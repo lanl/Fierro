@@ -31,7 +31,7 @@ make -j
 The fierro executable will be in the bin/test.
 
 ## Running the code
-To run the fierro exectuable (see subsection above here) go to bin/test and type
+To run the fierro exectuable (see subsection above here to make the executable) go to bin/test and type
 ```
 ./fierro my_mesh.geo
 ```
