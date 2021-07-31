@@ -28,7 +28,7 @@ To compile the code type
 ```
 make -j
 ```
-The fierro executable will be in the bin/test.
+The fierro executable will be in the bin/test folder.
 
 ## Running the code
 To run the fierro exectuable (see subsection above here to make the executable) go to bin/test and type
