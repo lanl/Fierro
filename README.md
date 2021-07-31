@@ -15,10 +15,27 @@
 ## Material models  
 The classical ideal gas model is the only material model implemented in the code, and it is useful for verification tests of the software and simple gas dynamic simulations.  The code has C++ to Fortran interfaces that allow users to write their own material models and test them on quasi static problems or material dynamic applications.  The interfaces follow an industry standard format so that **Fierro** can be used for model research and development that has historically been done with commercial implicit or explicit finite element codes. 
 
+**Building the code**
+The user should create a new directory where the compiled code will reside.  
+```
+mkdir bin
+```
+Next, go to the folder and type
+```
+cmake ..
+```
+To compile the code type
+```
+make -j
+```
+The fierro executable will be in the bin/test.
 
-
-
-
+**Running the code**
+To run the fierro exectuable (see subsection above here) go to bin/test and type
+```
+./fierro my_mesh.geo
+```
+The user must supply a mesh when executing the code, a range of meshes are provided in the meshes/ folder in the repository.
 
 
 
