@@ -9,6 +9,7 @@ include_directories(ELEMENTS/elements)
 include_directories(ELEMENTS/swage)
 include_directories(ELEMENTS/geometry)
 include_directories(ELEMENTS/slam)
+include_directories(user_mat)
 
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -41,5 +42,6 @@ add_subdirectory(ELEMENTS/swage)
 add_subdirectory(ELEMENTS/geometry)
 add_subdirectory(ELEMENTS/slam)
 add_subdirectory(src)
+add_subdirectory(user_mat)
 add_subdirectory(test)
 

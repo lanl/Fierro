@@ -10,6 +10,9 @@ target_link_libraries (fierro slam)
 # General use libraries
 target_link_libraries (fierro Hydro)
 
+# User Material
+target_link_libraries (fierro user_mat)
+
 # CCH coding
 #target_link_libraries (fierro CCH_Hydro)
 

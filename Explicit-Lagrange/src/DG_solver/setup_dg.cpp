@@ -10,6 +10,7 @@
 #include "state.h"
 #include "geometry.h"
 #include "variables.h"
+#include "user_mat.h"
 
 
 #define PI (3.1415926535897932384626433832795)
@@ -39,6 +40,12 @@ void setup_dgh(char *MESH){
     std::cout << "Allocate and Initialize"  << std::endl;
     std::cout << "RK num stages = "<< rk_storage  << std::endl;
     // --- allocate and initialize the defaults for the problem ---
+	
+	size_t user_mat_sz = user_material_number_vars();
+    material_t setup_mat;
+    real_t* setup_state_vars;
+    setup_state_vars = (real_t*)malloc((size_t)(user_mat_sz * sizeof(real_t)));
+    setup_mat.init(&setup_state_vars[0]);
 
     // Initialize the reference element
     ref_elem.init(p_order, num_dim);
@@ -244,7 +251,17 @@ void setup_dgh(char *MESH){
                         
                         
                         // --- Pressure ---
-                        gauss_properties(gauss_gid);
+						real_t dummy = 0;
+                        user_mat_model(&setup_state_vars[0],
+                            &mat_pt.grad_vel(gauss_gid, 0, 0),
+                            dt,
+                            1,
+                            mat_pt.density(gauss_gid),
+                            mat_pt.ie(gauss_gid),
+                            mat_pt.pressure(gauss_gid),
+                            mat_pt.sspd(gauss_gid),
+                            dummy);
+                        //gauss_properties(gauss_gid);
 
                         // Apply the initial velocity to the node associated with the gauss point
                         int node_gid = mesh.node_in_gauss(gauss_gid);
@@ -404,7 +421,17 @@ void setup_dgh(char *MESH){
 
     // Update the properties at all of the gauss points (material points)
     for(int gauss_gid=0; gauss_gid<mesh.num_gauss_pts(); gauss_gid++){
-        gauss_properties(gauss_gid);
+        real_t dummy = 0;
+        user_mat_model(&setup_state_vars[0],
+        &mat_pt.grad_vel(gauss_gid, 0, 0),
+        dt,
+        1,
+        mat_pt.density(gauss_gid),
+        mat_pt.ie(gauss_gid),
+        mat_pt.pressure(gauss_gid),
+        mat_pt.sspd(gauss_gid),
+        dummy);
+		//gauss_properties(gauss_gid);
     }
 
 

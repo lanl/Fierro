@@ -8,6 +8,7 @@
 #include "state.h"
 #include "geometry.h"
 #include "variables.h"
+#include "user_mat.h"
 
 #define PI (3.1415926535897932384626433832795)
 
@@ -16,6 +17,8 @@ using namespace utils;
 
 void dg_hydro(){
     
+	size_t user_mat_sz = user_material_number_vars();
+	
     // loop over the max number of time integration cycles
     for (cycle = 1; cycle <= cycle_stop; cycle++) {
 
@@ -178,7 +181,18 @@ void dg_hydro(){
 
                 // Update the properties at all of the gauss points (material points)
                 for(int gauss_gid=0; gauss_gid<mesh.num_gauss_pts(); gauss_gid++){
-                    gauss_properties(gauss_gid);
+                    //gauss_properties(gauss_gid);
+					real_t dummy = 0.0;
+                    user_mat_model(&state_vars[gauss_gid * user_mat_sz],	//inout
+                        &mat_pt.grad_vel(gauss_gid, 0, 0),                  //in
+                        dt,                                                 //in
+                        cycle,                                              //in
+                        mat_pt.density(gauss_gid),                          //in
+                        mat_pt.ie(gauss_gid),                               //in
+                        mat_pt.pressure(gauss_gid),                         //out
+                        mat_pt.sspd(gauss_gid),                             //out
+                        dummy);                                             //out
+
                 }
                 
                 // Get the Riemann velocity, surface fluxes, and nodal velocities

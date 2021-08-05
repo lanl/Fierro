@@ -66,13 +66,6 @@ void input(){
 
     // ---- EOS parameters and material model ---- //
     NR = 1;
-    material = (material_t *) malloc((size_t)(NR*sizeof(material_t)));
-    
-    material[0].eos_func = ideal_gas; // EOS model
-    material[0].cv       = 1.0;       // specific heat
-    material[0].csmin    = 1.0E-14;       // minimum sound speed
-    material[0].g        = 1.4;       // gamma value
-    material[0].b1       = 1.3333;    // linear slope of UsUp for Riemann solver
 
 
     // ---- fill instructions and intial conditions ---- //
@@ -97,7 +90,6 @@ void input(){
     if (test_problem == 1){
 
         // currently set up for sedov blast wave 
-        material[0].g        = 5.0/3.0;   // gamma value
 
         NF = 2; // number of fills
         
@@ -220,8 +212,7 @@ void input(){
     if (test_problem == 2){
 
 
-
-        material[0].g        = 1.4;       // gamma value 
+        
 
         NF = 2; // number of fills
         
@@ -307,8 +298,7 @@ void input(){
     // Sod in y on a 1x200x1 mesh
     if (test_problem == 3){
 
-        material[0].g = 1.4;   // gamma value
-
+       
         NF = 2; // number of fills
         
         mat_fill = (mat_fill_t *) malloc((size_t)(NF*sizeof(mat_fill_t)));
@@ -469,7 +459,7 @@ void input(){
     // Double rarefaction in X
     if (test_problem == 5){
 
-        material[0].g = 1.4;   // gamma value
+        
 
         NF = 3; // number of fills
         
@@ -581,7 +571,7 @@ void input(){
 
         TFINAL = 0.6;
         
-        material[0].g        = 5.0/3.0;   // gamma value
+        
 
         NF = 1; // number of fills
         
@@ -626,7 +616,7 @@ void input(){
     if (test_problem == 7){
 
 
-        material[0].g        = 5.0/3.0;   // gamma value
+        
 
         NF = 3; // number of fills
         
@@ -739,7 +729,7 @@ void input(){
     if (test_problem == 8){
 
 
-        material[0].g        = 7.0/5.0;   // gamma value
+        
 
         NF = 1; // number of fills
         
@@ -800,7 +790,7 @@ void input(){
 
         TFINAL = 0.6;
         
-        material[0].g        = 7.0/5.0;   // gamma value
+        
 
         NF = 1; // number of fills
         

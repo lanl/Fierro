@@ -90,12 +90,827 @@ using SArray4D     = Kokkos::View<size_t ****,Layout,ExecSpace>;
 using SArray5D     = Kokkos::View<size_t *****,Layout,ExecSpace>;
 
 using SHArray1D     = Kokkos::View<size_t *,Layout,Kokkos::HostSpace>;
+
+#else
+
+#define KOKKOS_FUNCTION 
+#define KOKKOS_INLINE_FUNCTION inline
+
 #endif
 
 //To disable asserts, uncomment the following line
 //#define NDEBUG
 
 //---Begin Standard Data Structures---
+
+template <typename T>
+class ViewCArrayMat {
+
+private:
+    size_t dim1_;
+    size_t dim2_;
+    size_t dim3_;
+    size_t dim4_;
+    size_t dim5_;
+    size_t dim6_;
+    size_t length_;
+    T* this_matrix_;
+
+public:
+
+    KOKKOS_FUNCTION
+        ViewCArrayMat();
+
+    //copy constructor
+    KOKKOS_FUNCTION
+        ViewCArrayMat(const ViewCArrayMat& temp);
+
+    //View Constructors
+    KOKKOS_FUNCTION
+        ViewCArrayMat(T* some_matrix, size_t dim1);
+
+    KOKKOS_FUNCTION
+        ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2);
+
+    KOKKOS_FUNCTION
+        ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3);
+
+    KOKKOS_FUNCTION
+        ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4);
+
+    KOKKOS_FUNCTION
+        ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4, size_t dim5);
+
+    KOKKOS_FUNCTION
+        ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4, size_t dim5, size_t dim6);
+
+    KOKKOS_FUNCTION
+        ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4, size_t dim5, size_t dim6, size_t dim7);
+
+    //Reverse Constructors to quickly convert between Array and Matrix
+    KOKKOS_FUNCTION
+        ViewCArrayMat(size_t length, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4, size_t dim5, size_t dim6, T* some_matrix);
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k, size_t l) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k, size_t l, size_t m) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k, size_t l, size_t m, size_t n) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k, size_t l, size_t m, size_t n, size_t o) const;
+
+
+
+    //overload = operator
+    KOKKOS_FUNCTION
+        ViewCArrayMat& operator=    (const ViewCArrayMat& temp);
+    KOKKOS_FUNCTION
+        ViewCArrayMat& set(const ViewCArrayMat& temp);
+    KOKKOS_FUNCTION
+        ViewCArrayMat& operator=    (const       T& temp);
+    KOKKOS_FUNCTION
+        ViewCArrayMat& operator=    (T* temp);
+
+    KOKKOS_FUNCTION
+        operator T* ();
+
+    KOKKOS_FUNCTION
+        size_t size();
+
+    size_t extent();
+
+    KOKKOS_FUNCTION
+        ~ViewCArrayMat();
+
+}; // End of ViewCArrayMat
+
+// Default constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat() { }
+
+
+//Copy Constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat(const ViewCArrayMat& temp)
+{
+    dim1_ = temp.dim1_;
+    dim2_ = temp.dim2_;
+    dim3_ = temp.dim3_;
+    dim4_ = temp.dim4_;
+    dim5_ = temp.dim5_;
+    dim6_ = temp.dim6_;
+    length_ = temp.length_;
+
+    this_matrix_ = temp.this_matrix_;
+}
+
+// Overloaded 1D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat(T* some_matrix, size_t dim1) {
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = 1;
+    dim3_ = 1;
+    dim2_ = 1;
+    dim1_ = 1;
+    length_ = dim1;
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 2D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat(T* some_matrix, size_t dim1,
+    size_t dim2) {
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = 1;
+    dim3_ = 1;
+    dim2_ = 1;
+    dim1_ = dim2;
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 3D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3) {
+
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = 1;
+    dim3_ = 1;
+    dim2_ = dim3;
+    dim1_ = dim2_ * dim2;
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 4D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3, size_t dim4) {
+
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = 1;
+    dim3_ = dim4;
+    dim2_ = dim3_ * dim3;
+    dim1_ = dim2_ * dim2;
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 5D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3, size_t dim4, size_t dim5) {
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = dim5;
+    dim3_ = dim4_ * dim4;
+    dim2_ = dim3_ * dim3;
+    dim1_ = dim2_ * dim2;
+
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 6D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3, size_t dim4, size_t dim5,
+    size_t dim6) {
+    dim6_ = 1;
+    dim5_ = dim6;
+    dim4_ = dim5_ * dim5;
+    dim3_ = dim4_ * dim4;
+    dim2_ = dim3_ * dim3;
+    dim1_ = dim2_ * dim2;
+
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 7D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3, size_t dim4, size_t dim5,
+    size_t dim6, size_t dim7) {
+
+    dim6_ = dim7;
+    dim5_ = dim6_ * dim6;
+    dim4_ = dim5_ * dim5;
+    dim3_ = dim4_ * dim4;
+    dim2_ = dim3_ * dim3;
+    dim1_ = dim2_ * dim2;
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Reverse Constructor to convert from Array to Matrix quickly
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::ViewCArrayMat(size_t length, size_t dim1, size_t dim2, size_t dim3, size_t dim4, size_t dim5, size_t dim6, T* some_matrix) {
+    length_ = length;
+    dim1_ = dim1;
+    dim2_ = dim2;
+    dim3_ = dim3;
+    dim4_ = dim4;
+    dim5_ = dim5;
+    dim6_ = dim6;
+    this_matrix_ = some_matrix;
+}
+
+
+
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCArrayMat<T>::operator()(size_t i) const {
+    //assert(i < length_ && "i is out of bounds in ViewCArrayMat 1D!");
+    return this_matrix_[(i)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCArrayMat<T>::operator()(size_t i, size_t j) const {
+    //assert(i < length_/dim1_ && "i is out of bounds in ViewCArrayMat 2D!");
+    //assert(j < dim1_/dim2_ && "j is out of bounds in ViewCArrayMat 2D!");
+    return this_matrix_[(i)*dim1_ + (j)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCArrayMat<T>::operator()(size_t i, size_t j, size_t k) const {
+    //assert(i < length_ / dim1_ && "i is out of bounds in ViewCArrayMat 3D!");
+    //assert(j < dim1_ / dim2_ && "j is out of bounds in ViewCArrayMat 3D!");
+    //assert(k < dim2_/dim3_ && "k is out of bounds in ViewCArrayMat 3D!");
+    return this_matrix_[(i)*dim1_ + (j)*dim2_ + k];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCArrayMat<T>::operator()(size_t i, size_t j, size_t k, size_t l) const {
+    //assert(i < length_/dim1_ && "i is out of bounds in ViewCArrayMat 4D!");
+    //assert(j < dim1_ / dim2_ && "j is out of bounds in ViewCArrayMat 4D!");
+    //assert(k < dim2_/dim3_ && "k is out of bounds in ViewCArrayMat 4D!");
+    //assert(l < dim3_/dim4_ && "l is out of bounds in ViewCArrayMat 4D!");
+    return this_matrix_[(i)*dim1_ + (j)*dim2_ + (k)*dim3_ + (l)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCArrayMat<T>::operator()(size_t i, size_t j, size_t k, size_t l,
+    size_t m) const {
+    //assert(i >= 1 && i <= dim1_ && "i is out of bounds for ViewCArrayMat 5D!");
+    //assert(j >= 1 && j <= dim2_ && "j is out of bounds for ViewCArrayMat 5D!");
+    //assert(k >= 1 && k <= dim3_ && "k is out of bounds for ViewCArrayMat 5D!");
+    //assert(l >= 1 && l <= dim4_ && "l is out of bounds for ViewCArrayMat 5D!");
+    //assert(m >= 1 && m <= dim5_ && "m is out of bounds for ViewCArrayMat 5D!");
+    return this_matrix_[(i)*dim1_ + (j)*dim2_ + (k)*dim3_ + (l)*dim4_ + (m)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCArrayMat<T>::operator()(size_t i, size_t j, size_t k, size_t l,
+    size_t m, size_t n) const {
+    //assert(i >= 1 && i <= dim1_ && "i is out of bounds for ViewCArrayMat 6D!");
+    //assert(j >= 1 && j <= dim2_ && "j is out of bounds for ViewCArrayMat 6D!");
+    //assert(k >= 1 && k <= dim3_ && "k is out of bounds for ViewCArrayMat 6D!");
+    //assert(l >= 1 && l <= dim4_ && "l is out of bounds for ViewCArrayMat 6D!");
+    //assert(m >= 1 && m <= dim5_ && "m is out of bounds for ViewCArrayMat 6D!");
+    //assert(n >= 1 && n <= dim6_ && "n is out of bounds for ViewCArrayMat 6D!");
+    return this_matrix_[(i)*dim1_ + (j)*dim2_ + (k)*dim3_ + (l)*dim4_ + (m)*dim5_ + (n)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCArrayMat<T>::operator()(size_t i, size_t j, size_t k, size_t l,
+    size_t m, size_t n, size_t o) const {
+    //assert(i >= 1 && i <= dim1_ && "i is out of bounds for ViewCArrayMat 7D!");
+    //assert(j >= 1 && j <= dim2_ && "j is out of bounds for ViewCArrayMat 7D!");
+    //assert(k >= 1 && k <= dim3_ && "k is out of bounds for ViewCArrayMat 7D!");
+    //assert(l >= 1 && l <= dim4_ && "l is out of bounds for ViewCArrayMat 7D!");
+    //assert(m >= 1 && m <= dim5_ && "m is out of bounds for ViewCArrayMat 7D!");
+    //assert(n >= 1 && n <= dim6_ && "n is out of bounds for ViewCArrayMat 7D!");
+    //assert(o >= 1 && o <= dim7_ && "o is out of bounds for ViewCArrayMat 7D!");
+    return this_matrix_[(i)*dim1_ + (j)*dim2_ + (k)*dim3_ + (l)*dim4_ + (m)*dim5_ + (n)*dim6_ + (o)];
+}
+
+
+template <typename T>
+KOKKOS_FUNCTION
+size_t ViewCArrayMat<T>::size() {
+    return length_;
+}
+
+template <typename T>
+size_t ViewCArrayMat<T>::extent() {
+    return length_;
+}
+
+
+template <typename T>
+KOKKOS_FUNCTION ViewCArrayMat<T>& ViewCArrayMat<T>::operator=  (const ViewCArrayMat <T>& temp)
+{
+
+    memcpy(&this_matrix_[0], &temp.this_matrix_[0], sizeof(T) * length_);
+
+    //for (size_t i = 0; i < length_; i++) { this_matrix_[i] = temp.this_matrix_[i]; }
+
+    return *this;
+}
+
+template <typename T> KOKKOS_FUNCTION
+ViewCArrayMat<T>& ViewCArrayMat<T>::set(const ViewCArrayMat <T>& temp)
+{
+    if (this != &temp) {
+        dim1_ = temp.dim1_;
+        dim2_ = temp.dim2_;
+        dim3_ = temp.dim3_;
+        dim4_ = temp.dim4_;
+        dim5_ = temp.dim5_;
+        dim6_ = temp.dim6_;
+
+        length_ = temp.length_;
+
+        this_matrix_ = temp.this_matrix_;
+    }
+    return *this;
+}
+
+template <typename T> KOKKOS_FUNCTION
+ViewCArrayMat<T>& ViewCArrayMat<T>::operator=  (const T& temp) {
+
+    for (size_t i = 0; i < length_; i++) this_matrix_[i] = temp;
+
+    return *this;
+}
+template <typename T> KOKKOS_FUNCTION
+ViewCArrayMat<T>& ViewCArrayMat<T>::operator=  (T* temp) {
+
+    for (size_t i = 0; i < length_; i++) this_matrix_[i] = temp[i];
+
+    return *this;
+}
+
+template <typename T> KOKKOS_FUNCTION
+ViewCArrayMat<T>::operator T* () {
+
+    return &this_matrix_[0];
+}
+
+
+
+template <typename T>
+KOKKOS_FUNCTION
+ViewCArrayMat<T>::~ViewCArrayMat() {}
+
+////////////////////////////////////////////////////////////////////////////////
+// End of ViewCArrayMat
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+template <typename T>
+class ViewCMatrixMat {
+
+private:
+    size_t dim1_;
+    size_t dim2_;
+    size_t dim3_;
+    size_t dim4_;
+    size_t dim5_;
+    size_t dim6_;
+    size_t length_;
+    T* this_matrix_;
+
+public:
+
+    KOKKOS_FUNCTION
+        ViewCMatrixMat();
+
+    //copy constructor
+    KOKKOS_FUNCTION
+        ViewCMatrixMat(const ViewCMatrixMat& temp);
+
+    //View Constructors
+    KOKKOS_FUNCTION
+        ViewCMatrixMat(T* some_matrix, size_t dim1);
+
+    KOKKOS_FUNCTION
+        ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2);
+
+    KOKKOS_FUNCTION
+        ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3);
+
+    KOKKOS_FUNCTION
+        ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4);
+
+    KOKKOS_FUNCTION
+        ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4, size_t dim5);
+
+    KOKKOS_FUNCTION
+        ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4, size_t dim5, size_t dim6);
+
+    KOKKOS_FUNCTION
+        ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4, size_t dim5, size_t dim6, size_t dim7);
+
+    //Reverse Constructor for Direct Assignment
+    KOKKOS_FUNCTION
+        ViewCMatrixMat(size_t length, size_t dim1, size_t dim2, size_t dim3,
+            size_t dim4, size_t dim5, size_t dim6, T* some_matrix);
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k, size_t l) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k, size_t l, size_t m) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k, size_t l, size_t m, size_t n) const;
+
+    KOKKOS_INLINE_FUNCTION
+        T& operator()(size_t i, size_t j, size_t k, size_t l, size_t m, size_t n, size_t o) const;
+
+
+
+    //overload = operator
+    KOKKOS_FUNCTION
+        ViewCMatrixMat& operator=    (const ViewCMatrixMat& temp);
+    KOKKOS_FUNCTION
+        ViewCMatrixMat& set(const ViewCMatrixMat& temp);
+    KOKKOS_FUNCTION
+        ViewCMatrixMat& operator=    (const       T temp);
+    KOKKOS_FUNCTION
+        ViewCMatrixMat& operator=    (T* temp);
+
+    KOKKOS_FUNCTION
+        operator T* ();
+
+    KOKKOS_FUNCTION
+        operator ViewCArrayMat<T>();
+
+    KOKKOS_FUNCTION
+        size_t size();
+
+    size_t extent();
+
+    KOKKOS_FUNCTION
+        ~ViewCMatrixMat();
+
+}; // End of ViewCMatrixMat
+
+// Default constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat() { }
+
+
+//Copy Constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat(const ViewCMatrixMat& temp)
+{
+    dim1_ = temp.dim1_;
+    dim2_ = temp.dim2_;
+    dim3_ = temp.dim3_;
+    dim4_ = temp.dim4_;
+    dim5_ = temp.dim5_;
+    dim6_ = temp.dim6_;
+    length_ = temp.length_;
+
+    this_matrix_ = temp.this_matrix_;
+}
+
+// Overloaded 1D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat(T* some_matrix, size_t dim1) {
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = 1;
+    dim3_ = 1;
+    dim2_ = 1;
+    dim1_ = 1;
+    length_ = dim1;
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 2D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat(T* some_matrix, size_t dim1,
+    size_t dim2) {
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = 1;
+    dim3_ = 1;
+    dim2_ = 1;
+    dim1_ = dim2;
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 3D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3) {
+
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = 1;
+    dim3_ = 1;
+    dim2_ = dim3;
+    dim1_ = dim2_ * dim2;
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 4D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3, size_t dim4) {
+
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = 1;
+    dim3_ = dim4;
+    dim2_ = dim3_ * dim3;
+    dim1_ = dim2_ * dim2;
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 5D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3, size_t dim4, size_t dim5) {
+    dim6_ = 1;
+    dim5_ = 1;
+    dim4_ = dim5;
+    dim3_ = dim4_ * dim4;
+    dim2_ = dim3_ * dim3;
+    dim1_ = dim2_ * dim2;
+
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 6D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3, size_t dim4, size_t dim5,
+    size_t dim6) {
+    dim6_ = 1;
+    dim5_ = dim6;
+    dim4_ = dim5_ * dim5;
+    dim3_ = dim4_ * dim4;
+    dim2_ = dim3_ * dim3;
+    dim1_ = dim2_ * dim2;
+
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+// Overloaded 7D constructor
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat(T* some_matrix, size_t dim1, size_t dim2,
+    size_t dim3, size_t dim4, size_t dim5,
+    size_t dim6, size_t dim7) {
+
+    dim6_ = dim7;
+    dim5_ = dim6_ * dim6;
+    dim4_ = dim5_ * dim5;
+    dim3_ = dim4_ * dim4;
+    dim2_ = dim3_ * dim3;
+    dim1_ = dim2_ * dim2;
+    length_ = (dim1_ * dim1);
+    this_matrix_ = some_matrix;
+}
+
+
+
+// Reverse Constructor for direct Assignment
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::ViewCMatrixMat(size_t length, size_t dim1, size_t dim2, size_t dim3, size_t dim4, size_t dim5, size_t dim6, T* some_matrix) {
+    length_ = length;
+    dim1_ = dim1;
+    dim2_ = dim2;
+    dim3_ = dim3;
+    dim4_ = dim4;
+    dim5_ = dim5;
+    dim6_ = dim6;
+    this_matrix_ = some_matrix;
+}
+
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCMatrixMat<T>::operator()(size_t i) const {
+    //assert(i >= 1 && i <= length_ && "i is out of bounds in ViewCMatrixMat 1D!");
+    return this_matrix_[(i - 1)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCMatrixMat<T>::operator()(size_t i, size_t j) const {
+    //assert(i >= 1 && i <= length_/dim1_ && "i is out of bounds in ViewCMatrixMat 2D!");
+    //assert(j >= 1 && j <= dim1_/dim2_ && "j is out of bounds in ViewCMatrixMat 2D!");
+    return this_matrix_[(i - 1) * dim1_ + (j - 1)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCMatrixMat<T>::operator()(size_t i, size_t j, size_t k) const {
+    //assert(i >= 1 && i <= length_/dim1_ && "i is out of bounds in ViewCMatrixMat 3D!");
+    //assert(j >= 1 && j <= dim1_/dim2_ && "j is out of bounds in ViewCMatrixMat 3D!");
+    //assert(k >= 1 && k <= dim2_/dim3_ && "k is out of bounds in ViewCMatrixMat 3D!");
+    return this_matrix_[(i - 1) * dim1_ + (j - 1) * dim2_ + k - 1];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCMatrixMat<T>::operator()(size_t i, size_t j, size_t k, size_t l) const {
+    //assert(i >= 1 && i <= length_/dim1_ && "i is out of bounds in ViewCMatrixMat 4D!");
+    //assert(j >= 1 && j <= dim1_/dim2_ && "j is out of bounds in ViewCMatrixMat 4D!");
+    //assert(k >= 1 && k <= dim2_/dim3_ && "k is out of bounds in ViewCMatrixMat 4D!");
+    //assert(l >= 1 && l <= dim3_/dim4_ && "l is out of bounds in ViewCMatrixMat 4D!");
+    return this_matrix_[(i - 1) * dim1_ + (j - 1) * dim2_ + (k - 1) * dim3_ + (l - 1)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCMatrixMat<T>::operator()(size_t i, size_t j, size_t k, size_t l,
+    size_t m) const {
+    //assert(i >= 1 && i <= dim1_ && "i is out of bounds for ViewCMatrixMat 5D!");
+    //assert(j >= 1 && j <= dim2_ && "j is out of bounds for ViewCMatrixMat 5D!");
+    //assert(k >= 1 && k <= dim3_ && "k is out of bounds for ViewCMatrixMat 5D!");
+    //assert(l >= 1 && l <= dim4_ && "l is out of bounds for ViewCMatrixMat 5D!");
+    //assert(m >= 1 && m <= dim5_ && "m is out of bounds for ViewCMatrixMat 5D!");
+    return this_matrix_[(i - 1) * dim1_ + (j - 1) * dim2_ + (k - 1) * dim3_ + (l - 1) * dim4_ + (m - 1)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCMatrixMat<T>::operator()(size_t i, size_t j, size_t k, size_t l,
+    size_t m, size_t n) const {
+    //assert(i >= 1 && i <= dim1_ && "i is out of bounds for ViewCMatrixMat 6D!");
+    //assert(j >= 1 && j <= dim2_ && "j is out of bounds for ViewCMatrixMat 6D!");
+    //assert(k >= 1 && k <= dim3_ && "k is out of bounds for ViewCMatrixMat 6D!");
+    //assert(l >= 1 && l <= dim4_ && "l is out of bounds for ViewCMatrixMat 6D!");
+    //assert(m >= 1 && m <= dim5_ && "m is out of bounds for ViewCMatrixMat 6D!");
+    //assert(n >= 1 && n <= dim6_ && "n is out of bounds for ViewCMatrixMat 6D!");
+    return this_matrix_[(i - 1) * dim1_ + (j - 1) * dim2_ + (k - 1) * dim3_ + (l - 1) * dim4_ + (m - 1) * dim5_ + (n - 1)];
+}
+
+template <typename T>
+KOKKOS_INLINE_FUNCTION
+T& ViewCMatrixMat<T>::operator()(size_t i, size_t j, size_t k, size_t l,
+    size_t m, size_t n, size_t o) const {
+    //assert(i >= 1 && i <= dim1_ && "i is out of bounds for ViewCMatrixMat 7D!");
+    //assert(j >= 1 && j <= dim2_ && "j is out of bounds for ViewCMatrixMat 7D!");
+    //assert(k >= 1 && k <= dim3_ && "k is out of bounds for ViewCMatrixMat 7D!");
+    //assert(l >= 1 && l <= dim4_ && "l is out of bounds for ViewCMatrixMat 7D!");
+    //assert(m >= 1 && m <= dim5_ && "m is out of bounds for ViewCMatrixMat 7D!");
+    //assert(n >= 1 && n <= dim6_ && "n is out of bounds for ViewCMatrixMat 7D!");
+    //assert(o >= 1 && o <= dim7_ && "o is out of bounds for ViewCMatrixMat 7D!");
+    return this_matrix_[(i - 1) * dim1_ + (j - 1) * dim2_ + (k - 1) * dim3_ + (l - 1) * dim4_ + (m - 1) * dim5_ + (n - 1) * dim6_ + (o - 1)];
+}
+
+
+template <typename T>
+KOKKOS_FUNCTION
+size_t ViewCMatrixMat<T>::size() {
+    return length_;
+}
+
+template <typename T>
+size_t ViewCMatrixMat<T>::extent() {
+    return length_;
+}
+
+
+template <typename T>
+KOKKOS_FUNCTION ViewCMatrixMat<T>& ViewCMatrixMat<T>::operator=  (const ViewCMatrixMat <T>& temp)
+{
+
+    memcpy(&this_matrix_[0], &temp.this_matrix_[0], sizeof(T) * length_);
+
+    //for (size_t i = 0; i < length_; i++) { this_matrix_[i] = temp.this_matrix_[i]; }
+
+    return *this;
+}
+
+template <typename T> KOKKOS_FUNCTION
+ViewCMatrixMat<T>& ViewCMatrixMat<T>::set(const ViewCMatrixMat <T>& temp)
+{
+    if (this != &temp) {
+        dim1_ = temp.dim1_;
+        dim2_ = temp.dim2_;
+        dim3_ = temp.dim3_;
+        dim4_ = temp.dim4_;
+        dim5_ = temp.dim5_;
+        dim6_ = temp.dim6_;
+
+        length_ = temp.length_;
+
+        this_matrix_ = temp.this_matrix_;
+    }
+    return *this;
+}
+
+template <typename T> KOKKOS_FUNCTION
+ViewCMatrixMat<T>& ViewCMatrixMat<T>::operator=  (const T temp) {
+
+    //memset(&this_matrix_[0], temp, (sizeof(T) * length_));
+
+    for (size_t i = 0; i < length_; i++) this_matrix_[i] = temp;
+
+    return *this;
+}
+template <typename T> KOKKOS_FUNCTION
+ViewCMatrixMat<T>& ViewCMatrixMat<T>::operator=  (T* temp) {
+
+    //memcpy(&this_matrix_[0], &temp[0], sizeof(T) * length_);
+
+    for (size_t i = 0; i < length_; i++) this_matrix_[i] = temp[i];
+
+    return *this;
+}
+
+template <typename T> KOKKOS_FUNCTION
+ViewCMatrixMat<T>::operator T* () {
+
+    return &this_matrix_[0];
+}
+
+
+template <typename T> KOKKOS_FUNCTION
+ViewCMatrixMat<T>::operator ViewCArrayMat<T>() {
+
+    ViewCArrayMat<T>  out(length_, dim1_, dim2_, dim3_, dim4_, dim5_, dim6_, &this_matrix_[0]);
+
+    return out;
+}
+
+template <typename T>
+KOKKOS_FUNCTION
+ViewCMatrixMat<T>::~ViewCMatrixMat() {}
+
+////////////////////////////////////////////////////////////////////////////////
+// End of ViewCMatrixMat
+////////////////////////////////////////////////////////////////////////////////
+
+
 
 //1. FArray
 template <typename T>

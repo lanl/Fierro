@@ -29,7 +29,7 @@ mat_pt_t        mat_pt;
 // gauss_pt_t      gauss_pt;
 
 
-material_t  * material;
+real_t		* state_vars;
 mat_fill_t  * mat_fill;
 
 boundary_t   * boundary;
@@ -148,14 +148,18 @@ int main(int argc, char *argv[]){
     std::cout << "DGH = "<< DGH << std::endl;
 
     //---- Read intial mesh and build connectivity ----//
-    if(CCH == true) setup_cch(argv[1]);
-    if(SGH == true) setup_sgh(argv[1]);
+    //if(CCH == true) setup_cch(argv[1]);
+    //if(SGH == true) setup_sgh(argv[1]);
     if(DGH == true) setup_dgh(argv[1]);
+	
+	
+	//---- Initialize Material at each point in mesh ----//
+    setup_material();
 
 
     // calculate the total energy at the beginning of the calculation 
-    if(CCH == true) track_cch(ke, ie);
-    if(SGH == true) track_sgh(ke, ie);
+    //if(CCH == true) track_cch(ke, ie);
+    //if(SGH == true) track_sgh(ke, ie);
     if(DGH == true) track_dgh(ke, ie);
     
 
@@ -202,9 +206,9 @@ int main(int argc, char *argv[]){
     // get the wall clock time
     std::clock_t start_time = std::clock();
 
-    if(CCH == true) cch_hydro();
-    
-    if(SGH == true) sgh_hydro();
+    //if(CCH == true) cch_hydro();
+    //
+    //if(SGH == true) sgh_hydro();
 
     if(DGH == true) dg_hydro();
 
@@ -383,8 +387,8 @@ int main(int argc, char *argv[]){
 
 
     // calculate the total energy at the end of the calculation
-    if(CCH == true) track_cch(ke, ie);
-    if(SGH == true) track_sgh(ke, ie);
+    //if(CCH == true) track_cch(ke, ie);
+    //if(SGH == true) track_sgh(ke, ie);
     if(DGH == true) track_dgh(ke, ie);
     
 

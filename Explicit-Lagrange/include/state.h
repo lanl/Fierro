@@ -903,26 +903,6 @@ public:
 
 
 
-// Change to be view in the code
-struct material_t {
-
-    real_t cv;    // specific heat
-    real_t t;     // temperature
-    real_t d;     // density
-    real_t en;    // specific internal energy
-    real_t g;     // gamma
-    real_t csmin; // minimum sound speed
-    
-    // eos fcn pointer
-    real_t (*eos_func) (int,int,real_t,real_t);
-
-    real_t b1;    // linear coefficient in Riemann solver
-
-    ~material_t() {
-
-    }
-
-};
 
 
 namespace region
@@ -1075,10 +1055,7 @@ void run_info(int cycle);
 
 void boundary_force();
 void boundary_velocity();
-void gauss_properties(int mat_pt_gid);
-
-void gauss_properties(int mat_pt_gid);
-void cell_properties(int cell_gid);
+void setup_material();
 
 void get_timestep();
 void rk_init();

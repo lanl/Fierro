@@ -13,7 +13,7 @@ extern mat_pt_t  	mat_pt;
 // extern gauss_pt_t  	gauss_pt;
 
 
-extern material_t  	*material;
+extern real_t  	    *state_vars;
 extern mat_fill_t  	*mat_fill;
 extern boundary_t  	*boundary;
 
