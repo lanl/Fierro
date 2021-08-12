@@ -82,14 +82,26 @@ private:
     const int num_patches_hex_ = 6;
     
     const int num_nodes_patch_ = 4;
+    
+    // i-dir, then j-dir, then z-dir patches
     const int this_node_in_patch_in_cell_[24] = // this assumes i,j,k structures nodes
+        {0,2,6,4,
+         1,3,7,5,
+            //
+         0,4,5,1,
+         2,6,7,3,
+            //
+         0,1,3,2,
+         4,5,7,6
+         };
+    /* was:
         {0,1,3,2,
          4,5,7,6,
          0,1,5,4,
          2,3,7,6,
          0,2,6,4,
          1,3,7,5};
-
+     */
     int indx_; //useful for returning from internal function
 
 
@@ -160,6 +172,7 @@ private:
     CArray <int> corners_in_node_list_start_;
     CArray <int> corners_in_node_list_;
     CArray <int> gauss_in_corner_;
+    CArray <int> cornpatches_in_corner_list_;
     
 
     // ---- PATCHES ---- //
@@ -167,6 +180,10 @@ private:
 
     CArray <int> patch_nodes_list_;
     CArray <int> cells_in_patch_list_;
+    CArray <int> corner_in_cornpatch_list_;
+    CArray <int> cornpatches_in_patch_list_;
+    CArray <int> corner_direction_in_cornpatch_list_;
+    
 
 
     // ---- BOUNDARY ---- //
@@ -341,21 +358,39 @@ public:
     
     // return gauss id for this corner, there is one guass id in a corner
     int gauss_in_corner (int corn_gid) const;
+    
+    // returns the cornpatches in a patch
+    int& cornpatches_in_corner(int patch_corner, int corner_lid);
 
 
+    
     // ---- PATCHES ---- //
 
     // returns the number of elements
     int num_patches () const;
+    
+    int num_cornpatches() const;
 
     // returns the global node id given a cell_id, local_patch_indx(0:5), local_patchnode_indx(0:3)
     int node_in_patch_in_cell(int cell_id, int this_patch, int patchnode_lid) const;
 
+    // returns the global corner id given a cell_id, local_patch_indx(0:5), local_patchnode_indx(0:3)
+    int corner_in_patch_in_cell(int cell_gid, int patch_lid, int patchnode_lid) const;
+    
     // returns the global id for a cell that is connected to the patch
     int cells_in_patch(int patch_gid, int this_cell) const;
           
     // returns the nodes in the patch
     int node_in_patch(int patch_gid, int patchnode_lid) const;
+    
+    // returns corner global id for the two corners in a cornpatch
+    int& corner_in_cornpatch(int cornpatch_gid, int corner_lid);
+    
+    // returns the cornpatches in a patch
+    int& cornpatches_in_patch(int patch_gid, int corner_lid);
+    
+    int & corner_direction_in_cornpatch(int cornpatch_gid, int corner_lid);
+
 
 
     // ---- Boundary ---- //

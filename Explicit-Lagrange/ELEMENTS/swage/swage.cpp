@@ -781,13 +781,30 @@ int mesh_t::gauss_in_corner (int corn_gid) const
 }
 
 
+
+// return the global id for the 3 cornpatch surfaces
+int& mesh_t::cornpatches_in_corner(int corn_gid, int cornpatch_lid)
+{
+    // get the index in the global 1D array
+    int this_index = 3*corn_gid + cornpatch_lid;
+    
+    return cornpatches_in_corner_list_(this_index);
+};
+
 // ---- patches ---- //
 
-// returns the number of elements
+// returns the number of patches
 int mesh_t::num_patches () const
 {
     return num_patches_;
 }
+    
+// returns the number of cornerpathes
+int mesh_t::num_cornpatches() const
+{
+    return num_patches_*4;
+}
+    
 
 // returns the global node id given a cell_id, local_patch_indx(0:5), local_patchnode_indx(0:3)
 int mesh_t::node_in_patch_in_cell(int cell_id, int this_patch, int patchnode_lid) const
@@ -798,6 +815,18 @@ int mesh_t::node_in_patch_in_cell(int cell_id, int this_patch, int patchnode_lid
     // return the global id for the local node index
     return nodes_in_cell(cell_id, this_node);
 } // end of method
+
+    
+// returns the global corner id given a cell_gid, local_patch_indx(0:5), local_patchnode_indx(0:3)
+int mesh_t::corner_in_patch_in_cell(int cell_gid, int patch_lid, int patchnode_lid) const
+{
+    // get the local node index in the cell,  node_lid = corner_lid
+    int node_lid = this_node_in_patch_in_cell_[patchnode_lid + patch_lid*num_nodes_patch_];
+    int corner_lid = node_lid;
+    
+    // return the global id for the local node index
+    return corners_in_cell(cell_gid, corner_lid);
+};
 
 
 // returns the global id for a cell that is connected to the patch
@@ -814,12 +843,38 @@ int mesh_t::cells_in_patch(int patch_gid, int this_cell) const
 int mesh_t::node_in_patch(int patch_gid, int patchnode_lid) const
 {
     // get the 1D index
-    int this_index = patch_gid*4;
+    int this_index = patch_gid*4 + patchnode_lid;
     
     // patchnode_lid is in the range of 0:3
-    return patch_nodes_list_(this_index + patchnode_lid);
+    return patch_nodes_list_(this_index);
 }
-
+    
+// returns a corner in the cornpatch
+int& mesh_t::corner_in_cornpatch(int cornpatch_gid, int corner_lid)
+{
+    
+    // get the 1D index
+    int this_index = cornpatch_gid*2 + corner_lid;  // corner_lid = 0 or 1
+    
+    return corner_in_cornpatch_list_(this_index);
+}
+    
+// returns the cornpatches in a patch
+int& mesh_t::cornpatches_in_patch(int patch_gid, int corner_lid)
+{
+    // get the 1D index
+    int this_index = patch_gid*4 + corner_lid;  // corner_lid = 0:3
+    
+    return cornpatches_in_patch_list_(this_index);
+}
+    
+int& mesh_t::corner_direction_in_cornpatch(int cornpatch_gid, int corner_lid)
+{
+    // get the 1D index
+    int this_index = cornpatch_gid*2 + corner_lid;  // corner_lid = 0 or 1
+    
+    return corner_direction_in_cornpatch_list_(this_index);
+}
 
 // ---- Boundary ---- //
 
@@ -1102,8 +1157,9 @@ void mesh_t::build_corner_connectivity(){
 
     for (int node_gid = 0; node_gid < num_nodes_; node_gid++ ){
 
-        num_corners_in_node_(node_gid) = num_corners_saved[node_gid]; 
+        num_corners_in_node_(node_gid) = num_corners_saved[node_gid];
     }
+    
 } // end of build_corner_connectivity
 
     
@@ -1480,8 +1536,48 @@ void mesh_t::build_patch_connectivity(){
 
     hash_count = 0;
     
+    
+    // ----------------------------------------------
+    // --- corner patch and cornpatch structures ----
+    // ----------------------------------------------
+    
+    // the paches conntected to a corner
+    CArray <int> patches_in_corner(num_corners_,3);
+    cornpatches_in_corner_list_ = CArray <int> (num_corners_*3);
+    
+    for (int cell_gid = 0; cell_gid < num_cells_; cell_gid++){
+        for(int corn_lid = 0; corn_lid < num_nodes_in_cell(); corn_lid++){
+            int corn_gid = corners_in_cell(cell_gid, corn_lid);
+            
+            // i-dir patches, j-dir patches, k-dir patches
+            for (int ref_dir=0; ref_dir < 3; ref_dir++){
+                cornpatches_in_corner(corn_gid, ref_dir) = -1;
+            }
+        }
+    }
+    
+    // 4 cornpatches in a patch and 2 corners per cornpatch
+    corner_in_cornpatch_list_ = CArray <int> (num_patches_*4*2);
+    corner_direction_in_cornpatch_list_ = CArray <int> (num_patches_*4*2);
+    for (int cornpatch_gid=0; cornpatch_gid<num_patches_*4; cornpatch_gid++){
+        for (int corn_lid=0; corn_lid<2; corn_lid++){
+            // initializing to -1
+            corner_in_cornpatch(cornpatch_gid, corn_lid) = -1;
+            corner_direction_in_cornpatch(cornpatch_gid, corn_lid) = -1;
+        }
+    } // end of loop over cornpatch_gid;
+    
+    cornpatches_in_patch_list_ = CArray <int> (num_patches_*4);
+    
+
+    // ---
+    
+    
     // save the cell_gid to the cells_in_patch_list
     for (int cell_gid = 0; cell_gid < num_cells_; cell_gid++){
+        
+        int reference_direction[6] = {0,0,1,1,2,2};  // i-dir patches, j-dir patches, k-dir patches
+        
         for (int patch_lid = 0; patch_lid < num_patches_hex_; patch_lid++){
             
             // get the patch_id
@@ -1489,15 +1585,29 @@ void mesh_t::build_patch_connectivity(){
 
             // a temp variable for storing the node global ids on the patch
             int these_nodes[num_nodes_patch_];
+            
 
-            // loop over all the vertices on the this patch
+            // loop over all the nodes on the this patch (aways 4 nodes)
             for (int patchnode_lid = 0; patchnode_lid < num_nodes_patch_; patchnode_lid++){
+                
                 
                 // get the global node id
                 int node_gid = node_in_patch_in_cell(cell_gid, patch_lid, patchnode_lid);
                 
+                
                 // save the global node id
                 these_nodes[patchnode_lid] = node_gid;
+                
+                
+                // --- save the patches in a corner ---
+                // get the corner index for this node, the node_lid=corn_lid
+                
+                int corn_gid = corner_in_patch_in_cell(cell_gid, patch_lid, patchnode_lid);
+                
+                // save the patch_gid
+                // the reference direction is the corn_patch lid: i-dir is first, j-dir is second, and k-dir is third
+                patches_in_corner(corn_gid, reference_direction[patch_lid]) = patch_gid;
+                
                 
             } // end for patchnode_lid
 
@@ -1516,7 +1626,6 @@ void mesh_t::build_patch_connectivity(){
                     patch_nodes_list_(this_index + patchnode_lid) = these_nodes[patchnode_lid];
                 }
             }
-
             else{
                 // it is the other cell connected to this patch
 
@@ -1529,6 +1638,102 @@ void mesh_t::build_patch_connectivity(){
 
         } // end for patch_lid
     } // end for cell_gid
+    
+    
+    CArray <int> cornpatch_hash_key(num_corners_,3);
+    CArray <int> cornpatch_hash_array(num_patches_*num_nodes_);
+    
+    for (int cell_gid = 0; cell_gid < num_cells_; cell_gid++){
+        for(int corn_lid = 0; corn_lid < num_nodes_in_cell(); corn_lid++){
+            
+            int node_lid = corn_lid;
+            
+            int corn_gid = corners_in_cell(cell_gid, corn_lid);
+            int node_gid = nodes_in_cell(cell_gid, node_lid);
+            
+            // i-dir patches, j-dir patches, k-dir patches
+            for (int ref_dir = 0; ref_dir < 3; ref_dir++){
+                int patch_gid = patches_in_corner(corn_gid, ref_dir);
+                
+                int hash_gid = patch_gid + node_gid*num_patches_; // not working :(
+                
+                // save the hash key to the corner
+                cornpatch_hash_key(corn_gid, ref_dir) = hash_gid;
+                
+                cornpatch_hash_array(hash_gid) = -1;
+            } // end for ref_dir
+            
+        } // end for corners in cell
+    } // end for cells
+    
+    int cornpatch_gid = 0;
+    for (int cell_gid = 0; cell_gid < num_cells_; cell_gid++){
+        for(int corn_lid = 0; corn_lid < num_nodes_in_cell(); corn_lid++){
+            
+            int node_lid = corn_lid;
+            
+            int corn_gid = corners_in_cell(cell_gid, corn_lid);
+            int node_gid = nodes_in_cell(cell_gid, node_lid);
+        
+            // i-dir patches, j-dir patches, k-dir patches
+            for (int ref_dir = 0; ref_dir < 3; ref_dir++){
+                
+                // get the hash key
+                int hash_gid = cornpatch_hash_key(corn_gid, ref_dir);
+                
+                // check to see if no corners are saved
+                if (cornpatch_hash_array(hash_gid) == -1){
+                    
+                    // save the cornpatch_gid in the hash array
+                    cornpatch_hash_array(hash_gid) = cornpatch_gid;
+                    
+                    // save the corn_gid to the cornpatch
+                    corner_in_cornpatch(cornpatch_gid, 0) = corn_gid;
+                    
+                    // save the reference direction for the corner
+                    corner_direction_in_cornpatch(cornpatch_gid, 0) = ref_dir;
+                    
+                    // save the cornpatch_gid to the corner
+                    cornpatches_in_corner(corn_gid, ref_dir) = cornpatch_gid;
+                    
+                    // save the cornerpatch in the patch following the node ordering convention in a patch
+                    patch_gid = patches_in_corner(corn_gid, ref_dir);
+                    int save_cornpatch_lid = 0;
+                    for (int patchnode_lid=0; patchnode_lid<4; patchnode_lid++){
+                        if ( node_in_patch(patch_gid, patchnode_lid) == node_gid ){
+                            break;
+                        }
+                        else{
+                            save_cornpatch_lid++;
+                        }
+                    }
+                    cornpatches_in_patch(patch_gid, save_cornpatch_lid) = cornpatch_gid;
+
+                    // increate the cornpatch index
+                    cornpatch_gid++;
+                }
+                // this is the second corner
+                else{
+                    int this_cornpatch_gid = cornpatch_hash_array(hash_gid);
+                    
+                    // save the corn_gid to the cornpatch
+                    corner_in_cornpatch(this_cornpatch_gid, 1) = corn_gid;
+                    
+                    // save the reference direction for the corner
+                    corner_direction_in_cornpatch(this_cornpatch_gid, 1) = ref_dir;
+                    
+                    // save the cornpatch_gid to the corner
+                    cornpatches_in_corner(corn_gid, ref_dir) = this_cornpatch_gid;
+                } // end if
+                
+            } // end ref_dir
+            
+        }  // end for corn_lid
+    } // end for cell_gid
+    
+    
+    
+    
 } // end of build patches
 
 
