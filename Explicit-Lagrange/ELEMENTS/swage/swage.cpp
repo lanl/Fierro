@@ -399,6 +399,7 @@ void mesh_t::init_element(int e_order, int dim, int num_elem){
     
     num_elem_ = num_elem;
 
+    num_g_pts_1d_ = num_g_pts_1d;
     num_g_pts_in_elem_ = num_g_pts;
 
     num_mat_pts_in_elem_ = 1;
@@ -1006,7 +1007,24 @@ real_t mesh_t::patch_coords(int patch_id, int this_dim) const
 } // end of patch_coords
 
 
+    // ---- Surfaces ---- //
+int mesh_t::num_surfaces() const{
+    return num_surfaces_;
+};
 
+int mesh_t::num_surface_nodes() const{
+    return num_surface_nodes_;
+};
+
+int mesh_t::surface_nodes(int surfnode_gid) const{
+    return surf_node_list_(surfnode_gid);
+}
+
+    
+int mesh_t::surface_patches(int surfpatch_gid) const{
+    return surface_patch_list_(surfpatch_gid);
+}
+    
 // ---- BOUNDARY ---- //
 
 
@@ -1032,6 +1050,9 @@ void mesh_t::build_connectivity(){
 
     // -- ELEMENTS -- //
     build_element_connectivity();
+    
+    // -- surface nodes and patches -- //
+    build_surfaces();
 
 } // end of build connectivity
 
@@ -1101,6 +1122,7 @@ void mesh_t::build_node_cell_connectivity(){
             
         }  // end for this_point
     } // end for cell_gid
+    
 } // end of build_node_cell_connectivity
 
 
@@ -1733,8 +1755,20 @@ void mesh_t::build_patch_connectivity(){
     
     
     
+    /*
+    for (int patch_gid = 0; patch_gid<num_patches(); patch_gid++){
+        std::cout << "** patch_gid = " << patch_gid << std::endl;
+        for (int node_lid = 0; node_lid<4; node_lid++){
+            std::cout << "nodes in patch = " << node_in_patch(patch_gid, node_lid) << std::endl;
+        }
+        std::cout << " " << std::endl;
+    }*/
+    
+    
+    
     
 } // end of build patches
+
 
 
 void mesh_t::build_element_connectivity(){
@@ -2130,6 +2164,112 @@ int mesh_t::check_bdy(int patch_gid, int this_bc_tag, real_t val){
     return is_on_bdy;
     
 } // end method to check bdy
+
+    
+// this routine builds the surface nodes and the patches in the surface
+void mesh_t::build_surfaces(){
+    
+    // populate the element surface nodes data structures
+    CArray <int> saved_node_gid(num_nodes_);
+    for (int node_gid=0; node_gid<num_nodes_; node_gid++){
+        saved_node_gid(node_gid) = 0; // 0 = not saved
+    }
+    
+    
+    CArray <int> temp_surface_nodes(num_nodes_);
+    int surfnode_gid = 0;
+    
+    // note: num_g_pts_1d_ = number of nodes in a direction
+    for (int elem_gid=0; elem_gid<num_elem_; elem_gid++){
+        for (int k=0; k<num_g_pts_1d_; k++){
+            for (int j=0; j<num_g_pts_1d_; j++){
+                for (int i=0; i<num_g_pts_1d_; i++){
+            
+                    // node lid
+                    int node_lid = i + j*num_g_pts_1d_ + k*num_g_pts_1d_*num_g_pts_1d_;
+                    
+                    // check to see if the node is on the exterior or interior
+                    if (i>0 && i<num_g_pts_1d_-1 &&
+                        j>0 && j<num_g_pts_1d_-1 &&
+                        k>0 && k<num_g_pts_1d_-1){
+                        
+                        // this is an inside node to the element
+                    }
+                    else{
+                        
+                        // --- This is a surface node ---
+                        
+                        // get the global index for the node
+                        int node_gid = nodes_in_elem(elem_gid, node_lid);
+                        
+                        // check to see if this surface node was previously saved
+                        if (saved_node_gid(node_gid)==0){
+                            
+                            // save the node_gid
+                            temp_surface_nodes(surfnode_gid) = node_gid;
+                            
+                            // increment the number of surface nodes
+                            surfnode_gid++;
+                            
+                            // tag the node as being saved
+                            saved_node_gid(node_gid) = 1;
+                        } // end if
+                        
+                    } // end if inside or surface node
+                    
+                } // end for i
+            } // end for j
+        } // end for k
+    } // end for elem_gid
+    
+    // save the number of surface nodes
+    num_surface_nodes_ = surfnode_gid;
+    
+    // save the surfacepatches
+    auto surf_node_list_ = CArray <int> (num_surface_nodes_);
+    for (surfnode_gid =0; surfnode_gid < num_surface_nodes_; surfnode_gid++){
+        surf_node_list_(surfnode_gid) = temp_surface_nodes(surfnode_gid);
+    }
+
+    
+    // --- populate the patches in the surface ---
+
+    CArray <int> temp_surface_patches(num_patches_);
+    
+    num_surface_patches_ = 0;
+    for (int patch_gid=0; patch_gid<num_patches_; patch_gid++){
+        
+        int num_patchnodes_in_surface = 0;
+        for (int patchnode_lid=0; patchnode_lid < num_nodes_patch_; patchnode_lid++){
+            
+            // get the global id for a node in the patch
+            int node_gid = node_in_patch(patch_gid, patchnode_lid);
+            
+            // note: if saved_node_gid(node_gid) = 1, then that node is a surface node;
+            num_patchnodes_in_surface += saved_node_gid(node_gid);
+        } // end for over nodes in the patch
+        
+        // if all the nodes in this patch are on the surface, save it
+        if(num_patchnodes_in_surface == num_nodes_patch_){
+            
+            // it is on the surface of the element
+            temp_surface_patches(num_surface_patches_) = patch_gid;
+
+            num_surface_patches_++;
+        } // end if
+     
+    } // end for patch_gid
+    
+    
+    // save the surfacepatches
+    auto surface_patch_list_ = CArray <int> (num_surface_patches_);
+    
+    for (int surfpatch_gid=0; surfpatch_gid < num_surface_patches_; surfpatch_gid++){
+        surface_patch_list_(surfpatch_gid) = temp_surface_patches(surfpatch_gid);
+    }
+    
+    
+} // end build surfaces
 
 
 // deconstructor
@@ -2591,7 +2731,9 @@ void refine_mesh(
     }
 
     mesh.build_connectivity();
-}
+    
+} // end refine
+    
 
 
 

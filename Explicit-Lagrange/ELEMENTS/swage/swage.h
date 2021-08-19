@@ -160,6 +160,7 @@ private:
 
     // ---- GAUSS POINTS ---- //
     int   num_g_pts_;
+    int   num_g_pts_1d_;
 
     CArray <int> node_in_gauss_list_;
 
@@ -184,6 +185,14 @@ private:
     CArray <int> cornpatches_in_patch_list_;
     CArray <int> corner_direction_in_cornpatch_list_;
     
+    
+    // ---- SURFACES ---- //
+    int num_surfaces_;
+    int num_surface_nodes_;
+    int num_surface_patches_;
+    
+    CArray <int> surface_patch_list_;  
+    CArray <int> surf_node_list_;
 
 
     // ---- BOUNDARY ---- //
@@ -389,9 +398,20 @@ public:
     // returns the cornpatches in a patch
     int& cornpatches_in_patch(int patch_gid, int corner_lid);
     
-    int & corner_direction_in_cornpatch(int cornpatch_gid, int corner_lid);
+    int& corner_direction_in_cornpatch(int cornpatch_gid, int corner_lid);
 
-
+    
+    // ---- Surfaces---- //
+    int num_surfaces() const;
+    int num_surface_nodes() const;
+    
+    // the patches on an element surface
+    int surface_patches(int surfpatch_gid) const;
+    
+    // the element surface nodes in the mesh
+    int surface_nodes(int surfnode_gid) const;
+    
+    
 
     // ---- Boundary ---- //
 
@@ -472,6 +492,8 @@ public:
     void build_patch_connectivity();
 
     void build_element_connectivity();
+    
+    void build_surfaces();
 
     // identify the boundary patches
     void build_bdy_patches ();
