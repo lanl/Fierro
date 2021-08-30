@@ -195,45 +195,126 @@ void setup_sgh(char *MESH){
                         cell_state.mat_id(cell_gid) = mat_fill[f_id].mat_id;
 
 
-                        cell_state.total_energy(rk_stage, cell_gid) = mat_fill[f_id].ie; // + initialization of kinetic energy
-
-
+                        // --- Density and specific volume ---
                         cell_state.density(cell_gid) = mat_fill[f_id].r;
-
-
-
                         cell_state.mass(cell_gid) = cell_state.density(cell_gid)*mesh.cell_vol(cell_gid);
 
+                        // --- Internal energy ---
                         cell_state.ie(rk_stage, cell_gid) = mat_fill[f_id].ie;
+                        cell_state.total_energy(rk_stage, cell_gid) = mat_fill[f_id].ie; // + initialization of kinetic energy later
 
 
 
-
+                        // --- Pressure ---
                         cell_properties(cell_gid);
 
-
-
-                        // cell_state.pressure(cell_gid) = 0.25*( cos(2.0*PI*elem_coords_x) + cos(2.0*PI*elem_coords_y)) + 1.0;
-                        
-
-                        // cell_state.ie(rk_stage, cell_gid) = 
 
                         for (int node_lid = 0; node_lid < mesh.num_nodes_in_cell(); node_lid++){
                             
                             int node_gid = mesh.nodes_in_cell(cell_gid, node_lid);
 
-                            node.vel(rk_stage, node_gid, 0) = mat_fill[f_id].u; // = 0.0;
-                            node.vel(rk_stage, node_gid, 1) = mat_fill[f_id].v; //. 0.0;
-                            node.vel(rk_stage, node_gid, 2) = mat_fill[f_id].w; //. 0.0;
+                            //node.vel(rk_stage, node_gid, 0) = mat_fill[f_id].u; // = 0.0;
+                            //node.vel(rk_stage, node_gid, 1) = mat_fill[f_id].v; //. 0.0;
+                            //node.vel(rk_stage, node_gid, 2) = mat_fill[f_id].w; //. 0.0;
 
-                            // node.vel(rk_stage, node_gid, 0) = sin(PI * mesh.node_coords(node_gid, 0)) * cos(PI * mesh.node_coords(node_gid, 1));
-                            // node.vel(rk_stage, node_gid, 1) = -1.0*cos(PI * mesh.node_coords(node_gid, 0)) * sin(PI * mesh.node_coords(node_gid, 1));
-                            // node.vel(rk_stage, node_gid, 2) = 0.0;
+                            // --- Velocity ---
+                            switch(mat_fill[f_id].velocity)
+                            {
+                                case init_conds::cartesian:
+                                {
+                                
+                                    node.vel(rk_stage, node_gid, 0) = mat_fill[f_id].u;
+                                    node.vel(rk_stage, node_gid, 1) = mat_fill[f_id].v;
+                                    node.vel(rk_stage, node_gid, 2) = mat_fill[f_id].w;
+                                
+                                    break;
+                                }
+                                case init_conds::radial:
+                                {
+                                    // Setting up spherical
+                                    real_t dir[2] = {0.0, 0.0};
+                                    real_t radius_val = 0.0;
+                                
+                                    for(int dim=0; dim<2; dim++){
+                                        dir[dim] = mesh.node_coords(node_gid, dim);
+                                        radius_val += mesh.node_coords(node_gid, dim)*mesh.node_coords(node_gid, dim);
+                                    } // end for
+                                    radius_val = sqrt(radius_val);
+                                
+                                    for(int dim=0; dim<2; dim++){
+                                        if (radius_val > 1.0e-14){
+                                            dir[dim] /= (radius_val);
+                                        }
+                                        else{
+                                            dir[dim] = 0.0;
+                                        }
+                                    } // end for
+                                
+                                
+                                    node.vel(rk_stage, node_gid, 0) = mat_fill[f_id].speed*dir[0];
+                                    node.vel(rk_stage, node_gid, 1) = mat_fill[f_id].speed*dir[1];
+                                    node.vel(rk_stage, node_gid, 2) = 0.0;
+                                
+                                    break;
+                                }
+                                case init_conds::spherical:
+                                {
+                                    // Setting up spherical
+                                    real_t dir[3] = {0.0, 0.0, 0.0};
+                                    real_t radius_val = 0.0;
+                                
+                                    for(int dim=0; dim<3; dim++){
+                                        dir[dim] = mesh.node_coords(node_gid, dim);
+                                        radius_val += mesh.node_coords(node_gid, dim)*mesh.node_coords(node_gid, dim);
+                                    } // end for
+                                    radius_val = sqrt(radius_val);
+                                
+                                    for(int dim=0; dim<3; dim++){
+                                        if (radius_val > 1.0e-14){
+                                            dir[dim] /= (radius_val);
+                                        }
+                                        else{
+                                            dir[dim] = 0.0;
+                                        }
+                                    } // end for
+                                
+                                
+                                    node.vel(rk_stage, node_gid, 0) = mat_fill[f_id].speed*dir[0];
+                                    node.vel(rk_stage, node_gid, 1) = mat_fill[f_id].speed*dir[1];
+                                    node.vel(rk_stage, node_gid, 2) = mat_fill[f_id].speed*dir[2];
+                                
+                                    break;
+                                }
+                                case init_conds::radial_linear:
+                                {
+                                
+                                    break;
+                                }
+                                case init_conds::spherical_linear:
+                                {
+                                
+                                    break;
+                                }
+                                case init_conds::tg_vortex:
+                                {
+                                    // as a quick fix, pressure and internal energy are calculated using this case
+                                
+                                    node.vel(rk_stage, node_gid, 0) = sin(PI * mesh.node_coords(node_gid, 0)) * cos(PI * mesh.node_coords(node_gid, 1)); // = 0.0;
+                                    node.vel(rk_stage, node_gid, 1) =  -1.0*cos(PI * mesh.node_coords(node_gid, 0)) * sin(PI * mesh.node_coords(node_gid, 1)); //. 0.0;
+                                    node.vel(rk_stage, node_gid, 2) = 0.0; //. 0.0;
+                                
+                                    break;
+                                }
+                            } // end of switch
 
+
+                        } // end for loop over nodes in cell
+
+                        if(mat_fill[f_id].velocity == init_conds::tg_vortex)
+                        {
+                            cell_state.pressure(cell_gid) = 0.25*( cos(2.0*PI*elem_coords_x) + cos(2.0*PI*elem_coords_y) ) + 1.0;
                         }
-
-                        // loop over all points to find total kinetic energy 
-                        real_t ke = 0.0;
+                        
                         // for (int node_lid = 0; node_lid < mesh.num_nodes_in_cell(); node_lid++) {
                             
                         //     int node_gid = mesh.nodes_in_cell(cell_gid, node_lid);
