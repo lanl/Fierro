@@ -313,6 +313,9 @@ void setup_sgh(char *MESH){
                         if(mat_fill[f_id].velocity == init_conds::tg_vortex)
                         {
                             cell_state.pressure(cell_gid) = 0.25*( cos(2.0*PI*elem_coords_x) + cos(2.0*PI*elem_coords_y) ) + 1.0;
+                        
+                            // p = rho*ie*(gamma - 1)
+                            cell_state.ie(rk_stage, cell_gid) = cell_state.pressure(cell_gid)/(mat_fill[f_id].r*(material[f_id].g - 1.0));
                         }
                         
                         // for (int node_lid = 0; node_lid < mesh.num_nodes_in_cell(); node_lid++) {
