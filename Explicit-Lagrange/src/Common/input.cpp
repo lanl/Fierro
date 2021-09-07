@@ -126,7 +126,11 @@ void input(){
         // mat_fill[1].radius2 = 1.2/6.0;     // outer radius of fill region
 
         mat_fill[1].radius2 = 1.2/8.0;     // outer radius of fill region
-
+        
+        // for the p2 mesh
+        //mat_fill[1].radius2 = 0.0257128;     // outer radius of fill region
+        
+        
         //mat_fill[1].radius2 = 1.2/16.0;     // outer radius of fill region
 
         //mat_fill[1].radius2 = 1.2/32.0;     // outer radius of fill region
@@ -134,9 +138,10 @@ void input(){
         
         mat_fill[1].r = 1.0;                // initial density
 
-
+        // p2 mesh
+        mat_fill[1].ie = (963.652344*pow((1.2/30.0),3))/pow((mat_fill[1].radius2),3);
         // 8x8x8 cells
-        mat_fill[1].ie = (963.652344*pow((1.2/30.0),3))/pow((1.2/8.0),3);
+        //mat_fill[1].ie = (963.652344*pow((1.2/30.0),3))/pow((1.2/8.0),3);
 
         // // 16x16x16 cells
         //mat_fill[1].ie = (963.652344*pow((1.2/30.0),3))/pow((1.2/16.0),3);

@@ -1036,23 +1036,35 @@ int mesh_t::surface_patches(int surfpatch_gid) const{
 void mesh_t::build_connectivity(){
     
     // -- NODE TO CELL CONNECTIVITY -- //
-    build_node_cell_connectivity(); 
+    build_node_cell_connectivity();
+    
+    std::cout << "node_cell" << std::endl;
 
     // -- CORNER CONNECTIVITY -- //
     build_corner_connectivity();
     build_corner_guass_connectivity();
+    
+    std::cout << "corners" << std::endl;
 
     // -- CELL TO CELL CONNECTIVITY -- //
     build_cell_cell_connectivity(); 
 
+    std::cout << "cell_cell" << std::endl;
+    
     // -- patches -- //
-    build_patch_connectivity(); 
+    build_patch_connectivity();
+    
+    std::cout << "patch" << std::endl;
 
     // -- ELEMENTS -- //
     build_element_connectivity();
     
+    std::cout << "element" << std::endl;
+    
     // -- surface nodes and patches -- //
     build_surfaces();
+    
+    std::cout << "surface" << std::endl;
 
 } // end of build connectivity
 
@@ -1563,6 +1575,7 @@ void mesh_t::build_patch_connectivity(){
     // --- corner patch and cornpatch structures ----
     // ----------------------------------------------
     
+    
     // the paches conntected to a corner
     CArray <int> patches_in_corner(num_corners_,3);
     cornpatches_in_corner_list_ = CArray <int> (num_corners_*3);
@@ -1662,6 +1675,10 @@ void mesh_t::build_patch_connectivity(){
     } // end for cell_gid
     
     
+    /*
+    std::cout << "HERE 2" << std::endl;
+     
+    
     CArray <int> cornpatch_hash_key(num_corners_,3);
     CArray <int> cornpatch_hash_array(num_patches_*num_nodes_);
     
@@ -1675,18 +1692,31 @@ void mesh_t::build_patch_connectivity(){
             
             // i-dir patches, j-dir patches, k-dir patches
             for (int ref_dir = 0; ref_dir < 3; ref_dir++){
+                
                 int patch_gid = patches_in_corner(corn_gid, ref_dir);
+                
+                std::cout << "patch_gid = " << patch_gid << "  num patches = " << num_patches_ << std::endl;
+                std::cout << "node_gid = " << node_gid << std::endl;
                 
                 int hash_gid = patch_gid + node_gid*num_patches_; // not working :(
                 
+                std::cout << "node_gid*num_patches = " << node_gid*num_patches_ << std::endl;
+                std::cout << "patch_gid = " << patch_gid << std::endl;
+                std::cout << "hash_gid = " << hash_gid << std::endl;
+                
                 // save the hash key to the corner
                 cornpatch_hash_key(corn_gid, ref_dir) = hash_gid;
+                
+                
                 
                 cornpatch_hash_array(hash_gid) = -1;
             } // end for ref_dir
             
         } // end for corners in cell
     } // end for cells
+    
+    std::cout << "HERE 3" << std::endl;
+    
     
     int cornpatch_gid = 0;
     for (int cell_gid = 0; cell_gid < num_cells_; cell_gid++){
@@ -1753,7 +1783,8 @@ void mesh_t::build_patch_connectivity(){
         }  // end for corn_lid
     } // end for cell_gid
     
-    
+    std::cout << "HERE 4" << std::endl;
+    */
     
     /*
     for (int patch_gid = 0; patch_gid<num_patches(); patch_gid++){
@@ -2622,6 +2653,7 @@ void refine_mesh(
     // Initialize nodes on sub_mesh
     mesh.init_nodes(num_nodes);
 
+    
     //  ---------------------------------------------------------------------------
     //  Write position to nodes 
     //  ---------------------------------------------------------------------------
@@ -2647,6 +2679,7 @@ void refine_mesh(
     p0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = 0;
     
     int num_1d = num_g_pts_1d;
+    
 
     for(int elem_gid = 0; elem_gid < num_elem; elem_gid++){
         for(int k = 0; k < num_sub_1d; k++){
@@ -2731,6 +2764,8 @@ void refine_mesh(
     }
 
     mesh.build_connectivity();
+    
+    
     
 } // end refine
     

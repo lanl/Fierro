@@ -350,14 +350,17 @@ void setup_dgh(char *MESH){
                             
                                 mat_pt.pressure(gauss_gid) = 0.25*( cos(2.0*PI*mesh.node_coords(node_gid, 0)) + cos(2.0*PI*mesh.node_coords(node_gid, 1))) + 1.0;
                             
-                                mat_pt.specific_total_energy(rk_stage, gauss_gid) = (mat_pt.pressure(gauss_gid) / (mat_pt.density(gauss_gid)*((7.0/5.0) - 1.0)) );
+                                // save the internal energy contribution to the total energy
+                                mat_pt.ie(gauss_gid) = (mat_pt.pressure(gauss_gid) / (mat_pt.density(gauss_gid)*((7.0/5.0) - 1.0)) );
 
+                                mat_pt.specific_total_energy(rk_stage, gauss_gid) = mat_pt.ie(gauss_gid);
                                 break;
                             }
                         } // end of switch
 
                         
                         // --- total energy ---
+                        // add the ke contribution to te
                         real_t ke = 0.0;
                         for(int dim=0; dim<3; dim++){
                             ke += mat_pt.velocity(rk_stage, gauss_gid, dim)*mat_pt.velocity(rk_stage, gauss_gid, dim);
