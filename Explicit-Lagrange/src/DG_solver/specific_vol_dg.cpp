@@ -109,7 +109,7 @@ void specific_vol_dg(real_t rk_alpha){
 			}
 	    }
 
-		// update the total energy at the kinematic degrees of freedom
+		// update the spec vol at the kinematic degrees of freedom
 		for(int basis_id = 0; basis_id < elem.num_basis(); basis_id++){
 
 			int node_basis_id = elem.vert_node_map(basis_id);
@@ -134,7 +134,7 @@ void specific_vol_dg(real_t rk_alpha){
 
             real_t interp_spec_vol = 0.0;
 
-            // Sum over the basis times the velocity defined at the basis vertex position
+            // Sum over the basis times the spec vol defined at the basis vertex position
             for(int basis_id = 0; basis_id < elem.num_basis(); basis_id++){
 
                 int node_basis_id = elem.vert_node_map(basis_id);
@@ -144,7 +144,7 @@ void specific_vol_dg(real_t rk_alpha){
                 			   * ref_elem.ref_nodal_basis(gauss_lid, basis_id);
             }
 
-            // Save interpolated energy back to gauss point
+            // Save interpolated spec vol back to gauss point
             mat_pt.specific_volume(1, gauss_gid) = interp_spec_vol;
         } // end loop over gauss in element
 
