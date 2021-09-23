@@ -61,7 +61,7 @@ void input(){
 
     // ---- graphics information ---- //
     graphics_cyc_ival = 1000000;
-    graphics_dt_ival  = 0.05;    // every 0.1 time units
+    graphics_dt_ival  = 0.025;    // every 0.1 time units
 
 
 
@@ -130,6 +130,8 @@ void input(){
         // for the p2 mesh
         //mat_fill[1].radius2 = 0.0257128;     // outer radius of fill region
         
+        // for the p3 mesh
+        //mat_fill[1].radius2 = 0.012;     // outer radius of fill region
         
         //mat_fill[1].radius2 = 1.2/16.0;     // outer radius of fill region
 

@@ -126,7 +126,7 @@ void limit_vel(swage::mesh_t& mesh, elements::ref_element& ref_elem, std::string
         real_t alpha_ke;
         
         // limit velocity
-        int lim_approach = 1;  // 0 = vel, 1 = ke
+        int lim_approach = 0;  // 0 = vel, 1 = ke
         
         
         // limit based on the velocity
@@ -231,19 +231,20 @@ void limit_vel(swage::mesh_t& mesh, elements::ref_element& ref_elem, std::string
         // calculate shock detector
         real_t ssp = std::max(mat_pt.sspd(gauss_gid), 1.0E-14);
         real_t ratio = ssp/( fabs(char_length*mat_pt.div_vel(gauss_gid)) + 1.0E-16 );
-        ratio = std::min(1.0, ratio/200.0);
+        ratio = std::min(1.0, ratio/20.0);
         alpha_shock = std::min(alpha_shock, ratio);
         
         // expansion
-        //if (mat_pt.div_vel(gauss_gid) >= 0.0 && 2.0*char_length*mat_pt.div_vel(gauss_gid) <= ssp){
-        //    alpha_shock = 1.0;  // don't limit if in expansion and if the exapansion is less than the speed of sound
-        //}
+        if (mat_pt.div_vel(gauss_gid) >= 0.0){ // && 2.0*char_length*mat_pt.div_vel(gauss_gid) <= ssp){
+            alpha_shock = std::max(0.0, std::min( 1.0, 1.5-char_length*mat_pt.div_vel(gauss_gid)/ssp ));  // don't limit if in expansion and if the exapansion is less than the speed of sound
+        }
         
     } //end loop over gauss points in element to find elem_alpha
     
     // d. use shock detector
     //elem_alpha_vel = std::max(elem_alpha_vel, alpha_shock);
 
+    
     
     // verifying that the internal energy is positive
     for(int gauss_lid = 0; gauss_lid < mesh.num_gauss_in_elem(); gauss_lid++) {

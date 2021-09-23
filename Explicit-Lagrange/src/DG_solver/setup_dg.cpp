@@ -423,6 +423,9 @@ void setup_dgh(char *MESH){
     // Get the Riemann velocity, surface fluxes, and nodal velocities
     riemann();
 
+    // Get the velocity gradient tensor
+    gradvel_dg();
+    
     
     // for (rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
 

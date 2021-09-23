@@ -58,10 +58,6 @@ void dg_hydro(){
 
                 // ---- RK coefficient ---- //
                 real_t rk_alpha = 1.0/((real_t)rk_num_stages - (real_t)rk_stage);
-                
-                
-                // Get the velocity gradient tensor
-                gradvel_dg();
 
                 // Evolve the position using the Riemann velocity 
                 for (int node_gid = 0; node_gid < mesh.num_nodes(); node_gid++) {
@@ -77,6 +73,10 @@ void dg_hydro(){
                         mesh.node_coords(node_gid, dim) = node.coords(1, node_gid, dim);
                     }
                 } // end for loop over nodes
+                
+                
+                // add artificial visocisty to the stress tensor
+                //art_viscosity();
                 
                 
                 // selecting strong mass or evolve specific volume
@@ -162,7 +162,7 @@ void dg_hydro(){
                         
                         if (mat_pt.ie(gauss_gid) < 0.0) {
                             
-                            std::cout<<"ste = "<< mat_pt.specific_total_energy(1, gauss_gid) <<" , ke = "<<mat_pt.ke(gauss_gid)<<std::endl;
+                            std::cout<<"ste = "<< mat_pt.specific_total_energy(1, gauss_gid) << " , ke = " << mat_pt.ke(gauss_gid)<<std::endl;
                             std::cout<<"!!!WARNING: NEGATIVE INTERNAL ENERGY!!!:: gauss_gid = "<< gauss_gid<<std::endl;
                             elem_state.bad(elem_gid) = 1;
                             
@@ -184,9 +184,61 @@ void dg_hydro(){
                 // Get the Riemann velocity, surface fluxes, and nodal velocities
                 riemann();
 
-
+                // Get the velocity gradient tensor
+                gradvel_dg();
+                //gradvel_dg_direct();
+                
+                
+                
                 // Save quantities to the cells for visualization
                 for(int elem_gid = 0; elem_gid < mesh.num_elems(); elem_gid++){
+                    
+                    // ---- testing ----
+                    // testing corner normal summation over a cell
+                    //for(int cell_lid = 0; cell_lid < mesh.num_cells_in_elem(); cell_lid++){
+                    //
+                    //    real_t sum_corn_normals = 0;
+                    //
+                    //    int cell_gid = mesh.cells_in_elem(elem_gid, cell_lid);
+                    //
+                    //    for(int corner_lid = 0; corner_lid < mesh.num_nodes_in_cell(); corner_lid++){
+                    //
+                    //        int corner_gid = mesh.corners_in_cell(cell_gid, corner_lid);  // node_lid = corner_lid
+                    //
+                    //        for(int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
+                    //            sum_corn_normals += corner.normal(corner_gid, dim_i);
+                    //        }
+                    //
+                    //    } // end for the corn_lid in this cell
+                    //
+                    //    if (fabs(sum_corn_normals)> 1e-12){
+                    //        std::cout << " error in the sum of corner_normals in a cell = " << sum_corn_normals << std::endl;
+                    //    }// end if
+                    //
+                    //} // end for cell_lid
+                    // end of corner normal test in a cell
+                    
+                    // testing corner normal summation over an element
+                    //real_t sum_corn_normals_elem = 0;
+                    //for(int cell_lid = 0; cell_lid < mesh.num_cells_in_elem(); cell_lid++){
+                    //
+                    //    int cell_gid = mesh.cells_in_elem(elem_gid, cell_lid);
+                    //
+                    //    for(int corner_lid = 0; corner_lid < mesh.num_nodes_in_cell(); corner_lid++){
+                    //
+                    //        int corner_gid = mesh.corners_in_cell(cell_gid, corner_lid);  // node_lid = corner_lid
+                    //
+                    //        for(int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
+                    //            sum_corn_normals_elem += corner.normal(corner_gid, dim_i);
+                    //        }
+                    //
+                    //    } // end for the corn_lid in this cell
+                    //
+                    //} // end for cell_lid in element
+                    //if (fabs(sum_corn_normals_elem)> 1e-12){
+                    //    std::cout << " error in the sum of corner_normals in an element = " << sum_corn_normals_elem << std::endl;
+                    //}// end if
+                    // end of corner normal test in an element
                     
                     
                     // Save variables to the cells for visualization

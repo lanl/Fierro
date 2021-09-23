@@ -522,8 +522,8 @@ void gradvel_dg(){
 } // end of grad_vel_dg routine
 
 
-/*
-void gradvel_dg_internal(){
+// calculate the velocity gradient directly, no L2 projection
+void gradvel_dg_direct(){
     
     for(int elem_gid = 0; elem_gid < mesh.num_elems(); elem_gid++){
         
@@ -556,7 +556,7 @@ void gradvel_dg_internal(){
                         int node_gid = mesh.nodes_in_elem(elem_gid, node_basis_lid);
                         
                         mat_pt.grad_vel(gauss_gid, dim_i, dim_j) += ref_elem.ref_nodal_gradient(gauss_lid, basis_id, dim_i)
-                        * node.vel(1, node_gid, dim_j);
+                                * node.vel(1, node_gid, dim_j);
                         
                     } // end loop over basis
                     
@@ -580,63 +580,78 @@ void gradvel_dg_internal(){
     } // end of loop over elements
     
 } // end of grad_vel_dg routine
-*/
 
 
-/*
+
+void art_viscosity(){
+
+    for (int elem_gid = 0; elem_gid < mesh.num_elems(); elem_gid++){
+         for (int gauss_lid = 0; gauss_lid < mesh.num_gauss_in_elem(); gauss_lid++){
+             
+             int gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_lid);
+         
+             // Calculate the q artifical viscosity q = \mu \l^{hat} div(velocity)
+             
+             real_t sspd = fmax(mat_pt.sspd(gauss_gid), 1.0e-3);
+             //real_t char_length = pow(mesh.elem_vol(elem_gid)/mesh.num_cells_in_elem(), 0.333333);
+             real_t char_length = pow(mesh.elem_vol(elem_gid), 0.333333);
+             
+             // Calculate the symmetric part of the velocity gradient
+             auto sym_Velgrad = CArray <real_t> (mesh.num_dim(), mesh.num_dim());
+             
+             for (int dim_i = 0; dim_i < mesh.num_dim(); dim_i++){
+                 for (int dim_j = 0; dim_j < mesh.num_dim(); dim_j++){
+                     
+                     sym_Velgrad(dim_i, dim_j) =  mat_pt.grad_vel(gauss_gid, dim_i, dim_j); //0.5*(mat_pt.grad_vel(gauss_gid, dim_i, dim_j) + mat_pt.grad_vel(gauss_gid, dim_j, dim_i));
+                     
+                 } // end loop over dim_j
+             } // end loop over dim_i
+             
+             
+             auto Q_visc = CArray <real_t> (mesh.num_dim(), mesh.num_dim());
+             
+             for (int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
+                 for (int dim_j = 0; dim_j < mesh.num_dim(); dim_j++) {
+                     Q_visc(dim_i, dim_j) = 0.0;
+                 }
+             }
+             
+             real_t QC1 = 0.333;
+             real_t QC2 = 1.333;
+             real_t QC3 = 0.0;
+             
+             real_t shock_impeadance = mat_pt.density(gauss_gid) *
+                                        (QC1*sspd +
+                                         QC2*char_length*fabs(mat_pt.div_vel(gauss_gid)) +
+                                         QC3*pow(char_length*mat_pt.div_vel(gauss_gid),2.0));
+             //shock_impeadance = 5.0;
+             
+             for (int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
+                 for (int dim_j = 0; dim_j < mesh.num_dim(); dim_j++) {
+                     Q_visc(dim_i, dim_j) =
+                         (-shock_impeadance) * char_length * sym_Velgrad(dim_i, dim_j);
+                 }
+             }
+             
+             mat_pt.q_visc(gauss_gid) = 0.0;
+             for (int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
+                 mat_pt.q_visc(gauss_gid) -= Q_visc(dim_i, dim_i);
+             }
+             
+             
+            // if ( fabs(sym_Velgrad(0, 0)) > 0.0001) std::cout << sym_Velgrad(0, 0) << " ratio = " << mat_pt.q_visc(gauss_gid)/mat_pt.pressure(gauss_gid) << std::endl;
+             
+             for (int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
+                 for (int dim_j = 0; dim_j < mesh.num_dim(); dim_j++) {
+                     //corner.stress(corner_gid, dim_i, dim_j) -= Q_visc(dim_i, dim_j); //cell_state.stress(1, cell_gid, dim_i, dim_j);
+                     mat_pt.stress(gauss_gid, dim_i, dim_j) -= Q_visc(dim_i, dim_j);
+                 }
+             }
  
- // Calculate the q artifical viscousity q = \mu \l^{hat} div(velocity)
- 
- real_t sspd = fmax(mat_pt.sspd(gauss_gid), 1.0e-3);
- real_t char_length = pow(mesh.elem_vol(elem_gid)/mesh.num_cells_in_elem(), 0.333333);
- 
- // Calculate the symmetric part of the velocity gradient
- auto sym_Velgrad = CArray <real_t> (mesh.num_dim(), mesh.num_dim());
- 
- for (int dim_i = 0; dim_i < mesh.num_dim(); dim_i++){
- for (int dim_j = 0; dim_j < mesh.num_dim(); dim_j++){
- 
- sym_Velgrad(dim_i, dim_j) = 0.5*(mat_pt.grad_vel(gauss_gid, dim_i, dim_j) + mat_pt.grad_vel(gauss_gid, dim_j, dim_i));
- 
- } // end loop over dim_j
- } // end loop over dim_i
- 
- 
- auto Q_visc = CArray <real_t> (mesh.num_dim(), mesh.num_dim());
- 
- for(int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
- for(int dim_j = 0; dim_j < mesh.num_dim(); dim_j++) {
- Q_visc(dim_i, dim_j) = 0.0;
- }
- }
- 
- 
- 
- for(int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
- for(int dim_j = 0; dim_j < mesh.num_dim(); dim_j++) {
- Q_visc(dim_i, dim_j) = -1.0
- * mat_pt.density(gauss_gid) * (C1*sspd + fabs(C2*char_length*mat_pt.div_vel(gauss_gid)))// \mu
- * (char_length) // l^{hat}
- * sym_Velgrad(dim_i, dim_j);  // or use the full velocity gradient
- 
- }
- }
- 
- mat_pt.q_visc(gauss_gid) = 0.0;
- for(int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
- mat_pt.q_visc(gauss_gid) += Q_visc(dim_i, dim_i);
- }
- 
- 
- for(int dim_i = 0; dim_i < mesh.num_dim(); dim_i++) {
- for(int dim_j = 0; dim_j < mesh.num_dim(); dim_j++) {
- corner.stress(corner_gid, dim_i, dim_j) -= Q_visc(dim_i, dim_j); //cell_state.stress(1, cell_gid, dim_i, dim_j);
- mat_pt.stress(gauss_gid, dim_i, dim_j) -= Q_visc(dim_i, dim_j);
- }
- }
- 
+         } // end of loop over guass points
+    } // end of loop over elements
 
  
- */
+}// end of rountine
 
 

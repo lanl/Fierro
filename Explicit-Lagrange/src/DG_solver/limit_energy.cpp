@@ -99,13 +99,13 @@ void limit_energy(swage::mesh_t& mesh, elements::ref_element& ref_elem, std::str
         // calculate shock detector
         real_t ssp = std::max(mat_pt.sspd(gauss_gid), 1.0E-14);
         ratio = ssp/( fabs(char_length*mat_pt.div_vel(gauss_gid)) + 1.0E-16 );
-        ratio = std::min(1.0, ratio/200.0);
+        ratio = std::min(1.0, ratio/20.0);
         alpha_shock = std::min(alpha_shock, ratio);
         
         // expansion
-        //if (mat_pt.div_vel(gauss_gid) >= 0.0 && 2.0*char_length*mat_pt.div_vel(gauss_gid) <= ssp){
-        //    alpha_shock = 1.0;  // don't limit if in expansion and if the exapansion is less than the speed of sound
-        //}
+        if (mat_pt.div_vel(gauss_gid) >= 0.0){ // && 2.0*char_length*mat_pt.div_vel(gauss_gid) <= ssp){
+            alpha_shock = std::max(0.0, std::min( 1.0, 1.5-char_length*mat_pt.div_vel(gauss_gid)/ssp ));  // don't limit if in expansion and if the exapansion is less than the speed of sound
+        }
 
     } //end finding alpha for limiting
 

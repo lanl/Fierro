@@ -1110,6 +1110,8 @@ void setup_dgh(char *MESH);
 void strong_mass_dg();
 void specific_vol_dg(real_t rk_alpha);
 void gradvel_dg();
+void gradvel_dg_direct();
+void art_viscosity();
 void momentum_dg(real_t rk_alpha,  int cycle);
 void energy_dg(real_t rk_alpha, int cycle);
 void limit_density(swage::mesh_t& mesh, elements::ref_element& ref_elem, std::string type, int elem_id );
