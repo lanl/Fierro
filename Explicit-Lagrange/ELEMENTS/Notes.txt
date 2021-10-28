@@ -1,9 +1,0 @@
-# NOTES:
-# Add test directory to elements and to swage that has a main file.  Also, add test to MATAR at the matar level.
-# Add testing to each level of the directory. 
-# 
-# 
-# 
-# 
-# 
-# 

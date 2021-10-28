@@ -1,1 +1,0 @@
-add_library(slam slam.cpp)
