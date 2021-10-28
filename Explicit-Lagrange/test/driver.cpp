@@ -117,6 +117,16 @@ real_t ke;
 // Main function for the testing program
 int main(int argc, char *argv[]){
 
+    // check to see of a mesh was supplied when running the code
+    if (argc == 1) {
+        std::cout << "\n\n**********************************\n\n";
+        std::cout << " ERROR:\n";
+        std::cout << " Please supply a mesh \n";
+        std::cout << "   ./fierro my_mesh.geo \n\n";
+        std::cout << "**********************************\n\n" << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+    
     std::cout<<"MAIN START"<<std::endl;
 
     // Initialize RK stage
