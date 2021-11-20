@@ -1,0 +1,1 @@
+make -j4 install amesos2 rol
