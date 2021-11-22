@@ -8,11 +8,11 @@ enable_language(Fortran)
 # Disable Kokkos warning about not supporting C++ extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(MPI REQUIRED CXX Fortran)
+#find_package(MPI REQUIRED CXX)
 #find_library(GFORTRAN_LIBRARY libgfortran.a)
-SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
+SET(CMAKE_PREFIX_PATH ./Trilinos/build ${CMAKE_PREFIX_PATH})
 #SET(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
-FIND_PACKAGE(Trilinos REQUIRED)
+FIND_PACKAGE(Trilinos REQUIRED COMPONENTS Teuchos Tpetra Rol)
 
 # Make sure to use same compilers and flags as Trilinos
 SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
@@ -41,8 +41,8 @@ MESSAGE("   Trilinos_BUILD_SHARED_LIBS = ${Trilinos_BUILD_SHARED_LIBS}")
 MESSAGE("End of Trilinos details\n")
 
 include_directories(Elements/matar/src)
-include_directories(Include)
-include_directories(Elements)
+#include_directories(Include)
+include_directories(Elements/elements)
 
 INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})

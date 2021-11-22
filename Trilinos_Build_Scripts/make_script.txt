@@ -1,1 +1,1 @@
-make -j4 install amesos2 rol
+make -j4 install amesos2 belos rol zoltan2 muelu ifpack2
