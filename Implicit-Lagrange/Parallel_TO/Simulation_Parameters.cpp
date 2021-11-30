@@ -1,7 +1,5 @@
 #include "utilities.h"
 #include "Simulation_Parameters.h"
-#include "state.h"
-#include "header.h"
 #include "elements.h"
 #include "swage.h"
 

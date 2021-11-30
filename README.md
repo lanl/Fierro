@@ -30,6 +30,13 @@ make -j
 ```
 The fierro executable will be in the bin/test folder.
 
+## Trilinos Dependencies to Install
+OpenMPI
+g++
+gfortran
+BLAS
+LAPACK
+
 ## Running the code
 To run the fierro exectuable (see subsection above here to make the executable) go to bin/test and type
 ```

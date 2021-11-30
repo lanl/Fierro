@@ -4,9 +4,6 @@
 #include <sys/stat.h>
 #include <mpi.h>
 #include "Solver.h"
-#include "Pseudo_Laplacian.h"
-#include "Static_Solver.h"
-#include "Static_Solver_Parallel.h"
 #include "Parallel_Nonlinear_Solver.h"
 
 void solver_setup(int argc, char *argv[]);

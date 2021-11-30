@@ -5,11 +5,11 @@ set(Solver_SRC_CXX main.cpp Solver.cpp)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(MPI REQUIRED CXX Fortran)
+#find_package(MPI REQUIRED CXX Fortran)
 #find_library(GFORTRAN_LIBRARY libgfortran.a)
-SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
+#SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
 #SET(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
-FIND_PACKAGE(Trilinos REQUIRED)
+#FIND_PACKAGE(Trilinos REQUIRED)
 
 # Make sure to use same compilers and flags as Trilinos
 SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
@@ -44,9 +44,9 @@ LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 add_executable(main ${Solver_SRC_CXX} ${Solver_SRC_H} ${Class_SRC} ${Laplace_SRC} ${Static_SRC} ${Static_Parallel_SRC} ${Parallel_Nonlinear_SRC})
 
-target_link_libraries (main swage)
-target_link_libraries (main elements)
-target_link_libraries (main matar)
+target_link_libraries (main ${CMAKE_SOURCE_DIR}/Elements/build/swage/libswage.a)
+target_link_libraries (main ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
+target_link_libraries (main ${CMAKE_SOURCE_DIR}/Elements/build/matar/src/libmatar.a)
 target_include_directories(main PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH})
 target_compile_options (main PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
 target_link_libraries (main ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})

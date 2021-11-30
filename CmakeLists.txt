@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 #find_package(MPI REQUIRED CXX)
 #find_library(GFORTRAN_LIBRARY libgfortran.a)
-SET(CMAKE_PREFIX_PATH ./Trilinos/build ${CMAKE_PREFIX_PATH})
+SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
 #SET(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
 FIND_PACKAGE(Trilinos REQUIRED COMPONENTS Teuchos Tpetra Rol)
 
@@ -43,12 +43,13 @@ MESSAGE("End of Trilinos details\n")
 include_directories(Elements/matar/src)
 #include_directories(Include)
 include_directories(Elements/elements)
+include_directories(Elements/swage)
 
 INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
-add_subdirectory(Implicit_Lagrange)
-add_subdirectory(Explicit_Lagrange)
-add_subdirectory(Elements)
+add_subdirectory(Implicit-Lagrange)
+#add_subdirectory(Explicit-Lagrange)
+#add_subdirectory(Elements)
 
 add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)
