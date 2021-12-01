@@ -73,8 +73,6 @@ num_cells in element = (p_order*2)^3
 #include "swage.h"
 #include "matar.h"
 #include "utilities.h"
-#include "header.h"
-#include "state.h"
 #include "node_combination.h"
 #include "Simulation_Parameters.h"
 #include "Amesos2_Version.hpp"
@@ -148,8 +146,8 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
-  init_mesh = new swage::mesh_t(simparam);
-  mesh = new swage::mesh_t(simparam);
+  //init_mesh = new swage::mesh_t(simparam);
+  //mesh = new swage::mesh_t(simparam);
 
   element_select = new elements::element_selector();
   num_nodes = 0;
@@ -1357,8 +1355,8 @@ void Parallel_Nonlinear_Solver::init_maps(){
   ghost_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),ghost_nodes.get_kokkos_view(),0,comm));
     
   // Create reference element
-  ref_elem->init(p_order, num_dim, elem->num_basis());
-  std::cout<<"done with ref elem"<<std::endl;
+  //ref_elem->init(p_order, num_dim, elem->num_basis());
+  //std::cout<<"done with ref elem"<<std::endl;
 
   //communicate ghost node positions; construct multivector distributed object using local node data
 
@@ -2553,7 +2551,7 @@ void Parallel_Nonlinear_Solver::tecplot_writer(){
 /* ----------------------------------------------------------------------
    Output Model Information in vtk format
 ------------------------------------------------------------------------- */
-
+/*
 void Parallel_Nonlinear_Solver::vtk_writer(){
     //local variable for host view in the dual view
     host_vec_array node_coords = dual_node_coords.view_host();
@@ -2757,11 +2755,11 @@ void Parallel_Nonlinear_Solver::vtk_writer(){
 
     fclose(out[0]);
 } // end vtk_writer
-
+*/
 /* ----------------------------------------------------------------------
    Output Model Information in ensight format
 ------------------------------------------------------------------------- */
-
+/*
 void Parallel_Nonlinear_Solver::ensight_writer(){
     //local variable for host view in the dual view
     host_vec_array node_coords = dual_node_coords.view_host();
@@ -3060,11 +3058,11 @@ void Parallel_Nonlinear_Solver::ensight_writer(){
     // increment graphics id counter
     graphics_id++;
 } // end ensight
+*/
 
 /* ----------------------------------------------------------------------
    Initialize global vectors and array maps needed for matrix assembly
 ------------------------------------------------------------------------- */
-
 void Parallel_Nonlinear_Solver::init_assembly(){
   int num_dim = simparam->num_dim;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);

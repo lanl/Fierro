@@ -14,16 +14,6 @@ class Simulation_Parameters
   //   Mesh Variables
   //==============================================================================
 
-  // --- Mesh state declarations ---
-  class node_t          *node;
-  class mat_pt_t        *mat_pt;
-
-
-  class material_t  *material;
-  class mat_fill_t  *mat_fill;
-  class boundary_t  *boundary;
-
-
   // --- Mesh regions and material fills ---
   int NR; // number of Regions
   int NC; // number of contours

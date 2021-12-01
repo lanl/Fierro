@@ -125,9 +125,9 @@ public:
   //finds the boundary element surfaces in this model
   void Get_Boundary_Patches();
 
-  void vtk_writer();
+  //void vtk_writer();
 
-  void ensight_writer();
+  //void ensight_writer();
 
   void tecplot_writer();
 

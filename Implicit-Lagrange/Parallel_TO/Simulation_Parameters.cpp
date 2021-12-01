@@ -6,9 +6,6 @@
 using namespace utils;
 
 Simulation_Parameters::Simulation_Parameters(){
-  node = new node_t();
-  mat_pt = new mat_pt_t();
-  material = new material_t();
 
   //initialize data and flags to defaults
   output_strain_flag = 0;
@@ -24,9 +21,6 @@ Simulation_Parameters::Simulation_Parameters(){
 }
 
 Simulation_Parameters::~Simulation_Parameters(){
-  delete node;
-  delete mat_pt;
-  delete material;
 }
 
 void Simulation_Parameters::input(){
@@ -65,8 +59,6 @@ void Simulation_Parameters::input(){
   // ---- fill instructions and intial conditions ---- //
 
   NF = 2; // number of fills
-    
-  mat_fill = (mat_fill_t *) malloc((size_t)(NF*sizeof(mat_fill_t)));
   
   //Static isotropic parameters to move into a child class later
   Elastic_Modulus = 10000;
@@ -89,43 +81,11 @@ void Simulation_Parameters::input(){
   penalty_power = 6;
   maximum_strain = 0.02;
   maximum_strain_energy = 1000;
-    
-  // Global instructions
-  mat_fill[0].volume = region::global;    // fill everywhere
-  mat_fill[0].mat_id = 0;                 // material id
-  mat_fill[0].field1 = 1.0;               // some field
-  mat_fill[0].field2 = 0.0;               // some other field
-
-    
-  // Specific instructions
-  mat_fill[1].volume = region::box;   // fill a sphere
-  mat_fill[1].mat_id = 1;             // material id
-  mat_fill[1].x1 = 0.0;
-  mat_fill[1].x2 = 0.7;
-  mat_fill[1].y1 = 0.0;
-  mat_fill[1].y2 = 2.0;
-  mat_fill[1].z1 = 0.0;
-  mat_fill[1].z2 = 2.0;
-  mat_fill[1].field1 = 10.0;  // some field
-  mat_fill[1].field2 = 0.0;   // some other field
 
   // ---- boundary conditions ---- //
   NB = 5; // number of boundaries
   NBSF = 4; //number of surface density force conditions
   NBD = 1; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
            //note this only implies a fixed displacement on the surface if no other basis functions have support on the surface
-    
-  // allocate boundary memory
-  boundary = (boundary_t *) malloc((size_t)(NB*sizeof(boundary_t)));
-    
-  // Tag X=0 plane
-  boundary[0].surface = bdy::x_plane; // planes, cylinder, spheres, or a files
-  boundary[0].value = 0.0;
-  boundary[0].thermal_bc = bdy::isothermal;
-    
-  // Tag X=2 plane
-  boundary[1].surface = bdy::x_plane; // planes, cylinder, spheres, or a files
-  boundary[1].value = 2.0;
-  boundary[1].thermal_bc = bdy::isothermal;
 
 }
