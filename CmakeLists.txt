@@ -46,6 +46,13 @@ include_directories(Elements/elements)
 include_directories(Elements/swage)
 include_directories(Elements/common)
 
+if(BUILD_ELEMENTS)
+add_subdirectory(Elements/elements)
+add_subdirectory(Elements/swage)
+add_subdirectory(Elements/common)
+add_subdirectory(Elements/matar/src)
+endif()
+
 INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 

@@ -6242,13 +6242,6 @@ int Parallel_Nonlinear_Solver::solve(){
   //assumes ROL::Ptr<T> was compiled as Teuchos::RCP<T>
   ROL::Ptr<ROL::Vector<real_t> > x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(node_coords_distributed);
   
-  // Before we do anything, check that KLU2 is enabled
-  if( !Amesos2::query("SuperLUDist") ){
-    std::cerr << "SuperLUDist not enabled in this run.  Exiting..." << std::endl;
-    return EXIT_SUCCESS;        // Otherwise CTest will pick it up as
-                                // failure, which it isn't really
-  }
-  
   std::ostream &out = std::cout;
   Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
 
@@ -6572,6 +6565,12 @@ int Parallel_Nonlinear_Solver::solve(){
   // Create solver interface to KLU2 with Amesos2 factory method
   //std::cout << "Creating solver" << std::endl <<std::flush;
   if(simparam->direct_solver_flag){
+    // Before we do anything, check that KLU2 is enabled
+    if( !Amesos2::query("SuperLUDist") ){
+      std::cerr << "SuperLUDist not enabled in this run.  Exiting..." << std::endl;
+      return EXIT_SUCCESS;        // Otherwise CTest will pick it up as
+                                  // failure, which it isn't really
+    }
     Teuchos::RCP<Amesos2::Solver<MAT,MV>> solver = Amesos2::create<MAT,MV>("SuperLUDist", balanced_A, X, balanced_B);
     //Teuchos::RCP<Amesos2::Solver<MAT,MV>> solver = Amesos2::create<MAT,MV>("SuperLUDist", balanced_A, X, balanced_B);
     //Teuchos::RCP<Amesos2::Solver<MAT,MV>> solver = Amesos2::create<MAT,MV>("KLU2", balanced_A, X, balanced_B);
