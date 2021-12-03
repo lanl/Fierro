@@ -346,7 +346,7 @@
     <Parameter name="Gradient Tolerance"      type="double" value="1.e-5"   />
     <Parameter name="Constraint Tolerance"    type="double" value="1.e-5"   />
     <Parameter name="Step Tolerance"          type="double" value="1.e-8"  />
-    <Parameter name="Iteration Limit"         type="int"    value="100"     />
+    <Parameter name="Iteration Limit"         type="int"    value="2"     />
     <Parameter name="Use Relative Tolerances" type="bool"   value="true"    />
   </ParameterList>
 </ParameterList>

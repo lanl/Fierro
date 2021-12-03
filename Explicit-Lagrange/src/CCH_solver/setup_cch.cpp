@@ -19,6 +19,11 @@ using namespace utils;
 //------------------------------------------------------------------------------
 void setup_cch(char *MESH){
 
+    //elements::HexN      elem;
+
+    // Reference element
+    //elements::ref_element  ref_elem;
+
     std::cout << "Setting up CCH P0 Solver" << std::endl;
 
     read_mesh_ensight(MESH);
