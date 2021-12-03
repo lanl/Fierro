@@ -7,6 +7,7 @@
 
 #include "utilities.h"
 #include "state.h"
+#include "elements.h"
 #include "geometry.h"
 #include "variables.h"
 

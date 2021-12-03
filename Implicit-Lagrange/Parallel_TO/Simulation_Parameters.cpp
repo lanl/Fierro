@@ -13,7 +13,7 @@ Simulation_Parameters::Simulation_Parameters(){
   nodal_density_flag = 1;
   unit_scaling = 1;
   strain_max_flag = 0;
-  optimization_output_freq = 20;
+  optimization_output_freq = 100;
   direct_solver_flag = false;
   penalty_power = 3;
   restart_file = false;
