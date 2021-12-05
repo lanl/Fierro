@@ -278,7 +278,8 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     // Data writers
     tecplot_writer();
     // vtk_writer();
-    
+    if(myrank==0)
+    std::cout << "Total number of solves and assembly " << update_count <<std::endl;
     std::cout << "End of Main file" << std::endl;
 }
 
