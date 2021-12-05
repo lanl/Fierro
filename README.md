@@ -20,7 +20,7 @@ The user should create a new directory where the compiled code will reside.
 ```
 mkdir bin
 ```
-Next, go to the folder and type
+Next, go to the folder and, for a default build, type
 ```
 cmake ..
 ```
@@ -29,6 +29,21 @@ To compile the code type
 make -j
 ```
 The fierro executable will be in the bin/test folder.
+```
+The following are the possible cmake build variables with their default values shown
+```
+BUILD_ELEMENTS=ON (Tells cmake whether to build the Elements libraries. Otherwise the user must compile them in Elements/build as instructed by the Elements readme)
+```
+BUILD_EXPLICIT_SOLVER=ON (Tells cmake whether to build the explicit solver components of Fierro)
+```
+BUILD_IMPLICIT_SOLVER=OFF (Tells cmake whether to build the implicit solver components of Fierro. This requires the user to build Trilinos in the folder Fierro/Trilinos/build)
+
+## Trilinos Dependencies to Install
+OpenMPI
+g++
+gfortran
+BLAS
+LAPACK
 
 ## Running the code
 To run the fierro exectuable (see subsection above here to make the executable) go to bin/test and type

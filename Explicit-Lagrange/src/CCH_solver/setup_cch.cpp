@@ -7,6 +7,7 @@
 
 #include "utilities.h"
 #include "state.h"
+#include "elements.h"
 #include "geometry.h"
 #include "variables.h"
 
@@ -17,6 +18,11 @@ using namespace utils;
 // This function reads the mesh and sets up the simulation
 //------------------------------------------------------------------------------
 void setup_cch(char *MESH){
+
+    //elements::HexN      elem;
+
+    // Reference element
+    //elements::ref_element  ref_elem;
 
     std::cout << "Setting up CCH P0 Solver" << std::endl;
 

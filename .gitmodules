@@ -1,3 +1,4 @@
-[submodule "Explicit-Lagrange/ELEMENTS"]
-	path = Explicit-Lagrange/ELEMENTS
+[submodule "Elements"]
+	path = Elements
 	url = https://github.com/lanl/ELEMENTS.git
+	branch = main

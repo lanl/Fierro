@@ -37,10 +37,10 @@ boundary_t   * boundary;
 
 
 // Reference element
-elements::ref_element  ref_elem;
+//elements::ref_element  ref_elem;
 
 // Everything is HexN for now
-elements::HexN      elem;
+//elements::HexN      elem;
 
 
 // --- Mesh regions and material fills ---

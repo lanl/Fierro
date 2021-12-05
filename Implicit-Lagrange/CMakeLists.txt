@@ -1,0 +1,48 @@
+set(Solver_SRC_H Parallel_TO/utilities.h)
+set(Class_SRC Solver.h Parallel_TO/Simulation_Parameters.h Parallel_TO/Simulation_Parameters.cpp Parallel_TO/node_combination.h Parallel_TO/node_combination.cpp)
+set(Parallel_Nonlinear_SRC Parallel_TO/Parallel_Nonlinear_Solver.h Parallel_TO/Parallel_Nonlinear_Solver.cpp)
+set(Solver_SRC_CXX main.cpp Solver.cpp)
+
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+#find_package(MPI REQUIRED CXX Fortran)
+#find_library(GFORTRAN_LIBRARY libgfortran.a)
+#SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
+#SET(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
+#FIND_PACKAGE(Trilinos REQUIRED)
+
+# Make sure to use same compilers and flags as Trilinos
+SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
+SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
+SET(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
+#SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90.exe)
+#SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90)
+
+set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
+set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
+set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
+
+include_directories(Parallel_TO)
+
+INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
+LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
+
+add_executable(main ${Solver_SRC_CXX} ${Solver_SRC_H} ${Class_SRC} ${Laplace_SRC} ${Static_SRC} ${Static_Parallel_SRC} ${Parallel_Nonlinear_SRC})
+if(BUILD_ELEMENTS)
+target_link_libraries (main swage)
+target_link_libraries (main elements)
+target_link_libraries (main matar)
+else()
+target_link_libraries (main ${CMAKE_SOURCE_DIR}/Elements/build/swage/libswage.a)
+target_link_libraries (main ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
+target_link_libraries (main ${CMAKE_SOURCE_DIR}/Elements/build/matar/src/libmatar.a)
+endif()
+target_include_directories(main PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH})
+target_compile_options (main PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
+target_link_libraries (main ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
+#target_link_libraries(main /usr/lib/gcc/x86_64-linux-gnu/9/libgfortran.a)
+target_link_libraries(main /mnt/c/Scalapack/scalapack/build/libscalapack.a)
+target_link_libraries(main /mnt/c/Scalapack/scalapack/build/libblacs.a)
+#set_property(TARGET main PROPERTY LINKER_LANGUAGE Fortran)
+
+add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)

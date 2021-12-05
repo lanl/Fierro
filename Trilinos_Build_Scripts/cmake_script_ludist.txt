@@ -1,0 +1,15 @@
+#Put this script in the build directory of the superlu library clone; try "dos2unix cmake_script_ludist" if weird stuff happens.
+export COMBBLAS_ROOT=/mnt/c/CombBLAS
+export COMBBLAS_BUILD_DIR=${COMBBLAS_ROOT}/_build
+export PARMETIS_ROOT=/mnt/c/ParMETIS
+export PARMETIS_BUILD_DIR=${PARMETIS_ROOT}/build/Linux-x86_64
+cmake -DCMAKE_INSTALL_PREFIX=/mnt/c/superlu_dist/build \
+-DCMAKE_CXX_FLAGS="-std=c++14" \
+-DCMAKE_EXE_LINKER_FLAGS="-std=c++14 -pthread -fopenmp" \
+-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+-DTPL_PARMETIS_INCLUDE_DIRS="${PARMETIS_ROOT}/include;${PARMETIS_ROOT}/metis/include" \
+-DTPL_PARMETIS_LIBRARIES="${PARMETIS_BUILD_DIR}/libparmetis/libparmetis.a;${PARMETIS_BUILD_DIR}/libmetis/libmetis.a" \
+-DTPL_ENABLE_COMBBLASLIB=ON \
+-DTPL_COMBBLAS_INCLUDE_DIRS="${COMBBLAS_ROOT}/_install/include;${COMBBLAS_ROOT}/Applications/BipartiteMatchings" \
+-DTPL_COMBBLAS_LIBRARIES="${COMBBLAS_ROOT}/_install/lib/libCombBLAS.a" \
+..
