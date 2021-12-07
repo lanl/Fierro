@@ -621,7 +621,7 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
   //broadcast number of elements
   MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
 
-  std::cout<<"before initial mesh initialization"<<std::endl;
+  std::cout<<"before mesh initialization"<<std::endl;
   
   //read in element connectivity
   //we're gonna reallocate for the words per line expected for the element connectivity
@@ -4161,7 +4161,7 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArray <real_t>
     current_density = 0;
     if(nodal_density_flag)
     for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      current_density += nodal_density(node_loop,0)*basis_values(node_loop);
+      current_density += nodal_density(node_loop)*basis_values(node_loop);
     }
     //default constant element density
     else{
@@ -5349,7 +5349,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
     current_density = 0;
     if(nodal_density_flag)
     for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      current_density += nodal_density(node_loop,0)*basis_values(node_loop);
+      current_density += nodal_density(node_loop)*basis_values(node_loop);
     }
     //default constant element density
     else{
