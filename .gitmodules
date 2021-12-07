@@ -1,4 +1,3 @@
-[submodule "Elements"]
+[submodule "ELEMENTS"]
 	path = Elements
 	url = https://github.com/lanl/ELEMENTS.git
-	branch = main
