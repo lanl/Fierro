@@ -163,7 +163,6 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
 Parallel_Nonlinear_Solver::~Parallel_Nonlinear_Solver(){
    delete simparam;
    delete ref_elem;
-   delete mesh;
    delete element_select;
    if(myrank==0)
    delete in;
@@ -1667,7 +1666,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   //problem.addConstraint("Equality Constraint",econ,emul);
   ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
   ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
-  ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,0.25);
+  ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,0.15);
 
   ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
   ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
