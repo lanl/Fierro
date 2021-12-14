@@ -41,7 +41,7 @@ void setup_dgh(char *MESH){
     // --- allocate and initialize the defaults for the problem ---
 
     // Initialize the reference element
-    ref_elem.init(p_order, num_dim);
+    ref_elem.init(p_order, num_dim, elem);
 
 
     // ---- Node initialization ---- //
