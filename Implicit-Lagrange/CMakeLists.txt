@@ -41,8 +41,10 @@ target_include_directories(main PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_IN
 target_compile_options (main PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
 target_link_libraries (main ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 #target_link_libraries(main /usr/lib/gcc/x86_64-linux-gnu/9/libgfortran.a)
+if(PARALLEL_DIRECT_SOLVER)
 target_link_libraries(main /mnt/c/Scalapack/scalapack/build/libscalapack.a)
 target_link_libraries(main /mnt/c/Scalapack/scalapack/build/libblacs.a)
+endif()
 #set_property(TARGET main PROPERTY LINKER_LANGUAGE Fortran)
 
 add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)
