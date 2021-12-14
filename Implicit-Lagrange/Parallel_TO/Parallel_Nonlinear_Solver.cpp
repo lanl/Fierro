@@ -230,14 +230,15 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     linear_solver_parameters();
     
     std::cout << "Starting First Solve" << std::endl <<std::flush;
+    
     int solver_exit = solve();
     if(solver_exit == EXIT_SUCCESS){
       std::cout << "Linear Solver Error" << std::endl <<std::flush;
       return;
     }
-    
-    //debug print
     /*
+    //debug print
+    
     Teuchos::RCP<MV> design_gradients_distributed = Teuchos::rcp(new MV(map, 1));
     const_host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     host_vec_array design_gradients = design_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);

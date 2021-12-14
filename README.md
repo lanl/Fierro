@@ -1,6 +1,6 @@
 # Fierro
 
-**Fierro** (LANL code number C21030) is a modern C++ code designed to simulate quasi-static solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, which have meshes with constant mass elements that move with the material, or with Eulerian methods, which have stationary meshes.  **Fierro** is designed to aid a) material model research that has historically been done using commercial implicit and explicit finite element codes, b) numerical methods research, and c) computer science research.  **Fierro** will soon support user developed material models that adhere to several industry standard formats by using a C++ to Fortran interface to couple the model to the numerical solvers.  **Fierro** is built on the **ELEMENTS** library that supports a diverse suite of element types, including high-order elements, and quadrature rules. The mesh class within the **ELEMENTS** library is designed for efficient calculations on unstructured meshes and to minimize memory usage.  **Fierro** is designed to readily accommodate a range of numerical methods including continuous finite element, finite volume, and discontinuous Galerkin methods.  **Fierro** is designed to support explicit and implicit time integration methods.  
+**Fierro** (LANL code number C21030) is a modern C++ code designed to simulate quasi-static solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, which have meshes with constant mass elements that move with the material, or with Eulerian methods, which have stationary meshes.  **Fierro** is designed to aid a) material model research that has historically been done using commercial implicit and explicit finite element codes, b) numerical methods research, and c) computer science research.  **Fierro** will soon support user developed material models that adhere to several industry standard formats by using a C++ to Fortran interface to couple the model to the numerical solvers.  **Fierro** is built on the **ELEMENTS** library that supports a diverse suite of element types, including high-order elements, and quadrature rules. The mesh class within the **ELEMENTS** library is designed for efficient calculations on unstructured meshes and to minimize memory usage.  **Fierro** is designed to readily accommodate a range of numerical methods including continuous finite element, finite volume, and discontinuous Galerkin methods.  **Fierro** is designed to support explicit and implicit time integration methods as well as implicit optimization methods.  
 
 
 ## Computer implementation
@@ -28,15 +28,14 @@ To compile the code type
 ```
 make -j
 ```
-The fierro executable will be in the bin/test folder.
-```
-The following are the possible cmake build variables with their default values shown
+The fierro executable will be in the bin/test folder. The following are the possible cmake build variables with their default values shown
 ```
 BUILD_ELEMENTS=ON (Tells cmake whether to build the Elements libraries. Otherwise the user must compile them in Elements/build as instructed by the Elements readme)
-```
+
 BUILD_EXPLICIT_SOLVER=ON (Tells cmake whether to build the explicit solver components of Fierro)
-```
+
 BUILD_IMPLICIT_SOLVER=OFF (Tells cmake whether to build the implicit solver components of Fierro. This requires the user to build Trilinos in the folder Fierro/Trilinos/build)
+```
 
 ## Trilinos Dependencies to Install
 OpenMPI
