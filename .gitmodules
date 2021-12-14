@@ -1,3 +1,4 @@
 [submodule "Elements"]
 	path = Elements
 	url = https://github.com/lanl/ELEMENTS.git
+        branch = fix-local_reference_element_variables
