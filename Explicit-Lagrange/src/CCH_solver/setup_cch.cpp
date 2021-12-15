@@ -58,7 +58,7 @@ void setup_cch(char *MESH){
     std::cout << std::endl;
 
 
-    ref_elem.init(p_order, num_dim);
+    ref_elem.init(p_order, num_dim, elem);
 
 
     rk_stage = 0;

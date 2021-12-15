@@ -4,6 +4,11 @@
 
 extern int num_dim;
 
+
+// --- Reference element variables ---
+extern elements::HexN      elem;
+extern elements::ref_element  ref_elem;
+
 // --- Mesh state variables ---
 extern elem_state_t elem_state;
 extern cell_state_t cell_state;
