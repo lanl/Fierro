@@ -23,7 +23,7 @@ void dg_hydro(){
 
 	
         // reset rk_stage to zero
-        rk_stage = 0;
+        //rk_stage = 0;
         
         // stop calculation if flag
         if (stop_calc == 1) break;
@@ -54,7 +54,7 @@ void dg_hydro(){
 
             
             // integrate solution forward in time
-            for (rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
+            for (int rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
 
                 // ---- RK coefficient ---- //
                 real_t rk_alpha = 1.0/((real_t)rk_num_stages - (real_t)rk_stage);

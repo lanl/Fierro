@@ -54,7 +54,7 @@ extern double dt_cfl;
 
 extern int rk_num_stages;  	// number of rk stages, 1,2,3,4
 extern int rk_storage;      // number of bins for rk storage
-extern int rk_stage;		// current rk stage in calculation
+//extern int rk_stage;		// current rk stage in calculation
 
 extern int cycle;          // the time cycle number
 extern int cycle_stop;     // stop calculation at this cycle number

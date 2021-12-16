@@ -14,7 +14,7 @@ void cch_hydro(){
 	for (cycle = 1; cycle <= cycle_stop; cycle++) {
 
 	    // reset rk_stage to zero
-	    rk_stage = 0;
+	    //rk_stage = 0;
 	    
 	    // stop calculation if flag
 	    if (stop_calc == 1) break;
@@ -36,7 +36,7 @@ void cch_hydro(){
 
 	        
 	        // integrate solution forward in time
-	        for (rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
+	        for (int rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
 
 	            // k_init();
 

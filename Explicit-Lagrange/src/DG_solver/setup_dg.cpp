@@ -69,7 +69,7 @@ void setup_dgh(char *MESH){
     std::cout << "Element state allocated and initialized"  << std::endl;
     std::cout << std::endl;
 
-    rk_stage = 0;
+    //rk_stage = 0;
     
  
     std::cout << "number of patchess = " << mesh.num_patches() << std::endl;
@@ -418,7 +418,7 @@ void setup_dgh(char *MESH){
     // Build and invert the mass matrix
     mass_mat_inverse();
 
-    rk_stage = 0;
+    //rk_stage = 0;
 
     // Get the Riemann velocity, surface fluxes, and nodal velocities
     riemann();

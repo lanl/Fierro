@@ -268,12 +268,12 @@ struct elem_state_t {
 
     Calculate all geometry
     
-    for(rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
+    for(int rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
         std::cout << "Before volume"  << std::endl;
-        get_vol();
+        get_vol(rk_stage);
 
         std::cout << "Before B matrix"  << std::endl;
-        get_bmatrix();
+        get_bmatrix(rk_stage);
     
     }
 
@@ -292,7 +292,7 @@ using namespace utils;
 //    J^{-T} is the inverse transpose of the Jacobi matrix
 //    \nabla_{xi} is the gradient opperator in the reference coordinates
 //------------------------------------------------------------------------------
-void get_bmatrix(){
+void get_bmatrix(int rk_stage){
 
     int num_verts = elem.num_verts;
 
@@ -454,7 +454,7 @@ void get_bmatrix(){
 } // end subroutine
 
 
-void update_position(real_t rk_alpha){
+void update_position(real_t rk_alpha, int rk_stage){
 
     int next = rk_num_stages - rk_stage - 1;
     
@@ -552,7 +552,7 @@ void update_position(real_t rk_alpha){
 // } // end subroutine
 
 
-void get_vol(){
+void get_vol(int rk_stage){
 
     real_t x_array[8];
     real_t y_array[8];
