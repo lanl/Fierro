@@ -61,7 +61,7 @@ void setup_cch(char *MESH){
     ref_elem.init(p_order, num_dim, elem);
 
 
-    rk_stage = 0;
+    //rk_stage = 0;
     
  
     std::cout << "number of patchess = " << mesh.num_patches() << std::endl;
@@ -341,7 +341,7 @@ void setup_cch(char *MESH){
         } // end for fills
     }// end for rk stages
 
-    rk_stage = 0;
+    //rk_stage = 0;
 
     std::cout << "here at end of setup CCH " << std::endl;
 } // end subroutine

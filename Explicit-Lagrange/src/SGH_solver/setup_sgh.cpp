@@ -51,7 +51,7 @@ void setup_sgh(char *MESH){
     ref_elem.init(p_order, num_dim, elem);
 
 
-    rk_stage = 0;
+    //rk_stage = 0;
     
  
     std::cout << "number of patchess = " << mesh.num_patches() << std::endl;
@@ -424,7 +424,7 @@ void setup_sgh(char *MESH){
         } // end for fills
         boundary_velocity();
     }// end for rk stages
-    rk_stage = 0;
+    //rk_stage = 0;
 
 
     // calculate the nodal masses by looping over all cells 

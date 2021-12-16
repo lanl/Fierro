@@ -79,7 +79,7 @@ real_t dt_start = 1.0e-8;
 
 int rk_num_stages = 1;
 int rk_storage = 2;
-int rk_stage = 0;
+//int rk_stage = 0;
 
 int cycle = 0;
 int cycle_stop = 1000000000;
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]){
     std::cout<<"MAIN START"<<std::endl;
 
     // Initialize RK stage
-    rk_stage = 0;
+    //rk_stage = 0;
     
     // output files
     FILE *out_cell_state;  // cell state values
