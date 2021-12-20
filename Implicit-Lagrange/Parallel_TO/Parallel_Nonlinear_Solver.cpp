@@ -278,9 +278,10 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     // Data writers
     tecplot_writer();
     // vtk_writer();
-    if(myrank==0)
+    if(myrank==0){
     std::cout << "Total number of solves and assembly " << update_count <<std::endl;
-    std::cout << "End of Main file" << std::endl;
+    std::cout << "End of Optimization" << std::endl;
+    }
 }
 
 /* ----------------------------------------------------------------------
@@ -6021,13 +6022,13 @@ void Parallel_Nonlinear_Solver::compute_nodal_strains(){
     
   //debug print
   
-  std::ostream &out = std::cout;
-  Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+  //std::ostream &out = std::cout;
+  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   //if(myrank==0)
   //*fos << "Local Node Strains :" << std::endl;
   //all_node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
+  //*fos << std::endl;
+  //std::fflush(stdout);
   
 
 }

@@ -473,8 +473,8 @@ void SystemSolve(Teuchos::RCP<Xpetra::Matrix<Scalar,LocalOrdinal,GlobalOrdinal,N
       // Check convergence
       if (ret != Belos::Converged)
         out << std::endl << "ERROR:  Belos did not converge! " << std::endl;
-      else
-        out << std::endl << "SUCCESS:  Belos converged!" << std::endl;
+      //else
+        //out << std::endl << "SUCCESS:  Belos converged!" << std::endl;
 #ifdef HAVE_MUELU_CUDA
       if(profileSolve) cudaProfilerStop();
 #endif
