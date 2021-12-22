@@ -211,7 +211,7 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     
     // ---- Find Boundaries on mesh ---- //
     generate_bcs();
-    
+    if(myrank == 0)
     std::cout << "Starting init assembly" << std::endl <<std::flush;
     //allocate and fill sparse structures needed for global solution
     init_assembly();
@@ -221,7 +221,10 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     
     //assemble the global solution (stiffness matrix etc. and nodal forces)
     assemble_matrix();
+
+    if(myrank == 0)
     std::cout << "Finished matrix assembly" << std::endl <<std::flush;
+    
     assemble_vector();
     //return;
     //find each element's volume
@@ -229,6 +232,7 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
 
     linear_solver_parameters();
     
+    if(myrank == 0)
     std::cout << "Starting First Solve" << std::endl <<std::flush;
     
     int solver_exit = solve();
