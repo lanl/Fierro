@@ -117,7 +117,7 @@ public:
       if(inertia_component_ == 5)
       std::cout << "INITIAL MOMENT OF INERTIA YZ: " << initial_moment_of_inertia << std::endl;
     }
-    constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 6));
+    constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -237,7 +237,7 @@ public:
     }
     
 
-    ROL_Moment_of_Inertia_Gradient = ROL::makePtr<ROL_MV>(constraint_gradients_distributed_xx);
+    ROL_Moment_of_Inertia_Gradient = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
     real_t gradient_dot_v = ROL_Moment_of_Inertia_Gradient->dot(v);
     //debug print
     //std::cout << "Constraint Gradient value " << gradient_dot_v << std::endl;

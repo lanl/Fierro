@@ -107,9 +107,13 @@ public:
 
   void compute_element_masses(const_host_vec_array design_densities, bool max_flag);
 
-  void compute_nodal_gradients(const_host_vec_array design_densities, host_vec_array objective_gradients);
+  void compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component);
 
-  void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array constraint_gradients);
+  void compute_nodal_gradients(const_host_vec_array design_densities, host_vec_array gradients);
+
+  void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component);
+
+  void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
 
   void compute_nodal_strains();
 
@@ -221,6 +225,12 @@ public:
   Teuchos::RCP<MV> Global_Element_Densities;
   Teuchos::RCP<MV> Global_Element_Volumes;
   Teuchos::RCP<MV> Global_Element_Masses;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xx;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yy;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_zz;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xy;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xz;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yz;
 
   //Global arrays with collected data used to print
   const_host_vec_array collected_node_coords;
