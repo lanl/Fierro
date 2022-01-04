@@ -158,6 +158,10 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
   gradient_print_sync = 0;
   //RCP pointer to *this (Parallel Nonlinear Solver Object)
   //FEM_pass = Teuchos::rcp(this);
+
+  //property initialization flags
+  mass_init = false;
+  com_init[0] = com_init[1] = com_init[2] = false;
 }
 
 Parallel_Nonlinear_Solver::~Parallel_Nonlinear_Solver(){
@@ -3441,6 +3445,9 @@ void Parallel_Nonlinear_Solver::init_design(){
 
   //create global vectors for mass and moment of inertia
   Global_Element_Masses = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_x = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_y = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_z = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_of_Inertia_xx = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_of_Inertia_yy = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_of_Inertia_zz = Teuchos::rcp(new MV(element_map, 1));

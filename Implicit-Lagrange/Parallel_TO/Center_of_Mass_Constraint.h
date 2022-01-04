@@ -52,6 +52,7 @@ class CenterOfMassConstraint_TopOpt : public ROL::Constraint<real_t> {
 private:
 
   Parallel_Nonlinear_Solver *FEM_;
+  ROL::Ptr<ROL_MV> ROL_Element_Masses;
   ROL::Ptr<ROL_MV> ROL_Element_Moments;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
@@ -81,6 +82,7 @@ public:
     inequality_flag_ = inequality_flag;
     constraint_value_ = constraint_value;
     constraint_component_ = constraint_component;
+    ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
     if(constraint_component_ == 0)
     ROL_Element_Moments = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
     if(constraint_component_ == 1)
@@ -95,17 +97,26 @@ public:
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     real_t initial_moment = ROL_Element_Moments->reduce(sumreduc);
-    
-    real_t initial_center_of_mass = initial_moment/initial_mass;
+    real_t initial_mass;
+
+    if(FEM_->mass_init) { initial_mass = FEM_->mass; }
+    else{
+      FEM_->compute_element_masses(design_densities,true);
+      //sum per element results across all MPI ranks
+      ROL::Elementwise::ReductionSum<real_t> sumreduc;
+      initial_mass = ROL_Element_Masses->reduce(sumreduc);
+    }
+
+    initial_center_of_mass = initial_moment/initial_mass;
 
     //debug print
     if(FEM_->myrank==0){
-      if(inertia_component_ == 0)
-      std::cout << "INITIAL MOMENT OF INERTIA XX: " << initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 1)
-      std::cout << "INITIAL MOMENT OF INERTIA YY: " << initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 2)
-      std::cout << "INITIAL MOMENT OF INERTIA ZZ: " << initial_moment_of_inertia << std::endl;
+      if(constraint_component_ == 0)
+      std::cout << "INITIAL COM X: " << initial_center_of_mass << std::endl;
+      if(constraint_component_ == 1)
+      std::cout << "INITIAL COM Y: " << initial_center_of_mass << std::endl;
+      if(constraint_component_ == 2)
+      std::cout << "INITIAL COM Z: " << initial_center_of_mass << std::endl;
     }
     constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
   }
@@ -126,32 +137,37 @@ public:
       last_comm_step = current_step;
     }
     
-    FEM_->compute_element_moments_of_inertia(design_densities,false,inertia_component_);
+    FEM_->compute_element_moments(design_densities,false,inertia_component_);
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    real_t current_moment_of_inertia = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+    real_t current_moment = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+
+    //compute mass
+    real_t current_mass
+    if(FEM_->mass_update == current_step) { current_mass = FEM_->mass; }
+    else{
+      FEM_->compute_element_masses(design_densities,false);
+      //sum per element results across all MPI ranks
+      ROL::Elementwise::ReductionSum<real_t> sumreduc;
+      current_mass = ROL_Element_Masses->reduce(sumreduc);
+    }
+
     //debug print
     if(FEM_->myrank==0){
-      if(inertia_component_ == 0)
-      std::cout << "MOMENT OF INERTIA XX RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 1)
-      std::cout << "MOMENT OF INERTIA YY RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 2)
-      std::cout << "MOMENT OF INERTIA ZZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 3)
-      std::cout << "MOMENT OF INERTIA XY RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 4)
-      std::cout << "MOMENT OF INERTIA XZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 5)
-      std::cout << "MOMENT OF INERTIA YZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+      if(constraint_component_ == 0)
+      std::cout << "CURRENT COM X " << current_moment/current_mass<< std::endl;
+      if(constraint_component_ == 1)
+      std::cout << "CURRENT COM X " << current_moment/current_mass << std::endl;
+      if(constraint_component_ == 2)
+      std::cout << "CURRENT COM X " << current_moment/current_mass << std::endl;
     }
     
     if(inequality_flag_){
-      (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia;
+      (*cp)[0] = current_moment/current_mass;
     }
     else{
-      (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia - constraint_value_[0];
+      (*cp)[0] = current_moment/current_mass - constraint_value_[0];
     }
 
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;

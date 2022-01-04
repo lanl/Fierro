@@ -83,10 +83,11 @@ public:
     const_host_vec_array design_densities = FEM_->design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     
     FEM_->compute_element_masses(design_densities,true);
+    FEM_->mass_init = true;
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    initial_mass = ROL_Element_Masses->reduce(sumreduc);
+    FEM_->mass = initial_mass = ROL_Element_Masses->reduce(sumreduc);
     //debug print
     if(FEM_->myrank==0)
     std::cout << "INITIAL MASS: " << initial_mass << std::endl;
@@ -114,6 +115,7 @@ public:
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     real_t current_mass = ROL_Element_Masses->reduce(sumreduc);
+    FEM_->mass = current_mass;
     //debug print
     if(FEM_->myrank==0)
     std::cout << "SYSTEM MASS RATIO: " << current_mass/initial_mass << std::endl;

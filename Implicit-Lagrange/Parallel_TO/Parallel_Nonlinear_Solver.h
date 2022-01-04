@@ -107,9 +107,13 @@ public:
 
   void compute_element_masses(const_host_vec_array design_densities, bool max_flag);
 
+  void compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component);
+
   void compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component);
 
   void compute_nodal_gradients(const_host_vec_array design_densities, host_vec_array gradients);
+
+  void compute_moment_gradients(const_host_vec_array design_densities, host_vec_array gradients, int moment_component);
 
   void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component);
 
@@ -225,6 +229,9 @@ public:
   Teuchos::RCP<MV> Global_Element_Densities;
   Teuchos::RCP<MV> Global_Element_Volumes;
   Teuchos::RCP<MV> Global_Element_Masses;
+  Teuchos::RCP<MV> Global_Element_Moments_x;
+  Teuchos::RCP<MV> Global_Element_Moments_y;
+  Teuchos::RCP<MV> Global_Element_Moments_z;
   Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xx;
   Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yy;
   Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_zz;
@@ -307,6 +314,16 @@ public:
 
   //linear solver parameters
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
+
+  //inertial properties
+  real_t mass, center_of_mass[3], moments_of_inertia[6];
+
+  //runtime flags
+  bool mass_init, com_init[3];
+
+  //update counters
+  int mass_update, com_update[3];
+  int mass_gradient_update, com_gradient_update[3];
   
 };
 
