@@ -1,5 +1,5 @@
-#ifndef MOMENT_OF_INERTIA_CONSTRAINT_TOPOPT_H
-#define MOMENT_OF_INERTIA_CONSTRAINT_TOPOPT_H
+#ifndef CENTER_OF_MASS_CONSTRAINT_TOPOPT_H
+#define CENTER_OF_MASS_CONSTRAINT_TOPOPT_H
 
 #include "matar.h"
 #include "elements.h"
@@ -22,7 +22,7 @@
 #include "ROL_Elementwise_Reduce.hpp"
 #include "Parallel_Nonlinear_Solver.h"
 
-class MomentOfInertiaConstraint_TopOpt : public ROL::Constraint<real_t> {
+class CenterOfMassConstraint_TopOpt : public ROL::Constraint<real_t> {
   
   typedef Tpetra::Map<>::local_ordinal_type LO;
   typedef Tpetra::Map<>::global_ordinal_type GO;
@@ -52,13 +52,13 @@ class MomentOfInertiaConstraint_TopOpt : public ROL::Constraint<real_t> {
 private:
 
   Parallel_Nonlinear_Solver *FEM_;
-  ROL::Ptr<ROL_MV> ROL_Element_Moments_of_Inertia;
+  ROL::Ptr<ROL_MV> ROL_Element_Moments;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
-  real_t initial_moment_of_inertia;
+  real_t initial_center_of_mass;
   bool inequality_flag_;
   real_t constraint_value_;
-  int inertia_component_;
+  int constraint_component_;
 
   ROL::Ptr<const MV> getVector( const V& x ) {
     return dynamic_cast<const ROL_MV&>(x).getVector();
@@ -72,7 +72,7 @@ public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
 
-  MomentOfInertiaConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, bool inequality_flag=true, real_t *constraint_value, int inertia_component) 
+  CenterOfMassConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, bool inequality_flag=true, real_t *constraint_value, int constraint_component) 
     : FEM_(FEM) {
 
     nodal_density_flag_ = nodal_density_flag;
@@ -80,27 +80,23 @@ public:
     current_step = 0;
     inequality_flag_ = inequality_flag;
     constraint_value_ = constraint_value;
-    intertia_component_ = inertia_component;
-    if(inertia_component_ == 0)
-    ROL_Element_Moments_of_Inertia = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_xx);
-    if(inertia_component_ == 1)
-    ROL_Element_Moments_of_Inertia = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_yy);
-    if(inertia_component_ == 2)
-    ROL_Element_Moments_of_Inertia = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_zz);
-    if(inertia_component_ == 3)
-    ROL_Element_Moments_of_Inertia = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_xy);
-    if(inertia_component_ == 4)
-    ROL_Element_Moments_of_Inertia = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_xz);
-    if(inertia_component_ == 5)
-    ROL_Element_Moments_of_Inertia = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_yz);
+    constraint_component_ = constraint_component;
+    if(constraint_component_ == 0)
+    ROL_Element_Moments = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
+    if(constraint_component_ == 1)
+    ROL_Element_Moments = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
+    if(constraint_component_ == 2)
+    ROL_Element_Moments = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
 
     const_host_vec_array design_densities = FEM_->design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     
-    FEM_->compute_element_moments_of_inertia(design_densities,true, inertia_component_);
+    FEM_->compute_element_moments(design_densities,true, constraint_component_);
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    initial_moment_of_inertia = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+    real_t initial_moment = ROL_Element_Moments->reduce(sumreduc);
+    
+    real_t initial_center_of_mass = initial_moment/initial_mass;
 
     //debug print
     if(FEM_->myrank==0){
@@ -110,12 +106,6 @@ public:
       std::cout << "INITIAL MOMENT OF INERTIA YY: " << initial_moment_of_inertia << std::endl;
       if(inertia_component_ == 2)
       std::cout << "INITIAL MOMENT OF INERTIA ZZ: " << initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 3)
-      std::cout << "INITIAL MOMENT OF INERTIA XY: " << initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 4)
-      std::cout << "INITIAL MOMENT OF INERTIA XZ: " << initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 5)
-      std::cout << "INITIAL MOMENT OF INERTIA YZ: " << initial_moment_of_inertia << std::endl;
     }
     constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
   }

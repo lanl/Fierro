@@ -4986,7 +4986,7 @@ void Parallel_Nonlinear_Solver::compute_element_masses(const_host_vec_array desi
         }
       }
     
-      Element_Masses(nonoverlapping_ielem,0) += current_density*Jacobian;
+      Element_Masses(nonoverlapping_ielem,0) += current_density*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
     }
     }
     else{
@@ -5363,17 +5363,17 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
       }
 
       if(inertia_component==0)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(current_position(1)*current_position(1)+current_position(2)*current_position(2))*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(current_position(1)*current_position(1)+current_position(2)*current_position(2))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
       if(inertia_component==1)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(current_position(0)*current_position(0)+current_position(2)*current_position(2))*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(current_position(0)*current_position(0)+current_position(2)*current_position(2))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
       if(inertia_component==2)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(current_position(1)*current_position(1)+current_position(0)*current_position(0))*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(current_position(1)*current_position(1)+current_position(0)*current_position(0))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
       if(inertia_component==3)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(0)*current_position(1))*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(0)*current_position(1))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
       if(inertia_component==4)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(0)*current_position(2))*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(0)*current_position(2))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
       if(inertia_component==5)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(2)*current_position(1))*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(2)*current_position(1))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
     }
   }
 
@@ -5433,6 +5433,7 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
   CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
   CArray<real_t> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t> current_position(num_dim);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -5536,12 +5537,31 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
                  JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
                  JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
       if(Jacobian<0) Jacobian = -Jacobian;
+
+      //compute current position
+      current_position(0) = current_position(1) = current_position(2) = 0;
+      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+        current_position(0) += nodal_positions(node_loop,0)*basis_values(node_loop);
+        current_position(1) += nodal_positions(node_loop,1)*basis_values(node_loop);
+        current_position(2) += nodal_positions(node_loop,2)*basis_values(node_loop);
+      }
       
       //assign contribution to every local node this element has
       for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
           local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
-          design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*Jacobian;
+            if(inertia_component==0)
+            design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(1)*current_position(1)+current_position(2)*current_position(2))*Jacobian;
+            if(inertia_component==1)
+            design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(0)*current_position(0)+current_position(2)*current_position(2))*Jacobian;
+            if(inertia_component==2)
+            design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(1)*current_position(1)+current_position(0)*current_position(0))*Jacobian;
+            if(inertia_component==3)
+            design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(1)*current_position(0))*Jacobian;
+            if(inertia_component==4)
+            design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(0)*current_position(2))*Jacobian;
+            if(inertia_component==5)
+            design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(1)*current_position(2))*Jacobian;
         }
       }
     }
