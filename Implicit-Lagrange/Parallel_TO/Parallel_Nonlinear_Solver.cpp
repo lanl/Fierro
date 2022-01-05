@@ -168,6 +168,7 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
 
   //RCP initialization
   mass_gradients_distributed = Teuchos::null;
+  center_of_mass_gradients_distributed = Teuchos::null;
 }
 
 Parallel_Nonlinear_Solver::~Parallel_Nonlinear_Solver(){
@@ -5438,7 +5439,7 @@ void Parallel_Nonlinear_Solver::compute_moment_gradients(const_host_vec_array de
 
   //initialize design gradients to 0
   for(int init = 0; init < nlocal_nodes; init++)
-    design_gradients(init,0) = 0;
+    design_gradients(init,moment_component) = 0;
 
   //loop over elements and use quadrature rule to compute volume from Jacobian determinant
   for(int ielem = 0; ielem < rnum_elem; ielem++){
@@ -5545,7 +5546,7 @@ void Parallel_Nonlinear_Solver::compute_moment_gradients(const_host_vec_array de
       for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
           local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
-            design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*current_position(moment_component)*Jacobian;
+            design_gradients(local_node_id,moment_component)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*current_position(moment_component)*Jacobian;
         }
       }
     }
@@ -5588,6 +5589,7 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
   size_t local_node_id;
   LO ielem;
   GO global_element_index;
+  real_t delx1, delx2;
 
   real_t Jacobian, current_density;
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -5750,18 +5752,36 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
         current_position(2) += nodal_positions(node_loop,2)*basis_values(node_loop);
       }
 
-      if(inertia_component==0)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(current_position(1)*current_position(1)+current_position(2)*current_position(2))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
-      if(inertia_component==1)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(current_position(0)*current_position(0)+current_position(2)*current_position(2))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
-      if(inertia_component==2)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(current_position(1)*current_position(1)+current_position(0)*current_position(0))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
-      if(inertia_component==3)
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(0)*current_position(1))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
-      if(inertia_component==4)
+      if(inertia_component==0){
+        delx1 = current_position(1) - center_of_mass[1];
+        delx2 = current_position(2) - center_of_mass[2];
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+      }
+      if(inertia_component==1){
+        delx1 = current_position(0) - center_of_mass[0];
+        delx2 = current_position(2) - center_of_mass[2];
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+      }
+      if(inertia_component==2){
+        delx1 = current_position(0) - center_of_mass[0];
+        delx2 = current_position(2) - center_of_mass[1];
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+      }
+      if(inertia_component==3){
+        delx1 = current_position(0) - center_of_mass[0];
+        delx2 = current_position(2) - center_of_mass[1];
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+      }
+      if(inertia_component==4){
+        delx1 = current_position(0) - center_of_mass[0];
+        delx2 = current_position(2) - center_of_mass[2];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(0)*current_position(2))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
-      if(inertia_component==5)
+      }
+      if(inertia_component==5){
+        delx1 = current_position(0) - center_of_mass[1];
+        delx2 = current_position(2) - center_of_mass[2];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(2)*current_position(1))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+      }
     }
   }
 

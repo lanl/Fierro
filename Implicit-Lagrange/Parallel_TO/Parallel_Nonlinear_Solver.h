@@ -225,6 +225,7 @@ public:
   Teuchos::RCP<MV> lower_bound_node_densities_distributed;
   Teuchos::RCP<MV> upper_bound_node_densities_distributed;
   Teuchos::RCP<MV> mass_gradients_distributed;
+  Teuchos::RCP<MV> center_of_mass_gradients_distributed;
   Teuchos::RCP<MV> Global_Element_Densities_Upper_Bound;
   Teuchos::RCP<MV> Global_Element_Densities_Lower_Bound;
   Teuchos::RCP<MV> Global_Element_Densities;

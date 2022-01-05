@@ -83,6 +83,7 @@ public:
     inequality_flag_ = inequality_flag;
     constraint_value_ = constraint_value;
     constraint_component_ = constraint_component;
+    int num_dim = FEM_->simparam->num_dim;
     ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
     if(constraint_component_ == 0)
     ROL_Element_Moments = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
@@ -121,10 +122,14 @@ public:
       if(constraint_component_ == 2)
       std::cout << "INITIAL COM Z: " << initial_center_of_mass << std::endl;
     }
-    constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
+  
     if(FEM_->mass_gradients_distributed.is_null()) 
       FEM_->mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
     mass_gradients_distributed = FEM_->mass_gradients_distributed; 
+
+    if(FEM_->center_of_mass_gradients_distributed.is_null()) 
+      FEM_->center_of_mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, num_dim));
+    constraint_gradients_distributed = FEM_->center_of_mass_gradients_distributed;
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -243,9 +248,9 @@ public:
       //*fos << std::endl;
       //std::fflush(stdout);
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,0) /= current_mass;
-      constraint_gradients(i,0) -= mass_gradients(i)*center_of_mass[constraint_component_]/current_mass;
-      constraint_gradients(i,0) *= (*vp)[0];
+      constraint_gradients(i,constraint_component_) /= current_mass;
+      constraint_gradients(i,constraint_component_) -= mass_gradients(i)*current_com/current_mass;
+      constraint_gradients(i,constraint_component_) *= (*vp)[0];
     }
     
     
@@ -304,9 +309,9 @@ public:
     FEM_->compute_nodal_gradients(design_densities, mass_gradients);
 
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,0) /= current_mass;
-      constraint_gradients(i,0) -= mass_gradients(i)*center_of_mass[constraint_component_]/current_mass;
-      constraint_gradients(i,0) *= (*vp)[0];
+      constraint_gradients(i,constraint_component_) /= current_mass;
+      constraint_gradients(i,constraint_component_) -= mass_gradients(i)*current_com/current_mass;
+      constraint_gradients(i,constraint_component_) *= (*vp)[0];
     }
 
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
