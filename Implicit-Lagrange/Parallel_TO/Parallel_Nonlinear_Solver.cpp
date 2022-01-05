@@ -5764,23 +5764,23 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
       }
       if(inertia_component==2){
         delx1 = current_position(0) - center_of_mass[0];
-        delx2 = current_position(2) - center_of_mass[1];
+        delx2 = current_position(1) - center_of_mass[1];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
       }
       if(inertia_component==3){
         delx1 = current_position(0) - center_of_mass[0];
-        delx2 = current_position(2) - center_of_mass[1];
+        delx2 = current_position(1) - center_of_mass[1];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
       }
       if(inertia_component==4){
         delx1 = current_position(0) - center_of_mass[0];
         delx2 = current_position(2) - center_of_mass[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(0)*current_position(2))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
       }
       if(inertia_component==5){
-        delx1 = current_position(0) - center_of_mass[1];
+        delx1 = current_position(1) - center_of_mass[1];
         delx2 = current_position(2) - center_of_mass[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(current_position(2)*current_position(1))*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
       }
     }
   }
@@ -5814,6 +5814,7 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
   size_t local_node_id;
   LO ielem;
   GO global_element_index;
+  real_t delx1, delx2;
   
   real_t Jacobian;
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -5958,18 +5959,36 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
       for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
           local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
-            if(inertia_component==0)
-            design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(1)*current_position(1)+current_position(2)*current_position(2))*Jacobian;
-            if(inertia_component==1)
-            design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(0)*current_position(0)+current_position(2)*current_position(2))*Jacobian;
-            if(inertia_component==2)
-            design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(1)*current_position(1)+current_position(0)*current_position(0))*Jacobian;
-            if(inertia_component==3)
-            design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(1)*current_position(0))*Jacobian;
-            if(inertia_component==4)
-            design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(0)*current_position(2))*Jacobian;
-            if(inertia_component==5)
-            design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(current_position(1)*current_position(2))*Jacobian;
+            if(inertia_component==0){
+              delx1 = current_position[1] - center_of_mass[1];
+              delx2 = current_position[2] - center_of_mass[2];
+              design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
+            }
+            if(inertia_component==1){
+              delx1 = current_position[0] - center_of_mass[0];
+              delx2 = current_position[2] - center_of_mass[2];
+              design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
+            }
+            if(inertia_component==2){
+              delx1 = current_position[0] - center_of_mass[0];
+              delx2 = current_position[1] - center_of_mass[1];
+              design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
+            }
+            if(inertia_component==3){
+              delx1 = current_position[0] - center_of_mass[0];
+              delx2 = current_position[1] - center_of_mass[1];
+              design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx2)*Jacobian;
+            }
+            if(inertia_component==4){
+              delx1 = current_position[0] - center_of_mass[0];
+              delx2 = current_position[2] - center_of_mass[2];
+              design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx2)*Jacobian;
+            }
+            if(inertia_component==5){
+              delx1 = current_position[1] - center_of_mass[1];
+              delx2 = current_position[2] - center_of_mass[2];
+              design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx2)*Jacobian;
+            }
         }
       }
     }

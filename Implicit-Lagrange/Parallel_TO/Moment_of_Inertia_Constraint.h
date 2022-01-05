@@ -276,6 +276,7 @@ public:
     real_t current_center_of_mass[3];
     update_com_and_mass(design_densities, current_mass, current_center_of_mass);
 
+    /*
     //compute mass and com derivates needed by chain rule
     FEM_->compute_nodal_gradients(design_densities, mass_gradients);
 
@@ -328,7 +329,8 @@ public:
       center_of_mass_gradients(i,com2) /= current_mass;
       center_of_mass_gradients(i,com2) -= mass_gradients(i)*current_center_of_mass[com2]/current_mass;
     }
-
+    */
+    
     FEM_->compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_);
       //debug print of gradient
       //std::ostream &out = std::cout;
@@ -338,6 +340,15 @@ public:
       //ajvp->describe(*fos,Teuchos::VERB_EXTREME);
       //*fos << std::endl;
       //std::fflush(stdout);
+
+    //for(int i = 0; i < FEM_->nlocal_nodes; i++){
+      //constraint_gradients(i,0) -= 2*current_center_of_mass[com1]*current_mass*center_of_mass_gradients(i, com1);
+      //constraint_gradients(i,0) -= 2*current_center_of_mass[com2]*current_mass*center_of_mass_gradients(i, com2);
+
+      //constraint_gradients(i,0) += 2*current_center_of_mass[com1]*current_mass*center_of_mass_gradients(i, com1);
+      //constraint_gradients(i,0) += 2*current_center_of_mass[com2]*current_mass*center_of_mass_gradients(i, com2);
+    //}
+
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
       constraint_gradients(i,0) *= (*vp)[0]/initial_moment_of_inertia;
     }
