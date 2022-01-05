@@ -224,6 +224,7 @@ public:
   Teuchos::RCP<MV> Global_Nodal_Forces;
   Teuchos::RCP<MV> lower_bound_node_densities_distributed;
   Teuchos::RCP<MV> upper_bound_node_densities_distributed;
+  Teuchos::RCP<MV> mass_gradients_distributed;
   Teuchos::RCP<MV> Global_Element_Densities_Upper_Bound;
   Teuchos::RCP<MV> Global_Element_Densities_Lower_Bound;
   Teuchos::RCP<MV> Global_Element_Densities;
@@ -321,7 +322,7 @@ public:
   //runtime flags
   bool mass_init, com_init[3];
 
-  //update counters
+  //update counters (first attempt at reducing redundant calls through ROL for Moments of Inertia and Center of Mass)
   int mass_update, com_update[3];
   int mass_gradient_update, com_gradient_update[3];
   

@@ -56,6 +56,7 @@ private:
   ROL::Ptr<ROL_MV> ROL_Element_Moments;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
+  Teuchos::RCP<MV> mass_gradients_distributed;
   real_t initial_center_of_mass;
   bool inequality_flag_;
   real_t constraint_value_;
@@ -104,10 +105,12 @@ public:
       FEM_->compute_element_masses(design_densities,true);
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
-      initial_mass = ROL_Element_Masses->reduce(sumreduc);
+      FEM_->mass = initial_mass = ROL_Element_Masses->reduce(sumreduc);
+      FEM_->mass_init = true;
     }
-
-    initial_center_of_mass = initial_moment/initial_mass;
+    
+    FEM_->com_init[constraint_component_] = true;
+    FEM_->center_of_mass[constraint_component_] = initial_center_of_mass = initial_moment/initial_mass;
 
     //debug print
     if(FEM_->myrank==0){
@@ -119,6 +122,9 @@ public:
       std::cout << "INITIAL COM Z: " << initial_center_of_mass << std::endl;
     }
     constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
+    if(FEM_->mass_gradients_distributed.is_null()) 
+      FEM_->mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
+    mass_gradients_distributed = FEM_->mass_gradients_distributed; 
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -137,37 +143,41 @@ public:
       last_comm_step = current_step;
     }
     
-    FEM_->compute_element_moments(design_densities,false,inertia_component_);
+    FEM_->compute_element_moments(design_densities,false,constraint_component_);
+    FEM->com_update[constraint_component_] = current_step;
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     real_t current_moment = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+    real_t current_com;
 
     //compute mass
-    real_t current_mass
+    real_t current_mass;
     if(FEM_->mass_update == current_step) { current_mass = FEM_->mass; }
     else{
       FEM_->compute_element_masses(design_densities,false);
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
-      current_mass = ROL_Element_Masses->reduce(sumreduc);
+      FEM_->mass = current_mass = ROL_Element_Masses->reduce(sumreduc);
+      FEM_->mass_update = current_step;
     }
 
+    current_com = FEM->center_of_mass[constraint_component_] = current_moment/current_mass;
     //debug print
     if(FEM_->myrank==0){
       if(constraint_component_ == 0)
-      std::cout << "CURRENT COM X " << current_moment/current_mass<< std::endl;
+      std::cout << "CURRENT COM X " << current_com << std::endl;
       if(constraint_component_ == 1)
-      std::cout << "CURRENT COM X " << current_moment/current_mass << std::endl;
+      std::cout << "CURRENT COM Y " << current_com << std::endl;
       if(constraint_component_ == 2)
-      std::cout << "CURRENT COM X " << current_moment/current_mass << std::endl;
+      std::cout << "CURRENT COM Z " << current_com << std::endl;
     }
     
     if(inequality_flag_){
-      (*cp)[0] = current_moment/current_mass;
+      (*cp)[0] = current_com;
     }
     else{
-      (*cp)[0] = current_moment/current_mass - constraint_value_[0];
+      (*cp)[0] = current_com - constraint_value_[0];
     }
 
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;
@@ -186,6 +196,7 @@ public:
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     //host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_vec_array constraint_gradients = ajvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array mass_gradients = mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     //host_vec_array dual_constraint_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     //communicate ghosts
@@ -196,7 +207,33 @@ public:
     
     int rnum_elem = FEM_->rnum_elem;
 
-    FEM_->compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_);
+    //compute mass
+    real_t current_mass;
+    if(FEM_->mass_update == current_step) { current_mass = FEM_->mass; }
+    else{
+      FEM_->compute_element_masses(design_densities,false);
+      //sum per element results across all MPI ranks
+      ROL::Elementwise::ReductionSum<real_t> sumreduc;
+      FEM_->mass = current_mass = ROL_Element_Masses->reduce(sumreduc);
+      FEM_->mass_update = current_step;
+    }
+
+    //compute center of mass
+    real_t current_com;
+    if(FEM_->com_update[constraint_component_] == current_step) current_com = FEM_->center_of_mass[constraint_component_];
+    else{
+    FEM_->compute_element_moments(design_densities,false,constraint_component_);
+    FEM->com_update[constraint_component_] = current_step;
+    
+    //sum per element results across all MPI ranks
+    ROL::Elementwise::ReductionSum<real_t> sumreduc;
+    real_t current_moment = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+    FEM_->center_of_mass[constraint_component_] = current_com = current_moment/current_mass;
+    }
+
+    FEM_->compute_moment_gradients(design_densities, constraint_gradients, constraint_component_);
+    FEM_->compute_nodal_gradients(design_densities, mass_gradients);
+
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -206,7 +243,9 @@ public:
       //*fos << std::endl;
       //std::fflush(stdout);
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,0) *= (*vp)[0]/initial_moment_of_inertia;
+      constraint_gradients(i,0) /= current_mass;
+      constraint_gradients(i,0) -= mass_gradients(i)*center_of_mass[constraint_component_]/current_mass;
+      constraint_gradients(i,0) *= (*vp)[0];
     }
     
     
@@ -226,6 +265,7 @@ public:
     //get local view of the data
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array mass_gradients = mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
     //communicate ghosts
@@ -236,14 +276,40 @@ public:
     
     int rnum_elem = FEM_->rnum_elem;
 
-    
-    compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_);
-    for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,0) /= initial_moment_of_inertia;
+    //compute mass
+    real_t current_mass;
+    if(FEM_->mass_update == current_step) { current_mass = FEM_->mass; }
+    else{
+      FEM_->compute_element_masses(design_densities,false);
+      //sum per element results across all MPI ranks
+      ROL::Elementwise::ReductionSum<real_t> sumreduc;
+      FEM_->mass = current_mass = ROL_Element_Masses->reduce(sumreduc);
+      FEM_->mass_update = current_step;
     }
-    
 
-    ROL_Moment_of_Inertia_Gradient = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
+    //compute center of mass
+    real_t current_com;
+    if(FEM_->com_update[constraint_component_] == current_step) current_com = FEM_->center_of_mass[constraint_component_];
+    else{
+    FEM_->compute_element_moments(design_densities,false,constraint_component_);
+    FEM->com_update[constraint_component_] = current_step;
+    
+    //sum per element results across all MPI ranks
+    ROL::Elementwise::ReductionSum<real_t> sumreduc;
+    real_t current_moment = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+    FEM_->center_of_mass[constraint_component_] = current_com = current_moment/current_mass;
+    }
+
+    FEM_->compute_moment_gradients(design_densities, constraint_gradients, constraint_component_);
+    FEM_->compute_nodal_gradients(design_densities, mass_gradients);
+
+    for(int i = 0; i < FEM_->nlocal_nodes; i++){
+      constraint_gradients(i,0) /= current_mass;
+      constraint_gradients(i,0) -= mass_gradients(i)*center_of_mass[constraint_component_]/current_mass;
+      constraint_gradients(i,0) *= (*vp)[0];
+    }
+
+    ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
     real_t gradient_dot_v = ROL_Moment_of_Inertia_Gradient->dot(v);
     //debug print
     //std::cout << "Constraint Gradient value " << gradient_dot_v << std::endl;

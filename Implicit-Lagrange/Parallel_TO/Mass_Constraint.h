@@ -91,7 +91,9 @@ public:
     //debug print
     if(FEM_->myrank==0)
     std::cout << "INITIAL MASS: " << initial_mass << std::endl;
-    constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
+    if(FEM_->mass_gradients_distributed.is_null())
+      FEM_->mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
+    constraint_gradients_distributed = FEM_->mass_gradients_distributed;
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -116,6 +118,8 @@ public:
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     real_t current_mass = ROL_Element_Masses->reduce(sumreduc);
     FEM_->mass = current_mass;
+    FEM_->mass_update = current_step;
+    
     //debug print
     if(FEM_->myrank==0)
     std::cout << "SYSTEM MASS RATIO: " << current_mass/initial_mass << std::endl;
