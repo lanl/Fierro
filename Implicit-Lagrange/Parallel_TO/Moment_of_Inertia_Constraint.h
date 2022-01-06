@@ -385,7 +385,7 @@ public:
     real_t current_center_of_mass[3];
     update_com_and_mass(design_densities, current_mass, current_center_of_mass);
     
-    compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_);
+    FEM_->compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_);
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
       constraint_gradients(i,0) /= initial_moment_of_inertia;
     }
@@ -451,7 +451,7 @@ public:
       FEM_->center_of_mass[com1] = current_center_of_mass[com1] = current_moment/current_mass;
     }
 
-    if(FEM_->com_update[com2] = current_step);) { initial_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
+    if(FEM_->com_update[com2] = current_step) { initial_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
     else{
       FEM_->compute_element_moments(design_densities,false, com2);
       //sum per element results across all MPI ranks
