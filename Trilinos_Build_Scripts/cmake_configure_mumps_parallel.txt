@@ -17,5 +17,5 @@ cmake -DCMAKE_BUILD_TYPE=RELEASE \
 -DTrilinos_ENABLE_Amesos2=ON \
 -DTrilinos_ENABLE_ROL=ON \
 -DTrilinos_ENABLE_ALL_PACKAGES=OFF -DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF -DTrilinos_ENABLE_TESTS=OFF \
--DCMAKE_INSTALL_PREFIX=/mnt/c/Users/Adrian\ Diaz/Documents/Github/ELEMENTS/Trilinos/build/ \
+-DCMAKE_INSTALL_PREFIX=. \
 ..

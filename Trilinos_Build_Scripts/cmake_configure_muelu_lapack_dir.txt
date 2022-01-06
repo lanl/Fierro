@@ -2,6 +2,8 @@
 cmake -DCMAKE_BUILD_TYPE=RELEASE \
 -DTrilinos_MUST_FIND_ALL_TPL_LIBS=TRUE \
 -DTPL_ENABLE_MPI=ON \
+-DTPL_BLAS_LIBRARIES=/usr/lib/x86_64-linux-gnu/blas/libblas.so.3.7.1 \
+-DTPL_LAPACK_LIBRARIES=/usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.7.1 \
 -DTrilinos_ENABLE_Kokkos=ON \
 -DTrilinos_ENABLE_OpenMP=ON \
 -DTrilinos_ENABLE_Amesos2=ON \
