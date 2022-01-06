@@ -129,6 +129,7 @@ num_cells in element = (p_order*2)^3
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
 #define DENSITY_EPSILON 0.0001
+#define BC_EPSILON 1.0e-8
 
 using namespace utils;
 
@@ -296,8 +297,8 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     tecplot_writer();
     // vtk_writer();
     if(myrank==0){
-    std::cout << "Total number of solves and assembly " << update_count <<std::endl;
-    std::cout << "End of Optimization" << std::endl;
+      std::cout << "Total number of solves and assembly " << update_count <<std::endl;
+      std::cout << "End of Optimization" << std::endl;
     }
 }
 
@@ -1684,10 +1685,14 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   //ROL::Ptr<ROL::Vector<double>>     emul = ROL::makePtr<MyEqualityConstraintMultiplier<double>>();
   //problem.addConstraint("Equality Constraint",econ,emul);
   ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+  ROL::Ptr<std::vector<real_t> > li_ptr2 = ROL::makePtr<std::vector<real_t>>(1,0.0);
+  ROL::Ptr<std::vector<real_t> > li_ptr3 = ROL::makePtr<std::vector<real_t>>(1,0.0);
   ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
   ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,0.15);
 
   ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
+  ROL::Ptr<ROL::Vector<real_t> > constraint_mul2 = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr2);
+  ROL::Ptr<ROL::Vector<real_t> > constraint_mul3 = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr3);
   ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
   ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
   
@@ -1703,12 +1708,16 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   
   real_t initial_mass = ROL_Element_Masses->reduce(sumreduc);
 
-  //define constrain objects
-  //ROL::Ptr<ROL::Constraint<real_t>> eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag, false, 0.2);
-  ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag);
+  //define constraint objects
+  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag, false, 0.2);
+  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint2 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(this, nodal_density_flag, 2, false, 0.4);
+  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint3 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(this, nodal_density_flag, 3, false);
+  //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag);
   ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
   //problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
-  problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
+  problem->addConstraint("equality Constraint 1",eq_constraint,constraint_mul);
+  problem->addConstraint("equality Constraint 2",eq_constraint2,constraint_mul2);
+  problem->addConstraint("equality Constraint 3",eq_constraint3,constraint_mul3);
   //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
   problem->setProjectionAlgorithm(*parlist);
   //finalize problem
@@ -1722,7 +1731,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
   directions_distributed->putScalar(0.1);
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
-   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
+  ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
   //obj->checkGradient(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
@@ -1951,12 +1960,15 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   //initialize
   for(int ibdy=0; ibdy < num_boundary_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
     
-  // tag the x=0 plane,  (Direction, value, bdy_set)
+  // tag the z=0 plane,  (Direction, value, bdy_set)
   std::cout << "tagging z = 0 " << std::endl;
   int bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  real_t value = 0.0;
+  real_t value = 0.0 * simparam->unit_scaling;
+  real_t fix_limits[4];
+  fix_limits[0] = fix_limits[2] = 4;
+  fix_limits[1] = fix_limits[3] = 6;
   bdy_set_id = current_bdy_id++;
-  tag_boundaries(bc_tag, value, bdy_set_id);
+  tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
   Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
   Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
   Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
@@ -2075,14 +2087,17 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
-  
+  */
   std::cout << "tagging beam -y " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 0 * simparam->unit_scaling;
+  real_t load_limits_left[4];
+  load_limits_left[0] = load_limits_left[2] = 4;
+  load_limits_left[1] = load_limits_left[3] = 6;
   //value = 2;
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
+  tag_boundaries(bc_tag, value, bdy_set_id ,load_limits_left);
   Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 1/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
@@ -2095,10 +2110,13 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << "tagging beam +y " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 10 * simparam->unit_scaling;
+  real_t load_limits_right[4];
+  load_limits_right[0] = load_limits_right[2] = 4;
+  load_limits_right[1] = load_limits_right[3] = 6;
   //value = 2;
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
+  tag_boundaries(bc_tag, value, bdy_set_id, load_limits_right);
   Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = -1/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
@@ -2108,8 +2126,9 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
   
-  */
   
+  
+  /*
   std::cout << "tagging beam +z force " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
@@ -2125,7 +2144,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
-  /*
+  
   
   std::cout << "tagging y = 2 " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
@@ -2186,7 +2205,7 @@ void Parallel_Nonlinear_Solver::init_boundary_sets (int num_sets){
    val = plane value, cylinder radius, shell radius
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set){
+void Parallel_Nonlinear_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL){
   
   int num_boundary_sets = simparam->NB;
   int is_on_set;
@@ -2197,13 +2216,20 @@ void Parallel_Nonlinear_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_s
     exit(0);
   }
   */
+
+  //test patch limits for feasibility
+  if(patch_limits != NULL){
+    //test for upper bounds being greater than lower bounds
+    if(patch_limits[2] <= patch_limits[0]) std::cout << " Warning: patch limits for boundary condition are infeasible";
+    if(patch_limits[3] <= patch_limits[1]) std::cout << " Warning: patch limits for boundary condition are infeasible";
+  }
     
   // save the boundary vertices to this set that are on the plane
   int counter = 0;
   for (int iboundary_patch = 0; iboundary_patch < nboundary_patches; iboundary_patch++) {
 
     // check to see if this patch is on the specified plane
-    is_on_set = check_boundary(Boundary_Patches(iboundary_patch), bc_tag, val); // no=0, yes=1
+    is_on_set = check_boundary(Boundary_Patches(iboundary_patch), bc_tag, val, patch_limits); // no=0, yes=1
         
     if (is_on_set == 1){
       Boundary_Condition_Patches(bdy_set,counter) = iboundary_patch;
@@ -2224,28 +2250,55 @@ void Parallel_Nonlinear_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_s
 ------------------------------------------------------------------------- */
 
 
-int Parallel_Nonlinear_Solver::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, real_t val){
+int Parallel_Nonlinear_Solver::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, real_t val, real_t *patch_limits){
   
   int is_on_set = 1;
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
   //Nodes on the Patch
   auto node_list = Patch_Nodes.node_set;
+  int num_dim = simparam->num_dim;
   size_t nnodes = node_list.size();
   size_t node_rid;
-  real_t node_coord;
+  real_t node_coord[num_dim];
+  int dim_other1, dim_other2;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> node_on_flags(nnodes, "node_on_flags");
 
   //initialize
   for(int inode = 0; inode < nnodes; inode++) node_on_flags(inode) = 0;
-    
+
+  if(bc_tag==0){
+    dim_other1 = 1;
+    dim_other2 = 2;
+  }
+  else if(bc_tag==1){
+    dim_other1 = 0;
+    dim_other2 = 2;
+  }
+  else if(bc_tag==2){
+    dim_other1 = 0;
+    dim_other2 = 1;
+  }
+  
+  
   //test for planes
   if(bc_tag < 3)
   for(int inode = 0; inode < nnodes; inode++){
 
     node_rid = all_node_map->getLocalElement(node_list(inode));
-    node_coord = all_node_coords(node_rid,bc_tag);
-    if ( fabs(node_coord - val) <= 1.0e-8 ) node_on_flags(inode) = 1;
+    for(int init=0; init < num_dim; init++){
+      node_coord[init] = all_node_coords(node_rid,i);
+    }
+    if ( fabs(node_coord[bc_tag] - val) <= BC_EPSILON){ node_on_flags(inode) = 1;
+
+      //test if within patch segment if user specified
+      if(patch_limits!=NULL){
+        if (node_coord[dim_other1] - patch_limits[0] <= -BC_EPSILON) node_on_flags(inode) = 0;
+        if (node_coord[dim_other1] - patch_limits[1] >= BC_EPSILON) node_on_flags(inode) = 0;
+        if (node_coord[dim_other2] - patch_limits[2] <= -BC_EPSILON) node_on_flags(inode) = 0;
+        if (node_coord[dim_other2] - patch_limits[3] >= BC_EPSILON) node_on_flags(inode) = 0;
+      }
+    }
     //debug print of node id and node coord
     //std::cout << "node coords on task " << myrank << " for node " << node_rid << std::endl;
     //std::cout << "coord " <<node_coord << " flag " << node_on_flags(inode) << " bc_tag " << bc_tag << std::endl;
