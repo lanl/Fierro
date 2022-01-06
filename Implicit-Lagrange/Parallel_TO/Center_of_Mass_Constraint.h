@@ -74,7 +74,7 @@ public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
 
-  CenterOfMassConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, bool inequality_flag=true, real_t *constraint_value, int constraint_component) 
+  CenterOfMassConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, real_t constraint_value, int constraint_component, bool inequality_flag=true) 
     : FEM_(FEM) {
 
     nodal_density_flag_ = nodal_density_flag;
@@ -149,11 +149,11 @@ public:
     }
     
     FEM_->compute_element_moments(design_densities,false,constraint_component_);
-    FEM->com_update[constraint_component_] = current_step;
+    FEM_->com_update[constraint_component_] = current_step;
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    real_t current_moment = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+    real_t current_moment = ROL_Element_Moments->reduce(sumreduc);
     real_t current_com;
 
     //compute mass
@@ -167,7 +167,7 @@ public:
       FEM_->mass_update = current_step;
     }
 
-    current_com = FEM->center_of_mass[constraint_component_] = current_moment/current_mass;
+    current_com = FEM_->center_of_mass[constraint_component_] = current_moment/current_mass;
     //debug print
     if(FEM_->myrank==0){
       if(constraint_component_ == 0)
@@ -182,7 +182,7 @@ public:
       (*cp)[0] = current_com;
     }
     else{
-      (*cp)[0] = current_com - constraint_value_[0];
+      (*cp)[0] = current_com - constraint_value_;
     }
 
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;
@@ -228,11 +228,11 @@ public:
     if(FEM_->com_update[constraint_component_] == current_step) current_com = FEM_->center_of_mass[constraint_component_];
     else{
     FEM_->compute_element_moments(design_densities,false,constraint_component_);
-    FEM->com_update[constraint_component_] = current_step;
+    FEM_->com_update[constraint_component_] = current_step;
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    real_t current_moment = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+    real_t current_moment = ROL_Element_Moments->reduce(sumreduc);
     FEM_->center_of_mass[constraint_component_] = current_com = current_moment/current_mass;
     }
 
@@ -249,7 +249,7 @@ public:
       //std::fflush(stdout);
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
       constraint_gradients(i,constraint_component_) /= current_mass;
-      constraint_gradients(i,constraint_component_) -= mass_gradients(i)*current_com/current_mass;
+      constraint_gradients(i,constraint_component_) -= mass_gradients(i,0)*current_com/current_mass;
       constraint_gradients(i,constraint_component_) *= (*vp)[0];
     }
     
@@ -297,11 +297,11 @@ public:
     if(FEM_->com_update[constraint_component_] == current_step) current_com = FEM_->center_of_mass[constraint_component_];
     else{
     FEM_->compute_element_moments(design_densities,false,constraint_component_);
-    FEM->com_update[constraint_component_] = current_step;
+    FEM_->com_update[constraint_component_] = current_step;
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    real_t current_moment = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+    real_t current_moment = ROL_Element_Moments->reduce(sumreduc);
     FEM_->center_of_mass[constraint_component_] = current_com = current_moment/current_mass;
     }
 
@@ -310,12 +310,11 @@ public:
 
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
       constraint_gradients(i,constraint_component_) /= current_mass;
-      constraint_gradients(i,constraint_component_) -= mass_gradients(i)*current_com/current_mass;
-      constraint_gradients(i,constraint_component_) *= (*vp)[0];
+      constraint_gradients(i,constraint_component_) -= mass_gradients(i,0)*current_com/current_mass;
     }
 
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
-    real_t gradient_dot_v = ROL_Moment_of_Inertia_Gradient->dot(v);
+    real_t gradient_dot_v = ROL_Gradients->dot(v);
     //debug print
     //std::cout << "Constraint Gradient value " << gradient_dot_v << std::endl;
 

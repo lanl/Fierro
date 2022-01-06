@@ -76,7 +76,7 @@ public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
 
-  MomentOfInertiaConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, bool inequality_flag=true, real_t *constraint_value, int inertia_component) 
+  MomentOfInertiaConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, real_t constraint_value, int inertia_component, bool inequality_flag=true) 
     : FEM_(FEM) {
 
     nodal_density_flag_ = nodal_density_flag;
@@ -84,7 +84,7 @@ public:
     current_step = 0;
     inequality_flag_ = inequality_flag;
     constraint_value_ = constraint_value;
-    intertia_component_ = inertia_component;
+    inertia_component_ = inertia_component;
     int num_dim = FEM_->simparam->num_dim;
     if(inertia_component_ == 0)
     ROL_Element_Moments_of_Inertia = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_xx);
@@ -242,7 +242,7 @@ public:
       (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia;
     }
     else{
-      (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia - constraint_value_[0];
+      (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia - constraint_value_;
     }
 
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;
@@ -261,8 +261,8 @@ public:
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     //host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_vec_array constraint_gradients = ajvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    host_vec_array mass_gradients = mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    host_vec_array center_of_mass_gradients = center_of_mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    //host_vec_array mass_gradients = mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    //host_vec_array center_of_mass_gradients = center_of_mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     //host_vec_array dual_constraint_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     //communicate ghosts
@@ -370,8 +370,8 @@ public:
     //get local view of the data
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    host_vec_array mass_gradients = mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    host_vec_array center_of_mass_gradients = center_of_mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    //host_vec_array mass_gradients = mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    //host_vec_array center_of_mass_gradients = center_of_mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
     //communicate ghosts
@@ -389,10 +389,9 @@ public:
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
       constraint_gradients(i,0) /= initial_moment_of_inertia;
     }
-    
 
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
-    real_t gradient_dot_v = ROL_Moment_of_Inertia_Gradient->dot(v);
+    real_t gradient_dot_v = ROL_Gradients->dot(v);
     //debug print
     //std::cout << "Constraint Gradient value " << gradient_dot_v << std::endl;
 
@@ -448,7 +447,7 @@ public:
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
       current_moment = ROL_Element_Moments->reduce(sumreduc);
-      FEM_->com_update[com1] = current_step);
+      FEM_->com_update[com1] = current_step;
       FEM_->center_of_mass[com1] = current_center_of_mass[com1] = current_moment/current_mass;
     }
 
@@ -458,7 +457,7 @@ public:
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
       current_moment = ROL_Element_Moments->reduce(sumreduc);
-      FEM_->com_update[com2] = current_step);
+      FEM_->com_update[com2] = current_step;
       FEM_->center_of_mass[com2] = current_center_of_mass[com2] = current_moment/current_mass;
     }
   }
