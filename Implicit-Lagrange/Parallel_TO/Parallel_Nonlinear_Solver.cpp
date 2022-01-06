@@ -5960,33 +5960,33 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
           local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
             if(inertia_component==0){
-              delx1 = current_position[1] - center_of_mass[1];
-              delx2 = current_position[2] - center_of_mass[2];
+              delx1 = current_position(1) - center_of_mass[1];
+              delx2 = current_position(2) - center_of_mass[2];
               design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
             }
             if(inertia_component==1){
-              delx1 = current_position[0] - center_of_mass[0];
-              delx2 = current_position[2] - center_of_mass[2];
+              delx1 = current_position(0) - center_of_mass[0];
+              delx2 = current_position(2) - center_of_mass[2];
               design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
             }
             if(inertia_component==2){
-              delx1 = current_position[0] - center_of_mass[0];
-              delx2 = current_position[1] - center_of_mass[1];
+              delx1 = current_position(0) - center_of_mass[0];
+              delx2 = current_position(1) - center_of_mass[1];
               design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
             }
             if(inertia_component==3){
-              delx1 = current_position[0] - center_of_mass[0];
-              delx2 = current_position[1] - center_of_mass[1];
+              delx1 = current_position(0) - center_of_mass[0];
+              delx2 = current_position(1) - center_of_mass[1];
               design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx2)*Jacobian;
             }
             if(inertia_component==4){
-              delx1 = current_position[0] - center_of_mass[0];
-              delx2 = current_position[2] - center_of_mass[2];
+              delx1 = current_position(0) - center_of_mass[0];
+              delx2 = current_position(2) - center_of_mass[2];
               design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx2)*Jacobian;
             }
             if(inertia_component==5){
-              delx1 = current_position[1] - center_of_mass[1];
-              delx2 = current_position[2] - center_of_mass[2];
+              delx1 = current_position(1) - center_of_mass[1];
+              delx2 = current_position(2) - center_of_mass[2];
               design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx2)*Jacobian;
             }
         }
