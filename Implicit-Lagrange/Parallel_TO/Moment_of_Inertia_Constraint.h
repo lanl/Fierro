@@ -451,7 +451,7 @@ public:
       FEM_->center_of_mass[com1] = current_center_of_mass[com1] = current_moment/current_mass;
     }
 
-    if(FEM_->com_update[com2] = current_step) { initial_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
+    if(FEM_->com_update[com2] = current_step) { current_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
     else{
       FEM_->compute_element_moments(design_densities,false, com2);
       //sum per element results across all MPI ranks
