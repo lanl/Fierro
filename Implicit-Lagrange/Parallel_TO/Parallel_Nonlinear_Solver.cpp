@@ -96,6 +96,8 @@ num_cells in element = (p_order*2)^3
 //Objective Functions and Constraint Functions
 #include "Mass_Objective.h"
 #include "Mass_Constraint.h"
+#include "Center_of_Mass_Constraint.h"
+#include "Moment_of_Inertia_Constraint.h"
 #include "Bounded_Strain_Constraint.h"
 #include "Strain_Energy_Constraint.h"
 #include "Strain_Energy_Minimize.h"
