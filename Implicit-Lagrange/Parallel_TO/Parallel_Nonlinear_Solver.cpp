@@ -2287,7 +2287,7 @@ int Parallel_Nonlinear_Solver::check_boundary(Node_Combination &Patch_Nodes, int
 
     node_rid = all_node_map->getLocalElement(node_list(inode));
     for(int init=0; init < num_dim; init++){
-      node_coord[init] = all_node_coords(node_rid,i);
+      node_coord[init] = all_node_coords(node_rid,init);
     }
     if ( fabs(node_coord[bc_tag] - val) <= BC_EPSILON){ node_on_flags(inode) = 1;
 
