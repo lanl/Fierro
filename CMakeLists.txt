@@ -106,6 +106,8 @@ add_subdirectory(Elements/common)
 add_subdirectory(Elements/matar/src)
 add_subdirectory(Elements/geometry)
 add_subdirectory(Elements/slam)
+add_subdirectory(Elements/tests)
+add_subdirectory(Elements/mesh_tools)
 endif()
 
 if(BUILD_IMPLICIT_SOLVER)

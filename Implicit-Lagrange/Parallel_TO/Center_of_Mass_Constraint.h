@@ -74,7 +74,7 @@ public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
 
-  CenterOfMassConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, real_t constraint_value, int constraint_component, bool inequality_flag=true) 
+  CenterOfMassConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, int constraint_component, bool inequality_flag=true, real_t constraint_value=0) 
     : FEM_(FEM) {
 
     nodal_density_flag_ = nodal_density_flag;
