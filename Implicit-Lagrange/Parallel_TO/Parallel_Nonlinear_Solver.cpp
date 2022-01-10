@@ -315,7 +315,7 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
   size_t strain_count;
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
-  CArray <char> read_buffer;
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int buffer_loop, buffer_iteration, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
@@ -405,7 +405,7 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
   elem_words_per_line = simparam->elem_words_per_line;
 
   //allocate read buffer
-  read_buffer = CArray<char>(BUFFER_LINES,words_per_line,MAX_WORD);
+  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
   int dof_limit = num_nodes;
   int buffer_iterations = dof_limit/BUFFER_LINES;
@@ -618,7 +618,7 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
 
   num_elem = 0;
   rnum_elem = 0;
-  CArray<int> node_store(elem_words_per_line);
+  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(elem_words_per_line);
 
   if(myrank==0){
   //skip element type name line
@@ -644,7 +644,7 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
   
   //read in element connectivity
   //we're gonna reallocate for the words per line expected for the element connectivity
-  read_buffer = CArray<char>(BUFFER_LINES,elem_words_per_line,MAX_WORD);
+  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,elem_words_per_line,MAX_WORD);
 
   //calculate buffer iterations to read number of lines
   buffer_iterations = num_elem/BUFFER_LINES;
@@ -749,7 +749,7 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
   nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
-  Element_Types = CArray<elements::elem_types::elem_type>(rnum_elem);
+  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
   for(int ielem = 0; ielem < rnum_elem; ielem++)
     for(int inode = 0; inode < elem_words_per_line; inode++)
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
@@ -787,8 +787,8 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
 
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
-  CArray<size_t> convert_ensight_to_ijk(max_nodes_per_element);
-  CArray<size_t> tmp_ijk_indx(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
   convert_ensight_to_ijk(0) = 0;
   convert_ensight_to_ijk(1) = 1;
   convert_ensight_to_ijk(2) = 3;
@@ -863,7 +863,7 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
   size_t strain_count;
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
-  CArray <char> read_buffer;
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int buffer_loop, buffer_iteration, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
@@ -962,7 +962,7 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
   elem_words_per_line = simparam->elem_words_per_line;
 
   //allocate read buffer
-  read_buffer = CArray<char>(BUFFER_LINES,words_per_line,MAX_WORD);
+  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
   int dof_limit = num_nodes;
   int buffer_iterations = dof_limit/BUFFER_LINES;
@@ -1064,7 +1064,7 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
   
   //read in element info (supported tecplot format currently assumes one type)
 
-  CArray<int> node_store(elem_words_per_line);
+  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(elem_words_per_line);
   
   //broadcast number of elements
   MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
@@ -1072,7 +1072,7 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
   
   //read in element connectivity
   //we're gonna reallocate for the words per line expected for the element connectivity
-  read_buffer = CArray<char>(BUFFER_LINES,elem_words_per_line,MAX_WORD);
+  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,elem_words_per_line,MAX_WORD);
 
   //calculate buffer iterations to read number of lines
   buffer_iterations = num_elem/BUFFER_LINES;
@@ -1178,7 +1178,7 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
   nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
-  Element_Types = CArray<elements::elem_types::elem_type>(rnum_elem);
+  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem, array_layout, HostSpace, memory_traits);
   for(int ielem = 0; ielem < rnum_elem; ielem++)
     for(int inode = 0; inode < elem_words_per_line; inode++)
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
@@ -1216,8 +1216,8 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
 
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
-  CArray<size_t> convert_ensight_to_ijk(max_nodes_per_element);
-  CArray<size_t> tmp_ijk_indx(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
   convert_ensight_to_ijk(0) = 0;
   convert_ensight_to_ijk(1) = 1;
   convert_ensight_to_ijk(2) = 3;
@@ -1295,7 +1295,7 @@ void Parallel_Nonlinear_Solver::init_maps(){
   int local_node_index, current_column_index;
   size_t strain_count;
   std::stringstream line_parse;
-  CArray <char> read_buffer;
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int nodes_per_element;
   GO node_gid;
   
@@ -1315,7 +1315,7 @@ void Parallel_Nonlinear_Solver::init_maps(){
       buffer_limit += elem->num_nodes();
     }
 
-    CArray<size_t> ghost_node_buffer(buffer_limit);
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> ghost_node_buffer(buffer_limit);
     std::set<GO> ghost_node_set;
 
     //search through local elements for global node indices not owned by this MPI rank
@@ -1342,7 +1342,7 @@ void Parallel_Nonlinear_Solver::init_maps(){
     }
 
     //by now the set contains, with no repeats, all the global node indices that are ghosts for this rank
-    //now pass the contents of the set over to a CArray, then create a map to find local ghost indices from global ghost indices
+    //now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
     nghost_nodes = ghost_node_set.size();
     ghost_nodes = CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type>(nghost_nodes, "ghost_nodes");
     ghost_node_ranks = CArrayKokkos<int, array_layout, device_type, memory_traits>(nghost_nodes, "ghost_node_ranks");
@@ -1358,7 +1358,7 @@ void Parallel_Nonlinear_Solver::init_maps(){
     //for(int i = 0; i < nghost_nodes; i++)
       //std::cout << "{" << i + 1 << "," << ghost_nodes(i) + 1 << "}" << std::endl;
 
-    //find which mpi rank each ghost node belongs to and store the information in a CArray
+    //find which mpi rank each ghost node belongs to and store the information in a CArrayKokkos
     //allocate Teuchos Views since they are the only input available at the moment in the map definitions
     Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.get_kokkos_view().data(), nghost_nodes);
     Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.get_kokkos_view().data(), nghost_nodes);
@@ -1954,9 +1954,9 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   int surf_disp_set_id = 0;
 
   init_boundary_sets(num_boundary_sets);
-  Boundary_Condition_Type_List = CArray<int>(num_boundary_sets); 
-  Boundary_Surface_Force_Densities = CArray<real_t>(num_surface_force_sets,3);
-  Boundary_Surface_Displacements = CArray<real_t>(num_surface_disp_sets,3);
+  Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_boundary_sets); 
+  Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets,3);
+  Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets,3);
   //initialize
   for(int ibdy=0; ibdy < num_boundary_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
     
@@ -2169,8 +2169,8 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
 
   //allocate nodal data
   Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes*num_dim, "Node_DOF_Boundary_Condition_Type");
-  Node_DOF_Displacement_Boundary_Conditions = CArray<real_t>(nall_nodes*num_dim);
-  Node_DOF_Force_Boundary_Conditions = CArray<real_t>(nall_nodes*num_dim);
+  Node_DOF_Displacement_Boundary_Conditions = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(nall_nodes*num_dim);
+  Node_DOF_Force_Boundary_Conditions = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(nall_nodes*num_dim);
 
   //initialize
   for(int init=0; init < nall_nodes*num_dim; init++)
@@ -2458,8 +2458,8 @@ void Parallel_Nonlinear_Solver::tecplot_writer(){
   collect_information();
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
-  CArray<size_t> convert_ijk_to_ensight(max_nodes_per_element);
-  CArray<size_t> tmp_ijk_indx(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
   convert_ijk_to_ensight(0) = 0;
   convert_ijk_to_ensight(1) = 1;
   convert_ijk_to_ensight(2) = 3;
@@ -3531,7 +3531,7 @@ void Parallel_Nonlinear_Solver::assemble_matrix(){
   int local_dof_index, global_node_index, current_row, current_column;
   int max_stride = 0;
   
-  CArray <real_t> Local_Stiffness_Matrix = CArray <real_t> (num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Stiffness_Matrix(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
 
   //initialize stiffness Matrix entries to 0
   //debug print
@@ -3737,7 +3737,7 @@ void Parallel_Nonlinear_Solver::Gradient_Element_Material_Properties(size_t iele
    Construct the local stiffness matrix
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArray <real_t> &Local_Matrix){
+void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArrayKokkos <real_t> &Local_Matrix){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3759,8 +3759,8 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArray <real_t> &Local_M
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian;
   real_t Element_Modulus, Poisson_Ratio;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -3782,8 +3782,8 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArray <real_t> &Local_M
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -4121,7 +4121,7 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArray <real_t> &Local_M
    Construct the local stiffness matrix
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArray <real_t> &Local_Matrix){
+void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArrayKokkos <real_t, array_layout, device_type, memory_traits> &Local_Matrix){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -4143,8 +4143,8 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArray <real_t>
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian;
   real_t Element_Modulus, Poisson_Ratio;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -4166,17 +4166,17 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArray <real_t>
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
   size_t Brows;
   if(num_dim==2) Brows = 3;
   if(num_dim==3) Brows = 6;
-  CArray<real_t> B_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArray<real_t> B_matrix(Brows,num_dim*elem->num_basis());
-  CArray<real_t> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArray<real_t> CB_matrix(Brows,num_dim*elem->num_basis());
-  CArray<real_t> C_matrix(Brows,Brows);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -4521,9 +4521,9 @@ void Parallel_Nonlinear_Solver::Displacement_Boundary_Conditions(){
   int surface_disp_set_id = 0;
   int num_dim = simparam->num_dim;
   int bc_option, bc_dim_set[3];
-  CArray<real_t> displacement(num_dim);
-  CArray<size_t> Displacement_Conditions(num_dim);
-  CArray<size_t> first_condition_per_node(nall_nodes*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> displacement(num_dim);
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Displacement_Conditions(num_dim);
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   Number_DOF_BCS = 0;
   Displacement_Conditions(0) = X_DISPLACEMENT_CONDITION;
@@ -4657,8 +4657,8 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   int current_element_index, local_surface_id, surf_dim1, surf_dim2;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -4668,9 +4668,9 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
   real_t force_density[3], wedge_product;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   
-  CArray<real_t> JT_row1(num_dim);
-  CArray<real_t> JT_row2(num_dim);
-  CArray<real_t> JT_row3(num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row3(num_dim);
 
    //force vector initialization
   for(int i=0; i < num_dim*nlocal_nodes; i++)
@@ -4721,10 +4721,10 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
       ViewCArray<real_t> basis_values(pointer_basis_values,8);
       ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,8);
       ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,8);
-      CArray<real_t> nodal_positions(4,num_dim);
-      CArray<real_t> surf_basis_derivative_s1(4,num_dim);
-      CArray<real_t> surf_basis_derivative_s2(4,num_dim);
-      CArray<real_t> surf_basis_values(4,num_dim);
+      CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(4,num_dim);
+      CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(4,num_dim);
+      CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(4,num_dim);
+      CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(4,num_dim);
       int local_nodes[4];
       //set current quadrature point
       y_quad = iquad / num_gauss_points;
@@ -4908,8 +4908,8 @@ void Parallel_Nonlinear_Solver::compute_element_masses(const_host_vec_array desi
   GO global_element_index;
 
   real_t Jacobian, current_density;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -4931,8 +4931,8 @@ void Parallel_Nonlinear_Solver::compute_element_masses(const_host_vec_array desi
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -5094,8 +5094,8 @@ void Parallel_Nonlinear_Solver::compute_nodal_gradients(const_host_vec_array des
   GO global_element_index;
   
   real_t Jacobian;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -5117,8 +5117,8 @@ void Parallel_Nonlinear_Solver::compute_nodal_gradients(const_host_vec_array des
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -5268,8 +5268,8 @@ void Parallel_Nonlinear_Solver::compute_element_moments(const_host_vec_array des
   GO global_element_index;
 
   real_t Jacobian, current_density;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -5291,9 +5291,9 @@ void Parallel_Nonlinear_Solver::compute_element_moments(const_host_vec_array des
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> nodal_density(elem->num_basis());
-  CArrayKokkos<real_t> current_position(num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -5461,8 +5461,8 @@ void Parallel_Nonlinear_Solver::compute_moment_gradients(const_host_vec_array de
   GO global_element_index;
   
   real_t Jacobian;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -5484,9 +5484,9 @@ void Parallel_Nonlinear_Solver::compute_moment_gradients(const_host_vec_array de
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> nodal_density(elem->num_basis());
-  CArrayKokkos<real_t> current_position(num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -5647,8 +5647,8 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
   real_t delx1, delx2;
 
   real_t Jacobian, current_density;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -5670,9 +5670,9 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> nodal_density(elem->num_basis());
-  CArrayKokkos<real_t> current_position(num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -5872,8 +5872,8 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
   real_t delx1, delx2;
   
   real_t Jacobian;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -5895,9 +5895,9 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> nodal_density(elem->num_basis());
-  CArrayKokkos<real_t> current_position(num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_position(num_dim);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -6083,8 +6083,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
   real_t Element_Modulus_Gradient, Poisson_Ratio;
   real_t Elastic_Constant, Shear_Term, Pressure_Term;
   real_t inner_product, matrix_term, Jacobian;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -6106,19 +6106,19 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> current_nodal_displacements(elem->num_basis()*num_dim);
-  CArray<real_t> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
   size_t Brows;
   if(num_dim==2) Brows = 3;
   if(num_dim==3) Brows = 6;
-  CArray<real_t> B_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArray<real_t> B_matrix(Brows,num_dim*elem->num_basis());
-  CArray<real_t> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArray<real_t> CB_matrix(Brows,num_dim*elem->num_basis());
-  CArray<real_t> C_matrix(Brows,Brows);
-  CArray <real_t> Local_Matrix_Contribution = CArray <real_t> (num_dim*nodes_per_elem,num_dim*nodes_per_elem);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Matrix_Contribution(num_dim*nodes_per_elem,num_dim*nodes_per_elem);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -6501,8 +6501,8 @@ void Parallel_Nonlinear_Solver::compute_nodal_strains(){
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t matrix_term, current_strain;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -6524,18 +6524,18 @@ void Parallel_Nonlinear_Solver::compute_nodal_strains(){
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
-  CArray<real_t> current_nodal_displacements(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
 
   size_t Brows;
   if(num_dim==2) Brows = 3;
   if(num_dim==3) Brows = 6;
-  CArray<real_t> B_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArray<real_t> B_matrix(Brows,num_dim*elem->num_basis());
-  CArray<real_t> quad_strain(Brows);
-  FArray<real_t> projection_matrix(max_nodes_per_element,max_nodes_per_element);
-  CArray<real_t> projection_vector(Brows,max_nodes_per_element);
-  CArray<real_t> strain_vector(max_nodes_per_element);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> quad_strain(Brows);
+  FArrayKokkos<real_t, array_layout, device_type, memory_traits> projection_matrix(max_nodes_per_element,max_nodes_per_element);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> projection_vector(Brows,max_nodes_per_element);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> strain_vector(max_nodes_per_element);
   //Teuchos::SerialSymDenseMatrix<LO,real_t> projection_matrix_pass;
   Teuchos::RCP<Teuchos::SerialDenseMatrix<LO,real_t>> projection_matrix_pass;
   //Teuchos::SerialDenseVector<LO,real_t> projection_vector_pass;
@@ -6950,8 +6950,8 @@ void Parallel_Nonlinear_Solver::compute_element_volumes(){
   GO global_element_index;
 
   real_t Jacobian;
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
   real_t pointer_quad_coordinate_weight[num_dim];
   real_t pointer_interpolated_point[num_dim];
@@ -6973,7 +6973,7 @@ void Parallel_Nonlinear_Solver::compute_element_volumes(){
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArray<real_t> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
