@@ -123,9 +123,9 @@ public:
 
   void setup_optimization_problem();
 
-  void local_matrix(int ielem, CArray <real_t> &Local_Matrix);
+  void local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
 
-  void local_matrix_multiply(int ielem, CArray <real_t> &Local_Matrix);
+  void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
   
   //interfaces between user input and creating data structures for bcs
   void generate_bcs();
@@ -176,8 +176,8 @@ public:
   dual_vec_array dual_nodal_forces;
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
   host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
-  CArray<elements::elem_types::elem_type> Element_Types;
-  CArray<size_t> Nodes_Per_Element_Type;
+  CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
@@ -270,15 +270,15 @@ public:
   //lists what kind of boundary condition the nodal DOF is subjected to if any
   CArrayKokkos<int, array_layout, device_type, memory_traits> Node_DOF_Boundary_Condition_Type;
   //stores the displacement value for the boundary condition on this nodal DOF
-  CArray<real_t> Node_DOF_Displacement_Boundary_Conditions;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Displacement_Boundary_Conditions;
   //stores applied point forces on nodal DOF
-  CArray<real_t> Node_DOF_Force_Boundary_Conditions;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Force_Boundary_Conditions;
   //lists what kind of boundary condition each boundary set is assigned to
-  CArray<int> Boundary_Condition_Type_List;
+  CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
   //constant surface force densities corresponding to each boundary set (provide varying field later)
-  CArray<real_t> Boundary_Surface_Force_Densities;
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Force_Densities;
   //constant displacement condition applied to all nodes on a boundary surface (convenient option to avoid specifying nodes)
-  CArray<real_t> Boundary_Surface_Displacements;
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Displacements;
   
   //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
   size_t Number_DOF_BCS;
