@@ -421,7 +421,7 @@ public:
   void update_com_and_mass(const_host_vec_array design_densities, real_t &current_mass, real_t *current_center_of_mass){
 
     //compute mass
-    if(FEM_->mass_update == current_step) { current_mass = FEM_->mass; }
+    if(FEM_->mass_update == current_step&&0) { current_mass = FEM_->mass; }
     else{
       FEM_->compute_element_masses(design_densities,true);
       //sum per element results across all MPI ranks
@@ -433,7 +433,7 @@ public:
     //compute initial center of mass
     real_t current_moment;
     
-    if(FEM_->com_update[com1] == current_step) { current_center_of_mass[com1] = FEM_->center_of_mass[com1]; }
+    if(FEM_->com_update[com1] == current_step&&0) { current_center_of_mass[com1] = FEM_->center_of_mass[com1]; }
     else{
       FEM_->compute_element_moments(design_densities,false, com1);
       //sum per element results across all MPI ranks
@@ -443,7 +443,7 @@ public:
       FEM_->center_of_mass[com1] = current_center_of_mass[com1] = current_moment/current_mass;
     }
 
-    if(FEM_->com_update[com2] = current_step) { current_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
+    if(FEM_->com_update[com2] = current_step&&0) { current_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
     else{
       FEM_->compute_element_moments(design_densities,false, com2);
       //sum per element results across all MPI ranks
