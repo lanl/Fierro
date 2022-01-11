@@ -413,7 +413,7 @@ public:
         for(int i = 0; i < FEM_->nlocal_nodes; i++)
           constraint_gradients(i,0) *= (*vp)[0];
       }
-      else if(inertia_component_ > 2 && !inequality_flag){
+      else if(inertia_component_ > 2 && !inequality_flag_){
         for(int i = 0; i < FEM_->nlocal_nodes; i++)
           constraint_gradients(i,0) *= (*vp)[0]/constraint_value_;
       }
@@ -460,7 +460,7 @@ public:
         for(int i = 0; i < FEM_->nlocal_nodes; i++)
           constraint_gradients(i,0) /= initial_moment_of_inertia;
       }
-      else if ((inertia_component_ > 2 && !zero_flag)&&!inequality_flag){
+      else if ((inertia_component_ > 2 && !zero_flag)&&!inequality_flag_){
         for(int i = 0; i < FEM_->nlocal_nodes; i++)
           constraint_gradients(i,0) /= constraint_value_;
       }
