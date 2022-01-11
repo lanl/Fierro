@@ -147,16 +147,17 @@ public:
       com2 = 2;
     }
     
+    
+    if(com1 == 0)
+    ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
+    if(com1 == 1)
+    ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
+    if(com1 == 2)
+    ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
+
     if(FEM_->com_init[com1]) { initial_center_of_mass[com1] = FEM_->center_of_mass[com1]; }
     else{
       FEM_->compute_element_moments(design_densities,true, com1);
-      
-      if(com1 == 0)
-      ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
-      if(com1 == 1)
-      ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
-      if(com1 == 2)
-      ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
 
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
@@ -164,17 +165,17 @@ public:
       FEM_->com_init[com1] = true;
       FEM_->center_of_mass[com1] = initial_center_of_mass[com1] = initial_moment/initial_mass;
     }
+    
+    if(com2 == 0)
+    ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
+    if(com2 == 1)
+    ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
+    if(com2 == 2)
+    ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
 
     if(FEM_->com_init[com2]) { initial_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
     else{
       FEM_->compute_element_moments(design_densities,true, com2);
-
-      if(com2 == 0)
-      ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
-      if(com2 == 1)
-      ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
-      if(com2 == 2)
-      ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
 
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
