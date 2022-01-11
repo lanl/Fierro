@@ -1178,7 +1178,7 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
   nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
-  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem, array_layout, HostSpace, memory_traits);
+  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
   for(int ielem = 0; ielem < rnum_elem; ielem++)
     for(int inode = 0; inode < elem_words_per_line; inode++)
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
@@ -2099,7 +2099,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id ,load_limits_left);
   Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 1/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 10/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
@@ -2118,7 +2118,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id, load_limits_right);
   Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = -1/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Force_Densities(surf_force_set_id,0) = -10/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
@@ -3759,8 +3759,8 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArrayKokkos<real_t, arr
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian;
   real_t Element_Modulus, Poisson_Ratio;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -4145,8 +4145,8 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArrayKokkos<re
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian;
   real_t Element_Modulus, Poisson_Ratio;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -4661,8 +4661,8 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   int current_element_index, local_surface_id, surf_dim1, surf_dim2;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -4914,8 +4914,8 @@ void Parallel_Nonlinear_Solver::compute_element_masses(const_host_vec_array desi
   GO global_element_index;
 
   real_t Jacobian, current_density;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -5102,8 +5102,8 @@ void Parallel_Nonlinear_Solver::compute_nodal_gradients(const_host_vec_array des
   GO global_element_index;
   
   real_t Jacobian;
-  #CArrayKokkos<real_t> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -5278,8 +5278,8 @@ void Parallel_Nonlinear_Solver::compute_element_moments(const_host_vec_array des
   GO global_element_index;
 
   real_t Jacobian, current_density;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -5473,8 +5473,8 @@ void Parallel_Nonlinear_Solver::compute_moment_gradients(const_host_vec_array de
   GO global_element_index;
   
   real_t Jacobian;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -5661,8 +5661,8 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
   real_t delx1, delx2;
 
   real_t Jacobian, current_density;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -5888,8 +5888,8 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
   real_t delx1, delx2;
   
   real_t Jacobian;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -6101,8 +6101,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
   real_t Element_Modulus_Gradient, Poisson_Ratio;
   real_t Elastic_Constant, Shear_Term, Pressure_Term;
   real_t inner_product, matrix_term, Jacobian;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -6521,8 +6521,8 @@ void Parallel_Nonlinear_Solver::compute_nodal_strains(){
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t matrix_term, current_strain;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
@@ -6972,8 +6972,8 @@ void Parallel_Nonlinear_Solver::compute_element_volumes(){
   GO global_element_index;
 
   real_t Jacobian;
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  #CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
   CArray<real_t> legendre_weights_1D(num_gauss_points);
   real_t pointer_quad_coordinate[num_dim];
