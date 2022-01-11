@@ -22,6 +22,8 @@
 #include "ROL_Elementwise_Reduce.hpp"
 #include "Parallel_Nonlinear_Solver.h"
 
+#define MOI_EPSILON 0.000000001
+
 class MomentOfInertiaConstraint_TopOpt : public ROL::Constraint<real_t> {
   
   typedef Tpetra::Map<>::local_ordinal_type LO;
@@ -61,7 +63,7 @@ private:
   Teuchos::RCP<MV> center_of_mass_gradients_distributed;
   Teuchos::RCP<MV> mass_gradients_distributed;
   real_t initial_moment_of_inertia;
-  bool inequality_flag_;
+  bool inequality_flag_, ratio_flag, zero_flag;
   real_t constraint_value_;
   int inertia_component_;
   int com1, com2;
@@ -80,7 +82,8 @@ public:
 
   MomentOfInertiaConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, int inertia_component, bool inequality_flag=true, real_t constraint_value = 0) 
     : FEM_(FEM) {
-
+    ratio_flag = true;
+    zero_flag = false;
     nodal_density_flag_ = nodal_density_flag;
     last_comm_step = last_solve_step = -1;
     current_step = 0;
@@ -190,6 +193,12 @@ public:
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     initial_moment_of_inertia = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+    
+    //prevent numerical issues
+    if(constraint_value_==0&&!inequality_flag) {zero_flag = true;}
+    if(inertia_component_ < 3 && zero_flag) { std::cout << "ERROR PRINCIPAL MOMENTS OF INERTIA CANNOT BE CONSTRAINED TO ZERO " << std::endl; }
+    real_t temp_initial = initial_moment_of_inertia;
+    if(inertia_component_ > 2) { ratio_flag = false; }
 
     //debug print
     if(FEM_->myrank==0){
@@ -245,24 +254,50 @@ public:
     //debug print
     if(FEM_->myrank==0){
       if(inertia_component_ == 0)
-      std::cout << "MOMENT OF INERTIA XX RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 1)
-      std::cout << "MOMENT OF INERTIA YY RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 2)
-      std::cout << "MOMENT OF INERTIA ZZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 3)
-      std::cout << "MOMENT OF INERTIA XY RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 4)
-      std::cout << "MOMENT OF INERTIA XZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 5)
-      std::cout << "MOMENT OF INERTIA YZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+          std::cout << "MOMENT OF INERTIA XX RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+        if(inertia_component_ == 1)
+          std::cout << "MOMENT OF INERTIA YY RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+        if(inertia_component_ == 2)
+          std::cout << "MOMENT OF INERTIA ZZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+      if(!zero_flag){
+        if(inertia_component_ == 3)
+          std::cout << "MOMENT OF INERTIA XY % ERROR: " << 100*current_moment_of_inertia/constraint_value_ - 100 << std::endl;
+        if(inertia_component_ == 4)
+          std::cout << "MOMENT OF INERTIA XZ % ERROR: " << 100*current_moment_of_inertia/constraint_value_ - 100 << std::endl;
+        if(inertia_component_ == 5)
+          std::cout << "MOMENT OF INERTIA YZ % ERROR: " << 100*current_moment_of_inertia/constraint_value_ - 100 << std::endl;
+      }
+      else{
+        if(inertia_component_ == 3)
+          std::cout << "MOMENT OF INERTIA XY: " << current_moment_of_inertia << std::endl;
+        if(inertia_component_ == 4)
+          std::cout << "MOMENT OF INERTIA XZ: " << current_moment_of_inertia << std::endl;
+        if(inertia_component_ == 5)
+          std::cout << "MOMENT OF INERTIA YZ: " << current_moment_of_inertia << std::endl;
+      }
     }
     
     if(inequality_flag_){
-      (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia;
+      if(inertia_component_ < 3){
+        (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia;
+      }
+      else if(inertia_component_ > 2 && zero_flag){
+        (*cp)[0] = current_moment_of_inertia;
+      }
+      else{
+        (*cp)[0] = current_moment_of_inertia;
+      }
     }
     else{
-      (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia - constraint_value_;
+      if(inertia_component_ < 3){
+        (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia - constraint_value_;
+      }
+      else if(inertia_component_ > 2 && zero_flag){
+        (*cp)[0] = current_moment_of_inertia;
+      }
+      else{
+        (*cp)[0] = current_moment_of_inertia/constraint_value_ - 1;
+      }
     }
 
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;
@@ -369,10 +404,24 @@ public:
       //constraint_gradients(i,0) += 2*current_center_of_mass[com2]*current_mass*center_of_mass_gradients(i, com2);
     //}
 
-    for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,0) *= (*vp)[0]/initial_moment_of_inertia;
-    }
     
+      if(inertia_component_ < 3){
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) *= (*vp)[0]/initial_moment_of_inertia;
+      }
+      else if(inertia_component_ > 2 && zero_flag){
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) *= (*vp)[0];
+      }
+      else if(inertia_component_ > 2 && !inequality_flag){
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) *= (*vp)[0]/constraint_value_;
+      }
+      else{
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) *= (*vp)[0];
+      }
+     
     
     //std::cout << "Ended constraint adjoint grad on task " <<FEM_->myrank  << std::endl;
     //debug print
@@ -406,9 +455,16 @@ public:
     update_com_and_mass(design_densities, current_mass, current_center_of_mass);
     
     FEM_->compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_);
-    for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,0) /= initial_moment_of_inertia;
-    }
+    
+      if(inertia_component_ < 3){
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) /= initial_moment_of_inertia;
+      }
+      else if ((inertia_component_ > 2 && !zero_flag)&&!inequality_flag){
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) /= constraint_value_;
+      }
+    
 
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
     real_t gradient_dot_v = ROL_Gradients->dot(v);
