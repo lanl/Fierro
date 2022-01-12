@@ -213,7 +213,7 @@ public:
     }
     
     //prevent numerical issues
-    if(inertia_component_ < 3 && constraint_value_==0&&) { std::cout << "ERROR PRINCIPAL MOMENTS OF INERTIA CANNOT BE CONSTRAINED TO ZERO " << std::endl; }
+    if(inertia_component_ < 3 && constraint_value_==0) { std::cout << "ERROR PRINCIPAL MOMENTS OF INERTIA CANNOT BE CONSTRAINED TO ZERO " << std::endl; }
 
     //debug print
     if(FEM_->myrank==0){
