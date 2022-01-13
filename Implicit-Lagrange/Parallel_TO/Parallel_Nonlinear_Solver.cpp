@@ -4879,6 +4879,291 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
 
     //apply contribution from non-zero displacement boundary conditions
 
+    //apply body forces
+    //initialize quadrature data
+    elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+
+    for(size_t ielem = 0; ielem < rnum_elem; ielem++){
+
+    //initialize C matrix
+    for(int irow = 0; irow < Brows; irow++)
+      for(int icol = 0; icol < Brows; icol++)
+        C_matrix(irow,icol) = 0;
+
+    //B matrix initialization
+    for(int irow=0; irow < Brows; irow++)
+      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+        CB_matrix(irow,icol) = 0;
+      }
+
+    //acquire set of nodes and nodal displacements for this local element
+    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_dof_idx = all_dof_map->getLocalElement(nodes_in_elem(ielem, node_loop)*num_dim);
+      local_dof_idy = local_dof_idx + 1;
+      local_dof_idz = local_dof_idx + 2;
+      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+      current_nodal_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
+      current_nodal_displacements(node_loop*num_dim+1) = all_node_displacements(local_dof_idy,0);
+      current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
+      
+      if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
+      //debug print
+      /*
+      std::cout << "node index access x "<< local_node_id << std::endl;
+      std::cout << "local index access x "<< local_dof_idx << " displacement x " << current_nodal_displacements(node_loop*num_dim) <<std::endl;
+      std::cout << "local index access y "<< local_dof_idy << " displacement y " << current_nodal_displacements(node_loop*num_dim + 1) << std::endl;
+      std::cout << "local index access z "<< local_dof_idz << " displacement z " << current_nodal_displacements(node_loop*num_dim + 2) << std::endl; 
+      */
+    }
+
+    //debug print of current_nodal_displacements
+    /*
+    std::cout << " ------------nodal displacements for Element "<< ielem + 1 <<"--------------"<<std::endl;
+    std::cout << " { ";
+    for (int idof = 0; idof < num_dim*nodes_per_elem; idof++){
+      std::cout << idof + 1 << " = " << current_nodal_displacements(idof) << " , " ;
+    }
+    std::cout << " }"<< std::endl;
+    */
+
+    //loop over quadrature points
+    for(int iquad=0; iquad < direct_product_count; iquad++){
+
+    //set current quadrature point
+    if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
+    y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
+    x_quad = iquad % num_gauss_points;
+    quad_coordinate(0) = legendre_nodes_1D(x_quad);
+    quad_coordinate(1) = legendre_nodes_1D(y_quad);
+    if(num_dim==3)
+    quad_coordinate(2) = legendre_nodes_1D(z_quad);
+
+    //set current quadrature weight
+    quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+    quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+    if(num_dim==3)
+    quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+
+    //compute shape functions at this point for the element type
+    elem->basis(basis_values,quad_coordinate);
+
+    //compute all the necessary coordinates and derivatives at this point
+    //compute shape function derivatives
+    elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+    elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+    elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+
+    //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+    //derivative of x,y,z w.r.t s
+    JT_row1(0) = 0;
+    JT_row1(1) = 0;
+    JT_row1(2) = 0;
+    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+      JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+      JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+      JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+    }
+
+    //derivative of x,y,z w.r.t t
+    JT_row2(0) = 0;
+    JT_row2(1) = 0;
+    JT_row2(2) = 0;
+    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+      JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+      JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+      JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+    }
+
+    //derivative of x,y,z w.r.t w
+    JT_row3(0) = 0;
+    JT_row3(1) = 0;
+    JT_row3(2) = 0;
+    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+      JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+      JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+      JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+    }
+    
+    //compute the determinant of the Jacobian
+    Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+               JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+               JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+    if(Jacobian<0) Jacobian = -Jacobian;
+
+    //compute density
+    current_density = 0;
+    if(nodal_density_flag)
+    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+      current_density += nodal_density(node_loop)*basis_values(node_loop);
+    }
+    //default constant element density
+    else{
+      current_density = Element_Densities(ielem,0);
+    }
+
+    //debug print
+    //std::cout << "Current Density " << current_density << std::endl;
+
+    //compute the contributions of this quadrature point to the B matrix
+    if(num_dim==2)
+    for(int ishape=0; ishape < nodes_per_elem; ishape++){
+      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(1,ishape*num_dim) = 0;
+      B_matrix_contribution(2,ishape*num_dim) = 0;
+      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      B_matrix_contribution(5,ishape*num_dim) = 0;
+      B_matrix_contribution(0,ishape*num_dim+1) = 0;
+      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      B_matrix_contribution(2,ishape*num_dim+1) = 0;
+      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(4,ishape*num_dim+1) = 0;
+      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      B_matrix_contribution(0,ishape*num_dim+2) = 0;
+      B_matrix_contribution(1,ishape*num_dim+2) = 0;
+      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      B_matrix_contribution(3,ishape*num_dim+2) = 0;
+      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+    }
+    if(num_dim==3)
+    for(int ishape=0; ishape < nodes_per_elem; ishape++){
+      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(1,ishape*num_dim) = 0;
+      B_matrix_contribution(2,ishape*num_dim) = 0;
+      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      B_matrix_contribution(5,ishape*num_dim) = 0;
+      B_matrix_contribution(0,ishape*num_dim+1) = 0;
+      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      B_matrix_contribution(2,ishape*num_dim+1) = 0;
+      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(4,ishape*num_dim+1) = 0;
+      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      B_matrix_contribution(0,ishape*num_dim+2) = 0;
+      B_matrix_contribution(1,ishape*num_dim+2) = 0;
+      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      B_matrix_contribution(3,ishape*num_dim+2) = 0;
+      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+    }
+    
+    
+    //evaluate local stiffness matrix gradient with respect to igradient
+    for(int igradient=0; igradient < nodes_per_elem; igradient++){
+      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
+      //look up element material properties at this point as a function of density
+      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+      Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+      Shear_Term = 0.5 - Poisson_Ratio;
+      Pressure_Term = 1 - Poisson_Ratio;
+
+      //debug print
+      //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
+
+      //compute Elastic (C) matrix
+      if(num_dim==2){
+        C_matrix(0,0) = Pressure_Term;
+        C_matrix(1,1) = Pressure_Term;
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(2,2) = Shear_Term;
+      }
+      if(num_dim==3){
+        C_matrix(0,0) = Pressure_Term;
+        C_matrix(1,1) = Pressure_Term;
+        C_matrix(2,2) = Pressure_Term;
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(0,2) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(1,2) = Poisson_Ratio;
+        C_matrix(2,0) = Poisson_Ratio;
+        C_matrix(2,1) = Poisson_Ratio;
+        C_matrix(3,3) = Shear_Term;
+        C_matrix(4,4) = Shear_Term;
+        C_matrix(5,5) = Shear_Term;
+      }
+
+      //compute the previous multiplied by the Elastic (C) Matrix
+      for(int irow=0; irow < Brows; irow++){
+        for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+          CB_matrix_contribution(irow,icol) = 0;
+          for(int span=0; span < Brows; span++){
+            CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+          }
+        }
+      }
+
+      //compute the contributions of this quadrature point to all the local stiffness matrix elements
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
+          matrix_term = 0;
+          for(int span = 0; span < Brows; span++){
+            matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
+          }
+          Local_Matrix_Contribution(ifill,jfill) = Elastic_Constant*basis_values(igradient)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*matrix_term/Jacobian;
+        }
+      }
+      
+      //compute inner product for this quadrature point contribution
+      inner_product = 0;
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+          //debug
+          //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
+          //inner_product += Local_Matrix_Contribution(ifill, jfill);
+        }
+      }
+      
+      //debug print
+      //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
+      design_gradients(local_node_id,0) -= inner_product;
+      }
+    }
+  }
+
     //debug print of force vector
     /*
     std::cout << "---------FORCE VECTOR-------------" << std::endl;
