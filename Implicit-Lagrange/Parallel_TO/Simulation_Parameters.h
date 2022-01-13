@@ -77,6 +77,10 @@ class Simulation_Parameters
   //debug and performance reporting flags
   int report_runtime_flag;
 
+  //Body force parameters
+  bool gravity_flag;
+  real_t gravity_vector[3];
+
   //Linear Solver Flags
   bool direct_solver_flag;
 

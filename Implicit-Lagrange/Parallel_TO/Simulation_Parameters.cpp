@@ -18,6 +18,7 @@ Simulation_Parameters::Simulation_Parameters(){
   penalty_power = 3;
   restart_file = false;
   tecplot_input = false;
+  gravity_flag = false;
 }
 
 Simulation_Parameters::~Simulation_Parameters(){
@@ -87,5 +88,11 @@ void Simulation_Parameters::input(){
   NBSF = 4; //number of surface density force conditions
   NBD = 1; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
            //note this only implies a fixed displacement on the surface if no other basis functions have support on the surface
+
+  //apply body forces
+  gravity_flag = true;
+  gravity_vector[0] = 9.81;
+  gravity_vector[1] = 0;
+  gravity_vector[2] = 0;
 
 }

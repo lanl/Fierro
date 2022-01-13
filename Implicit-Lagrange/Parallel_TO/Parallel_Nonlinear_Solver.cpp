@@ -172,6 +172,9 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
   //RCP initialization
   mass_gradients_distributed = Teuchos::null;
   center_of_mass_gradients_distributed = Teuchos::null;
+
+  //boundary condition flags
+  body_force_flag = gravity_flag = thermal_flag = electric_flag = false;
 }
 
 Parallel_Nonlinear_Solver::~Parallel_Nonlinear_Solver(){
@@ -224,7 +227,14 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     init_clock();
     
     // ---- Find Boundaries on mesh ---- //
+    init_boundaries();
+
+    //set boundary conditions
     generate_bcs();
+
+    //set applied loading conditions
+    generate_applied_loads();
+
     if(myrank == 0)
     std::cout << "Starting init assembly" << std::endl <<std::flush;
     //allocate and fill sparse structures needed for global solution
@@ -1929,41 +1939,61 @@ void Parallel_Nonlinear_Solver::Get_Boundary_Patches(){
   */
 }
 
+/* ----------------------------------------------------------------------------
+   Initialize sets of element boundary surfaces and arrays for input conditions
+------------------------------------------------------------------------------- */
+
+void Parallel_Nonlinear_Solver::init_boundaries(){
+  int num_boundary_sets = simparam->NB;
+  int num_surface_force_sets = simparam->NBSF;
+  int num_surface_disp_sets = simparam->NBD;
+  int num_dim = simparam->num_dim;
+
+  // build boundary mesh patches
+  if(myrank == 0)
+    std::cout << "Starting boundary patch setup" << std::endl <<std::flush;
+  Get_Boundary_Patches();
+  //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
+  std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
+  
+  // set the number of boundary sets
+  if(myrank == 0)
+    std::cout << "building boundary sets " << std::endl;
+  
+  init_boundary_sets(num_boundary_sets);
+  Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_boundary_sets); 
+  Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets,3);
+  Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets,3);
+
+  //initialize
+  for(int ibdy=0; ibdy < num_boundary_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
+
+  //allocate nodal data
+  Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes*num_dim, "Node_DOF_Boundary_Condition_Type");
+  Node_DOF_Displacement_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes*num_dim);
+  Node_DOF_Force_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes*num_dim);
+
+  //initialize
+  for(int init=0; init < nall_nodes*num_dim; init++)
+    Node_DOF_Boundary_Condition_Type(init) = NONE;
+}
+
 /* ----------------------------------------------------------------------
    Assign sets of element boundary surfaces corresponding to user BCs
 ------------------------------------------------------------------------- */
 
 void Parallel_Nonlinear_Solver::generate_bcs(){
-    
-  // build boundary mesh patches
-  //mesh->build_bdy_patches();
-  //std::cout << "Starting boundary patch setup" << std::endl <<std::flush;
-  Get_Boundary_Patches();
-  //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
-  std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
-  std::cout << "building boundary sets " << std::endl;
-  // set the number of boundary sets
-    
-  int num_boundary_sets = simparam->NB;
-  int num_surface_force_sets = simparam->NBSF;
-  int num_surface_disp_sets = simparam->NBD;
   int num_dim = simparam->num_dim;
   int current_bdy_id = 0;
   int bdy_set_id;
-  int surf_force_set_id = 0;
   int surf_disp_set_id = 0;
-
-  init_boundary_sets(num_boundary_sets);
-  Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_boundary_sets); 
-  Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets,3);
-  Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets,3);
-  //initialize
-  for(int ibdy=0; ibdy < num_boundary_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
+  int bc_tag;
+  real_t value;
     
   // tag the z=0 plane,  (Direction, value, bdy_set)
   std::cout << "tagging z = 0 " << std::endl;
-  int bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  real_t value = 0.0 * simparam->unit_scaling;
+  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+  value = 0.0 * simparam->unit_scaling;
   real_t fix_limits[4];
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
@@ -2004,6 +2034,25 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << std::endl;
   
   */
+
+  //Tag nodes for Boundary conditions such as displacements
+  Displacement_Boundary_Conditions();
+} // end generate_bcs
+
+/* ----------------------------------------------------------------------
+   Assign sets of element boundary surfaces corresponding to user BCs
+------------------------------------------------------------------------- */
+
+void Parallel_Nonlinear_Solver::generate_applied_loads(){
+  int num_dim = simparam->num_dim;
+  int current_bdy_id = 0;
+  int bdy_set_id;
+  int surf_force_set_id = 0;
+  int bc_tag;
+  real_t value;
+  
+  //Surface Forces Section
+
   /*
   std::cout << "tagging z = 2 Force " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
@@ -2012,7 +2061,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam->unit_scaling/simparam->unit_scaling;
@@ -2029,7 +2078,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam->unit_scaling/simparam->unit_scaling;
@@ -2046,7 +2095,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 1/simparam->unit_scaling/simparam->unit_scaling;
@@ -2063,7 +2112,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = -1/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
@@ -2079,7 +2128,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 1/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
@@ -2098,7 +2147,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id ,load_limits_left);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 10/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
@@ -2117,7 +2166,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id, load_limits_right);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = -10/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
@@ -2125,8 +2174,6 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
-  
-  
   
   /*
   std::cout << "tagging beam +z force " << std::endl;
@@ -2136,7 +2183,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 1/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
@@ -2151,7 +2198,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   value = 2.0;
   bdy_set_id = 4;
   mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   std::cout << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
   std::cout << std::endl;
@@ -2161,24 +2208,21 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   value = 2.0;
   bdy_set_id = 5;
   mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = LOADING_CONDITION;
+  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   std::cout << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
   std::cout << std::endl;
   */
+  
+  //Body Forces Section
 
-  //allocate nodal data
-  Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes*num_dim, "Node_DOF_Boundary_Condition_Type");
-  Node_DOF_Displacement_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes*num_dim);
-  Node_DOF_Force_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes*num_dim);
+  //apply gravity
+  gravity_flag = simparam->gravity_flag;
+  gravity_vector = simparam->gravity_vector;
 
-  //initialize
-  for(int init=0; init < nall_nodes*num_dim; init++)
-    Node_DOF_Boundary_Condition_Type(init) = NONE;
+  if(electric_flag||gravity_flag||thermal_flag) body_force_flag = true;
 
-  //Tag nodes for Boundary conditions such as displacements
-  Displacement_Boundary_Conditions();
-} // end generate_bcs
+}
 
 /* ----------------------------------------------------------------------
    initialize storage for element boundary surfaces corresponding to user BCs
@@ -3703,6 +3747,36 @@ void Parallel_Nonlinear_Solver::assemble_matrix(){
    Retrieve material properties associated with a finite element
 ------------------------------------------------------------------------- */
 
+void Parallel_Nonlinear_Solver::Body_Force(size_t ielem, real_t density, real_t *force_density){
+  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam->num_dim;
+  
+  //init 
+  for(int idim = 0; idim < num_dim; idim++){
+    force_density[idim] = 0;
+  }
+  if(gravity_flag){
+    for(int idim = 0; idim < num_dim; idim++){
+      force_density[idim] += gravity_vector[idim] * density;
+    }
+  }
+  
+  /*
+  if(thermal_flag){
+
+  }
+
+  if(electric_flag){
+
+  }
+
+  */
+}
+
+/* ----------------------------------------------------------------------
+   Retrieve material properties associated with a finite element
+------------------------------------------------------------------------- */
+
 void Parallel_Nonlinear_Solver::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
@@ -3713,7 +3787,6 @@ void Parallel_Nonlinear_Solver::Element_Material_Properties(size_t ielem, real_t
   Element_Modulus = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus = density*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
-
 }
 
 /* ----------------------------------------------------------------------
@@ -3730,7 +3803,6 @@ void Parallel_Nonlinear_Solver::Gradient_Element_Material_Properties(size_t iele
   Element_Modulus_Derivative = simparam->penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
-
 }
 
 /* ----------------------------------------------------------------------
@@ -4512,7 +4584,7 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArrayKokkos<re
 }
 
 /* ----------------------------------------------------------------------
-   Loop through applied boundary conditions and tag node ids to redecule 
+   Loop through applied boundary conditions and tag node ids to remove 
    necessary rows and columns from the assembled linear system
 ------------------------------------------------------------------------- */
 
@@ -4686,7 +4758,7 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
   These sets can have overlapping nodes since applied loading conditions
   are assumed to be additive*/
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
-    if(Boundary_Condition_Type_List(iboundary)!=LOADING_CONDITION) continue;
+    if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION) continue;
     //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
@@ -4880,290 +4952,116 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
     //apply contribution from non-zero displacement boundary conditions
 
     //apply body forces
-    //initialize quadrature data
-    elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-    elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+    if(body_force_flag){
+      //initialize quadrature data
+      elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
+      elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+      direct_product_count = std::pow(num_gauss_points,num_dim);
 
-    for(size_t ielem = 0; ielem < rnum_elem; ielem++){
+      for(size_t ielem = 0; ielem < rnum_elem; ielem++){
 
-    //initialize C matrix
-    for(int irow = 0; irow < Brows; irow++)
-      for(int icol = 0; icol < Brows; icol++)
-        C_matrix(irow,icol) = 0;
-
-    //B matrix initialization
-    for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
-        CB_matrix(irow,icol) = 0;
+      //acquire set of nodes and nodal displacements for this local element
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+        nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+        nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+        nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+        if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
       }
 
-    //acquire set of nodes and nodal displacements for this local element
-    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
-      local_dof_idx = all_dof_map->getLocalElement(nodes_in_elem(ielem, node_loop)*num_dim);
-      local_dof_idy = local_dof_idx + 1;
-      local_dof_idz = local_dof_idx + 2;
-      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
-      current_nodal_displacements(node_loop*num_dim+1) = all_node_displacements(local_dof_idy,0);
-      current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
-      
-      if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
+      //loop over quadrature points
+      for(int iquad=0; iquad < direct_product_count; iquad++){
+
+      //set current quadrature point
+      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
+      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
+      x_quad = iquad % num_gauss_points;
+      quad_coordinate(0) = legendre_nodes_1D(x_quad);
+      quad_coordinate(1) = legendre_nodes_1D(y_quad);
+      if(num_dim==3)
+      quad_coordinate(2) = legendre_nodes_1D(z_quad);
+
+      //set current quadrature weight
+      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+      if(num_dim==3)
+      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+
+      //compute shape functions at this point for the element type
+      elem->basis(basis_values,quad_coordinate);
+
+      //compute all the necessary coordinates and derivatives at this point
+      //compute shape function derivatives
+      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+
+      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+      //derivative of x,y,z w.r.t s
+      JT_row1(0) = 0;
+      JT_row1(1) = 0;
+      JT_row1(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t t
+      JT_row2(0) = 0;
+      JT_row2(1) = 0;
+      JT_row2(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t w
+      JT_row3(0) = 0;
+      JT_row3(1) = 0;
+      JT_row3(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+      }
+    
+      //compute the determinant of the Jacobian
+      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+      if(Jacobian<0) Jacobian = -Jacobian;
+
+      //compute density
+      current_density = 0;
+      if(nodal_density_flag)
+      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+        current_density += nodal_density(node_loop)*basis_values(node_loop);
+      }
+      //default constant element density
+      else{
+        current_density = Element_Densities(ielem,0);
+      }
+
       //debug print
-      /*
-      std::cout << "node index access x "<< local_node_id << std::endl;
-      std::cout << "local index access x "<< local_dof_idx << " displacement x " << current_nodal_displacements(node_loop*num_dim) <<std::endl;
-      std::cout << "local index access y "<< local_dof_idy << " displacement y " << current_nodal_displacements(node_loop*num_dim + 1) << std::endl;
-      std::cout << "local index access z "<< local_dof_idz << " displacement z " << current_nodal_displacements(node_loop*num_dim + 2) << std::endl; 
-      */
-    }
-
-    //debug print of current_nodal_displacements
-    /*
-    std::cout << " ------------nodal displacements for Element "<< ielem + 1 <<"--------------"<<std::endl;
-    std::cout << " { ";
-    for (int idof = 0; idof < num_dim*nodes_per_elem; idof++){
-      std::cout << idof + 1 << " = " << current_nodal_displacements(idof) << " , " ;
-    }
-    std::cout << " }"<< std::endl;
-    */
-
-    //loop over quadrature points
-    for(int iquad=0; iquad < direct_product_count; iquad++){
-
-    //set current quadrature point
-    if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-    y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-    x_quad = iquad % num_gauss_points;
-    quad_coordinate(0) = legendre_nodes_1D(x_quad);
-    quad_coordinate(1) = legendre_nodes_1D(y_quad);
-    if(num_dim==3)
-    quad_coordinate(2) = legendre_nodes_1D(z_quad);
-
-    //set current quadrature weight
-    quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-    quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-    if(num_dim==3)
-    quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-
-    //compute shape functions at this point for the element type
-    elem->basis(basis_values,quad_coordinate);
-
-    //compute all the necessary coordinates and derivatives at this point
-    //compute shape function derivatives
-    elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-    elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-    elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
-
-    //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-    //derivative of x,y,z w.r.t s
-    JT_row1(0) = 0;
-    JT_row1(1) = 0;
-    JT_row1(2) = 0;
-    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-      JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-      JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-      JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-    }
-
-    //derivative of x,y,z w.r.t t
-    JT_row2(0) = 0;
-    JT_row2(1) = 0;
-    JT_row2(2) = 0;
-    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-      JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-      JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-      JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-    }
-
-    //derivative of x,y,z w.r.t w
-    JT_row3(0) = 0;
-    JT_row3(1) = 0;
-    JT_row3(2) = 0;
-    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-      JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-      JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-      JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-    }
-    
-    //compute the determinant of the Jacobian
-    Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-               JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-               JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-    if(Jacobian<0) Jacobian = -Jacobian;
-
-    //compute density
-    current_density = 0;
-    if(nodal_density_flag)
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      current_density += nodal_density(node_loop)*basis_values(node_loop);
-    }
-    //default constant element density
-    else{
-      current_density = Element_Densities(ielem,0);
-    }
-
-    //debug print
-    //std::cout << "Current Density " << current_density << std::endl;
-
-    //compute the contributions of this quadrature point to the B matrix
-    if(num_dim==2)
-    for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-    }
-    if(num_dim==3)
-    for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-    }
-    
-    
-    //evaluate local stiffness matrix gradient with respect to igradient
-    for(int igradient=0; igradient < nodes_per_elem; igradient++){
-      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
-      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
+      //std::cout << "Current Density " << current_density << std::endl;
       //look up element material properties at this point as a function of density
-      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
-      Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-      Shear_Term = 0.5 - Poisson_Ratio;
-      Pressure_Term = 1 - Poisson_Ratio;
+      Body_Force(ielem, current_density, force_density);
+    
+      //evaluate contribution to force vector component
+      for(int ibasis=0; ibasis < nodes_per_elem; ibasis++){
+        if(!map->isNodeGlobalElement(nodes_in_elem(ielem, ibasis))) continue;
+        local_node_id = map->getLocalElement(nodes_in_elem(ielem, ibasis));
 
-      //debug print
-      //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
-
-      //compute Elastic (C) matrix
-      if(num_dim==2){
-        C_matrix(0,0) = Pressure_Term;
-        C_matrix(1,1) = Pressure_Term;
-        C_matrix(0,1) = Poisson_Ratio;
-        C_matrix(1,0) = Poisson_Ratio;
-        C_matrix(2,2) = Shear_Term;
-      }
-      if(num_dim==3){
-        C_matrix(0,0) = Pressure_Term;
-        C_matrix(1,1) = Pressure_Term;
-        C_matrix(2,2) = Pressure_Term;
-        C_matrix(0,1) = Poisson_Ratio;
-        C_matrix(0,2) = Poisson_Ratio;
-        C_matrix(1,0) = Poisson_Ratio;
-        C_matrix(1,2) = Poisson_Ratio;
-        C_matrix(2,0) = Poisson_Ratio;
-        C_matrix(2,1) = Poisson_Ratio;
-        C_matrix(3,3) = Shear_Term;
-        C_matrix(4,4) = Shear_Term;
-        C_matrix(5,5) = Shear_Term;
-      }
-
-      //compute the previous multiplied by the Elastic (C) Matrix
-      for(int irow=0; irow < Brows; irow++){
-        for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
-          CB_matrix_contribution(irow,icol) = 0;
-          for(int span=0; span < Brows; span++){
-            CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+        for(int idim = 0; idim < num_dim; idim++){
+            if(force_density[idim]!=0)
+            Nodal_Forces(num_dim*local_node_id + idim,0) += Jacobian*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*force_density[idim]*basis_values(ibasis);
           }
         }
-      }
-
-      //compute the contributions of this quadrature point to all the local stiffness matrix elements
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-          matrix_term = 0;
-          for(int span = 0; span < Brows; span++){
-            matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
-          }
-          Local_Matrix_Contribution(ifill,jfill) = Elastic_Constant*basis_values(igradient)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*matrix_term/Jacobian;
-        }
-      }
-      
-      //compute inner product for this quadrature point contribution
-      inner_product = 0;
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
-          //debug
-          //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
-          //inner_product += Local_Matrix_Contribution(ifill, jfill);
-        }
-      }
-      
-      //debug print
-      //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) -= inner_product;
       }
     }
   }
-
     //debug print of force vector
     /*
     std::cout << "---------FORCE VECTOR-------------" << std::endl;

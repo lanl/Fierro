@@ -127,8 +127,14 @@ public:
 
   void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
   
+  //initialize data for boundaries of the model and storage for boundary conditions and applied loads
+  void init_boundaries();
+  
   //interfaces between user input and creating data structures for bcs
   void generate_bcs();
+  
+  //interfaces between user input and creating data structures for applied loads
+  void generate_applied_loads();
   
   //finds the boundary element surfaces in this model
   void Get_Boundary_Patches();
@@ -139,9 +145,11 @@ public:
 
   void tecplot_writer();
 
-  void Element_Material_Properties(size_t, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
-  void Gradient_Element_Material_Properties(size_t, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+
+  void Body_Force(size_t ielem, real_t density, real_t *forces);
 
   void Displacement_Boundary_Conditions();
 
@@ -262,10 +270,14 @@ public:
 
   //element selection parameters and data
   size_t max_nodes_per_element;
+  
+  //body force parameters
+  bool body_force_flag, gravity_flag, thermal_flag, electric_flag;
+  real_t gravity_vector[3];
 
   //types of boundary conditions
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
-   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, LOADING_CONDITION};
+   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, BODY_FORCE};
 
   //lists what kind of boundary condition the nodal DOF is subjected to if any
   CArrayKokkos<int, array_layout, device_type, memory_traits> Node_DOF_Boundary_Condition_Type;
