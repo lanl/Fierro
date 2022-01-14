@@ -6352,7 +6352,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
   GO current_global_index;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Element_Modulus_Gradient, Poisson_Ratio, force_density_gradient[3];
+  real_t Element_Modulus_Gradient, Poisson_Ratio, gradient_force_density[3];
   real_t Elastic_Constant, Shear_Term, Pressure_Term;
   real_t inner_product, matrix_term, Jacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
