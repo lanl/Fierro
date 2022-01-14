@@ -2250,7 +2250,7 @@ void Parallel_Nonlinear_Solver::init_boundary_sets (int num_sets){
    val = plane value, cylinder radius, shell radius
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL){
+void Parallel_Nonlinear_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits){
   
   int num_boundary_sets = simparam->NB;
   int is_on_set;
@@ -6676,6 +6676,9 @@ void Parallel_Nonlinear_Solver::update_linear_solve(Teuchos::RCP<const MV> zp){
   test_node_densities_distributed = zp;
 
   assemble_matrix();
+
+  if(body_force_flag)
+    assemble_vector();
   
   //solve for new nodal displacements
   int solver_exit = solve();

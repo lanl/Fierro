@@ -157,7 +157,7 @@ public:
 
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits);
 
-  int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
+  int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits = NULL);
 
   //debug and performance functions/variables
   double CPU_Time();
