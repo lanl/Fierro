@@ -173,6 +173,9 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
   mass_gradients_distributed = Teuchos::null;
   center_of_mass_gradients_distributed = Teuchos::null;
 
+  //boundary condition data
+  current_bdy_id = 0;
+
   //boundary condition flags
   body_force_flag = gravity_flag = thermal_flag = electric_flag = false;
 }
@@ -1984,7 +1987,6 @@ void Parallel_Nonlinear_Solver::init_boundaries(){
 
 void Parallel_Nonlinear_Solver::generate_bcs(){
   int num_dim = simparam->num_dim;
-  int current_bdy_id = 0;
   int bdy_set_id;
   int surf_disp_set_id = 0;
   int bc_tag;
@@ -2045,7 +2047,6 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
 
 void Parallel_Nonlinear_Solver::generate_applied_loads(){
   int num_dim = simparam->num_dim;
-  int current_bdy_id = 0;
   int bdy_set_id;
   int surf_force_set_id = 0;
   int bc_tag;
