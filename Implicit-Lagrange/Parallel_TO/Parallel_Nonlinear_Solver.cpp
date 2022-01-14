@@ -3745,7 +3745,7 @@ void Parallel_Nonlinear_Solver::assemble_matrix(){
 }
 
 /* ----------------------------------------------------------------------
-   Retrieve material properties associated with a finite element
+   Retrieve body force at a point
 ------------------------------------------------------------------------- */
 
 void Parallel_Nonlinear_Solver::Body_Force(size_t ielem, real_t density, real_t *force_density){
@@ -3759,6 +3759,36 @@ void Parallel_Nonlinear_Solver::Body_Force(size_t ielem, real_t density, real_t 
   if(gravity_flag){
     for(int idim = 0; idim < num_dim; idim++){
       force_density[idim] += gravity_vector[idim] * density;
+    }
+  }
+  
+  /*
+  if(thermal_flag){
+
+  }
+
+  if(electric_flag){
+
+  }
+
+  */
+}
+
+/* ----------------------------------------------------------------------
+   Gradient of body force at a point
+------------------------------------------------------------------------- */
+
+void Parallel_Nonlinear_Solver::Gradient_Body_Force(size_t ielem, real_t density, real_t *gradient_force_density){
+  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam->num_dim;
+  
+  //init 
+  for(int idim = 0; idim < num_dim; idim++){
+    gradient_force_density[idim] = 0;
+  }
+  if(gravity_flag){
+    for(int idim = 0; idim < num_dim; idim++){
+      gradient_force_density[idim] += gravity_vector[idim];
     }
   }
   
@@ -3830,7 +3860,7 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArrayKokkos<real_t, arr
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
-  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian;
+  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, weight_multiply;
   real_t Element_Modulus, Poisson_Ratio;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
@@ -3897,6 +3927,9 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArrayKokkos<real_t, arr
     quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
     if(num_dim==3)
     quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+    else
+    quad_coordinate_weight(2) = 1;
+    weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
     //compute shape functions at this point for the element type
     elem->basis(basis_values,quad_coordinate);
@@ -4174,7 +4207,7 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArrayKokkos<real_t, arr
           matrix_term = matrix_subterm1 + matrix_subterm2;
         }
         
-        Local_Matrix(ifill,jfill) += Elastic_Constant*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*matrix_term/Jacobian;
+        Local_Matrix(ifill,jfill) += Elastic_Constant*weight_multiply*matrix_term/Jacobian;
       }
       
     }
@@ -4216,7 +4249,7 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArrayKokkos<re
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
-  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian;
+  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, weight_multiply;
   real_t Element_Modulus, Poisson_Ratio;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
@@ -4311,6 +4344,9 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArrayKokkos<re
     quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
     if(num_dim==3)
     quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+    else
+    quad_coordinate_weight(2) = 1;
+    weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
     //compute shape functions at this point for the element type
     elem->basis(basis_values,quad_coordinate);
@@ -4542,7 +4578,7 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArrayKokkos<re
         for(int span = 0; span < Brows; span++){
           matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
         }
-        Local_Matrix(ifill,jfill) += Elastic_Constant*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*matrix_term/Jacobian;
+        Local_Matrix(ifill,jfill) += Elastic_Constant*weight_multiply*matrix_term/Jacobian;
       }
     
     }
@@ -4753,7 +4789,7 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
   ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  real_t force_density[3], wedge_product, Jacobian, current_density;
+  real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
@@ -5000,6 +5036,9 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
       if(num_dim==3)
       quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
@@ -5070,7 +5109,7 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
 
         for(int idim = 0; idim < num_dim; idim++){
             if(force_density[idim]!=0)
-            Nodal_Forces(num_dim*local_node_id + idim,0) += Jacobian*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*force_density[idim]*basis_values(ibasis);
+            Nodal_Forces(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
           }
         }
       }
@@ -5110,7 +5149,7 @@ void Parallel_Nonlinear_Solver::compute_element_masses(const_host_vec_array desi
   LO ielem;
   GO global_element_index;
 
-  real_t Jacobian, current_density;
+  real_t Jacobian, current_density, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -5194,6 +5233,9 @@ void Parallel_Nonlinear_Solver::compute_element_masses(const_host_vec_array desi
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
       if(num_dim==3)
       quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
@@ -5260,7 +5302,7 @@ void Parallel_Nonlinear_Solver::compute_element_masses(const_host_vec_array desi
         }
       }
     
-      Element_Masses(nonoverlapping_ielem,0) += current_density*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+      Element_Masses(nonoverlapping_ielem,0) += current_density*weight_multiply*Jacobian;
     }
     }
     else{
@@ -5298,7 +5340,7 @@ void Parallel_Nonlinear_Solver::compute_nodal_gradients(const_host_vec_array des
   LO ielem;
   GO global_element_index;
   
-  real_t Jacobian;
+  real_t Jacobian, weight_multiply;
   //CArrayKokkos<real_t> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -5375,6 +5417,9 @@ void Parallel_Nonlinear_Solver::compute_nodal_gradients(const_host_vec_array des
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
       if(num_dim==3)
       quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
@@ -5434,7 +5479,7 @@ void Parallel_Nonlinear_Solver::compute_nodal_gradients(const_host_vec_array des
       for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
           local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
-          design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*Jacobian;
+          design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*Jacobian;
         }
       }
     }
@@ -5474,7 +5519,7 @@ void Parallel_Nonlinear_Solver::compute_element_moments(const_host_vec_array des
   LO ielem;
   GO global_element_index;
 
-  real_t Jacobian, current_density;
+  real_t Jacobian, current_density, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -5558,6 +5603,9 @@ void Parallel_Nonlinear_Solver::compute_element_moments(const_host_vec_array des
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
       if(num_dim==3)
       quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
@@ -5635,7 +5683,7 @@ void Parallel_Nonlinear_Solver::compute_element_moments(const_host_vec_array des
         current_position(moment_component) += nodal_positions(node_loop,moment_component)*basis_values(node_loop);
       }
 
-      Element_Moments(nonoverlapping_ielem,0) += current_density*current_position(moment_component)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+      Element_Moments(nonoverlapping_ielem,0) += current_density*current_position(moment_component)*weight_multiply*Jacobian;
     }
   }
 
@@ -5669,7 +5717,7 @@ void Parallel_Nonlinear_Solver::compute_moment_gradients(const_host_vec_array de
   LO ielem;
   GO global_element_index;
   
-  real_t Jacobian;
+  real_t Jacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -5747,6 +5795,9 @@ void Parallel_Nonlinear_Solver::compute_moment_gradients(const_host_vec_array de
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
       if(num_dim==3)
       quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
@@ -5812,7 +5863,7 @@ void Parallel_Nonlinear_Solver::compute_moment_gradients(const_host_vec_array de
       for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
           local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
-            design_gradients(local_node_id,moment_component)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*current_position(moment_component)*Jacobian;
+            design_gradients(local_node_id,moment_component)+=weight_multiply*basis_values(node_loop)*current_position(moment_component)*Jacobian;
         }
       }
     }
@@ -5857,7 +5908,7 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
   GO global_element_index;
   real_t delx1, delx2;
 
-  real_t Jacobian, current_density;
+  real_t Jacobian, current_density, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -5941,6 +5992,9 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
       if(num_dim==3)
       quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
@@ -6023,32 +6077,32 @@ void Parallel_Nonlinear_Solver::compute_element_moments_of_inertia(const_host_ve
       if(inertia_component==0){
         delx1 = current_position(1) - center_of_mass[1];
         delx2 = current_position(2) - center_of_mass[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==1){
         delx1 = current_position(0) - center_of_mass[0];
         delx2 = current_position(2) - center_of_mass[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==2){
         delx1 = current_position(0) - center_of_mass[0];
         delx2 = current_position(1) - center_of_mass[1];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==3){
         delx1 = current_position(0) - center_of_mass[0];
         delx2 = current_position(1) - center_of_mass[1];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==4){
         delx1 = current_position(0) - center_of_mass[0];
         delx2 = current_position(2) - center_of_mass[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==5){
         delx1 = current_position(1) - center_of_mass[1];
         delx2 = current_position(2) - center_of_mass[2];
-        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+        Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*weight_multiply*Jacobian;
       }
     }
   }
@@ -6084,7 +6138,7 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
   GO global_element_index;
   real_t delx1, delx2;
   
-  real_t Jacobian;
+  real_t Jacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -6162,6 +6216,9 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
       if(num_dim==3)
       quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
@@ -6232,32 +6289,32 @@ void Parallel_Nonlinear_Solver::compute_moment_of_inertia_gradients(const_host_v
             if(inertia_component==0){
               delx1 = current_position(1) - center_of_mass[1];
               delx2 = current_position(2) - center_of_mass[2];
-              design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
+              design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
             }
             if(inertia_component==1){
               delx1 = current_position(0) - center_of_mass[0];
               delx2 = current_position(2) - center_of_mass[2];
-              design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
+              design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
             }
             if(inertia_component==2){
               delx1 = current_position(0) - center_of_mass[0];
               delx2 = current_position(1) - center_of_mass[1];
-              design_gradients(local_node_id,0)+=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
+              design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
             }
             if(inertia_component==3){
               delx1 = current_position(0) - center_of_mass[0];
               delx2 = current_position(1) - center_of_mass[1];
-              design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx2)*Jacobian;
+              design_gradients(local_node_id,0)-=weight_multiply*basis_values(node_loop)*(delx1*delx2)*Jacobian;
             }
             if(inertia_component==4){
               delx1 = current_position(0) - center_of_mass[0];
               delx2 = current_position(2) - center_of_mass[2];
-              design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx2)*Jacobian;
+              design_gradients(local_node_id,0)-=weight_multiply*basis_values(node_loop)*(delx1*delx2)*Jacobian;
             }
             if(inertia_component==5){
               delx1 = current_position(1) - center_of_mass[1];
               delx2 = current_position(2) - center_of_mass[2];
-              design_gradients(local_node_id,0)-=quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(node_loop)*(delx1*delx2)*Jacobian;
+              design_gradients(local_node_id,0)-=weight_multiply*basis_values(node_loop)*(delx1*delx2)*Jacobian;
             }
         }
       }
@@ -6295,9 +6352,9 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
   GO current_global_index;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Element_Modulus_Gradient, Poisson_Ratio;
+  real_t Element_Modulus_Gradient, Poisson_Ratio, force_density_gradient[3];
   real_t Elastic_Constant, Shear_Term, Pressure_Term;
-  real_t inner_product, matrix_term, Jacobian;
+  real_t inner_product, matrix_term, Jacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -6412,6 +6469,9 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
     quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
     if(num_dim==3)
     quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+    else
+    quad_coordinate_weight(2) = 1;
+    weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
     //compute shape functions at this point for the element type
     elem->basis(basis_values,quad_coordinate);
@@ -6607,7 +6667,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
           for(int span = 0; span < Brows; span++){
             matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
           }
-          Local_Matrix_Contribution(ifill,jfill) = Elastic_Constant*basis_values(igradient)*quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*matrix_term/Jacobian;
+          Local_Matrix_Contribution(ifill,jfill) = Elastic_Constant*basis_values(igradient)*weight_multiply*matrix_term/Jacobian;
         }
       }
       
@@ -6625,6 +6685,24 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
       design_gradients(local_node_id,0) -= inner_product;
+      }
+
+      //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
+      for(int igradient=0; igradient < nodes_per_elem; igradient++){
+      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
+      //look up element material properties at this point as a function of density
+      Gradient_Body_Force(ielem, current_density, gradient_force_density);
+      
+      //compute inner product for this quadrature point contribution
+      inner_product = 0;
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        inner_product += gradient_force_density[ifill]*current_nodal_displacements(ifill)*basis_values(igradient)*basis_values(ifill/num_dim)*weight_multiply*Jacobian;
+      }
+      
+      //debug print
+      //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
+      design_gradients(local_node_id,0) += inner_product;
       }
     }
   }
@@ -6720,7 +6798,7 @@ void Parallel_Nonlinear_Solver::compute_nodal_strains(){
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t matrix_term, current_strain;
-  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian;
+  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -6855,6 +6933,9 @@ void Parallel_Nonlinear_Solver::compute_nodal_strains(){
     quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
     if(num_dim==3)
     quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+    else
+    quad_coordinate_weight(2) = 1;
+    weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
     //compute shape functions at this point for the element type
     elem->basis(basis_values,quad_coordinate);
@@ -7014,7 +7095,7 @@ void Parallel_Nonlinear_Solver::compute_nodal_strains(){
         std::fflush(stdout);
         }
         */
-        projection_vector(irow,icol) += quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*quad_strain(irow)*basis_values(icol);
+        projection_vector(irow,icol) += weight_multiply*quad_strain(irow)*basis_values(icol);
         
       }
 
@@ -7022,7 +7103,7 @@ void Parallel_Nonlinear_Solver::compute_nodal_strains(){
     for(int irow=0; irow < nodes_per_elem; irow++)
       for(int icol=0; icol < nodes_per_elem; icol++){
         //if(irow<=icol)
-        projection_matrix(irow,icol) += quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*basis_values(irow)*basis_values(icol)*Jacobian;
+        projection_matrix(irow,icol) += weight_multiply*basis_values(irow)*basis_values(icol)*Jacobian;
       }
 
     //accumulate B matrix
@@ -7171,7 +7252,7 @@ void Parallel_Nonlinear_Solver::compute_element_volumes(){
   LO ielem;
   GO global_element_index;
 
-  real_t Jacobian;
+  real_t Jacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -7250,6 +7331,9 @@ void Parallel_Nonlinear_Solver::compute_element_volumes(){
       quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
       if(num_dim==3)
       quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
 
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
@@ -7305,7 +7389,7 @@ void Parallel_Nonlinear_Solver::compute_element_volumes(){
                JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
     if(Jacobian<0) Jacobian = -Jacobian;
     
-    Element_Volumes(nonoverlapping_ielem,0) += quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*Jacobian;
+    Element_Volumes(nonoverlapping_ielem,0) += weight_multiply*Jacobian;
     }
   }
 

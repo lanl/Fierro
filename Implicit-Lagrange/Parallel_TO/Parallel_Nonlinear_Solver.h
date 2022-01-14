@@ -150,6 +150,7 @@ public:
   void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
   void Body_Force(size_t ielem, real_t density, real_t *forces);
+  void Gradient_Body_Force(size_t ielem, real_t density, real_t *forces);
 
   void Displacement_Boundary_Conditions();
 
