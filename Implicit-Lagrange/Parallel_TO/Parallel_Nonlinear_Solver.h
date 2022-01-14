@@ -273,7 +273,7 @@ public:
   
   //body force parameters
   bool body_force_flag, gravity_flag, thermal_flag, electric_flag;
-  real_t gravity_vector[3];
+  real_t *gravity_vector;
 
   //types of boundary conditions
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,

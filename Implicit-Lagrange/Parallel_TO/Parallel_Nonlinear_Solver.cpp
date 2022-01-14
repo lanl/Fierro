@@ -4722,10 +4722,19 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
   host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  const_host_vec_array Element_Densities;
+  //local variable for host view of densities from the dual view
+  bool nodal_density_flag = simparam->nodal_density_flag;
+  const_host_vec_array all_node_densities;
+  if(nodal_density_flag)
+  all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  else
+  Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   int num_bdy_patches_in_set;
-  size_t node_id, patch_id;
+  size_t patch_id;
   GO current_node_index;
-  LO local_node_index;
+  LO local_node_id;
+  LO node_id;
   int num_boundary_sets = num_boundary_conditions;
   int surface_force_set_id = 0;
   int num_dim = simparam->num_dim;
@@ -4743,12 +4752,24 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
   ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  real_t force_density[3], wedge_product;
+  real_t force_density[3], wedge_product, Jacobian, current_density;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row3(num_dim);
+
+  real_t pointer_basis_values[nodes_per_elem];
+  real_t pointer_basis_derivative_s1[nodes_per_elem];
+  real_t pointer_basis_derivative_s2[nodes_per_elem];
+  ViewCArray<real_t> basis_values(pointer_basis_values,nodes_per_elem);
+  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,nodes_per_elem);
+  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,nodes_per_elem);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
 
    //force vector initialization
   for(int i=0; i < num_dim*nlocal_nodes; i++)
@@ -4793,16 +4814,6 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
       
       if(Element_Types(current_element_index)==elements::elem_types::Hex8){
 
-      real_t pointer_basis_values[8];
-      real_t pointer_basis_derivative_s1[8];
-      real_t pointer_basis_derivative_s2[8];
-      ViewCArray<real_t> basis_values(pointer_basis_values,8);
-      ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,8);
-      ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,8);
-      CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(4,num_dim);
-      CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(4,num_dim);
-      CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(4,num_dim);
-      CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(4,num_dim);
       int local_nodes[4];
       //set current quadrature point
       y_quad = iquad / num_gauss_points;
@@ -4855,10 +4866,10 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
       //acquire set of nodes for this face
       for(int node_loop=0; node_loop < 4; node_loop++){
         current_node_index = Surface_Nodes(node_loop);
-        local_node_index = all_node_map->getLocalElement(current_node_index);
-        nodal_positions(node_loop,0) = all_node_coords(local_node_index,0);
-        nodal_positions(node_loop,1) = all_node_coords(local_node_index,1);
-        nodal_positions(node_loop,2) = all_node_coords(local_node_index,2);
+        local_node_id = all_node_map->getLocalElement(current_node_index);
+        nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+        nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+        nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
       }
 
       if(local_surface_id<2){
