@@ -4762,9 +4762,11 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
   real_t pointer_basis_values[nodes_per_elem];
   real_t pointer_basis_derivative_s1[nodes_per_elem];
   real_t pointer_basis_derivative_s2[nodes_per_elem];
+  real_t pointer_basis_derivative_s3[nodes_per_elem];
   ViewCArray<real_t> basis_values(pointer_basis_values,nodes_per_elem);
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,nodes_per_elem);
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,nodes_per_elem);
+  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
