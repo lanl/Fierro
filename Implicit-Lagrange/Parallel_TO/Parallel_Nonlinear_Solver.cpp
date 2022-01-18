@@ -6698,7 +6698,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
         //compute inner product for this quadrature point contribution
         inner_product = 0;
         for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-          inner_product += gradient_force_density[ifill]*current_nodal_displacements(ifill)*basis_values(igradient)*basis_values(ifill/num_dim)*weight_multiply*Jacobian;
+          inner_product += gradient_force_density[ifill%num_dim]*current_nodal_displacements(ifill)*basis_values(igradient)*basis_values(ifill/num_dim)*weight_multiply*Jacobian;
         }
       
         //debug print
