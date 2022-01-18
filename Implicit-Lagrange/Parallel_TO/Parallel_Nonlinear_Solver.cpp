@@ -6684,7 +6684,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) -= inner_product;
+      design_gradients(local_node_id,0) -= inner_product/2;
       }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
