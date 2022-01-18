@@ -6688,21 +6688,23 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
       }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
-      for(int igradient=0; igradient < nodes_per_elem; igradient++){
-      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
-      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-      //look up element material properties at this point as a function of density
-      Gradient_Body_Force(ielem, current_density, gradient_force_density);
+      if(body_force_flag){
+        for(int igradient=0; igradient < nodes_per_elem; igradient++){
+        if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+        local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
+        //look up element material properties at this point as a function of density
+        Gradient_Body_Force(ielem, current_density, gradient_force_density);
       
-      //compute inner product for this quadrature point contribution
-      inner_product = 0;
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        inner_product += gradient_force_density[ifill]*current_nodal_displacements(ifill)*basis_values(igradient)*basis_values(ifill/num_dim)*weight_multiply*Jacobian;
-      }
+        //compute inner product for this quadrature point contribution
+        inner_product = 0;
+        for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+          inner_product += gradient_force_density[ifill]*current_nodal_displacements(ifill)*basis_values(igradient)*basis_values(ifill/num_dim)*weight_multiply*Jacobian;
+        }
       
-      //debug print
-      //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) += inner_product;
+        //debug print
+        //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
+        design_gradients(local_node_id,0) += inner_product;
+        }
       }
     }
   }
