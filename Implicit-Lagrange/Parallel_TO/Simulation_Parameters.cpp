@@ -84,9 +84,9 @@ void Simulation_Parameters::input(){
   maximum_strain_energy = 1000;
 
   // ---- boundary conditions ---- //
-  NB = 5; // number of boundaries
+  NB = 6; // number of boundaries
   NBSF = 4; //number of surface density force conditions
-  NBD = 1; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
+  NBD = 2; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
            //note this only implies a fixed displacement on the surface if no other basis functions have support on the surface
 
   //apply body forces

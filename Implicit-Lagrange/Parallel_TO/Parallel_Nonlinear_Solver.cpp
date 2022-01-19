@@ -2000,7 +2000,28 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
   bdy_set_id = current_bdy_id++;
-  tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
+  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
+  tag_boundaries(bc_tag, value, bdy_set_id);
+  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
+  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
+  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
+  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
+  surf_disp_set_id++;
+    
+  std::cout << "tagged a set " << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << std::endl;
+
+  // tag the +z beam plane,  (Direction, value, bdy_set)
+  std::cout << "tagging z = 100 " << std::endl;
+  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+  value = 100.0 * simparam->unit_scaling;
+  real_t fix_limits[4];
+  fix_limits[0] = fix_limits[2] = 4;
+  fix_limits[1] = fix_limits[3] = 6;
+  bdy_set_id = current_bdy_id++;
+  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
+  tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
   Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
   Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
