@@ -2016,7 +2016,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << "tagging z = 100 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 100.0 * simparam->unit_scaling;
-  real_t fix_limits[4];
+  //real_t fix_limits[4];
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
   bdy_set_id = current_bdy_id++;
