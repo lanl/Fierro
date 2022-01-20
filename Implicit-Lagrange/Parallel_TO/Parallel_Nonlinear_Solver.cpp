@@ -7861,14 +7861,14 @@ int Parallel_Nonlinear_Solver::solve(){
     compute_element_masses(all_node_densities,false);
     mass = ROL_Element_Masses->reduce(sumreduc);
 
-    FEM_->compute_element_moments(all_node_densities,false, 0);
-    center_of_mass[0] = ROL_Element_Moments_x->reduce(sumreduc)/current_mass;
+    compute_element_moments(all_node_densities,false, 0);
+    center_of_mass[0] = ROL_Element_Moments_x->reduce(sumreduc)/mass;
 
-    FEM_->compute_element_moments(all_node_densities,false, 1);
-    center_of_mass[1] = ROL_Element_Moments_y->reduce(sumreduc)/current_mass;
+    compute_element_moments(all_node_densities,false, 1);
+    center_of_mass[1] = ROL_Element_Moments_y->reduce(sumreduc)/mass;
 
-    FEM_->compute_element_moments(all_node_densities,false, 2);
-    center_of_mass[2] = ROL_Element_Moments_z->reduce(sumreduc)/current_mass;
+    compute_element_moments(all_node_densities,false, 2);
+    center_of_mass[2] = ROL_Element_Moments_z->reduce(sumreduc)/mass;
 
     host_vec_array unbalanced_coordinates_view = unbalanced_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     int dim_index;
