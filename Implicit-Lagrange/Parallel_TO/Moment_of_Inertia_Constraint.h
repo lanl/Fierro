@@ -84,7 +84,7 @@ public:
   MomentOfInertiaConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, int inertia_component, bool inequality_flag=true, real_t constraint_value = 0) 
     : FEM_(FEM) {
     
-    if(inertia_component_ > 5) { std::cout << "SPECIFIED MOMENT OF INERTIA CONSTRAINT COMPONENT CANNOT EXCEED 5" << std::endl; }
+    if(inertia_component > 5) { std::cout << "SPECIFIED MOMENT OF INERTIA CONSTRAINT COMPONENT CANNOT EXCEED 5" << std::endl; }
     nodal_density_flag_ = nodal_density_flag;
     last_comm_step = last_solve_step = -1;
     current_step = 0;
