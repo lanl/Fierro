@@ -86,6 +86,7 @@ num_cells in element = (p_order*2)^3
 #include "ROL_TrustRegionStep.hpp"
 #include "ROL_StatusTest.hpp"
 #include "ROL_Types.hpp"
+#include "ROL_Elementwise_Reduce.hpp"
 #include "ROL_Stream.hpp"
 
 #include "ROL_StdVector.hpp"
@@ -108,7 +109,6 @@ num_cells in element = (p_order*2)^3
 #include <Xpetra_Map.hpp>
 #include <Xpetra_MultiVector.hpp>
 #include <MueLu.hpp>
-
 #include <MueLu_BaseClass.hpp>
 #ifdef HAVE_MUELU_EXPLICIT_INSTANTIATION
 #include <MueLu_ExplicitInstantiation.hpp>
@@ -2011,7 +2011,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
-
+  /*
   // tag the +z beam plane,  (Direction, value, bdy_set)
   std::cout << "tagging z = 100 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
@@ -2031,7 +2031,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
-  /*
+  
   //This part should be changed so it interfaces with simparam to handle multiple input cases
   // tag the y=0 plane,  (Direction, value, bdy_set)
   std::cout << "tagging y = 0 " << std::endl;
@@ -2159,6 +2159,8 @@ void Parallel_Nonlinear_Solver::generate_applied_loads(){
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
   */
+
+  /*
   std::cout << "tagging beam -y " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 0 * simparam->unit_scaling;
@@ -2196,8 +2198,8 @@ void Parallel_Nonlinear_Solver::generate_applied_loads(){
   std::cout << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
+  */
   
-  /*
   std::cout << "tagging beam +z force " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
@@ -2214,7 +2216,7 @@ void Parallel_Nonlinear_Solver::generate_applied_loads(){
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
   
-  
+  /*
   std::cout << "tagging y = 2 " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 2.0;
@@ -7844,6 +7846,29 @@ int Parallel_Nonlinear_Solver::solve(){
     Teuchos::RCP<MV> unbalanced_coordinates_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, num_dim));
     //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
 
+    //Center of mass calculation
+    bool nodal_density_flag = simparam->nodal_density_flag;
+    const_host_vec_array all_node_densities;
+    if(nodal_density_flag)
+    all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    ROL::Elementwise::ReductionSum<real_t> sumreduc;
+    ROL::Ptr<ROL_MV> ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
+    ROL::Ptr<ROL_MV> ROL_Element_Moments_x = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
+    ROL::Ptr<ROL_MV> ROL_Element_Moments_y = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
+    ROL::Ptr<ROL_MV> ROL_Element_Moments_z = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
+
+    compute_element_masses(all_node_densities,false);
+    mass = current_mass = ROL_Element_Masses->reduce(sumreduc);
+
+    FEM_->compute_element_moments(all_node_densities,false, 0);
+    center_of_mass[0] = ROL_Element_Moments_x->reduce(sumreduc)/current_mass;
+
+    FEM_->compute_element_moments(all_node_densities,false, 1);
+    center_of_mass[1] = ROL_Element_Moments_y->reduce(sumreduc)/current_mass;
+
+    FEM_->compute_element_moments(all_node_densities,false, 2);
+    center_of_mass[2] = ROL_Element_Moments_z->reduce(sumreduc)/current_mass;
+
     host_vec_array unbalanced_coordinates_view = unbalanced_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     int dim_index;
     real_t node_x, node_y, node_z;
@@ -7878,11 +7903,14 @@ int Parallel_Nonlinear_Solver::solve(){
 
     //compute center
     // Calculate center
-	  real_t cx = tcoordinates->getVector(0)->meanValue();
-	  real_t cy = tcoordinates->getVector(1)->meanValue();
+	  //real_t cx = tcoordinates->getVector(0)->meanValue();
+	  //real_t cy = tcoordinates->getVector(1)->meanValue();
+    real_t cx = center_of_mass[0];
+    real_t cy = center_of_mass[1];
     real_t cz;
     if(num_dim==3)
-	    cz = tcoordinates->getVector(2)->meanValue();
+	    //cz = tcoordinates->getVector(2)->meanValue();
+      cz = center_of_mass[2];
 
     if(num_dim==3){
       for(LO i=0; i < local_nrows_reduced; i++){

@@ -90,7 +90,7 @@ void Simulation_Parameters::input(){
            //note this only implies a fixed displacement on the surface if no other basis functions have support on the surface
 
   //apply body forces
-  gravity_flag = true;
+  gravity_flag = false;
   gravity_vector[0] = 9.81;
   gravity_vector[1] = 0;
   gravity_vector[2] = 0;
