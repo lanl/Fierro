@@ -7847,18 +7847,19 @@ int Parallel_Nonlinear_Solver::solve(){
     //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
 
     //Center of mass calculation
+    typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
     bool nodal_density_flag = simparam->nodal_density_flag;
     const_host_vec_array all_node_densities;
     if(nodal_density_flag)
     all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    ROL::Ptr<ROL_MV> ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
-    ROL::Ptr<ROL_MV> ROL_Element_Moments_x = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
-    ROL::Ptr<ROL_MV> ROL_Element_Moments_y = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
-    ROL::Ptr<ROL_MV> ROL_Element_Moments_z = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
+    ROL::Ptr<ROL_MV> ROL_Element_Masses = ROL::makePtr<ROL_MV>(Global_Element_Masses);
+    ROL::Ptr<ROL_MV> ROL_Element_Moments_x = ROL::makePtr<ROL_MV>(Global_Element_Moments_x);
+    ROL::Ptr<ROL_MV> ROL_Element_Moments_y = ROL::makePtr<ROL_MV>(Global_Element_Moments_y);
+    ROL::Ptr<ROL_MV> ROL_Element_Moments_z = ROL::makePtr<ROL_MV>(Global_Element_Moments_z);
 
     compute_element_masses(all_node_densities,false);
-    mass = current_mass = ROL_Element_Masses->reduce(sumreduc);
+    mass = ROL_Element_Masses->reduce(sumreduc);
 
     FEM_->compute_element_moments(all_node_densities,false, 0);
     center_of_mass[0] = ROL_Element_Moments_x->reduce(sumreduc)/current_mass;
