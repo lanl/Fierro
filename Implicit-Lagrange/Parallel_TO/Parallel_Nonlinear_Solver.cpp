@@ -8003,8 +8003,6 @@ int Parallel_Nonlinear_Solver::solve(){
     //out<<*Linear_Solve_Params;
     //out<<"*******************************************"<<std::endl;
     
-    Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
-    Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
     {
       comm->barrier();
       //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);

@@ -25,6 +25,9 @@
   <!-- ===========  AGGREGATION  =========== -->
     <Parameter        name="aggregation: type"                    type="string"   value="uncoupled"/>
     <Parameter        name="aggregation: drop scheme"             type="string"   value="classical"/>
+
+   <!-- ===========  REUSE  =========== -->
+    <Parameter        name="reuse: type"                          type="string"   value="S"/>
     <!-- Uncomment the next line to enable dropping of weak connections, which can help AMG convergence
          for anisotropic problems.  The exact value is problem dependent. -->
     <!-- <Parameter        name="aggregation: drop tol"                type="double"   value="0.02"/> -->
@@ -46,10 +49,9 @@
     <Parameter        name="repartition: start level"             type="int"      value="2"/>
     <Parameter        name="repartition: min rows per proc"       type="int"      value="800"/>
     <Parameter        name="repartition: max imbalance"           type="double"   value="1.02"/>
-    <Parameter        name="repartition: remap parts"             type="bool"     value="false"/>
     <!-- start of default values for repartitioning (can be omitted) -->
     <Parameter name="repartition: remap parts"                type="bool"     value="true"/>
-    <Parameter name="repartition: rebalance P and R"          type="bool"     value="false"/>
+    <Parameter name="repartition: rebalance P and R"          type="bool"     value="true"/>
     <ParameterList name="repartition: params">
        <Parameter name="algorithm" type="string" value="multijagged"/>
     </ParameterList> 
