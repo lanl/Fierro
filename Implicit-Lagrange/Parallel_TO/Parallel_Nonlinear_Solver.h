@@ -22,6 +22,10 @@
 //#include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 
+//#include <Xpetra_Operator.hpp>
+//#include <MueLu.hpp>
+
+//forward declarations
 namespace swage{
   class mesh_t;
 }
@@ -31,6 +35,16 @@ namespace elements{
   class Element3D;
   class Element2D;
   class ref_element;
+}
+
+namespace MueLu{
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class Hierarchy;
+}
+
+namespace Xpetra{
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class Operator;
 }
 
 class Parallel_Nonlinear_Solver: public Solver{
