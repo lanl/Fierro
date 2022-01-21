@@ -195,20 +195,22 @@ Parallel_Nonlinear_Solver::~Parallel_Nonlinear_Solver(){
 
 void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     
-    std::cout << "Running TO Solver" << std::endl;
-     // check to see of a mesh was supplied when running the code
-    if (argc == 1) {
+    //MPI info
+    world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
+    MPI_Comm_rank(world,&myrank);
+    MPI_Comm_size(world,&nranks);
+    
+    if(myrank == 0){
+      std::cout << "Running TO Solver" << std::endl;
+       // check to see of a mesh was supplied when running the code
+      if (argc == 1) {
         std::cout << "\n\n**********************************\n\n";
         std::cout << " ERROR:\n";
         std::cout << " Please supply a mesh file as the second command line argument \n";
         std::cout << "**********************************\n\n" << std::endl;
         return;
+      }
     }
-    //MPI info
-    world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
-    MPI_Comm_rank(world,&myrank);
-    MPI_Comm_size(world,&nranks);
-
     //initialize Trilinos communicator class
     comm = Tpetra::getDefaultComm();
 
@@ -223,7 +225,7 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
 
     init_maps();
     
-    std::cout << "Num elements = " << rnum_elem << std::endl;
+    std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
     
     //initialize timing
     if(simparam->report_runtime_flag)
@@ -652,7 +654,8 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
   
   //broadcast number of elements
   MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
-
+  
+  if(myrank == 0)
   std::cout<<"before mesh initialization"<<std::endl;
   
   //read in element connectivity
@@ -754,7 +757,7 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
   if(myrank==0)
   in->close();
   
-  std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
+  //std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
   //copy temporary element storage to multivector storage
   max_nodes_per_element = MAX_ELEM_NODES;
 
@@ -1101,7 +1104,7 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
   read_index_start = 0;
   //std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
   rnum_elem = 0;
-  std::cout << "BUFFER ITERATIONS IS: " << buffer_iterations << std::endl;
+  //std::cout << "BUFFER ITERATIONS IS: " << buffer_iterations << std::endl;
   for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
     //pack buffer on rank 0
     if(myrank==0&&buffer_iteration<buffer_iterations-1){
@@ -1568,6 +1571,7 @@ void Parallel_Nonlinear_Solver::init_maps(){
   //}
      
   //std::cout << "number of patches = " << mesh->num_patches() << std::endl;
+  if(myrank == 0)
   std::cout << "End of map setup " << std::endl;
 }
 
@@ -1803,12 +1807,14 @@ void Parallel_Nonlinear_Solver::Get_Boundary_Patches(){
   //information for all patches on this rank
   CArrayKokkos<Node_Combination,array_layout, device_type, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
   CArrayKokkos<size_t,array_layout, device_type, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
-  std::cout << "Done with boundary patch allocation" << std::endl <<std::flush;
+  if(myrank == 0)
+    std::cout << "Done with boundary patch allocation" << std::endl <<std::flush;
   //initialize boundary patch flags
   for(int init = 0; init < npatches_repeat; init++)
     Patch_Boundary_Flags(init) = 1;
-
-  std::cout << "Done with boundary patch flags init" << std::endl <<std::flush;
+  
+  if(myrank == 0)
+    std::cout << "Done with boundary patch flags init" << std::endl <<std::flush;
   //use set of nodal combinations to find boundary set
   //boundary patches will not try to add nodal combinations twice
   //loop through elements in this rank to find boundary patches
@@ -1888,6 +1894,7 @@ void Parallel_Nonlinear_Solver::Get_Boundary_Patches(){
     std::cout << std::endl;
   }
   */
+  if(myrank == 0)
   std::cout << "Done with boundary patch loop" << std::endl <<std::flush;
   //loop through patch boundary flags to isolate boundary patches
   nboundary_patches = 0;
