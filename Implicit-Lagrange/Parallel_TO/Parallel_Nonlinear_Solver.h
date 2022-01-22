@@ -348,6 +348,7 @@ public:
   //multigrid solver hierarchy and preconditioner
   Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
+  bool Hierarchy_Constructed;
 
   //inertial properties
   real_t mass, center_of_mass[3], moments_of_inertia[6];

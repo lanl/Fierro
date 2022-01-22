@@ -178,6 +178,9 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
 
   //boundary condition flags
   body_force_flag = gravity_flag = thermal_flag = electric_flag = false;
+
+  //preconditioner construction
+  Hierarchy_Constructed = false;
 }
 
 Parallel_Nonlinear_Solver::~Parallel_Nonlinear_Solver(){
@@ -8013,7 +8016,13 @@ int Parallel_Nonlinear_Solver::solve(){
     {
       comm->barrier();
       //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
-      PreconditionerSetup(xwrap_balanced_A,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
+      if(Hierarchy_Constructed){
+        ReuseXpetraPreconditioner(xwrap_balanced_A, H);
+      }
+      else{
+        PreconditionerSetup(xwrap_balanced_A,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
+        Hierarchy_Constructed = true;
+      }
       comm->barrier();
       //H->Write(-1, -1);
       //H->describe(*fos,Teuchos::VERB_EXTREME);
