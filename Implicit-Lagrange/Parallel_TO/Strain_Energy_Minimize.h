@@ -90,8 +90,8 @@ public:
       //first linear solve was done in FEA class run function already
       //deep copy solve data into the cache variable
       
-      FEM->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM->all_node_displacements_distributed), Teuchos::Copy));
-      all_node_displacements_distributed_temp = FEM->all_node_displacements_distributed;
+      FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
+      all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
 
       //initial design density data was already communicated for ghost nodes in init_design()
     }
@@ -100,27 +100,27 @@ public:
       // and has been accepted as the new iterate
       /*assign temp pointer to the cache multivector (not the cache pointer) storage for a swap of the multivectors;
         this just avoids deep copy */
-      all_node_displacements_distributed_temp = FEM->all_cached_node_displacements_distributed;
+      all_node_displacements_distributed_temp = FEM_->all_cached_node_displacements_distributed;
       // Cache the accepted value
-      FEM->all_cached_node_displacements_distributed = FEM->all_node_displacements_distributed;
+      FEM_->all_cached_node_displacements_distributed = FEM_->all_node_displacements_distributed;
     }
     else if (type == ROL::UpdateType::Revert) {
       // u_ was set to u=S(x) during a trial update
       // and has been rejected as the new iterate
       // Revert to cached value
       FEM_->comm_variables(zp);
-      FEM->all_node_displacements_distributed = FEM->all_cached_node_displacements_distributed;
+      FEM_->all_node_displacements_distributed = FEM_->all_cached_node_displacements_distributed;
     }
     else if (type == ROL::UpdateType::Trial) {
       // This is a new value of x
-      FEM->all_node_displacements_distributed = all_node_displacements_distributed_temp;
+      FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
       FEM_->comm_variables(zp);
       FEM_->update_linear_solve(zp);
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,
       // e.g., finite-difference checks
-      FEM->all_node_displacements_distributed = all_displacements_distributed_temp;
+      FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
       FEM_->comm_variables(zp);
       FEM_->update_linear_solve(zp);
     }
