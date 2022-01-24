@@ -98,6 +98,31 @@ public:
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
+
+    ROL::Ptr<const MV> zp = getVector(z);
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+    if (type == ROL::UpdateType::Initial)  {
+
+      //initial design density data was already communicated for ghost nodes in init_design()
+    }
+    else if (type == ROL::UpdateType::Accept) {
+      // z was accepted as the new iterate
+    }
+    else if (type == ROL::UpdateType::Revert) {
+      // z has been rejected as the new iterate
+      // Revert to cached value
+      FEM_->comm_variables(zp);
+    }
+    else if (type == ROL::UpdateType::Trial) {
+      // This is a new value of x
+      FEM_->comm_variables(zp);
+    }
+    else { // ROL::UpdateType::Temp
+      // This is a new value of x used for,
+      // e.g., finite-difference checks
+      FEM_->comm_variables(zp);
+    }
   }
 
   void value(ROL::Vector<real_t> &c, const ROL::Vector<real_t> &z, real_t &tol ) override {
@@ -107,11 +132,12 @@ public:
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
-    
+    */
     FEM_->compute_element_masses(design_densities,false);
     
     //sum per element results across all MPI ranks
@@ -148,11 +174,12 @@ public:
     //host_vec_array dual_constraint_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     //communicate ghosts
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
-    
+    */
     int rnum_elem = FEM_->rnum_elem;
 
     if(nodal_density_flag_){
@@ -198,11 +225,12 @@ public:
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
     //communicate ghosts
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
-    
+    */
     int rnum_elem = FEM_->rnum_elem;
 
     if(nodal_density_flag_){

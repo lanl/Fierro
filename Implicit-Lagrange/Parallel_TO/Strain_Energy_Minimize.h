@@ -56,6 +56,7 @@ private:
   ROL::Ptr<ROL_MV> ROL_Displacements;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
+  Teuchos::RCP<MV> all_node_displacements_distributed_temp;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -81,6 +82,49 @@ public:
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
+    ROL::Ptr<const MV> zp = getVector(z);
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+    if (type == ROL::UpdateType::Initial)  {
+      // This is the first call to update
+      //first linear solve was done in FEA class run function already
+      //deep copy solve data into the cache variable
+      
+      FEM->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM->all_node_displacements_distributed), Teuchos::Copy));
+      all_node_displacements_distributed_temp = FEM->all_node_displacements_distributed;
+
+      //initial design density data was already communicated for ghost nodes in init_design()
+    }
+    else if (type == ROL::UpdateType::Accept) {
+      // u_ was set to u=S(x) during a trial update
+      // and has been accepted as the new iterate
+      /*assign temp pointer to the cache multivector (not the cache pointer) storage for a swap of the multivectors;
+        this just avoids deep copy */
+      all_node_displacements_distributed_temp = FEM->all_cached_node_displacements_distributed;
+      // Cache the accepted value
+      FEM->all_cached_node_displacements_distributed = FEM->all_node_displacements_distributed;
+    }
+    else if (type == ROL::UpdateType::Revert) {
+      // u_ was set to u=S(x) during a trial update
+      // and has been rejected as the new iterate
+      // Revert to cached value
+      FEM_->comm_variables(zp);
+      FEM->all_node_displacements_distributed = FEM->all_cached_node_displacements_distributed;
+    }
+    else if (type == ROL::UpdateType::Trial) {
+      // This is a new value of x
+      FEM->all_node_displacements_distributed = all_node_displacements_distributed_temp;
+      FEM_->comm_variables(zp);
+      FEM_->update_linear_solve(zp);
+    }
+    else { // ROL::UpdateType::Temp
+      // This is a new value of x used for,
+      // e.g., finite-difference checks
+      FEM->all_node_displacements_distributed = all_displacements_distributed_temp;
+      FEM_->comm_variables(zp);
+      FEM_->update_linear_solve(zp);
+    }
+
     //decide to output current optimization state
     if(current_step%FEM_->simparam->optimization_output_freq==0)
       FEM_->tecplot_writer();
@@ -102,17 +146,18 @@ public:
 
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
-
+    
     if(last_solve_step!=current_step){
       //std::cout << "UPDATED DISPLACEMENTS" << std::endl;
       FEM_->update_linear_solve(zp);
       last_solve_step = current_step;
     }
-
+    */
     //debug print of displacements
     //std::ostream &out = std::cout;
     //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -146,14 +191,17 @@ public:
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
     //FEM_->gradient_print_sync=1;
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
+    
     if(last_solve_step!=current_step){
       FEM_->update_linear_solve(zp);
       last_solve_step = current_step;
     }
+    */
     //FEM_->gradient_print_sync=0;
     //get local view of the data
     host_vec_array objective_gradients = gp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);

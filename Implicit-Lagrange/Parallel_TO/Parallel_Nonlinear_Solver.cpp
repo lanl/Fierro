@@ -1502,7 +1502,6 @@ void Parallel_Nonlinear_Solver::init_maps(){
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   node_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   all_node_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
-  all_cached_node_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
   //all_node_nconn_distributed = Teuchos::rcp(new MCONN(all_node_map, 1));
   if(num_dim==3) strain_count = 6;
   else strain_count = 3;
