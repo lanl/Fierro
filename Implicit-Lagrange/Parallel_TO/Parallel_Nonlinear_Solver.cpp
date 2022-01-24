@@ -1502,6 +1502,7 @@ void Parallel_Nonlinear_Solver::init_maps(){
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   node_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   all_node_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+  all_cached_node_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
   //all_node_nconn_distributed = Teuchos::rcp(new MCONN(all_node_map, 1));
   if(num_dim==3) strain_count = 6;
   else strain_count = 3;
@@ -7857,6 +7858,7 @@ int Parallel_Nonlinear_Solver::solve(){
     //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
 
     //Center of mass calculation
+    /*
     typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
     bool nodal_density_flag = simparam->nodal_density_flag;
     const_host_vec_array all_node_densities;
@@ -7879,7 +7881,8 @@ int Parallel_Nonlinear_Solver::solve(){
 
     compute_element_moments(all_node_densities,false, 2);
     center_of_mass[2] = ROL_Element_Moments_z->reduce(sumreduc)/mass;
-
+    */
+    
     host_vec_array unbalanced_coordinates_view = unbalanced_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     int dim_index;
     real_t node_x, node_y, node_z;
@@ -7914,14 +7917,14 @@ int Parallel_Nonlinear_Solver::solve(){
 
     //compute center
     // Calculate center
-	  //real_t cx = tcoordinates->getVector(0)->meanValue();
-	  //real_t cy = tcoordinates->getVector(1)->meanValue();
-    real_t cx = center_of_mass[0];
-    real_t cy = center_of_mass[1];
+	  real_t cx = tcoordinates->getVector(0)->meanValue();
+	  real_t cy = tcoordinates->getVector(1)->meanValue();
+    //real_t cx = center_of_mass[0];
+    //real_t cy = center_of_mass[1];
     real_t cz;
     if(num_dim==3)
-	    //cz = tcoordinates->getVector(2)->meanValue();
-      cz = center_of_mass[2];
+	    cz = tcoordinates->getVector(2)->meanValue();
+      //cz = center_of_mass[2];
 
     if(num_dim==3){
       for(LO i=0; i < local_nrows_reduced; i++){

@@ -239,6 +239,7 @@ public:
   Teuchos::RCP<MV> node_strains_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> all_node_displacements_distributed;
+  Teuchos::RCP<MV> all_cached_node_displacements_distributed;
   Teuchos::RCP<MV> all_node_strains_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
   Teuchos::RCP<const MV> test_node_densities_distributed;
