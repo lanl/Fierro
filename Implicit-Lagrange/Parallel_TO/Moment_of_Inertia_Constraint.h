@@ -22,6 +22,8 @@
 #include "ROL_Elementwise_Reduce.hpp"
 #include "Parallel_Nonlinear_Solver.h"
 
+#define MOI_EPSILON 0.000000001
+
 class MomentOfInertiaConstraint_TopOpt : public ROL::Constraint<real_t> {
   
   typedef Tpetra::Map<>::local_ordinal_type LO;
@@ -56,11 +58,12 @@ private:
   ROL::Ptr<ROL_MV> ROL_Element_Moments1;
   ROL::Ptr<ROL_MV> ROL_Element_Moments2;
   ROL::Ptr<ROL_MV> ROL_Element_Moments_of_Inertia;
+  ROL::Ptr<ROL_MV> ROL_Element_Moments_of_Inertia_xx, ROL_Element_Moments_of_Inertia_yy, ROL_Element_Moments_of_Inertia_zz;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
   Teuchos::RCP<MV> center_of_mass_gradients_distributed;
   Teuchos::RCP<MV> mass_gradients_distributed;
-  real_t initial_moment_of_inertia;
+  real_t initial_moment_of_inertia, initial_Mxx, initial_Myy, initial_Mzz;
   bool inequality_flag_;
   real_t constraint_value_;
   int inertia_component_;
@@ -80,7 +83,8 @@ public:
 
   MomentOfInertiaConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, int inertia_component, bool inequality_flag=true, real_t constraint_value = 0) 
     : FEM_(FEM) {
-
+    
+    if(inertia_component > 5) { std::cout << "SPECIFIED MOMENT OF INERTIA CONSTRAINT COMPONENT CANNOT EXCEED 5" << std::endl; }
     nodal_density_flag_ = nodal_density_flag;
     last_comm_step = last_solve_step = -1;
     current_step = 0;
@@ -102,6 +106,10 @@ public:
     ROL_Element_Moments_of_Inertia = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_xz);
     if(inertia_component_ == 5)
     ROL_Element_Moments_of_Inertia = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_yz);
+
+    ROL_Element_Moments_of_Inertia_xx = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_xx);
+    ROL_Element_Moments_of_Inertia_yy = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_yy);
+    ROL_Element_Moments_of_Inertia_zz = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_of_Inertia_zz);
 
     const_host_vec_array design_densities = FEM_->design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     
@@ -147,16 +155,17 @@ public:
       com2 = 2;
     }
     
+    
+    if(com1 == 0)
+    ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
+    if(com1 == 1)
+    ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
+    if(com1 == 2)
+    ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
+
     if(FEM_->com_init[com1]) { initial_center_of_mass[com1] = FEM_->center_of_mass[com1]; }
     else{
       FEM_->compute_element_moments(design_densities,true, com1);
-      
-      if(com1 == 0)
-      ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
-      if(com1 == 1)
-      ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
-      if(com1 == 2)
-      ROL_Element_Moments1 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
 
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
@@ -164,17 +173,17 @@ public:
       FEM_->com_init[com1] = true;
       FEM_->center_of_mass[com1] = initial_center_of_mass[com1] = initial_moment/initial_mass;
     }
+    
+    if(com2 == 0)
+    ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
+    if(com2 == 1)
+    ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
+    if(com2 == 2)
+    ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
 
     if(FEM_->com_init[com2]) { initial_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
     else{
       FEM_->compute_element_moments(design_densities,true, com2);
-
-      if(com2 == 0)
-      ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);
-      if(com2 == 1)
-      ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_y);
-      if(com2 == 2)
-      ROL_Element_Moments2 = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_z);
 
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
@@ -189,6 +198,22 @@ public:
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     initial_moment_of_inertia = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
+
+    if(inertia_component_ == 3){
+      FEM_->compute_element_moments_of_inertia(design_densities,true, 0);
+      initial_Mxx = ROL_Element_Moments_of_Inertia_xx->reduce(sumreduc);
+    }
+    if(inertia_component_ == 4){
+      FEM_->compute_element_moments_of_inertia(design_densities,true, 0);
+      initial_Mxx = ROL_Element_Moments_of_Inertia_xx->reduce(sumreduc);
+    }
+    if(inertia_component_ == 5){
+      FEM_->compute_element_moments_of_inertia(design_densities,true, 2);
+      initial_Mzz = ROL_Element_Moments_of_Inertia_zz->reduce(sumreduc);
+    }
+    
+    //prevent numerical issues
+    if(inertia_component_ < 3 && constraint_value_==0) { std::cout << "ERROR PRINCIPAL MOMENTS OF INERTIA CANNOT BE CONSTRAINED TO ZERO " << std::endl; }
 
     //debug print
     if(FEM_->myrank==0){
@@ -244,24 +269,40 @@ public:
     //debug print
     if(FEM_->myrank==0){
       if(inertia_component_ == 0)
-      std::cout << "MOMENT OF INERTIA XX RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+        std::cout << "MOMENT OF INERTIA XX RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
       if(inertia_component_ == 1)
-      std::cout << "MOMENT OF INERTIA YY RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+        std::cout << "MOMENT OF INERTIA YY RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
       if(inertia_component_ == 2)
-      std::cout << "MOMENT OF INERTIA ZZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+        std::cout << "MOMENT OF INERTIA ZZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
       if(inertia_component_ == 3)
-      std::cout << "MOMENT OF INERTIA XY RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+        std::cout << "MOMENT OF INERTIA XY RATIO (NORMALIZED BY M_XX): " << current_moment_of_inertia/initial_Mxx << std::endl;
       if(inertia_component_ == 4)
-      std::cout << "MOMENT OF INERTIA XZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+        std::cout << "MOMENT OF INERTIA XZ RATIO (NORMALIZED BY M_XX): " << current_moment_of_inertia/initial_Mxx << std::endl;
       if(inertia_component_ == 5)
-      std::cout << "MOMENT OF INERTIA YZ RATIO: " << current_moment_of_inertia/initial_moment_of_inertia << std::endl;
+        std::cout << "MOMENT OF INERTIA YZ RATIO (NORMALIZED BY M_ZZ): " << current_moment_of_inertia/initial_Mzz << std::endl;
     }
     
     if(inequality_flag_){
-      (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia;
+      if(inertia_component_ < 3){
+        (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia;
+      }
+      else if(inertia_component_ == 3||inertia_component_== 4){
+        (*cp)[0] = current_moment_of_inertia/initial_Mxx;
+      }
+      else{
+        (*cp)[0] = current_moment_of_inertia/initial_Mzz;
+      }
     }
     else{
-      (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia - constraint_value_;
+      if(inertia_component_ < 3){
+        (*cp)[0] = current_moment_of_inertia/initial_moment_of_inertia - constraint_value_;
+      }
+      else if(inertia_component_ == 3||inertia_component_== 4){
+        (*cp)[0] = current_moment_of_inertia/initial_Mxx - constraint_value_;
+      }
+      else{
+        (*cp)[0] = current_moment_of_inertia/initial_Mzz - constraint_value_;
+      }
     }
 
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;
@@ -368,10 +409,20 @@ public:
       //constraint_gradients(i,0) += 2*current_center_of_mass[com2]*current_mass*center_of_mass_gradients(i, com2);
     //}
 
-    for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,0) *= (*vp)[0]/initial_moment_of_inertia;
-    }
     
+      if(inertia_component_ < 3){
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) *= (*vp)[0]/initial_moment_of_inertia;
+      }
+      else if(inertia_component_== 3||inertia_component_== 4){
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) *= (*vp)[0]/initial_Mxx;
+      }
+      else{
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) *= (*vp)[0]/initial_Mzz;
+      }
+     
     
     //std::cout << "Ended constraint adjoint grad on task " <<FEM_->myrank  << std::endl;
     //debug print
@@ -405,9 +456,20 @@ public:
     update_com_and_mass(design_densities, current_mass, current_center_of_mass);
     
     FEM_->compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_);
-    for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,0) /= initial_moment_of_inertia;
-    }
+    
+      if(inertia_component_ < 3){
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) /= initial_moment_of_inertia;
+      }
+      else if (inertia_component_== 3||inertia_component_== 4){
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) /= initial_Mxx;
+      }
+      else{
+        for(int i = 0; i < FEM_->nlocal_nodes; i++)
+          constraint_gradients(i,0) /= initial_Mzz;
+      }
+    
 
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
     real_t gradient_dot_v = ROL_Gradients->dot(v);
@@ -421,9 +483,9 @@ public:
   void update_com_and_mass(const_host_vec_array design_densities, real_t &current_mass, real_t *current_center_of_mass){
 
     //compute mass
-    if(FEM_->mass_update == current_step) { current_mass = FEM_->mass; }
+    if(FEM_->mass_update == current_step&&0) { current_mass = FEM_->mass; }
     else{
-      FEM_->compute_element_masses(design_densities,true);
+      FEM_->compute_element_masses(design_densities,false);
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
       FEM_->mass = current_mass = ROL_Element_Masses->reduce(sumreduc);
@@ -433,7 +495,7 @@ public:
     //compute initial center of mass
     real_t current_moment;
     
-    if(FEM_->com_update[com1] == current_step) { current_center_of_mass[com1] = FEM_->center_of_mass[com1]; }
+    if(FEM_->com_update[com1] == current_step&&0) { current_center_of_mass[com1] = FEM_->center_of_mass[com1]; }
     else{
       FEM_->compute_element_moments(design_densities,false, com1);
       //sum per element results across all MPI ranks
@@ -443,7 +505,7 @@ public:
       FEM_->center_of_mass[com1] = current_center_of_mass[com1] = current_moment/current_mass;
     }
 
-    if(FEM_->com_update[com2] = current_step) { current_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
+    if(FEM_->com_update[com2] = current_step&&0) { current_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
     else{
       FEM_->compute_element_moments(design_densities,false, com2);
       //sum per element results across all MPI ranks

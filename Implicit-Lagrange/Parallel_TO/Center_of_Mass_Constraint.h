@@ -158,7 +158,7 @@ public:
 
     //compute mass
     real_t current_mass;
-    if(FEM_->mass_update == current_step) { current_mass = FEM_->mass; }
+    if(FEM_->mass_update == current_step&&0) { current_mass = FEM_->mass; }
     else{
       FEM_->compute_element_masses(design_densities,false);
       //sum per element results across all MPI ranks
@@ -214,7 +214,7 @@ public:
 
     //compute mass
     real_t current_mass;
-    if(FEM_->mass_update == current_step) { current_mass = FEM_->mass; }
+    if(FEM_->mass_update == current_step&&0) { current_mass = FEM_->mass; }
     else{
       FEM_->compute_element_masses(design_densities,false);
       //sum per element results across all MPI ranks
@@ -283,7 +283,7 @@ public:
 
     //compute mass
     real_t current_mass;
-    if(FEM_->mass_update == current_step) { current_mass = FEM_->mass; }
+    if(FEM_->mass_update == current_step&&0) { current_mass = FEM_->mass; }
     else{
       FEM_->compute_element_masses(design_densities,false);
       //sum per element results across all MPI ranks

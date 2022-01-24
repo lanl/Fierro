@@ -22,6 +22,10 @@
 //#include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 
+//#include <Xpetra_Operator.hpp>
+//#include <MueLu.hpp>
+
+//forward declarations
 namespace swage{
   class mesh_t;
 }
@@ -31,6 +35,16 @@ namespace elements{
   class Element3D;
   class Element2D;
   class ref_element;
+}
+
+namespace MueLu{
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class Hierarchy;
+}
+
+namespace Xpetra{
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class Operator;
 }
 
 class Parallel_Nonlinear_Solver: public Solver{
@@ -123,12 +137,18 @@ public:
 
   void setup_optimization_problem();
 
-  void local_matrix(int ielem, CArray <real_t> &Local_Matrix);
+  void local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
 
-  void local_matrix_multiply(int ielem, CArray <real_t> &Local_Matrix);
+  void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
+  
+  //initialize data for boundaries of the model and storage for boundary conditions and applied loads
+  void init_boundaries();
   
   //interfaces between user input and creating data structures for bcs
   void generate_bcs();
+  
+  //interfaces between user input and creating data structures for applied loads
+  void generate_applied_loads();
   
   //finds the boundary element surfaces in this model
   void Get_Boundary_Patches();
@@ -139,15 +159,18 @@ public:
 
   void tecplot_writer();
 
-  void Element_Material_Properties(size_t, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
-  void Gradient_Element_Material_Properties(size_t, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+
+  void Body_Force(size_t ielem, real_t density, real_t *forces);
+  void Gradient_Body_Force(size_t ielem, real_t density, real_t *forces);
 
   void Displacement_Boundary_Conditions();
 
   void init_boundary_sets(int num_boundary_sets);
 
-  void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits);
+  void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
 
   int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
 
@@ -176,8 +199,8 @@ public:
   dual_vec_array dual_nodal_forces;
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
   host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
-  CArray<elements::elem_types::elem_type> Element_Types;
-  CArray<size_t> Nodes_Per_Element_Type;
+  CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
@@ -216,6 +239,7 @@ public:
   Teuchos::RCP<MV> node_strains_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> all_node_displacements_distributed;
+  Teuchos::RCP<MV> all_cached_node_displacements_distributed;
   Teuchos::RCP<MV> all_node_strains_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
   Teuchos::RCP<const MV> test_node_densities_distributed;
@@ -252,6 +276,7 @@ public:
   //CArray <Nodal_Combination> Patch_Nodes;
   size_t nboundary_patches;
   size_t num_boundary_conditions;
+  int current_bdy_id;
   CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NBoundary_Condition_Patches;
@@ -262,23 +287,27 @@ public:
 
   //element selection parameters and data
   size_t max_nodes_per_element;
+  
+  //body force parameters
+  bool body_force_flag, gravity_flag, thermal_flag, electric_flag;
+  real_t *gravity_vector;
 
   //types of boundary conditions
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
-   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, LOADING_CONDITION};
+   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, TO_SURFACE_CONSTRAINT};
 
   //lists what kind of boundary condition the nodal DOF is subjected to if any
   CArrayKokkos<int, array_layout, device_type, memory_traits> Node_DOF_Boundary_Condition_Type;
   //stores the displacement value for the boundary condition on this nodal DOF
-  CArray<real_t> Node_DOF_Displacement_Boundary_Conditions;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Displacement_Boundary_Conditions;
   //stores applied point forces on nodal DOF
-  CArray<real_t> Node_DOF_Force_Boundary_Conditions;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Force_Boundary_Conditions;
   //lists what kind of boundary condition each boundary set is assigned to
-  CArray<int> Boundary_Condition_Type_List;
+  CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
   //constant surface force densities corresponding to each boundary set (provide varying field later)
-  CArray<real_t> Boundary_Surface_Force_Densities;
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Force_Densities;
   //constant displacement condition applied to all nodes on a boundary surface (convenient option to avoid specifying nodes)
-  CArray<real_t> Boundary_Surface_Displacements;
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Displacements;
   
   //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
   size_t Number_DOF_BCS;
@@ -316,6 +345,11 @@ public:
 
   //linear solver parameters
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
+
+  //multigrid solver hierarchy and preconditioner
+  Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
+  Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
+  bool Hierarchy_Constructed;
 
   //inertial properties
   real_t mass, center_of_mass[3], moments_of_inertia[6];
