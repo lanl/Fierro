@@ -114,7 +114,9 @@ public:
     else if (type == ROL::UpdateType::Trial) {
       // This is a new value of x
       FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
+      //communicate density variables for ghosts
       FEM_->comm_variables(zp);
+      //update deformation variables
       FEM_->update_linear_solve(zp);
     }
     else { // ROL::UpdateType::Temp

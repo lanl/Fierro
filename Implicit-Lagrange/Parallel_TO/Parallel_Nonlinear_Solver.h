@@ -133,6 +133,8 @@ public:
 
   void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
 
+  void compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, host_vec_array direction_vec);
+
   void compute_nodal_strains();
 
   void setup_optimization_problem();
@@ -346,7 +348,12 @@ public:
   //linear solver parameters
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
 
-  //multigrid solver hierarchy and preconditioner
+  //multigrid solver data
+  Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
+  Teuchos::RCP<MV> unbalanced_B;
+  Teuchos::RCP<MV> balanced_B;
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xbalanced_B;
   Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
   bool Hierarchy_Constructed;
