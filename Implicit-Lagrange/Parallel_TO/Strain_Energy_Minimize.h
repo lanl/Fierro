@@ -77,10 +77,19 @@ public:
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
+      
+      //deep copy solve data into the cache variable
+      FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
+      all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
+
       constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
+    //debug
+    std::ostream &out = std::cout;
+    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+
     current_step++;
     ROL::Ptr<const MV> zp = getVector(z);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -88,10 +97,6 @@ public:
     if (type == ROL::UpdateType::Initial)  {
       // This is the first call to update
       //first linear solve was done in FEA class run function already
-      //deep copy solve data into the cache variable
-      
-      FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
-      all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
 
       //initial design density data was already communicated for ghost nodes in init_design()
     }
@@ -118,10 +123,14 @@ public:
       FEM_->comm_variables(zp);
       //update deformation variables
       FEM_->update_linear_solve(zp);
+      if(FEM_->myrank==0)
+      *fos << "called Trial" << std::endl;
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,
       // e.g., finite-difference checks
+      if(FEM_->myrank==0)
+      *fos << "called Temp" << std::endl;
       FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
       FEM_->comm_variables(zp);
       FEM_->update_linear_solve(zp);
@@ -248,7 +257,9 @@ public:
   
   
   void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
-    
+    //debug
+    std::ostream &out = std::cout;
+    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
     // Unwrap hv
     ROL::Ptr<MV> hvp = getVector(hv);
 
@@ -261,6 +272,11 @@ public:
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, direction_vector);
+    //if(FEM_->myrank==0)
+    //std::cout << "hessvec" << std::endl;
+    //hvp->describe(*fos,Teuchos::VERB_EXTREME);
+    if(FEM_->myrank==0)
+    *fos << "Called Hessianvec" << std::endl;
   }
 /*
   void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 

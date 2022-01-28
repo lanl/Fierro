@@ -1736,8 +1736,8 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
   //problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
   problem->addConstraint("equality Constraint 1",eq_constraint,constraint_mul);
-  problem->addConstraint("equality Constraint 2",eq_constraint2,constraint_mul2);
-  problem->addConstraint("equality Constraint 3",eq_constraint3,constraint_mul3);
+  //problem->addConstraint("equality Constraint 2",eq_constraint2,constraint_mul2);
+  //problem->addConstraint("equality Constraint 3",eq_constraint3,constraint_mul3);
   //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
   problem->setProjectionAlgorithm(*parlist);
   //finalize problem
@@ -1752,7 +1752,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   directions_distributed->putScalar(0.1);
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  //obj->checkGradient(*rol_x, *rol_d);
+  obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.0000001);
@@ -1764,7 +1764,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  solver.solve(std::cout);
+  //solver.solve(std::cout);
 
   //print mass constraint for final design vector
   compute_element_masses(design_densities,false);
@@ -6801,6 +6801,9 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = xX;
   Teuchos::RCP<MV> lambda = X;
   const_host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+
+  Teuchos::RCP<Teuchos::FancyOStream> fancy = Teuchos::fancyOStream(Teuchos::rcpFromRef(std::cout));
+  Teuchos::FancyOStream& out = *fancy;
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
@@ -6874,7 +6877,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   for(int i = 0; i < nlocal_nodes; i++)
     local_direction_vec_reduce += direction_vec(i,0);
   
-  MPI_Allreduce(&local_direction_vec_reduce,&direction_vec_reduce,1,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(&local_direction_vec_reduce,&direction_vec_reduce,1,MPI_DOUBLE,MPI_SUM,world);
 
   //loop through each element to contribute to the RHS of the hessvec adjoint equation
   for(size_t ielem = 0; ielem < rnum_elem; ielem++){
@@ -7155,8 +7158,6 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   balanced_B->doImport(*unbalanced_B, Bvec_importer, Tpetra::INSERT);
   
   //solve for adjoint vector
-  Teuchos::RCP<Teuchos::FancyOStream> fancy = Teuchos::fancyOStream(Teuchos::rcpFromRef(std::cout));
-  Teuchos::FancyOStream& out = *fancy;
   int num_iter = 2000;
   double solve_tol = 1e-12;
   int cacheSize = 1000;
@@ -7187,6 +7188,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
+
   //communicate adjoint vector to original all dof map for simplicity now (optimize out later)
   Teuchos::RCP<MV> adjoint_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   Teuchos::RCP<MV> all_adjoint_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
@@ -7208,7 +7210,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
 
   for(LO i=0; i < local_reduced_dof_original_map->getNodeNumElements(); i++){
    local_reduced_dof_id = local_dof_map->getLocalElement(Free_Indices(i));
-    adjoint_host(local_reduced_dof_id,0) = adjoint_host(i,0);
+    adjoint_host(local_reduced_dof_id,0) = reduced_adjoint_host(i,0);
   }
   
   //import for displacement of ghosts
@@ -7217,9 +7219,10 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   //comms to get displacements on all node map
   all_adjoint_distributed->doImport(*adjoint_distributed, ghost_displacement_importer, Tpetra::INSERT);
   host_vec_array all_adjoint = all_adjoint_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  
+
 //now that adjoint is computed, calculate the hessian vector product
 //loop through each element and assign the contribution to Hessian vector product for each of its local nodes
+
   for(size_t ielem = 0; ielem < rnum_elem; ielem++){
     nodes_per_elem = elem->num_basis();
 
@@ -7548,7 +7551,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       }
     }
   }//end element loop for hessian vector product
-
+  
 }
 
 /* -------------------------------------------------------------------------------------------
