@@ -6678,52 +6678,52 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
           basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
     }
     
-    
+    //look up element material properties at this point as a function of density
+    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+    Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+    Shear_Term = 0.5 - Poisson_Ratio;
+    Pressure_Term = 1 - Poisson_Ratio;
+
+    //debug print
+    //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
+
+    //compute Elastic (C) matrix
+    if(num_dim==2){
+      C_matrix(0,0) = Pressure_Term;
+      C_matrix(1,1) = Pressure_Term;
+      C_matrix(0,1) = Poisson_Ratio;
+      C_matrix(1,0) = Poisson_Ratio;
+      C_matrix(2,2) = Shear_Term;
+    }
+    if(num_dim==3){
+      C_matrix(0,0) = Pressure_Term;
+      C_matrix(1,1) = Pressure_Term;
+      C_matrix(2,2) = Pressure_Term;
+      C_matrix(0,1) = Poisson_Ratio;
+      C_matrix(0,2) = Poisson_Ratio;
+      C_matrix(1,0) = Poisson_Ratio;
+      C_matrix(1,2) = Poisson_Ratio;
+      C_matrix(2,0) = Poisson_Ratio;
+      C_matrix(2,1) = Poisson_Ratio;
+      C_matrix(3,3) = Shear_Term;
+      C_matrix(4,4) = Shear_Term;
+      C_matrix(5,5) = Shear_Term;
+    }
+
+    //compute the previous multiplied by the Elastic (C) Matrix
+    for(int irow=0; irow < Brows; irow++){
+      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+        CB_matrix_contribution(irow,icol) = 0;
+        for(int span=0; span < Brows; span++){
+          CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+        }
+      }
+    }
+
     //evaluate local stiffness matrix gradient with respect to igradient
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
       if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-      //look up element material properties at this point as a function of density
-      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
-      Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-      Shear_Term = 0.5 - Poisson_Ratio;
-      Pressure_Term = 1 - Poisson_Ratio;
-
-      //debug print
-      //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
-
-      //compute Elastic (C) matrix
-      if(num_dim==2){
-        C_matrix(0,0) = Pressure_Term;
-        C_matrix(1,1) = Pressure_Term;
-        C_matrix(0,1) = Poisson_Ratio;
-        C_matrix(1,0) = Poisson_Ratio;
-        C_matrix(2,2) = Shear_Term;
-      }
-      if(num_dim==3){
-        C_matrix(0,0) = Pressure_Term;
-        C_matrix(1,1) = Pressure_Term;
-        C_matrix(2,2) = Pressure_Term;
-        C_matrix(0,1) = Poisson_Ratio;
-        C_matrix(0,2) = Poisson_Ratio;
-        C_matrix(1,0) = Poisson_Ratio;
-        C_matrix(1,2) = Poisson_Ratio;
-        C_matrix(2,0) = Poisson_Ratio;
-        C_matrix(2,1) = Poisson_Ratio;
-        C_matrix(3,3) = Shear_Term;
-        C_matrix(4,4) = Shear_Term;
-        C_matrix(5,5) = Shear_Term;
-      }
-
-      //compute the previous multiplied by the Elastic (C) Matrix
-      for(int irow=0; irow < Brows; irow++){
-        for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
-          CB_matrix_contribution(irow,icol) = 0;
-          for(int span=0; span < Brows; span++){
-            CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
-          }
-        }
-      }
 
       //compute the contributions of this quadrature point to all the local stiffness matrix elements
       for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
@@ -6754,11 +6754,11 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
       if(body_force_flag){
+        //look up element material properties at this point as a function of density
+        Gradient_Body_Force(ielem, current_density, gradient_force_density);
         for(int igradient=0; igradient < nodes_per_elem; igradient++){
         if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
         local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-        //look up element material properties at this point as a function of density
-        Gradient_Body_Force(ielem, current_density, gradient_force_density);
       
         //compute inner product for this quadrature point contribution
         inner_product = 0;
@@ -6783,7 +6783,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
    Compute the gradient of strain energy with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, host_vec_array direction_vec){
+void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, const_host_vec_array direction_vec){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -6800,20 +6800,21 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   host_vec_array unbalanced_B_view = unbalanced_B->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = xX;
   Teuchos::RCP<MV> lambda = X;
-  host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+  const_host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
   int strain_max_flag = simparam->strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
   int solve_flag, zero_strain_flag;
-  LO local_node_id, local_dof_id, local_reduced_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
+  LO local_node_id, jlocal_node_id, local_dof_id, local_reduced_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index, global_dof_id;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Element_Modulus_Gradient, Element_Modulus_Concavity, Poisson_Ratio, gradient_force_density[3];
-  real_t Elastic_Constant, Shear_Term, Pressure_Term;
+  real_t Elastic_Constant, Gradient_Elastic_Constant, Concavity_Elastic_Constant, Shear_Term, Pressure_Term;
   real_t inner_product, matrix_term, Jacobian, weight_multiply;
+  real_t direction_vec_reduce, local_direction_vec_reduce;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -6865,8 +6866,16 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
     hessvec(inode,0) = 0;
   
   //initialize RHS vector
-  for(int i=0; i < local_reduced_dof_map->getNodeNumElements; i++)
+  for(int i=0; i < local_reduced_dof_map->getNodeNumElements(); i++)
     unbalanced_B_view(i,0) = 0;
+  
+  //sum components of direction vector
+  direction_vec_reduce = local_direction_vec_reduce = 0;
+  for(int i = 0; i < nlocal_nodes; i++)
+    local_direction_vec_reduce += direction_vec(i,0);
+  
+  MPI_Allreduce(&local_direction_vec_reduce,&direction_vec_reduce,1,MPI_INT,MPI_SUM,world);
+
   //loop through each element to contribute to the RHS of the hessvec adjoint equation
   for(size_t ielem = 0; ielem < rnum_elem; ielem++){
     nodes_per_elem = elem->num_basis();
@@ -7059,52 +7068,53 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
           basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
     }
     
+    //look up element material properties at this point as a function of density
+    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
     
+    Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+    Shear_Term = 0.5 - Poisson_Ratio;
+    Pressure_Term = 1 - Poisson_Ratio;
+
+    //debug print
+    //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
+
+    //compute Elastic (C) matrix
+    if(num_dim==2){
+      C_matrix(0,0) = Pressure_Term;
+      C_matrix(1,1) = Pressure_Term;
+      C_matrix(0,1) = Poisson_Ratio;
+      C_matrix(1,0) = Poisson_Ratio;
+      C_matrix(2,2) = Shear_Term;
+    }
+    if(num_dim==3){
+      C_matrix(0,0) = Pressure_Term;
+      C_matrix(1,1) = Pressure_Term;
+      C_matrix(2,2) = Pressure_Term;
+      C_matrix(0,1) = Poisson_Ratio;
+      C_matrix(0,2) = Poisson_Ratio;
+      C_matrix(1,0) = Poisson_Ratio;
+      C_matrix(1,2) = Poisson_Ratio;
+      C_matrix(2,0) = Poisson_Ratio;
+      C_matrix(2,1) = Poisson_Ratio;
+      C_matrix(3,3) = Shear_Term;
+      C_matrix(4,4) = Shear_Term;
+      C_matrix(5,5) = Shear_Term;
+    }
+
+    //compute the previous multiplied by the Elastic (C) Matrix
+    for(int irow=0; irow < Brows; irow++){
+      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+        CB_matrix_contribution(irow,icol) = 0;
+        for(int span=0; span < Brows; span++){
+          CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+        }
+      }
+    }
+
     //evaluate local stiffness matrix gradient with respect to igradient
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
       if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-      //look up element material properties at this point as a function of density
-      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
-      Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-      Shear_Term = 0.5 - Poisson_Ratio;
-      Pressure_Term = 1 - Poisson_Ratio;
-
-      //debug print
-      //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
-
-      //compute Elastic (C) matrix
-      if(num_dim==2){
-        C_matrix(0,0) = Pressure_Term;
-        C_matrix(1,1) = Pressure_Term;
-        C_matrix(0,1) = Poisson_Ratio;
-        C_matrix(1,0) = Poisson_Ratio;
-        C_matrix(2,2) = Shear_Term;
-      }
-      if(num_dim==3){
-        C_matrix(0,0) = Pressure_Term;
-        C_matrix(1,1) = Pressure_Term;
-        C_matrix(2,2) = Pressure_Term;
-        C_matrix(0,1) = Poisson_Ratio;
-        C_matrix(0,2) = Poisson_Ratio;
-        C_matrix(1,0) = Poisson_Ratio;
-        C_matrix(1,2) = Poisson_Ratio;
-        C_matrix(2,0) = Poisson_Ratio;
-        C_matrix(2,1) = Poisson_Ratio;
-        C_matrix(3,3) = Shear_Term;
-        C_matrix(4,4) = Shear_Term;
-        C_matrix(5,5) = Shear_Term;
-      }
-
-      //compute the previous multiplied by the Elastic (C) Matrix
-      for(int irow=0; irow < Brows; irow++){
-        for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
-          CB_matrix_contribution(irow,icol) = 0;
-          for(int span=0; span < Brows; span++){
-            CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
-          }
-        }
-      }
 
       //compute the contributions of this quadrature point to all the local stiffness matrix elements
       for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
@@ -7158,7 +7168,6 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   //out<<"*********** MueLu ParameterList ***********"<<std::endl;
   //out<<*Linear_Solve_Params;
   //out<<"*******************************************"<<std::endl;
-    
   
   comm->barrier();
   //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
@@ -7172,15 +7181,16 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   comm->barrier();
   //H->Write(-1, -1);
   //H->describe(*fos,Teuchos::VERB_EXTREME);
-    
-
+  
   // =========================================================================
   // System solution (Ax = b)
   // =========================================================================
   comm->barrier();
   SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,out,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
-
+  
+  //scale by reciprocal ofdirection vector sum
+  lambda->scale(1/direction_vec_reduce);
   //communicate adjoint vector to original all dof map for simplicity now (optimize out later)
   Teuchos::RCP<MV> adjoint_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   Teuchos::RCP<MV> all_adjoint_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
@@ -7407,64 +7417,69 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
           basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
           basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
     }
+
+    //look up element material properties at this point as a function of density
+    Concavity_Element_Material_Properties(ielem, Element_Modulus_Concavity, Poisson_Ratio, current_density);
+    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
     
-    
-    //evaluate local stiffness matrix gradient with respect to igradient
+    Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+    Concavity_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+    Shear_Term = 0.5 - Poisson_Ratio;
+    Pressure_Term = 1 - Poisson_Ratio;
+
+    //debug print
+    //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
+
+    //compute Elastic (C) matrix
+    if(num_dim==2){
+      C_matrix(0,0) = Pressure_Term;
+      C_matrix(1,1) = Pressure_Term;
+      C_matrix(0,1) = Poisson_Ratio;
+      C_matrix(1,0) = Poisson_Ratio;
+      C_matrix(2,2) = Shear_Term;
+    }
+    if(num_dim==3){
+      C_matrix(0,0) = Pressure_Term;
+      C_matrix(1,1) = Pressure_Term;
+      C_matrix(2,2) = Pressure_Term;
+      C_matrix(0,1) = Poisson_Ratio;
+      C_matrix(0,2) = Poisson_Ratio;
+      C_matrix(1,0) = Poisson_Ratio;
+      C_matrix(1,2) = Poisson_Ratio;
+      C_matrix(2,0) = Poisson_Ratio;
+      C_matrix(2,1) = Poisson_Ratio;
+      C_matrix(3,3) = Shear_Term;
+      C_matrix(4,4) = Shear_Term;
+      C_matrix(5,5) = Shear_Term;
+    }
+
+    //compute the previous multiplied by the Elastic (C) Matrix
+    for(int irow=0; irow < Brows; irow++){
+      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+        CB_matrix_contribution(irow,icol) = 0;
+        for(int span=0; span < Brows; span++){
+          CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+        }
+      }
+    }
+
+    //evaluate local stiffness matrix concavity with respect to igradient and jgradient
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
       if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-      //look up element material properties at this point as a function of density
-      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
-      Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-      Shear_Term = 0.5 - Poisson_Ratio;
-      Pressure_Term = 1 - Poisson_Ratio;
-
-      //debug print
-      //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
-
-      //compute Elastic (C) matrix
-      if(num_dim==2){
-        C_matrix(0,0) = Pressure_Term;
-        C_matrix(1,1) = Pressure_Term;
-        C_matrix(0,1) = Poisson_Ratio;
-        C_matrix(1,0) = Poisson_Ratio;
-        C_matrix(2,2) = Shear_Term;
-      }
-      if(num_dim==3){
-        C_matrix(0,0) = Pressure_Term;
-        C_matrix(1,1) = Pressure_Term;
-        C_matrix(2,2) = Pressure_Term;
-        C_matrix(0,1) = Poisson_Ratio;
-        C_matrix(0,2) = Poisson_Ratio;
-        C_matrix(1,0) = Poisson_Ratio;
-        C_matrix(1,2) = Poisson_Ratio;
-        C_matrix(2,0) = Poisson_Ratio;
-        C_matrix(2,1) = Poisson_Ratio;
-        C_matrix(3,3) = Shear_Term;
-        C_matrix(4,4) = Shear_Term;
-        C_matrix(5,5) = Shear_Term;
-      }
-
-      //compute the previous multiplied by the Elastic (C) Matrix
-      for(int irow=0; irow < Brows; irow++){
-        for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
-          CB_matrix_contribution(irow,icol) = 0;
-          for(int span=0; span < Brows; span++){
-            CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+      for(int jgradient=0; jgradient < nodes_per_elem; jgradient++){
+        jlocal_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, jgradient));
+        //compute the contributions of this quadrature point to all the local stiffness matrix elements
+        for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+          for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
+            matrix_term = 0;
+            for(int span = 0; span < Brows; span++){
+              matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
+            }
+            Local_Matrix_Contribution(ifill,jfill) = Concavity_Elastic_Constant*basis_values(igradient)*direction_vec(jlocal_node_id,0)
+                                                     basis_values(jgradient)*weight_multiply*matrix_term/Jacobian;
           }
         }
-      }
-
-      //compute the contributions of this quadrature point to all the local stiffness matrix elements
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-          matrix_term = 0;
-          for(int span = 0; span < Brows; span++){
-            matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
-          }
-          Local_Matrix_Contribution(ifill,jfill) = Elastic_Constant*basis_values(igradient)*weight_multiply*matrix_term/Jacobian;
-        }
-      }
       
       //compute inner product for this quadrature point contribution
       inner_product = 0;
@@ -7479,7 +7494,40 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) -= inner_product/2;
+      hessvec(local_node_id,0) -= inner_product/2;
+      }
+    }
+
+    //evaluate local stiffness matrix gradient with respect to igradient (augmented term with adjoint vector)
+    for(int igradient=0; igradient < nodes_per_elem; igradient++){
+      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
+
+      //compute the contributions of this quadrature point to all the local stiffness matrix elements
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
+          matrix_term = 0;
+          for(int span = 0; span < Brows; span++){
+            matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
+          }
+          Local_Matrix_Contribution(ifill,jfill) = Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*matrix_term/Jacobian;
+        }
+      }
+      
+      //compute inner product for this quadrature point contribution
+      inner_product = 0;
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_adjoint_displacements(ifill)*current_nodal_displacements(jfill);
+          //debug
+          //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
+          //inner_product += Local_Matrix_Contribution(ifill, jfill);
+        }
+      }
+      
+      //debug print
+      //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
+      hessvec(local_node_id,0) += inner_product*direction_vec_reduce;
       }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
@@ -7493,12 +7541,13 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
         //compute inner product for this quadrature point contribution
         inner_product = 0;
         for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-          inner_product += gradient_force_density[ifill%num_dim]*current_nodal_displacements(ifill)*basis_values(igradient)*basis_values(ifill/num_dim)*weight_multiply*Jacobian;
+          inner_product -= gradient_force_density[ifill%num_dim]*direction_vec_reduce*
+                           current_adjoint_displacements(ifill)*basis_values(igradient)*basis_values(ifill/num_dim)*weight_multiply*Jacobian;
         }
       
         //debug print
         //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-        design_gradients(local_node_id,0) += inner_product;
+        hessvec(local_node_id,0) += inner_product*direction_vec_reduce;
         }
       }
     }

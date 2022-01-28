@@ -45,6 +45,12 @@ namespace MueLu{
 namespace Xpetra{
   template<class floattype, class local_ind, class global_ind, class nodetype> 
   class Operator;
+  
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class MultiVector;
+
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class Matrix;
 }
 
 class Parallel_Nonlinear_Solver: public Solver{
@@ -133,7 +139,7 @@ public:
 
   void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
 
-  void compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, host_vec_array direction_vec);
+  void compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, const_host_vec_array direction_vec);
 
   void compute_nodal_strains();
 
@@ -359,7 +365,7 @@ public:
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xbalanced_B;
   Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_original_map
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_original_map;
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_reduced_dof_original_map;
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_map;
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map;
