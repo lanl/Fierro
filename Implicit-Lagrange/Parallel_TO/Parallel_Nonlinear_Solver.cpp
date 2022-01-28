@@ -7180,17 +7180,13 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   //out<<*Linear_Solve_Params;
   //out<<"*******************************************"<<std::endl;
   
-  comm->barrier();
-  //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
-  ReuseXpetraPreconditioner(xwrap_balanced_A, H);
-  
-  comm->barrier();
   //H->Write(-1, -1);
   //H->describe(*fos,Teuchos::VERB_EXTREME);
   
   // =========================================================================
   // System solution (Ax = b)
   // =========================================================================
+  //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   comm->barrier();
   SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,out,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
