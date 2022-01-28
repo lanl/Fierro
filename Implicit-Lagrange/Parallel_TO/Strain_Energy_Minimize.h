@@ -271,7 +271,7 @@ public:
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
-    FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, direction_vector);
+    FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //hvp->describe(*fos,Teuchos::VERB_EXTREME);

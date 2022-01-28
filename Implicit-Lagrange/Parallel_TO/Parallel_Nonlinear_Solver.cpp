@@ -6783,7 +6783,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
    Compute the gradient of strain energy with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, const_host_vec_array direction_vec){
+void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -6798,6 +6798,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   host_vec_array unbalanced_B_view = unbalanced_B->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+  const_host_vec_array direction_vec = direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = xX;
   Teuchos::RCP<MV> lambda = X;
   const_host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
@@ -6878,6 +6879,15 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
     local_direction_vec_reduce += direction_vec(i,0);
   
   MPI_Allreduce(&local_direction_vec_reduce,&direction_vec_reduce,1,MPI_DOUBLE,MPI_SUM,world);
+
+  //comms to get ghost components of direction vector needed for matrix inner products
+  Tpetra::Import<LO, GO> node_importer(map, all_node_map);
+  
+  all_direction_vec_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+  //comms to get ghosts
+  all_direction_vec_distributed->doImport(*direction_vec_distributed, node_importer, Tpetra::INSERT);
+  
+  const_host_vec_array all_direction_vec = all_direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
   //loop through each element to contribute to the RHS of the hessvec adjoint equation
   for(size_t ielem = 0; ielem < rnum_elem; ielem++){
@@ -7116,9 +7126,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
 
     //evaluate local stiffness matrix gradient with respect to igradient
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
-      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
-      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-
+      //if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, igradient));
       //compute the contributions of this quadrature point to all the local stiffness matrix elements
       for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
         for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
@@ -7139,7 +7148,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
         if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_reduced_dof_original_map->isNodeGlobalElement(global_dof_id)){
           local_reduced_dof_id = local_reduced_dof_original_map->getLocalElement(global_dof_id);
           for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-            unbalanced_B_view(local_reduced_dof_id,0) -= Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(jfill)*direction_vec(local_node_id,0);
+            unbalanced_B_view(local_reduced_dof_id,0) -= Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(jfill)*all_direction_vec(local_node_id,0);
             //debug
             //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
             //inner_product += Local_Matrix_Contribution(ifill, jfill);
@@ -7249,7 +7258,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       current_nodal_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
       current_nodal_displacements(node_loop*num_dim+1) = all_node_displacements(local_dof_idy,0);
       current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
-      current_adjoint_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
+      current_adjoint_displacements(node_loop*num_dim) = all_adjoint(local_dof_idx,0);
       current_adjoint_displacements(node_loop*num_dim+1) = all_adjoint(local_dof_idy,0);
       current_adjoint_displacements(node_loop*num_dim+2) = all_adjoint(local_dof_idz,0);
       
@@ -7422,7 +7431,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
     Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
     
     Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Concavity_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+    Concavity_Elastic_Constant = Element_Modulus_Concavity/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5 - Poisson_Ratio;
     Pressure_Term = 1 - Poisson_Ratio;
 
@@ -7475,7 +7484,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
             for(int span = 0; span < Brows; span++){
               matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
             }
-            Local_Matrix_Contribution(ifill,jfill) = Concavity_Elastic_Constant*basis_values(igradient)*direction_vec(jlocal_node_id,0)*
+            Local_Matrix_Contribution(ifill,jfill) = Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(jlocal_node_id,0)*
                                                      basis_values(jgradient)*weight_multiply*matrix_term/Jacobian;
           }
         }
@@ -7485,9 +7494,6 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
         for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
           inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
-          //debug
-          //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
-          //inner_product += Local_Matrix_Contribution(ifill, jfill);
         }
       }
       

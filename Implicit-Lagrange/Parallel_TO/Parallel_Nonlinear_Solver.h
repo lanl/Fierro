@@ -139,7 +139,7 @@ public:
 
   void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
 
-  void compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, const_host_vec_array direction_vec);
+  void compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
 
   void compute_nodal_strains();
 
