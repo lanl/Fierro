@@ -3860,11 +3860,31 @@ void Parallel_Nonlinear_Solver::Element_Material_Properties(size_t ielem, real_t
 void Parallel_Nonlinear_Solver::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
+  Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
   for(int i = 0; i < simparam->penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and stiffness
   Element_Modulus_Derivative = simparam->penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  Poisson_Ratio = simparam->Poisson_Ratio;
+}
+
+/* --------------------------------------------------------------------------------
+   Retrieve second derivative of material properties with respect to local density
+----------------------------------------------------------------------------------- */
+
+void Parallel_Nonlinear_Solver::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
+  real_t unit_scaling = simparam->unit_scaling;
+  real_t penalty_product = 1;
+  Element_Modulus_Derivative = 0;
+  if(density < 0) density = 0;
+  if(simparam->penalty_power>=2){
+    for(int i = 0; i < simparam->penalty_power - 2; i++)
+      penalty_product *= density;
+    //relationship between density and stiffness
+    Element_Modulus_Derivative = simparam->penalty_power*(simparam->penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  }
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
 }
@@ -4667,8 +4687,9 @@ void Parallel_Nonlinear_Solver::Displacement_Boundary_Conditions(){
   int surface_disp_set_id = 0;
   int num_dim = simparam->num_dim;
   int bc_option, bc_dim_set[3];
+  int DOF_BC_type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> displacement(num_dim);
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Displacement_Conditions(num_dim);
+  CArrayKokkos<int, array_layout, device_type, memory_traits> Displacement_Conditions(num_dim);
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   Number_DOF_BCS = 0;
@@ -4686,10 +4707,22 @@ void Parallel_Nonlinear_Solver::Displacement_Boundary_Conditions(){
   //scan for surface method of setting fixed nodal displacements
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
     
-    if(Boundary_Condition_Type_List(iboundary)==DISPLACEMENT_CONDITION){bc_option=3;}
-    else if(Boundary_Condition_Type_List(iboundary)==X_DISPLACEMENT_CONDITION){bc_option=0;}
-    else if(Boundary_Condition_Type_List(iboundary)==Y_DISPLACEMENT_CONDITION){bc_option=1;}
-    else if(Boundary_Condition_Type_List(iboundary)==Z_DISPLACEMENT_CONDITION){bc_option=2;}
+    if(Boundary_Condition_Type_List(iboundary)==DISPLACEMENT_CONDITION){
+      bc_option=3;
+      DOF_BC_type = DISPLACEMENT_CONDITION;
+    }
+    else if(Boundary_Condition_Type_List(iboundary)==X_DISPLACEMENT_CONDITION){
+      bc_option=0;
+      DOF_BC_type = DISPLACEMENT_CONDITION;
+    }
+    else if(Boundary_Condition_Type_List(iboundary)==Y_DISPLACEMENT_CONDITION){
+      bc_option=1;
+      DOF_BC_type = DISPLACEMENT_CONDITION;
+    }
+    else if(Boundary_Condition_Type_List(iboundary)==Z_DISPLACEMENT_CONDITION){
+      bc_option=2;
+      DOF_BC_type = DISPLACEMENT_CONDITION;
+    }
     else{
       continue;
     }
@@ -4743,15 +4776,14 @@ void Parallel_Nonlinear_Solver::Displacement_Boundary_Conditions(){
 
           for(int idim=0; idim < num_dim; idim++){
           //warning for reapplied a displacement boundary condition (For now there is an output flag being set that triggers output later)
-          if(Node_DOF_Boundary_Condition_Type(current_node_id*num_dim + idim)==DISPLACEMENT_CONDITION||
-          Node_DOF_Boundary_Condition_Type(current_node_id*num_dim + idim)==Displacement_Conditions(idim)){
+          if(Node_DOF_Boundary_Condition_Type(current_node_id*num_dim + idim)==DOF_BC_type){
             //if overlap is just due to the loop over patches, a warning is not needed
             if(first_condition_per_node(current_node_id*num_dim + idim)!=iboundary) warning_flag = 1;
           }
           else{
             if(bc_dim_set[idim]){
               first_condition_per_node(current_node_id*num_dim + idim) = iboundary;
-              Node_DOF_Boundary_Condition_Type(current_node_id*num_dim+idim) = Boundary_Condition_Type_List(iboundary);
+              Node_DOF_Boundary_Condition_Type(current_node_id*num_dim+idim) = DOF_BC_type;
               Node_DOF_Displacement_Boundary_Conditions(current_node_id*num_dim+idim) = displacement(idim);
               //counts local DOF being constrained
               if(local_flag){
@@ -6765,17 +6797,21 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+  host_vec_array unbalanced_B_view = unbalanced_B->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = xX;
+  Teuchos::RCP<MV> lambda = X;
+  host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
   int strain_max_flag = simparam->strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
   int solve_flag, zero_strain_flag;
-  size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
-  GO current_global_index;
+  LO local_node_id, local_dof_id, local_reduced_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
+  GO current_global_index, global_dof_id;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Element_Modulus_Gradient, Poisson_Ratio, gradient_force_density[3];
+  real_t Element_Modulus_Gradient, Element_Modulus_Concavity, Poisson_Ratio, gradient_force_density[3];
   real_t Elastic_Constant, Shear_Term, Pressure_Term;
   real_t inner_product, matrix_term, Jacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -6805,6 +6841,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_adjoint_displacements(elem->num_basis()*num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
   size_t Brows;
@@ -6825,8 +6862,11 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
 
   //initialize gradient value to zero
   for(size_t inode = 0; inode < nlocal_nodes; inode++)
-    design_gradients(inode,0) = 0;
-
+    hessvec(inode,0) = 0;
+  
+  //initialize RHS vector
+  for(int i=0; i < local_reduced_dof_map->getNodeNumElements; i++)
+    unbalanced_B_view(i,0) = 0;
   //loop through each element to contribute to the RHS of the hessvec adjoint equation
   for(size_t ielem = 0; ielem < rnum_elem; ielem++){
     nodes_per_elem = elem->num_basis();
@@ -6856,24 +6896,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
       
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
-      //debug print
-      /*
-      std::cout << "node index access x "<< local_node_id << std::endl;
-      std::cout << "local index access x "<< local_dof_idx << " displacement x " << current_nodal_displacements(node_loop*num_dim) <<std::endl;
-      std::cout << "local index access y "<< local_dof_idy << " displacement y " << current_nodal_displacements(node_loop*num_dim + 1) << std::endl;
-      std::cout << "local index access z "<< local_dof_idz << " displacement z " << current_nodal_displacements(node_loop*num_dim + 2) << std::endl; 
-      */
     }
-
-    //debug print of current_nodal_displacements
-    /*
-    std::cout << " ------------nodal displacements for Element "<< ielem + 1 <<"--------------"<<std::endl;
-    std::cout << " { ";
-    for (int idof = 0; idof < num_dim*nodes_per_elem; idof++){
-      std::cout << idof + 1 << " = " << current_nodal_displacements(idof) << " , " ;
-    }
-    std::cout << " }"<< std::endl;
-    */
 
     //loop over quadrature points
     for(int iquad=0; iquad < direct_product_count; iquad++){
@@ -6904,6 +6927,355 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
       elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
       elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+
+      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+      //derivative of x,y,z w.r.t s
+      JT_row1(0) = 0;
+      JT_row1(1) = 0;
+      JT_row1(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t t
+      JT_row2(0) = 0;
+      JT_row2(1) = 0;
+      JT_row2(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t w
+      JT_row3(0) = 0;
+      JT_row3(1) = 0;
+      JT_row3(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+      }
+    
+      //compute the determinant of the Jacobian
+      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+      if(Jacobian<0) Jacobian = -Jacobian;
+
+      //compute density
+      current_density = 0;
+      if(nodal_density_flag)
+      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+        current_density += nodal_density(node_loop)*basis_values(node_loop);
+      }
+      //default constant element density
+      else{
+        current_density = Element_Densities(ielem,0);
+      }
+
+      //debug print
+      //std::cout << "Current Density " << current_density << std::endl;
+
+      //compute the contributions of this quadrature point to the B matrix
+      if(num_dim==2)
+      for(int ishape=0; ishape < nodes_per_elem; ishape++){
+        B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(1,ishape*num_dim) = 0;
+        B_matrix_contribution(2,ishape*num_dim) = 0;
+        B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(5,ishape*num_dim) = 0;
+        B_matrix_contribution(0,ishape*num_dim+1) = 0;
+        B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        B_matrix_contribution(2,ishape*num_dim+1) = 0;
+        B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(4,ishape*num_dim+1) = 0;
+        B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(0,ishape*num_dim+2) = 0;
+        B_matrix_contribution(1,ishape*num_dim+2) = 0;
+        B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(3,ishape*num_dim+2) = 0;
+        B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+    }
+    if(num_dim==3)
+    for(int ishape=0; ishape < nodes_per_elem; ishape++){
+        B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(1,ishape*num_dim) = 0;
+        B_matrix_contribution(2,ishape*num_dim) = 0;
+        B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(5,ishape*num_dim) = 0;
+        B_matrix_contribution(0,ishape*num_dim+1) = 0;
+        B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        B_matrix_contribution(2,ishape*num_dim+1) = 0;
+        B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(4,ishape*num_dim+1) = 0;
+        B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(0,ishape*num_dim+2) = 0;
+        B_matrix_contribution(1,ishape*num_dim+2) = 0;
+        B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(3,ishape*num_dim+2) = 0;
+        B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+    }
+    
+    
+    //evaluate local stiffness matrix gradient with respect to igradient
+    for(int igradient=0; igradient < nodes_per_elem; igradient++){
+      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
+      //look up element material properties at this point as a function of density
+      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+      Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+      Shear_Term = 0.5 - Poisson_Ratio;
+      Pressure_Term = 1 - Poisson_Ratio;
+
+      //debug print
+      //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
+
+      //compute Elastic (C) matrix
+      if(num_dim==2){
+        C_matrix(0,0) = Pressure_Term;
+        C_matrix(1,1) = Pressure_Term;
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(2,2) = Shear_Term;
+      }
+      if(num_dim==3){
+        C_matrix(0,0) = Pressure_Term;
+        C_matrix(1,1) = Pressure_Term;
+        C_matrix(2,2) = Pressure_Term;
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(0,2) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(1,2) = Poisson_Ratio;
+        C_matrix(2,0) = Poisson_Ratio;
+        C_matrix(2,1) = Poisson_Ratio;
+        C_matrix(3,3) = Shear_Term;
+        C_matrix(4,4) = Shear_Term;
+        C_matrix(5,5) = Shear_Term;
+      }
+
+      //compute the previous multiplied by the Elastic (C) Matrix
+      for(int irow=0; irow < Brows; irow++){
+        for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+          CB_matrix_contribution(irow,icol) = 0;
+          for(int span=0; span < Brows; span++){
+            CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+          }
+        }
+      }
+
+      //compute the contributions of this quadrature point to all the local stiffness matrix elements
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
+          matrix_term = 0;
+          for(int span = 0; span < Brows; span++){
+            matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
+          }
+          Local_Matrix_Contribution(ifill,jfill) = Elastic_Constant*basis_values(igradient)*weight_multiply*matrix_term/Jacobian;
+        }
+      }
+      
+      //compute rhs product for this quadrature point contribution
+      inner_product = 0;
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        local_dof_id = all_dof_map->getLocalElement(nodes_in_elem(ielem, ifill/num_dim)*num_dim);
+        local_dof_id += ifill%num_dim;
+        global_dof_id = all_dof_map->getGlobalElement(local_dof_id);
+        if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_reduced_dof_original_map->isNodeGlobalElement(global_dof_id)){
+          local_reduced_dof_id = local_reduced_dof_original_map->getLocalElement(global_dof_id);
+          for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
+            unbalanced_B_view(local_reduced_dof_id,0) -= Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(jfill)*direction_vec(local_node_id,0);
+            //debug
+            //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
+            //inner_product += Local_Matrix_Contribution(ifill, jfill);
+          }
+        }
+      }
+      } //density gradient loop
+    }//quadrature loop
+  }//element index loop
+
+  //balance RHS vector due to missing BC dofs
+  //import object to rebalance force vector
+  Tpetra::Import<LO, GO> Bvec_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
+  
+  //comms to rebalance force vector
+  balanced_B->doImport(*unbalanced_B, Bvec_importer, Tpetra::INSERT);
+  
+  //solve for adjoint vector
+  std::ostream &out = std::cout;
+  int num_iter = 2000;
+  double solve_tol = 1e-12;
+  int cacheSize = 1000;
+  std::string solveType         = "belos";
+  std::string belosType         = "cg";
+  // =========================================================================
+  // Preconditioner construction
+  // =========================================================================
+  //bool useML   = Linear_Solve_Params->isParameter("use external multigrid package") && (Linear_Solve_Params->get<std::string>("use external multigrid package") == "ml");
+  //out<<"*********** MueLu ParameterList ***********"<<std::endl;
+  //out<<*Linear_Solve_Params;
+  //out<<"*******************************************"<<std::endl;
+    
+  
+  comm->barrier();
+  //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
+  if(Hierarchy_Constructed){
+    ReuseXpetraPreconditioner(xwrap_balanced_A, H);
+  }
+  else{
+    PreconditionerSetup(xwrap_balanced_A,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
+    Hierarchy_Constructed = true;
+  }
+  comm->barrier();
+  //H->Write(-1, -1);
+  //H->describe(*fos,Teuchos::VERB_EXTREME);
+    
+
+  // =========================================================================
+  // System solution (Ax = b)
+  // =========================================================================
+  comm->barrier();
+  SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,out,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  comm->barrier();
+
+  //communicate adjoint vector to original all dof map for simplicity now (optimize out later)
+  Teuchos::RCP<MV> adjoint_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
+  Teuchos::RCP<MV> all_adjoint_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+  //communicate solution on reduced map to the all node map vector for post processing of strain etc.
+  //intermediate storage on the unbalanced reduced system
+  Teuchos::RCP<MV> reduced_adjoint_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, 1));
+  //create import object using local node indices map and all indices map
+  Tpetra::Import<LO, GO> reduced_adjoint_importer(local_balanced_reduced_dof_map, local_reduced_dof_map);
+
+  //comms to get displacements on reduced unbalanced displacement vector
+  reduced_adjoint_distributed->doImport(*lambda, reduced_adjoint_importer, Tpetra::INSERT);
+
+  //populate node displacement multivector on the local dof map
+  const_host_vec_array reduced_adjoint_host = reduced_adjoint_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  host_vec_array adjoint_host = adjoint_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+  for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
+    adjoint_host(init,0) = 0;
+
+  for(LO i=0; i < local_nrows_reduced; i++){
+    access_index = local_dof_map->getLocalElement(Free_Indices(i));
+    adjoint_host(access_index,0) = adjoint_host(i,0);
+  }
+  
+  //import for displacement of ghosts
+  Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+
+  //comms to get displacements on all node map
+  all_adjoint_distributed->doImport(*adjoint_distributed, ghost_displacement_importer, Tpetra::INSERT);
+  host_vec_array all_adjoint = all_adjoint_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  
+//now that adjoint is computed, calculate the hessian vector product
+//loop through each element and assign the contribution to Hessian vector product for each of its local nodes
+  for(size_t ielem = 0; ielem < rnum_elem; ielem++){
+    nodes_per_elem = elem->num_basis();
+
+    //initialize C matrix
+    for(int irow = 0; irow < Brows; irow++)
+      for(int icol = 0; icol < Brows; icol++)
+        C_matrix(irow,icol) = 0;
+
+    //B matrix initialization
+    for(int irow=0; irow < Brows; irow++)
+      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+        CB_matrix(irow,icol) = 0;
+      }
+
+    //acquire set of nodes and nodal displacements for this local element
+    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_dof_idx = all_dof_map->getLocalElement(nodes_in_elem(ielem, node_loop)*num_dim);
+      local_dof_idy = local_dof_idx + 1;
+      local_dof_idz = local_dof_idx + 2;
+      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+      current_nodal_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
+      current_nodal_displacements(node_loop*num_dim+1) = all_node_displacements(local_dof_idy,0);
+      current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
+      current_adjoint_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
+      current_adjoint_displacements(node_loop*num_dim+1) = all_adjoint(local_dof_idy,0);
+      current_adjoint_displacements(node_loop*num_dim+2) = all_adjoint(local_dof_idz,0);
+      
+      if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
+    }
+
+    //loop over quadrature points
+    for(int iquad=0; iquad < direct_product_count; iquad++){
+
+    //set current quadrature point
+    if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
+    y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
+    x_quad = iquad % num_gauss_points;
+    quad_coordinate(0) = legendre_nodes_1D(x_quad);
+    quad_coordinate(1) = legendre_nodes_1D(y_quad);
+    if(num_dim==3)
+    quad_coordinate(2) = legendre_nodes_1D(z_quad);
+
+    //set current quadrature weight
+    quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+    quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+    if(num_dim==3)
+    quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+    else
+    quad_coordinate_weight(2) = 1;
+    weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+
+    //compute shape functions at this point for the element type
+    elem->basis(basis_values,quad_coordinate);
+
+    //compute all the necessary coordinates and derivatives at this point
+    //compute shape function derivatives
+    elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+    elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+    elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
 
     //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
     //derivative of x,y,z w.r.t s
@@ -7107,50 +7479,31 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      Teuchos::RCP<MV> unbalanced_B(local_dof_id,0) -= inner_product/2;
+      design_gradients(local_node_id,0) -= inner_product/2;
+      }
+
+      //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
+      if(body_force_flag){
+        for(int igradient=0; igradient < nodes_per_elem; igradient++){
+        if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+        local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
+        //look up element material properties at this point as a function of density
+        Gradient_Body_Force(ielem, current_density, gradient_force_density);
+      
+        //compute inner product for this quadrature point contribution
+        inner_product = 0;
+        for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+          inner_product += gradient_force_density[ifill%num_dim]*current_nodal_displacements(ifill)*basis_values(igradient)*basis_values(ifill/num_dim)*weight_multiply*Jacobian;
+        }
+      
+        //debug print
+        //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
+        design_gradients(local_node_id,0) += inner_product;
+        }
       }
     }
-  }
-  
-  //solve for adjoint vector
-  std::ostream &out = std::cout;
-  int num_iter = 2000;
-  double solve_tol = 1e-12;
-  int cacheSize = 1000;
-  std::string solveType         = "belos";
-  std::string belosType         = "cg";
-  // =========================================================================
-  // Preconditioner construction
-  // =========================================================================
-  //bool useML   = Linear_Solve_Params->isParameter("use external multigrid package") && (Linear_Solve_Params->get<std::string>("use external multigrid package") == "ml");
-  //out<<"*********** MueLu ParameterList ***********"<<std::endl;
-  //out<<*Linear_Solve_Params;
-  //out<<"*******************************************"<<std::endl;
-    
-  
-  comm->barrier();
-  //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
-  if(Hierarchy_Constructed){
-    ReuseXpetraPreconditioner(xwrap_balanced_A, H);
-  }
-  else{
-    PreconditionerSetup(xwrap_balanced_A,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
-    Hierarchy_Constructed = true;
-  }
-  comm->barrier();
-  //H->Write(-1, -1);
-  //H->describe(*fos,Teuchos::VERB_EXTREME);
-    
+  }//end element loop for hessian vector product
 
-// =========================================================================
-// System solution (Ax = b)
-// =========================================================================
-Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> lambda = xX;
-comm->barrier();
-SystemSolve(xwrap_balanced_A,lambda,xbalanced_B,H,Prec,out,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
-comm->barrier();
-  
-//now that adjoint is computed, calculated the hessian vector product
 }
 
 /* -------------------------------------------------------------------------------------------
@@ -7929,13 +8282,10 @@ int Parallel_Nonlinear_Solver::solve(){
   }
   
   //stores global indices belonging to this MPI rank from the non-reduced map corresponding to the reduced system
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Free_Indices(local_nrows_reduced,"Free_Indices");
+  Free_Indices = CArrayKokkos<GO, array_layout, device_type, memory_traits>(local_nrows_reduced,"Free_Indices");
   reduced_index = 0;
   for(LO i=0; i < nlocal_nodes*num_dim; i++)
-    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)&&
-       (Node_DOF_Boundary_Condition_Type(i)!=X_DISPLACEMENT_CONDITION)&&
-       (Node_DOF_Boundary_Condition_Type(i)!=Y_DISPLACEMENT_CONDITION)&&
-       (Node_DOF_Boundary_Condition_Type(i)!=Z_DISPLACEMENT_CONDITION)){
+    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)){
         Free_Indices(reduced_index) = local_dof_map->getGlobalElement(i);
         reduced_index++;
       }
@@ -7948,10 +8298,7 @@ int Parallel_Nonlinear_Solver::solve(){
     for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
       global_dof_index = DOF_Graph_Matrix(access_index,j);
       row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)&&
-         (Node_DOF_Boundary_Condition_Type(row_access_index)!=X_DISPLACEMENT_CONDITION)&&
-         (Node_DOF_Boundary_Condition_Type(row_access_index)!=Y_DISPLACEMENT_CONDITION)&&
-         (Node_DOF_Boundary_Condition_Type(row_access_index)!=Z_DISPLACEMENT_CONDITION)){
+      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
         reduced_row_count++;
       }
     }
@@ -7970,11 +8317,11 @@ int Parallel_Nonlinear_Solver::solve(){
   
   //construct maps to define set of global indices for the reduced node set
   //stores indices that aren't contiguous due to removal of BCS
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_original_map =
+  local_reduced_dof_original_map =
     Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,Free_Indices.get_kokkos_view(),0,comm) );
 
   //stores contiguous indices with an unbalanced local distribution
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_map = 
+  local_reduced_dof_map = 
     Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,local_nrows_reduced,0,comm));
   
   //dual view of the local global index to reduced global index map
@@ -7997,10 +8344,7 @@ int Parallel_Nonlinear_Solver::solve(){
   //stores global indices belonging to this MPI rank and ghosts from the non-reduced map corresponding to the reduced system
   size_t all_nrows_reduced = local_nrows_reduced + nghost_nodes*num_dim;
   for(LO i=nlocal_nodes*num_dim; i < nall_nodes*num_dim; i++){
-      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)||
-         (Node_DOF_Boundary_Condition_Type(i)==X_DISPLACEMENT_CONDITION)||
-         (Node_DOF_Boundary_Condition_Type(i)==Y_DISPLACEMENT_CONDITION)||
-         (Node_DOF_Boundary_Condition_Type(i)==Z_DISPLACEMENT_CONDITION))
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION))
       all_nrows_reduced--;
   }
   
@@ -8021,17 +8365,14 @@ int Parallel_Nonlinear_Solver::solve(){
   
   reduced_index = 0;
   for(LO i=0; i < nall_nodes*num_dim; i++)
-    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)&&
-       (Node_DOF_Boundary_Condition_Type(i)!=X_DISPLACEMENT_CONDITION)&&
-       (Node_DOF_Boundary_Condition_Type(i)!=Y_DISPLACEMENT_CONDITION)&&
-       (Node_DOF_Boundary_Condition_Type(i)!=Z_DISPLACEMENT_CONDITION)){
+    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)){
         All_Free_Indices(reduced_index) = all_dof_map->getGlobalElement(i);
         reduced_index++;
       }
   
   //construct map to define set of global indices for the reduced node set including ghosts
   //passing invalid forces the map to count the global elements
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_reduced_dof_original_map =
+  all_reduced_dof_original_map =
     Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Free_Indices.get_kokkos_view(),0,comm) );
 
   //debug print
@@ -8077,10 +8418,7 @@ int Parallel_Nonlinear_Solver::solve(){
     for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
       global_dof_index = DOF_Graph_Matrix(access_index,j);
       row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)&&
-         (Node_DOF_Boundary_Condition_Type(row_access_index)!=X_DISPLACEMENT_CONDITION)&&
-         (Node_DOF_Boundary_Condition_Type(row_access_index)!=Y_DISPLACEMENT_CONDITION)&&
-         (Node_DOF_Boundary_Condition_Type(row_access_index)!=Z_DISPLACEMENT_CONDITION)){
+      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
         reduced_local_dof_index = all_reduced_dof_original_map->getLocalElement(global_dof_index);
         //std::cout << "REDUCED LOCAL INDEX ON TASK " << myrank << " is " << Reduced_Stiffness_Matrix_Strides(i) << Reduced_DOF_Graph_Matrix(i,row_counter++) << std::endl;
         Reduced_DOF_Graph_Matrix(i,row_counter++) = all_reduced_global_indices_host(reduced_local_dof_index,0);
@@ -8095,17 +8433,14 @@ int Parallel_Nonlinear_Solver::solve(){
     for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
       global_dof_index = DOF_Graph_Matrix(access_index,j);
       row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)&&
-         (Node_DOF_Boundary_Condition_Type(row_access_index)!=X_DISPLACEMENT_CONDITION)&&
-         (Node_DOF_Boundary_Condition_Type(row_access_index)!=Y_DISPLACEMENT_CONDITION)&&
-         (Node_DOF_Boundary_Condition_Type(row_access_index)!=Z_DISPLACEMENT_CONDITION)){
+      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
         Reduced_Stiffness_Matrix(i,row_counter++) = Stiffness_Matrix(access_index,j);
       }
     }
   }
   
   // create a Map for the reduced global stiffness matrix that is evenly distributed amongst mpi ranks
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map = 
+  local_balanced_reduced_dof_map = 
     Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,0,comm));
 
   //build column map
@@ -8175,7 +8510,7 @@ int Parallel_Nonlinear_Solver::solve(){
   size_t balanced_local_nrows = local_balanced_reduced_dof_map->getNodeNumElements();
   //vec_array Xview_pass = vec_array("Xview_pass", balanced_local_nrows, 1);
   //Xview_pass.assign_data(Xview.pointer());
-  Teuchos::RCP<MV> X = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, 1));
+  X = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, 1));
   //return !EXIT_SUCCESS;
   //X->randomize();
 

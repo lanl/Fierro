@@ -165,6 +165,8 @@ public:
 
   void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
+  void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+
   void Body_Force(size_t ielem, real_t density, real_t *forces);
   void Gradient_Body_Force(size_t ielem, real_t density, real_t *forces);
 
@@ -351,11 +353,17 @@ public:
   //multigrid solver data
   Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
+  Teuchos::RCP<MV> X;
   Teuchos::RCP<MV> unbalanced_B;
   Teuchos::RCP<MV> balanced_B;
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xbalanced_B;
   Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_original_map
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_reduced_dof_original_map;
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_map;
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Free_Indices;
   bool Hierarchy_Constructed;
 
   //inertial properties
