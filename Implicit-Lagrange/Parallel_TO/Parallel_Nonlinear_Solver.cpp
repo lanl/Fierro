@@ -7155,7 +7155,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   balanced_B->doImport(*unbalanced_B, Bvec_importer, Tpetra::INSERT);
   
   //solve for adjoint vector
-  std::ostream &out = std::cout;
+  Teuchos::RCP<Teuchos::FancyOStream> fancy = Teuchos::fancyOStream(Teuchos::rcpFromRef(std::cout));
+  Teuchos::FancyOStream& out = *fancy;
   int num_iter = 2000;
   double solve_tol = 1e-12;
   int cacheSize = 1000;
@@ -7171,13 +7172,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   
   comm->barrier();
   //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
-  if(Hierarchy_Constructed){
-    ReuseXpetraPreconditioner(xwrap_balanced_A, H);
-  }
-  else{
-    PreconditionerSetup(xwrap_balanced_A,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
-    Hierarchy_Constructed = true;
-  }
+  ReuseXpetraPreconditioner(xwrap_balanced_A, H);
+  
   comm->barrier();
   //H->Write(-1, -1);
   //H->describe(*fos,Teuchos::VERB_EXTREME);
@@ -7210,9 +7206,9 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
     adjoint_host(init,0) = 0;
 
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    adjoint_host(access_index,0) = adjoint_host(i,0);
+  for(LO i=0; i < local_reduced_dof_original_map->getNodeNumElements(); i++){
+   local_reduced_dof_id = local_dof_map->getLocalElement(Free_Indices(i));
+    adjoint_host(local_reduced_dof_id,0) = adjoint_host(i,0);
   }
   
   //import for displacement of ghosts
@@ -7476,7 +7472,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
             for(int span = 0; span < Brows; span++){
               matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
             }
-            Local_Matrix_Contribution(ifill,jfill) = Concavity_Elastic_Constant*basis_values(igradient)*direction_vec(jlocal_node_id,0)
+            Local_Matrix_Contribution(ifill,jfill) = Concavity_Elastic_Constant*basis_values(igradient)*direction_vec(jlocal_node_id,0)*
                                                      basis_values(jgradient)*weight_multiply*matrix_term/Jacobian;
           }
         }
@@ -8539,7 +8535,7 @@ int Parallel_Nonlinear_Solver::solve(){
   //communicate reduced stiffness matrix entries for better load balancing
   //create import object using the unbalanced map and the balanced map
   Tpetra::Import<LO, GO> matrix_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
-  balanced_A = Tpetra::importAndFillCompleteCrsMatrix(const_unbalanced_A, matrix_importer, local_balanced_reduced_dof_map, local_balanced_reduced_dof_map);
+  Teuchos::RCP<MAT> balanced_A = Tpetra::importAndFillCompleteCrsMatrix(const_unbalanced_A, matrix_importer, local_balanced_reduced_dof_map, local_balanced_reduced_dof_map);
 
   //debug print of map
   //if(myrank==0)
