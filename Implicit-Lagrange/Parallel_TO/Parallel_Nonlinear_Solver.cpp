@@ -1752,7 +1752,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   directions_distributed->putScalar(0.1);
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  obj->checkHessVec(*rol_x, *rol_d);
+  //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.0000001);
@@ -1764,7 +1764,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  //solver.solve(std::cout);
+  solver.solve(std::cout);
 
   //print mass constraint for final design vector
   compute_element_masses(design_densities,false);
@@ -6883,7 +6883,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   //comms to get ghost components of direction vector needed for matrix inner products
   Tpetra::Import<LO, GO> node_importer(map, all_node_map);
   
-  all_direction_vec_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+  Teuchos::RCP<MV> all_direction_vec_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   //comms to get ghosts
   all_direction_vec_distributed->doImport(*direction_vec_distributed, node_importer, Tpetra::INSERT);
   
