@@ -1749,7 +1749,11 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-  directions_distributed->putScalar(0.1);
+  directions_distributed->putScalar(1);
+  //set all but first component to 0 for debug
+  host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //for(int init = 1; init < nlocal_nodes; init++)
+    //directions(init,0) = 0;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
   //obj->checkHessVec(*rol_x, *rol_d);
@@ -1764,7 +1768,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  solver.solve(std::cout);
+  //solver.solve(std::cout);
 
   //print mass constraint for final design vector
   compute_element_masses(design_densities,false);
@@ -2001,12 +2005,12 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   int surf_disp_set_id = 0;
   int bc_tag;
   real_t value;
-    
+  real_t fix_limits[4];
+
   // tag the z=0 plane,  (Direction, value, bdy_set)
   std::cout << "tagging z = 0 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 0.0 * simparam->unit_scaling;
-  real_t fix_limits[4];
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
   bdy_set_id = current_bdy_id++;
@@ -2021,7 +2025,45 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   std::cout << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   std::cout << std::endl;
-  /*
+ /*
+  // tag the y=10 plane,  (Direction, value, bdy_set)
+  std::cout << "tagging y = 10 " << std::endl;
+  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+  value = 10.0 * simparam->unit_scaling;
+  fix_limits[0] = fix_limits[2] = 4;
+  fix_limits[1] = fix_limits[3] = 6;
+  bdy_set_id = current_bdy_id++;
+  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
+  tag_boundaries(bc_tag, value, bdy_set_id);
+  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
+  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
+  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
+  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
+  surf_disp_set_id++;
+    
+  std::cout << "tagged a set " << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << std::endl;
+
+  // tag the x=10 plane,  (Direction, value, bdy_set)
+  std::cout << "tagging y = 10 " << std::endl;
+  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+  value = 10.0 * simparam->unit_scaling;
+  fix_limits[0] = fix_limits[2] = 4;
+  fix_limits[1] = fix_limits[3] = 6;
+  bdy_set_id = current_bdy_id++;
+  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
+  tag_boundaries(bc_tag, value, bdy_set_id);
+  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
+  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
+  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
+  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
+  surf_disp_set_id++;
+    
+  std::cout << "tagged a set " << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << std::endl;
+ 
   // tag the +z beam plane,  (Direction, value, bdy_set)
   std::cout << "tagging z = 100 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
@@ -4809,8 +4851,8 @@ void Parallel_Nonlinear_Solver::Displacement_Boundary_Conditions(){
   */
 
   //print warning for overlapping boundary conditions
-  if(warning_flag)
-  std::cout << std::endl << "One or more displacement boundary conditions overlap on a subset of nodes; please revise input" << std::endl << std::endl;
+  //if(warning_flag)
+  //std::cout << std::endl << "One or more displacement boundary conditions overlap on a subset of nodes; please revise input" << std::endl << std::endl;
 
 }
 
@@ -6864,6 +6906,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
   
   real_t current_density = 1;
+  
+  //direction_vec_distributed->describe(*fancy,Teuchos::VERB_EXTREME);
 
   //initialize gradient value to zero
   for(size_t inode = 0; inode < nlocal_nodes; inode++)
@@ -7148,7 +7192,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
         if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_reduced_dof_original_map->isNodeGlobalElement(global_dof_id)){
           local_reduced_dof_id = local_reduced_dof_original_map->getLocalElement(global_dof_id);
           for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-            unbalanced_B_view(local_reduced_dof_id,0) -= Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(jfill)*all_direction_vec(local_node_id,0);
+            unbalanced_B_view(local_reduced_dof_id,0) += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(jfill)*all_direction_vec(local_node_id,0);
             //debug
             //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
             //inner_product += Local_Matrix_Contribution(ifill, jfill);
@@ -7158,7 +7202,13 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       } //density gradient loop
     }//quadrature loop
   }//element index loop
+  
+  //*fancy << "Elastic Modulus Gradient" << Element_Modulus_Gradient <<std::endl;
+  //*fancy << "DISPLACEMENT" << std::endl;
+  //all_node_displacements_distributed->describe(*fancy,Teuchos::VERB_EXTREME);
 
+  //*fancy << "RHS vector" << std::endl;
+  //unbalanced_B->describe(*fancy,Teuchos::VERB_EXTREME);
   //balance RHS vector due to missing BC dofs
   //import object to rebalance force vector
   Tpetra::Import<LO, GO> Bvec_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
@@ -7187,13 +7237,15 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   // System solution (Ax = b)
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
+  //xwrap_balanced_A->describe(*fancy,Teuchos::VERB_EXTREME);
   comm->barrier();
   SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,out,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
-
+  //*fancy << "LAMBDA" << std::endl;
+  //lambda->describe(*fancy,Teuchos::VERB_EXTREME);
   //communicate adjoint vector to original all dof map for simplicity now (optimize out later)
   Teuchos::RCP<MV> adjoint_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   Teuchos::RCP<MV> all_adjoint_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
@@ -7224,7 +7276,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   //comms to get displacements on all node map
   all_adjoint_distributed->doImport(*adjoint_distributed, ghost_displacement_importer, Tpetra::INSERT);
   host_vec_array all_adjoint = all_adjoint_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-
+  //*fancy << "ALL ADJOINT" << std::endl;
+  //all_adjoint_distributed->describe(*fancy,Teuchos::VERB_EXTREME);
 //now that adjoint is computed, calculate the hessian vector product
 //loop through each element and assign the contribution to Hessian vector product for each of its local nodes
 
@@ -7430,7 +7483,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
     Concavity_Elastic_Constant = Element_Modulus_Concavity/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5 - Poisson_Ratio;
     Pressure_Term = 1 - Poisson_Ratio;
-
+    //*fancy << "Elastic Modulus Concavity" << Element_Modulus_Concavity << " " << Element_Modulus_Gradient << std::endl;
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
@@ -7542,7 +7595,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
         //compute inner product for this quadrature point contribution
         inner_product = 0;
         for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-          inner_product -= gradient_force_density[ifill%num_dim]*direction_vec_reduce*
+          inner_product -= gradient_force_density[ifill%num_dim]*
                            current_adjoint_displacements(ifill)*basis_values(igradient)*basis_values(ifill/num_dim)*weight_multiply*Jacobian;
         }
       
@@ -7553,7 +7606,6 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       }
     }
   }//end element loop for hessian vector product
-  
 }
 
 /* -------------------------------------------------------------------------------------------
@@ -8806,7 +8858,7 @@ int Parallel_Nonlinear_Solver::solve(){
     //out<<*Linear_Solve_Params;
     //out<<"*******************************************"<<std::endl;
     
-    
+    //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
     comm->barrier();
     //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
     if(Hierarchy_Constructed){
@@ -8828,7 +8880,7 @@ int Parallel_Nonlinear_Solver::solve(){
     comm->barrier();
     SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,out,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
     comm->barrier();
-    
+    //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
   }
   //return !EXIT_SUCCESS;
   //timing statistics for LU solver
