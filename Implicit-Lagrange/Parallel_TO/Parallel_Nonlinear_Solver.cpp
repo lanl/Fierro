@@ -1756,7 +1756,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
     //directions(init,0) = 0;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  //obj->checkHessVec(*rol_x, *rol_d);
+  obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.0000001);
@@ -3955,7 +3955,7 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArrayKokkos<real_t, arr
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
-  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, weight_multiply;
+  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, invJacobian, weight_multiply;
   real_t Element_Modulus, Poisson_Ratio;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
@@ -4089,6 +4089,7 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArrayKokkos<real_t, arr
                JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
                JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
     if(Jacobian<0) Jacobian = -Jacobian;
+    invJacobian = 1/Jacobian;
 
     //compute the contributions of this quadrature point to all the matrix elements
     int index_x,index_y,basis_index_x,basis_index_y,swap1,swap2;
@@ -4302,7 +4303,7 @@ void Parallel_Nonlinear_Solver::local_matrix(int ielem, CArrayKokkos<real_t, arr
           matrix_term = matrix_subterm1 + matrix_subterm2;
         }
         
-        Local_Matrix(ifill,jfill) += Elastic_Constant*weight_multiply*matrix_term/Jacobian;
+        Local_Matrix(ifill,jfill) += Elastic_Constant*weight_multiply*matrix_term*invJacobian;
       }
       
     }
@@ -4344,7 +4345,7 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArrayKokkos<re
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
-  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, weight_multiply;
+  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;
   real_t Element_Modulus, Poisson_Ratio;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
@@ -4554,7 +4555,7 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArrayKokkos<re
                JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
                JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
     if(Jacobian<0) Jacobian = -Jacobian;
-
+    invJacobian = 1/Jacobian;
     //compute the contributions of this quadrature point to the B matrix
     if(num_dim==2)
     for(int ishape=0; ishape < nodes_per_elem; ishape++){
@@ -4673,7 +4674,7 @@ void Parallel_Nonlinear_Solver::local_matrix_multiply(int ielem, CArrayKokkos<re
         for(int span = 0; span < Brows; span++){
           matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
         }
-        Local_Matrix(ifill,jfill) += Elastic_Constant*weight_multiply*matrix_term/Jacobian;
+        Local_Matrix(ifill,jfill) += Elastic_Constant*weight_multiply*matrix_term*invJacobian;
         if(ifill!=jfill)
           Local_Matrix(jfill,ifill) = Local_Matrix(ifill,jfill);
       }
@@ -6463,7 +6464,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Element_Modulus_Gradient, Poisson_Ratio, gradient_force_density[3];
   real_t Elastic_Constant, Shear_Term, Pressure_Term;
-  real_t inner_product, matrix_term, Jacobian, weight_multiply;
+  real_t inner_product, matrix_term, Jacobian, invJacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -6627,6 +6628,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
                JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
                JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
     if(Jacobian<0) Jacobian = -Jacobian;
+    invJacobian = 1/Jacobian;
 
     //compute density
     current_density = 0;
@@ -6798,7 +6800,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) -= inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply/Jacobian/2;
+      design_gradients(local_node_id,0) -= inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*0.5*invJacobian;
       }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
@@ -6866,7 +6868,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Element_Modulus_Gradient, Element_Modulus_Concavity, Poisson_Ratio, gradient_force_density[3];
   real_t Elastic_Constant, Gradient_Elastic_Constant, Concavity_Elastic_Constant, Shear_Term, Pressure_Term;
-  real_t inner_product, matrix_term, Jacobian, weight_multiply;
+  real_t inner_product, matrix_term, Jacobian, invJacobian, weight_multiply;
   real_t direction_vec_reduce, local_direction_vec_reduce;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
@@ -7037,6 +7039,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
                  JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
                  JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
       if(Jacobian<0) Jacobian = -Jacobian;
+      invJacobian = 1/Jacobian;
 
       //compute density
       current_density = 0;
@@ -7207,7 +7210,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
             //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
             //inner_product += Local_Matrix_Contribution(ifill, jfill);
           }
-          unbalanced_B_view(local_reduced_dof_id,0) += inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)/Jacobian;
+          unbalanced_B_view(local_reduced_dof_id,0) += inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
         }
       }
       } //density gradient loop
@@ -7391,6 +7394,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
                JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
                JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
     if(Jacobian<0) Jacobian = -Jacobian;
+    invJacobian = 1/Jacobian;
 
     //compute density
     current_density = 0;
@@ -7565,12 +7569,12 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       if(map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))){
         temp_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
         hessvec(temp_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(jlocal_node_id,0)*
-                                  basis_values(jgradient)*weight_multiply/2/Jacobian;
+                                  basis_values(jgradient)*weight_multiply*0.5*invJacobian;
       }
       if(igradient!=jgradient&&map->isNodeGlobalElement(nodes_in_elem(ielem, jgradient))){
         temp_id = map->getLocalElement(nodes_in_elem(ielem, jgradient));
         hessvec(jlocal_node_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(local_node_id,0)*
-                                    basis_values(jgradient)*weight_multiply/2/Jacobian;
+                                    basis_values(jgradient)*weight_multiply*0.5*invJacobian;
 
       }
       }
@@ -7607,7 +7611,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      hessvec(local_node_id,0) += inner_product*direction_vec_reduce*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply/Jacobian;
+      hessvec(local_node_id,0) += inner_product*direction_vec_reduce*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*invJacobian;
       }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
