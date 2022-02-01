@@ -1749,14 +1749,17 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-  directions_distributed->putScalar(1);
+  //directions_distributed->putScalar(1);
+  directions_distributed->randomize(-1,1);
+  //real_t normd = directions_distributed->norm2();
+  //directions_distributed->scale(normd);
   //set all but first component to 0 for debug
   host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //for(int init = 1; init < nlocal_nodes; init++)
-    //directions(init,0) = 0;
+  //directions(4,0) = -0.3;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  obj->checkHessVec(*rol_x, *rol_d);
+  //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.0000001);
