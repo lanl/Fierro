@@ -188,7 +188,7 @@ public:
   double CPU_Time();
   void init_clock();
   double initial_CPU_time;
-  int update_count;
+  int update_count, hessvec_count;
   
   swage::mesh_t *init_mesh;
   swage::mesh_t *mesh;

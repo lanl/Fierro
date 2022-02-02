@@ -277,6 +277,7 @@ public:
     //hvp->describe(*fos,Teuchos::VERB_EXTREME);
     if(FEM_->myrank==0)
     *fos << "Called Hessianvec" << std::endl;
+    FEM_->hessvec_count++;
   }
 /*
   void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 

@@ -154,7 +154,7 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
 
   element_select = new elements::element_selector();
   num_nodes = 0;
-  update_count = 0;
+  hessvec_count = update_count = 0;
   file_index = 0;
 
   Matrix_alloc=0;
@@ -316,6 +316,7 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     // vtk_writer();
     if(myrank==0){
       std::cout << "Total number of solves and assembly " << update_count <<std::endl;
+      std::cout << "Total number of hessvec counts " << hessvec_count <<std::endl;
       std::cout << "End of Optimization" << std::endl;
     }
 }
