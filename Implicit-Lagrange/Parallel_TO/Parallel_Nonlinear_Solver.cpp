@@ -1595,6 +1595,8 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   int current_element_index, local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
+  std::ostream &out = std::cout;
+  Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
@@ -1742,7 +1744,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
   problem->setProjectionAlgorithm(*parlist);
   //finalize problem
-  problem->finalize(false,true,std::cout);
+  problem->finalize(false,true,*fos);
   //problem->check(true,std::cout);
 
   //debug checks
@@ -1760,7 +1762,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   //directions(4,0) = -0.3;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  obj->checkHessVec(*rol_x, *rol_d);
+  //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.0000001);
@@ -1772,7 +1774,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  solver.solve(std::cout);
+  solver.solve(*fos);
 
   //print mass constraint for final design vector
   compute_element_masses(design_densities,false);
