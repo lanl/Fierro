@@ -189,6 +189,9 @@ public:
   void init_clock();
   double initial_CPU_time;
   int update_count, hessvec_count;
+
+  //output stream
+  Teuchos::RCP<Teuchos::FancyOStream> fos;
   
   swage::mesh_t *init_mesh;
   swage::mesh_t *mesh;

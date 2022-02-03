@@ -181,6 +181,11 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
 
   //preconditioner construction
   Hierarchy_Constructed = false;
+
+  //Trilinos output stream
+  std::ostream &out = std::cout;
+  fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+  (*fos).setOutputToRootOnly(0);
 }
 
 Parallel_Nonlinear_Solver::~Parallel_Nonlinear_Solver(){
@@ -1595,8 +1600,6 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   int current_element_index, local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
-  std::ostream &out = std::cout;
-  Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
@@ -2014,7 +2017,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   real_t fix_limits[4];
 
   // tag the z=0 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging z = 0 " << std::endl;
+  *fos << "tagging z = 0 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 0.0 * simparam->unit_scaling;
   fix_limits[0] = fix_limits[2] = 4;
@@ -2028,9 +2031,9 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
   Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
   surf_disp_set_id++;
     
-  std::cout << "tagged a set " << std::endl;
+  *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
+  *fos << std::endl;
  /*
   // tag the y=10 plane,  (Direction, value, bdy_set)
   std::cout << "tagging y = 10 " << std::endl;
@@ -2258,7 +2261,7 @@ void Parallel_Nonlinear_Solver::generate_applied_loads(){
   std::cout << std::endl;
   */
   
-  std::cout << "tagging beam +z force " << std::endl;
+  *fos << "tagging beam +z force " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
   value = 100;
@@ -2270,9 +2273,9 @@ void Parallel_Nonlinear_Solver::generate_applied_loads(){
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
+  *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
+  *fos << std::endl;
   
   /*
   std::cout << "tagging y = 2 " << std::endl;
@@ -2366,7 +2369,7 @@ void Parallel_Nonlinear_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_s
   // save the number of bdy patches in the set
   NBoundary_Condition_Patches(bdy_set) = counter;
     
-  std::cout << " tagged boundary patches " << std::endl;
+  *fos << " tagged boundary patches " << std::endl;
 }
 
 /* ----------------------------------------------------------------------
@@ -3623,8 +3626,6 @@ void Parallel_Nonlinear_Solver::init_design(){
     //create global vector
     Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, Element_Densities));
 
-    std::ostream &out = std::cout;
-    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
     //if(myrank==0)
     //*fos << "Global Element Densities:" << std::endl;
     //Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
@@ -6860,8 +6861,6 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   Teuchos::RCP<MV> lambda = X;
   const_host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
-  Teuchos::RCP<Teuchos::FancyOStream> fancy = Teuchos::fancyOStream(Teuchos::rcpFromRef(std::cout));
-  Teuchos::FancyOStream& out = *fancy;
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
@@ -6922,7 +6921,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   
   real_t current_density = 1;
   
-  //direction_vec_distributed->describe(*fancy,Teuchos::VERB_EXTREME);
+  //direction_vec_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 
   //initialize gradient value to zero
   for(size_t inode = 0; inode < nlocal_nodes; inode++)
@@ -7223,12 +7222,12 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
     }//quadrature loop
   }//element index loop
   
-  //*fancy << "Elastic Modulus Gradient" << Element_Modulus_Gradient <<std::endl;
-  //*fancy << "DISPLACEMENT" << std::endl;
-  //all_node_displacements_distributed->describe(*fancy,Teuchos::VERB_EXTREME);
+  //*fos << "Elastic Modulus Gradient" << Element_Modulus_Gradient <<std::endl;
+  //*fos << "DISPLACEMENT" << std::endl;
+  //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 
-  //*fancy << "RHS vector" << std::endl;
-  //unbalanced_B->describe(*fancy,Teuchos::VERB_EXTREME);
+  //*fos << "RHS vector" << std::endl;
+  //unbalanced_B->describe(*fos,Teuchos::VERB_EXTREME);
   //balance RHS vector due to missing BC dofs
   //import object to rebalance force vector
   Tpetra::Import<LO, GO> Bvec_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
@@ -7257,15 +7256,15 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   // System solution (Ax = b)
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
-  //xwrap_balanced_A->describe(*fancy,Teuchos::VERB_EXTREME);
+  //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
   comm->barrier();
-  SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,out,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
-  //*fancy << "LAMBDA" << std::endl;
-  //lambda->describe(*fancy,Teuchos::VERB_EXTREME);
+  //*fos << "LAMBDA" << std::endl;
+  //lambda->describe(*fos,Teuchos::VERB_EXTREME);
   //communicate adjoint vector to original all dof map for simplicity now (optimize out later)
   Teuchos::RCP<MV> adjoint_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   Teuchos::RCP<MV> all_adjoint_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
@@ -7296,8 +7295,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   //comms to get displacements on all node map
   all_adjoint_distributed->doImport(*adjoint_distributed, ghost_displacement_importer, Tpetra::INSERT);
   host_vec_array all_adjoint = all_adjoint_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  //*fancy << "ALL ADJOINT" << std::endl;
-  //all_adjoint_distributed->describe(*fancy,Teuchos::VERB_EXTREME);
+  //*fos << "ALL ADJOINT" << std::endl;
+  //all_adjoint_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 //now that adjoint is computed, calculate the hessian vector product
 //loop through each element and assign the contribution to Hessian vector product for each of its local nodes
 
@@ -7504,7 +7503,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
     Concavity_Elastic_Constant = Element_Modulus_Concavity/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5 - Poisson_Ratio;
     Pressure_Term = 1 - Poisson_Ratio;
-    //*fancy << "Elastic Modulus Concavity" << Element_Modulus_Concavity << " " << Element_Modulus_Gradient << std::endl;
+    //*fos << "Elastic Modulus Concavity" << Element_Modulus_Concavity << " " << Element_Modulus_Gradient << std::endl;
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
@@ -8366,9 +8365,6 @@ int Parallel_Nonlinear_Solver::solve(){
   //ROL::Ptr<MV> > x_ptr  = ROL::makePtr<MV>(2);
   //assumes ROL::Ptr<T> was compiled as Teuchos::RCP<T>
   ROL::Ptr<ROL::Vector<real_t> > x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(node_coords_distributed);
-  
-  std::ostream &out = std::cout;
-  Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
 
   //*fos << Amesos2::version() << std::endl << std::endl;
 
@@ -8710,8 +8706,6 @@ int Parallel_Nonlinear_Solver::solve(){
       typename Kokkos::Details::ArithTraits<real_t>::val_type;
     using mag_type = typename Kokkos::ArithTraits<impl_scalar_type>::mag_type;
     // Instead of checking each time for rank, create a rank 0 stream
-    Teuchos::RCP<Teuchos::FancyOStream> fancy = Teuchos::fancyOStream(Teuchos::rcpFromRef(std::cout));
-    Teuchos::FancyOStream& out = *fancy;
 
     xbalanced_B = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(balanced_B));
     xX = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(X));
@@ -8901,7 +8895,7 @@ int Parallel_Nonlinear_Solver::solve(){
     // =========================================================================
     
     comm->barrier();
-    SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,out,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+    SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
     comm->barrier();
     //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
   }
