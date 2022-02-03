@@ -1760,7 +1760,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
   //directions(4,0) = -0.3;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  //obj->checkHessVec(*rol_x, *rol_d);
+  obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.0000001);
@@ -6769,63 +6769,63 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
         }
       }
     }
+    
+    //compute the contributions of this quadrature point to all the local stiffness matrix elements
+    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+        matrix_term = 0;
+        for(int span = 0; span < Brows; span++){
+          matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
+        }
+        Local_Matrix_Contribution(ifill,jfill) = matrix_term;
+        if(ifill!=jfill)
+          Local_Matrix_Contribution(jfill,ifill) = Local_Matrix_Contribution(ifill,jfill);
+      }
+    }
+
+    //compute inner product for this quadrature point contribution
+    inner_product = 0;
+    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+        if(ifill==jfill)
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+        else
+          inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+        //debug
+        //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
+        //inner_product += Local_Matrix_Contribution(ifill, jfill);
+      }
+    }
 
     //evaluate local stiffness matrix gradient with respect to igradient
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
       if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-
-      //compute the contributions of this quadrature point to all the local stiffness matrix elements
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
-          matrix_term = 0;
-          for(int span = 0; span < Brows; span++){
-            matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
-          }
-          Local_Matrix_Contribution(ifill,jfill) = matrix_term;
-          if(ifill!=jfill)
-            Local_Matrix_Contribution(jfill,ifill) = Local_Matrix_Contribution(ifill,jfill);
-        }
-      }
-      
-      //compute inner product for this quadrature point contribution
-      inner_product = 0;
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
-          if(ifill==jfill)
-            inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
-          else
-            inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
-          //debug
-          //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
-          //inner_product += Local_Matrix_Contribution(ifill, jfill);
-        }
-      }
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
       design_gradients(local_node_id,0) -= inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*0.5*invJacobian;
-      }
+    }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
-      if(body_force_flag){
-        //look up element material properties at this point as a function of density
-        Gradient_Body_Force(ielem, current_density, gradient_force_density);
-        for(int igradient=0; igradient < nodes_per_elem; igradient++){
-        if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
-        local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
+    if(body_force_flag){
+      //look up element material properties at this point as a function of density
+      Gradient_Body_Force(ielem, current_density, gradient_force_density);
+      for(int igradient=0; igradient < nodes_per_elem; igradient++){
+      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
       
-        //compute inner product for this quadrature point contribution
-        inner_product = 0;
-        for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-          inner_product += gradient_force_density[ifill%num_dim]*current_nodal_displacements(ifill)*basis_values(ifill/num_dim);
-        }
-      
-        //debug print
-        //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-        design_gradients(local_node_id,0) += inner_product*basis_values(igradient)*weight_multiply*Jacobian;
-        }
+      //compute inner product for this quadrature point contribution
+      inner_product = 0;
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        inner_product += gradient_force_density[ifill%num_dim]*current_nodal_displacements(ifill)*basis_values(ifill/num_dim);
       }
+      
+      //debug print
+      //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
+      design_gradients(local_node_id,0) += inner_product*basis_values(igradient)*weight_multiply*Jacobian;
+      }
+    }
     }
   }
   
@@ -7181,33 +7181,33 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
         }
       }
     }
+    
+    //compute the contributions of this quadrature point to all the local stiffness matrix elements
+    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+        matrix_term = 0;
+        for(int span = 0; span < Brows; span++){
+          matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
+        }
+        Local_Matrix_Contribution(ifill,jfill) = matrix_term;
+        if(ifill!=jfill)
+          Local_Matrix_Contribution(jfill,ifill) = Local_Matrix_Contribution(ifill,jfill);
+      }
+    }
 
     //evaluate local stiffness matrix gradient with respect to igradient
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
       //if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, igradient));
-      //compute the contributions of this quadrature point to all the local stiffness matrix elements
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
-          matrix_term = 0;
-          for(int span = 0; span < Brows; span++){
-            matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
-          }
-          Local_Matrix_Contribution(ifill,jfill) = matrix_term;
-          if(ifill!=jfill)
-            Local_Matrix_Contribution(jfill,ifill) = Local_Matrix_Contribution(ifill,jfill);
-        }
-      }
       
-      //compute rhs product for this quadrature point contribution
-      
+      //compute rhs product for this quadrature point contribution  
       for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        inner_product = 0;
         local_dof_id = all_dof_map->getLocalElement(nodes_in_elem(ielem, ifill/num_dim)*num_dim);
         local_dof_id += ifill%num_dim;
         global_dof_id = all_dof_map->getGlobalElement(local_dof_id);
         if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_reduced_dof_original_map->isNodeGlobalElement(global_dof_id)){
           local_reduced_dof_id = local_reduced_dof_original_map->getLocalElement(global_dof_id);
+          inner_product = 0;
           for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
             inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(jfill);
             //debug
@@ -7538,58 +7538,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
         }
       }
     }
-
-    //evaluate local stiffness matrix concavity with respect to igradient and jgradient
-    for(int igradient=0; igradient < nodes_per_elem; igradient++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, igradient));
-      for(int jgradient=igradient; jgradient < nodes_per_elem; jgradient++){
-        jlocal_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, jgradient));
-        //compute the contributions of this quadrature point to all the local stiffness matrix elements
-        for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-          for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
-            matrix_term = 0;
-            for(int span = 0; span < Brows; span++){
-              matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
-            }
-            Local_Matrix_Contribution(ifill,jfill) = matrix_term;
-            if(jfill!=ifill)
-              Local_Matrix_Contribution(jfill,ifill) = Local_Matrix_Contribution(ifill,jfill);
-          }
-        }
-      
-      //compute inner product for this quadrature point contribution
-      inner_product = 0;
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
-          if(ifill==jfill)
-            inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
-          else
-            inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
-        }
-      }
-      
-      //debug print
-      //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      if(map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))){
-        temp_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-        hessvec(temp_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(jlocal_node_id,0)*
-                                  basis_values(jgradient)*weight_multiply*0.5*invJacobian;
-      }
-      if(igradient!=jgradient&&map->isNodeGlobalElement(nodes_in_elem(ielem, jgradient))){
-        temp_id = map->getLocalElement(nodes_in_elem(ielem, jgradient));
-        hessvec(jlocal_node_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(local_node_id,0)*
-                                    basis_values(jgradient)*weight_multiply*0.5*invJacobian;
-
-      }
-      }
-    }
-
-    //evaluate local stiffness matrix gradient with respect to igradient (augmented term with adjoint vector)
-    for(int igradient=0; igradient < nodes_per_elem; igradient++){
-      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
-      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-
-      //compute the contributions of this quadrature point to all the local stiffness matrix elements
+    
+    //compute the contributions of this quadrature point to all the local stiffness matrix elements
       for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
         for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
           matrix_term = 0;
@@ -7597,21 +7547,58 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
             matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
           }
           Local_Matrix_Contribution(ifill,jfill) = matrix_term;
-          if(ifill!=jfill)
-           Local_Matrix_Contribution(jfill,ifill) = Local_Matrix_Contribution(ifill,jfill);
+          if(jfill!=ifill)
+            Local_Matrix_Contribution(jfill,ifill) = Local_Matrix_Contribution(ifill,jfill);
         }
       }
       
-      //compute inner product for this quadrature point contribution
-      inner_product = 0;
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_adjoint_displacements(ifill)*current_nodal_displacements(jfill);
-          //debug
-          //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
-          //inner_product += Local_Matrix_Contribution(ifill, jfill);
+    //compute inner product for this quadrature point contribution
+    inner_product = 0;
+    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+        if(ifill==jfill)
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+        else
+          inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+      }
+    }
+
+    //evaluate local stiffness matrix concavity with respect to igradient and jgradient
+    for(int igradient=0; igradient < nodes_per_elem; igradient++){
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, igradient));
+      for(int jgradient=igradient; jgradient < nodes_per_elem; jgradient++){
+        jlocal_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, jgradient));
+        //debug print
+        //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
+        if(map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))){
+        temp_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
+          hessvec(temp_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(jlocal_node_id,0)*
+                                  basis_values(jgradient)*weight_multiply*0.5*invJacobian;
+        }
+        if(igradient!=jgradient&&map->isNodeGlobalElement(nodes_in_elem(ielem, jgradient))){
+          temp_id = map->getLocalElement(nodes_in_elem(ielem, jgradient));
+          hessvec(jlocal_node_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(local_node_id,0)*
+                                      basis_values(jgradient)*weight_multiply*0.5*invJacobian;
+
         }
       }
+    }
+    
+    //compute inner product for this quadrature point contribution
+    inner_product = 0;
+    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+      for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
+        inner_product += Local_Matrix_Contribution(ifill, jfill)*current_adjoint_displacements(ifill)*current_nodal_displacements(jfill);
+        //debug
+        //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
+        //inner_product += Local_Matrix_Contribution(ifill, jfill);
+      }
+    }
+
+    //evaluate local stiffness matrix gradient with respect to igradient (augmented term with adjoint vector)
+    for(int igradient=0; igradient < nodes_per_elem; igradient++){
+      if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+      local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
