@@ -304,7 +304,7 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     
     //CPU time
     double current_cpu = CPU_Time();
-    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << "update solve time " << linear_solve_time << "hess solve time " << hessvec_linear_time <<std::endl;
+    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " update solve time " << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
     //debug return to avoid printing further
 
     real_t dt = simparam->dt;
