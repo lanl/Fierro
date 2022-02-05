@@ -188,6 +188,7 @@ public:
   double CPU_Time();
   void init_clock();
   double initial_CPU_time;
+  double linear_solve_time, hessvec_time, hessvec_linear_time;
   int update_count, hessvec_count;
 
   //output stream

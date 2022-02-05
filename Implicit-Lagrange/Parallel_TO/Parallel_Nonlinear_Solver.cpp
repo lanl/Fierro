@@ -156,6 +156,7 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
   num_nodes = 0;
   hessvec_count = update_count = 0;
   file_index = 0;
+  linear_solve_time = hessvec_time = hessvec_linear_time = 0;
 
   Matrix_alloc=0;
   gradient_print_sync = 0;
@@ -303,7 +304,7 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     
     //CPU time
     double current_cpu = CPU_Time();
-    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time <<std::endl;
+    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << "update solve time " << linear_solve_time << "hess solve time " << hessvec_linear_time <<std::endl;
     //debug return to avoid printing further
 
     real_t dt = simparam->dt;
@@ -6843,6 +6844,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_gradients(const_host_vec_array d
 
 void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
   //local variable for host view in the dual view
+  real_t current_cpu_time = CPU_Time();
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -7257,10 +7259,11 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  real_t current_cpu_time2 = CPU_Time();
   comm->barrier();
   SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
-  
+  hessvec_linear_time += CPU_Time() - current_cpu_time2;
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
   //*fos << "LAMBDA" << std::endl;
@@ -7628,6 +7631,7 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
       }
     }
   }//end element loop for hessian vector product
+  hessvec_time += CPU_Time() - current_cpu_time;
 }
 
 /* -------------------------------------------------------------------------------------------
@@ -8876,6 +8880,7 @@ int Parallel_Nonlinear_Solver::solve(){
     //out<<"*******************************************"<<std::endl;
     
     //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+    real_t current_cpu_time = CPU_Time();
     comm->barrier();
     //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
     if(Hierarchy_Constructed){
@@ -8898,6 +8903,7 @@ int Parallel_Nonlinear_Solver::solve(){
     SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
     comm->barrier();
     //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+    linear_solve_time += CPU_Time() - current_cpu_time;
   }
   //return !EXIT_SUCCESS;
   //timing statistics for LU solver
