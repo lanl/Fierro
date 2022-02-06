@@ -45,6 +45,12 @@ namespace MueLu{
 namespace Xpetra{
   template<class floattype, class local_ind, class global_ind, class nodetype> 
   class Operator;
+  
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class MultiVector;
+
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class Matrix;
 }
 
 class Parallel_Nonlinear_Solver: public Solver{
@@ -133,6 +139,8 @@ public:
 
   void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
 
+  void compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
+
   void compute_nodal_strains();
 
   void setup_optimization_problem();
@@ -163,6 +171,8 @@ public:
 
   void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
+  void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+
   void Body_Force(size_t ielem, real_t density, real_t *forces);
   void Gradient_Body_Force(size_t ielem, real_t density, real_t *forces);
 
@@ -178,7 +188,11 @@ public:
   double CPU_Time();
   void init_clock();
   double initial_CPU_time;
-  int update_count;
+  double linear_solve_time, hessvec_time, hessvec_linear_time;
+  int update_count, hessvec_count;
+
+  //output stream
+  Teuchos::RCP<Teuchos::FancyOStream> fos;
   
   swage::mesh_t *init_mesh;
   swage::mesh_t *mesh;
@@ -346,9 +360,20 @@ public:
   //linear solver parameters
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
 
-  //multigrid solver hierarchy and preconditioner
+  //multigrid solver data
+  Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
+  Teuchos::RCP<MV> X;
+  Teuchos::RCP<MV> unbalanced_B;
+  Teuchos::RCP<MV> balanced_B;
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xbalanced_B;
   Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_original_map;
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_reduced_dof_original_map;
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_map;
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Free_Indices;
   bool Hierarchy_Constructed;
 
   //inertial properties

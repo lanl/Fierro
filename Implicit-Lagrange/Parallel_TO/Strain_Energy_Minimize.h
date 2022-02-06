@@ -56,6 +56,7 @@ private:
   ROL::Ptr<ROL_MV> ROL_Displacements;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
+  Teuchos::RCP<MV> all_node_displacements_distributed_temp;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -76,11 +77,65 @@ public:
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
+      
+      //deep copy solve data into the cache variable
+      FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
+      all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
+
       constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
+    //debug
+    std::ostream &out = std::cout;
+    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+
     current_step++;
+    ROL::Ptr<const MV> zp = getVector(z);
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+    if (type == ROL::UpdateType::Initial)  {
+      // This is the first call to update
+      //first linear solve was done in FEA class run function already
+
+      //initial design density data was already communicated for ghost nodes in init_design()
+    }
+    else if (type == ROL::UpdateType::Accept) {
+      // u_ was set to u=S(x) during a trial update
+      // and has been accepted as the new iterate
+      /*assign temp pointer to the cache multivector (not the cache pointer) storage for a swap of the multivectors;
+        this just avoids deep copy */
+      all_node_displacements_distributed_temp = FEM_->all_cached_node_displacements_distributed;
+      // Cache the accepted value
+      FEM_->all_cached_node_displacements_distributed = FEM_->all_node_displacements_distributed;
+    }
+    else if (type == ROL::UpdateType::Revert) {
+      // u_ was set to u=S(x) during a trial update
+      // and has been rejected as the new iterate
+      // Revert to cached value
+      FEM_->comm_variables(zp);
+      FEM_->all_node_displacements_distributed = FEM_->all_cached_node_displacements_distributed;
+    }
+    else if (type == ROL::UpdateType::Trial) {
+      // This is a new value of x
+      FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
+      //communicate density variables for ghosts
+      FEM_->comm_variables(zp);
+      //update deformation variables
+      FEM_->update_linear_solve(zp);
+      if(FEM_->myrank==0)
+      *fos << "called Trial" << std::endl;
+    }
+    else { // ROL::UpdateType::Temp
+      // This is a new value of x used for,
+      // e.g., finite-difference checks
+      if(FEM_->myrank==0)
+      *fos << "called Temp" << std::endl;
+      FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
+      FEM_->comm_variables(zp);
+      FEM_->update_linear_solve(zp);
+    }
+
     //decide to output current optimization state
     if(current_step%FEM_->simparam->optimization_output_freq==0)
       FEM_->tecplot_writer();
@@ -102,17 +157,18 @@ public:
 
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
-
+    
     if(last_solve_step!=current_step){
       //std::cout << "UPDATED DISPLACEMENTS" << std::endl;
       FEM_->update_linear_solve(zp);
       last_solve_step = current_step;
     }
-
+    */
     //debug print of displacements
     //std::ostream &out = std::cout;
     //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -146,14 +202,17 @@ public:
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
     //FEM_->gradient_print_sync=1;
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
+    
     if(last_solve_step!=current_step){
       FEM_->update_linear_solve(zp);
       last_solve_step = current_step;
     }
+    */
     //FEM_->gradient_print_sync=0;
     //get local view of the data
     host_vec_array objective_gradients = gp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
@@ -196,35 +255,31 @@ public:
     //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
   }
   
-  /*
-  void hessVec_12( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    
+  
+  void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
+    //debug
+    std::ostream &out = std::cout;
+    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
     // Unwrap hv
     ROL::Ptr<MV> hvp = getVector(hv);
 
     // Unwrap v
     ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
     ROL::Ptr<const MV> zp = getVector(z);
-
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV KU(up->size(),0.0);
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      FEM_->apply_jacobian(KU,U,*zp,*vp);
-      for (size_t i=0; i<up->size(); i++) {
-        (*hvp)[i] = 2.0*KU[i];
-      }
-    }
     
-  }
+    host_vec_array objective_hessvec = hvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
+    FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
+    //if(FEM_->myrank==0)
+    //std::cout << "hessvec" << std::endl;
+    //hvp->describe(*fos,Teuchos::VERB_EXTREME);
+    if(FEM_->myrank==0)
+    *fos << "Called Hessianvec" << std::endl;
+    FEM_->hessvec_count++;
+  }
+/*
   void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
                    const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
                      

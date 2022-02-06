@@ -98,6 +98,31 @@ public:
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
     current_step++;
+
+    ROL::Ptr<const MV> zp = getVector(z);
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+    if (type == ROL::UpdateType::Initial)  {
+
+      //initial design density data was already communicated for ghost nodes in init_design()
+    }
+    else if (type == ROL::UpdateType::Accept) {
+      // z was accepted as the new iterate
+    }
+    else if (type == ROL::UpdateType::Revert) {
+      // z has been rejected as the new iterate
+      // Revert to cached value
+      FEM_->comm_variables(zp);
+    }
+    else if (type == ROL::UpdateType::Trial) {
+      // This is a new value of x
+      FEM_->comm_variables(zp);
+    }
+    else { // ROL::UpdateType::Temp
+      // This is a new value of x used for,
+      // e.g., finite-difference checks
+      FEM_->comm_variables(zp);
+    }
   }
 
   void value(ROL::Vector<real_t> &c, const ROL::Vector<real_t> &z, real_t &tol ) override {
@@ -107,11 +132,12 @@ public:
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
-    
+    */
     FEM_->compute_element_masses(design_densities,false);
     
     //sum per element results across all MPI ranks
@@ -148,11 +174,12 @@ public:
     //host_vec_array dual_constraint_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     //communicate ghosts
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
-    
+    */
     int rnum_elem = FEM_->rnum_elem;
 
     if(nodal_density_flag_){
@@ -198,11 +225,12 @@ public:
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
     //communicate ghosts
+    /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
-    
+    */
     int rnum_elem = FEM_->rnum_elem;
 
     if(nodal_density_flag_){
@@ -230,35 +258,16 @@ public:
     //std::cout << "Ended constraint grad on task " <<FEM_->myrank  << std::endl;
   }
   
-  /*
-  void hessVec_12( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
+  
+  void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
     
     // Unwrap hv
     ROL::Ptr<MV> hvp = getVector(hv);
 
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
-
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV KU(up->size(),0.0);
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      FEM_->apply_jacobian(KU,U,*zp,*vp);
-      for (size_t i=0; i<up->size(); i++) {
-        (*hvp)[i] = 2.0*KU[i];
-      }
-    }
+    hvp->putScalar(0);
     
   }
-
+  /*
   void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
                    const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
                      
