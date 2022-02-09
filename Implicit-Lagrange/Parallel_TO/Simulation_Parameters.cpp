@@ -19,6 +19,7 @@ Simulation_Parameters::Simulation_Parameters(){
   restart_file = false;
   tecplot_input = false;
   gravity_flag = false;
+  multigrid_timers = false;
 }
 
 Simulation_Parameters::~Simulation_Parameters(){
@@ -28,6 +29,7 @@ void Simulation_Parameters::input(){
   //file input flags
   tecplot_input = false;
   restart_file = false;
+  //multigrid_timers = true;
 
   //simulation spatial dimension
   num_dim = 3;

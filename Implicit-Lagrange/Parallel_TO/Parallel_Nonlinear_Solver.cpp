@@ -8902,8 +8902,19 @@ int Parallel_Nonlinear_Solver::solve(){
     comm->barrier();
     SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
     comm->barrier();
+    if(simparam->multigrid_timers){
+    Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
+        reportParams->set("How to merge timer sets",   "Union");
+        reportParams->set("alwaysWriteLocal",          false);
+        reportParams->set("writeGlobalStats",          true);
+        reportParams->set("writeZeroTimers",           false);
+    std::ios_base::fmtflags ff(fos->flags());
+    *fos << std::fixed;
+    Teuchos::TimeMonitor::report(comm.ptr(), *fos, "", reportParams);
+    *fos << std::setiosflags(ff);
     //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
     linear_solve_time += CPU_Time() - current_cpu_time;
+    }
   }
   //return !EXIT_SUCCESS;
   //timing statistics for LU solver
