@@ -2,6 +2,7 @@ set(Solver_SRC_H Parallel_TO/utilities.h)
 set(Class_SRC Solver.h Parallel_TO/Simulation_Parameters.h Parallel_TO/Simulation_Parameters.cpp Parallel_TO/node_combination.h Parallel_TO/node_combination.cpp)
 set(Parallel_Nonlinear_SRC Parallel_TO/Parallel_Nonlinear_Solver.h Parallel_TO/Parallel_Nonlinear_Solver.cpp)
 set(Solver_SRC_CXX main.cpp Solver.cpp)
+set(TEST_SRC_CXX MueLU_Test/Driver.cpp)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -28,6 +29,7 @@ INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 add_executable(main ${Solver_SRC_CXX} ${Solver_SRC_H} ${Class_SRC} ${Laplace_SRC} ${Static_SRC} ${Static_Parallel_SRC} ${Parallel_Nonlinear_SRC})
+add_executable(test ${TEST_SRC_CXX})
 if(BUILD_ELEMENTS)
 target_link_libraries (main swage)
 target_link_libraries (main elements)
