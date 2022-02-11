@@ -294,7 +294,7 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    setup_optimization_problem();
+    //setup_optimization_problem();
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -8853,7 +8853,8 @@ int Parallel_Nonlinear_Solver::solve(){
     Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xbalanced_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(balanced_A));
     xwrap_balanced_A = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xbalanced_A));
     //xwrap_balanced_A->SetFixedBlockSize(1);
-
+    if(simparam->equilibrate_matrix_flag)
+      equilibrateMatrix(xwrap_balanced_A,"diag");
     //randomize initial vector
     xX->setSeed(100);
     xX->randomize();
