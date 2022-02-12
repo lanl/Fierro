@@ -20,6 +20,7 @@ Simulation_Parameters::Simulation_Parameters(){
   tecplot_input = false;
   gravity_flag = false;
   multigrid_timers = false;
+  equilibrate_matrix_flag = false;
 }
 
 Simulation_Parameters::~Simulation_Parameters(){
@@ -30,6 +31,7 @@ void Simulation_Parameters::input(){
   tecplot_input = false;
   restart_file = false;
   //multigrid_timers = true;
+  //equilibrate_matrix_flag = true;
 
   //simulation spatial dimension
   num_dim = 3;
