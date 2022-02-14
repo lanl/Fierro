@@ -294,7 +294,7 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    //setup_optimization_problem();
+    setup_optimization_problem();
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -8869,7 +8869,7 @@ int Parallel_Nonlinear_Solver::solve(){
     
     int num_iter = 2000;
     double solve_tol = 1e-12;
-    int cacheSize = 1000;
+    int cacheSize = 0;
     std::string solveType         = "belos";
     std::string belosType         = "cg";
     // =========================================================================
@@ -8881,7 +8881,7 @@ int Parallel_Nonlinear_Solver::solve(){
     //out<<"*******************************************"<<std::endl;
     
     //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
-    real_t current_cpu_time = CPU_Time();
+    
     comm->barrier();
     //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
     if(Hierarchy_Constructed){
@@ -8899,9 +8899,10 @@ int Parallel_Nonlinear_Solver::solve(){
     // =========================================================================
     // System solution (Ax = b)
     // =========================================================================
-    
-    comm->barrier();
+
+    real_t current_cpu_time = CPU_Time();
     SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+    linear_solve_time += CPU_Time() - current_cpu_time;
     comm->barrier();
     if(simparam->multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
@@ -8914,7 +8915,6 @@ int Parallel_Nonlinear_Solver::solve(){
     Teuchos::TimeMonitor::report(comm.ptr(), *fos, "", reportParams);
     *fos << std::setiosflags(ff);
     //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
-    linear_solve_time += CPU_Time() - current_cpu_time;
     }
   }
   //return !EXIT_SUCCESS;

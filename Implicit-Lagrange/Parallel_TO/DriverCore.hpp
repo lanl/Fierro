@@ -389,6 +389,7 @@ void SystemSolve(Teuchos::RCP<Xpetra::Matrix<Scalar,LocalOrdinal,GlobalOrdinal,N
       belosList->set("Maximum Iterations",    maxIts); // Maximum number of iterations allowed
       belosList->set("Convergence Tolerance", tol);    // Relative convergence tolerance requested
       belosList->set( "Use Single Reduction", true ); // Use single reduction CG iteration
+      belosList->set( "Fold Convergence Detection Into Allreduce", true );
       //belosList->set("Verbosity",             Belos::Errors + Belos::Warnings + Belos::StatusTestDetails);
       //belosList->set("Output Frequency",      1);
       //belosList->set("Output Style",          Belos::Brief);
