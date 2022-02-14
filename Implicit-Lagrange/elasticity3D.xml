@@ -63,6 +63,7 @@
     <Parameter name="repartition: rebalance P and R"          type="bool"     value="true"/>
     <ParameterList name="repartition: params">
        <Parameter name="algorithm" type="string" value="multijagged"/>
+       <Parameter name="mj_premigration_option" type="int" value="1"/>
     </ParameterList> 
     <!-- end of default values -->
 
