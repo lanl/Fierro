@@ -9,9 +9,11 @@
 
     <Parameter        name="verbosity"                            type="string"   value="none"/>
 
-    <Parameter        name="coarse: max size"                     type="int"      value="3000"/>
+    <Parameter        name="coarse: max size"                     type="int"      value="2000"/>
 
     <Parameter        name="multigrid algorithm"                  type="string"   value="sa"/>
+    
+    <Parameter        name="coarse: type"                         type="string"   value="Klu2"/>
 
     <!-- reduces setup cost for symmetric problems -->
     <Parameter        name="transpose: use implicit"              type="bool"     value="true"/>
@@ -32,7 +34,7 @@
          for anisotropic problems.  The exact value is problem dependent. -->
     <!-- <Parameter        name="aggregation: drop tol"                type="double"   value="0.02"/> -->
 
-  <!-- ===========  SMOOTHING  =========== -->
+  <!-- ===========  SMOOTHING  ===========-->
     <Parameter        name="smoother: type"                       type="string"   value="CHEBYSHEV"/>
     <ParameterList    name="smoother: params">
       <Parameter      name="chebyshev: degree"                    type="int"      value="2"/>>
@@ -41,13 +43,20 @@
       <Parameter      name="chebyshev: zero starting solution"    type="bool"     value="true"/>
       <Parameter      name="chebyshev: eigenvalue max iterations" type="int"      value="30"/>
     </ParameterList>
-    
+<!-- ===========  SMOOTHING  ===========
+    <Parameter        name="smoother: type"                       type="string"   value="RELAXATION"/>
+  <ParameterList    name="smoother: params">
+    <Parameter      name="relaxation: type"                     type="string"   value="Jacobi"/>
+    <Parameter      name="relaxation: sweeps"                   type="int"      value="1"/>
+    <Parameter      name="relaxation: damping factor"           type="double"   value="0.3"/>
+  </ParameterList>
+    -->
 
   <!-- ===========  REPARTITIONING  =========== -->
     <Parameter        name="repartition: enable"                  type="bool"     value="true"/>
     <Parameter        name="repartition: partitioner"             type="string"   value="zoltan2"/>
     <Parameter        name="repartition: start level"             type="int"      value="2"/>
-    <Parameter        name="repartition: min rows per proc"       type="int"      value="3000"/>
+    <Parameter        name="repartition: min rows per proc"       type="int"      value="2000"/>
     <Parameter        name="repartition: max imbalance"           type="double"   value="1.10"/>
     <!-- start of default values for repartitioning (can be omitted) -->
     <Parameter name="repartition: remap parts"                type="bool"     value="true"/>

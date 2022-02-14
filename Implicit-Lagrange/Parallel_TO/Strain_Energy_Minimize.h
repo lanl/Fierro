@@ -83,6 +83,14 @@ public:
       all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
 
       constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
+
+      ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
+      ROL_Displacements = ROL::makePtr<ROL_MV>(FEM_->node_displacements_distributed);
+
+      real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
+      std::cout.precision(10);
+      if(FEM_->myrank==0)
+      std::cout << "INITIAL STRAIN ENERGY " << current_strain_energy << std::endl;
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -274,6 +282,7 @@ public:
     FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
+    //vp->describe(*fos,Teuchos::VERB_EXTREME);
     //hvp->describe(*fos,Teuchos::VERB_EXTREME);
     if(FEM_->myrank==0)
     *fos << "Called Hessianvec" << std::endl;
