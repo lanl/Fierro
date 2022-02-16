@@ -21,6 +21,7 @@
 #include <Kokkos_Parallel_Reduce.hpp>
 //#include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
+#include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
 
 //#include <Xpetra_Operator.hpp>
 //#include <MueLu.hpp>
@@ -360,7 +361,9 @@ public:
   //linear solver parameters
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
 
-  //multigrid solver data
+  //multigrid solver data and functions
+  using equil_type = decltype (Tpetra::computeRowAndColumnOneNorms (*Global_Stiffness_Matrix, false));
+  equil_type equibResult;
   Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
   Teuchos::RCP<MV> X;
@@ -375,6 +378,10 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map;
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Free_Indices;
   bool Hierarchy_Constructed;
+  void equilibrateMatrix(Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type> > &Axpetra, std::string equilibrate);
+  void preScaleRightHandSides (Tpetra::MultiVector<real_t,LO,GO,node_type>& B, std::string equilibrate) const;
+  void preScaleInitialGuesses (Tpetra::MultiVector<real_t,LO,GO,node_type>& X, std::string equilibrate) const;
+  void postScaleSolutionVectors (Tpetra::MultiVector<real_t,LO,GO,node_type>& X, std::string equilibrate) const;
 
   //inertial properties
   real_t mass, center_of_mass[3], moments_of_inertia[6];

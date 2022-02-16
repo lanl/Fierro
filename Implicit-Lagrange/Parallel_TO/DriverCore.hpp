@@ -389,7 +389,7 @@ void SystemSolve(Teuchos::RCP<Xpetra::Matrix<Scalar,LocalOrdinal,GlobalOrdinal,N
       belosList->set("Maximum Iterations",    maxIts); // Maximum number of iterations allowed
       belosList->set("Convergence Tolerance", tol);    // Relative convergence tolerance requested
       belosList->set( "Use Single Reduction", true ); // Use single reduction CG iteration
-      belosList->set( "Fold Convergence Detection Into Allreduce", true );
+      //belosList->set( "Fold Convergence Detection Into Allreduce", true );
       //belosList->set("Verbosity",             Belos::Errors + Belos::Warnings + Belos::StatusTestDetails);
       //belosList->set("Output Frequency",      1);
       //belosList->set("Output Style",          Belos::Brief);
@@ -489,68 +489,3 @@ void SystemSolve(Teuchos::RCP<Xpetra::Matrix<Scalar,LocalOrdinal,GlobalOrdinal,N
 }
 
 #endif
-
-
-#include <KokkosBlas1_abs.hpp>
-#include <Tpetra_leftAndOrRightScaleCrsMatrix.hpp>
-#include <Tpetra_computeRowAndColumnOneNorms.hpp>
-#include "KokkosBlas1_abs_impl.hpp"
-#include <MueLu_Utilities.hpp>
-template<class RV, class XV, class SizeType>
-void Temporary_Replacement_For_Kokkos_abs(const RV& R, const XV& X) {
-  typedef typename XV::execution_space execution_space;
-  const SizeType numRows = X.extent(0);
-  Kokkos::RangePolicy<execution_space, SizeType> policy (0, numRows);
-  KokkosBlas::Impl::V_Abs_Functor<RV, XV, SizeType> op (R, X);
-  Kokkos::parallel_for (policy, op);
-}
-
-template<class Scalar, class LocalOrdinal, class GlobalOrdinal, class Node>
-void equilibrateMatrix(Teuchos::RCP<Xpetra::Matrix<Scalar,LocalOrdinal,GlobalOrdinal,Node> > &Axpetra, std::string equilibrate) {
-  using Tpetra::computeRowAndColumnOneNorms;
-  using Tpetra::leftAndOrRightScaleCrsMatrix;
-  bool equilibrate_1norm = (equilibrate == "1-norm");
-  bool equilibrate_diag  = (equilibrate == "diag");
-  bool equilibrate_no    = (equilibrate == "no");
-  bool assumeSymmetric = false;
-  typedef typename Tpetra::Details::EquilibrationInfo<typename Kokkos::ArithTraits<Scalar>::val_type,typename Node::device_type> equil_type;
-
-  Teuchos::RCP<Tpetra::CrsMatrix<Scalar,LocalOrdinal,GlobalOrdinal,Node> > A = MueLu::Utilities<Scalar,LocalOrdinal,GlobalOrdinal,Node>::Op2NonConstTpetraCrs(Axpetra);
-
-  if(Axpetra->getRowMap()->lib() == Xpetra::UseTpetra) {
-     equil_type equibResult_ = computeRowAndColumnOneNorms (*A, assumeSymmetric);
-     if (equilibrate_1norm) {
-        using device_type = typename Node::device_type;
-        using mag_type = typename Kokkos::ArithTraits<Scalar>::mag_type;
-        using mag_view_type = Kokkos::View<mag_type*, device_type>;
-        using scalar_view_type = Kokkos::View<typename equil_type::val_type*, device_type>;
-
-        mag_view_type rowDiagAbsVals ("rowDiagAbsVals",equibResult_.rowDiagonalEntries.extent (0));
-        //        KokkosBlas::abs (rowDiagAbsVals, equibResult_.rowDiagonalEntries);
-        Temporary_Replacement_For_Kokkos_abs<mag_view_type,scalar_view_type,LocalOrdinal>(rowDiagAbsVals, equibResult_.rowDiagonalEntries);
-
-        mag_view_type colDiagAbsVals ("colDiagAbsVals",equibResult_.colDiagonalEntries.extent (0));
-
-        //        KokkosBlas::abs (colDiagAbsVals, equibResult_.colDiagonalEntries);
-        Temporary_Replacement_For_Kokkos_abs<mag_view_type,scalar_view_type,LocalOrdinal>(colDiagAbsVals, equibResult_.colDiagonalEntries);
-
-        leftAndOrRightScaleCrsMatrix (*A, rowDiagAbsVals, colDiagAbsVals,
-                                      true, true, equibResult_.assumeSymmetric,
-                                      Tpetra::SCALING_DIVIDE);
-     }
-     else if (equilibrate_diag) {
-        auto colScalingFactors = equibResult_.assumeSymmetric ?
-          equibResult_.colNorms :
-          equibResult_.rowScaledColNorms;
-        leftAndOrRightScaleCrsMatrix (*A, equibResult_.rowNorms,
-                                      colScalingFactors, true, true,
-                                      equibResult_.assumeSymmetric,
-                                      Tpetra::SCALING_DIVIDE);
-      }
-     else if (equilibrate_no) {
-       // no-op
-     }
-     else
-       throw std::runtime_error("Invalid 'equilibrate' option '"+equilibrate+"'");
-  }
-}
