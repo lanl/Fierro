@@ -7259,11 +7259,19 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  if(simparam->equilibrate_matrix_flag){
+    preScaleRightHandSides(*balanced_B,"diag");
+    preScaleInitialGuesses(*lambda,"diag");
+  }
   real_t current_cpu_time2 = CPU_Time();
   comm->barrier();
   SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   hessvec_linear_time += CPU_Time() - current_cpu_time2;
+
+  if(simparam->equilibrate_matrix_flag){
+    postScaleSolutionVectors(*lambda,"diag");
+  }
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
   //*fos << "LAMBDA" << std::endl;
@@ -8853,13 +8861,17 @@ int Parallel_Nonlinear_Solver::solve(){
     Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xbalanced_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(balanced_A));
     xwrap_balanced_A = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xbalanced_A));
     //xwrap_balanced_A->SetFixedBlockSize(1);
-    if(simparam->equilibrate_matrix_flag)
-      equilibrateMatrix(xwrap_balanced_A,"diag");
+   
     //randomize initial vector
     xX->setSeed(100);
     xX->randomize();
     
-    
+     if(simparam->equilibrate_matrix_flag){
+      equilibrateMatrix(xwrap_balanced_A,"diag");
+      preScaleRightHandSides(*balanced_B,"diag");
+      preScaleInitialGuesses(*X,"diag");
+     }
+
     //debug print
     //if(myrank==0)
     //*fos << "Xpetra A matrix :" << std::endl;
@@ -8892,6 +8904,7 @@ int Parallel_Nonlinear_Solver::solve(){
       Hierarchy_Constructed = true;
     }
     comm->barrier();
+    
     //H->Write(-1, -1);
     //H->describe(*fos,Teuchos::VERB_EXTREME);
     
@@ -8904,6 +8917,11 @@ int Parallel_Nonlinear_Solver::solve(){
     SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
     linear_solve_time += CPU_Time() - current_cpu_time;
     comm->barrier();
+
+    if(simparam->equilibrate_matrix_flag){
+      postScaleSolutionVectors(*X,"diag");
+    }
+
     if(simparam->multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
         reportParams->set("How to merge timer sets",   "Union");

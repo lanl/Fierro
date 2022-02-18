@@ -31,7 +31,7 @@ void Simulation_Parameters::input(){
   tecplot_input = false;
   restart_file = false;
   //multigrid_timers = true;
-  //equilibrate_matrix_flag = true;
+  equilibrate_matrix_flag = true;
 
   //simulation spatial dimension
   num_dim = 3;
