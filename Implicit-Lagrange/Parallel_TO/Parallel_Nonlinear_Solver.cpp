@@ -2270,7 +2270,7 @@ void Parallel_Nonlinear_Solver::generate_applied_loads(){
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 1/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
@@ -7239,8 +7239,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   
   //solve for adjoint vector
   int num_iter = 2000;
-  double solve_tol = 1e-12;
-  int cacheSize = 1000;
+  double solve_tol = 1e-05;
+  int cacheSize = 0;
   std::string solveType         = "belos";
   std::string belosType         = "cg";
   // =========================================================================
@@ -8880,7 +8880,7 @@ int Parallel_Nonlinear_Solver::solve(){
     //std::fflush(stdout);
     
     int num_iter = 2000;
-    double solve_tol = 1e-12;
+    double solve_tol = 1e-06;
     int cacheSize = 0;
     std::string solveType         = "belos";
     std::string belosType         = "cg";

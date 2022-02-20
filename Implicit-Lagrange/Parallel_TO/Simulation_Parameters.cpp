@@ -31,7 +31,7 @@ void Simulation_Parameters::input(){
   tecplot_input = false;
   restart_file = false;
   //multigrid_timers = true;
-  equilibrate_matrix_flag = true;
+  equilibrate_matrix_flag = false;
 
   //simulation spatial dimension
   num_dim = 3;
@@ -83,7 +83,7 @@ void Simulation_Parameters::input(){
   nodal_density_flag = 1;
 
   //Topology Optimization parameters
-  penalty_power = 6;
+  penalty_power = 3;
   maximum_strain = 0.02;
   maximum_strain_energy = 1000;
 
