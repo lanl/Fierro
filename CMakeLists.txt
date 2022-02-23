@@ -92,10 +92,6 @@ if (BUILD_IMPLICIT_SOLVER)
       "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}"
   )
 
-  include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
-  link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
-  add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)
-
   # Echo trilinos build info just for fun
   message("\nFound Trilinos!  Here are the details: ")
   message("   Trilinos_DIR = ${Trilinos_DIR}")
