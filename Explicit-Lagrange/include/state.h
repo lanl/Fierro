@@ -5,7 +5,7 @@
 #include <string>
 
 #include "utilities.h"
-#include "geometry.h"
+#include "geometry/geometry.h"
 
 using namespace utils;
 

@@ -2,7 +2,7 @@
 #define MASS_CONSTRAINT_TOPOPT_H
 
 #include "matar.h"
-#include "elements.h"
+#include "element_types/elements.h"
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_oblackholestream.hpp>

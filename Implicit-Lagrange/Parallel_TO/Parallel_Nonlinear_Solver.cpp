@@ -69,8 +69,8 @@ num_cells in element = (p_order*2)^3
 #include "MatrixMarket_Tpetra.hpp"
 #include <set>
 
-#include "elements.h"
-#include "swage.h"
+#include "element_types/elements.h"
+#include "swage/swage.h"
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"

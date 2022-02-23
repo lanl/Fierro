@@ -5,7 +5,7 @@
 #include <string>		//string -> char for file output
 
 #include "state.h"
-#include "geometry.h"
+#include "geometry/geometry.h"
 #include "variables.h"
 #include "utilities.h"
 

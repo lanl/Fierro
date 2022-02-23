@@ -6,7 +6,7 @@
 
 #include "utilities.h"
 #include "state.h"
-#include "geometry.h"
+#include "geometry/geometry.h"
 #include "variables.h"
 
 void run_info(int cycle){

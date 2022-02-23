@@ -7,8 +7,8 @@
 
 #include "utilities.h"
 #include "state.h"
-#include "elements.h"
-#include "geometry.h"
+#include "element_types/elements.h"
+#include "geometry/geometry.h"
 #include "variables.h"
 
 using namespace utils;

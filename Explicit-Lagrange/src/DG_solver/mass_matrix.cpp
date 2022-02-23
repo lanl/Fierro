@@ -6,8 +6,8 @@
 
 #include "utilities.h"
 #include "state.h"
-#include "geometry.h"
-#include "slam.h"
+#include "geometry/geometry.h"
+#include "slam/slam.h"
 #include "variables.h"
 
 using namespace utils;

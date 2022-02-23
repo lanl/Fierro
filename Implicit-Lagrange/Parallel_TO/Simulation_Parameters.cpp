@@ -1,7 +1,7 @@
 #include "utilities.h"
 #include "Simulation_Parameters.h"
-#include "elements.h"
-#include "swage.h"
+#include "element_types/elements.h"
+#include "swage/swage.h"
 
 using namespace utils;
 

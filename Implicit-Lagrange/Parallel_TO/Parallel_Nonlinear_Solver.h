@@ -4,7 +4,7 @@
 #include "utilities.h"
 #include "../Solver.h"
 #include "matar.h"
-#include "elements.h"
+#include "element_types/elements.h"
 #include "node_combination.h"
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>

@@ -4,7 +4,7 @@
 //------------------------------------------------------------------------------
 #include "utilities.h"
 #include "state.h"
-#include "geometry.h"
+#include "geometry/geometry.h"
 #include "variables.h"
 
 using namespace utils;
