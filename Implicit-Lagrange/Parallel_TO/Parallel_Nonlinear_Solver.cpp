@@ -3799,10 +3799,11 @@ void Parallel_Nonlinear_Solver::assemble_matrix(){
   Matrix_alloc = 1;
   }
 
-  //filter small negative numbers from floating point error
+  //filter small negative numbers (that should have been 0 from cancellation) from floating point error
+  /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
     for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      if(Stiffness_Matrix(idof,istride)<0&&Stiffness_Matrix(idof,istride)>-0.00000000001)
+      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON)
       Stiffness_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -3810,6 +3811,7 @@ void Parallel_Nonlinear_Solver::assemble_matrix(){
     //debug print
     //std::cout << std::endl;
   }
+  */
   //This completes the setup for A matrix of the linear system
   
   //file to debug print
