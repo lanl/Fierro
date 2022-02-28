@@ -82,7 +82,7 @@ class Simulation_Parameters
   real_t gravity_vector[3];
 
   //Linear Solver Flags
-  bool direct_solver_flag;
+  bool direct_solver_flag, multigrid_timers, equilibrate_matrix_flag;
 
   //Topology Optimization flags
   bool nodal_density_flag;

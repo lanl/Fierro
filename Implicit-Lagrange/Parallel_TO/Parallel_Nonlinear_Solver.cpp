@@ -1094,7 +1094,7 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
   
   //broadcast number of elements
   MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
-  std::cout<<"before initial mesh initialization"<<std::endl;
+  //std::cout<<"before initial mesh initialization"<<std::endl;
   
   //read in element connectivity
   //we're gonna reallocate for the words per line expected for the element connectivity
@@ -2270,7 +2270,7 @@ void Parallel_Nonlinear_Solver::generate_applied_loads(){
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 1/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
@@ -3799,10 +3799,11 @@ void Parallel_Nonlinear_Solver::assemble_matrix(){
   Matrix_alloc = 1;
   }
 
-  //filter small negative numbers from floating point error
+  //filter small negative numbers (that should have been 0 from cancellation) from floating point error
+  /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
     for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      if(Stiffness_Matrix(idof,istride)<0&&Stiffness_Matrix(idof,istride)>-0.00000000001)
+      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON)
       Stiffness_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -3810,6 +3811,7 @@ void Parallel_Nonlinear_Solver::assemble_matrix(){
     //debug print
     //std::cout << std::endl;
   }
+  */
   //This completes the setup for A matrix of the linear system
   
   //file to debug print
@@ -7239,8 +7241,8 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   
   //solve for adjoint vector
   int num_iter = 2000;
-  double solve_tol = 1e-12;
-  int cacheSize = 1000;
+  double solve_tol = 1e-05;
+  int cacheSize = 0;
   std::string solveType         = "belos";
   std::string belosType         = "cg";
   // =========================================================================
@@ -7259,11 +7261,19 @@ void Parallel_Nonlinear_Solver::compute_adjoint_hessian_vec(const_host_vec_array
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  if(simparam->equilibrate_matrix_flag){
+    preScaleRightHandSides(*balanced_B,"diag");
+    preScaleInitialGuesses(*lambda,"diag");
+  }
   real_t current_cpu_time2 = CPU_Time();
   comm->barrier();
   SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   hessvec_linear_time += CPU_Time() - current_cpu_time2;
+
+  if(simparam->equilibrate_matrix_flag){
+    postScaleSolutionVectors(*lambda,"diag");
+  }
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
   //*fos << "LAMBDA" << std::endl;
@@ -8853,12 +8863,17 @@ int Parallel_Nonlinear_Solver::solve(){
     Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xbalanced_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(balanced_A));
     xwrap_balanced_A = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xbalanced_A));
     //xwrap_balanced_A->SetFixedBlockSize(1);
-
+   
     //randomize initial vector
     xX->setSeed(100);
     xX->randomize();
     
-    
+     if(simparam->equilibrate_matrix_flag){
+      equilibrateMatrix(xwrap_balanced_A,"diag");
+      preScaleRightHandSides(*balanced_B,"diag");
+      preScaleInitialGuesses(*X,"diag");
+     }
+
     //debug print
     //if(myrank==0)
     //*fos << "Xpetra A matrix :" << std::endl;
@@ -8867,8 +8882,8 @@ int Parallel_Nonlinear_Solver::solve(){
     //std::fflush(stdout);
     
     int num_iter = 2000;
-    double solve_tol = 1e-12;
-    int cacheSize = 1000;
+    double solve_tol = 1e-06;
+    int cacheSize = 0;
     std::string solveType         = "belos";
     std::string belosType         = "cg";
     // =========================================================================
@@ -8880,7 +8895,7 @@ int Parallel_Nonlinear_Solver::solve(){
     //out<<"*******************************************"<<std::endl;
     
     //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
-    real_t current_cpu_time = CPU_Time();
+    
     comm->barrier();
     //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
     if(Hierarchy_Constructed){
@@ -8891,6 +8906,7 @@ int Parallel_Nonlinear_Solver::solve(){
       Hierarchy_Constructed = true;
     }
     comm->barrier();
+    
     //H->Write(-1, -1);
     //H->describe(*fos,Teuchos::VERB_EXTREME);
     
@@ -8898,12 +8914,28 @@ int Parallel_Nonlinear_Solver::solve(){
     // =========================================================================
     // System solution (Ax = b)
     // =========================================================================
-    
-    comm->barrier();
+
+    real_t current_cpu_time = CPU_Time();
     SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
-    comm->barrier();
-    //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
     linear_solve_time += CPU_Time() - current_cpu_time;
+    comm->barrier();
+
+    if(simparam->equilibrate_matrix_flag){
+      postScaleSolutionVectors(*X,"diag");
+    }
+
+    if(simparam->multigrid_timers){
+    Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
+        reportParams->set("How to merge timer sets",   "Union");
+        reportParams->set("alwaysWriteLocal",          false);
+        reportParams->set("writeGlobalStats",          true);
+        reportParams->set("writeZeroTimers",           false);
+    std::ios_base::fmtflags ff(fos->flags());
+    *fos << std::fixed;
+    Teuchos::TimeMonitor::report(comm.ptr(), *fos, "", reportParams);
+    *fos << std::setiosflags(ff);
+    //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+    }
   }
   //return !EXIT_SUCCESS;
   //timing statistics for LU solver
