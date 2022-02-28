@@ -1,6 +1,6 @@
 set(Solver_SRC_H Parallel_TO/utilities.h)
 set(Class_SRC Solver.h Parallel_TO/Simulation_Parameters.h Parallel_TO/Simulation_Parameters.cpp Parallel_TO/node_combination.h Parallel_TO/node_combination.cpp)
-set(Parallel_Nonlinear_SRC Parallel_TO/Parallel_Nonlinear_Solver.h Parallel_TO/Parallel_Nonlinear_Solver.cpp Parallel_TO/Matrix_Equilibration.cpp)
+set(Parallel_Nonlinear_SRC Parallel_TO/Parallel_Nonlinear_Solver.h Parallel_TO/Parallel_Nonlinear_Solver.cpp Parallel_TO/Matrix_Equilibration.cpp Parallel_TO/Elasticity_FEA.cpp)
 set(Solver_SRC_CXX main.cpp Solver.cpp)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
