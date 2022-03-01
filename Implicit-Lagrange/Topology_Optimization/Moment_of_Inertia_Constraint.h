@@ -22,8 +22,6 @@
 #include "ROL_Elementwise_Reduce.hpp"
 #include "Parallel_Nonlinear_Solver.h"
 
-#define MOI_EPSILON 0.000000001
-
 class MomentOfInertiaConstraint_TopOpt : public ROL::Constraint<real_t> {
   
   typedef Tpetra::Map<>::local_ordinal_type LO;
@@ -66,6 +64,8 @@ private:
   real_t initial_moment_of_inertia, initial_Mxx, initial_Myy, initial_Mzz;
   bool inequality_flag_;
   real_t constraint_value_;
+  real_t current_mass;
+  real_t current_center_of_mass[3];
   int inertia_component_;
   int com1, com2;
 
@@ -332,8 +332,6 @@ public:
     }
     
     int rnum_elem = FEM_->rnum_elem;
-    real_t current_mass;
-    real_t current_center_of_mass[3];
     update_com_and_mass(design_densities, current_mass, current_center_of_mass);
 
     /*
@@ -516,34 +514,17 @@ public:
     }
   }
   
-  /*
-  void hessVec_12( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
+  
+  void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
+                const ROL::Vector<real_t> &z, real_t &tol ) {
     
     // Unwrap hv
     ROL::Ptr<MV> hvp = getVector(hv);
 
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
-
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV KU(up->size(),0.0);
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      FEM_->apply_jacobian(KU,U,*zp,*vp);
-      for (size_t i=0; i<up->size(); i++) {
-        (*hvp)[i] = 2.0*KU[i];
-      }
-    }
+    hvp->putScalar(0);
     
   }
+  /*
 
   void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
                    const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {

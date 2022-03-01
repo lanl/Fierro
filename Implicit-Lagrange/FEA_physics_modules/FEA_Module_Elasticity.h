@@ -1,30 +1,7 @@
 #ifndef FEA_MODULE_ELASTICITY_H
 #define FEA_MODULE_ELASTICITY_H
 
-#include "utilities.h"
 #include "FEA_Module.h"
-#include "matar.h"
-#include "elements.h"
-#include "node_combination.h"
-#include <Teuchos_ScalarTraits.hpp>
-#include <Teuchos_RCP.hpp>
-#include <Teuchos_oblackholestream.hpp>
-#include <Teuchos_Tuple.hpp>
-#include <Teuchos_VerboseObject.hpp>
-
-#include <Tpetra_Core.hpp>
-#include <Tpetra_Map.hpp>
-#include <Tpetra_MultiVector.hpp>
-#include <Tpetra_CrsMatrix.hpp>
-#include <Kokkos_View.hpp>
-#include <Kokkos_Parallel.hpp>
-#include <Kokkos_Parallel_Reduce.hpp>
-//#include "Tpetra_Details_makeColMap.hpp"
-#include "Tpetra_Details_DefaultTypes.hpp"
-#include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
-
-//#include <Xpetra_Operator.hpp>
-//#include <MueLu.hpp>
 
 class FEA_Module_Elasticity: public FEA_Module{
 
@@ -77,9 +54,9 @@ public:
 
   void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
-  void Body_Force(size_t ielem, real_t density, real_t *forces);
+  void Body_Term(size_t ielem, real_t density, real_t *forces);
 
-  void Gradient_Body_Force(size_t ielem, real_t density, real_t *forces);
+  void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces);
 
   void Displacement_Boundary_Conditions();
 

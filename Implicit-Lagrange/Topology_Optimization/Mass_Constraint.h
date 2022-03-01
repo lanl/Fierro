@@ -56,6 +56,7 @@ private:
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
   real_t initial_mass;
+  real_t current_mass;
   bool inequality_flag_;
   real_t constraint_value_;
 
@@ -142,7 +143,7 @@ public:
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    real_t current_mass = ROL_Element_Masses->reduce(sumreduc);
+    current_mass = ROL_Element_Masses->reduce(sumreduc);
     FEM_->mass = current_mass;
     FEM_->mass_update = current_step;
     

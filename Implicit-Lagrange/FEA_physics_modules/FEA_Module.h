@@ -20,15 +20,12 @@
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
 
-//#include <Xpetra_Operator.hpp>
-//#include <MueLu.hpp>
 
-
-class Parallel_Nonlinear_Solver: public Solver{
+class FEA_Module{
 
 public:
-  Parallel_Nonlinear_Solver();
-  ~Parallel_Nonlinear_Solver();
+  FEA_Module();
+  ~FEA_Module();
 
   //Trilinos type definitions
   typedef Tpetra::Map<>::local_ordinal_type LO;
@@ -65,61 +62,40 @@ public:
   typedef MCONN::dual_view_type::t_dev elem_conn_array;
   typedef Kokkos::View<const GO**, array_layout, HostSpace, memory_traits> const_host_elem_conn_array;
   typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
-
-  void run(int argc, char *argv[]);
-
-  void read_mesh_ensight(char *MESH);
-
-  void read_mesh_tecplot(char *MESH);
-  
-  //setup ghosts and element maps
-  void init_maps();
   
   //initializes memory for arrays used in the global stiffness matrix assembly
-  void init_assembly();
+  virtual void init_assembly() {}
 
-  void init_design();
+  virtual void assemble_matrix() {}
 
-  void assemble_matrix();
+  virtual void assemble_vector() {}
 
-  void assemble_vector();
+  virtual int solve() {}
 
-  virtual int solve(){}
+  virtual void linear_solver_parameters() {}
 
-  void linear_solver_parameters();
+  virtual void comm_variables(Teuchos::RCP<const MV> zp) {}
 
-  void comm_variables(Teuchos::RCP<const MV> zp);
-
-  void update_linear_solve(Teuchos::RCP<const MV> zp);
-
-  void collect_information();
+  virtual void update_linear_solve(Teuchos::RCP<const MV> zp) {}
 
   virtual void local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix) {}
 
   virtual void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix) {}
 
-  virtual void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  virtual void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density) {}
 
-  virtual void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  virtual void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density) {}
 
-  virtual void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  virtual void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density) {}
 
-  void Body_Force(size_t ielem, real_t density, real_t *forces);
+  virtual void Body_Term(size_t ielem, real_t density, real_t *forces) {}
 
-  void Gradient_Body_Force(size_t ielem, real_t density, real_t *forces);
+  virtual void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces) {}
 
-  //debug and performance functions/variables
-  double CPU_Time();
-  void init_clock();
-  double initial_CPU_time;
-  double linear_solve_time, hessvec_time, hessvec_linear_time;
   int update_count, hessvec_count;
 
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
-  
-  swage::mesh_t *init_mesh;
-  swage::mesh_t *mesh;
   
   elements::element_selector *element_select;
   elements::Element3D *elem;
@@ -283,12 +259,6 @@ public:
 
   //linear solver parameters
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
-
-  //multigrid solver data and functions
-  using equil_type = decltype (Tpetra::computeRowAndColumnOneNorms (*Global_Stiffness_Matrix, false));
-  using mag_type = typename Kokkos::ArithTraits<real_t>::mag_type;
-  using scaling_view_type = Kokkos::View<mag_type*, device_type>;
-  equil_type equibResult;
   Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
   Teuchos::RCP<MV> X;

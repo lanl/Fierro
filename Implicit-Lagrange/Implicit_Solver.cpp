@@ -77,7 +77,7 @@ num_cells in element = (p_order*2)^3
 #include "Simulation_Parameters.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
-#include "Parallel_Nonlinear_Solver.h"
+#include "Implicit_Solver.h"
 
 //Optimization Package
 #include "ROL_Algorithm.hpp"
@@ -141,7 +141,7 @@ each surface to use for hammering metal into to form it.
 
 */
 
-Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
+Implicit_Solver::Implicit_Solver() : Solver(){
   //create parameter object
   simparam = new Simulation_Parameters();
   // ---- Read input file, define state and boundary conditions ---- //
@@ -189,7 +189,7 @@ Parallel_Nonlinear_Solver::Parallel_Nonlinear_Solver() : Solver(){
   (*fos).setOutputToRootOnly(0);
 }
 
-Parallel_Nonlinear_Solver::~Parallel_Nonlinear_Solver(){
+Implicit_Solver::~Implicit_Solver(){
    delete simparam;
    delete ref_elem;
    delete element_select;
@@ -202,7 +202,7 @@ Parallel_Nonlinear_Solver::~Parallel_Nonlinear_Solver(){
 //==============================================================================
 
 
-void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
+void Implicit_Solver::run(int argc, char *argv[]){
     
     //MPI info
     world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
@@ -330,7 +330,7 @@ void Parallel_Nonlinear_Solver::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read Ensight format mesh file
 ------------------------------------------------------------------------- */
-void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
+void Implicit_Solver::read_mesh_ensight(char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -878,7 +878,7 @@ void Parallel_Nonlinear_Solver::read_mesh_ensight(char *MESH){
 /* ----------------------------------------------------------------------
    Read Tecplot format mesh file
 ------------------------------------------------------------------------- */
-void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
+void Implicit_Solver::read_mesh_tecplot(char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -1313,7 +1313,7 @@ void Parallel_Nonlinear_Solver::read_mesh_tecplot(char *MESH){
    Initialize Ghost and Non-Overlapping Element Maps
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::init_maps(){
+void Implicit_Solver::init_maps(){
   char ch;
   int num_dim = simparam->num_dim;
   int p_order = simparam->p_order;
@@ -1589,7 +1589,7 @@ void Parallel_Nonlinear_Solver::init_maps(){
    Setup Optimization Problem Object, Relevant Objective, and Constraints
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::setup_optimization_problem(){
+void Implicit_Solver::setup_optimization_problem(){
   int num_dim = simparam->num_dim;
   bool nodal_density_flag = simparam->nodal_density_flag;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
@@ -1791,7 +1791,7 @@ void Parallel_Nonlinear_Solver::setup_optimization_problem(){
    Find boundary surface segments that belong to this MPI rank
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::Get_Boundary_Patches(){
+void Implicit_Solver::Get_Boundary_Patches(){
   size_t npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
   int local_node_id;
   int num_dim = simparam->num_dim;
@@ -1970,7 +1970,7 @@ void Parallel_Nonlinear_Solver::Get_Boundary_Patches(){
    Initialize sets of element boundary surfaces and arrays for input conditions
 ------------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::init_boundaries(){
+void Implicit_Solver::init_boundaries(){
   int num_boundary_sets = simparam->NB;
   int num_surface_force_sets = simparam->NBSF;
   int num_surface_disp_sets = simparam->NBD;
@@ -2009,7 +2009,7 @@ void Parallel_Nonlinear_Solver::init_boundaries(){
    Assign sets of element boundary surfaces corresponding to user BCs
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::generate_bcs(){
+void Implicit_Solver::generate_bcs(){
   int num_dim = simparam->num_dim;
   int bdy_set_id;
   int surf_disp_set_id = 0;
@@ -2128,7 +2128,7 @@ void Parallel_Nonlinear_Solver::generate_bcs(){
    Assign sets of element boundary surfaces corresponding to user BCs
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::generate_applied_loads(){
+void Implicit_Solver::generate_applied_loads(){
   int num_dim = simparam->num_dim;
   int bdy_set_id;
   int surf_force_set_id = 0;
@@ -2314,7 +2314,7 @@ void Parallel_Nonlinear_Solver::generate_applied_loads(){
    initialize storage for element boundary surfaces corresponding to user BCs
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::init_boundary_sets (int num_sets){
+void Implicit_Solver::init_boundary_sets (int num_sets){
     
   num_boundary_conditions = num_sets;
   if(num_sets == 0){
@@ -2335,7 +2335,7 @@ void Parallel_Nonlinear_Solver::init_boundary_sets (int num_sets){
    val = plane value, cylinder radius, shell radius
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits){
+void Implicit_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits){
   
   int num_boundary_sets = simparam->NB;
   int is_on_set;
@@ -2380,7 +2380,7 @@ void Parallel_Nonlinear_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_s
 ------------------------------------------------------------------------- */
 
 
-int Parallel_Nonlinear_Solver::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, real_t val, real_t *patch_limits){
+int Implicit_Solver::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, real_t val, real_t *patch_limits){
   
   int is_on_set = 1;
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2473,7 +2473,7 @@ int Parallel_Nonlinear_Solver::check_boundary(Node_Combination &Patch_Nodes, int
    Collect Nodal Information on Rank 0
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::collect_information(){
+void Implicit_Solver::collect_information(){
   size_t nreduce_dof = 0;
   size_t nreduce_nodes = 0;
   size_t nreduce_elem = 0;
@@ -2570,7 +2570,7 @@ void Parallel_Nonlinear_Solver::collect_information(){
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::tecplot_writer(){
+void Implicit_Solver::tecplot_writer(){
   
   size_t num_dim = simparam->num_dim;
 	std::string current_file_name;
@@ -2754,7 +2754,7 @@ void Parallel_Nonlinear_Solver::tecplot_writer(){
    Output Model Information in vtk format
 ------------------------------------------------------------------------- */
 /*
-void Parallel_Nonlinear_Solver::vtk_writer(){
+void Implicit_Solver::vtk_writer(){
     //local variable for host view in the dual view
     host_vec_array node_coords = dual_node_coords.view_host();
     const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2962,7 +2962,7 @@ void Parallel_Nonlinear_Solver::vtk_writer(){
    Output Model Information in ensight format
 ------------------------------------------------------------------------- */
 /*
-void Parallel_Nonlinear_Solver::ensight_writer(){
+void Implicit_Solver::ensight_writer(){
     //local variable for host view in the dual view
     host_vec_array node_coords = dual_node_coords.view_host();
     const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3266,7 +3266,7 @@ void Parallel_Nonlinear_Solver::ensight_writer(){
    Initialize local views and global vectors needed to describe the design
 -------------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::init_design(){
+void Implicit_Solver::init_design(){
   int num_dim = simparam->num_dim;
   bool nodal_density_flag = simparam->nodal_density_flag;
 
@@ -3365,7 +3365,7 @@ void Parallel_Nonlinear_Solver::init_design(){
    Construct the global applied force vector
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::assemble_vector(){
+void Implicit_Solver::assemble_vector(){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3740,7 +3740,7 @@ void Parallel_Nonlinear_Solver::assemble_vector(){
    Communicate ghosts using the current optimization design data
 ---------------------------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::comm_variables(Teuchos::RCP<const MV> zp){
+void Implicit_Solver::comm_variables(Teuchos::RCP<const MV> zp){
   
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
@@ -3772,7 +3772,7 @@ void Parallel_Nonlinear_Solver::comm_variables(Teuchos::RCP<const MV> zp){
    update nodal displacement information in accordance with current optimization vector
 ---------------------------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::update_linear_solve(Teuchos::RCP<const MV> zp){
+void Implicit_Solver::update_linear_solve(Teuchos::RCP<const MV> zp){
   
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
@@ -3801,7 +3801,7 @@ void Parallel_Nonlinear_Solver::update_linear_solve(Teuchos::RCP<const MV> zp){
    much in the same way as MPI_Wtime() returns the wall time.
 ------------------------------------------------------------------------- */
 
-double Parallel_Nonlinear_Solver::CPU_Time()
+double Implicit_Solver::CPU_Time()
 {
   double rv = 0.0;
 /*
@@ -3830,7 +3830,7 @@ double Parallel_Nonlinear_Solver::CPU_Time()
    Clock variable initialization
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::init_clock(){
+void Implicit_Solver::init_clock(){
   double current_cpu = 0;
   initial_CPU_time = CPU_Time();
 }

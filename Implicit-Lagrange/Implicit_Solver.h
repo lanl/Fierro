@@ -1,5 +1,5 @@
-#ifndef PARALLEL_NONLINEAR_SOLVER_H
-#define PARALLEL_NONLINEAR_SOLVER_H
+#ifndef IMPLICIT_SOLVER_H
+#define IMPLICIT_SOLVER_H
 
 #include "utilities.h"
 #include "../Solver.h"
@@ -54,11 +54,11 @@ namespace Xpetra{
   class Matrix;
 }
 
-class Parallel_Nonlinear_Solver: public Solver{
+class Implicit_Solver: public Solver{
 
 public:
-  Parallel_Nonlinear_Solver();
-  ~Parallel_Nonlinear_Solver();
+  Implicit_Solver();
+  ~Implicit_Solver();
 
   //Trilinos type definitions
   typedef Tpetra::Map<>::local_ordinal_type LO;
@@ -298,7 +298,7 @@ public:
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches_strides;
 
   //pointer to FEA solver object passed to objectives and constraints
-  Teuchos::RCP<Parallel_Nonlinear_Solver> FEM_pass;
+  Teuchos::RCP<Implicit_Solver> FEM_pass;
 
   //element selection parameters and data
   size_t max_nodes_per_element;

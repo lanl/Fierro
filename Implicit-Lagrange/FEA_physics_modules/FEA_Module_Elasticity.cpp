@@ -138,14 +138,6 @@ FEA_Module_Elasticity::FEA_Module_Elasticity() :FEA_Module(){
 
   //boundary condition flags
   body_force_flag = gravity_flag = thermal_flag = electric_flag = false;
-
-  //preconditioner construction
-  Hierarchy_Constructed = false;
-
-  //Trilinos output stream
-  std::ostream &out = std::cout;
-  fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  (*fos).setOutputToRootOnly(0);
 }
 
 FEA_Module_Elasticity::~FEA_Module_Elasticity(){
@@ -156,7 +148,7 @@ FEA_Module_Elasticity::~FEA_Module_Elasticity(){
    Retrieve body force at a point
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::Body_Force(size_t ielem, real_t density, real_t *force_density){
+void FEA_Module_Elasticity::Body_Term(size_t ielem, real_t density, real_t *force_density){
   real_t unit_scaling = simparam->unit_scaling;
   int num_dim = simparam->num_dim;
   
@@ -186,7 +178,7 @@ void FEA_Module_Elasticity::Body_Force(size_t ielem, real_t density, real_t *for
    Gradient of body force at a point
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::Gradient_Body_Force(size_t ielem, real_t density, real_t *gradient_force_density){
+void FEA_Module_Elasticity::Gradient_Body_Term(size_t ielem, real_t density, real_t *gradient_force_density){
   real_t unit_scaling = simparam->unit_scaling;
   int num_dim = simparam->num_dim;
   
@@ -2765,7 +2757,7 @@ void FEA_Module_Elasticity::compute_adjoint_gradients(const_host_vec_array desig
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
     if(body_force_flag){
       //look up element material properties at this point as a function of density
-      Gradient_Body_Force(ielem, current_density, gradient_force_density);
+      Gradient_Body_Term(ielem, current_density, gradient_force_density);
       for(int igradient=0; igradient < nodes_per_elem; igradient++){
       if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
@@ -3574,7 +3566,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
         if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
         local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
         //look up element material properties at this point as a function of density
-        Gradient_Body_Force(ielem, current_density, gradient_force_density);
+        Gradient_Body_Term(ielem, current_density, gradient_force_density);
       
         //compute inner product for this quadrature point contribution
         inner_product = 0;
