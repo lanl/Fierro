@@ -3262,6 +3262,292 @@ void Parallel_Nonlinear_Solver::ensight_writer(){
 } // end ensight
 */
 
+/* ----------------------------------------------------------------------
+   Initialize global vectors and array maps needed for matrix assembly
+------------------------------------------------------------------------- */
+void Parallel_Nonlinear_Solver::init_assembly(){
+  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  Stiffness_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Stiffness_Matrix_Strides");
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
+  int current_row_n_nodes_scanned;
+  int local_node_index, global_node_index, current_column_index;
+  int max_stride = 0;
+  size_t nodes_per_element;
+  
+  //allocate stride arrays
+  CArrayKokkos <size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
+  Graph_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes, "Graph_Matrix_Strides");
+
+  //allocate storage for the sparse stiffness matrix map used in the assembly process
+  Global_Stiffness_Matrix_Assembly_Map = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
+                                         max_nodes_per_element,max_nodes_per_element, "Global_Stiffness_Matrix_Assembly_Map");
+
+  //allocate array used to determine global node repeats in the sparse graph later
+  CArrayKokkos <int, array_layout, device_type, memory_traits> node_indices_used(nall_nodes, "node_indices_used");
+
+  /*allocate array that stores which column the node index occured on for the current row
+    when removing repeats*/
+  CArrayKokkos <size_t, array_layout, device_type, memory_traits> column_index(nall_nodes, "column_index");
+  
+  //initialize nlocal arrays
+  for(int inode = 0; inode < nlocal_nodes; inode++){
+    Graph_Matrix_Strides_initial(inode) = 0;
+    Graph_Matrix_Strides(inode) = 0;
+    Graph_Fill(inode) = 0;
+  }
+
+  //initialize nall arrays
+  for(int inode = 0; inode < nall_nodes; inode++){
+    node_indices_used(inode) = 0;
+    column_index(inode) = 0;
+  }
+  
+  //count upper bound of strides for Sparse Pattern Graph by allowing repeats due to connectivity
+  if(num_dim == 2)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
+    nodes_per_element = elem2D->num_nodes();
+    for (int lnode = 0; lnode < nodes_per_element; lnode++){
+      global_node_index = nodes_in_elem(ielem, lnode);
+      if(map->isNodeGlobalElement(global_node_index)){
+        local_node_index = map->getLocalElement(global_node_index);
+        Graph_Matrix_Strides_initial(local_node_index) += nodes_per_element;
+      }
+    }
+  }
+
+  if(num_dim == 3)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_3Delem_type(Element_Types(ielem), elem);
+    nodes_per_element = elem->num_nodes();
+    for (int lnode = 0; lnode < nodes_per_element; lnode++){
+      global_node_index = nodes_in_elem(ielem, lnode);
+      if(map->isNodeGlobalElement(global_node_index)){
+        local_node_index = map->getLocalElement(global_node_index);
+        Graph_Matrix_Strides_initial(local_node_index) += nodes_per_element;
+      }
+    }
+  }
+  
+  //equate strides for later
+  for(int inode = 0; inode < nlocal_nodes; inode++)
+    Graph_Matrix_Strides(inode) = Graph_Matrix_Strides_initial(inode);
+  
+  //compute maximum stride
+  for(int inode = 0; inode < nlocal_nodes; inode++)
+    if(Graph_Matrix_Strides_initial(inode) > max_stride) max_stride = Graph_Matrix_Strides_initial(inode);
+  
+  //allocate array used in the repeat removal process
+  current_row_nodes_scanned = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_stride, "current_row_nodes_scanned");
+
+  //allocate sparse graph with node repeats
+  RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Repeat_Graph_Matrix(Graph_Matrix_Strides_initial);
+  RaggedRightArrayofVectorsKokkos<size_t, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial,num_dim);
+  
+  //Fill the initial Graph with repeats
+  if(num_dim == 2)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
+    nodes_per_element = elem2D->num_nodes();
+    for (int lnode = 0; lnode < nodes_per_element; lnode++){
+      global_node_index = nodes_in_elem(ielem, lnode);
+      if(map->isNodeGlobalElement(global_node_index)){
+        local_node_index = map->getLocalElement(global_node_index);
+        for (int jnode = 0; jnode < nodes_per_element; jnode++){
+          current_column_index = Graph_Fill(local_node_index)+jnode;
+          Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem,jnode);
+
+          //fill inverse map
+          Element_local_indices(local_node_index,current_column_index,0) = ielem;
+          Element_local_indices(local_node_index,current_column_index,1) = lnode;
+          Element_local_indices(local_node_index,current_column_index,2) = jnode;
+
+          //fill forward map
+          Global_Stiffness_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+        }
+        Graph_Fill(local_node_index) += nodes_per_element;
+      }
+    }
+  }
+  
+  if(num_dim == 3)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_3Delem_type(Element_Types(ielem), elem);
+    nodes_per_element = elem->num_nodes();
+    for (int lnode = 0; lnode < nodes_per_element; lnode++){
+      global_node_index = nodes_in_elem(ielem, lnode);
+      if(map->isNodeGlobalElement(global_node_index)){
+        local_node_index = map->getLocalElement(global_node_index);
+        for (int jnode = 0; jnode < nodes_per_element; jnode++){
+          current_column_index = Graph_Fill(local_node_index)+jnode;
+          Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem,jnode);
+
+          //fill inverse map
+          Element_local_indices(local_node_index,current_column_index,0) = ielem;
+          Element_local_indices(local_node_index,current_column_index,1) = lnode;
+          Element_local_indices(local_node_index,current_column_index,2) = jnode;
+
+          //fill forward map
+          Global_Stiffness_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+        }
+        Graph_Fill(local_node_index) += nodes_per_element;
+      }
+    }
+  }
+  
+  //debug statement
+  //std::cout << "started run" << std::endl;
+  //std::cout << "Graph Matrix Strides Repeat on task " << myrank << std::endl;
+  //for (int inode = 0; inode < nlocal_nodes; inode++)
+    //std::cout << Graph_Matrix_Strides(inode) << std::endl;
+  
+  //remove repeats from the inital graph setup
+  int current_node, current_element_index, element_row_index, element_column_index, current_stride;
+  for (int inode = 0; inode < nlocal_nodes; inode++){
+    current_row_n_nodes_scanned = 0;
+    for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
+      //convert global index in graph to its local index for the flagging array
+      current_node = all_node_map->getLocalElement(Repeat_Graph_Matrix(inode,istride));
+      //debug
+      //if(current_node==-1)
+      //std::cout << "Graph Matrix node access on task " << myrank << std::endl;
+      //std::cout << Repeat_Graph_Matrix(inode,istride) << std::endl;
+      if(node_indices_used(current_node)){
+        //set global assembly map index to the location in the graph matrix where this global node was first found
+        current_element_index = Element_local_indices(inode,istride,0);
+        element_row_index = Element_local_indices(inode,istride,1);
+        element_column_index = Element_local_indices(inode,istride,2);
+        Global_Stiffness_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
+            = column_index(current_node);   
+
+        
+        //swap current node with the end of the current row and shorten the stride of the row
+        //first swap information about the inverse and forward maps
+
+        current_stride = Graph_Matrix_Strides(inode);
+        if(istride!=current_stride-1){
+        Element_local_indices(inode,istride,0) = Element_local_indices(inode,current_stride-1,0);
+        Element_local_indices(inode,istride,1) = Element_local_indices(inode,current_stride-1,1);
+        Element_local_indices(inode,istride,2) = Element_local_indices(inode,current_stride-1,2);
+        current_element_index = Element_local_indices(inode,istride,0);
+        element_row_index = Element_local_indices(inode,istride,1);
+        element_column_index = Element_local_indices(inode,istride,2);
+
+        Global_Stiffness_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
+            = istride;
+
+        //now that the element map information has been copied, copy the global node index and delete the last index
+
+        Repeat_Graph_Matrix(inode,istride) = Repeat_Graph_Matrix(inode,current_stride-1);
+        }
+        istride--;
+        Graph_Matrix_Strides(inode)--;
+      }
+      else{
+        /*this node hasn't shown up in the row before; add it to the list of nodes
+          that have been scanned uniquely. Use this list to reset the flag array
+          afterwards without having to loop over all the nodes in the system*/
+        node_indices_used(current_node) = 1;
+        column_index(current_node) = istride;
+        current_row_nodes_scanned(current_row_n_nodes_scanned) = current_node;
+        current_row_n_nodes_scanned++;
+      }
+    }
+    //reset nodes used list for the next row of the sparse list
+    for(int node_reset = 0; node_reset < current_row_n_nodes_scanned; node_reset++)
+      node_indices_used(current_row_nodes_scanned(node_reset)) = 0;
+
+  }
+
+  //copy reduced content to non_repeat storage
+  Graph_Matrix = RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
+  for(int inode = 0; inode < nlocal_nodes; inode++)
+    for(int istride = 0; istride < Graph_Matrix_Strides(inode); istride++)
+      Graph_Matrix(inode,istride) = Repeat_Graph_Matrix(inode,istride);
+
+  //deallocate repeat matrix
+  
+  /*At this stage the sparse graph should have unique global indices on each row.
+    The constructed Assembly map (to the global sparse matrix)
+    is used to loop over each element's local stiffness matrix in the assembly process.*/
+  
+  //expand strides for stiffness matrix by multipling by dim
+  for(int inode = 0; inode < nlocal_nodes; inode++){
+    for (int idim = 0; idim < num_dim; idim++)
+    Stiffness_Matrix_Strides(num_dim*inode + idim) = num_dim*Graph_Matrix_Strides(inode);
+  }
+
+  Stiffness_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Stiffness_Matrix_Strides);
+  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Stiffness_Matrix_Strides);
+
+  //set stiffness Matrix Graph
+  //debug print
+    //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof/num_dim,istride/num_dim)*num_dim + istride%num_dim;
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
+  
+  /*
+  //debug print nodal positions and indices
+  std::cout << " ------------NODAL POSITIONS--------------"<<std::endl;
+  for (int inode = 0; inode < num_nodes; inode++){
+      std::cout << "node: " << inode + 1 << " { ";
+    for (int istride = 0; istride < num_dim; istride++){
+        std::cout << node_coords(inode,istride) << " , ";
+    }
+    std::cout << " }"<< std::endl;
+  }
+  //debug print element edof
+  
+  std::cout << " ------------ELEMENT EDOF--------------"<<std::endl;
+
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    std::cout << "elem:  " << ielem+1 << std::endl;
+    for (int lnode = 0; lnode < nodes_per_elem; lnode++){
+        std::cout << "{ ";
+          std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
+        
+        std::cout << " }"<< std::endl;
+    }
+    std::cout << std::endl;
+  }
+  
+
+  //debug section; print stiffness matrix graph and per element map
+  std::cout << " ------------SPARSE GRAPH MATRIX--------------"<<std::endl;
+  for (int inode = 0; inode < num_nodes; inode++){
+      std::cout << "row: " << inode + 1 << " { ";
+    for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
+        std::cout << istride + 1 << " = " << Repeat_Graph_Matrix(inode,istride) + 1 << " , " ;
+    }
+    std::cout << " }"<< std::endl;
+  }
+
+  std::cout << " ------------ELEMENT ASSEMBLY MAP--------------"<<std::endl;
+
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    std::cout << "elem:  " << ielem+1 << std::endl;
+    for (int lnode = 0; lnode < nodes_per_elem; lnode++){
+        std::cout << "{ "<< std::endl;
+        for (int jnode = 0; jnode < nodes_per_elem; jnode++){
+          std::cout <<"(" << lnode+1 << "," << jnode+1 << "," << nodes_in_elem(ielem,lnode)+1 << ")"<< " = " << Global_Stiffness_Matrix_Assembly_Map(ielem,lnode, jnode) + 1 << " ";
+        }
+        std::cout << " }"<< std::endl;
+    }
+    std::cout << std::endl;
+  }
+  */
+  
+}
+
 /* -----------------------------------------------------------------------------
    Initialize local views and global vectors needed to describe the design
 -------------------------------------------------------------------------------- */
@@ -3359,6 +3645,188 @@ void Parallel_Nonlinear_Solver::init_design(){
   Global_Element_Moments_of_Inertia_xz = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_of_Inertia_yz = Teuchos::rcp(new MV(element_map, 1));
 
+}
+
+/* ----------------------------------------------------------------------
+   Assemble the Sparse Stiffness Matrix
+------------------------------------------------------------------------- */
+
+void Parallel_Nonlinear_Solver::assemble_matrix(){
+  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  int nodes_per_element;
+  int current_row_n_nodes_scanned;
+  int local_dof_index, global_node_index, current_row, current_column;
+  int max_stride = 0;
+  
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Stiffness_Matrix(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
+
+  //initialize stiffness Matrix entries to 0
+  //debug print
+    //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      Stiffness_Matrix(idof,istride) = 0;
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
+
+  //assemble the global stiffness matrix
+  if(num_dim==2)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
+    nodes_per_element = elem2D->num_nodes();
+    //construct local stiffness matrix for this element
+    local_matrix_multiply(ielem, Local_Stiffness_Matrix);
+    //assign entries of this local matrix to the sparse global matrix storage;
+    for (int inode = 0; inode < nodes_per_element; inode++){
+      //see if this node is local
+      global_node_index = nodes_in_elem(ielem,inode);
+      if(!map->isNodeGlobalElement(global_node_index)) continue;
+      //set dof row start index
+      current_row = num_dim*map->getLocalElement(global_node_index);
+      for(int jnode = 0; jnode < nodes_per_element; jnode++){
+        
+        current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
+        for (int idim = 0; idim < num_dim; idim++){
+          for (int jdim = 0; jdim < num_dim; jdim++){
+
+            //debug print
+            //if(current_row + idim==15&&current_column + jdim==4)
+            //std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
+            //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
+            //end debug
+
+            Stiffness_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
+          }
+        }
+      }
+    }
+  }
+
+  if(num_dim==3)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_3Delem_type(Element_Types(ielem), elem);
+    nodes_per_element = elem->num_nodes();
+    //construct local stiffness matrix for this element
+    local_matrix_multiply(ielem, Local_Stiffness_Matrix);
+    //assign entries of this local matrix to the sparse global matrix storage;
+    for (int inode = 0; inode < nodes_per_element; inode++){
+      //see if this node is local
+      global_node_index = nodes_in_elem(ielem,inode);
+      if(!map->isNodeGlobalElement(global_node_index)) continue;
+      //set dof row start index
+      current_row = num_dim*map->getLocalElement(global_node_index);
+      for(int jnode = 0; jnode < nodes_per_element; jnode++){
+        
+        current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
+        for (int idim = 0; idim < num_dim; idim++){
+          for (int jdim = 0; jdim < num_dim; jdim++){
+
+            //debug print
+            //if(current_row + idim==15&&current_column + jdim==4)
+            //std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
+            //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
+            //end debug
+
+            Stiffness_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
+          }
+        }
+      }
+    }
+  }
+
+  //construct distributed stiffness matrix and force vector from local kokkos data
+  
+  //build column map for the global stiffness matrix
+  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap;
+  const Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > dommap = local_dof_map;
+  
+  //debug print
+  /*
+    std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      //debug print
+      std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    std::cout << std::endl;
+  } */
+
+  //debug print of stiffness matrix
+  /*
+  std::cout << " ------------SPARSE STIFFNESS MATRIX ON TASK"<< myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+      std::cout << "row: " << idof + 1 << " { ";
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+        std::cout << istride + 1 << " = " << Stiffness_Matrix(idof,istride) << " , " ;
+    }
+    std::cout << " }"<< std::endl;
+  }
+  */
+  Tpetra::Details::makeColMap<LO,GO,node_type>(colmap,dommap,DOF_Graph_Matrix.get_kokkos_view(), nullptr);
+
+  size_t nnz = DOF_Graph_Matrix.size();
+
+  //debug print
+  //std::cout << "DOF GRAPH SIZE ON RANK " << myrank << " IS " << nnz << std::endl;
+  
+  //local indices in the graph using the constructed column map
+  CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
+  
+  //row offsets with compatible template arguments
+    row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+    row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
+    for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
+      row_offsets_pass(ipass) = row_offsets(ipass);
+    }
+
+  size_t entrycount = 0;
+  for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+    for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+      stiffness_local_indices(entrycount) = colmap->getLocalElement(DOF_Graph_Matrix(irow,istride));
+      entrycount++;
+    }
+  }
+  
+  if(!Matrix_alloc){
+  Global_Stiffness_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view()));
+  Global_Stiffness_Matrix->fillComplete();
+  Matrix_alloc = 1;
+  }
+
+  //filter small negative numbers (that should have been 0 from cancellation) from floating point error
+  /*
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON)
+      Stiffness_Matrix(idof,istride) = 0;
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
+  */
+  //This completes the setup for A matrix of the linear system
+  
+  //file to debug print
+  //std::ostream &out = std::cout;
+  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+
+  //debug print of A matrix
+  //*fos << "Global Stiffness Matrix :" << std::endl;
+  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+
+  //Print solution vector
+  //*fos << "Global Nodal Forces :" << std::endl;
+  //Global_Nodal_Forces->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
 }
 
 /* ----------------------------------------------------------------------

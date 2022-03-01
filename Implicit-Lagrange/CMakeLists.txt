@@ -1,6 +1,7 @@
 set(Solver_SRC_H Parallel_TO/utilities.h)
 set(Class_SRC Solver.h Parallel_TO/Simulation_Parameters.h Parallel_TO/Simulation_Parameters.cpp Parallel_TO/node_combination.h Parallel_TO/node_combination.cpp)
-set(Parallel_Nonlinear_SRC Parallel_TO/Parallel_Nonlinear_Solver.h Parallel_TO/Parallel_Nonlinear_Solver.cpp Parallel_TO/Matrix_Equilibration.cpp Parallel_TO/Elasticity_FEA.cpp)
+set(Parallel_Nonlinear_SRC Parallel_TO/Parallel_Nonlinear_Solver.h Parallel_TO/Parallel_Nonlinear_Solver.cpp Parallel_TO/Matrix_Equilibration.cpp )
+set(FEA_physics_modules/FEA_Module.h FEA_physics_modules/FEA_Module.cpp FEA_physics_modules/FEA_Module_Elasticity.h FEA_physics_modules/FEA_Module_Elasticity.cpp)
 set(Solver_SRC_CXX main.cpp Solver.cpp)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -23,11 +24,12 @@ set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
 
 include_directories(Parallel_TO)
+include_directories(FEA_physics_modules)
 
 INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
-add_executable(main ${Solver_SRC_CXX} ${Solver_SRC_H} ${Class_SRC} ${Laplace_SRC} ${Static_SRC} ${Static_Parallel_SRC} ${Parallel_Nonlinear_SRC})
+add_executable(main ${Solver_SRC_CXX} ${Solver_SRC_H} ${Class_SRC} ${Parallel_Nonlinear_SRC} ${FEA_Module_SRC})
 if(BUILD_ELEMENTS)
 target_link_libraries (main swage)
 target_link_libraries (main elements)
