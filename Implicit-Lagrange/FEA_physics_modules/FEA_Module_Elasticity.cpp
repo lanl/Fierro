@@ -123,10 +123,866 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
     node_displacements(init,0) = 0;
   for(int init = 0; init < all_dof_map->getNodeNumElements(); init++)
     all_node_displacements(init,0) = 0;
+
+  //construct per element inertial property vectors
+  Global_Element_Masses = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_x = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_y = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_z = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_of_Inertia_xx = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_of_Inertia_yy = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_of_Inertia_zz = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_of_Inertia_xy = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_of_Inertia_xz = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Moments_of_Inertia_yz = Teuchos::rcp(new MV(element_map, 1));
 }
 
 FEA_Module_Elasticity::~FEA_Module_Elasticity(){
    delete simparam;
+}
+
+/* ----------------------------------------------------------------------
+   Initialize global vectors and array maps needed for matrix assembly
+------------------------------------------------------------------------- */
+void Parallel_Nonlinear_Solver::init_assembly(){
+  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  Stiffness_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Stiffness_Matrix_Strides");
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
+  int current_row_n_nodes_scanned;
+  int local_node_index, global_node_index, current_column_index;
+  int max_stride = 0;
+  size_t nodes_per_element;
+  
+  //allocate stride arrays
+  CArrayKokkos <size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
+  Graph_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes, "Graph_Matrix_Strides");
+
+  //allocate storage for the sparse stiffness matrix map used in the assembly process
+  Global_Stiffness_Matrix_Assembly_Map = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
+                                         max_nodes_per_element,max_nodes_per_element, "Global_Stiffness_Matrix_Assembly_Map");
+
+  //allocate array used to determine global node repeats in the sparse graph later
+  CArrayKokkos <int, array_layout, device_type, memory_traits> node_indices_used(nall_nodes, "node_indices_used");
+
+  /*allocate array that stores which column the node index occured on for the current row
+    when removing repeats*/
+  CArrayKokkos <size_t, array_layout, device_type, memory_traits> column_index(nall_nodes, "column_index");
+  
+  //initialize nlocal arrays
+  for(int inode = 0; inode < nlocal_nodes; inode++){
+    Graph_Matrix_Strides_initial(inode) = 0;
+    Graph_Matrix_Strides(inode) = 0;
+    Graph_Fill(inode) = 0;
+  }
+
+  //initialize nall arrays
+  for(int inode = 0; inode < nall_nodes; inode++){
+    node_indices_used(inode) = 0;
+    column_index(inode) = 0;
+  }
+  
+  //count upper bound of strides for Sparse Pattern Graph by allowing repeats due to connectivity
+  if(num_dim == 2)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
+    nodes_per_element = elem2D->num_nodes();
+    for (int lnode = 0; lnode < nodes_per_element; lnode++){
+      global_node_index = nodes_in_elem(ielem, lnode);
+      if(map->isNodeGlobalElement(global_node_index)){
+        local_node_index = map->getLocalElement(global_node_index);
+        Graph_Matrix_Strides_initial(local_node_index) += nodes_per_element;
+      }
+    }
+  }
+
+  if(num_dim == 3)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_3Delem_type(Element_Types(ielem), elem);
+    nodes_per_element = elem->num_nodes();
+    for (int lnode = 0; lnode < nodes_per_element; lnode++){
+      global_node_index = nodes_in_elem(ielem, lnode);
+      if(map->isNodeGlobalElement(global_node_index)){
+        local_node_index = map->getLocalElement(global_node_index);
+        Graph_Matrix_Strides_initial(local_node_index) += nodes_per_element;
+      }
+    }
+  }
+  
+  //equate strides for later
+  for(int inode = 0; inode < nlocal_nodes; inode++)
+    Graph_Matrix_Strides(inode) = Graph_Matrix_Strides_initial(inode);
+  
+  //compute maximum stride
+  for(int inode = 0; inode < nlocal_nodes; inode++)
+    if(Graph_Matrix_Strides_initial(inode) > max_stride) max_stride = Graph_Matrix_Strides_initial(inode);
+  
+  //allocate array used in the repeat removal process
+  current_row_nodes_scanned = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_stride, "current_row_nodes_scanned");
+
+  //allocate sparse graph with node repeats
+  RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Repeat_Graph_Matrix(Graph_Matrix_Strides_initial);
+  RaggedRightArrayofVectorsKokkos<size_t, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial,num_dim);
+  
+  //Fill the initial Graph with repeats
+  if(num_dim == 2)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
+    nodes_per_element = elem2D->num_nodes();
+    for (int lnode = 0; lnode < nodes_per_element; lnode++){
+      global_node_index = nodes_in_elem(ielem, lnode);
+      if(map->isNodeGlobalElement(global_node_index)){
+        local_node_index = map->getLocalElement(global_node_index);
+        for (int jnode = 0; jnode < nodes_per_element; jnode++){
+          current_column_index = Graph_Fill(local_node_index)+jnode;
+          Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem,jnode);
+
+          //fill inverse map
+          Element_local_indices(local_node_index,current_column_index,0) = ielem;
+          Element_local_indices(local_node_index,current_column_index,1) = lnode;
+          Element_local_indices(local_node_index,current_column_index,2) = jnode;
+
+          //fill forward map
+          Global_Stiffness_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+        }
+        Graph_Fill(local_node_index) += nodes_per_element;
+      }
+    }
+  }
+  
+  if(num_dim == 3)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_3Delem_type(Element_Types(ielem), elem);
+    nodes_per_element = elem->num_nodes();
+    for (int lnode = 0; lnode < nodes_per_element; lnode++){
+      global_node_index = nodes_in_elem(ielem, lnode);
+      if(map->isNodeGlobalElement(global_node_index)){
+        local_node_index = map->getLocalElement(global_node_index);
+        for (int jnode = 0; jnode < nodes_per_element; jnode++){
+          current_column_index = Graph_Fill(local_node_index)+jnode;
+          Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem,jnode);
+
+          //fill inverse map
+          Element_local_indices(local_node_index,current_column_index,0) = ielem;
+          Element_local_indices(local_node_index,current_column_index,1) = lnode;
+          Element_local_indices(local_node_index,current_column_index,2) = jnode;
+
+          //fill forward map
+          Global_Stiffness_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+        }
+        Graph_Fill(local_node_index) += nodes_per_element;
+      }
+    }
+  }
+  
+  //debug statement
+  //std::cout << "started run" << std::endl;
+  //std::cout << "Graph Matrix Strides Repeat on task " << myrank << std::endl;
+  //for (int inode = 0; inode < nlocal_nodes; inode++)
+    //std::cout << Graph_Matrix_Strides(inode) << std::endl;
+  
+  //remove repeats from the inital graph setup
+  int current_node, current_element_index, element_row_index, element_column_index, current_stride;
+  for (int inode = 0; inode < nlocal_nodes; inode++){
+    current_row_n_nodes_scanned = 0;
+    for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
+      //convert global index in graph to its local index for the flagging array
+      current_node = all_node_map->getLocalElement(Repeat_Graph_Matrix(inode,istride));
+      //debug
+      //if(current_node==-1)
+      //std::cout << "Graph Matrix node access on task " << myrank << std::endl;
+      //std::cout << Repeat_Graph_Matrix(inode,istride) << std::endl;
+      if(node_indices_used(current_node)){
+        //set global assembly map index to the location in the graph matrix where this global node was first found
+        current_element_index = Element_local_indices(inode,istride,0);
+        element_row_index = Element_local_indices(inode,istride,1);
+        element_column_index = Element_local_indices(inode,istride,2);
+        Global_Stiffness_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
+            = column_index(current_node);   
+
+        
+        //swap current node with the end of the current row and shorten the stride of the row
+        //first swap information about the inverse and forward maps
+
+        current_stride = Graph_Matrix_Strides(inode);
+        if(istride!=current_stride-1){
+        Element_local_indices(inode,istride,0) = Element_local_indices(inode,current_stride-1,0);
+        Element_local_indices(inode,istride,1) = Element_local_indices(inode,current_stride-1,1);
+        Element_local_indices(inode,istride,2) = Element_local_indices(inode,current_stride-1,2);
+        current_element_index = Element_local_indices(inode,istride,0);
+        element_row_index = Element_local_indices(inode,istride,1);
+        element_column_index = Element_local_indices(inode,istride,2);
+
+        Global_Stiffness_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
+            = istride;
+
+        //now that the element map information has been copied, copy the global node index and delete the last index
+
+        Repeat_Graph_Matrix(inode,istride) = Repeat_Graph_Matrix(inode,current_stride-1);
+        }
+        istride--;
+        Graph_Matrix_Strides(inode)--;
+      }
+      else{
+        /*this node hasn't shown up in the row before; add it to the list of nodes
+          that have been scanned uniquely. Use this list to reset the flag array
+          afterwards without having to loop over all the nodes in the system*/
+        node_indices_used(current_node) = 1;
+        column_index(current_node) = istride;
+        current_row_nodes_scanned(current_row_n_nodes_scanned) = current_node;
+        current_row_n_nodes_scanned++;
+      }
+    }
+    //reset nodes used list for the next row of the sparse list
+    for(int node_reset = 0; node_reset < current_row_n_nodes_scanned; node_reset++)
+      node_indices_used(current_row_nodes_scanned(node_reset)) = 0;
+
+  }
+
+  //copy reduced content to non_repeat storage
+  Graph_Matrix = RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
+  for(int inode = 0; inode < nlocal_nodes; inode++)
+    for(int istride = 0; istride < Graph_Matrix_Strides(inode); istride++)
+      Graph_Matrix(inode,istride) = Repeat_Graph_Matrix(inode,istride);
+
+  //deallocate repeat matrix
+  
+  /*At this stage the sparse graph should have unique global indices on each row.
+    The constructed Assembly map (to the global sparse matrix)
+    is used to loop over each element's local stiffness matrix in the assembly process.*/
+  
+  //expand strides for stiffness matrix by multipling by dim
+  for(int inode = 0; inode < nlocal_nodes; inode++){
+    for (int idim = 0; idim < num_dim; idim++)
+    Stiffness_Matrix_Strides(num_dim*inode + idim) = num_dim*Graph_Matrix_Strides(inode);
+  }
+
+  Stiffness_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Stiffness_Matrix_Strides);
+  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Stiffness_Matrix_Strides);
+
+  //set stiffness Matrix Graph
+  //debug print
+    //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof/num_dim,istride/num_dim)*num_dim + istride%num_dim;
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
+  
+  /*
+  //debug print nodal positions and indices
+  std::cout << " ------------NODAL POSITIONS--------------"<<std::endl;
+  for (int inode = 0; inode < num_nodes; inode++){
+      std::cout << "node: " << inode + 1 << " { ";
+    for (int istride = 0; istride < num_dim; istride++){
+        std::cout << node_coords(inode,istride) << " , ";
+    }
+    std::cout << " }"<< std::endl;
+  }
+  //debug print element edof
+  
+  std::cout << " ------------ELEMENT EDOF--------------"<<std::endl;
+
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    std::cout << "elem:  " << ielem+1 << std::endl;
+    for (int lnode = 0; lnode < nodes_per_elem; lnode++){
+        std::cout << "{ ";
+          std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
+        
+        std::cout << " }"<< std::endl;
+    }
+    std::cout << std::endl;
+  }
+  
+
+  //debug section; print stiffness matrix graph and per element map
+  std::cout << " ------------SPARSE GRAPH MATRIX--------------"<<std::endl;
+  for (int inode = 0; inode < num_nodes; inode++){
+      std::cout << "row: " << inode + 1 << " { ";
+    for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
+        std::cout << istride + 1 << " = " << Repeat_Graph_Matrix(inode,istride) + 1 << " , " ;
+    }
+    std::cout << " }"<< std::endl;
+  }
+
+  std::cout << " ------------ELEMENT ASSEMBLY MAP--------------"<<std::endl;
+
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    std::cout << "elem:  " << ielem+1 << std::endl;
+    for (int lnode = 0; lnode < nodes_per_elem; lnode++){
+        std::cout << "{ "<< std::endl;
+        for (int jnode = 0; jnode < nodes_per_elem; jnode++){
+          std::cout <<"(" << lnode+1 << "," << jnode+1 << "," << nodes_in_elem(ielem,lnode)+1 << ")"<< " = " << Global_Stiffness_Matrix_Assembly_Map(ielem,lnode, jnode) + 1 << " ";
+        }
+        std::cout << " }"<< std::endl;
+    }
+    std::cout << std::endl;
+  }
+  */
+  
+}
+
+/* ----------------------------------------------------------------------
+   Assemble the Sparse Stiffness Matrix
+------------------------------------------------------------------------- */
+
+void Parallel_Nonlinear_Solver::assemble_matrix(){
+  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  int nodes_per_element;
+  int current_row_n_nodes_scanned;
+  int local_dof_index, global_node_index, current_row, current_column;
+  int max_stride = 0;
+  
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Stiffness_Matrix(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
+
+  //initialize stiffness Matrix entries to 0
+  //debug print
+    //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      Stiffness_Matrix(idof,istride) = 0;
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
+
+  //assemble the global stiffness matrix
+  if(num_dim==2)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
+    nodes_per_element = elem2D->num_nodes();
+    //construct local stiffness matrix for this element
+    local_matrix_multiply(ielem, Local_Stiffness_Matrix);
+    //assign entries of this local matrix to the sparse global matrix storage;
+    for (int inode = 0; inode < nodes_per_element; inode++){
+      //see if this node is local
+      global_node_index = nodes_in_elem(ielem,inode);
+      if(!map->isNodeGlobalElement(global_node_index)) continue;
+      //set dof row start index
+      current_row = num_dim*map->getLocalElement(global_node_index);
+      for(int jnode = 0; jnode < nodes_per_element; jnode++){
+        
+        current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
+        for (int idim = 0; idim < num_dim; idim++){
+          for (int jdim = 0; jdim < num_dim; jdim++){
+
+            //debug print
+            //if(current_row + idim==15&&current_column + jdim==4)
+            //std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
+            //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
+            //end debug
+
+            Stiffness_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
+          }
+        }
+      }
+    }
+  }
+
+  if(num_dim==3)
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    element_select->choose_3Delem_type(Element_Types(ielem), elem);
+    nodes_per_element = elem->num_nodes();
+    //construct local stiffness matrix for this element
+    local_matrix_multiply(ielem, Local_Stiffness_Matrix);
+    //assign entries of this local matrix to the sparse global matrix storage;
+    for (int inode = 0; inode < nodes_per_element; inode++){
+      //see if this node is local
+      global_node_index = nodes_in_elem(ielem,inode);
+      if(!map->isNodeGlobalElement(global_node_index)) continue;
+      //set dof row start index
+      current_row = num_dim*map->getLocalElement(global_node_index);
+      for(int jnode = 0; jnode < nodes_per_element; jnode++){
+        
+        current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
+        for (int idim = 0; idim < num_dim; idim++){
+          for (int jdim = 0; jdim < num_dim; jdim++){
+
+            //debug print
+            //if(current_row + idim==15&&current_column + jdim==4)
+            //std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
+            //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
+            //end debug
+
+            Stiffness_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
+          }
+        }
+      }
+    }
+  }
+
+  //construct distributed stiffness matrix and force vector from local kokkos data
+  
+  //build column map for the global stiffness matrix
+  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap;
+  const Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > dommap = local_dof_map;
+  
+  //debug print
+  /*
+    std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      //debug print
+      std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    std::cout << std::endl;
+  } */
+
+  //debug print of stiffness matrix
+  /*
+  std::cout << " ------------SPARSE STIFFNESS MATRIX ON TASK"<< myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+      std::cout << "row: " << idof + 1 << " { ";
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+        std::cout << istride + 1 << " = " << Stiffness_Matrix(idof,istride) << " , " ;
+    }
+    std::cout << " }"<< std::endl;
+  }
+  */
+  Tpetra::Details::makeColMap<LO,GO,node_type>(colmap,dommap,DOF_Graph_Matrix.get_kokkos_view(), nullptr);
+
+  size_t nnz = DOF_Graph_Matrix.size();
+
+  //debug print
+  //std::cout << "DOF GRAPH SIZE ON RANK " << myrank << " IS " << nnz << std::endl;
+  
+  //local indices in the graph using the constructed column map
+  CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
+  
+  //row offsets with compatible template arguments
+    row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+    row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
+    for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
+      row_offsets_pass(ipass) = row_offsets(ipass);
+    }
+
+  size_t entrycount = 0;
+  for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+    for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+      stiffness_local_indices(entrycount) = colmap->getLocalElement(DOF_Graph_Matrix(irow,istride));
+      entrycount++;
+    }
+  }
+  
+  if(!Matrix_alloc){
+  Global_Stiffness_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view()));
+  Global_Stiffness_Matrix->fillComplete();
+  Matrix_alloc = 1;
+  }
+
+  //filter small negative numbers (that should have been 0 from cancellation) from floating point error
+  /*
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON)
+      Stiffness_Matrix(idof,istride) = 0;
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
+  */
+  //This completes the setup for A matrix of the linear system
+  
+  //file to debug print
+  //std::ostream &out = std::cout;
+  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+
+  //debug print of A matrix
+  //*fos << "Global Stiffness Matrix :" << std::endl;
+  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+
+  //Print solution vector
+  //*fos << "Global Nodal Forces :" << std::endl;
+  //Global_Nodal_Forces->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+}
+
+
+/* ----------------------------------------------------------------------
+   Construct the global applied force vector
+------------------------------------------------------------------------- */
+
+void Implicit_Solver::assemble_vector(){
+  //local variable for host view in the dual view
+  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //local variable for host view in the dual view
+  host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  const_host_vec_array Element_Densities;
+  //local variable for host view of densities from the dual view
+  bool nodal_density_flag = simparam->nodal_density_flag;
+  const_host_vec_array all_node_densities;
+  if(nodal_density_flag)
+  all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  else
+  Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+  int num_bdy_patches_in_set;
+  size_t patch_id;
+  GO current_node_index;
+  LO local_node_id;
+  LO node_id;
+  int num_boundary_sets = num_boundary_conditions;
+  int surface_force_set_id = 0;
+  int num_dim = simparam->num_dim;
+  int nodes_per_elem = max_nodes_per_element;
+  int num_gauss_points = simparam->num_gauss_points;
+  int z_quad,y_quad,x_quad, direct_product_count;
+  int current_element_index, local_surface_id, surf_dim1, surf_dim2;
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  CArray<real_t> legendre_nodes_1D(num_gauss_points);
+  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  real_t pointer_quad_coordinate[num_dim];
+  real_t pointer_quad_coordinate_weight[num_dim];
+  real_t pointer_interpolated_point[num_dim];
+  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
+  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
+  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
+  real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
+  
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row3(num_dim);
+
+  real_t pointer_basis_values[nodes_per_elem];
+  real_t pointer_basis_derivative_s1[nodes_per_elem];
+  real_t pointer_basis_derivative_s2[nodes_per_elem];
+  real_t pointer_basis_derivative_s3[nodes_per_elem];
+  ViewCArray<real_t> basis_values(pointer_basis_values,nodes_per_elem);
+  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,nodes_per_elem);
+  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,nodes_per_elem);
+  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,nodes_per_elem);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
+
+   //force vector initialization
+  for(int i=0; i < num_dim*nlocal_nodes; i++)
+    Nodal_Forces(i,0) = 0;
+
+  /*Loop through boundary sets and check if they apply surface forces.
+  These sets can have overlapping nodes since applied loading conditions
+  are assumed to be additive*/
+  for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
+    if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION) continue;
+    //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
+    num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
+    
+    force_density[0] = Boundary_Surface_Force_Densities(surface_force_set_id,0);
+    force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
+    force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
+    surface_force_set_id++;
+
+    real_t pointer_basis_values[elem->num_basis()];
+    ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
+
+    //initialize weights
+    elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
+    elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+
+    direct_product_count = std::pow(num_gauss_points,num_dim-1);
+    //loop over boundary sets for their applied forces; use quadrature for distributed forces
+    for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
+                
+    // get the global id for this boundary patch
+    patch_id = Boundary_Condition_Patches(iboundary, bdy_patch_gid);
+    Surface_Nodes = Boundary_Patches(patch_id).node_set;
+    //find element index this boundary patch is on
+    current_element_index = Boundary_Patches(patch_id).element_id;
+    local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+    //debug print of local surface ids
+    //std::cout << " LOCAL SURFACE IDS " << std::endl;
+    //std::cout << local_surface_id << std::endl;
+
+    //loop over quadrature points if this is a distributed force
+    for(int iquad=0; iquad < direct_product_count; iquad++){
+      
+      if(Element_Types(current_element_index)==elements::elem_types::Hex8){
+
+      int local_nodes[4];
+      //set current quadrature point
+      y_quad = iquad / num_gauss_points;
+      x_quad = iquad % num_gauss_points;
+      
+      if(local_surface_id<2){
+      surf_dim1 = 0;
+      surf_dim2 = 1;
+      quad_coordinate(0) = legendre_nodes_1D(x_quad);
+      quad_coordinate(1) = legendre_nodes_1D(y_quad);
+      //set to -1 or 1 for an isoparametric space
+        if(local_surface_id%2==0)
+        quad_coordinate(2) = -1;
+        else
+        quad_coordinate(2) = 1;
+      }
+      else if(local_surface_id<4){
+      surf_dim1 = 0;
+      surf_dim2 = 2;
+      quad_coordinate(0) = legendre_nodes_1D(x_quad);
+      quad_coordinate(2) = legendre_nodes_1D(y_quad);
+      //set to -1 or 1 for an isoparametric space
+        if(local_surface_id%2==0)
+        quad_coordinate(1) = -1;
+        else
+        quad_coordinate(1) = 1;
+      }
+      else if(local_surface_id<6){
+      surf_dim1 = 1;
+      surf_dim2 = 2;
+      quad_coordinate(1) = legendre_nodes_1D(x_quad);
+      quad_coordinate(2) = legendre_nodes_1D(y_quad);
+      //set to -1 or 1 for an isoparametric space
+        if(local_surface_id%2==0)
+        quad_coordinate(0) = -1;
+        else
+        quad_coordinate(0) = 1;
+      }
+      
+      //set current quadrature weight
+      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+
+      //find local dof set for this surface
+      local_nodes[0] = elem->surface_to_dof_lid(local_surface_id,0);
+      local_nodes[1] = elem->surface_to_dof_lid(local_surface_id,1);
+      local_nodes[2] = elem->surface_to_dof_lid(local_surface_id,2);
+      local_nodes[3] = elem->surface_to_dof_lid(local_surface_id,3);
+
+      //acquire set of nodes for this face
+      for(int node_loop=0; node_loop < 4; node_loop++){
+        current_node_index = Surface_Nodes(node_loop);
+        local_node_id = all_node_map->getLocalElement(current_node_index);
+        nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+        nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+        nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+      }
+
+      if(local_surface_id<2){
+        //compute shape function derivatives
+        elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+        elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+      }
+      else if(local_surface_id<4){
+        //compute shape function derivatives
+        elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+        elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
+      }
+      else if(local_surface_id<6){
+        //compute shape function derivatives
+        elem->partial_eta_basis(basis_derivative_s1,quad_coordinate);
+        elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
+      }
+
+      //set values relevant to this surface
+      for(int node_loop=0; node_loop < 4; node_loop++){
+        surf_basis_derivative_s1(node_loop) = basis_derivative_s1(local_nodes[node_loop]);
+        surf_basis_derivative_s2(node_loop) = basis_derivative_s2(local_nodes[node_loop]);
+      }
+
+      //compute derivatives of x,y,z w.r.t the s,t coordinates of this surface; needed to compute dA in surface integral
+      //derivative of x,y,z w.r.t s
+      JT_row1(0) = 0;
+      JT_row1(1) = 0;
+      JT_row1(2) = 0;
+      for(int node_loop=0; node_loop < 4; node_loop++){
+        JT_row1(0) += nodal_positions(node_loop,0)*surf_basis_derivative_s1(node_loop);
+        JT_row1(1) += nodal_positions(node_loop,1)*surf_basis_derivative_s1(node_loop);
+        JT_row1(2) += nodal_positions(node_loop,2)*surf_basis_derivative_s1(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t t
+      JT_row2(0) = 0;
+      JT_row2(1) = 0;
+      JT_row2(2) = 0;
+      for(int node_loop=0; node_loop < 4; node_loop++){
+        JT_row2(0) += nodal_positions(node_loop,0)*surf_basis_derivative_s2(node_loop);
+        JT_row2(1) += nodal_positions(node_loop,1)*surf_basis_derivative_s2(node_loop);
+        JT_row2(2) += nodal_positions(node_loop,2)*surf_basis_derivative_s2(node_loop);
+      }
+      
+
+      //compute jacobian for this surface
+      //compute the determinant of the Jacobian
+      wedge_product = sqrt(pow(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2),2)+
+               pow(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2),2)+
+               pow(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1),2));
+
+      //compute shape functions at this point for the element type
+      elem->basis(basis_values,quad_coordinate);
+
+      // loop over nodes of this face and 
+      for(int node_count = 0; node_count < 4; node_count++){
+            
+        node_id = nodes_in_elem(current_element_index, local_nodes[node_count]);
+        //check if node is local to alter Nodal Forces vector
+        if(!map->isNodeGlobalElement(node_id)) continue;
+        node_id = map->getLocalElement(node_id);
+        
+        /*
+        //debug print block
+        std::cout << " ------------Element "<< current_element_index + 1 <<"--------------"<<std::endl;
+        std::cout <<  " = , " << " Wedge Product: " << wedge_product << " local node " << local_nodes[node_count] << " node " << node_gid + 1<< " : s " 
+        << quad_coordinate(0) << " t " << quad_coordinate(1) << " w " << quad_coordinate(2) << " basis value  "<< basis_values(local_nodes[node_count])
+        << " Nodal Force value"<< Nodal_Forces(num_dim*node_gid)+wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[0]*basis_values(local_nodes[node_count]);
+        
+        std::cout << " }"<< std::endl;
+        //end debug print block
+        */
+
+        // Accumulate force vector contribution from this quadrature point
+        for(int idim = 0; idim < num_dim; idim++){
+          if(force_density[idim]!=0)
+          //Nodal_Forces(num_dim*node_gid + idim) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
+          Nodal_Forces(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
+        }
+      }
+      }
+    }
+  }
+  }
+
+    //apply line distribution of forces
+
+    //apply point forces
+
+    //apply contribution from non-zero displacement boundary conditions
+
+    //apply body forces
+    if(body_force_flag){
+      //initialize quadrature data
+      elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
+      elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+      direct_product_count = std::pow(num_gauss_points,num_dim);
+
+      for(size_t ielem = 0; ielem < rnum_elem; ielem++){
+
+      //acquire set of nodes and nodal displacements for this local element
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+        nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+        nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+        nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+        if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
+      }
+
+      //loop over quadrature points
+      for(int iquad=0; iquad < direct_product_count; iquad++){
+
+      //set current quadrature point
+      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
+      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
+      x_quad = iquad % num_gauss_points;
+      quad_coordinate(0) = legendre_nodes_1D(x_quad);
+      quad_coordinate(1) = legendre_nodes_1D(y_quad);
+      if(num_dim==3)
+      quad_coordinate(2) = legendre_nodes_1D(z_quad);
+
+      //set current quadrature weight
+      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+      if(num_dim==3)
+      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+
+      //compute shape functions at this point for the element type
+      elem->basis(basis_values,quad_coordinate);
+
+      //compute all the necessary coordinates and derivatives at this point
+      //compute shape function derivatives
+      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+
+      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+      //derivative of x,y,z w.r.t s
+      JT_row1(0) = 0;
+      JT_row1(1) = 0;
+      JT_row1(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t t
+      JT_row2(0) = 0;
+      JT_row2(1) = 0;
+      JT_row2(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t w
+      JT_row3(0) = 0;
+      JT_row3(1) = 0;
+      JT_row3(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+      }
+    
+      //compute the determinant of the Jacobian
+      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+      if(Jacobian<0) Jacobian = -Jacobian;
+
+      //compute density
+      current_density = 0;
+      if(nodal_density_flag)
+      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+        current_density += nodal_density(node_loop)*basis_values(node_loop);
+      }
+      //default constant element density
+      else{
+        current_density = Element_Densities(ielem,0);
+      }
+
+      //debug print
+      //std::cout << "Current Density " << current_density << std::endl;
+      //look up element material properties at this point as a function of density
+      Body_Force(ielem, current_density, force_density);
+    
+      //evaluate contribution to force vector component
+      for(int ibasis=0; ibasis < nodes_per_elem; ibasis++){
+        if(!map->isNodeGlobalElement(nodes_in_elem(ielem, ibasis))) continue;
+        local_node_id = map->getLocalElement(nodes_in_elem(ielem, ibasis));
+
+        for(int idim = 0; idim < num_dim; idim++){
+            if(force_density[idim]!=0)
+            Nodal_Forces(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
+          }
+        }
+      }
+    }
+  }
+    //debug print of force vector
+    /*
+    std::cout << "---------FORCE VECTOR-------------" << std::endl;
+    for(int iforce=0; iforce < num_nodes*num_dim; iforce++)
+      std::cout << " DOF: "<< iforce+1 << ", "<< Nodal_Forces(iforce) << std::endl;
+    */
+
 }
 
 /* ----------------------------------------------------------------------
@@ -4819,4 +5675,64 @@ int FEA_Module_Elasticity::solve(){
   //*fos << std::endl;
   
   return !EXIT_SUCCESS;
+}
+
+/* -------------------------------------------------------------------------------------------
+   Communicate ghosts using the current optimization design data
+---------------------------------------------------------------------------------------------- */
+
+void Implicit_Solver::comm_variables(Teuchos::RCP<const MV> zp){
+  
+  //set density vector to the current value chosen by the optimizer
+  test_node_densities_distributed = zp;
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  Tpetra::Import<LO, GO> importer(map, all_node_map);
+
+  //comms to get ghosts
+  all_node_densities_distributed->doImport(*test_node_densities_distributed, importer, Tpetra::INSERT);
+
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
+}
+
+/* -------------------------------------------------------------------------------------------
+   update nodal displacement information in accordance with current optimization vector
+---------------------------------------------------------------------------------------------- */
+
+void Implicit_Solver::update_linear_solve(Teuchos::RCP<const MV> zp){
+  
+  //set density vector to the current value chosen by the optimizer
+  test_node_densities_distributed = zp;
+
+  assemble_matrix();
+
+  if(body_force_flag)
+    assemble_vector();
+  
+  //solve for new nodal displacements
+  int solver_exit = solve();
+  if(solver_exit == EXIT_SUCCESS){
+    std::cout << "Linear Solver Error" << std::endl <<std::flush;
+    return;
+  }
+  
+  update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
 }

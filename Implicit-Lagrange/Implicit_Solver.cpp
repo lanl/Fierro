@@ -1654,21 +1654,21 @@ void Implicit_Solver::setup_optimization_problem(){
   
   //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag);
   //compute initial mass
-  ROL::Ptr<ROL_MV> ROL_Element_Masses = ROL::makePtr<ROL_MV>(Global_Element_Masses);
+  ROL::Ptr<ROL_MV> ROL_Element_Masses = ROL::makePtr<ROL_MV>(fea_elasticity->Global_Element_Masses);
   ROL::Elementwise::ReductionSum<real_t> sumreduc;
   if(nodal_density_flag)
     design_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
     design_densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  compute_element_masses(design_densities,true);
+  fea_elasticity->compute_element_masses(design_densities,true);
   
   real_t initial_mass = ROL_Element_Masses->reduce(sumreduc);
 
   //define constraint objects
-  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag, false, 0.2);
-  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint2 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(this, nodal_density_flag, 2, false, 0.4);
-  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint3 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(this, nodal_density_flag, 3, false);
-  //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag);
+  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_elasticity, nodal_density_flag, false, 0.2);
+  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint2 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_elasticity, nodal_density_flag, 2, false, 0.4);
+  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint3 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_elasticity, nodal_density_flag, 3, false);
+  //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_elasticity, nodal_density_flag);
   ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
   //problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
   problem->addConstraint("equality Constraint 1",eq_constraint,constraint_mul);
@@ -1710,7 +1710,7 @@ void Implicit_Solver::setup_optimization_problem(){
   solver.solve(*fos);
 
   //print mass constraint for final design vector
-  compute_element_masses(design_densities,false);
+  fea_elasticity->compute_element_masses(design_densities,false);
   real_t final_mass = ROL_Element_Masses->reduce(sumreduc);
   if(myrank==0)
     std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
@@ -2434,7 +2434,7 @@ void Implicit_Solver::collect_information(){
   Teuchos::RCP<MV> collected_node_displacements_distributed = Teuchos::rcp(new MV(global_reduce_dof_map, 1));
 
   //comms to collect
-  collected_node_displacements_distributed->doImport(*node_displacements_distributed, dof_collection_importer, Tpetra::INSERT);
+  collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
 
   //collected nodal density information
   Teuchos::RCP<MV> collected_node_densities_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
@@ -2477,7 +2477,7 @@ void Implicit_Solver::collect_information(){
     Teuchos::RCP<MV> collected_node_strains_distributed = Teuchos::rcp(new MV(global_reduce_map, strain_count));
 
     //comms to collect
-    collected_node_strains_distributed->doImport(*node_strains_distributed, node_collection_importer, Tpetra::INSERT);
+    collected_node_strains_distributed->doImport(*(fea_elasticity->node_strains_distributed), node_collection_importer, Tpetra::INSERT);
 
     //debug print
     //std::ostream &out = std::cout;
@@ -2490,7 +2490,7 @@ void Implicit_Solver::collect_information(){
 
     //host view to print from
     if(myrank==0)
-    collected_node_strains = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      collected_node_strains = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   
 }
@@ -2513,7 +2513,7 @@ void Implicit_Solver::tecplot_writer(){
   int temp_convert;
   int displace_geometry = 1;
   int output_strain_flag = simparam->output_strain_flag;
-  if(output_strain_flag) compute_nodal_strains();
+  if(output_strain_flag) fea_elasticity->compute_nodal_strains();
   collect_information();
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
@@ -3276,453 +3276,6 @@ void Implicit_Solver::init_design(){
     //*fos << std::endl;
   }
 
-  //create global vectors for mass and moment of inertia
-  Global_Element_Masses = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_x = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_y = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_z = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_xx = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_yy = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_zz = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_xy = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_xz = Teuchos::rcp(new MV(element_map, 1));
-  Global_Element_Moments_of_Inertia_yz = Teuchos::rcp(new MV(element_map, 1));
-
-}
-
-/* ----------------------------------------------------------------------
-   Construct the global applied force vector
-------------------------------------------------------------------------- */
-
-void Implicit_Solver::assemble_vector(){
-  //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  //local variable for host view in the dual view
-  host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  const_host_vec_array Element_Densities;
-  //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
-  const_host_vec_array all_node_densities;
-  if(nodal_density_flag)
-  all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  else
-  Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  int num_bdy_patches_in_set;
-  size_t patch_id;
-  GO current_node_index;
-  LO local_node_id;
-  LO node_id;
-  int num_boundary_sets = num_boundary_conditions;
-  int surface_force_set_id = 0;
-  int num_dim = simparam->num_dim;
-  int nodes_per_elem = max_nodes_per_element;
-  int num_gauss_points = simparam->num_gauss_points;
-  int z_quad,y_quad,x_quad, direct_product_count;
-  int current_element_index, local_surface_id, surf_dim1, surf_dim2;
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
-  real_t pointer_quad_coordinate[num_dim];
-  real_t pointer_quad_coordinate_weight[num_dim];
-  real_t pointer_interpolated_point[num_dim];
-  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
-  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
-  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
-  
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row3(num_dim);
-
-  real_t pointer_basis_values[nodes_per_elem];
-  real_t pointer_basis_derivative_s1[nodes_per_elem];
-  real_t pointer_basis_derivative_s2[nodes_per_elem];
-  real_t pointer_basis_derivative_s3[nodes_per_elem];
-  ViewCArray<real_t> basis_values(pointer_basis_values,nodes_per_elem);
-  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,nodes_per_elem);
-  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,nodes_per_elem);
-  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,nodes_per_elem);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
-
-   //force vector initialization
-  for(int i=0; i < num_dim*nlocal_nodes; i++)
-    Nodal_Forces(i,0) = 0;
-
-  /*Loop through boundary sets and check if they apply surface forces.
-  These sets can have overlapping nodes since applied loading conditions
-  are assumed to be additive*/
-  for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
-    if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION) continue;
-    //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
-    num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
-    
-    force_density[0] = Boundary_Surface_Force_Densities(surface_force_set_id,0);
-    force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
-    force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
-    surface_force_set_id++;
-
-    real_t pointer_basis_values[elem->num_basis()];
-    ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
-
-    //initialize weights
-    elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-    elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-
-    direct_product_count = std::pow(num_gauss_points,num_dim-1);
-    //loop over boundary sets for their applied forces; use quadrature for distributed forces
-    for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
-                
-    // get the global id for this boundary patch
-    patch_id = Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-    Surface_Nodes = Boundary_Patches(patch_id).node_set;
-    //find element index this boundary patch is on
-    current_element_index = Boundary_Patches(patch_id).element_id;
-    local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-    //debug print of local surface ids
-    //std::cout << " LOCAL SURFACE IDS " << std::endl;
-    //std::cout << local_surface_id << std::endl;
-
-    //loop over quadrature points if this is a distributed force
-    for(int iquad=0; iquad < direct_product_count; iquad++){
-      
-      if(Element_Types(current_element_index)==elements::elem_types::Hex8){
-
-      int local_nodes[4];
-      //set current quadrature point
-      y_quad = iquad / num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      
-      if(local_surface_id<2){
-      surf_dim1 = 0;
-      surf_dim2 = 1;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      //set to -1 or 1 for an isoparametric space
-        if(local_surface_id%2==0)
-        quad_coordinate(2) = -1;
-        else
-        quad_coordinate(2) = 1;
-      }
-      else if(local_surface_id<4){
-      surf_dim1 = 0;
-      surf_dim2 = 2;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(2) = legendre_nodes_1D(y_quad);
-      //set to -1 or 1 for an isoparametric space
-        if(local_surface_id%2==0)
-        quad_coordinate(1) = -1;
-        else
-        quad_coordinate(1) = 1;
-      }
-      else if(local_surface_id<6){
-      surf_dim1 = 1;
-      surf_dim2 = 2;
-      quad_coordinate(1) = legendre_nodes_1D(x_quad);
-      quad_coordinate(2) = legendre_nodes_1D(y_quad);
-      //set to -1 or 1 for an isoparametric space
-        if(local_surface_id%2==0)
-        quad_coordinate(0) = -1;
-        else
-        quad_coordinate(0) = 1;
-      }
-      
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-
-      //find local dof set for this surface
-      local_nodes[0] = elem->surface_to_dof_lid(local_surface_id,0);
-      local_nodes[1] = elem->surface_to_dof_lid(local_surface_id,1);
-      local_nodes[2] = elem->surface_to_dof_lid(local_surface_id,2);
-      local_nodes[3] = elem->surface_to_dof_lid(local_surface_id,3);
-
-      //acquire set of nodes for this face
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        current_node_index = Surface_Nodes(node_loop);
-        local_node_id = all_node_map->getLocalElement(current_node_index);
-        nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-        nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-        nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      }
-
-      if(local_surface_id<2){
-        //compute shape function derivatives
-        elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-        elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      }
-      else if(local_surface_id<4){
-        //compute shape function derivatives
-        elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-        elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
-      }
-      else if(local_surface_id<6){
-        //compute shape function derivatives
-        elem->partial_eta_basis(basis_derivative_s1,quad_coordinate);
-        elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
-      }
-
-      //set values relevant to this surface
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        surf_basis_derivative_s1(node_loop) = basis_derivative_s1(local_nodes[node_loop]);
-        surf_basis_derivative_s2(node_loop) = basis_derivative_s2(local_nodes[node_loop]);
-      }
-
-      //compute derivatives of x,y,z w.r.t the s,t coordinates of this surface; needed to compute dA in surface integral
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        JT_row1(0) += nodal_positions(node_loop,0)*surf_basis_derivative_s1(node_loop);
-        JT_row1(1) += nodal_positions(node_loop,1)*surf_basis_derivative_s1(node_loop);
-        JT_row1(2) += nodal_positions(node_loop,2)*surf_basis_derivative_s1(node_loop);
-      }
-
-      //derivative of x,y,z w.r.t t
-      JT_row2(0) = 0;
-      JT_row2(1) = 0;
-      JT_row2(2) = 0;
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        JT_row2(0) += nodal_positions(node_loop,0)*surf_basis_derivative_s2(node_loop);
-        JT_row2(1) += nodal_positions(node_loop,1)*surf_basis_derivative_s2(node_loop);
-        JT_row2(2) += nodal_positions(node_loop,2)*surf_basis_derivative_s2(node_loop);
-      }
-      
-
-      //compute jacobian for this surface
-      //compute the determinant of the Jacobian
-      wedge_product = sqrt(pow(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2),2)+
-               pow(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2),2)+
-               pow(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1),2));
-
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
-
-      // loop over nodes of this face and 
-      for(int node_count = 0; node_count < 4; node_count++){
-            
-        node_id = nodes_in_elem(current_element_index, local_nodes[node_count]);
-        //check if node is local to alter Nodal Forces vector
-        if(!map->isNodeGlobalElement(node_id)) continue;
-        node_id = map->getLocalElement(node_id);
-        
-        /*
-        //debug print block
-        std::cout << " ------------Element "<< current_element_index + 1 <<"--------------"<<std::endl;
-        std::cout <<  " = , " << " Wedge Product: " << wedge_product << " local node " << local_nodes[node_count] << " node " << node_gid + 1<< " : s " 
-        << quad_coordinate(0) << " t " << quad_coordinate(1) << " w " << quad_coordinate(2) << " basis value  "<< basis_values(local_nodes[node_count])
-        << " Nodal Force value"<< Nodal_Forces(num_dim*node_gid)+wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[0]*basis_values(local_nodes[node_count]);
-        
-        std::cout << " }"<< std::endl;
-        //end debug print block
-        */
-
-        // Accumulate force vector contribution from this quadrature point
-        for(int idim = 0; idim < num_dim; idim++){
-          if(force_density[idim]!=0)
-          //Nodal_Forces(num_dim*node_gid + idim) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
-          Nodal_Forces(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
-        }
-      }
-      }
-    }
-  }
-  }
-
-    //apply line distribution of forces
-
-    //apply point forces
-
-    //apply contribution from non-zero displacement boundary conditions
-
-    //apply body forces
-    if(body_force_flag){
-      //initialize quadrature data
-      elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-      elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-      direct_product_count = std::pow(num_gauss_points,num_dim);
-
-      for(size_t ielem = 0; ielem < rnum_elem; ielem++){
-
-      //acquire set of nodes and nodal displacements for this local element
-      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-        local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
-        nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-        nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-        nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-        if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
-      }
-
-      //loop over quadrature points
-      for(int iquad=0; iquad < direct_product_count; iquad++){
-
-      //set current quadrature point
-      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-      x_quad = iquad % num_gauss_points;
-      quad_coordinate(0) = legendre_nodes_1D(x_quad);
-      quad_coordinate(1) = legendre_nodes_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate(2) = legendre_nodes_1D(z_quad);
-
-      //set current quadrature weight
-      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-      if(num_dim==3)
-      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-      else
-      quad_coordinate_weight(2) = 1;
-      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
-
-      //compute shape functions at this point for the element type
-      elem->basis(basis_values,quad_coordinate);
-
-      //compute all the necessary coordinates and derivatives at this point
-      //compute shape function derivatives
-      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
-
-      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-      //derivative of x,y,z w.r.t s
-      JT_row1(0) = 0;
-      JT_row1(1) = 0;
-      JT_row1(2) = 0;
-      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-      }
-
-      //derivative of x,y,z w.r.t t
-      JT_row2(0) = 0;
-      JT_row2(1) = 0;
-      JT_row2(2) = 0;
-      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-      }
-
-      //derivative of x,y,z w.r.t w
-      JT_row3(0) = 0;
-      JT_row3(1) = 0;
-      JT_row3(2) = 0;
-      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-      }
-    
-      //compute the determinant of the Jacobian
-      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      if(Jacobian<0) Jacobian = -Jacobian;
-
-      //compute density
-      current_density = 0;
-      if(nodal_density_flag)
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        current_density += nodal_density(node_loop)*basis_values(node_loop);
-      }
-      //default constant element density
-      else{
-        current_density = Element_Densities(ielem,0);
-      }
-
-      //debug print
-      //std::cout << "Current Density " << current_density << std::endl;
-      //look up element material properties at this point as a function of density
-      Body_Force(ielem, current_density, force_density);
-    
-      //evaluate contribution to force vector component
-      for(int ibasis=0; ibasis < nodes_per_elem; ibasis++){
-        if(!map->isNodeGlobalElement(nodes_in_elem(ielem, ibasis))) continue;
-        local_node_id = map->getLocalElement(nodes_in_elem(ielem, ibasis));
-
-        for(int idim = 0; idim < num_dim; idim++){
-            if(force_density[idim]!=0)
-            Nodal_Forces(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
-          }
-        }
-      }
-    }
-  }
-    //debug print of force vector
-    /*
-    std::cout << "---------FORCE VECTOR-------------" << std::endl;
-    for(int iforce=0; iforce < num_nodes*num_dim; iforce++)
-      std::cout << " DOF: "<< iforce+1 << ", "<< Nodal_Forces(iforce) << std::endl;
-    */
-
-}
-
-/* -------------------------------------------------------------------------------------------
-   Communicate ghosts using the current optimization design data
----------------------------------------------------------------------------------------------- */
-
-void Implicit_Solver::comm_variables(Teuchos::RCP<const MV> zp){
-  
-  //set density vector to the current value chosen by the optimizer
-  test_node_densities_distributed = zp;
-  
-  //debug print of design vector
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(myrank==0)
-      //*fos << "Density data :" << std::endl;
-      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
-
-  //communicate design densities
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
-
-  //comms to get ghosts
-  all_node_densities_distributed->doImport(*test_node_densities_distributed, importer, Tpetra::INSERT);
-
-  //update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
-}
-
-/* -------------------------------------------------------------------------------------------
-   update nodal displacement information in accordance with current optimization vector
----------------------------------------------------------------------------------------------- */
-
-void Implicit_Solver::update_linear_solve(Teuchos::RCP<const MV> zp){
-  
-  //set density vector to the current value chosen by the optimizer
-  test_node_densities_distributed = zp;
-
-  assemble_matrix();
-
-  if(body_force_flag)
-    assemble_vector();
-  
-  //solve for new nodal displacements
-  int solver_exit = solve();
-  if(solver_exit == EXIT_SUCCESS){
-    std::cout << "Linear Solver Error" << std::endl <<std::flush;
-    return;
-  }
-  
-  update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
 }
 
 /* ----------------------------------------------------------------------

@@ -91,8 +91,6 @@ public:
 
   void init_design();
 
-  void comm_variables(Teuchos::RCP<const MV> zp);
-
   void collect_information();
 
   void setup_optimization_problem();
@@ -187,7 +185,9 @@ public:
 
   //Global arrays with collected data used to print
   const_host_vec_array collected_node_coords;
+  const_host_vec_array collected_node_displacements;
   const_host_vec_array collected_node_densities;
+  const_host_vec_array collected_node_strains;
   const_host_elem_conn_array collected_nodes_in_elem;
   
   //Boundary Conditions Data
