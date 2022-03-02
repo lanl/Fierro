@@ -20,7 +20,7 @@
 #include <ROL_TpetraMultiVector.hpp>
 #include "ROL_Constraint.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
-#include "Parallel_Nonlinear_Solver.h"
+#include "FEA_Module_Elasticity.h"
 
 class BoundedStrainConstraint_TopOpt : public ROL::Constraint<real_t> {
   
@@ -51,7 +51,7 @@ class BoundedStrainConstraint_TopOpt : public ROL::Constraint<real_t> {
 
 private:
 
-  Parallel_Nonlinear_Solver *FEM_;
+  FEA_Module_Elasticity *FEM_;
   ROL::Ptr<MV> Element_Masses;
   ROL::Ptr<ROL_MV> ROL_Element_Masses;
   real_t maximum_strain_;
@@ -70,7 +70,7 @@ public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
 
-  BoundedStrainConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, real_t maximum_strain) 
+  BoundedStrainConstraint_TopOpt(FEA_Module_Elasticity *FEM, bool nodal_density_flag, real_t maximum_strain) 
     : FEM_(FEM), useLC_(true) {
       nodal_density_flag_ = nodal_density_flag;
       Element_Masses = ROL::makePtr<MV>(FEM_->element_map,1,true);

@@ -1,41 +1,3 @@
-/* 
-
-Example code for smoothing some field on the mesh. 
-
-
-A representative mesh is shown:
-
-p
-*---------*---------*
-|         |         |
-|         |         |
-|    *z   |    *    |
-|         |         |
-|         |         |
-*---------*---------*
-|         |         |
-|         |         |
-|    *    |    *    |
-|         |         |
-|         |         |
-*---------*---------*
-
-The smoothing operation follows a two step process:
-
-1. ) Loop over all the nodes (p) in a cell and 
-average the field to the cell center materhial
-point (z). 
-
-2.) Loop over all of the cells (z) connected to a node (p)
-and average values to the nodal field.
-
-
-Each cell is within an element, and the number of cells is 
-defined by the user using the p_order variable in the input
-
-num_cells in element = (p_order*2)^3
-
-*/
 
 #include <iostream>
 #include <fstream>
@@ -51,9 +13,6 @@ num_cells in element = (p_order*2)^3
 #include <Teuchos_oblackholestream.hpp>
 #include <Teuchos_Tuple.hpp>
 #include <Teuchos_VerboseObject.hpp>
-#include <Teuchos_SerialDenseMatrix.hpp>
-#include <Teuchos_SerialDenseVector.hpp>
-#include <Teuchos_SerialDenseSolver.hpp>
 
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
@@ -66,7 +25,6 @@ num_cells in element = (p_order*2)^3
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
-#include "MatrixMarket_Tpetra.hpp"
 #include <set>
 
 #include "elements.h"
@@ -75,9 +33,9 @@ num_cells in element = (p_order*2)^3
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters.h"
-#include "Amesos2_Version.hpp"
-#include "Amesos2.hpp"
 #include "Implicit_Solver.h"
+#include "FEA_Module_Elasticity.h"
+
 
 //Optimization Package
 #include "ROL_Algorithm.hpp"
@@ -103,21 +61,6 @@ num_cells in element = (p_order*2)^3
 #include "Strain_Energy_Constraint.h"
 #include "Strain_Energy_Minimize.h"
 #include "Strain_Energy_Objective.h"
-
-//Multigrid Solver
-#include <Xpetra_Operator.hpp>
-#include <Xpetra_Map.hpp>
-#include <Xpetra_MultiVector.hpp>
-#include <MueLu.hpp>
-#include <MueLu_BaseClass.hpp>
-#ifdef HAVE_MUELU_EXPLICIT_INSTANTIATION
-#include <MueLu_ExplicitInstantiation.hpp>
-#endif
-#include <MueLu_Level.hpp>
-#include <MueLu_MutuallyExclusiveTime.hpp>
-#include <MueLu_ParameterListInterpreter.hpp>
-#include <MueLu_Utilities.hpp>
-#include <DriverCore.hpp>
 
 //debug and performance includes
 #include <sys/time.h>
@@ -249,31 +192,34 @@ void Implicit_Solver::run(int argc, char *argv[]){
     //set applied loading conditions
     generate_applied_loads();
 
+    //construct FEA module
+    fea_elasticity = new FEA_Module_Elasticity();
+
     if(myrank == 0)
     std::cout << "Starting init assembly" << std::endl <<std::flush;
     //allocate and fill sparse structures needed for global solution
-    init_assembly();
+    fea_elasticity->init_assembly();
 
     //initialize and initialize TO design variable storage
     init_design();
     
     //assemble the global solution (stiffness matrix etc. and nodal forces)
-    assemble_matrix();
+    fea_elasticity->assemble_matrix();
 
     if(myrank == 0)
     std::cout << "Finished matrix assembly" << std::endl <<std::flush;
     
-    assemble_vector();
+    fea_elasticity->assemble_vector();
     //return;
     //find each element's volume
-    compute_element_volumes();
+    fea_elasticity->compute_element_volumes();
 
-    linear_solver_parameters();
+    fea_elasticity->linear_solver_parameters();
     
     if(myrank == 0)
     std::cout << "Starting First Solve" << std::endl <<std::flush;
     
-    int solver_exit = solve();
+    int solver_exit = fea_elasticity->solve();
     if(solver_exit == EXIT_SUCCESS){
       std::cout << "Linear Solver Error" << std::endl <<std::flush;
       return;
@@ -1507,23 +1453,6 @@ void Implicit_Solver::init_maps(){
   //create distributed multivector of the local node data and all (local + ghost) node storage
   node_coords_distributed = Teuchos::rcp(new MV(map, dual_node_coords));
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
-  node_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
-  all_node_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
-  //all_node_nconn_distributed = Teuchos::rcp(new MCONN(all_node_map, 1));
-  if(num_dim==3) strain_count = 6;
-  else strain_count = 3;
-  node_strains_distributed = Teuchos::rcp(new MV(map, strain_count));
-  all_node_strains_distributed = Teuchos::rcp(new MV(all_node_map, strain_count));
-  Global_Nodal_Forces = Teuchos::rcp(new MV(local_dof_map, dual_nodal_forces));
-
-  //initialize displacements to 0
-  //local variable for host view in the dual view
-  host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  host_vec_array node_displacements = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
-    node_displacements(init,0) = 0;
-  for(int init = 0; init < all_dof_map->getNodeNumElements(); init++)
-    all_node_displacements(init,0) = 0;
   
   //debug print
   //std::ostream &out = std::cout;

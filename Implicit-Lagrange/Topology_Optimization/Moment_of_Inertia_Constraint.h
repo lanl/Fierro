@@ -20,7 +20,7 @@
 #include <ROL_TpetraMultiVector.hpp>
 #include "ROL_Constraint.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
-#include "Parallel_Nonlinear_Solver.h"
+#include "FEA_Module_Elasticity.h"
 
 class MomentOfInertiaConstraint_TopOpt : public ROL::Constraint<real_t> {
   
@@ -51,7 +51,7 @@ class MomentOfInertiaConstraint_TopOpt : public ROL::Constraint<real_t> {
 
 private:
 
-  Parallel_Nonlinear_Solver *FEM_;
+  FEA_Module_Elasticity *FEM_;
   ROL::Ptr<ROL_MV> ROL_Element_Masses;
   ROL::Ptr<ROL_MV> ROL_Element_Moments1;
   ROL::Ptr<ROL_MV> ROL_Element_Moments2;
@@ -81,7 +81,7 @@ public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
 
-  MomentOfInertiaConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, int inertia_component, bool inequality_flag=true, real_t constraint_value = 0) 
+  MomentOfInertiaConstraint_TopOpt(FEA_Module_Elasticity *FEM, bool nodal_density_flag, int inertia_component, bool inequality_flag=true, real_t constraint_value = 0) 
     : FEM_(FEM) {
     
     if(inertia_component > 5) { std::cout << "SPECIFIED MOMENT OF INERTIA CONSTRAINT COMPONENT CANNOT EXCEED 5" << std::endl; }

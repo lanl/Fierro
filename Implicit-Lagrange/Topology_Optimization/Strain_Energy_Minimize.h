@@ -20,7 +20,7 @@
 #include <ROL_TpetraMultiVector.hpp>
 #include "ROL_Objective.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
-#include "Parallel_Nonlinear_Solver.h"
+#include "FEA_Module_Elasticity.h"
 
 class StrainEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
   
@@ -51,7 +51,7 @@ class StrainEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
 
 private:
 
-  Parallel_Nonlinear_Solver *FEM_;
+  FEA_Module_Elasticity *FEM_;
   ROL::Ptr<ROL_MV> ROL_Force;
   ROL::Ptr<ROL_MV> ROL_Displacements;
   ROL::Ptr<ROL_MV> ROL_Gradients;
@@ -72,7 +72,7 @@ public:
   bool nodal_density_flag_;
   size_t last_comm_step, last_solve_step, current_step;
 
-  StrainEnergyMinimize_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag) 
+  StrainEnergyMinimize_TopOpt(FEA_Module_Elasticity *FEM, bool nodal_density_flag) 
     : FEM_(FEM), useLC_(true) {
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;

@@ -6,7 +6,7 @@
 class FEA_Module_Elasticity: public FEA_Module{
 
 public:
-  FEA_Module_Elasticity();
+  FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer);
   ~FEA_Module_Elasticity();
   
   //initializes memory for arrays used in the global stiffness matrix assembly
@@ -98,41 +98,17 @@ public:
   //Local FEA data including ghosts
   size_t nall_nodes;
   size_t rnum_elem;
-  dual_vec_array dual_all_node_coords; //coordinates of the nodes including ghosts
-  dual_vec_array dual_all_node_displacements; //coordinates of the nodes including ghosts
-  dual_vec_array dual_all_node_densities; //includes ghost data of the topology optimization design variable
 
   //Global FEA data
-  long long int num_nodes, num_elem;
-  Teuchos::RCP<const Teuchos::Comm<int> > comm;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > map; //map of node indices
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > ghost_node_map; //map of node indices with ghosts on each rank
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_node_map; //map of node indices with ghosts on each rank
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > element_map; //non overlapping map of elements owned by each rank used in reduction ops
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_element_map; //overlapping map of elements connected to the local nodes in each rank
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
-  Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
-  Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
-  Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> node_displacements_distributed;
   Teuchos::RCP<MV> node_strains_distributed;
-  Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> all_node_displacements_distributed;
   Teuchos::RCP<MV> all_cached_node_displacements_distributed;
   Teuchos::RCP<MV> all_node_strains_distributed;
-  Teuchos::RCP<MV> design_node_densities_distributed;
-  Teuchos::RCP<const MV> test_node_densities_distributed;
-  Teuchos::RCP<MV> all_node_densities_distributed;
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
   Teuchos::RCP<MV> Global_Nodal_Forces;
-  Teuchos::RCP<MV> lower_bound_node_densities_distributed;
-  Teuchos::RCP<MV> upper_bound_node_densities_distributed;
   Teuchos::RCP<MV> mass_gradients_distributed;
   Teuchos::RCP<MV> center_of_mass_gradients_distributed;
-  Teuchos::RCP<MV> Global_Element_Densities_Upper_Bound;
-  Teuchos::RCP<MV> Global_Element_Densities_Lower_Bound;
-  Teuchos::RCP<MV> Global_Element_Densities;
   Teuchos::RCP<MV> Global_Element_Volumes;
   Teuchos::RCP<MV> Global_Element_Masses;
   Teuchos::RCP<MV> Global_Element_Moments_x;
@@ -223,10 +199,6 @@ public:
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
 
   //multigrid solver data and functions
-  using equil_type = decltype (Tpetra::computeRowAndColumnOneNorms (*Global_Stiffness_Matrix, false));
-  using mag_type = typename Kokkos::ArithTraits<real_t>::mag_type;
-  using scaling_view_type = Kokkos::View<mag_type*, device_type>;
-  equil_type equibResult;
   Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
   Teuchos::RCP<MV> X;

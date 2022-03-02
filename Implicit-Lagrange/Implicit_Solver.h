@@ -38,22 +38,6 @@ namespace elements{
   class ref_element;
 }
 
-namespace MueLu{
-  template<class floattype, class local_ind, class global_ind, class nodetype> 
-  class Hierarchy;
-}
-
-namespace Xpetra{
-  template<class floattype, class local_ind, class global_ind, class nodetype> 
-  class Operator;
-  
-  template<class floattype, class local_ind, class global_ind, class nodetype> 
-  class MultiVector;
-
-  template<class floattype, class local_ind, class global_ind, class nodetype> 
-  class Matrix;
-}
-
 class Implicit_Solver: public Solver{
 
 public:
@@ -104,51 +88,14 @@ public:
   
   //setup ghosts and element maps
   void init_maps();
-  
-  //initializes memory for arrays used in the global stiffness matrix assembly
-  void init_assembly();
 
   void init_design();
 
-  void assemble_matrix();
-
-  void assemble_vector();
-
-  int solve();
-
-  void linear_solver_parameters();
-
   void comm_variables(Teuchos::RCP<const MV> zp);
-
-  void update_linear_solve(Teuchos::RCP<const MV> zp);
 
   void collect_information();
 
-  void compute_element_volumes();
-
-  void compute_element_masses(const_host_vec_array design_densities, bool max_flag);
-
-  void compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component);
-
-  void compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component);
-
-  void compute_nodal_gradients(const_host_vec_array design_densities, host_vec_array gradients);
-
-  void compute_moment_gradients(const_host_vec_array design_densities, host_vec_array gradients, int moment_component);
-
-  void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component);
-
-  void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
-
-  void compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
-
-  void compute_nodal_strains();
-
   void setup_optimization_problem();
-
-  void local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
-
-  void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
   void init_boundaries();
@@ -167,17 +114,6 @@ public:
   //void ensight_writer();
 
   void tecplot_writer();
-
-  void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
-
-  void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
-
-  void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
-
-  void Body_Force(size_t ielem, real_t density, real_t *forces);
-  void Gradient_Body_Force(size_t ielem, real_t density, real_t *forces);
-
-  void Displacement_Boundary_Conditions();
 
   void init_boundary_sets(int num_boundary_sets);
 
@@ -205,25 +141,17 @@ public:
   
 
   class Simulation_Parameters *simparam;
+  class FEA_Module_Elasticity *fea_elasticity;
   
   //Local FEA data
   size_t nlocal_nodes;
   dual_vec_array dual_node_coords; //coordinates of the nodes
-  dual_vec_array dual_node_displacements; //first three indices of second dim should be positions
   dual_vec_array dual_node_densities; //topology optimization design variable
-  dual_vec_array dual_nodal_forces;
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
   host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
-  RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
-  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
   //CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Forces;
-  CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Results; //result of linear solve; typically displacements and densities
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;
@@ -233,9 +161,6 @@ public:
   //Local FEA data including ghosts
   size_t nall_nodes;
   size_t rnum_elem;
-  dual_vec_array dual_all_node_coords; //coordinates of the nodes including ghosts
-  dual_vec_array dual_all_node_displacements; //coordinates of the nodes including ghosts
-  dual_vec_array dual_all_node_densities; //includes ghost data of the topology optimization design variable
 
   //Global FEA data
   long long int num_nodes, num_elem;
@@ -250,41 +175,19 @@ public:
   Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
-  Teuchos::RCP<MV> node_displacements_distributed;
-  Teuchos::RCP<MV> node_strains_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
-  Teuchos::RCP<MV> all_node_displacements_distributed;
-  Teuchos::RCP<MV> all_cached_node_displacements_distributed;
-  Teuchos::RCP<MV> all_node_strains_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
   Teuchos::RCP<const MV> test_node_densities_distributed;
   Teuchos::RCP<MV> all_node_densities_distributed;
-  Teuchos::RCP<MAT> Global_Stiffness_Matrix;
-  Teuchos::RCP<MV> Global_Nodal_Forces;
   Teuchos::RCP<MV> lower_bound_node_densities_distributed;
   Teuchos::RCP<MV> upper_bound_node_densities_distributed;
-  Teuchos::RCP<MV> mass_gradients_distributed;
-  Teuchos::RCP<MV> center_of_mass_gradients_distributed;
   Teuchos::RCP<MV> Global_Element_Densities_Upper_Bound;
   Teuchos::RCP<MV> Global_Element_Densities_Lower_Bound;
   Teuchos::RCP<MV> Global_Element_Densities;
-  Teuchos::RCP<MV> Global_Element_Volumes;
-  Teuchos::RCP<MV> Global_Element_Masses;
-  Teuchos::RCP<MV> Global_Element_Moments_x;
-  Teuchos::RCP<MV> Global_Element_Moments_y;
-  Teuchos::RCP<MV> Global_Element_Moments_z;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xx;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yy;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_zz;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xy;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xz;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yz;
 
   //Global arrays with collected data used to print
   const_host_vec_array collected_node_coords;
-  const_host_vec_array collected_node_displacements;
   const_host_vec_array collected_node_densities;
-  const_host_vec_array collected_node_strains;
   const_host_elem_conn_array collected_nodes_in_elem;
   
   //Boundary Conditions Data
@@ -298,7 +201,7 @@ public:
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches_strides;
 
   //pointer to FEA solver object passed to objectives and constraints
-  Teuchos::RCP<Implicit_Solver> FEM_pass;
+  Teuchos::RCP<FEA_Module_Elasticity> FEM_pass;
 
   //element selection parameters and data
   size_t max_nodes_per_element;
@@ -366,20 +269,6 @@ public:
   using mag_type = typename Kokkos::ArithTraits<real_t>::mag_type;
   using scaling_view_type = Kokkos::View<mag_type*, device_type>;
   equil_type equibResult;
-  Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
-  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
-  Teuchos::RCP<MV> X;
-  Teuchos::RCP<MV> unbalanced_B;
-  Teuchos::RCP<MV> balanced_B;
-  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xbalanced_B;
-  Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
-  Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_original_map;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_reduced_dof_original_map;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_map;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Free_Indices;
-  bool Hierarchy_Constructed;
   void equilibrateMatrix(Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type> > &Axpetra, std::string equilibrate);
   void preScaleRightHandSides (Tpetra::MultiVector<real_t,LO,GO,node_type>& B, std::string equilibrate);
   void preScaleInitialGuesses (Tpetra::MultiVector<real_t,LO,GO,node_type>& X, std::string equilibrate);
@@ -388,6 +277,7 @@ public:
   void elementWiseDivideMultiVector (MV& X, scaling_view_type& scalingFactors,bool a);
   void elementWiseMultiply (vec_array& X, scaling_view_type& scalingFactors, LO numRows, bool takeSquareRootsOfScalingFactors);
   void elementWiseDivide (vec_array& X, scaling_view_type& scalingFactors, LO numRows, bool takeSquareRootsOfScalingFactors);
+
   //division functor
   class ElementWiseDivide {
     public:
@@ -475,16 +365,6 @@ public:
       bool takeAbsoluteValueOfScalingFactors;
       bool takeSquareRootsOfScalingFactors;
   };
-
-  //inertial properties
-  real_t mass, center_of_mass[3], moments_of_inertia[6];
-
-  //runtime flags
-  bool mass_init, com_init[3];
-
-  //update counters (first attempt at reducing redundant calls through ROL for Moments of Inertia and Center of Mass)
-  int mass_update, com_update[3];
-  int mass_gradient_update, com_gradient_update[3];
   
 };
 

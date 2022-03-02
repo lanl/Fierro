@@ -20,7 +20,7 @@
 #include <ROL_TpetraMultiVector.hpp>
 #include "ROL_Constraint.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
-#include "Parallel_Nonlinear_Solver.h"
+#include "FEA_Module_Elasticity.h"
 
 class MassConstraint_TopOpt : public ROL::Constraint<real_t> {
   
@@ -51,7 +51,7 @@ class MassConstraint_TopOpt : public ROL::Constraint<real_t> {
 
 private:
 
-  Parallel_Nonlinear_Solver *FEM_;
+  FEA_Module_Elasticity *FEM_;
   ROL::Ptr<ROL_MV> ROL_Element_Masses;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
@@ -72,7 +72,7 @@ public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
 
-  MassConstraint_TopOpt(Parallel_Nonlinear_Solver *FEM, bool nodal_density_flag, bool inequality_flag=true, real_t constraint_value=0) 
+  MassConstraint_TopOpt(FEA_Module_Elasticity *FEM, bool nodal_density_flag, bool inequality_flag=true, real_t constraint_value=0) 
     : FEM_(FEM) {
 
     nodal_density_flag_ = nodal_density_flag;

@@ -1,6 +1,6 @@
 set(Class_SRC Topology_Optimization/Simulation_Parameters.cpp node_combination.cpp)
 set(Implicit_Solver_SRC Implicit_Solver.cpp)
-set(FEA_physics_modules/FEA_Module.cpp FEA_physics_modules/FEA_Module_Elasticity.cpp FEA_physics_modules/Matrix_Equilibration.cpp )
+set(FEA_Physics_Modules/FEA_Module.cpp FEA_Physics_Modules/FEA_Module_Elasticity.cpp FEA_Physics_Modules/Matrix_Equilibration.cpp )
 set(Solver_SRC_CXX main.cpp Solver.cpp)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -23,7 +23,7 @@ set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
 
 include_directories(Parallel_TO)
-include_directories(FEA_physics_modules)
+include_directories(FEA_Physics_Modules)
 
 INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})

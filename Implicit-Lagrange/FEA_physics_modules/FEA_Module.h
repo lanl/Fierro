@@ -20,11 +20,13 @@
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
 
+//forward declare
+class Implicit_Solver;
 
 class FEA_Module{
 
 public:
-  FEA_Module();
+  FEA_Module(Implicit_Solver *Solver_Pointer);
   ~FEA_Module();
 
   //Trilinos type definitions
@@ -115,13 +117,8 @@ public:
   host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
-  //CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Forces;
-  CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Results; //result of linear solve; typically displacements and densities
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
 
   //Ghost data on this MPI rank
@@ -132,9 +129,6 @@ public:
   //Local FEA data including ghosts
   size_t nall_nodes;
   size_t rnum_elem;
-  dual_vec_array dual_all_node_coords; //coordinates of the nodes including ghosts
-  dual_vec_array dual_all_node_displacements; //coordinates of the nodes including ghosts
-  dual_vec_array dual_all_node_densities; //includes ghost data of the topology optimization design variable
 
   //Global FEA data
   long long int num_nodes, num_elem;
@@ -149,41 +143,15 @@ public:
   Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
-  Teuchos::RCP<MV> node_displacements_distributed;
-  Teuchos::RCP<MV> node_strains_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
-  Teuchos::RCP<MV> all_node_displacements_distributed;
-  Teuchos::RCP<MV> all_cached_node_displacements_distributed;
-  Teuchos::RCP<MV> all_node_strains_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
   Teuchos::RCP<const MV> test_node_densities_distributed;
   Teuchos::RCP<MV> all_node_densities_distributed;
-  Teuchos::RCP<MAT> Global_Stiffness_Matrix;
-  Teuchos::RCP<MV> Global_Nodal_Forces;
-  Teuchos::RCP<MV> lower_bound_node_densities_distributed;
-  Teuchos::RCP<MV> upper_bound_node_densities_distributed;
-  Teuchos::RCP<MV> mass_gradients_distributed;
-  Teuchos::RCP<MV> center_of_mass_gradients_distributed;
-  Teuchos::RCP<MV> Global_Element_Densities_Upper_Bound;
-  Teuchos::RCP<MV> Global_Element_Densities_Lower_Bound;
   Teuchos::RCP<MV> Global_Element_Densities;
-  Teuchos::RCP<MV> Global_Element_Volumes;
-  Teuchos::RCP<MV> Global_Element_Masses;
-  Teuchos::RCP<MV> Global_Element_Moments_x;
-  Teuchos::RCP<MV> Global_Element_Moments_y;
-  Teuchos::RCP<MV> Global_Element_Moments_z;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xx;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yy;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_zz;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xy;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xz;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yz;
 
   //Global arrays with collected data used to print
   const_host_vec_array collected_node_coords;
-  const_host_vec_array collected_node_displacements;
   const_host_vec_array collected_node_densities;
-  const_host_vec_array collected_node_strains;
   const_host_elem_conn_array collected_nodes_in_elem;
   
   //Boundary Conditions Data
@@ -212,16 +180,8 @@ public:
 
   //lists what kind of boundary condition the nodal DOF is subjected to if any
   CArrayKokkos<int, array_layout, device_type, memory_traits> Node_DOF_Boundary_Condition_Type;
-  //stores the displacement value for the boundary condition on this nodal DOF
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Displacement_Boundary_Conditions;
-  //stores applied point forces on nodal DOF
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Force_Boundary_Conditions;
   //lists what kind of boundary condition each boundary set is assigned to
   CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
-  //constant surface force densities corresponding to each boundary set (provide varying field later)
-  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Force_Densities;
-  //constant displacement condition applied to all nodes on a boundary surface (convenient option to avoid specifying nodes)
-  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Displacements;
   
   //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
   size_t Number_DOF_BCS;
@@ -256,23 +216,6 @@ public:
 
   //debug flags
   int gradient_print_sync;
-
-  //linear solver parameters
-  Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
-  Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
-  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
-  Teuchos::RCP<MV> X;
-  Teuchos::RCP<MV> unbalanced_B;
-  Teuchos::RCP<MV> balanced_B;
-  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xbalanced_B;
-  Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
-  Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_original_map;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_reduced_dof_original_map;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_map;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Free_Indices;
-  bool Hierarchy_Constructed;
   
 };
 
