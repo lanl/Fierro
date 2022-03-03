@@ -45,6 +45,8 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   Global_Element_Densities = Solver_Pointer->Global_Element_Densities;
 
   //obtain boundary condition and loading data
+  nboundary_patches = Solver_Pointer->nboundary_patches;
+  Boundary_Patches = Solver_Pointer->Boundary_Patches;
 
 }
 

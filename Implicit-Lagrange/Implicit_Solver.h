@@ -99,10 +99,7 @@ public:
   void init_boundaries();
   
   //interfaces between user input and creating data structures for bcs
-  void generate_bcs();
-  
-  //interfaces between user input and creating data structures for applied loads
-  void generate_applied_loads();
+  void topology_conditions();
   
   //finds the boundary element surfaces in this model
   void Get_Boundary_Patches();
@@ -113,7 +110,7 @@ public:
 
   void tecplot_writer();
 
-  void init_boundary_sets(int num_boundary_sets);
+  //void init_boundary_sets(int num_boundary_sets);
 
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
 
@@ -196,9 +193,8 @@ public:
   size_t num_boundary_conditions;
   int current_bdy_id;
   CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches; //set of patches corresponding to each boundary condition
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> NBoundary_Condition_Patches;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches_strides;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> NTopology_Condition_Patches;
 
   //pointer to FEA solver object passed to objectives and constraints
   Teuchos::RCP<FEA_Module_Elasticity> FEM_pass;
@@ -211,21 +207,10 @@ public:
   real_t *gravity_vector;
 
   //types of boundary conditions
-  enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
-   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, TO_SURFACE_CONSTRAINT};
+  enum tc_type {NONE, TO_SURFACE_CONSTRAINT, TO_BODY_CONSTRAINT};
 
-  //lists what kind of boundary condition the nodal DOF is subjected to if any
-  CArrayKokkos<int, array_layout, device_type, memory_traits> Node_DOF_Boundary_Condition_Type;
-  //stores the displacement value for the boundary condition on this nodal DOF
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Displacement_Boundary_Conditions;
-  //stores applied point forces on nodal DOF
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Force_Boundary_Conditions;
   //lists what kind of boundary condition each boundary set is assigned to
   CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
-  //constant surface force densities corresponding to each boundary set (provide varying field later)
-  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Force_Densities;
-  //constant displacement condition applied to all nodes on a boundary surface (convenient option to avoid specifying nodes)
-  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Displacements;
   
   //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
   size_t Number_DOF_BCS;

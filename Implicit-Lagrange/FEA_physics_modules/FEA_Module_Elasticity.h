@@ -9,7 +9,12 @@ public:
   FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer);
   ~FEA_Module_Elasticity();
   
+  //initialize data for boundaries of the model and storage for boundary conditions and applied loads
+  void init_boundaries();
+
   //initializes memory for arrays used in the global stiffness matrix assembly
+  void init_boundary_sets(int num_boundary_sets);
+  
   void init_assembly();
 
   void assemble_matrix();
@@ -57,6 +62,12 @@ public:
   void Body_Term(size_t ielem, real_t density, real_t *forces);
 
   void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces);
+
+  //interfaces between user input and creating data structures for bcs
+  void generate_bcs();
+  
+  //interfaces between user input and creating data structures for applied loads
+  void generate_applied_loads();
 
   void Displacement_Boundary_Conditions();
 
@@ -137,9 +148,9 @@ public:
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NBoundary_Condition_Patches;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches_strides;
-
-  //pointer to FEA solver object passed to objectives and constraints
-  Teuchos::RCP<Parallel_Nonlinear_Solver> FEM_pass;
+  
+  enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
+   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, TO_SURFACE_CONSTRAINT};
 
   //element selection parameters and data
   size_t max_nodes_per_element;

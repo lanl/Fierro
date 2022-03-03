@@ -66,11 +66,23 @@ public:
   typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
   
   //initializes memory for arrays used in the global stiffness matrix assembly
+  //initialize data for boundaries of the model and storage for boundary conditions and applied loads
+  void init_boundaries() {}
+  
+  //initializes memory for arrays used in the global stiffness matrix assembly
+  void init_boundary_sets(int num_boundary_sets) {}
+
   virtual void init_assembly() {}
 
   virtual void assemble_matrix() {}
 
   virtual void assemble_vector() {}
+
+  //interfaces between user input and creating data structures for bcs
+  virtual void generate_bcs() {}
+  
+  //interfaces between user input and creating data structures for applied loads
+  virtual void generate_applied_loads() {}
 
   virtual int solve() {}
 

@@ -187,13 +187,16 @@ void Implicit_Solver::run(int argc, char *argv[]){
     init_boundaries();
 
     //set boundary conditions
-    generate_bcs();
-
-    //set applied loading conditions
-    generate_applied_loads();
+    generate_tcs();
 
     //construct FEA module
     fea_elasticity = new FEA_Module_Elasticity();
+
+    //set boundary conditions
+    fea_elasticity->generate_bcs();
+
+    //set applied loading conditions
+    fea_elasticity->generate_applied_loads();
 
     if(myrank == 0)
     std::cout << "Starting init assembly" << std::endl <<std::flush;
@@ -1526,7 +1529,7 @@ void Implicit_Solver::setup_optimization_problem(){
   LO local_node_index;
   int num_bdy_patches_in_set;
   size_t node_id, patch_id;
-  int num_boundary_sets = num_boundary_conditions;
+  int num_boundary_sets = fea_elasticity->num_boundary_conditions;
   int current_element_index, local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
@@ -1571,13 +1574,13 @@ void Implicit_Solver::setup_optimization_problem(){
     //set lower bounds for nodes on surfaces with boundary and loading conditions
     for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
 
-      num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
+      num_bdy_patches_in_set = fea_elasticity->NBoundary_Condition_Patches(iboundary);
 
       //loop over boundary patches for this boundary set
       for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
                 
       // get the global id for this boundary patch
-      patch_id = Boundary_Condition_Patches(iboundary, bdy_patch_gid);
+      patch_id = fea_elasticity->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
       Surface_Nodes = Boundary_Patches(patch_id).node_set;
       local_surface_id = Boundary_Patches(patch_id).local_patch_id;
       //debug print of local surface ids
@@ -1901,8 +1904,6 @@ void Implicit_Solver::Get_Boundary_Patches(){
 
 void Implicit_Solver::init_boundaries(){
   int num_boundary_sets = simparam->NB;
-  int num_surface_force_sets = simparam->NBSF;
-  int num_surface_disp_sets = simparam->NBD;
   int num_dim = simparam->num_dim;
 
   // build boundary mesh patches
@@ -1912,350 +1913,40 @@ void Implicit_Solver::init_boundaries(){
   //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
   std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
   
-  // set the number of boundary sets
-  if(myrank == 0)
-    std::cout << "building boundary sets " << std::endl;
-  
-  init_boundary_sets(num_boundary_sets);
-  Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_boundary_sets); 
-  Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets,3);
-  Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets,3);
-
-  //initialize
-  for(int ibdy=0; ibdy < num_boundary_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
-
-  //allocate nodal data
-  Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes*num_dim, "Node_DOF_Boundary_Condition_Type");
-  Node_DOF_Displacement_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes*num_dim);
-  Node_DOF_Force_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes*num_dim);
-
-  //initialize
-  for(int init=0; init < nall_nodes*num_dim; init++)
-    Node_DOF_Boundary_Condition_Type(init) = NONE;
+  //call boundary routines on fea modules
+  fea_elasticity->init_boundary_sets(num_boundary_sets);
 }
 
 /* ----------------------------------------------------------------------
    Assign sets of element boundary surfaces corresponding to user BCs
 ------------------------------------------------------------------------- */
 
-void Implicit_Solver::generate_bcs(){
+void Implicit_Solver::generate_tcs(){
   int num_dim = simparam->num_dim;
   int bdy_set_id;
-  int surf_disp_set_id = 0;
-  int bc_tag;
+  int tc_tag;
   real_t value;
   real_t fix_limits[4];
 
-  // tag the z=0 plane,  (Direction, value, bdy_set)
-  *fos << "tagging z = 0 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0.0 * simparam->unit_scaling;
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
-    
-  *fos << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  *fos << std::endl;
- /*
-  // tag the y=10 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging y = 10 " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10.0 * simparam->unit_scaling;
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
-    
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
+} // end generate_tcs
 
-  // tag the x=10 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging y = 10 " << std::endl;
-  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10.0 * simparam->unit_scaling;
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
-    
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
+/* ----------------------------------------------------------------------
+   initialize storage for DOF corresponding to user TCs
+------------------------------------------------------------------------- */
+
+void Implicit_Solver::init_topology_conditions (int num_sets){
  
-  // tag the +z beam plane,  (Direction, value, bdy_set)
-  std::cout << "tagging z = 100 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 100.0 * simparam->unit_scaling;
-  //real_t fix_limits[4];
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
-    
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  
-  //This part should be changed so it interfaces with simparam to handle multiple input cases
-  // tag the y=0 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging y = 0 " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0.0;
-  bdy_set_id = 1;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-    
-
-  // tag the z=0 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging z = 0 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0.0;
-  bdy_set_id = 2;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  
-  */
-
-  //Tag nodes for Boundary conditions such as displacements
-  Displacement_Boundary_Conditions();
-} // end generate_bcs
-
-/* ----------------------------------------------------------------------
-   Assign sets of element boundary surfaces corresponding to user BCs
-------------------------------------------------------------------------- */
-
-void Implicit_Solver::generate_applied_loads(){
-  int num_dim = simparam->num_dim;
-  int bdy_set_id;
-  int surf_force_set_id = 0;
-  int bc_tag;
-  real_t value;
-  
-  //Surface Forces Section
-
-  /*
-  std::cout << "tagging z = 2 Force " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam->unit_scaling/simparam->unit_scaling;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  
-  
-  std::cout << "tagging z = 1 Force " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 1 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam->unit_scaling/simparam->unit_scaling;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  
-  
-  std::cout << "tagging beam x = 0 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 1/simparam->unit_scaling/simparam->unit_scaling;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  */
-  /*
-  std::cout << "tagging beam -x " << std::endl;
-  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = -1/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-
-  std::cout << "tagging beam +x " << std::endl;
-  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 1/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  */
-
-  /*
-  std::cout << "tagging beam -y " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0 * simparam->unit_scaling;
-  real_t load_limits_left[4];
-  load_limits_left[0] = load_limits_left[2] = 4;
-  load_limits_left[1] = load_limits_left[3] = 6;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id ,load_limits_left);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 10/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-
-  std::cout << "tagging beam +y " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10 * simparam->unit_scaling;
-  real_t load_limits_right[4];
-  load_limits_right[0] = load_limits_right[2] = 4;
-  load_limits_right[1] = load_limits_right[3] = 6;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id, load_limits_right);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = -10/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  */
-  
-  *fos << "tagging beam +z force " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  //value = 0;
-  value = 100;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  *fos << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  *fos << std::endl;
-  
-  /*
-  std::cout << "tagging y = 2 " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2.0;
-  bdy_set_id = 4;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-
-  std::cout << "tagging z = 2 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2.0;
-  bdy_set_id = 5;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  */
-  
-  //Body Forces Section
-
-  //apply gravity
-  gravity_flag = simparam->gravity_flag;
-  gravity_vector = simparam->gravity_vector;
-
-  if(electric_flag||gravity_flag||thermal_flag) body_force_flag = true;
-
-}
-
-/* ----------------------------------------------------------------------
-   initialize storage for element boundary surfaces corresponding to user BCs
-------------------------------------------------------------------------- */
-
-void Implicit_Solver::init_boundary_sets (int num_sets){
-    
+  //surface conditions
   num_boundary_conditions = num_sets;
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions = 0";
     return;
   }
-  Boundary_Condition_Patches_strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "Boundary_Condition_Patches_strides");
-  NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
-  Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
+  NTopology_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
+  Topology_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
 
   //initialize data
-  for(int iset = 0; iset < num_sets; iset++) NBoundary_Condition_Patches(iset) = 0;
+  for(int iset = 0; iset < num_sets; iset++) NTopology_Condition_Patches(iset) = 0;
 }
 
 /* ----------------------------------------------------------------------
