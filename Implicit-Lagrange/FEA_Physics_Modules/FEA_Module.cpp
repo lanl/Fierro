@@ -1,6 +1,10 @@
+
+#include <math.h>  // fmin, fmax, abs note: fminl is long
 #include "FEA_Module.h"
-#include "../Implicit_Solver.h"
-#include "../node_combination.h"
+#include "Implicit_Solver.h"
+#include "Simulation_Parameters.h"
+
+#define BC_EPSILON 1.0e-8
 using namespace utils;
 
 FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){

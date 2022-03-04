@@ -20,11 +20,10 @@
 //#include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
+#include "node_combination.h"
 
 //forward declare
 class Implicit_Solver;
-
-class Node_Combination;
 
 class FEA_Module{
 
