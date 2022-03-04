@@ -110,8 +110,6 @@ public:
 
   virtual int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
 
-  int update_count, hessvec_count;
-
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   

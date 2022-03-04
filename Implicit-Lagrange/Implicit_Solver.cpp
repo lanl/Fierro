@@ -159,9 +159,12 @@ void Implicit_Solver::run(int argc, char *argv[]){
       init_clock();
 
     //initialize runtime counters and timers
-    hessvec_count = update_count = 0;
+    int hessvec_count = 0;
+    int update_count = 0;
     file_index = 0;
-    linear_solve_time = hessvec_time = hessvec_linear_time = 0;
+    real_t linear_solve_time = 0;
+    real_t hessvec_time = 0;
+    real_t hessvec_linear_time = 0;
     
     // ---- Find Boundaries on mesh ---- //
     init_boundaries();
