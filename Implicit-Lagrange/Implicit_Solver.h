@@ -2,7 +2,7 @@
 #define IMPLICIT_SOLVER_H
 
 #include "utilities.h"
-#include "../Solver.h"
+#include "Solver.h"
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
