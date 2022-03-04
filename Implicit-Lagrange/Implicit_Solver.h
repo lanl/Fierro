@@ -124,6 +124,11 @@ public:
 
   //void ensight_writer();
 
+  //interfaces between user input and creating data structures for topology conditions
+  void generate_tcs();
+
+  void init_topology_conditions (int num_sets);
+
   void tecplot_writer();
 
   //void init_boundary_sets(int num_boundary_sets);
@@ -136,8 +141,6 @@ public:
   double CPU_Time();
   void init_clock();
   double initial_CPU_time;
-  double linear_solve_time, hessvec_time, hessvec_linear_time;
-  int update_count, hessvec_count;
 
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
@@ -217,10 +220,6 @@ public:
 
   //element selection parameters and data
   size_t max_nodes_per_element;
-  
-  //body force parameters
-  bool body_force_flag, gravity_flag, thermal_flag, electric_flag;
-  real_t *gravity_vector;
 
   //types of boundary conditions
   enum tc_type {NONE, TO_SURFACE_CONSTRAINT, TO_BODY_CONSTRAINT};

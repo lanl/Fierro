@@ -171,9 +171,6 @@ public:
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NBoundary_Condition_Patches;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches_strides;
 
-  //pointer to FEA solver object passed to objectives and constraints
-  Teuchos::RCP<Parallel_Nonlinear_Solver> FEM_pass;
-
   //element selection parameters and data
   size_t max_nodes_per_element;
   
@@ -212,6 +209,10 @@ public:
 
   //debug flags
   int gradient_print_sync;
+
+  //runtime and counters for performance output
+  double linear_solve_time, hessvec_time, hessvec_linear_time;
+  int update_count, hessvec_count;
   
 };
 

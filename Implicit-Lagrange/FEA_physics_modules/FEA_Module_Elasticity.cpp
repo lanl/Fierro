@@ -112,7 +112,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   else strain_count = 3;
   node_strains_distributed = Teuchos::rcp(new MV(map, strain_count));
   all_node_strains_distributed = Teuchos::rcp(new MV(all_node_map, strain_count));
-  Global_Nodal_Forces = Teuchos::rcp(new MV(local_dof_map, dual_nodal_forces));
+  Global_Nodal_Forces = Teuchos::rcp(new MV(local_dof_map, 1));
 
   //initialize displacements to 0
   //local variable for host view in the dual view

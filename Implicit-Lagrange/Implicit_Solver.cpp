@@ -98,30 +98,8 @@ Implicit_Solver::Implicit_Solver() : Solver(){
   element_select = new elements::element_selector();
   num_nodes = 0;
 
-  Matrix_alloc=0;
-  gradient_print_sync = 0;
-  //RCP pointer to *this (Parallel Nonlinear Solver Object)
-  //FEM_pass = Teuchos::rcp(this);
-
-  //property initialization flags
-  mass_init = false;
-  com_init[0] = com_init[1] = com_init[2] = false;
-
-  //property update counters
-  mass_update = com_update[0] = com_update[1] = com_update[2] = -1;
-
-  //RCP initialization
-  mass_gradients_distributed = Teuchos::null;
-  center_of_mass_gradients_distributed = Teuchos::null;
-
   //boundary condition data
   current_bdy_id = 0;
-
-  //boundary condition flags
-  body_force_flag = gravity_flag = thermal_flag = electric_flag = false;
-
-  //preconditioner construction
-  Hierarchy_Constructed = false;
 
   //Trilinos output stream
   std::ostream &out = std::cout;
@@ -359,7 +337,6 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
 
   //allocate node storage with dual view
   dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
-  dual_nodal_forces = dual_vec_array("dual_nodal_forces", nlocal_nodes*num_dim,1);
 
   //local variable for host view in the dual view
   host_vec_array node_coords = dual_node_coords.view_host();
@@ -912,7 +889,6 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
   if(restart_file)
     dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
-  dual_nodal_forces = dual_vec_array("dual_nodal_forces", nlocal_nodes*num_dim,1);
 
   //local variable for host view in the dual view
   host_vec_array node_coords = dual_node_coords.view_host();
@@ -1543,7 +1519,7 @@ void Implicit_Solver::setup_optimization_problem(){
   //ROL::ParameterList parlist;
 
   // Objective function
-  ROL::Ptr<ROL::Objective<real_t>> obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(this, nodal_density_flag);
+  ROL::Ptr<ROL::Objective<real_t>> obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_elasticity, nodal_density_flag);
   //Design variables to optimize
   ROL::Ptr<ROL::Vector<real_t>> x;
   if(nodal_density_flag)
@@ -1985,7 +1961,7 @@ void Implicit_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t
   for (int iboundary_patch = 0; iboundary_patch < nboundary_patches; iboundary_patch++) {
 
     // check to see if this patch is on the specified plane
-    is_on_set = check_boundary(Topology_Patches(iboundary_patch), bc_tag, val, patch_limits); // no=0, yes=1
+    is_on_set = check_boundary(Boundary_Patches(iboundary_patch), bc_tag, val, patch_limits); // no=0, yes=1
         
     if (is_on_set == 1){
       Topology_Condition_Patches(bdy_set,counter) = iboundary_patch;
