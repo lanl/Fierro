@@ -19,7 +19,7 @@
 #include <Kokkos_View.hpp>
 #include <Kokkos_Parallel.hpp>
 #include <Kokkos_Parallel_Reduce.hpp>
-//#include "Tpetra_Details_makeColMap.hpp"
+#include "Tpetra_Details_EquilibrationInfo.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
 
@@ -250,7 +250,8 @@ public:
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
 
   //multigrid solver data and functions
-  using equil_type = decltype (Tpetra::computeRowAndColumnOneNorms (*Global_Stiffness_Matrix, false));
+  //using equil_type = decltype (Tpetra::computeRowAndColumnOneNorms (*Global_Stiffness_Matrix, false));
+  using equil_type = Tpetra::Details::EquilibrationInfo<real_t, device_type>;
   using mag_type = typename Kokkos::ArithTraits<real_t>::mag_type;
   using scaling_view_type = Kokkos::View<mag_type*, device_type>;
   equil_type equibResult;
