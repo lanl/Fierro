@@ -97,9 +97,6 @@ Implicit_Solver::Implicit_Solver() : Solver(){
 
   element_select = new elements::element_selector();
   num_nodes = 0;
-  hessvec_count = update_count = 0;
-  file_index = 0;
-  linear_solve_time = hessvec_time = hessvec_linear_time = 0;
 
   Matrix_alloc=0;
   gradient_print_sync = 0;
@@ -181,7 +178,12 @@ void Implicit_Solver::run(int argc, char *argv[]){
     
     //initialize timing
     if(simparam->report_runtime_flag)
-    init_clock();
+      init_clock();
+
+    //initialize runtime counters and timers
+    hessvec_count = update_count = 0;
+    file_index = 0;
+    linear_solve_time = hessvec_time = hessvec_linear_time = 0;
     
     // ---- Find Boundaries on mesh ---- //
     init_boundaries();
@@ -189,22 +191,22 @@ void Implicit_Solver::run(int argc, char *argv[]){
     //set boundary conditions
     generate_tcs();
 
-    //construct FEA module
-    fea_elasticity = new FEA_Module_Elasticity();
+    //initialize TO design variable storage
+    init_design();
 
-    //set boundary conditions
+    //construct FEA module
+    fea_elasticity = new FEA_Module_Elasticity(this);
+
+    //set boundary conditions for FEA modules
     fea_elasticity->generate_bcs();
 
-    //set applied loading conditions
+    //set applied loading conditions for FEA modules
     fea_elasticity->generate_applied_loads();
 
     if(myrank == 0)
     std::cout << "Starting init assembly" << std::endl <<std::flush;
-    //allocate and fill sparse structures needed for global solution
+    //allocate and fill sparse structures needed for global solution in each FEA module
     fea_elasticity->init_assembly();
-
-    //initialize and initialize TO design variable storage
-    init_design();
     
     //assemble the global solution (stiffness matrix etc. and nodal forces)
     fea_elasticity->assemble_matrix();
@@ -253,7 +255,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     
     //CPU time
     double current_cpu = CPU_Time();
-    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " update solve time " << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
+    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " update solve time " << fea_elasticity->linear_solve_time << " hess solve time " << fea_elasticity->hessvec_linear_time <<std::endl;
     //debug return to avoid printing further
 
     real_t dt = simparam->dt;
@@ -270,8 +272,8 @@ void Implicit_Solver::run(int argc, char *argv[]){
     tecplot_writer();
     // vtk_writer();
     if(myrank==0){
-      std::cout << "Total number of solves and assembly " << update_count <<std::endl;
-      std::cout << "Total number of hessvec counts " << hessvec_count <<std::endl;
+      std::cout << "Total number of solves and assembly " << fea_elasticity->update_count <<std::endl;
+      std::cout << "Total number of hessvec counts " << fea_elasticity->hessvec_count <<std::endl;
       std::cout << "End of Optimization" << std::endl;
     }
 }
@@ -1925,8 +1927,12 @@ void Implicit_Solver::generate_tcs(){
   int num_dim = simparam->num_dim;
   int bdy_set_id;
   int tc_tag;
+  int num_topology_conditions = 0;
   real_t value;
   real_t fix_limits[4];
+  
+  if(num_topology_conditions>0)
+    init_topology_conditions(num_topology_conditions);
 
 } // end generate_tcs
 
@@ -1979,16 +1985,16 @@ void Implicit_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t
   for (int iboundary_patch = 0; iboundary_patch < nboundary_patches; iboundary_patch++) {
 
     // check to see if this patch is on the specified plane
-    is_on_set = check_boundary(Boundary_Patches(iboundary_patch), bc_tag, val, patch_limits); // no=0, yes=1
+    is_on_set = check_boundary(Topology_Patches(iboundary_patch), bc_tag, val, patch_limits); // no=0, yes=1
         
     if (is_on_set == 1){
-      Boundary_Condition_Patches(bdy_set,counter) = iboundary_patch;
+      Topology_Condition_Patches(bdy_set,counter) = iboundary_patch;
       counter ++;
     }
   } // end for bdy_patch
     
   // save the number of bdy patches in the set
-  NBoundary_Condition_Patches(bdy_set) = counter;
+  NTopology_Condition_Patches(bdy_set) = counter;
     
   *fos << " tagged boundary patches " << std::endl;
 }

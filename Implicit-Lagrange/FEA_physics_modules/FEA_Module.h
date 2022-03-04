@@ -106,6 +106,10 @@ public:
 
   virtual void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces) {}
 
+  virtual void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
+
+  virtual int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
+
   int update_count, hessvec_count;
 
   //output stream
@@ -118,20 +122,16 @@ public:
   
 
   class Simulation_Parameters *simparam;
+  Implicit_Solver *Solver_Pointer_;
   
   //Local FEA data
   size_t nlocal_nodes;
   dual_vec_array dual_node_coords; //coordinates of the nodes
-  dual_vec_array dual_node_displacements; //first three indices of second dim should be positions
   dual_vec_array dual_node_densities; //topology optimization design variable
-  dual_vec_array dual_nodal_forces;
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
   host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
-  RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
-  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;
@@ -160,11 +160,6 @@ public:
   Teuchos::RCP<const MV> test_node_densities_distributed;
   Teuchos::RCP<MV> all_node_densities_distributed;
   Teuchos::RCP<MV> Global_Element_Densities;
-
-  //Global arrays with collected data used to print
-  const_host_vec_array collected_node_coords;
-  const_host_vec_array collected_node_densities;
-  const_host_elem_conn_array collected_nodes_in_elem;
   
   //Boundary Conditions Data
   //CArray <Nodal_Combination> Patch_Nodes;
@@ -185,10 +180,6 @@ public:
   //body force parameters
   bool body_force_flag, gravity_flag, thermal_flag, electric_flag;
   real_t *gravity_vector;
-
-  //types of boundary conditions
-  enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
-   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, TO_SURFACE_CONSTRAINT};
 
   //lists what kind of boundary condition the nodal DOF is subjected to if any
   CArrayKokkos<int, array_layout, device_type, memory_traits> Node_DOF_Boundary_Condition_Type;
@@ -218,13 +209,6 @@ public:
 
   //allocation flags to avoid repeat MV and global matrix construction
   int Matrix_alloc;
-
-  //file readin variables
-  std::ifstream *in;
-  int words_per_line, elem_words_per_line;
-
-  //file output variables
-  int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
 
   //debug flags
   int gradient_print_sync;

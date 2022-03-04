@@ -47,7 +47,145 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   //obtain boundary condition and loading data
   nboundary_patches = Solver_Pointer->nboundary_patches;
   Boundary_Patches = Solver_Pointer->Boundary_Patches;
-
+  
+  Solver_Pointer_ = Solver_Pointer;
 }
 
 FEA_Module::~FEA_Module() {}
+
+/* ----------------------------------------------------------------------
+   find which boundary patches correspond to the given BC.
+   bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+   val = plane value, cylinder radius, shell radius
+------------------------------------------------------------------------- */
+
+void FEA_Module::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits){
+  
+  int num_boundary_sets = simparam->NB;
+  int is_on_set;
+  /*
+  if (bdy_set == num_bdy_sets_){
+    std::cout << " ERROR: number of boundary sets must be increased by "
+      << bdy_set-num_bdy_sets_+1 << std::endl;
+    exit(0);
+  }
+  */
+
+  //test patch limits for feasibility
+  if(patch_limits != NULL){
+    //test for upper bounds being greater than lower bounds
+    if(patch_limits[1] <= patch_limits[0]) std::cout << " Warning: patch limits for boundary condition are infeasible";
+    if(patch_limits[2] <= patch_limits[3]) std::cout << " Warning: patch limits for boundary condition are infeasible";
+  }
+    
+  // save the boundary vertices to this set that are on the plane
+  int counter = 0;
+  for (int iboundary_patch = 0; iboundary_patch < nboundary_patches; iboundary_patch++) {
+
+    // check to see if this patch is on the specified plane
+    is_on_set = check_boundary(Boundary_Patches(iboundary_patch), bc_tag, val, patch_limits); // no=0, yes=1
+        
+    if (is_on_set == 1){
+      Boundary_Condition_Patches(bdy_set,counter) = iboundary_patch;
+      counter ++;
+    }
+  } // end for bdy_patch
+    
+  // save the number of bdy patches in the set
+  NBoundary_Condition_Patches(bdy_set) = counter;
+    
+  *fos << " tagged boundary patches " << std::endl;
+}
+
+/* ----------------------------------------------------------------------
+   routine for checking to see if a patch is on a boundary set
+   bc_tag = 0 xplane, 1 yplane, 3 zplane, 4 cylinder, 5 is shell
+   val = plane value, radius, radius
+------------------------------------------------------------------------- */
+
+int FEA_Module::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, real_t val, real_t *patch_limits){
+  
+  int is_on_set = 1;
+  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+  //Nodes on the Patch
+  auto node_list = Patch_Nodes.node_set;
+  int num_dim = simparam->num_dim;
+  size_t nnodes = node_list.size();
+  size_t node_rid;
+  real_t node_coord[num_dim];
+  int dim_other1, dim_other2;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> node_on_flags(nnodes, "node_on_flags");
+
+  //initialize
+  for(int inode = 0; inode < nnodes; inode++) node_on_flags(inode) = 0;
+
+  if(bc_tag==0){
+    dim_other1 = 1;
+    dim_other2 = 2;
+  }
+  else if(bc_tag==1){
+    dim_other1 = 0;
+    dim_other2 = 2;
+  }
+  else if(bc_tag==2){
+    dim_other1 = 0;
+    dim_other2 = 1;
+  }
+  
+  
+  //test for planes
+  if(bc_tag < 3)
+  for(int inode = 0; inode < nnodes; inode++){
+
+    node_rid = all_node_map->getLocalElement(node_list(inode));
+    for(int init=0; init < num_dim; init++){
+      node_coord[init] = all_node_coords(node_rid,init);
+    }
+    if ( fabs(node_coord[bc_tag] - val) <= BC_EPSILON){ node_on_flags(inode) = 1;
+
+      //test if within patch segment if user specified
+      if(patch_limits!=NULL){
+        if (node_coord[dim_other1] - patch_limits[0] <= -BC_EPSILON) node_on_flags(inode) = 0;
+        if (node_coord[dim_other1] - patch_limits[1] >= BC_EPSILON) node_on_flags(inode) = 0;
+        if (node_coord[dim_other2] - patch_limits[2] <= -BC_EPSILON) node_on_flags(inode) = 0;
+        if (node_coord[dim_other2] - patch_limits[3] >= BC_EPSILON) node_on_flags(inode) = 0;
+      }
+    }
+    //debug print of node id and node coord
+    //std::cout << "node coords on task " << myrank << " for node " << node_rid << std::endl;
+    //std::cout << "coord " <<node_coord << " flag " << node_on_flags(inode) << " bc_tag " << bc_tag << std::endl;
+  }
+    
+    /*
+    // cylinderical shell where radius = sqrt(x^2 + y^2)
+    else if (this_bc_tag == 3){
+        
+        real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
+                        these_patch_coords[1]*these_patch_coords[1]);
+        
+        if ( fabs(R - val) <= 1.0e-8 ) is_on_bdy = 1;
+
+        
+    }// end if on type
+    
+    // spherical shell where radius = sqrt(x^2 + y^2 + z^2)
+    else if (this_bc_tag == 4){
+        
+        real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
+                        these_patch_coords[1]*these_patch_coords[1] +
+                        these_patch_coords[2]*these_patch_coords[2]);
+        
+        if ( fabs(R - val) <= 1.0e-8 ) is_on_bdy = 1;
+        
+    } // end if on type
+    */
+    //check if all nodes lie on the boundary set
+  for(int inode = 0; inode < nnodes; inode++)
+    if(!node_on_flags(inode)) is_on_set = 0;
+  
+  //debug print of return flag
+  //std::cout << "patch flag on task " << myrank << " is " << is_on_set << std::endl;
+  return is_on_set;
+    
+} // end method to check bdy

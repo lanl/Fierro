@@ -70,28 +70,12 @@ public:
   void generate_applied_loads();
 
   void Displacement_Boundary_Conditions();
-
-  //output stream
-  Teuchos::RCP<Teuchos::FancyOStream> fos;
   
-  elements::element_selector *element_select;
-  elements::Element3D *elem;
-  elements::Element2D *elem2D;
-  elements::ref_element  *ref_elem;
-  
-
   class Simulation_Parameters *simparam;
   
   //Local FEA data
-  size_t nlocal_nodes;
-  dual_vec_array dual_node_coords; //coordinates of the nodes
   dual_vec_array dual_node_displacements; //first three indices of second dim should be positions
-  dual_vec_array dual_node_densities; //topology optimization design variable
   dual_vec_array dual_nodal_forces;
-  dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
-  host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
-  CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
@@ -100,15 +84,6 @@ public:
   CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Results; //result of linear solve; typically displacements and densities
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
-
-  //Ghost data on this MPI rank
-  size_t nghost_nodes;
-  CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type> ghost_nodes;
-  CArrayKokkos<int, array_layout, device_type, memory_traits> ghost_node_ranks;
-
-  //Local FEA data including ghosts
-  size_t nall_nodes;
-  size_t rnum_elem;
 
   //Global FEA data
   Teuchos::RCP<MV> node_displacements_distributed;
@@ -131,23 +106,8 @@ public:
   Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xy;
   Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xz;
   Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yz;
-
-  //Global arrays with collected data used to print
-  const_host_vec_array collected_node_coords;
-  const_host_vec_array collected_node_displacements;
-  const_host_vec_array collected_node_densities;
-  const_host_vec_array collected_node_strains;
-  const_host_elem_conn_array collected_nodes_in_elem;
   
   //Boundary Conditions Data
-  //CArray <Nodal_Combination> Patch_Nodes;
-  size_t nboundary_patches;
-  size_t num_boundary_conditions;
-  int current_bdy_id;
-  CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches; //set of patches corresponding to each boundary condition
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> NBoundary_Condition_Patches;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches_strides;
   
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
    Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, TO_SURFACE_CONSTRAINT};
@@ -158,53 +118,15 @@ public:
   //body force parameters
   bool body_force_flag, gravity_flag, thermal_flag, electric_flag;
   real_t *gravity_vector;
-
-  //lists what kind of boundary condition the nodal DOF is subjected to if any
-  CArrayKokkos<int, array_layout, device_type, memory_traits> Node_DOF_Boundary_Condition_Type;
+  
   //stores the displacement value for the boundary condition on this nodal DOF
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Displacement_Boundary_Conditions;
   //stores applied point forces on nodal DOF
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Force_Boundary_Conditions;
-  //lists what kind of boundary condition each boundary set is assigned to
-  CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
   //constant surface force densities corresponding to each boundary set (provide varying field later)
   CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Force_Densities;
   //constant displacement condition applied to all nodes on a boundary surface (convenient option to avoid specifying nodes)
   CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Displacements;
-  
-  //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
-  size_t Number_DOF_BCS;
-
-  //MPI data
-  int myrank; //index of this mpi rank in the world communicator
-  int nranks; //number of mpi ranks in the world communicator
-  MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
-
-  //! mapping used to get local ghost index from the global ID.
-  //typedef ::Tpetra::Details::FixedHashTable<GO, LO, Kokkos::HostSpace::device_type>
-    //global_to_local_table_host_type;
-
-  //global_to_local_table_host_type global2local_map;
-  //CArrayKokkos<int, Kokkos::LayoutLeft, Kokkos::HostSpace::device_type> active_ranks;
-
-  //Pertains to local mesh information being stored as prescribed by the row map
-  global_size_t local_nrows;
-  global_size_t min_gid;
-  global_size_t max_gid;
-  global_size_t index_base;
-
-  //allocation flags to avoid repeat MV and global matrix construction
-  int Matrix_alloc;
-
-  //file readin variables
-  std::ifstream *in;
-  int words_per_line, elem_words_per_line;
-
-  //file output variables
-  int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
-
-  //debug flags
-  int gradient_print_sync;
 
   //linear solver parameters
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;

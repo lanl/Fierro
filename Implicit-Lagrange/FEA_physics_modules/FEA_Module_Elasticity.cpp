@@ -77,7 +77,6 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   //mesh = new swage::mesh_t(simparam);
   num_nodes = 0;
   hessvec_count = update_count = 0;
-  file_index = 0;
   linear_solve_time = hessvec_time = hessvec_linear_time = 0;
 
   //preconditioner construction
@@ -3984,7 +3983,7 @@ void FEA_Module_Elasticity::compute_adjoint_gradients(const_host_vec_array desig
 
 void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
   //local variable for host view in the dual view
-  real_t current_cpu_time = CPU_Time();
+  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -4403,11 +4402,11 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
     preScaleRightHandSides(*balanced_B,"diag");
     preScaleInitialGuesses(*lambda,"diag");
   }
-  real_t current_cpu_time2 = CPU_Time();
+  real_t current_cpu_time2 = Solver_Pointer_->CPU_Time();
   comm->barrier();
   SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
-  hessvec_linear_time += CPU_Time() - current_cpu_time2;
+  hessvec_linear_time += Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
   if(simparam->equilibrate_matrix_flag){
     postScaleSolutionVectors(*lambda,"diag");
@@ -4779,7 +4778,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
       }
     }
   }//end element loop for hessian vector product
-  hessvec_time += CPU_Time() - current_cpu_time;
+  hessvec_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
 }
 
 /* -------------------------------------------------------------------------------------------
@@ -5963,9 +5962,9 @@ int FEA_Module_Elasticity::solve(){
     // System solution (Ax = b)
     // =========================================================================
 
-    real_t current_cpu_time = CPU_Time();
+    real_t current_cpu_time = Solver_Pointer_->CPU_Time();
     SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
-    linear_solve_time += CPU_Time() - current_cpu_time;
+    linear_solve_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
     comm->barrier();
 
     if(simparam->equilibrate_matrix_flag){
