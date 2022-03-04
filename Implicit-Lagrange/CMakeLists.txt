@@ -45,7 +45,7 @@ target_link_libraries (fea_modules ${CMAKE_SOURCE_DIR}/Elements/build/swage/libs
 target_link_libraries (fea_modules ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
 target_link_libraries (fea_modules ${CMAKE_SOURCE_DIR}/Elements/build/matar/src/libmatar.a)
 endif()
-target_include_directories(main PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH})
+target_include_directories(main PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(fea_modules PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options (main PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
 target_compile_options (fea_modules PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
