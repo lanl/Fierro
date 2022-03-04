@@ -12,14 +12,14 @@
 #include <Tpetra_computeRowAndColumnOneNorms.hpp>
 #include "KokkosBlas1_abs_impl.hpp"
 #include <MueLu_Utilities.hpp>
-#include "Parallel_Nonlinear_Solver.h"
+#include "Implicit_Solver.h"
 
 using namespace utils;
 
 /* ----------------------------------------------------------------------
    Equilibrate Matrix
 ------------------------------------------------------------------------- */
-void Parallel_Nonlinear_Solver::equilibrateMatrix(Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type> > &Axpetra, std::string equilibrate) {
+void Implicit_Solver::equilibrateMatrix(Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type> > &Axpetra, std::string equilibrate) {
   using Tpetra::computeRowAndColumnOneNorms;
   using Tpetra::leftAndOrRightScaleCrsMatrix;
   bool equilibrate_1norm = (equilibrate == "1-norm");
@@ -57,7 +57,7 @@ void Parallel_Nonlinear_Solver::equilibrateMatrix(Teuchos::RCP<Xpetra::Matrix<re
    Scale RHS vector by equilibration row scaling
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::preScaleRightHandSides (MV& B, std::string equilibrate)
+void Implicit_Solver::preScaleRightHandSides (MV& B, std::string equilibrate)
   {
     
     bool equilibrate_1norm = (equilibrate == "1-norm");
@@ -80,7 +80,7 @@ void Parallel_Nonlinear_Solver::preScaleRightHandSides (MV& B, std::string equil
    Scale Solution vector initial guess by equilibration column scaling
 ------------------------------------------------------------------------- */
 
-  void Parallel_Nonlinear_Solver::preScaleInitialGuesses (MV& X, std::string equilibrate)
+  void Implicit_Solver::preScaleInitialGuesses (MV& X, std::string equilibrate)
   {
     bool equilibrate_1norm = (equilibrate == "1-norm");
     bool equilibrate_diag  = (equilibrate == "diag");
@@ -104,7 +104,7 @@ void Parallel_Nonlinear_Solver::preScaleRightHandSides (MV& B, std::string equil
    Scale Solution vector by equilibration column scaling
 ------------------------------------------------------------------------- */
 
-  void Parallel_Nonlinear_Solver::postScaleSolutionVectors (MV& X, std::string equilibrate)
+  void Implicit_Solver::postScaleSolutionVectors (MV& X, std::string equilibrate)
   {
     bool equilibrate_1norm = (equilibrate == "1-norm");
     bool equilibrate_diag  = (equilibrate == "diag");
@@ -129,7 +129,7 @@ void Parallel_Nonlinear_Solver::preScaleRightHandSides (MV& B, std::string equil
    Scale vector through multiplication
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::elementWiseMultiply ( vec_array& X,
+void Implicit_Solver::elementWiseMultiply ( vec_array& X,
                       scaling_view_type& scalingFactors,
                       LO numRows,
                       bool takeSquareRootsOfScalingFactors)
@@ -173,7 +173,7 @@ void Parallel_Nonlinear_Solver::elementWiseMultiply ( vec_array& X,
   }
 }
 
-void Parallel_Nonlinear_Solver::elementWiseMultiplyMultiVector (MV& X,
+void Implicit_Solver::elementWiseMultiplyMultiVector (MV& X,
                                 scaling_view_type& scalingFactors,
                                 bool takeSquareRootsOfScalingFactors)
 {
@@ -199,7 +199,7 @@ void Parallel_Nonlinear_Solver::elementWiseMultiplyMultiVector (MV& X,
 /* ----------------------------------------------------------------------
    Scale vector through division
 ------------------------------------------------------------------------- */
-void Parallel_Nonlinear_Solver::elementWiseDivide (vec_array& X,
+void Implicit_Solver::elementWiseDivide (vec_array& X,
                    scaling_view_type& scalingFactors,
                   LO numRows,
                    bool takeSquareRootsOfScalingFactors)
@@ -244,7 +244,7 @@ void Parallel_Nonlinear_Solver::elementWiseDivide (vec_array& X,
   }
 }
 
-void Parallel_Nonlinear_Solver::elementWiseDivideMultiVector (MV& X,
+void Implicit_Solver::elementWiseDivideMultiVector (MV& X,
                               scaling_view_type& scalingFactors,
                               bool takeSquareRootsOfScalingFactors)
 {

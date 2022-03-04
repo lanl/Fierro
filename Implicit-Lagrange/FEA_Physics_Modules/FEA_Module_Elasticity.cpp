@@ -1318,7 +1318,7 @@ void FEA_Module_Elasticity::assemble_vector(){
       //debug print
       //std::cout << "Current Density " << current_density << std::endl;
       //look up element material properties at this point as a function of density
-      Body_Force(ielem, current_density, force_density);
+      Body_Term(ielem, current_density, force_density);
     
       //evaluate contribution to force vector component
       for(int ibasis=0; ibasis < nodes_per_elem; ibasis++){
