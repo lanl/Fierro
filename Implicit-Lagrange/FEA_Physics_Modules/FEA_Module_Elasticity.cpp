@@ -65,7 +65,7 @@
 using namespace utils;
 
 
-FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :FEA_Module(Solver Pointer){
+FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
   //create parameter object
   simparam = new Simulation_Parameters();
   // ---- Read input file, define state and boundary conditions ---- //
@@ -105,6 +105,8 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   body_force_flag = gravity_flag = thermal_flag = electric_flag = false;
 
   //construct globally distributed displacement, strain, and force vectors
+  int num_dim = simparam->num_dim;
+  size_t strain_count;
   node_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   all_node_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
   //all_node_nconn_distributed = Teuchos::rcp(new MCONN(all_node_map, 1));
@@ -314,7 +316,7 @@ void FEA_Module_Elasticity::generate_bcs(){
    Assign sets of element boundary surfaces corresponding to user BCs
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::::generate_applied_loads(){
+void FEA_Module_Elasticity::generate_applied_loads(){
   int num_dim = simparam->num_dim;
   int bdy_set_id;
   int surf_force_set_id = 0;
@@ -499,7 +501,7 @@ void FEA_Module_Elasticity::::generate_applied_loads(){
 /* ----------------------------------------------------------------------
    Initialize global vectors and array maps needed for matrix assembly
 ------------------------------------------------------------------------- */
-void Parallel_Nonlinear_Solver::init_assembly(){
+void FEA_Module_Elasticity::init_assembly(){
   int num_dim = simparam->num_dim;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   Stiffness_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Stiffness_Matrix_Strides");
@@ -786,7 +788,7 @@ void Parallel_Nonlinear_Solver::init_assembly(){
    Assemble the Sparse Stiffness Matrix
 ------------------------------------------------------------------------- */
 
-void Parallel_Nonlinear_Solver::assemble_matrix(){
+void FEA_Module_Elasticity::assemble_matrix(){
   int num_dim = simparam->num_dim;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_element;
@@ -969,7 +971,7 @@ void Parallel_Nonlinear_Solver::assemble_matrix(){
    Construct the global applied force vector
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::::assemble_vector(){
+void FEA_Module_Elasticity::assemble_vector(){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -4399,8 +4401,8 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
   if(simparam->equilibrate_matrix_flag){
-    preScaleRightHandSides(*balanced_B,"diag");
-    preScaleInitialGuesses(*lambda,"diag");
+    Solver_Pointer_->preScaleRightHandSides(*balanced_B,"diag");
+    Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
   real_t current_cpu_time2 = Solver_Pointer_->CPU_Time();
   comm->barrier();
@@ -4409,7 +4411,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   hessvec_linear_time += Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
   if(simparam->equilibrate_matrix_flag){
-    postScaleSolutionVectors(*lambda,"diag");
+    Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
   }
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
@@ -5916,9 +5918,9 @@ int FEA_Module_Elasticity::solve(){
     xX->randomize();
     
      if(simparam->equilibrate_matrix_flag){
-      equilibrateMatrix(xwrap_balanced_A,"diag");
-      preScaleRightHandSides(*balanced_B,"diag");
-      preScaleInitialGuesses(*X,"diag");
+      Solver_Pointer_->equilibrateMatrix(xwrap_balanced_A,"diag");
+      Solver_Pointer_->preScaleRightHandSides(*balanced_B,"diag");
+      Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
      }
 
     //debug print
@@ -5968,7 +5970,7 @@ int FEA_Module_Elasticity::solve(){
     comm->barrier();
 
     if(simparam->equilibrate_matrix_flag){
-      postScaleSolutionVectors(*X,"diag");
+      Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
     }
 
     if(simparam->multigrid_timers){
@@ -6036,7 +6038,7 @@ int FEA_Module_Elasticity::solve(){
    Communicate ghosts using the current optimization design data
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::::comm_variables(Teuchos::RCP<const MV> zp){
+void FEA_Module_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
   
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
@@ -6068,7 +6070,7 @@ void FEA_Module_Elasticity::::comm_variables(Teuchos::RCP<const MV> zp){
    update nodal displacement information in accordance with current optimization vector
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::::update_linear_solve(Teuchos::RCP<const MV> zp){
+void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp){
   
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
