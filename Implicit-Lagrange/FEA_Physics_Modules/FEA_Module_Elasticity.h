@@ -3,6 +3,22 @@
 
 #include "FEA_Module.h"
 
+namespace MueLu{
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class Hierarchy;
+}
+
+namespace Xpetra{
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class Operator;
+  
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class MultiVector;
+
+  template<class floattype, class local_ind, class global_ind, class nodetype> 
+  class Matrix;
+}
+
 class FEA_Module_Elasticity: public FEA_Module{
 
 public:
