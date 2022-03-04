@@ -3,6 +3,7 @@
 
 #include "utilities.h"
 #include "matar.h"
+#include "elements.h"
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_oblackholestream.hpp>
@@ -22,6 +23,8 @@
 
 //forward declare
 class Implicit_Solver;
+
+class Node_Combination;
 
 class FEA_Module{
 

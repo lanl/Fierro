@@ -1,6 +1,6 @@
 set(Class_SRC Topology_Optimization/Simulation_Parameters.cpp node_combination.cpp)
 set(Implicit_Solver_SRC Implicit_Solver.cpp)
-set(FEA_Physics_Modules/FEA_Module.cpp FEA_Physics_Modules/FEA_Module_Elasticity.cpp FEA_Physics_Modules/Matrix_Equilibration.cpp )
+set(FEA_Module_SRC FEA_Physics_Modules/FEA_Module.cpp FEA_Physics_Modules/FEA_Module_Elasticity.cpp FEA_Physics_Modules/Matrix_Equilibration.cpp )
 set(Solver_SRC_CXX main.cpp Solver.cpp)
 
 set(CMAKE_CXX_EXTENSIONS OFF)

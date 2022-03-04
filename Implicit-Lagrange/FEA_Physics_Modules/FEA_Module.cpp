@@ -1,5 +1,6 @@
 #include "FEA_Module.h"
-#include "Implicit_Solver.h"
+#include "../Implicit_Solver.h"
+#include "../node_combination.h"
 using namespace utils;
 
 FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
@@ -11,7 +12,6 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   rnum_elem = Solver_Pointer->rnum_elem;
 
   hessvec_count = update_count = 0;
-  file_index = 0;
   linear_solve_time = hessvec_time = hessvec_linear_time = 0;
 
   Matrix_alloc=0;
@@ -32,7 +32,7 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   element_map = Solver_Pointer->element_map; //non overlapping map of elements owned by each rank used in reduction ops
   all_element_map = Solver_Pointer->all_element_map; //overlapping map of elements connected to the local nodes in each rank
   local_dof_map = Solver_Pointer->local_dof_map; //map of local dofs (typically num_node_local*num_dim)
-  all_dof_map = Solver_Pointer->all_dof_map //map of local and ghost dofs (typically num_node_all*num_dim)
+  all_dof_map = Solver_Pointer->all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
 
   //obtain mesh coordinates, densities, and element connectivity
   nodes_in_elem_distributed = Solver_Pointer->nodes_in_elem_distributed; //element to node connectivity table
