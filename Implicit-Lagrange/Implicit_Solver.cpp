@@ -177,6 +177,9 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //construct FEA module
     fea_elasticity = new FEA_Module_Elasticity(this);
+    
+    //call boundary routines on fea modules
+    fea_elasticity->init_boundaries();
 
     //set boundary conditions for FEA modules
     fea_elasticity->generate_bcs();
@@ -1894,8 +1897,9 @@ void Implicit_Solver::init_boundaries(){
   //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
   std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
   
-  //call boundary routines on fea modules
-  fea_elasticity->init_boundary_sets(num_boundary_sets);
+  //disable for now
+  if(0)
+  init_topology_conditions(num_boundary_sets);
 }
 
 /* ----------------------------------------------------------------------
