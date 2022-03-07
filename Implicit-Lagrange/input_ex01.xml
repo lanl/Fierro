@@ -1,123 +1,5 @@
 <ParameterList name="Inputs">
 <!-- EXAMPLE 01 INPUT PARAMETERS
-       PROBLEM defines problem specific parameters including physical
-         parameters, discretization specifications and PDE solvers.
-         See the bottom of this file for more information.
--->
-  <ParameterList name="Problem">
-    <Parameter name="Check derivatives"                  type="bool"    value="false"      />
-    <Parameter name="Use state storage"                  type="bool"    value="true"       />
-    <!-- Problem Specification -->
-<!--
-    <Parameter name="Example"                            type="string"  value="3D L Beam"  />
-    <Parameter name="Problem Dimension"                  type="int"     value="3"          />
--->
-    <Parameter name="Example"                            type="string"  value="2D Truss"   />
-    <Parameter name="Problem Dimension"                  type="int"     value="2"          />
-    <Parameter name="Use Plain Stress"                   type="bool"    value="true"       />
-    <Parameter name="Young's Modulus"                    type="double"  value="200.0"      />
-    <Parameter name="Poisson Ratio"                      type="double"  value="0.29"       />
-    <Parameter name="Minimum Density"                    type="double"  value="1e-4"       />
-    <Parameter name="Maximum Density"                    type="double"  value="1.0"        />
-    <Parameter name="Minimization Type"                  type="string"  value="Compliance" />
-    <Parameter name="Compliance Scaling"                 type="double"  value="1.0"        />
-    <Parameter name="Normalize Compliance"               type="bool"    value="true"       />
-    <Parameter name="Output Frequency"                   type="int"     value="0"          />
-    <Parameter name="Use Basic Update"                   type="bool"    value="false"      />
-    <!-- Volume Minimization -->
-    <Parameter name="Compliance Factor"                  type="double"  value="2.0"        />
-    <!-- Compliance Minimization -->
-    <Parameter name="Volume Fraction"                    type="double"  value="0.4"        />
-    <Parameter name="Initial Density"                    type="double"  value="0.4"        />
-    <Parameter name="Use Volume Equality Constraint"     type="bool"    value="true"       />
-    <Parameter name="Hessian Approximation"              type="string"  value="None"       />
-    <!-- Total Minimization -->
-    <Parameter name="Volume Objective Scale"             type="double"  value="5e1"        />
-    <!-- SIMP -->
-    <Parameter name="SIMP Power"                         type="double"  value="3.0"        />
-    <Parameter name="Use Filter"                         type="bool"    value="true"       />
-    <Parameter name="Filter Radius"                      type="double"  value="0.1"        />
-    <Parameter name="Use Projection"                     type="bool"    value="false"      />
-    <Parameter name="Projection Parameter"               type="double"  value="1e0"        />
-    <Parameter name="Projection Threshold"               type="double"  value="0.5"        />
-    <!-- Phase Field -->
-    <Parameter name="Use Phase Field"                    type="bool"    value="false"      />
-    <Parameter name="Phase Field Penalty Parameter"      type="double"  value="1e-5"       />
-    <Parameter name="Phase Field Energy Objective Scale" type="double"  value="1e-4"       />
-    <!-- Finite Element Information -->
-    <Parameter name="Cubature Degree"                    type="int"     value="2"          />
-    <Parameter name="Basis Order"                        type="int"     value="1"          />
-    <Parameter name="Filter Basis Order"                 type="int"     value="1"          />
-    <Parameter name="Density Basis Order"                type="int"     value="0"          />
-  </ParameterList>
-
-  <!-- ===========  MESH INPUT PARAMETER SUBLIST  =========== -->
-  <ParameterList name="Mesh">
-    <Parameter name="File Name" type="string" value="meshfiles/Lbeam.txt" />
-  </ParameterList>
-
-  <!-- ===========  GEOMETRY INPUT PARAMETER SUBLIST  =========== -->
-  <ParameterList name="Geometry">
-    <!-- === rectangle === -->
-    <Parameter name="Width"             type="double"  value="2.0"  />
-    <Parameter name="Height"            type="double"  value="1.0"  />
-    <Parameter name="Depth"             type="double"  value="0.05" />
-    <Parameter name="X0"                type="double"  value="0.0"  />
-    <Parameter name="Y0"                type="double"  value="0.0"  />
-    <Parameter name="NX"                type="int"     value="128"  />
-    <Parameter name="NY"                type="int"     value="64"   />
-    <Parameter name="Partition type"    type="int"     value="1"    />
-  </ParameterList>
-
-  <!-- ===========  SIMOPT SOLVER PARAMETER SUBLIST  =========== -->
-  <ParameterList name="SimOpt">
-    <ParameterList name="Solve">
-      <Parameter name="Absolute Residual Tolerance"   type="double" value="1.e-12" />
-      <Parameter name="Relative Residual Tolerance"   type="double" value="1.e0"   />
-      <Parameter name="Iteration Limit"               type="int"    value="1"      />
-      <Parameter name="Sufficient Decrease Tolerance" type="double" value="1.e-4"  />
-      <Parameter name="Step Tolerance"                type="double" value="1.e-8"  />
-      <Parameter name="Backtracking Factor"           type="double" value="0.5"    />
-      <Parameter name="Output Iteration History"      type="bool"   value="false"  />
-    </ParameterList>
-  </ParameterList>
-
-  <!-- SOLVER INFORMATION -->
-  <ParameterList name="Solver">
-    <Parameter name="Use Direct Solver"       type="bool"   value="true"  />
-    <ParameterList name="Direct">
-      <Parameter name="Solver Type"           type="string" value="KLU2"  />
-    </ParameterList>
-    <ParameterList name="MueLu">
-      <Parameter name="verbosity"             type="string" value="none"  />
-      <Parameter name="number of equations"   type="int"    value="2"     />
-      <Parameter name="problem: symmetric"    type="bool"   value="true"  />
-      <Parameter name="multigrid algorithm"   type="string" value="sa"    />
-      <Parameter name="coarse: type"          type="string" value="KLU2"  />
-    </ParameterList>
-    <ParameterList name="Belos">
-      <Parameter name="Block Size"            type="int"    value="1"     />
-      <Parameter name="Maximum Iterations"    type="int"    value="500"   />
-      <Parameter name="Convergence Tolerance" type="double" value="1e-10" />
-      <Parameter name="Output Style"          type="int"    value="1"     />
-      <Parameter name="Output Frequency"      type="int"    value="20"    />
-      <Parameter name="Verbosity"             type="int"    value="0"    />
-    </ParameterList>
-  </ParameterList>
-
-  <!-- VECTOR INFORMATION -->
-  <ParameterList name="Vector">
-    <ParameterList name="Sim">
-      <Parameter name="Use Riesz Map"  type="bool" value="false" />
-      <Parameter name="Lump Riesz Map" type="bool" value="false" />
-    </ParameterList>
-    <ParameterList name="Opt">
-      <Parameter name="Use Riesz Map"  type="bool" value="false"  />
-      <Parameter name="Lump Riesz Map" type="bool" value="true"  />
-    </ParameterList>
-  </ParameterList>
-
-<!-- EXAMPLE 01 INPUT PARAMETERS
        The parameters below this point are ROL algorithmic parameters
 -->
   <!-- ===========  BEGIN GENERAL INPUT PARAMETER SUBLIST  =========== -->
@@ -220,12 +102,12 @@
       <Parameter name="Radius Growing Rate"                  type="double" value="2.5"          />
       <Parameter name="Safeguard Size"                       type="double" value="1.e1"         />
       <ParameterList name="Lin-More">
-        <Parameter name="Maximum Number of Minor Iterations" type="int"    value="10"   />
+        <Parameter name="Maximum Number of Minor Iterations" type="int"    value="1"   />
         <Parameter name="Sufficient Decrease Parameter"      type="double" value="1e-2" />
         <Parameter name="Relative Tolerance Exponent"        type="double" value="1.1"  />
         <ParameterList name="Cauchy Point">
-          <Parameter name="Maximum Number of Reduction Steps" type="int"    value="10"    />
-          <Parameter name="Maximum Number of Expansion Steps" type="int"    value="10"    />
+          <Parameter name="Maximum Number of Reduction Steps" type="int"    value="1"    />
+          <Parameter name="Maximum Number of Expansion Steps" type="int"    value="1"    />
           <Parameter name="Initial Step Size"                 type="double" value="1.0"   />
           <Parameter name="Normalize Initial Step Size"       type="bool"   value="true"  />
           <Parameter name="Reduction Rate"                    type="double" value="0.1"   />
@@ -234,7 +116,7 @@
         </ParameterList>
         <ParameterList name="Projected Search">
           <Parameter name="Backtracking Rate"       type="double" value="0.5"  />
-          <Parameter name="Maximum Number of Steps" type="int"    value="20"   />
+          <Parameter name="Maximum Number of Steps" type="int"    value="1"   />
         </ParameterList>
       </ParameterList>
       <!-- ===========  CONTROLS FOR INEXACTNESS  =========== -->
@@ -346,56 +228,8 @@
     <Parameter name="Gradient Tolerance"      type="double" value="1.e-5"   />
     <Parameter name="Constraint Tolerance"    type="double" value="1.e-5"   />
     <Parameter name="Step Tolerance"          type="double" value="1.e-8"  />
-    <Parameter name="Iteration Limit"         type="int"    value="2"     />
+    <Parameter name="Iteration Limit"         type="int"    value="5"     />
     <Parameter name="Use Relative Tolerances" type="bool"   value="true"    />
   </ParameterList>
 </ParameterList>
 
-<!-- PROBLEM parameter information
-
-       Minimization types:
-         1.) Compliance - Minimize compliance s.t. volume constraint
-         2.) Volume - Minimize volume s.t. compliance constraint
-         3.) Total - Minimize a linear combination of compliance and volume
-
-       Predefined examples:
-         1.) 2D Truss
-         2.) 2D Cantilever with 1 Load
-         3.) 2D Cantilever with 3 Loads
-         4.) 2D Wheel
-         5.) 2D Beams
-         6.) 2D Carrier Plate
-         7.) 3D Cantilever
-       If not using predefined examples, you can implement volumetric and
-       traction loads as follows:;
-
-       EXAMPLE: 2D Truss
-         <ParameterList name="Dirichlet">
-           <Parameter name="Sidesets" type="string" value="{3}" />
-           <Parameter name="Types"    type="string" value="{0}" />
-         </ParameterList>
-         <ParameterList name="Load">
-           <Parameter name="Magnitude"     type="string" value="{1.0}"   />
-           <Parameter name="Polar Angle"   type="string" value="{270.0}" />
-           <Parameter name="Azimuth Angle" type="string" value="{0.0}"   />
-           <Parameter name="X Location"    type="string" value="{2.0}"   />
-           <Parameter name="Y Location"    type="string" value="{0.5}"   />
-           <Parameter name="Z Location"    type="string" value="{0.0}"   />
-           <Parameter name="X Width"       type="string" value="{1e-2}"  />
-           <Parameter name="Y Width"       type="string" value="{1e-2}"  />
-           <Parameter name="Z Width"       type="string" value="{1e-2}"  />
-         </ParameterList>
-    
-       EXAMPLE: 2D Wheel
-         <ParameterList name="Dirichlet">
-           <Parameter name="Sidesets" type="string" value="{0, 4}" />
-           <Parameter name="Types"    type="string" value="{0, 2}" />
-         </ParameterList>
-         <ParameterList name="Traction">
-           <Parameter name="Sidesets"      type="string"  value="{2}"     />
-           <Parameter name="Side IDs"      type="string"  value="{0}"     />
-           <Parameter name="Magnitude"     type="string"  value="{1.0}"   />
-           <Parameter name="Polar Angle"   type="string"  value="{270.0}" />
-           <Parameter name="Azimuth Angle" type="string"  value="{0.0}"   />
-         </ParameterList>
--->
