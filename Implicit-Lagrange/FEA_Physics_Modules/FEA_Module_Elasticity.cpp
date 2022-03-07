@@ -75,7 +75,6 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   //create mesh objects
   //init_mesh = new swage::mesh_t(simparam);
   //mesh = new swage::mesh_t(simparam);
-  num_nodes = 0;
   hessvec_count = update_count = 0;
   linear_solve_time = hessvec_time = hessvec_linear_time = 0;
 
@@ -5478,6 +5477,7 @@ int FEA_Module_Elasticity::solve(){
   global_size_t global_nboundaries = 0;
   MPI_Allreduce(&local_nboundaries,&global_nboundaries,1,MPI_INT,MPI_SUM,world);
   global_size_t nrows_reduced = nrows - global_nboundaries;
+  //std::cout << "GLOBAL BC DATA " << nrows_reduced << " " << nrows <<"\n ";  
 
   //Rebalance distribution of the global stiffness matrix rows here later since
   //rows and columns are being removed.
@@ -5587,14 +5587,12 @@ int FEA_Module_Elasticity::solve(){
 
   //debug print
   /*
-  if(myrank==0)
   *fos << "All reduced dof original indices :" << std::endl;
   local_reduced_dof_original_map->describe(*fos,Teuchos::VERB_EXTREME);
   *fos << std::endl;
   std::fflush(stdout);
 
   //debug print
-  if(myrank==0)
   *fos << "All reduced dof original indices :" << std::endl;
   all_reduced_dof_original_map->describe(*fos,Teuchos::VERB_EXTREME);
   *fos << std::endl;
@@ -5614,7 +5612,6 @@ int FEA_Module_Elasticity::solve(){
 
   //debug print
   /*
-  if(myrank==0)
   *fos << "All reduced global indices :" << std::endl;
   all_reduced_global_indices->describe(*fos,Teuchos::VERB_EXTREME);
   *fos << std::endl;
@@ -5652,6 +5649,20 @@ int FEA_Module_Elasticity::solve(){
   // create a Map for the reduced global stiffness matrix that is evenly distributed amongst mpi ranks
   local_balanced_reduced_dof_map = 
     Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,0,comm));
+
+    //debug print
+  /*
+  *fos << "local_reduced_dof_map :" << std::endl;
+  local_reduced_dof_map->describe(*fos,Teuchos::VERB_EXTREME);
+  *fos << std::endl;
+  std::fflush(stdout);
+
+  //debug print
+  *fos << "local_balanced_reduced_dof_map :" << std::endl;
+  local_balanced_reduced_dof_map->describe(*fos,Teuchos::VERB_EXTREME);
+  *fos << std::endl;
+  std::fflush(stdout);
+  */
 
   //build column map
   Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap;
