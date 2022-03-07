@@ -61,6 +61,7 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   test_node_densities_distributed = Solver_Pointer->test_node_densities_distributed;
   all_node_densities_distributed = Solver_Pointer->all_node_densities_distributed;
   Global_Element_Densities = Solver_Pointer->Global_Element_Densities;
+  Element_Types = Solver_Pointer->Element_Types;
 
   //obtain boundary condition and loading data
   nboundary_patches = Solver_Pointer->nboundary_patches;
