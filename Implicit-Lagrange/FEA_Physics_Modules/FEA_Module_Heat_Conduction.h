@@ -1,8 +1,9 @@
-#ifndef FEA_MODULE_ELASTICITY_H
-#define FEA_MODULE_ELASTICITY_H
+#ifndef FEA_MODULE_HEAT_CONDUCTION_H
+#define FEA_MODULE_HEAT_CONDUCTION_H
 
 #include "FEA_Module.h"
 
+//forward declare linear solver classes
 namespace MueLu{
   template<class floattype, class local_ind, class global_ind, class nodetype> 
   class Hierarchy;
@@ -19,11 +20,11 @@ namespace Xpetra{
   class Matrix;
 }
 
-class FEA_Module_Elasticity: public FEA_Module{
+class FEA_Module_Heat_Conduction: public FEA_Module{
 
 public:
-  FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer);
-  ~FEA_Module_Elasticity();
+  FEA_Module_Heat_Conduction(Implicit_Solver *Solver_Pointer);
+  ~FEA_Module_Heat_Conduction();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
   void init_boundaries();
@@ -45,25 +46,11 @@ public:
 
   void update_linear_solve(Teuchos::RCP<const MV> zp);
 
-  void compute_element_volumes();
-
-  void compute_element_masses(const_host_vec_array design_densities, bool max_flag);
-
-  void compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component);
-
-  void compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component);
-
-  void compute_nodal_gradients(const_host_vec_array design_densities, host_vec_array gradients);
-
-  void compute_moment_gradients(const_host_vec_array design_densities, host_vec_array gradients, int moment_component);
-
-  void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component);
-
   void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
 
   void compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
 
-  void compute_nodal_strains();
+  void compute_nodal_heat_fluxes();
   
   void local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
 
@@ -85,57 +72,43 @@ public:
   //interfaces between user input and creating data structures for applied loads
   void generate_applied_loads();
 
-  void Displacement_Boundary_Conditions();
+  void Temperature_Boundary_Conditions();
   
   //Local FEA data
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Conductivity_Matrix_Assembly_Map;
   RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Conductivity_Matrix;
   //CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Forces;
   CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Results; //result of linear solve; typically displacements and densities
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Conductivity_Matrix_Strides;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
 
   //Global FEA data
-  Teuchos::RCP<MV> node_displacements_distributed;
-  Teuchos::RCP<MV> node_strains_distributed;
-  Teuchos::RCP<MV> all_node_displacements_distributed;
-  Teuchos::RCP<MV> all_cached_node_displacements_distributed;
-  Teuchos::RCP<MV> all_node_strains_distributed;
-  Teuchos::RCP<MAT> Global_Stiffness_Matrix;
-  Teuchos::RCP<MV> Global_Nodal_Forces;
-  Teuchos::RCP<MV> mass_gradients_distributed;
-  Teuchos::RCP<MV> center_of_mass_gradients_distributed;
-  Teuchos::RCP<MV> Global_Element_Volumes;
-  Teuchos::RCP<MV> Global_Element_Masses;
-  Teuchos::RCP<MV> Global_Element_Moments_x;
-  Teuchos::RCP<MV> Global_Element_Moments_y;
-  Teuchos::RCP<MV> Global_Element_Moments_z;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xx;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yy;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_zz;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xy;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xz;
-  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yz;
+  Teuchos::RCP<MV> node_temperatures_distributed;
+  Teuchos::RCP<MV> node_heat_fluxes_distributed;
+  Teuchos::RCP<MV> node_temperature_gradients_distributed;
+  Teuchos::RCP<MV> all_node_temperatures_distributed;
+  Teuchos::RCP<MV> all_cached_node_temperatures_distributed;
+  Teuchos::RCP<MV> all_node_temperature_gradients_distributed;
+  Teuchos::RCP<MV> all_node_heat_fluxes_distributed;
+  Teuchos::RCP<MAT> Global_Conductivity_Matrix;
   
   //Boundary Conditions Data
   
-  enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
-   Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
+  enum bc_type {NONE,TEMPERATURE_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
   
   //body force parameters
-  bool body_force_flag, gravity_flag, thermal_flag, electric_flag;
-  real_t *gravity_vector;
+  bool body_force_flag, thermal_flag, electric_flag;
   
   //stores the displacement value for the boundary condition on this nodal DOF
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Displacement_Boundary_Conditions;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_Temperature_Boundary_Conditions;
   //stores applied point forces on nodal DOF
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_DOF_Force_Boundary_Conditions;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_Heat_Flux_Boundary_Conditions;
   //constant surface force densities corresponding to each boundary set (provide varying field later)
-  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Force_Densities;
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Flux_Densities;
   //constant displacement condition applied to all nodes on a boundary surface (convenient option to avoid specifying nodes)
-  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Displacements;
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Temperatures;
 
   //linear solver parameters
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
@@ -155,16 +128,6 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map;
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Free_Indices;
   bool Hierarchy_Constructed;
-
-  //inertial properties
-  real_t mass, center_of_mass[3], moments_of_inertia[6];
-
-  //runtime flags
-  bool mass_init, com_init[3];
-
-  //update counters (first attempt at reducing redundant calls through ROL for Moments of Inertia and Center of Mass)
-  int mass_update, com_update[3];
-  int mass_gradient_update, com_gradient_update[3];
   
 };
 
