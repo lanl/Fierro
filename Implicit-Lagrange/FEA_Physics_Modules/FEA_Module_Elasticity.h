@@ -125,9 +125,6 @@ public:
   
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
    Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, TO_SURFACE_CONSTRAINT};
-
-  //element selection parameters and data
-  size_t max_nodes_per_element;
   
   //body force parameters
   bool body_force_flag, gravity_flag, thermal_flag, electric_flag;

@@ -20,6 +20,10 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   nghost_nodes = Solver_Pointer->nghost_nodes;
   max_nodes_per_element = Solver_Pointer->max_nodes_per_element;
 
+  //element select data
+  element_select = Solver_Pointer->element_select;
+  ref_elem = Solver_Pointer->ref_elem;
+
   hessvec_count = update_count = 0;
   linear_solve_time = hessvec_time = hessvec_linear_time = 0;
 
