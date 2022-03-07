@@ -14,6 +14,8 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   num_elem = Solver_Pointer->num_elem;
   nall_nodes = Solver_Pointer->nall_nodes;
   rnum_elem = Solver_Pointer->rnum_elem;
+  nlocal_nodes = Solver_Pointer->nlocal_nodes;
+  nghost_nodes = Solver_Pointer->nghost_nodes;
 
   hessvec_count = update_count = 0;
   linear_solve_time = hessvec_time = hessvec_linear_time = 0;
@@ -27,6 +29,11 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   std::ostream &out = std::cout;
   fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   (*fos).setOutputToRootOnly(0);
+
+  //MPI Data copy
+  myrank = Solver_Pointer_->myrank;
+  nranks = Solver_Pointer_->nranks;
+  world = Solver_Pointer_->world;
   
   //obtain node and element maps
   comm = Solver_Pointer->comm;
