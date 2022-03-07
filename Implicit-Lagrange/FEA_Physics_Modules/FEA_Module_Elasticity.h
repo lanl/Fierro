@@ -87,8 +87,6 @@ public:
 
   void Displacement_Boundary_Conditions();
   
-  class Simulation_Parameters *simparam;
-  
   //Local FEA data
   dual_vec_array dual_node_displacements; //first three indices of second dim should be positions
   dual_vec_array dual_nodal_forces;
