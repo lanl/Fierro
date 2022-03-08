@@ -88,7 +88,7 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
   current_bdy_id = 0;
 
   //boundary condition flags
-  body_force_flag = thermal_flag = electric_flag = false;
+  body_term_flag = thermal_flag = electric_flag = false;
 
   //construct globally distributed temperature and heat flux vectors
   int num_dim = simparam->num_dim;
@@ -98,13 +98,14 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
   node_temperature_gradients_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   all_node_temperatures_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
   node_heat_fluxes_distributed = Teuchos::rcp(new MV(map, num_dim));
+  Global_Nodal_RHS = Teuchos::rcp(new MV(local_dof_map, 1));
   all_node_temperature_gradients_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   all_node_heat_fluxes_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
 
   //initialize temperatures to 0
   //local variable for host view in the dual view
-  host_vec_array all_node_temperatures = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  host_vec_array node_temperatures = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  host_vec_array node_temperatures = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
     node_temperatures(init,0) = 0;
   for(int init = 0; init < all_dof_map->getNodeNumElements(); init++)
@@ -121,8 +122,8 @@ FEA_Module_Heat_Conduction::~FEA_Module_Heat_Conduction(){
 
 void FEA_Module_Heat_Conduction::init_boundaries(){
   int num_boundary_sets = simparam->NB;
-  int num_surface_force_sets = simparam->NBSF;
-  int num_surface_disp_sets = simparam->NBD;
+  int num_surface_flux_sets = simparam->NBSF;
+  int num_surface_temp_sets = simparam->NBT;
   int num_dim = simparam->num_dim;
   
   // set the number of boundary sets
@@ -131,16 +132,16 @@ void FEA_Module_Heat_Conduction::init_boundaries(){
   
   init_boundary_sets(num_boundary_sets);
   Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_boundary_sets); 
-  Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets,3);
-  Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets,3);
+  Boundary_Surface_Heat_Flux = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_flux_sets,3);
+  Boundary_Surface_Temperatures = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_temp_sets,1);
 
   //initialize
   for(int ibdy=0; ibdy < num_boundary_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
 
   //allocate nodal data
-  Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes*num_dim, "Node_DOF_Boundary_Condition_Type");
-  Node_DOF_Displacement_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes*num_dim);
-  Node_DOF_Force_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes*num_dim);
+  Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes, "Node_DOF_Boundary_Condition_Type");
+  Node_DOF_Temperature_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes);
+  Node_DOF_Flux_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes);
 
   //initialize
   for(int init=0; init < nall_nodes*num_dim; init++)
@@ -187,102 +188,18 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   bdy_set_id = current_bdy_id++;
   //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
   tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
+  Boundary_Condition_Type_List(bdy_set_id) = TEMPERATURE_CONDITION;
+  Boundary_Surface_Temperatures(surf_disp_set_id,0) = 0;
+  Boundary_Surface_Temperatures(surf_disp_set_id,1) = 0;
+  Boundary_Surface_Temperatures(surf_disp_set_id,2) = 0;
   surf_disp_set_id++;
     
   *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   *fos << std::endl;
- /*
-  // tag the y=10 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging y = 10 " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10.0 * simparam->unit_scaling;
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
-    
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-
-  // tag the x=10 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging y = 10 " << std::endl;
-  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10.0 * simparam->unit_scaling;
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
-    
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
- 
-  // tag the +z beam plane,  (Direction, value, bdy_set)
-  std::cout << "tagging z = 100 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 100.0 * simparam->unit_scaling;
-  //real_t fix_limits[4];
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
-    
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  
-  //This part should be changed so it interfaces with simparam to handle multiple input cases
-  // tag the y=0 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging y = 0 " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0.0;
-  bdy_set_id = 1;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-    
-
-  // tag the z=0 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging z = 0 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0.0;
-  bdy_set_id = 2;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  
-  */
 
   //Tag nodes for Boundary conditions such as displacements
-  Displacement_Boundary_Conditions();
+  Temperature_Boundary_Conditions();
 } // end generate_bcs
 
 /* ----------------------------------------------------------------------
@@ -292,138 +209,13 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
 void FEA_Module_Heat_Conduction::generate_applied_loads(){
   int num_dim = simparam->num_dim;
   int bdy_set_id;
-  int surf_force_set_id = 0;
+  int surf_flux_set_id = 0;
   int bc_tag;
   real_t value;
   
-  //Surface Forces Section
-
-  /*
-  std::cout << "tagging z = 2 Force " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam->unit_scaling/simparam->unit_scaling;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
+  //Surface Fluxes Section
   
-  
-  std::cout << "tagging z = 1 Force " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 1 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam->unit_scaling/simparam->unit_scaling;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  
-  
-  std::cout << "tagging beam x = 0 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 1/simparam->unit_scaling/simparam->unit_scaling;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  */
-  /*
-  std::cout << "tagging beam -x " << std::endl;
-  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = -1/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-
-  std::cout << "tagging beam +x " << std::endl;
-  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10 * simparam->unit_scaling;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 1/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  */
-
-  /*
-  std::cout << "tagging beam -y " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0 * simparam->unit_scaling;
-  real_t load_limits_left[4];
-  load_limits_left[0] = load_limits_left[2] = 4;
-  load_limits_left[1] = load_limits_left[3] = 6;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id ,load_limits_left);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 10/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-
-  std::cout << "tagging beam +y " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10 * simparam->unit_scaling;
-  real_t load_limits_right[4];
-  load_limits_right[0] = load_limits_right[2] = 4;
-  load_limits_right[1] = load_limits_right[3] = 6;
-  //value = 2;
-  bdy_set_id = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id, load_limits_right);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = -10/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  */
-  
-  *fos << "tagging beam +z force " << std::endl;
+  *fos << "tagging beam +z heat flux " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
   value = 100;
@@ -431,43 +223,21 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
+  Boundary_Surface_Heat_Flux(surf_force_set_id,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Heat_Flux(surf_force_set_id,1) = 0;
+  Boundary_Surface_Heat_Flux(surf_force_set_id,2) = 0;
+  surf_flux_set_id++;
   *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
   *fos << std::endl;
   
-  /*
-  std::cout << "tagging y = 2 " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2.0;
-  bdy_set_id = 4;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-
-  std::cout << "tagging z = 2 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2.0;
-  bdy_set_id = 5;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
-  std::cout << std::endl;
-  */
-  
-  //Body Forces Section
+  //Body Term Section
 
   //apply gravity
   gravity_flag = simparam->gravity_flag;
   gravity_vector = simparam->gravity_vector;
 
-  if(electric_flag||body_force_flag||thermal_flag) body_force_flag = true;
+  if(electric_flag||body_term_flag||thermal_flag) body_term_flag = true;
 
 }
 
@@ -477,7 +247,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
 void FEA_Module_Heat_Conduction::init_assembly(){
   int num_dim = simparam->num_dim;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  Stiffness_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Stiffness_Matrix_Strides");
+  Conductivity_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Conductivity_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
   int current_row_n_nodes_scanned;
@@ -489,9 +259,9 @@ void FEA_Module_Heat_Conduction::init_assembly(){
   CArrayKokkos <size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
   Graph_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes, "Graph_Matrix_Strides");
 
-  //allocate storage for the sparse stiffness matrix map used in the assembly process
-  Global_Stiffness_Matrix_Assembly_Map = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
-                                         max_nodes_per_element,max_nodes_per_element, "Global_Stiffness_Matrix_Assembly_Map");
+  //allocate storage for the sparse conductivity matrix map used in the assembly process
+  Global_Conductivity_Matrix_Assembly_Map = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
+                                         max_nodes_per_element,max_nodes_per_element, "Global_Conductivity_Matrix_Assembly_Map");
 
   //allocate array used to determine global node repeats in the sparse graph later
   CArrayKokkos <int, array_layout, device_type, memory_traits> node_indices_used(nall_nodes, "node_indices_used");
@@ -574,7 +344,7 @@ void FEA_Module_Heat_Conduction::init_assembly(){
           Element_local_indices(local_node_index,current_column_index,2) = jnode;
 
           //fill forward map
-          Global_Stiffness_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+          Global_Conductivity_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
         }
         Graph_Fill(local_node_index) += nodes_per_element;
       }
@@ -599,7 +369,7 @@ void FEA_Module_Heat_Conduction::init_assembly(){
           Element_local_indices(local_node_index,current_column_index,2) = jnode;
 
           //fill forward map
-          Global_Stiffness_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+          Global_Conductivity_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
         }
         Graph_Fill(local_node_index) += nodes_per_element;
       }
@@ -628,7 +398,7 @@ void FEA_Module_Heat_Conduction::init_assembly(){
         current_element_index = Element_local_indices(inode,istride,0);
         element_row_index = Element_local_indices(inode,istride,1);
         element_column_index = Element_local_indices(inode,istride,2);
-        Global_Stiffness_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
+        Global_Conductivity_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
             = column_index(current_node);   
 
         
@@ -644,7 +414,7 @@ void FEA_Module_Heat_Conduction::init_assembly(){
         element_row_index = Element_local_indices(inode,istride,1);
         element_column_index = Element_local_indices(inode,istride,2);
 
-        Global_Stiffness_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
+        Global_Conductivity_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
             = istride;
 
         //now that the element map information has been copied, copy the global node index and delete the last index
@@ -680,22 +450,22 @@ void FEA_Module_Heat_Conduction::init_assembly(){
   
   /*At this stage the sparse graph should have unique global indices on each row.
     The constructed Assembly map (to the global sparse matrix)
-    is used to loop over each element's local stiffness matrix in the assembly process.*/
+    is used to loop over each element's local conductivity matrix in the assembly process.*/
   
-  //expand strides for stiffness matrix by multipling by dim
+  //expand strides for conductivity matrix by multipling by dim
   for(int inode = 0; inode < nlocal_nodes; inode++){
     for (int idim = 0; idim < num_dim; idim++)
-    Stiffness_Matrix_Strides(num_dim*inode + idim) = num_dim*Graph_Matrix_Strides(inode);
+    Conductivity_Matrix_Strides(num_dim*inode + idim) = num_dim*Graph_Matrix_Strides(inode);
   }
 
-  Stiffness_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Stiffness_Matrix_Strides);
-  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Stiffness_Matrix_Strides);
+  Conductivity_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Conductivity_Matrix_Strides);
+  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Conductivity_Matrix_Strides);
 
-  //set stiffness Matrix Graph
+  //set conductivity Matrix Graph
   //debug print
     //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
-    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+    for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
       DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof/num_dim,istride/num_dim)*num_dim + istride%num_dim;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -730,7 +500,7 @@ void FEA_Module_Heat_Conduction::init_assembly(){
   }
   
 
-  //debug section; print stiffness matrix graph and per element map
+  //debug section; print conductivity matrix graph and per element map
   std::cout << " ------------SPARSE GRAPH MATRIX--------------"<<std::endl;
   for (int inode = 0; inode < num_nodes; inode++){
       std::cout << "row: " << inode + 1 << " { ";
@@ -747,7 +517,7 @@ void FEA_Module_Heat_Conduction::init_assembly(){
     for (int lnode = 0; lnode < nodes_per_elem; lnode++){
         std::cout << "{ "<< std::endl;
         for (int jnode = 0; jnode < nodes_per_elem; jnode++){
-          std::cout <<"(" << lnode+1 << "," << jnode+1 << "," << nodes_in_elem(ielem,lnode)+1 << ")"<< " = " << Global_Stiffness_Matrix_Assembly_Map(ielem,lnode, jnode) + 1 << " ";
+          std::cout <<"(" << lnode+1 << "," << jnode+1 << "," << nodes_in_elem(ielem,lnode)+1 << ")"<< " = " << Global_Conductivity_Matrix_Assembly_Map(ielem,lnode, jnode) + 1 << " ";
         }
         std::cout << " }"<< std::endl;
     }
@@ -771,12 +541,12 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Stiffness_Matrix(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
 
-  //initialize stiffness Matrix entries to 0
+  //initialize conductivity Matrix entries to 0
   //debug print
     //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
-    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      Stiffness_Matrix(idof,istride) = 0;
+    for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
+      Conductivity_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
     }
@@ -784,12 +554,12 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
     //std::cout << std::endl;
   }
 
-  //assemble the global stiffness matrix
+  //assemble the global conductivity matrix
   if(num_dim==2)
   for (int ielem = 0; ielem < rnum_elem; ielem++){
     element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
     nodes_per_element = elem2D->num_nodes();
-    //construct local stiffness matrix for this element
+    //construct local conductivity matrix for this element
     local_matrix_multiply(ielem, Local_Stiffness_Matrix);
     //assign entries of this local matrix to the sparse global matrix storage;
     for (int inode = 0; inode < nodes_per_element; inode++){
@@ -800,17 +570,17 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
       current_row = num_dim*map->getLocalElement(global_node_index);
       for(int jnode = 0; jnode < nodes_per_element; jnode++){
         
-        current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
+        current_column = num_dim*Global_Conductivity_Matrix_Assembly_Map(ielem,inode,jnode);
         for (int idim = 0; idim < num_dim; idim++){
           for (int jdim = 0; jdim < num_dim; jdim++){
 
             //debug print
             //if(current_row + idim==15&&current_column + jdim==4)
-            //std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
+            //std::cout << " Local conductivity matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
             //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
             //end debug
 
-            Stiffness_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
+            Conductivity_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
           }
         }
       }
@@ -821,7 +591,7 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
   for (int ielem = 0; ielem < rnum_elem; ielem++){
     element_select->choose_3Delem_type(Element_Types(ielem), elem);
     nodes_per_element = elem->num_nodes();
-    //construct local stiffness matrix for this element
+    //construct local conductivity matrix for this element
     local_matrix_multiply(ielem, Local_Stiffness_Matrix);
     //assign entries of this local matrix to the sparse global matrix storage;
     for (int inode = 0; inode < nodes_per_element; inode++){
@@ -832,26 +602,26 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
       current_row = num_dim*map->getLocalElement(global_node_index);
       for(int jnode = 0; jnode < nodes_per_element; jnode++){
         
-        current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
+        current_column = num_dim*Global_Conductivity_Matrix_Assembly_Map(ielem,inode,jnode);
         for (int idim = 0; idim < num_dim; idim++){
           for (int jdim = 0; jdim < num_dim; jdim++){
 
             //debug print
             //if(current_row + idim==15&&current_column + jdim==4)
-            //std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
+            //std::cout << " Local conductivity matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
             //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
             //end debug
 
-            Stiffness_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
+            Conductivity_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
           }
         }
       }
     }
   }
 
-  //construct distributed stiffness matrix and force vector from local kokkos data
+  //construct distributed conductivity matrix and force vector from local kokkos data
   
-  //build column map for the global stiffness matrix
+  //build column map for the global conductivity matrix
   Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap;
   const Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > dommap = local_dof_map;
   
@@ -859,7 +629,7 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
   /*
     std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
-    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+    for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
       //debug print
       std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
     }
@@ -867,13 +637,13 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
     std::cout << std::endl;
   } */
 
-  //debug print of stiffness matrix
+  //debug print of conductivity matrix
   /*
   std::cout << " ------------SPARSE STIFFNESS MATRIX ON TASK"<< myrank << std::endl;
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
       std::cout << "row: " << idof + 1 << " { ";
-    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-        std::cout << istride + 1 << " = " << Stiffness_Matrix(idof,istride) << " , " ;
+    for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
+        std::cout << istride + 1 << " = " << Conductivity_Matrix(idof,istride) << " , " ;
     }
     std::cout << " }"<< std::endl;
   }
@@ -897,24 +667,24 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
 
   size_t entrycount = 0;
   for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
-    for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+    for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
       stiffness_local_indices(entrycount) = colmap->getLocalElement(DOF_Graph_Matrix(irow,istride));
       entrycount++;
     }
   }
   
   if(!Matrix_alloc){
-  Global_Stiffness_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view()));
-  Global_Stiffness_Matrix->fillComplete();
+  Global_Conductivity_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Conductivity_Matrix.get_kokkos_view()));
+  Global_Conductivity_Matrix->fillComplete();
   Matrix_alloc = 1;
   }
 
   //filter small negative numbers (that should have been 0 from cancellation) from floating point error
   /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
-    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON)
-      Stiffness_Matrix(idof,istride) = 0;
+    for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
+      if(Conductivity_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON||Conductivity_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON)
+      Conductivity_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
     }
@@ -930,7 +700,7 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
 
   //debug print of A matrix
   //*fos << "Global Stiffness Matrix :" << std::endl;
-  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  //Global_Conductivity_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
 
   //Print solution vector
@@ -1013,9 +783,9 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
     //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
-    force_density[0] = Boundary_Surface_Force_Densities(surface_force_set_id,0);
-    force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
-    force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
+    force_density[0] = Boundary_Surface_Heat_Flux(surface_force_set_id,0);
+    force_density[1] = Boundary_Surface_Heat_Flux(surface_force_set_id,1);
+    force_density[2] = Boundary_Surface_Heat_Flux(surface_force_set_id,2);
     surface_force_set_id++;
 
     real_t pointer_basis_values[elem->num_basis()];
@@ -1193,7 +963,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
     //apply contribution from non-zero displacement boundary conditions
 
     //apply body forces
-    if(body_force_flag){
+    if(body_term_flag){
       //initialize quadrature data
       elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
       elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
@@ -1385,7 +1155,7 @@ void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_
   if(density < 0) density = 0;
   for(int i = 0; i < simparam->penalty_power; i++)
     penalty_product *= density;
-  //relationship between density and stiffness
+  //relationship between density and conductivity
   Element_Modulus = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus = density*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
@@ -1402,7 +1172,7 @@ void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t iel
   if(density < 0) density = 0;
   for(int i = 0; i < simparam->penalty_power - 1; i++)
     penalty_product *= density;
-  //relationship between density and stiffness
+  //relationship between density and conductivity
   Element_Modulus_Derivative = simparam->penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
@@ -1420,7 +1190,7 @@ void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ie
   if(simparam->penalty_power>=2){
     for(int i = 0; i < simparam->penalty_power - 2; i++)
       penalty_product *= density;
-    //relationship between density and stiffness
+    //relationship between density and conductivity
     Element_Modulus_Derivative = simparam->penalty_power*(simparam->penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   }
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
@@ -1428,7 +1198,7 @@ void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ie
 }
 
 /* ----------------------------------------------------------------------
-   Construct the local stiffness matrix
+   Construct the local conductivity matrix
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
@@ -1496,7 +1266,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
     if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
   }
 
-  //initialize local stiffness matrix storage
+  //initialize local conductivity matrix storage
   for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
       for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++)
       Local_Matrix(ifill,jfill) = 0;
@@ -1596,7 +1366,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
         basis_index_x = ifill/num_dim;
         basis_index_y = jfill/num_dim;
 
-        //compute stiffness matrix terms involving derivatives of the shape function and cofactor determinants from cramers rule
+        //compute conductivity matrix terms involving derivatives of the shape function and cofactor determinants from cramers rule
         if(index_x==0&&index_y==0){
           matrix_subterm1 = Pressure_Term*(basis_derivative_s1(basis_index_x)*
           (JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
@@ -1804,7 +1574,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
       
     }
 
-    //debug print of local stiffness matrix
+    //debug print of local conductivity matrix
       /*
       std::cout << " ------------LOCAL STIFFNESS MATRIX "<< ielem + 1 <<"--------------"<<std::endl;
       for (int idof = 0; idof < num_dim*nodes_per_elem; idof++){
@@ -1818,7 +1588,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
 }
 
 /* ----------------------------------------------------------------------
-   Construct the local stiffness matrix
+   Construct the local conductivity matrix
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
@@ -1908,7 +1678,7 @@ void FEA_Module_Heat_Conduction::local_matrix_multiply(int ielem, CArrayKokkos<r
     for(int icol = 0; icol < Brows; icol++)
       C_matrix(irow,icol) = 0;
 
-  //initialize local stiffness matrix storage
+  //initialize local conductivity matrix storage
   for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
       for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++)
       Local_Matrix(ifill,jfill) = 0;
@@ -2163,7 +1933,7 @@ void FEA_Module_Heat_Conduction::local_matrix_multiply(int ielem, CArrayKokkos<r
       for(int icol=0; icol < num_dim*nodes_per_elem; icol++)
       CB_matrix(irow,icol) += CB_matrix_contribution(irow,icol);
 
-    //compute the contributions of this quadrature point to all the local stiffness matrix elements
+    //compute the contributions of this quadrature point to all the local conductivity matrix elements
     for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
       for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
         matrix_term = 0;
@@ -2201,7 +1971,7 @@ void FEA_Module_Heat_Conduction::local_matrix_multiply(int ielem, CArrayKokkos<r
     //end debug block
     */
 
-    //debug print of local stiffness matrix
+    //debug print of local conductivity matrix
       /*
       std::cout << " ------------LOCAL STIFFNESS MATRIX "<< ielem + 1 <<"--------------"<<std::endl;
       for (int idof = 0; idof < num_dim*nodes_per_elem; idof++){
@@ -2239,7 +2009,7 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
   Displacement_Conditions(2) = Z_DISPLACEMENT_CONDITION;
 
   //host view of local nodal displacements
-  host_vec_array node_displacements_host = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  host_vec_array node_temperatures_host = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
   //initialize to -1 (DO NOT make -1 an index for bdy sets)
   for(int inode = 0 ; inode < nlocal_nodes*num_dim; inode++)
@@ -2274,23 +2044,23 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
       num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
       if(bc_option==0) {
         bc_dim_set[0]=1;
-        displacement(0) = Boundary_Surface_Displacements(surface_disp_set_id,0);
+        displacement(0) = Boundary_Surface_Temperatures(surface_disp_set_id,0);
       }
       else if(bc_option==1) {
         bc_dim_set[1]=1;
-        displacement(1) = Boundary_Surface_Displacements(surface_disp_set_id,1);
+        displacement(1) = Boundary_Surface_Temperatures(surface_disp_set_id,1);
       }
       else if(bc_option==2) {
         bc_dim_set[2]=1;
-        displacement(2) = Boundary_Surface_Displacements(surface_disp_set_id,2);
+        displacement(2) = Boundary_Surface_Temperatures(surface_disp_set_id,2);
       }
       else if(bc_option==3) {
         bc_dim_set[0]=1;
         bc_dim_set[1]=1;
         bc_dim_set[2]=1;
-        displacement(0) = Boundary_Surface_Displacements(surface_disp_set_id,0);
-        displacement(1) = Boundary_Surface_Displacements(surface_disp_set_id,1);
-        displacement(2) = Boundary_Surface_Displacements(surface_disp_set_id,2);
+        displacement(0) = Boundary_Surface_Temperatures(surface_disp_set_id,0);
+        displacement(1) = Boundary_Surface_Temperatures(surface_disp_set_id,1);
+        displacement(2) = Boundary_Surface_Temperatures(surface_disp_set_id,2);
       }
       surface_disp_set_id++;
       
@@ -2329,7 +2099,7 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
               //counts local DOF being constrained
               if(local_flag){
               Number_DOF_BCS++;
-              node_displacements_host(current_node_id*num_dim+idim,0) = displacement(idim);
+              node_temperatures_host(current_node_id*num_dim+idim,0) = displacement(idim);
               }
             }
           }
@@ -2362,7 +2132,7 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
 void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array design_variables, host_vec_array design_gradients){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   const_host_vec_array Element_Densities;
@@ -2459,9 +2229,9 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
-      current_nodal_displacements(node_loop*num_dim+1) = all_node_displacements(local_dof_idy,0);
-      current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
+      current_nodal_displacements(node_loop*num_dim) = all_node_temperatures(local_dof_idx,0);
+      current_nodal_displacements(node_loop*num_dim+1) = all_node_temperatures(local_dof_idy,0);
+      current_nodal_displacements(node_loop*num_dim+2) = all_node_temperatures(local_dof_idz,0);
       
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
       //debug print
@@ -2687,7 +2457,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
       }
     }
     
-    //compute the contributions of this quadrature point to all the local stiffness matrix elements
+    //compute the contributions of this quadrature point to all the local conductivity matrix elements
     for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
       for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
         matrix_term = 0;
@@ -2714,7 +2484,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
       }
     }
 
-    //evaluate local stiffness matrix gradient with respect to igradient
+    //evaluate local conductivity matrix gradient with respect to igradient
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
       if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
@@ -2725,7 +2495,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
     }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
-    if(body_force_flag){
+    if(body_term_flag){
       //look up element material properties at this point as a function of density
       Gradient_Body_Term(ielem, current_density, gradient_force_density);
       for(int igradient=0; igradient < nodes_per_elem; igradient++){
@@ -2759,7 +2529,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   //local variable for host view in the dual view
   real_t current_cpu_time = Solver_Pointer_->CPU_Time();
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   const_host_vec_array Element_Densities;
@@ -2886,9 +2656,9 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
-      current_nodal_displacements(node_loop*num_dim+1) = all_node_displacements(local_dof_idy,0);
-      current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
+      current_nodal_displacements(node_loop*num_dim) = all_node_temperatures(local_dof_idx,0);
+      current_nodal_displacements(node_loop*num_dim+1) = all_node_temperatures(local_dof_idy,0);
+      current_nodal_displacements(node_loop*num_dim+2) = all_node_temperatures(local_dof_idz,0);
       
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
     }
@@ -3098,7 +2868,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       }
     }
     
-    //compute the contributions of this quadrature point to all the local stiffness matrix elements
+    //compute the contributions of this quadrature point to all the local conductivity matrix elements
     for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
       for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
         matrix_term = 0;
@@ -3111,7 +2881,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       }
     }
 
-    //evaluate local stiffness matrix gradient with respect to igradient
+    //evaluate local conductivity matrix gradient with respect to igradient
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
       //if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, igradient));
@@ -3139,7 +2909,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   
   //*fos << "Elastic Modulus Gradient" << Element_Modulus_Gradient <<std::endl;
   //*fos << "DISPLACEMENT" << std::endl;
-  //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_temperatures_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 
   //*fos << "RHS vector" << std::endl;
   //unbalanced_B->describe(*fos,Teuchos::VERB_EXTREME);
@@ -3247,9 +3017,9 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
-      current_nodal_displacements(node_loop*num_dim+1) = all_node_displacements(local_dof_idy,0);
-      current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
+      current_nodal_displacements(node_loop*num_dim) = all_node_temperatures(local_dof_idx,0);
+      current_nodal_displacements(node_loop*num_dim+1) = all_node_temperatures(local_dof_idy,0);
+      current_nodal_displacements(node_loop*num_dim+2) = all_node_temperatures(local_dof_idz,0);
       current_adjoint_displacements(node_loop*num_dim) = all_adjoint(local_dof_idx,0);
       current_adjoint_displacements(node_loop*num_dim+1) = all_adjoint(local_dof_idy,0);
       current_adjoint_displacements(node_loop*num_dim+2) = all_adjoint(local_dof_idz,0);
@@ -3464,7 +3234,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       }
     }
     
-    //compute the contributions of this quadrature point to all the local stiffness matrix elements
+    //compute the contributions of this quadrature point to all the local conductivity matrix elements
       for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
         for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
           matrix_term = 0;
@@ -3488,7 +3258,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       }
     }
 
-    //evaluate local stiffness matrix concavity with respect to igradient and jgradient
+    //evaluate local conductivity matrix concavity with respect to igradient and jgradient
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
       local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, igradient));
       for(int jgradient=igradient; jgradient < nodes_per_elem; jgradient++){
@@ -3520,7 +3290,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       }
     }
 
-    //evaluate local stiffness matrix gradient with respect to igradient (augmented term with adjoint vector)
+    //evaluate local conductivity matrix gradient with respect to igradient (augmented term with adjoint vector)
     for(int igradient=0; igradient < nodes_per_elem; igradient++){
       if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
@@ -3531,7 +3301,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
-      if(body_force_flag){
+      if(body_term_flag){
         for(int igradient=0; igradient < nodes_per_elem; igradient++){
         if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
         local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
@@ -3564,7 +3334,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
 void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   host_vec_array all_node_strains = all_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   host_vec_array node_strains = node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
@@ -3677,9 +3447,9 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
-      current_nodal_displacements(node_loop*num_dim+1) = all_node_displacements(local_dof_idy,0);
-      current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
+      current_nodal_displacements(node_loop*num_dim) = all_node_temperatures(local_dof_idx,0);
+      current_nodal_displacements(node_loop*num_dim+1) = all_node_temperatures(local_dof_idy,0);
+      current_nodal_displacements(node_loop*num_dim+2) = all_node_temperatures(local_dof_idz,0);
 
       //debug print
       /*
@@ -4030,7 +3800,7 @@ void FEA_Module_Heat_Conduction::linear_solver_parameters(){
   }
   else{
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("MueLu"));
-    std::string xmlFileName = "elasticity3D.xml";
+    std::string xmlFileName = "MueLu_Thermal_3D_Params.xml";
     //std::string xmlFileName = "simple_test.xml";
     Teuchos::updateParametersFromXmlFileAndBroadcast(xmlFileName, Teuchos::Ptr<Teuchos::ParameterList>(&(*Linear_Solve_Params)), *comm);
   }
@@ -4044,7 +3814,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //local variable for host view in the dual view
   const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  const_host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
@@ -4067,12 +3837,12 @@ int FEA_Module_Heat_Conduction::solve(){
   
   //construct global data for example; normally this would be from file input and distributed
   //according to the row map at that point
-  global_size_t nrows = num_nodes*num_dim;
+  global_size_t nrows = num_nodes;
   
  
   //number of boundary conditions on this mpi rank
   global_size_t local_nboundaries = Number_DOF_BCS;
-  size_t local_nrows_reduced = nlocal_nodes*num_dim - local_nboundaries;
+  size_t local_nrows_reduced = nlocal_nodes - local_nboundaries;
 
   //obtain total number of boundary conditions on all ranks
   global_size_t global_nboundaries = 0;
@@ -4080,11 +3850,11 @@ int FEA_Module_Heat_Conduction::solve(){
   global_size_t nrows_reduced = nrows - global_nboundaries;
   //std::cout << "GLOBAL BC DATA " << nrows_reduced << " " << nrows <<"\n ";  
 
-  //Rebalance distribution of the global stiffness matrix rows here later since
+  //Rebalance distribution of the global conductivity matrix rows here later since
   //rows and columns are being removed.
 
   //global_size_t *entries_per_row = new global_size_t[local_nrows];
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Reduced_Stiffness_Matrix_Strides(local_nrows_reduced,"Reduced_Stiffness_Matrix_Strides");
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Reduced_Conductivity_Matrix_Strides(local_nrows_reduced,"Reduced_Conductivity_Matrix_Strides");
   row_pointers reduced_row_offsets_pass = row_pointers("reduced_row_offsets_pass", local_nrows_reduced+1);
 
   //init row_offsets
@@ -4095,8 +3865,8 @@ int FEA_Module_Heat_Conduction::solve(){
   //stores global indices belonging to this MPI rank from the non-reduced map corresponding to the reduced system
   Free_Indices = CArrayKokkos<GO, array_layout, device_type, memory_traits>(local_nrows_reduced,"Free_Indices");
   reduced_index = 0;
-  for(LO i=0; i < nlocal_nodes*num_dim; i++)
-    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)){
+  for(LO i=0; i < nlocal_nodes; i++)
+    if((Node_DOF_Boundary_Condition_Type(i)!=TEMPERATURE_CONDITION)){
         Free_Indices(reduced_index) = local_dof_map->getGlobalElement(i);
         reduced_index++;
       }
@@ -4106,19 +3876,19 @@ int FEA_Module_Heat_Conduction::solve(){
   for(LO i=0; i < local_nrows_reduced; i++){
     access_index = local_dof_map->getLocalElement(Free_Indices(i));
     reduced_row_count = 0;
-    for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
+    for(LO j=0; j < Conductivity_Matrix_Strides(access_index); j++){
       global_dof_index = DOF_Graph_Matrix(access_index,j);
       row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
+      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=TEMPERATURE_CONDITION)){
         reduced_row_count++;
       }
     }
-    Reduced_Stiffness_Matrix_Strides(i) = reduced_row_count;
+    Reduced_Conductivity_Matrix_Strides(i) = reduced_row_count;
   }
   
-  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Reduced_DOF_Graph_Matrix(Reduced_Stiffness_Matrix_Strides); //stores global dof indices
-  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Reduced_Local_DOF_Graph_Matrix(Reduced_Stiffness_Matrix_Strides); //stores local dof indices
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Reduced_Stiffness_Matrix(Reduced_Stiffness_Matrix_Strides);
+  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Reduced_DOF_Graph_Matrix(Reduced_Conductivity_Matrix_Strides); //stores global dof indices
+  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Reduced_Local_DOF_Graph_Matrix(Reduced_Conductivity_Matrix_Strides); //stores local dof indices
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Reduced_Conductivity_Matrix(Reduced_Conductivity_Matrix_Strides);
 
   //template compatible row offsets (may change to shallow copy later if it works on device types etc.)
   row_pointers reduced_row_offsets = Reduced_DOF_Graph_Matrix.start_index_;
@@ -4153,9 +3923,9 @@ int FEA_Module_Heat_Conduction::solve(){
   
   //construct map of all indices including ghosts for the reduced system
   //stores global indices belonging to this MPI rank and ghosts from the non-reduced map corresponding to the reduced system
-  size_t all_nrows_reduced = local_nrows_reduced + nghost_nodes*num_dim;
-  for(LO i=nlocal_nodes*num_dim; i < nall_nodes*num_dim; i++){
-      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION))
+  size_t all_nrows_reduced = local_nrows_reduced + nghost_nodes;
+  for(LO i=nlocal_nodes; i < nall_nodes; i++){
+      if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION))
       all_nrows_reduced--;
   }
   
@@ -4175,8 +3945,8 @@ int FEA_Module_Heat_Conduction::solve(){
   */
   
   reduced_index = 0;
-  for(LO i=0; i < nall_nodes*num_dim; i++)
-    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)){
+  for(LO i=0; i < nall_nodes; i++)
+    if((Node_DOF_Boundary_Condition_Type(i)!=TEMPERATURE_CONDITION)){
         All_Free_Indices(reduced_index) = all_dof_map->getGlobalElement(i);
         reduced_index++;
       }
@@ -4223,31 +3993,31 @@ int FEA_Module_Heat_Conduction::solve(){
   for(LO i=0; i < local_nrows_reduced; i++){
     access_index = local_dof_map->getLocalElement(Free_Indices(i));
     row_counter = 0;
-    for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
+    for(LO j=0; j < Conductivity_Matrix_Strides(access_index); j++){
       global_dof_index = DOF_Graph_Matrix(access_index,j);
       row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
+      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=TEMPERATURE_CONDITION)){
         reduced_local_dof_index = all_reduced_dof_original_map->getLocalElement(global_dof_index);
-        //std::cout << "REDUCED LOCAL INDEX ON TASK " << myrank << " is " << Reduced_Stiffness_Matrix_Strides(i) << Reduced_DOF_Graph_Matrix(i,row_counter++) << std::endl;
+        //std::cout << "REDUCED LOCAL INDEX ON TASK " << myrank << " is " << Reduced_Conductivity_Matrix_Strides(i) << Reduced_DOF_Graph_Matrix(i,row_counter++) << std::endl;
         Reduced_DOF_Graph_Matrix(i,row_counter++) = all_reduced_global_indices_host(reduced_local_dof_index,0);
       }
     }
   }
   
-  //store reduced stiffness matrix values
+  //store reduced conductivity matrix values
   for(LO i=0; i < local_nrows_reduced; i++){
     access_index = local_dof_map->getLocalElement(Free_Indices(i));
     row_counter = 0;
-    for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
+    for(LO j=0; j < Conductivity_Matrix_Strides(access_index); j++){
       global_dof_index = DOF_Graph_Matrix(access_index,j);
       row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
-        Reduced_Stiffness_Matrix(i,row_counter++) = Stiffness_Matrix(access_index,j);
+      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=TEMPERATURE_CONDITION)){
+        Reduced_Conductivity_Matrix(i,row_counter++) = Conductivity_Matrix(access_index,j);
       }
     }
   }
   
-  // create a Map for the reduced global stiffness matrix that is evenly distributed amongst mpi ranks
+  // create a Map for the reduced global conductivity matrix that is evenly distributed amongst mpi ranks
   local_balanced_reduced_dof_map = 
     Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,0,comm));
 
@@ -4274,7 +4044,7 @@ int FEA_Module_Heat_Conduction::solve(){
   if(myrank==4){
   std::cout << "Reduced DOF Graph Matrix on Rank " << myrank << std::endl;
   for(LO i=0; i < local_nrows_reduced; i++){
-    for(LO j=0; j < Reduced_Stiffness_Matrix_Strides(i); j++){
+    for(LO j=0; j < Reduced_Conductivity_Matrix_Strides(i); j++){
       std::cout << Reduced_DOF_Graph_Matrix(i,j) <<" ";
     }
     std::cout << std::endl;
@@ -4294,11 +4064,11 @@ int FEA_Module_Heat_Conduction::solve(){
 
   //convert global indices to local indices using column map
   for(LO i=0; i < local_nrows_reduced; i++)
-    for(LO j=0; j < Reduced_Stiffness_Matrix_Strides(i); j++)
+    for(LO j=0; j < Reduced_Conductivity_Matrix_Strides(i); j++)
       Reduced_Local_DOF_Graph_Matrix(i,j) = colmap->getLocalElement(Reduced_DOF_Graph_Matrix(i,j));
   
   Teuchos::RCP<MAT> unbalanced_A = Teuchos::rcp(new MAT(local_reduced_dof_map, colmap, reduced_row_offsets_pass,
-                   Reduced_Local_DOF_Graph_Matrix.get_kokkos_view(), Reduced_Stiffness_Matrix.get_kokkos_view()));
+                   Reduced_Local_DOF_Graph_Matrix.get_kokkos_view(), Reduced_Conductivity_Matrix.get_kokkos_view()));
   unbalanced_A->fillComplete();
   Teuchos::RCP<const_MAT> const_unbalanced_A(new const_MAT(*unbalanced_A));
   
@@ -4309,7 +4079,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //const_unbalanced_A->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
 
-  //communicate reduced stiffness matrix entries for better load balancing
+  //communicate reduced conductivity matrix entries for better load balancing
   //create import object using the unbalanced map and the balanced map
   Tpetra::Import<LO, GO> matrix_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
   Teuchos::RCP<MAT> balanced_A = Tpetra::importAndFillCompleteCrsMatrix(const_unbalanced_A, matrix_importer, local_balanced_reduced_dof_map, local_balanced_reduced_dof_map);
@@ -4363,7 +4133,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //debug print
   //if(update_count==42){
     //Tpetra::MatrixMarket::Writer<MAT> market_writer();
-    //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *balanced_A, "A_matrix", "Stores stiffness matrix values");
+    //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *balanced_A, "A_matrix", "Stores conductivity matrix values");
   //}
   //return !EXIT_SUCCESS;
   // Create solver interface to KLU2 with Amesos2 factory method
@@ -4400,9 +4170,6 @@ int FEA_Module_Heat_Conduction::solve(){
     //std::cout << "AFTER LINEAR SOLVE" << std::endl<< std::flush;
   }
   else{
-    //dimension of the nullspace for linear elasticity
-    int nulldim = 6;
-    if(num_dim == 2) nulldim = 3;
     using impl_scalar_type =
       typename Kokkos::Details::ArithTraits<real_t>::val_type;
     using mag_type = typename Kokkos::ArithTraits<impl_scalar_type>::mag_type;
@@ -4442,83 +4209,9 @@ int FEA_Module_Heat_Conduction::solve(){
     Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> coordinates = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tcoordinates));
     
     //nullspace vector
-    Teuchos::RCP<MV> unbalanced_nullspace_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, nulldim));
-    //set nullspace components
-    //init
-    unbalanced_nullspace_distributed->putScalar(0);
-    //loop through dofs and compute nullspace components for each
-    host_vec_array unbalanced_nullspace_view = unbalanced_nullspace_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-
-    //compute center
-    // Calculate center
-	  real_t cx = tcoordinates->getVector(0)->meanValue();
-	  real_t cy = tcoordinates->getVector(1)->meanValue();
-    //real_t cx = center_of_mass[0];
-    //real_t cy = center_of_mass[1];
-    real_t cz;
-    if(num_dim==3)
-	    cz = tcoordinates->getVector(2)->meanValue();
-      //cz = center_of_mass[2];
-
-    if(num_dim==3){
-      for(LO i=0; i < local_nrows_reduced; i++){
-        global_dof_index = Free_Indices(i);
-        global_index = Free_Indices(i)/num_dim;
-        dim_index = global_dof_index % num_dim;
-        access_index = map->getLocalElement(global_index);
-        node_x = node_coords(access_index, 0);
-        node_y = node_coords(access_index, 1);
-        node_z = node_coords(access_index, 2);
-        //set translational component
-        unbalanced_nullspace_view(i,dim_index) = 1;
-        //set rotational components
-        if(dim_index==0){
-          unbalanced_nullspace_view(i,3) = -node_y + cy;
-          unbalanced_nullspace_view(i,5) = node_z - cz;
-        }
-        if(dim_index==1){
-          unbalanced_nullspace_view(i,3) = node_x - cx;
-          unbalanced_nullspace_view(i,4) = -node_z + cz;
-        }
-        if(dim_index==2){
-          unbalanced_nullspace_view(i,4) = node_y - cy;
-          unbalanced_nullspace_view(i,5) = -node_x + cx;
-        }
-      }// for
-    }
-    else{
-      for(LO i=0; i < local_nrows_reduced; i++){
-        global_dof_index = Free_Indices(i);
-        global_index = Free_Indices(i)/num_dim;
-        dim_index = global_dof_index % num_dim;
-        access_index = map->getLocalElement(global_index);
-        node_x = node_coords(access_index, 0);
-        node_y = node_coords(access_index, 1);
-        //set translational component
-        unbalanced_nullspace_view(i,dim_index) = 1;
-        //set rotational components
-        if(dim_index==0){
-          unbalanced_nullspace_view(i,3) = -node_y + cy;
-        }
-        if(dim_index==1){
-          unbalanced_nullspace_view(i,3) = node_x - cx;
-        }
-      }// for
-    }
-    
-    //balanced nullspace vector
-    Teuchos::RCP<MV> tnullspace = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, nulldim));
-    //rebalance nullspace vector
-    tnullspace->doImport(*unbalanced_nullspace_distributed, Bvec_importer, Tpetra::INSERT);
+    Teuchos::RCP<MV> tnullspace = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, 1));
+    tnullspace->putScalar(1);
     Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> nullspace = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tnullspace));
-
-    //normalize components
-    Kokkos::View<mag_type*, Kokkos::HostSpace> norms2("norms2", nulldim);
-    tnullspace->norm2(norms2);
-    Kokkos::View<impl_scalar_type*, device_type> scaling_values("scaling_values", nulldim);
-    for (int i = 0; i < nulldim; i++)
-        scaling_values(i) = norms2(0) / norms2(i);
-    tnullspace->scale(scaling_values);
 
     Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> material = Teuchos::null;
     Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xbalanced_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(balanced_A));
@@ -4613,34 +4306,34 @@ int FEA_Module_Heat_Conduction::solve(){
 
   //communicate solution on reduced map to the all node map vector for post processing of strain etc.
   //intermediate storage on the unbalanced reduced system
-  Teuchos::RCP<MV> reduced_node_displacements_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, 1));
+  Teuchos::RCP<MV> reduced_node_temperatures_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, 1));
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> reduced_displacement_importer(local_balanced_reduced_dof_map, local_reduced_dof_map);
+  Tpetra::Import<LO, GO> reduced_temperatures_importer(local_balanced_reduced_dof_map, local_reduced_dof_map);
 
   //comms to get displacements on reduced unbalanced displacement vector
-  reduced_node_displacements_distributed->doImport(*X, reduced_displacement_importer, Tpetra::INSERT);
+  reduced_node_temperatures_distributed->doImport(*X, reduced_temperatures_importer, Tpetra::INSERT);
 
   //populate node displacement multivector on the local dof map
-  const_host_vec_array reduced_node_displacements_host = reduced_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  host_vec_array node_displacements_host = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  const_host_vec_array reduced_node_temperatures_host = reduced_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  host_vec_array node_temperatures_host = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
   for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
-    node_displacements_host(init,0) = 0;
+    node_temperatures_host(init,0) = 0;
 
   for(LO i=0; i < local_nrows_reduced; i++){
     access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    node_displacements_host(access_index,0) = reduced_node_displacements_host(i,0);
+    node_temperatures_host(access_index,0) = reduced_node_temperatures_host(i,0);
   }
   
   //import for displacement of ghosts
-  Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+  Tpetra::Import<LO, GO> ghost_temperature_importer(local_dof_map, all_dof_map);
 
   //comms to get displacements on all node map
-  all_node_displacements_distributed->doImport(*node_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
+  all_node_temperatures_distributed->doImport(*node_temperatures_distributed, ghost_displacement_importer, Tpetra::INSERT);
 
   //if(myrank==0)
   //*fos << "All displacements :" << std::endl;
-  //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_temperatures_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   
   return !EXIT_SUCCESS;
@@ -4689,7 +4382,7 @@ void FEA_Module_Heat_Conduction::update_linear_solve(Teuchos::RCP<const MV> zp){
 
   assemble_matrix();
 
-  if(body_force_flag)
+  if(body_term_flag)
     assemble_vector();
   
   //solve for new nodal displacements

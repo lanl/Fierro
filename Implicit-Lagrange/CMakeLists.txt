@@ -1,6 +1,6 @@
 set(Class_SRC Topology_Optimization/Simulation_Parameters.cpp node_combination.cpp)
 set(Implicit_Solver_SRC Implicit_Solver.cpp)
-set(FEA_Module_SRC FEA_Physics_Modules/FEA_Module.cpp FEA_Physics_Modules/FEA_Module_Elasticity.cpp FEA_Physics_Modules/Matrix_Equilibration.cpp )
+set(FEA_Module_SRC FEA_Physics_Modules/FEA_Module.cpp FEA_Physics_Modules/FEA_Module_Elasticity.cpp FEA_Physics_Modules/FEA_Module_Heat_Conduction.cpp FEA_Physics_Modules/Matrix_Equilibration.cpp )
 set(Solver_SRC_CXX main.cpp Solver.cpp)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -12,9 +12,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #FIND_PACKAGE(Trilinos REQUIRED)
 
 # Make sure to use same compilers and flags as Trilinos
-SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
-SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
-SET(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
+#SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
+#SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
+#SET(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
 #SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90.exe)
 #SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90)
 

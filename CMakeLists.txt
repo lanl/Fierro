@@ -30,6 +30,11 @@ INCLUDE( cmake/Modules/TargetDistclean.cmake OPTIONAL)
 
 enable_language(CXX)
 enable_language(Fortran)
+
+if(BUILD_IMPLICIT_SOLVER)
+  find_package(MPI REQUIRED)
+endif()
+
 #add_compile_options(-g -O0)
 #add_compile_options(-g -O3)
 #set (CMAKE_CXX_STANDARD 14)
@@ -52,7 +57,6 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${VECTOR_C_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${VECTOR_CXX_FLAGS}")
 endif()
 
-#find_package(MPI REQUIRED CXX)
 #find_library(GFORTRAN_LIBRARY libgfortran.a)
 
 if(BUILD_IMPLICIT_SOLVER)
@@ -61,9 +65,9 @@ SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
 FIND_PACKAGE(Trilinos REQUIRED)
 
 # Make sure to use same compilers and flags as Trilinos
-SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
-SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
-SET(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
+#SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
+#SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
+#SET(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
 #SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90.exe)
 #SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90)
 

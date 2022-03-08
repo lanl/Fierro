@@ -175,7 +175,7 @@ public:
   size_t max_nodes_per_element;
   
   //body force parameters
-  bool body_force_flag, gravity_flag, thermal_flag, electric_flag;
+  bool body_term_flag, gravity_flag, thermal_flag, electric_flag;
   real_t *gravity_vector;
 
   //lists what kind of boundary condition the nodal DOF is subjected to if any

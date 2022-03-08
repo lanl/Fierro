@@ -101,7 +101,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   current_bdy_id = 0;
 
   //boundary condition flags
-  body_force_flag = gravity_flag = thermal_flag = electric_flag = false;
+  body_term_flag = gravity_flag = thermal_flag = electric_flag = false;
 
   //construct globally distributed displacement, strain, and force vectors
   int num_dim = simparam->num_dim;
@@ -493,7 +493,7 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   gravity_flag = simparam->gravity_flag;
   gravity_vector = simparam->gravity_vector;
 
-  if(electric_flag||gravity_flag||thermal_flag) body_force_flag = true;
+  if(electric_flag||gravity_flag||thermal_flag) body_term_flag = true;
 
 }
 
@@ -1219,7 +1219,7 @@ void FEA_Module_Elasticity::assemble_vector(){
     //apply contribution from non-zero displacement boundary conditions
 
     //apply body forces
-    if(body_force_flag){
+    if(body_term_flag){
       //initialize quadrature data
       elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
       elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
@@ -3952,7 +3952,7 @@ void FEA_Module_Elasticity::compute_adjoint_gradients(const_host_vec_array desig
     }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
-    if(body_force_flag){
+    if(body_term_flag){
       //look up element material properties at this point as a function of density
       Gradient_Body_Term(ielem, current_density, gradient_force_density);
       for(int igradient=0; igradient < nodes_per_elem; igradient++){
@@ -4758,7 +4758,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
       }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
-      if(body_force_flag){
+      if(body_term_flag){
         for(int igradient=0; igradient < nodes_per_elem; igradient++){
         if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
         local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
@@ -6088,7 +6088,7 @@ void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp){
 
   assemble_matrix();
 
-  if(body_force_flag)
+  if(body_term_flag)
     assemble_vector();
   
   //solve for new nodal displacements

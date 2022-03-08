@@ -125,7 +125,7 @@ public:
    Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
   
   //body force parameters
-  bool body_force_flag, gravity_flag, thermal_flag, electric_flag;
+  bool body_term_flag, gravity_flag, thermal_flag, electric_flag;
   real_t *gravity_vector;
   
   //stores the displacement value for the boundary condition on this nodal DOF

@@ -92,6 +92,7 @@ public:
   Teuchos::RCP<MV> all_cached_node_temperatures_distributed;
   Teuchos::RCP<MV> all_node_temperature_gradients_distributed;
   Teuchos::RCP<MV> all_node_heat_fluxes_distributed;
+  Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MAT> Global_Conductivity_Matrix;
   
   //Boundary Conditions Data
@@ -99,14 +100,14 @@ public:
   enum bc_type {NONE,TEMPERATURE_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
   
   //body force parameters
-  bool body_force_flag, thermal_flag, electric_flag;
+  bool body_term_flag, thermal_flag, electric_flag;
   
   //stores the displacement value for the boundary condition on this nodal DOF
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_Temperature_Boundary_Conditions;
   //stores applied point forces on nodal DOF
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_Heat_Flux_Boundary_Conditions;
   //constant surface force densities corresponding to each boundary set (provide varying field later)
-  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Flux_Densities;
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Heat_Flux;
   //constant displacement condition applied to all nodes on a boundary surface (convenient option to avoid specifying nodes)
   CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Boundary_Surface_Temperatures;
 
