@@ -247,7 +247,6 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
 void FEA_Module_Heat_Conduction::init_assembly(){
   int num_dim = simparam->num_dim;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  Conductivity_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Conductivity_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
   int current_row_n_nodes_scanned;
@@ -452,78 +451,10 @@ void FEA_Module_Heat_Conduction::init_assembly(){
     The constructed Assembly map (to the global sparse matrix)
     is used to loop over each element's local conductivity matrix in the assembly process.*/
   
-  //expand strides for conductivity matrix by multipling by dim
-  for(int inode = 0; inode < nlocal_nodes; inode++){
-    for (int idim = 0; idim < num_dim; idim++)
-    Conductivity_Matrix_Strides(num_dim*inode + idim) = num_dim*Graph_Matrix_Strides(inode);
-  }
+  Conductivity_Matrix_Strides = Graph_Matrix_Strides;
 
   Conductivity_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Conductivity_Matrix_Strides);
-  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Conductivity_Matrix_Strides);
-
-  //set conductivity Matrix Graph
-  //debug print
-    //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
-  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
-    for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
-      DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof/num_dim,istride/num_dim)*num_dim + istride%num_dim;
-      //debug print
-      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
-    }
-    //debug print
-    //std::cout << std::endl;
-  }
-  
-  /*
-  //debug print nodal positions and indices
-  std::cout << " ------------NODAL POSITIONS--------------"<<std::endl;
-  for (int inode = 0; inode < num_nodes; inode++){
-      std::cout << "node: " << inode + 1 << " { ";
-    for (int istride = 0; istride < num_dim; istride++){
-        std::cout << node_coords(inode,istride) << " , ";
-    }
-    std::cout << " }"<< std::endl;
-  }
-  //debug print element edof
-  
-  std::cout << " ------------ELEMENT EDOF--------------"<<std::endl;
-
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    std::cout << "elem:  " << ielem+1 << std::endl;
-    for (int lnode = 0; lnode < nodes_per_elem; lnode++){
-        std::cout << "{ ";
-          std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
-        
-        std::cout << " }"<< std::endl;
-    }
-    std::cout << std::endl;
-  }
-  
-
-  //debug section; print conductivity matrix graph and per element map
-  std::cout << " ------------SPARSE GRAPH MATRIX--------------"<<std::endl;
-  for (int inode = 0; inode < num_nodes; inode++){
-      std::cout << "row: " << inode + 1 << " { ";
-    for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
-        std::cout << istride + 1 << " = " << Repeat_Graph_Matrix(inode,istride) + 1 << " , " ;
-    }
-    std::cout << " }"<< std::endl;
-  }
-
-  std::cout << " ------------ELEMENT ASSEMBLY MAP--------------"<<std::endl;
-
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    std::cout << "elem:  " << ielem+1 << std::endl;
-    for (int lnode = 0; lnode < nodes_per_elem; lnode++){
-        std::cout << "{ "<< std::endl;
-        for (int jnode = 0; jnode < nodes_per_elem; jnode++){
-          std::cout <<"(" << lnode+1 << "," << jnode+1 << "," << nodes_in_elem(ielem,lnode)+1 << ")"<< " = " << Global_Conductivity_Matrix_Assembly_Map(ielem,lnode, jnode) + 1 << " ";
-        }
-        std::cout << " }"<< std::endl;
-    }
-    std::cout << std::endl;
-  }
-  */
+  DOF_Graph_Matrix = Graph_Matrix;
   
 }
 
@@ -539,12 +470,12 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
   int local_dof_index, global_node_index, current_row, current_column;
   int max_stride = 0;
   
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Stiffness_Matrix(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Conductivity_Matrix(max_nodes_per_element,max_nodes_per_element);
 
   //initialize conductivity Matrix entries to 0
   //debug print
     //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
-  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+  for (int idof = 0; idof < nlocal_nodes; idof++){
     for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
       Conductivity_Matrix(idof,istride) = 0;
       //debug print
@@ -560,29 +491,18 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
     element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
     nodes_per_element = elem2D->num_nodes();
     //construct local conductivity matrix for this element
-    local_matrix_multiply(ielem, Local_Stiffness_Matrix);
+    local_matrix(ielem, Local_Conductivity_Matrix);
     //assign entries of this local matrix to the sparse global matrix storage;
     for (int inode = 0; inode < nodes_per_element; inode++){
       //see if this node is local
       global_node_index = nodes_in_elem(ielem,inode);
       if(!map->isNodeGlobalElement(global_node_index)) continue;
       //set dof row start index
-      current_row = num_dim*map->getLocalElement(global_node_index);
+      current_row = map->getLocalElement(global_node_index);
       for(int jnode = 0; jnode < nodes_per_element; jnode++){
         
-        current_column = num_dim*Global_Conductivity_Matrix_Assembly_Map(ielem,inode,jnode);
-        for (int idim = 0; idim < num_dim; idim++){
-          for (int jdim = 0; jdim < num_dim; jdim++){
-
-            //debug print
-            //if(current_row + idim==15&&current_column + jdim==4)
-            //std::cout << " Local conductivity matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
-            //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
-            //end debug
-
-            Conductivity_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
-          }
-        }
+        current_column = Global_Conductivity_Matrix_Assembly_Map(ielem,inode,jnode);
+        Conductivity_Matrix(current_row, current_column) += Local_Conductivity_Matrix(inode,jnode);
       }
     }
   }
@@ -592,29 +512,17 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
     element_select->choose_3Delem_type(Element_Types(ielem), elem);
     nodes_per_element = elem->num_nodes();
     //construct local conductivity matrix for this element
-    local_matrix_multiply(ielem, Local_Stiffness_Matrix);
+    local_matrix(ielem, Local_Conductivity_Matrix);
     //assign entries of this local matrix to the sparse global matrix storage;
     for (int inode = 0; inode < nodes_per_element; inode++){
       //see if this node is local
       global_node_index = nodes_in_elem(ielem,inode);
       if(!map->isNodeGlobalElement(global_node_index)) continue;
       //set dof row start index
-      current_row = num_dim*map->getLocalElement(global_node_index);
+      current_row = map->getLocalElement(global_node_index);
       for(int jnode = 0; jnode < nodes_per_element; jnode++){
-        
-        current_column = num_dim*Global_Conductivity_Matrix_Assembly_Map(ielem,inode,jnode);
-        for (int idim = 0; idim < num_dim; idim++){
-          for (int jdim = 0; jdim < num_dim; jdim++){
-
-            //debug print
-            //if(current_row + idim==15&&current_column + jdim==4)
-            //std::cout << " Local conductivity matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
-            //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
-            //end debug
-
-            Conductivity_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
-          }
-        }
+        current_column = Global_Conductivity_Matrix_Assembly_Map(ielem,inode,jnode);
+        Conductivity_Matrix(current_row, current_column) += Local_Conductivity_Matrix(inode,jnode);
       }
     }
   }
@@ -656,25 +564,25 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
   //std::cout << "DOF GRAPH SIZE ON RANK " << myrank << " IS " << nnz << std::endl;
   
   //local indices in the graph using the constructed column map
-  CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
+  CArrayKokkos<LO, array_layout, device_type, memory_traits> conductivity_local_indices(nnz, "conductivity_local_indices");
   
   //row offsets with compatible template arguments
     row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
-    row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
-    for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
+    row_pointers row_offsets_pass("row_offsets", nlocal_nodes + 1);
+    for(int ipass = 0; ipass < nlocal_nodes + 1; ipass++){
       row_offsets_pass(ipass) = row_offsets(ipass);
     }
 
   size_t entrycount = 0;
-  for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+  for(int irow = 0; irow < nlocal_nodes; irow++){
     for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
-      stiffness_local_indices(entrycount) = colmap->getLocalElement(DOF_Graph_Matrix(irow,istride));
+      conductivity_local_indices(entrycount) = colmap->getLocalElement(DOF_Graph_Matrix(irow,istride));
       entrycount++;
     }
   }
   
   if(!Matrix_alloc){
-  Global_Conductivity_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Conductivity_Matrix.get_kokkos_view()));
+  Global_Conductivity_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, conductivity_local_indices.get_kokkos_view(), Conductivity_Matrix.get_kokkos_view()));
   Global_Conductivity_Matrix->fillComplete();
   Matrix_alloc = 1;
   }
@@ -1089,14 +997,12 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
    Retrieve body force at a point
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Heat_Conduction::Body_Term(size_t ielem, real_t density, real_t *force_density){
+void FEA_Module_Heat_Conduction::Body_Term(size_t ielem, real_t density, real_t &specific_internal_energy_rate){
   real_t unit_scaling = simparam->unit_scaling;
   int num_dim = simparam->num_dim;
   
   //init 
-  for(int idim = 0; idim < num_dim; idim++){
-    force_density[idim] = 0;
-  }
+  specific_internal_energy_rate = 0;
   if(gravity_flag){
     for(int idim = 0; idim < num_dim; idim++){
       force_density[idim] += gravity_vector[idim] * density;
@@ -1119,14 +1025,12 @@ void FEA_Module_Heat_Conduction::Body_Term(size_t ielem, real_t density, real_t 
    Gradient of body force at a point
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density, real_t *gradient_force_density){
+void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density, real_t &gradient_specific_internal_energy_rate){
   real_t unit_scaling = simparam->unit_scaling;
   int num_dim = simparam->num_dim;
   
   //init 
-  for(int idim = 0; idim < num_dim; idim++){
-    gradient_force_density[idim] = 0;
-  }
+  gradient_specific_internal_energy_rate = 0;
   if(gravity_flag){
     for(int idim = 0; idim < num_dim; idim++){
       gradient_force_density[idim] += gravity_vector[idim];
@@ -1202,396 +1106,6 @@ void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ie
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
-  //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array Element_Densities;
-  //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
-  const_host_vec_array all_node_densities;
-  if(nodal_density_flag)
-  all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  else
-  Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  int num_dim = simparam->num_dim;
-  int nodes_per_elem = max_nodes_per_element;
-  int num_gauss_points = simparam->num_gauss_points;
-  int z_quad,y_quad,x_quad, direct_product_count;
-  size_t local_node_id;
-
-  direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
-  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, invJacobian, weight_multiply;
-  real_t Element_Modulus, Poisson_Ratio;
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
-  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-  CArray<real_t> legendre_nodes_1D(num_gauss_points);
-  CArray<real_t> legendre_weights_1D(num_gauss_points);
-  real_t pointer_quad_coordinate[num_dim];
-  real_t pointer_quad_coordinate_weight[num_dim];
-  real_t pointer_interpolated_point[num_dim];
-  real_t pointer_JT_row1[num_dim];
-  real_t pointer_JT_row2[num_dim];
-  real_t pointer_JT_row3[num_dim];
-  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
-  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
-  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  ViewCArray<real_t> JT_row1(pointer_JT_row1,num_dim);
-  ViewCArray<real_t> JT_row2(pointer_JT_row2,num_dim);
-  ViewCArray<real_t> JT_row3(pointer_JT_row3,num_dim);
-
-  real_t pointer_basis_values[elem->num_basis()];
-  real_t pointer_basis_derivative_s1[elem->num_basis()];
-  real_t pointer_basis_derivative_s2[elem->num_basis()];
-  real_t pointer_basis_derivative_s3[elem->num_basis()];
-  ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
-  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
-
-  //initialize weights
-  elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
-  elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-
-  real_t current_density = 1;
-
-  //acquire set of nodes for this local element
-  for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-    local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
-    nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-    nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-    nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-    if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
-  }
-
-  //initialize local conductivity matrix storage
-  for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
-      for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++)
-      Local_Matrix(ifill,jfill) = 0;
-
-  //loop over quadrature points
-  for(int iquad=0; iquad < direct_product_count; iquad++){
-
-    //set current quadrature point
-    if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
-    y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
-    x_quad = iquad % num_gauss_points;
-    quad_coordinate(0) = legendre_nodes_1D(x_quad);
-    quad_coordinate(1) = legendre_nodes_1D(y_quad);
-    if(num_dim==3)
-    quad_coordinate(2) = legendre_nodes_1D(z_quad);
-
-    //set current quadrature weight
-    quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
-    quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-    if(num_dim==3)
-    quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
-    else
-    quad_coordinate_weight(2) = 1;
-    weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
-
-    //compute shape functions at this point for the element type
-    elem->basis(basis_values,quad_coordinate);
-
-    //compute density
-    current_density = 0;
-    if(nodal_density_flag)
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      current_density += nodal_density(node_loop)*basis_values(node_loop);
-    }
-    //default constant element density
-    else{
-      current_density = Element_Densities(ielem,0);
-    }
-
-    //look up element material properties as a function of density at the point
-    Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
-    Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5-Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
-
-    //compute all the necessary coordinates and derivatives at this point
-
-    //compute shape function derivatives
-    elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
-    elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
-    elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
-
-    //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
-    //derivative of x,y,z w.r.t s
-    JT_row1(0) = 0;
-    JT_row1(1) = 0;
-    JT_row1(2) = 0;
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
-      JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
-      JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
-    }
-
-    //derivative of x,y,z w.r.t t
-    JT_row2(0) = 0;
-    JT_row2(1) = 0;
-    JT_row2(2) = 0;
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
-      JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
-      JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
-    }
-
-    //derivative of x,y,z w.r.t w
-    JT_row3(0) = 0;
-    JT_row3(1) = 0;
-    JT_row3(2) = 0;
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
-      JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
-      JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
-    }
-
-    //compute the determinant of the Jacobian
-    Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-               JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-               JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-    if(Jacobian<0) Jacobian = -Jacobian;
-    invJacobian = 1/Jacobian;
-
-    //compute the contributions of this quadrature point to all the matrix elements
-    int index_x,index_y,basis_index_x,basis_index_y,swap1,swap2;
-    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
-      for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-        index_x = ifill%num_dim;
-        index_y = jfill%num_dim;
-        basis_index_x = ifill/num_dim;
-        basis_index_y = jfill/num_dim;
-
-        //compute conductivity matrix terms involving derivatives of the shape function and cofactor determinants from cramers rule
-        if(index_x==0&&index_y==0){
-          matrix_subterm1 = Pressure_Term*(basis_derivative_s1(basis_index_x)*
-          (JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(basis_index_x)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(basis_index_x)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)))*
-          (basis_derivative_s1(basis_index_y)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(basis_index_y)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(basis_index_y)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-
-          matrix_subterm2 = Shear_Term*(-basis_derivative_s1(basis_index_x)*
-          (JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(basis_index_x)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(basis_index_x)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)))*
-          (-basis_derivative_s1(basis_index_y)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(basis_index_y)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(basis_index_y)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-
-          matrix_subterm3 = Shear_Term*(basis_derivative_s1(basis_index_x)*
-          (JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(basis_index_x)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(basis_index_x)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)))*
-          (basis_derivative_s1(basis_index_y)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(basis_index_y)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(basis_index_y)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-
-          matrix_term = matrix_subterm1 + matrix_subterm2 + matrix_subterm3;
-
-           //debug print block
-           /*
-          if(ielem==0&&((jfill==3&&ifill==3))){
-           std::cout << " ------------quadrature point "<< iquad + 1 <<"--------------"<<std::endl;
-           std::cout << "row: " << ifill + 1 << " { ";
-           std::cout << jfill + 1 << " = " << matrix_subterm1 << " , " << " bi:JT11 "<<JT_row1(0) << " bi:JT12 " <<  JT_row1(1) << " bi:JT13 " << JT_row1(2)
-           <<  " bi:JT21 "<<JT_row2(0) << " bi:JT22 " <<  JT_row2(1) << " bi:JT23 " << JT_row2(2) <<  " bi:JT31 "<<JT_row3(0) << " bi:JT32 " <<  JT_row3(1) << " bi:JT33 " << JT_row3(2);
-           std::cout << " }"<< std::endl;
-          }
-          
-          if(ielem==0&&((jfill==3&&ifill==3))){
-           std::cout << " ------------quadrature point "<< iquad + 1 <<"--------------"<<std::endl;
-           std::cout << "row: " << ifill + 1 << " { ";
-           std::cout << jfill + 1 << " = " << matrix_term*Elastic_Constant/Jacobian << " , " << " basis index x s1 "<< basis_derivative_s1(basis_index_x) << " quad x " <<  quad_coordinate(0)
-           <<  " quad y "<< quad_coordinate(1) << " quad z " <<  quad_coordinate(2) << "Force Vector " << Local_Matrix(3,3);
-           std::cout << " }"<< std::endl;
-          }
-          */
-          
-        }
-
-        if(index_x==1&&index_y==1){
-          
-          matrix_subterm1 = Pressure_Term*(-basis_derivative_s1(basis_index_x)*
-          (JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(basis_index_x)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(basis_index_x)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)))*
-          (-basis_derivative_s1(basis_index_y)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(basis_index_y)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(basis_index_y)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-
-          matrix_subterm2 = Shear_Term*(basis_derivative_s1(basis_index_x)*
-          (JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(basis_index_x)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(basis_index_x)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)))*
-          (basis_derivative_s1(basis_index_y)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(basis_index_y)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(basis_index_y)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-
-          matrix_subterm3 = Shear_Term*(basis_derivative_s1(basis_index_x)*
-          (JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(basis_index_x)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(basis_index_x)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)))*
-          (basis_derivative_s1(basis_index_y)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(basis_index_y)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(basis_index_y)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-
-          matrix_term = matrix_subterm1 + matrix_subterm2 + matrix_subterm3;
-        }
-
-        if(index_x==2&&index_y==2){
-          
-          matrix_subterm1 = Pressure_Term*(basis_derivative_s1(basis_index_x)*
-          (JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(basis_index_x)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(basis_index_x)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)))*
-          (basis_derivative_s1(basis_index_y)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(basis_index_y)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(basis_index_y)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-
-          matrix_subterm2 = Shear_Term*(basis_derivative_s1(basis_index_x)*
-          (JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(basis_index_x)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(basis_index_x)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)))*
-          (basis_derivative_s1(basis_index_y)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(basis_index_y)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(basis_index_y)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-
-          matrix_subterm3 = Shear_Term*(-basis_derivative_s1(basis_index_x)*
-          (JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(basis_index_x)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(basis_index_x)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)))*
-          (-basis_derivative_s1(basis_index_y)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(basis_index_y)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(basis_index_y)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-
-          matrix_term = matrix_subterm1 + matrix_subterm2 + matrix_subterm3;
-        }
-
-        if((index_x==0&&index_y==1)||(index_x==1&&index_y==0)){
-          if(index_x==1&&index_y==0){
-            swap1 = basis_index_x;
-            swap2 = basis_index_y;
-          }
-          else{
-            swap1 = basis_index_y;
-            swap2 = basis_index_x;
-          }
-          
-          matrix_subterm1 = Poisson_Ratio*(-basis_derivative_s1(swap1)*
-          (JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(swap1)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(swap1)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)))*
-          (basis_derivative_s1(swap2)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(swap2)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(swap2)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-          
-          
-          matrix_subterm2 = Shear_Term*(basis_derivative_s1(swap1)*
-          (JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(swap1)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(swap1)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)))*
-          (-basis_derivative_s1(swap2)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(swap2)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(swap2)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-
-          matrix_term = matrix_subterm1 + matrix_subterm2;
-
-          /* debug print block
-          if(iquad==0&&((jfill==4&&ifill==0)||(jfill==0&&ifill==4))){
-           std::cout << " ------------LOCAL STIFFNESS MATRIX "<< ielem + 1 <<"--------------"<<std::endl;
-           std::cout << "row: " << ifill + 1 << " { ";
-           std::cout << jfill + 1 << " = " << matrix_subterm2 << " , " << " bi:JT11 "<<JT_row1(0) << " bi:JT12 " <<  JT_row1(1) << " bi:JT13 " << JT_row1(2)
-           <<  " bi:JT21 "<<JT_row2(0) << " bi:JT22 " <<  JT_row2(1) << " bi:JT23 " << JT_row2(2) <<  " bi:JT31 "<<JT_row3(0) << " bi:JT32 " <<  JT_row3(1) << " bi:JT33 " << JT_row3(2);
-           std::cout << " }"<< std::endl;
-          }
-          */
-        }
-
-        if((index_x==0&&index_y==2)||(index_x==2&&index_y==0)){
-          if(index_x==2&index_y==0){
-            swap1 = basis_index_x;
-            swap2 = basis_index_y;
-          }
-          else{
-            swap1 = basis_index_y;
-            swap2 = basis_index_x;
-          }
-          matrix_subterm1 = Poisson_Ratio*(basis_derivative_s1(swap1)*
-          (JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(swap1)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(swap1)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)))*
-          (basis_derivative_s1(swap2)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(swap2)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(swap2)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-
-          matrix_subterm2 = Shear_Term*(basis_derivative_s1(swap1)*
-          (JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(swap1)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(swap1)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)))*
-          (basis_derivative_s1(swap2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(swap2)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(swap2)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-
-          matrix_term = matrix_subterm1 + matrix_subterm2;
-        }
-
-        if((index_x==1&&index_y==2)||(index_x==2&&index_y==1)){
-          if(index_x==2&&index_y==1){
-            swap1 = basis_index_x;
-            swap2 = basis_index_y;
-          }
-          else{
-            swap1 = basis_index_y;
-            swap2 = basis_index_x;
-          }
-          matrix_subterm1 = Poisson_Ratio*(basis_derivative_s1(swap1)*
-          (JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(swap1)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(swap1)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)))*
-          (-basis_derivative_s1(swap2)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(swap2)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(swap2)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-
-          matrix_subterm2 = Shear_Term*(-basis_derivative_s1(swap1)*
-          (JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(swap1)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(swap1)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)))*
-          (basis_derivative_s1(swap2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(swap2)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(swap2)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-
-          matrix_term = matrix_subterm1 + matrix_subterm2;
-        }
-        
-        Local_Matrix(ifill,jfill) += Elastic_Constant*weight_multiply*matrix_term*invJacobian;
-      }
-      
-    }
-
-    //debug print of local conductivity matrix
-      /*
-      std::cout << " ------------LOCAL STIFFNESS MATRIX "<< ielem + 1 <<"--------------"<<std::endl;
-      for (int idof = 0; idof < num_dim*nodes_per_elem; idof++){
-        std::cout << "row: " << idof + 1 << " { ";
-        for (int istride = 0; istride < num_dim*nodes_per_elem; istride++){
-          std::cout << istride + 1 << " = " << Local_Matrix(idof,istride) << " , " ;
-        }
-        std::cout << " }"<< std::endl;
-        }
-      */
-}
-
-/* ----------------------------------------------------------------------
-   Construct the local conductivity matrix
-------------------------------------------------------------------------- */
-
-void FEA_Module_Heat_Conduction::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
