@@ -66,6 +66,9 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   //obtain boundary condition and loading data
   nboundary_patches = Solver_Pointer->nboundary_patches;
   Boundary_Patches = Solver_Pointer->Boundary_Patches;
+
+  //flag init
+  body_term_flag = nonzero_bc_flag = false;
 }
 
 FEA_Module::~FEA_Module() {}

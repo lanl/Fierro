@@ -190,8 +190,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = TEMPERATURE_CONDITION;
   Boundary_Surface_Temperatures(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Temperatures(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Temperatures(surf_disp_set_id,2) = 0;
+  if(Boundary_Surface_Temperatures(surf_disp_set_id,0)) nonzero_bc_flag = true;
   surf_disp_set_id++;
     
   *fos << "tagged a set " << std::endl;
@@ -894,6 +893,16 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
     //apply point forces
 
     //apply contribution from non-zero displacement boundary conditions
+    if(nonzero_bc_flag){
+      for(int irow = 0; irow < nlocal_nodes; irow++){
+        for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
+          node_id = all_node_map->getLocalElement(Graph_Matrix(irow,istride));
+          if(Node_DOF_Boundary_Condition_Type(node_id)==TEMPERATURE_CONDITION&&Node_Temperature_Boundary_Conditions(node_id)){
+            Nodal_RHS(irow,0) -= Conductivity_Matrix(irow,istride)*Node_Temperature_Boundary_Conditions(node_id);  
+          }
+        }//for
+      }//for
+    }
 
     //apply body forces
     if(body_term_flag){
@@ -3874,7 +3883,7 @@ void FEA_Module_Heat_Conduction::update_linear_solve(Teuchos::RCP<const MV> zp){
 
   assemble_matrix();
 
-  if(body_term_flag)
+  if(body_term_flag||nonzero_bc_flag)
     assemble_vector();
   
   //solve for new nodal displacements

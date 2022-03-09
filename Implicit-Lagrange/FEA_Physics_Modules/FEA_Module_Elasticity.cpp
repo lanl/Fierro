@@ -6088,7 +6088,7 @@ void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp){
 
   assemble_matrix();
 
-  if(body_term_flag)
+  if(body_term_flag||nonzero_bc_flag)
     assemble_vector();
   
   //solve for new nodal displacements
