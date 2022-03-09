@@ -140,7 +140,7 @@ void FEA_Module_Heat_Conduction::init_boundaries(){
 
   //allocate nodal data
   Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes, "Node_DOF_Boundary_Condition_Type");
-  Node_DOF_Temperature_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes);
+  Node_Temperature_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes);
   Node_DOF_Flux_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes);
 
   //initialize
@@ -237,7 +237,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   gravity_flag = simparam->gravity_flag;
   gravity_vector = simparam->gravity_vector;
 
-  if(electric_flag||body_term_flag||thermal_flag) body_term_flag = true;
+  if(electric_flag||body_force_flag||thermal_flag) body_term_flag = true;
 
 }
 
@@ -627,7 +627,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
   bool nodal_density_flag = simparam->nodal_density_flag;
@@ -642,7 +642,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   LO local_node_id;
   LO node_id;
   int num_boundary_sets = num_boundary_conditions;
-  int surface_force_set_id = 0;
+  int surface_flux_set_id = 0;
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int num_gauss_points = simparam->num_gauss_points;
@@ -658,7 +658,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply;
+  real_t heat_flux[3], wedge_product, Jacobian, current_density, weight_multiply, inner_product, surface_normal[3], surface_norm;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
@@ -679,11 +679,11 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
 
-   //force vector initialization
-  for(int i=0; i < num_dim*nlocal_nodes; i++)
-    Nodal_Forces(i,0) = 0;
+   //RHS vector initialization
+  for(int i=0; i < nlocal_nodes; i++)
+    Nodal_RHS(i,0) = 0;
 
-  /*Loop through boundary sets and check if they apply surface forces.
+  /*Loop through boundary sets and check if they apply surface fluxes.
   These sets can have overlapping nodes since applied loading conditions
   are assumed to be additive*/
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
@@ -691,10 +691,10 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
     //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
-    force_density[0] = Boundary_Surface_Heat_Flux(surface_force_set_id,0);
-    force_density[1] = Boundary_Surface_Heat_Flux(surface_force_set_id,1);
-    force_density[2] = Boundary_Surface_Heat_Flux(surface_force_set_id,2);
-    surface_force_set_id++;
+    heat_flux[0] = Boundary_Surface_Heat_Flux(surface_flux_set_id,0);
+    heat_flux[1] = Boundary_Surface_Heat_Flux(surface_flux_set_id,1);
+    heat_flux[2] = Boundary_Surface_Heat_Flux(surface_flux_set_id,2);
+    surface_flux_set_id++;
 
     real_t pointer_basis_values[elem->num_basis()];
     ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
@@ -825,11 +825,24 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       
 
       //compute jacobian for this surface
-      //compute the determinant of the Jacobian
+      //compute product scaling the reference differential surface element to the deformed differential surface element
       wedge_product = sqrt(pow(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2),2)+
                pow(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2),2)+
                pow(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1),2));
-
+      
+      //compute surface normal through cross product of the two tangent vectors
+      surface_normal[0] = 
+      surface_normal[1] =
+      if(num_dim==3)
+        surface_normal[2] =
+      else
+        surface_normal[2] = 0;
+      
+      //normalize
+      surface_norm = sqrt(surface_normal[0]*surface_normal[0]+surface_normal[1]*surface_normal[1]+surface_normal[2]*surface_normal[2]);
+      surface_normal[0] = surface_normal[0]/surface_norm;
+      surface_normal[1] = surface_normal[1]/surface_norm;
+      surface_normal[2] = surface_normal[2]/surface_norm;
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
 
@@ -853,11 +866,11 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
         */
 
         // Accumulate force vector contribution from this quadrature point
-        for(int idim = 0; idim < num_dim; idim++){
-          if(force_density[idim]!=0)
-          //Nodal_Forces(num_dim*node_gid + idim) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
-          Nodal_Forces(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
-        }
+        inner_product = surface_normal[0]*heat_flux[0] + surface_normal[1]*heat_flux[1] + surface_normal[2]*heat_flux[2];
+
+        if(inner_product!=0)
+          Nodal_Forces(node_id,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*inner_product*basis_values(local_nodes[node_count]);
+        
       }
       }
     }
@@ -978,7 +991,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
 
         for(int idim = 0; idim < num_dim; idim++){
             if(force_density[idim]!=0)
-            Nodal_Forces(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
+            Nodal_RHS(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
           }
         }
       }
@@ -1003,14 +1016,12 @@ void FEA_Module_Heat_Conduction::Body_Term(size_t ielem, real_t density, real_t 
   
   //init 
   specific_internal_energy_rate = 0;
-  if(gravity_flag){
-    for(int idim = 0; idim < num_dim; idim++){
-      force_density[idim] += gravity_vector[idim] * density;
-    }
+  if(thermal_flag){
+    specific_internal_energy_rate += simparam->specific_internal_energy_rate*density;
   }
   
   /*
-  if(thermal_flag){
+  if(body_term_flag){
 
   }
 
@@ -1030,11 +1041,9 @@ void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density
   int num_dim = simparam->num_dim;
   
   //init 
-  gradient_specific_internal_energy_rate = 0;
-  if(gravity_flag){
-    for(int idim = 0; idim < num_dim; idim++){
-      gradient_force_density[idim] += gravity_vector[idim];
-    }
+  gradient_specific_internal_energy_rate = 0;\
+  if(thermal_flag){
+    specific_internal_energy_rate += simparam->specific_internal_energy_rate;
   }
   
   /*
@@ -1053,33 +1062,29 @@ void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density
    Retrieve material properties associated with a finite element
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
+void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_t &Element_Conductivity, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
   if(density < 0) density = 0;
   for(int i = 0; i < simparam->penalty_power; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Modulus = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
-  //Element_Modulus = density*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = simparam->Poisson_Ratio;
+  Element_Conductivity = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Thermal_Conductivity/unit_scaling/unit_scaling;
 }
 
 /* ----------------------------------------------------------------------
    Retrieve derivative of material properties with respect to local density
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
+void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Conductivity_Derivative, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
-  Element_Modulus_Derivative = 0;
+  Element_Conductivity_Derivative = 0;
   if(density < 0) density = 0;
   for(int i = 0; i < simparam->penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Modulus_Derivative = simparam->penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
-  //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = simparam->Poisson_Ratio;
+  Element_Conductivity_Derivative = simparam->penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Thermal_Conductivity/unit_scaling/unit_scaling;
 }
 
 /* --------------------------------------------------------------------------------
@@ -1089,13 +1094,13 @@ void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t iel
 void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
-  Element_Modulus_Derivative = 0;
+  ElementConductivity_Derivative = 0;
   if(density < 0) density = 0;
   if(simparam->penalty_power>=2){
     for(int i = 0; i < simparam->penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and conductivity
-    Element_Modulus_Derivative = simparam->penalty_power*(simparam->penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+    Element_Conductivity_Derivative = simparam->penalty_power*(simparam->penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   }
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
@@ -1509,44 +1514,29 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
   int local_flag;
   int current_node_index, current_node_id;
   int num_boundary_sets = num_boundary_conditions;
-  int surface_disp_set_id = 0;
+  int surface_temp_set_id = 0;
   int num_dim = simparam->num_dim;
-  int bc_option, bc_dim_set[3];
+  int bc_option;
   int DOF_BC_type;
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> displacement(num_dim);
-  CArrayKokkos<int, array_layout, device_type, memory_traits> Displacement_Conditions(num_dim);
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
+  real_t temperature;
+  CArrayKokkos<int, array_layout, device_type, memory_traits> Temperatures_Conditions(num_dim);
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes);
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   Number_DOF_BCS = 0;
-  Displacement_Conditions(0) = X_DISPLACEMENT_CONDITION;
-  Displacement_Conditions(1) = Y_DISPLACEMENT_CONDITION;
-  Displacement_Conditions(2) = Z_DISPLACEMENT_CONDITION;
 
   //host view of local nodal displacements
   host_vec_array node_temperatures_host = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
   //initialize to -1 (DO NOT make -1 an index for bdy sets)
-  for(int inode = 0 ; inode < nlocal_nodes*num_dim; inode++)
+  for(int inode = 0 ; inode < nlocal_nodes; inode++)
     first_condition_per_node(inode) = -1;
   
   //scan for surface method of setting fixed nodal displacements
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
     
-    if(Boundary_Condition_Type_List(iboundary)==DISPLACEMENT_CONDITION){
-      bc_option=3;
-      DOF_BC_type = DISPLACEMENT_CONDITION;
-    }
-    else if(Boundary_Condition_Type_List(iboundary)==X_DISPLACEMENT_CONDITION){
+    if(Boundary_Condition_Type_List(iboundary)==TEMPERATURE_CONDITION){
       bc_option=0;
-      DOF_BC_type = DISPLACEMENT_CONDITION;
-    }
-    else if(Boundary_Condition_Type_List(iboundary)==Y_DISPLACEMENT_CONDITION){
-      bc_option=1;
-      DOF_BC_type = DISPLACEMENT_CONDITION;
-    }
-    else if(Boundary_Condition_Type_List(iboundary)==Z_DISPLACEMENT_CONDITION){
-      bc_option=2;
-      DOF_BC_type = DISPLACEMENT_CONDITION;
+      DOF_BC_type = TEMPERATURE_CONDITION;
     }
     else{
       continue;
@@ -1558,25 +1548,9 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
       num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
       if(bc_option==0) {
         bc_dim_set[0]=1;
-        displacement(0) = Boundary_Surface_Temperatures(surface_disp_set_id,0);
+        displacement(0) = Boundary_Surface_Temperatures(surface_temp_set_id,0);
       }
-      else if(bc_option==1) {
-        bc_dim_set[1]=1;
-        displacement(1) = Boundary_Surface_Temperatures(surface_disp_set_id,1);
-      }
-      else if(bc_option==2) {
-        bc_dim_set[2]=1;
-        displacement(2) = Boundary_Surface_Temperatures(surface_disp_set_id,2);
-      }
-      else if(bc_option==3) {
-        bc_dim_set[0]=1;
-        bc_dim_set[1]=1;
-        bc_dim_set[2]=1;
-        displacement(0) = Boundary_Surface_Temperatures(surface_disp_set_id,0);
-        displacement(1) = Boundary_Surface_Temperatures(surface_disp_set_id,1);
-        displacement(2) = Boundary_Surface_Temperatures(surface_disp_set_id,2);
-      }
-      surface_disp_set_id++;
+      surface_temp_set_id++;
       
       //loop over boundary set patches for their respective nodes
       for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
@@ -1599,25 +1573,23 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
           std::cout << " }"<< std::endl;
           */
 
-          for(int idim=0; idim < num_dim; idim++){
           //warning for reapplied a displacement boundary condition (For now there is an output flag being set that triggers output later)
-          if(Node_DOF_Boundary_Condition_Type(current_node_id*num_dim + idim)==DOF_BC_type){
+          if(Node_DOF_Boundary_Condition_Type(current_node_id)==DOF_BC_type){
             //if overlap is just due to the loop over patches, a warning is not needed
-            if(first_condition_per_node(current_node_id*num_dim + idim)!=iboundary) warning_flag = 1;
+            if(first_condition_per_node(current_node_id)!=iboundary) warning_flag = 1;
           }
           else{
-            if(bc_dim_set[idim]){
-              first_condition_per_node(current_node_id*num_dim + idim) = iboundary;
-              Node_DOF_Boundary_Condition_Type(current_node_id*num_dim+idim) = DOF_BC_type;
-              Node_DOF_Displacement_Boundary_Conditions(current_node_id*num_dim+idim) = displacement(idim);
-              //counts local DOF being constrained
-              if(local_flag){
-              Number_DOF_BCS++;
-              node_temperatures_host(current_node_id*num_dim+idim,0) = displacement(idim);
-              }
+            first_condition_per_node(current_node_id) = iboundary;
+            Node_DOF_Boundary_Condition_Type(current_node_id) = DOF_BC_type;
+            Node_Temperature_Boundary_Conditions(current_node_id) = temperature;
+            //counts local DOF being constrained
+            if(local_flag){
+            Number_DOF_BCS++;
+            node_temperatures_host(current_node_id,0) = temperature;
             }
+            
           }
-          }
+          
         }
       }
   }

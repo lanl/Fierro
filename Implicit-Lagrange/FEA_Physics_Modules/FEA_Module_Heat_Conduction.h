@@ -54,11 +54,11 @@ public:
 
   void local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
 
-  void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  void Element_Material_Properties(size_t ielem, real_t &Element_Conductivity, real_t density);
 
-  void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Conductivity_Derivative, real_t density);
 
-  void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+  void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Conductivity_Derivative, real_t density);
 
   void Body_Term(size_t ielem, real_t density, real_t &specific_internal_energy_rate);
 
@@ -98,7 +98,7 @@ public:
   enum bc_type {NONE,TEMPERATURE_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
   
   //body force parameters
-  bool body_term_flag, thermal_flag, electric_flag;
+  bool body_term_flag, body_force_flag, thermal_flag, electric_flag;
   
   //stores the displacement value for the boundary condition on this nodal DOF
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_Temperature_Boundary_Conditions;
