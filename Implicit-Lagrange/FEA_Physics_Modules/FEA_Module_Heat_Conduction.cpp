@@ -647,7 +647,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   int nodes_per_elem = max_nodes_per_element;
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int current_element_index, local_surface_id, surf_dim1, surf_dim2;
+  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -659,6 +659,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t heat_flux[3], wedge_product, Jacobian, current_density, weight_multiply, inner_product, surface_normal[3], surface_norm;
+  real_t specific_internal_energy_rate;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
@@ -733,10 +734,14 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       quad_coordinate(0) = legendre_nodes_1D(x_quad);
       quad_coordinate(1) = legendre_nodes_1D(y_quad);
       //set to -1 or 1 for an isoparametric space
-        if(local_surface_id%2==0)
-        quad_coordinate(2) = -1;
-        else
-        quad_coordinate(2) = 1;
+        if(local_surface_id%2==0){
+          quad_coordinate(2) = -1;
+          surface_sign = 1;
+        }
+        else{
+          quad_coordinate(2) = 1;
+          surface_sign = -1;
+        }
       }
       else if(local_surface_id<4){
       surf_dim1 = 0;
@@ -744,10 +749,14 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       quad_coordinate(0) = legendre_nodes_1D(x_quad);
       quad_coordinate(2) = legendre_nodes_1D(y_quad);
       //set to -1 or 1 for an isoparametric space
-        if(local_surface_id%2==0)
-        quad_coordinate(1) = -1;
-        else
-        quad_coordinate(1) = 1;
+        if(local_surface_id%2==0){
+          quad_coordinate(1) = -1;
+          surface_sign = 1;
+        }
+        else{
+          quad_coordinate(1) = 1;
+          surface_sign = -1;
+        }
       }
       else if(local_surface_id<6){
       surf_dim1 = 1;
@@ -755,10 +764,14 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       quad_coordinate(1) = legendre_nodes_1D(x_quad);
       quad_coordinate(2) = legendre_nodes_1D(y_quad);
       //set to -1 or 1 for an isoparametric space
-        if(local_surface_id%2==0)
-        quad_coordinate(0) = -1;
-        else
-        quad_coordinate(0) = 1;
+        if(local_surface_id%2==0){
+          quad_coordinate(0) = -1;
+          surface_sign = 1;
+        }
+        else{
+          quad_coordinate(0) = 1;
+          surface_sign = -1;
+        }
       }
       
       //set current quadrature weight
@@ -831,18 +844,17 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
                pow(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1),2));
       
       //compute surface normal through cross product of the two tangent vectors
-      surface_normal[0] = 
-      surface_normal[1] =
+      surface_normal[0] = surface_sign*JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2);
+      surface_normal[1] = surface_sign*JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2);
       if(num_dim==3)
-        surface_normal[2] =
+        surface_normal[2] = surface_sign*JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1);
       else
         surface_normal[2] = 0;
       
       //normalize
-      surface_norm = sqrt(surface_normal[0]*surface_normal[0]+surface_normal[1]*surface_normal[1]+surface_normal[2]*surface_normal[2]);
-      surface_normal[0] = surface_normal[0]/surface_norm;
-      surface_normal[1] = surface_normal[1]/surface_norm;
-      surface_normal[2] = surface_normal[2]/surface_norm;
+      surface_normal[0] = surface_normal[0]/wedge_product;
+      surface_normal[1] = surface_normal[1]/wedge_product;
+      surface_normal[2] = surface_normal[2]/wedge_product;
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
 
@@ -869,7 +881,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
         inner_product = surface_normal[0]*heat_flux[0] + surface_normal[1]*heat_flux[1] + surface_normal[2]*heat_flux[2];
 
         if(inner_product!=0)
-          Nodal_Forces(node_id,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*inner_product*basis_values(local_nodes[node_count]);
+          Nodal_RHS(node_id,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*inner_product*basis_values(local_nodes[node_count]);
         
       }
       }
@@ -982,18 +994,14 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       //debug print
       //std::cout << "Current Density " << current_density << std::endl;
       //look up element material properties at this point as a function of density
-      Body_Term(ielem, current_density, force_density);
+      Body_Term(ielem, current_density, specific_internal_energy_rate);
     
       //evaluate contribution to force vector component
       for(int ibasis=0; ibasis < nodes_per_elem; ibasis++){
         if(!map->isNodeGlobalElement(nodes_in_elem(ielem, ibasis))) continue;
         local_node_id = map->getLocalElement(nodes_in_elem(ielem, ibasis));
-
-        for(int idim = 0; idim < num_dim; idim++){
-            if(force_density[idim]!=0)
-            Nodal_RHS(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
-          }
-        }
+        Nodal_RHS(local_node_id,0) += Jacobian*weight_multiply*specific_internal_energy_rate*basis_values(ibasis);
+      }
       }
     }
   }
@@ -1069,7 +1077,7 @@ void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_
   for(int i = 0; i < simparam->penalty_power; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Conductivity = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Thermal_Conductivity/unit_scaling/unit_scaling;
+  Element_Conductivity = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Thermal_Conductivity/unit_scaling;
 }
 
 /* ----------------------------------------------------------------------
@@ -1084,14 +1092,14 @@ void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t iel
   for(int i = 0; i < simparam->penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Conductivity_Derivative = simparam->penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Thermal_Conductivity/unit_scaling/unit_scaling;
+  Element_Conductivity_Derivative = simparam->penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Thermal_Conductivity/unit_scaling;
 }
 
 /* --------------------------------------------------------------------------------
    Retrieve second derivative of material properties with respect to local density
 ----------------------------------------------------------------------------------- */
 
-void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
+void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Conductivity_Derivative, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
   ElementConductivity_Derivative = 0;
@@ -1100,10 +1108,8 @@ void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ie
     for(int i = 0; i < simparam->penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and conductivity
-    Element_Conductivity_Derivative = simparam->penalty_power*(simparam->penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+    Element_Conductivity_Derivative = simparam->penalty_power*(simparam->penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Thermal_Conductivity/unit_scaling;
   }
-  //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = simparam->Poisson_Ratio;
 }
 
 /* ----------------------------------------------------------------------
