@@ -988,7 +988,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   size_t patch_id;
   GO current_node_index;
   LO local_node_id;
-  LO node_id;
+  LO node_id, dof_id;
   int num_boundary_sets = num_boundary_conditions;
   int surface_force_set_id = 0;
   int num_dim = simparam->num_dim;
@@ -1217,6 +1217,16 @@ void FEA_Module_Elasticity::assemble_vector(){
     //apply point forces
 
     //apply contribution from non-zero displacement boundary conditions
+    if(nonzero_bc_flag){
+      for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+        for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+          dof_id = all_dof_map->getLocalElement(DOF_Graph_Matrix(irow,istride));
+          if((Node_DOF_Boundary_Condition_Type(dof_id)==DISPLACEMENT_CONDITION||X_DISPLACEMENT_CONDITION||Y_DISPLACEMENT_CONDITION||Z_DISPLACEMENT_CONDITION)&&Node_DOF_Displacement_Boundary_Conditions(dof_id)){
+            Nodal_Forces(irow,0) -= Stiffness_Matrix(irow,istride)*Node_DOF_Displacement_Boundary_Conditions(dof_id);  
+          }
+        }//for
+      }//for
+    }
 
     //apply body forces
     if(body_term_flag){

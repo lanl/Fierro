@@ -1144,9 +1144,9 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
   size_t local_node_id;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
+  real_t matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;
-  real_t Element_Modulus, Poisson_Ratio;
+  real_t Element_Conductivity;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -1175,13 +1175,11 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
-  size_t Brows;
-  if(num_dim==2) Brows = 3;
-  if(num_dim==3) Brows = 6;
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
+  size_t Brows = dum_dim;
+  FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,elem->num_basis());
+  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
 
   //initialize weights
@@ -1213,13 +1211,13 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
       C_matrix(irow,icol) = 0;
 
   //initialize local conductivity matrix storage
-  for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
-      for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++)
+  for(int ifill=0; ifill < nodes_per_elem; ifill++)
+      for(int jfill=0; jfill < nodes_per_elem; jfill++)
       Local_Matrix(ifill,jfill) = 0;
 
   //B matrix initialization
   for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+      for(int icol=0; icol < nodes_per_elem; icol++){
         CB_matrix(irow,icol) = B_matrix(irow,icol) = 0;
       }
 
@@ -1262,35 +1260,20 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
     //std::cout << "Current Density " << current_density << std::endl;
 
     //look up element material properties at this point as a function of density
-    Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
-    Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5-Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
+    Element_Material_Properties((size_t) ielem,Element_Conductivity, current_density);
 
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
-    //compute Elastic (C) matrix
+    //compute Isotropic Conductivity (C) matrix (not multiplied by conductivity)
     if(num_dim==2){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(2,2) = Shear_Term;
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
     }
     if(num_dim==3){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(2,2) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(0,2) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(1,2) = Poisson_Ratio;
-      C_matrix(2,0) = Poisson_Ratio;
-      C_matrix(2,1) = Poisson_Ratio;
-      C_matrix(3,3) = Shear_Term;
-      C_matrix(4,4) = Shear_Term;
-      C_matrix(5,5) = Shear_Term;
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
+      C_matrix(2,2) = -1;
     }
   
   /*
@@ -1357,83 +1340,19 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
     if(Jacobian<0) Jacobian = -Jacobian;
     invJacobian = 1/Jacobian;
     //compute the contributions of this quadrature point to the B matrix
-    if(num_dim==2)
+    
     for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-    }
-    if(num_dim==3)
-    for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      B_matrix_contribution(0,ishape) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                                         basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+                                         basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(1,ishape) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                                         basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+                                         basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      if(num_dim==3){
+        B_matrix_contribution(2,ishape) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+                                           basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+                                           basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      }
     }
     /*
     //debug print of B matrix per quadrature point
@@ -1449,12 +1368,12 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
     */
     //accumulate B matrix
     for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++)
+      for(int icol=0; icol < nodes_per_elem; icol++)
       B_matrix(irow,icol) += B_matrix_contribution(irow,icol);
 
     //compute the previous multiplied by the Elastic (C) Matrix
     for(int irow=0; irow < Brows; irow++){
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+      for(int icol=0; icol < nodes_per_elem; icol++){
         CB_matrix_contribution(irow,icol) = 0;
         for(int span=0; span < Brows; span++){
           CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
@@ -1464,17 +1383,17 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
 
     //accumulate CB matrix
     for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++)
+      for(int icol=0; icol < nodes_per_elem; icol++)
       CB_matrix(irow,icol) += CB_matrix_contribution(irow,icol);
 
     //compute the contributions of this quadrature point to all the local conductivity matrix elements
-    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
-      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+    for(int ifill=0; ifill < nodes_per_elem; ifill++)
+      for(int jfill=ifill; jfill < nodes_per_elem; jfill++){
         matrix_term = 0;
         for(int span = 0; span < Brows; span++){
           matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
         }
-        Local_Matrix(ifill,jfill) += Elastic_Constant*weight_multiply*matrix_term*invJacobian;
+        Local_Matrix(ifill,jfill) += Element_Conductivity*weight_multiply*matrix_term*invJacobian;
         if(ifill!=jfill)
           Local_Matrix(jfill,ifill) = Local_Matrix(ifill,jfill);
       }
@@ -1654,8 +1573,8 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
   GO current_global_index;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Element_Modulus_Gradient, Poisson_Ratio, gradient_force_density[3];
-  real_t Elastic_Constant, Shear_Term, Pressure_Term;
+  real_t Element_Conductivity_Gradient, Poisson_Ratio, gradient_specific_internal_energy_rate;
+  real_t Element_Conductivity;
   real_t inner_product, matrix_term, Jacobian, invJacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
@@ -1683,18 +1602,16 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_temperatures(elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
-  size_t Brows;
-  if(num_dim==2) Brows = 3;
-  if(num_dim==3) Brows = 6;
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
+  size_t Brows = num_dim;
+  FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,elem->num_basis());
+  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Matrix_Contribution(num_dim*nodes_per_elem,num_dim*nodes_per_elem);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Matrix_Contribution(nodes_per_elem,nodes_per_elem);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -1717,22 +1634,17 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
 
     //B matrix initialization
     for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+      for(int icol=0; icol < nodes_per_elem; icol++){
         CB_matrix(irow,icol) = 0;
       }
 
     //acquire set of nodes and nodal displacements for this local element
     for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
       local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
-      local_dof_idx = all_dof_map->getLocalElement(nodes_in_elem(ielem, node_loop)*num_dim);
-      local_dof_idy = local_dof_idx + 1;
-      local_dof_idz = local_dof_idx + 2;
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_displacements(node_loop*num_dim) = all_node_temperatures(local_dof_idx,0);
-      current_nodal_displacements(node_loop*num_dim+1) = all_node_temperatures(local_dof_idy,0);
-      current_nodal_displacements(node_loop*num_dim+2) = all_node_temperatures(local_dof_idz,0);
+      current_nodal_temperatures(node_loop) = all_node_temperatures(local_node_id,0);
       
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
       //debug print
@@ -1837,120 +1749,40 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
     //std::cout << "Current Density " << current_density << std::endl;
 
     //compute the contributions of this quadrature point to the B matrix
-    if(num_dim==2)
     for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-    }
-    if(num_dim==3)
-    for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      B_matrix_contribution(0,ishape) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                                         basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+                                         basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(1,ishape) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                                         basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+                                         basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      if(num_dim==3){
+        B_matrix_contribution(2,ishape) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+                                           basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+                                           basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      }
     }
     
     //look up element material properties at this point as a function of density
-    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
-    Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5 - Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
+    Gradient_Element_Material_Properties(ielem, Element_Conductivity_Gradient, current_density);
 
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
-    //compute Elastic (C) matrix
+    //compute Isotropic Conductivity (C) matrix; not scaled by k for gradient calculation later
     if(num_dim==2){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(2,2) = Shear_Term;
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
     }
     if(num_dim==3){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(2,2) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(0,2) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(1,2) = Poisson_Ratio;
-      C_matrix(2,0) = Poisson_Ratio;
-      C_matrix(2,1) = Poisson_Ratio;
-      C_matrix(3,3) = Shear_Term;
-      C_matrix(4,4) = Shear_Term;
-      C_matrix(5,5) = Shear_Term;
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
+      C_matrix(2,2) = -1;
     }
 
     //compute the previous multiplied by the Elastic (C) Matrix
     for(int irow=0; irow < Brows; irow++){
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+      for(int icol=0; icol < nodes_per_elem; icol++){
         CB_matrix_contribution(irow,icol) = 0;
         for(int span=0; span < Brows; span++){
           CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
@@ -1959,8 +1791,8 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
     }
     
     //compute the contributions of this quadrature point to all the local conductivity matrix elements
-    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+    for(int ifill=0; ifill < nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < nodes_per_elem; jfill++){
         matrix_term = 0;
         for(int span = 0; span < Brows; span++){
           matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
@@ -1973,12 +1805,12 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
 
     //compute inner product for this quadrature point contribution
     inner_product = 0;
-    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+    for(int ifill=0; ifill < nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < nodes_per_elem; jfill++){
         if(ifill==jfill)
-          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_temperatures(ifill)*current_nodal_temperatures(jfill);
         else
-          inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+          inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_temperatures(ifill)*current_nodal_temperatures(jfill);
         //debug
         //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
         //inner_product += Local_Matrix_Contribution(ifill, jfill);
@@ -1992,21 +1824,21 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) -= inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*0.5*invJacobian;
+      design_gradients(local_node_id,0) -= inner_product*Element_Conductivity_Gradient*basis_values(igradient)*weight_multiply*0.5*invJacobian;
     }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
     if(body_term_flag){
       //look up element material properties at this point as a function of density
-      Gradient_Body_Term(ielem, current_density, gradient_force_density);
+      Gradient_Body_Term(ielem, current_density, gradient_specific_internal_energy_rate);
       for(int igradient=0; igradient < nodes_per_elem; igradient++){
       if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
       local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
       
       //compute inner product for this quadrature point contribution
       inner_product = 0;
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        inner_product += gradient_force_density[ifill%num_dim]*current_nodal_displacements(ifill)*basis_values(ifill/num_dim);
+      for(int ifill=0; ifill < nodes_per_elem; ifill++){
+        inner_product += gradient_specific_internal_energy_rate*current_nodal_temperatures(ifill)*basis_values(ifill);
       }
       
       //debug print
@@ -2057,8 +1889,8 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   GO current_global_index, global_dof_id;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Element_Modulus_Gradient, Element_Modulus_Concavity, Poisson_Ratio, gradient_force_density[3];
-  real_t Elastic_Constant, Gradient_Elastic_Constant, Concavity_Elastic_Constant, Shear_Term, Pressure_Term;
+  real_t Element_Conductivity_Gradient, Element_Conductivity_Concavity, specific_internal_energy_rate;
+  real_t Element_Conductivity;
   real_t inner_product, matrix_term, Jacobian, invJacobian, weight_multiply;
   real_t direction_vec_reduce, local_direction_vec_reduce;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -2087,19 +1919,17 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_adjoint_displacements(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_temperatures(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_adjoint_temperatures(elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
-  size_t Brows;
-  if(num_dim==2) Brows = 3;
-  if(num_dim==3) Brows = 6;
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
+  size_t Brows = num_dim;
+  FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,elem->num_basis());
+  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Matrix_Contribution(num_dim*nodes_per_elem,num_dim*nodes_per_elem);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Matrix_Contribution(nodes_per_elem,nodes_per_elem);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -2144,22 +1974,17 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
 
     //B matrix initialization
     for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+      for(int icol=0; icol < nodes_per_elem; icol++){
         CB_matrix(irow,icol) = 0;
       }
 
     //acquire set of nodes and nodal displacements for this local element
     for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
       local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
-      local_dof_idx = all_dof_map->getLocalElement(nodes_in_elem(ielem, node_loop)*num_dim);
-      local_dof_idy = local_dof_idx + 1;
-      local_dof_idz = local_dof_idx + 2;
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_displacements(node_loop*num_dim) = all_node_temperatures(local_dof_idx,0);
-      current_nodal_displacements(node_loop*num_dim+1) = all_node_temperatures(local_dof_idy,0);
-      current_nodal_displacements(node_loop*num_dim+2) = all_node_temperatures(local_dof_idz,0);
+      current_nodal_temperatures(node_loop*num_dim) = all_node_temperatures(local_node_id,0);
       
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
     }
@@ -2247,116 +2072,35 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       //std::cout << "Current Density " << current_density << std::endl;
 
       //compute the contributions of this quadrature point to the B matrix
-      if(num_dim==2)
       for(int ishape=0; ishape < nodes_per_elem; ishape++){
-        B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-        B_matrix_contribution(1,ishape*num_dim) = 0;
-        B_matrix_contribution(2,ishape*num_dim) = 0;
-        B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-        B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-        B_matrix_contribution(5,ishape*num_dim) = 0;
-        B_matrix_contribution(0,ishape*num_dim+1) = 0;
-        B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-        B_matrix_contribution(2,ishape*num_dim+1) = 0;
-        B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-        B_matrix_contribution(4,ishape*num_dim+1) = 0;
-        B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-        B_matrix_contribution(0,ishape*num_dim+2) = 0;
-        B_matrix_contribution(1,ishape*num_dim+2) = 0;
-        B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-        B_matrix_contribution(3,ishape*num_dim+2) = 0;
-        B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-        B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-    }
-    if(num_dim==3)
-    for(int ishape=0; ishape < nodes_per_elem; ishape++){
-        B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-        B_matrix_contribution(1,ishape*num_dim) = 0;
-        B_matrix_contribution(2,ishape*num_dim) = 0;
-        B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-        B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-        B_matrix_contribution(5,ishape*num_dim) = 0;
-        B_matrix_contribution(0,ishape*num_dim+1) = 0;
-        B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-        B_matrix_contribution(2,ishape*num_dim+1) = 0;
-        B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-        B_matrix_contribution(4,ishape*num_dim+1) = 0;
-        B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-        B_matrix_contribution(0,ishape*num_dim+2) = 0;
-        B_matrix_contribution(1,ishape*num_dim+2) = 0;
-        B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-        B_matrix_contribution(3,ishape*num_dim+2) = 0;
-        B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-        B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      B_matrix_contribution(0,ishape) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                                         basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+                                         basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(1,ishape) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                                         basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+                                         basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      if(num_dim==3){
+        B_matrix_contribution(2,ishape) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+                                           basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+                                           basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      }
     }
     
     //look up element material properties at this point as a function of density
-    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
-    
-    Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5 - Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
+    Gradient_Element_Material_Properties(ielem, Element_Conductivity_Gradient, current_density);
 
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
-    //compute Elastic (C) matrix
+    //compute Isotropic Conductivity (C) matrix
     if(num_dim==2){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(2,2) = Shear_Term;
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
     }
     if(num_dim==3){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(2,2) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(0,2) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(1,2) = Poisson_Ratio;
-      C_matrix(2,0) = Poisson_Ratio;
-      C_matrix(2,1) = Poisson_Ratio;
-      C_matrix(3,3) = Shear_Term;
-      C_matrix(4,4) = Shear_Term;
-      C_matrix(5,5) = Shear_Term;
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
+      C_matrix(2,2) = -1;
     }
 
     //compute the previous multiplied by the Elastic (C) Matrix
@@ -2611,83 +2355,18 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
     //std::cout << "Current Density " << current_density << std::endl;
 
     //compute the contributions of this quadrature point to the B matrix
-    if(num_dim==2)
     for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-    }
-    if(num_dim==3)
-    for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      B_matrix_contribution(0,ishape) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                                         basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+                                         basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(1,ishape) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                                         basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+                                         basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      if(num_dim==3){
+        B_matrix_contribution(2,ishape) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+                                           basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+                                           basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      }
     }
 
     //look up element material properties at this point as a function of density
@@ -2697,32 +2376,20 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
     Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Concavity_Elastic_Constant = Element_Modulus_Concavity/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5 - Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
+    -Element_Conductivity = 1 - Poisson_Ratio;
     //*fos << "Elastic Modulus Concavity" << Element_Modulus_Concavity << " " << Element_Modulus_Gradient << std::endl;
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
-    //compute Elastic (C) matrix
+    //compute Isotropic Conductivity (C) matrix
     if(num_dim==2){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(2,2) = Shear_Term;
+      C_matrix(0,0) = -Element_Conductivity;
+      C_matrix(1,1) = -Element_Conductivity;
     }
     if(num_dim==3){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(2,2) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(0,2) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(1,2) = Poisson_Ratio;
-      C_matrix(2,0) = Poisson_Ratio;
-      C_matrix(2,1) = Poisson_Ratio;
-      C_matrix(3,3) = Shear_Term;
-      C_matrix(4,4) = Shear_Term;
-      C_matrix(5,5) = Shear_Term;
+      C_matrix(0,0) = -Element_Conductivity;
+      C_matrix(1,1) = -Element_Conductivity;
+      C_matrix(2,2) = -Element_Conductivity;
     }
 
     //compute the previous multiplied by the Elastic (C) Matrix
@@ -3039,83 +2706,18 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
     if(Jacobian<0) Jacobian = -Jacobian;
 
     //compute the contributions of this quadrature point to the B matrix
-    if(num_dim==2)
     for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-    }
-    if(num_dim==3)
-    for(int ishape=0; ishape < nodes_per_elem; ishape++){
-      B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(1,ishape*num_dim) = 0;
-      B_matrix_contribution(2,ishape*num_dim) = 0;
-      B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(5,ishape*num_dim) = 0;
-      B_matrix_contribution(0,ishape*num_dim+1) = 0;
-      B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
-      B_matrix_contribution(2,ishape*num_dim+1) = 0;
-      B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(4,ishape*num_dim+1) = 0;
-      B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(0,ishape*num_dim+2) = 0;
-      B_matrix_contribution(1,ishape*num_dim+2) = 0;
-      B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
-      B_matrix_contribution(3,ishape*num_dim+2) = 0;
-      B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
-          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
-      B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
-          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      B_matrix_contribution(0,ishape) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                                         basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+                                         basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+      B_matrix_contribution(1,ishape) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                                         basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+                                         basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+      if(num_dim==3){
+        B_matrix_contribution(2,ishape) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+                                           basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+                                           basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+      }
     }
     
     //multiply by displacement vector to get strain at this quadrature point
