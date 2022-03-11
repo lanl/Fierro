@@ -1569,9 +1569,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
-  int strain_max_flag = simparam->strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int solve_flag, zero_strain_flag;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index;
 
@@ -1857,9 +1855,9 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
 
 }
 
-/* ----------------------------------------------------------------------
-   Compute the gradient of heat capacity potential with respect to nodal densities
-------------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------------------------------
+   Compute the hessian*vector product of heat capacity potential with respect to nodal densities
+------------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
   //local variable for host view in the dual view
@@ -1885,9 +1883,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
-  int strain_max_flag = simparam->strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int solve_flag, zero_strain_flag;
   LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_reduced_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index, global_dof_id;
 
@@ -2209,7 +2205,6 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   //communicate adjoint vector to original all dof map for simplicity now (optimize out later)
   Teuchos::RCP<MV> adjoint_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   Teuchos::RCP<MV> all_adjoint_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
-  //communicate solution on reduced map to the all node map vector for post processing of strain etc.
   //intermediate storage on the unbalanced reduced system
   Teuchos::RCP<MV> reduced_adjoint_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, 1));
   //create import object using local node indices map and all indices map
@@ -2501,15 +2496,16 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
-  int strain_max_flag = simparam->strain_max_flag;
+  int flux_max_flag = simparam->flux_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int solve_flag, zero_strain_flag;
+  int solve_flag, zero_flux_flag;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
   //real_t J_min = std::numeric_limits<real_t>::max();
   GO current_global_index;
+  real_t Element_Conductivity;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t matrix_term, current_strain;
+  real_t matrix_term, current_heat_flux;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
@@ -2545,6 +2541,7 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> quad_temperature_gradient(Brows);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> quad_heat_flux(Brows);
   FArrayKokkos<real_t, array_layout, device_type, memory_traits> projection_matrix(max_nodes_per_element,max_nodes_per_element);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> projection_vector(Brows,max_nodes_per_element);
@@ -2553,7 +2550,6 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   Teuchos::RCP<Teuchos::SerialDenseMatrix<LO,real_t>> projection_matrix_pass;
   //Teuchos::SerialDenseVector<LO,real_t> projection_vector_pass;
   Teuchos::RCP<Teuchos::SerialDenseVector<LO,real_t>> projection_vector_pass;
-  //Teuchos::SerialDenseVector<LO,real_t> strain_vector_pass;
   Teuchos::RCP<Teuchos::SerialDenseVector<LO,real_t>> heat_flux_vector_pass;
   //Teuchos::SerialSpdDenseSolver<LO,real_t> projection_solver;
   Teuchos::SerialDenseSolver<LO,real_t> projection_solver;
@@ -2562,21 +2558,21 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
 
-  //initialize strains to 0
+  //initialize fluxes to 0
   //local variable for host view in the dual view
   for(int init = 0; init < map->getNodeNumElements(); init++)
-    for(int istrain = 0; istrain < Brows; istrain++)
-      node_heat_fluxes(init,istrain) = 0;
+    for(int iflux = 0; iflux < Brows; iflux++)
+      node_heat_fluxes(init,iflux) = 0;
 
   for(int init = 0; init < all_node_map->getNodeNumElements(); init++)
-    for(int istrain = 0; istrain < Brows; istrain++)
-      all_node_heat_fluxes(init,istrain) = 0;
+    for(int iflux = 0; iflux < Brows; iflux++)
+      all_node_heat_fluxes(init,iflux) = 0;
   
 
   real_t current_density = 1;
 
-  //compute nodal strains as the result of minimizing the L2 error between the strain field and the nodal interpolant over each element
-  //assign the maximum nodal strain computed from connected elements to nodes sharing elements (safer to know the largest positive or negative values)
+  //compute nodal fluxes as the result of minimizing the L2 error between the flux field and the nodal interpolant over each element
+  //assign the maximum or average nodal flux computed from connected elements to nodes sharing elements (safer to know the largest positive or negative values)
   
   for(int ielem = 0; ielem < rnum_elem; ielem++){
     nodes_per_elem = elem->num_basis();
@@ -2721,39 +2717,30 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
       C_matrix(2,2) = -1;
     }
     
-    //multiply by displacement vector to get strain at this quadrature point
+    //multiply by displacement vector to get flux at this quadrature point
     //division by J ommited since it is multiplied out later
     for(int irow=0; irow < Brows; irow++){
-      quad_strain(irow) = 0;
+      quad_temperature_gradient(irow) = 0;
       for(int icol=0; icol < nodes_per_elem; icol++){
-        quad_strain(irow) += B_matrix_contribution(irow,icol)*current_nodal_temperatures(icol);
+        quad_temperature_gradient(irow) += B_matrix_contribution(irow,icol)*current_nodal_temperatures(icol);
       }
     }
 
-    //debug print of quad strain
-    /*
-    std::cout << " ------------Strain at quadrature point for Element "<< ielem + 1 <<"--------------"<<std::endl;
-    std::cout << " { ";
-    for (int idof = 0; idof < Brows; idof++){
-      std::cout << idof + 1 << " = " << quad_strain(idof)/Jacobian*100 << " , " ;
+    //look up element material properties at this point as a function of density
+    Element_Material_Properties(ielem, Element_Conductivity, current_density);
+    
+    //compute heat flux with Fourier's law
+    for(int irow=0; irow < Brows; irow++){
+      quad_temperature_gradient(irow) = 0;
+      for(int icol=0; icol < Brows; icol++){
+        quad_heat_flux(irow) += Element_Conductivity*C_matrix(irow,icol)*quad_temperature_gradient(icol);
+      }
     }
-    std::cout << " }"<< std::endl;
-    std::fflush(stdout);
-    */
 
     //compute contribution to RHS projection vector
     for(int irow=0; irow < Brows; irow++)
       for(int icol=0; icol < nodes_per_elem; icol++){
-        //debug print
-        /*
-        if(irow==2){
-        std::cout << " ------------Strain Projection Vector Contribution"<< ielem + 1 <<"--------------"<<std::endl;
-        std::cout << icol + 1 << " = " << projection_vector(irow,icol) << " " << quad_strain(irow) << " " << basis_values(icol) << " " << quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2) << std::endl;
-        std::fflush(stdout);
-        }
-        */
-        projection_vector(irow,icol) += weight_multiply*quad_strain(irow)*basis_values(icol);
-        
+        projection_vector(irow,icol) += weight_multiply*quad_heat_flux(irow)*basis_values(icol);
       }
 
     //compute contribution to projection matrix (only upper part is set)
@@ -2771,54 +2758,51 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
     //debug print of matrix
     //projection_matrix_pass->print(std::cout);
 
-    strain_vector_pass = Teuchos::rcp( new Teuchos::SerialDenseVector<LO,real_t>(Teuchos::View, strain_vector.pointer(), nodes_per_elem));
-    //loop through strain components and solve for nodal values of that component
-    for(int istrain = 0; istrain < Brows; istrain++){
-      //check if projection vector is zero due to zero strains
-      zero_strain_flag = 1;
+    heat_flux_vector_pass = Teuchos::rcp( new Teuchos::SerialDenseVector<LO,real_t>(Teuchos::View, heat_flux_vector.pointer(), nodes_per_elem));
+    //loop through flux components and solve for nodal values of that component
+    for(int iflux = 0; iflux < Brows; iflux++){
+      //check if projection vector is zero due to zero fluxes
+      zero_flux_flag = 1;
       for(int icol=0; icol < nodes_per_elem; icol++){
-        if(fabs(projection_vector(istrain,icol))>FLUX_EPSILON) zero_strain_flag = 0;
+        if(fabs(projection_vector(iflux,icol))>FLUX_EPSILON) zero_flux_flag = 0;
       }
-      if(!zero_strain_flag){
-        projection_vector_pass = Teuchos::rcp( new Teuchos::SerialDenseVector<LO,real_t>(Teuchos::View, &projection_vector(istrain,0), nodes_per_elem));
+      if(!zero_flux_flag){
+        projection_vector_pass = Teuchos::rcp( new Teuchos::SerialDenseVector<LO,real_t>(Teuchos::View, &projection_vector(iflux,0), nodes_per_elem));
         projection_matrix_pass = Teuchos::rcp( new Teuchos::SerialDenseMatrix<LO,real_t>(Teuchos::Copy, projection_matrix.pointer(), nodes_per_elem, nodes_per_elem, nodes_per_elem));
         //debug print of vectors
         //projection_vector_pass->print(std::cout);
         //projection_matrix_pass->print(std::cout);
         projection_solver.setMatrix(projection_matrix_pass);
-        projection_solver.setVectors(strain_vector_pass, projection_vector_pass);
+        projection_solver.setVectors(heat_flux_vector_pass, projection_vector_pass);
         projection_solver.factorWithEquilibration(true);
         solve_flag = projection_solver.solve();
         
         //debug print
-        //std::cout << "STRAIN COMPONENT ON NODES " << istrain + 1 << std::endl;
-        //strain_vector_pass->print(std::cout);
+        //std::cout << "HEAT FLUX COMPONENT ON NODES " << iflux + 1 << std::endl;
+        //heat_flux_vector_pass->print(std::cout);
         if(solve_flag) std::cout << "Projection Solve Failed With: " << solve_flag << std::endl;
 
-        //contribute equivalent nodal strain for this element to corresponding global nodes
-        //replace if abs greater than abs of currently assigned strain; accumulate average if flagged for node average
+        //contribute nodal flux for this element to corresponding global nodes
+        //replace if abs greater than abs of currently assigned flux; accumulate average if flagged for node average
         for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
           current_global_index = nodes_in_elem(ielem, node_loop);
           local_node_id = all_node_map->getLocalElement(current_global_index);
-          //debug print
-          //std::cout << "STRAIN CHECK " << (*strain_vector_pass)(node_loop) << " " << all_node_strains(local_node_id, istrain) << std::endl;
-          current_strain = (*strain_vector_pass)(node_loop);
-          if(strain_max_flag){
-            if(fabs(current_strain) > all_node_strains(local_node_id, istrain)){
-              all_node_strains(local_node_id, istrain) = current_strain;
+          current_heat_flux = (*heat_flux_vector_pass)(node_loop);
+          if(heat_max_flag){
+            if(fabs(current_heat_flux) > all_node_heat_fluxes(local_node_id, iflux)){
+              all_node_heat_fluxes(local_node_id, iflux) = current_heat_flux;
 
               if(map->isNodeGlobalElement(current_global_index)){
                 local_node_id = map->getLocalElement(current_global_index);
-                node_strains(local_node_id, istrain) = current_strain;
+                node_heat_fluxes(local_node_id, iflux) = current_heat_flux;
               }
             }
           }
           else{
             //debug print
-            //std::cout << current_strain/(double)all_node_nconn(local_node_id,0) << all_node_nconn(local_node_id,0) << " ";
             if(map->isNodeGlobalElement(current_global_index)){
               local_node_id = map->getLocalElement(current_global_index);
-              node_strains(local_node_id, istrain) += current_strain/(double)node_nconn(local_node_id,0);
+              node_heat_fluxes(local_node_id, iflux) += current_heat_flux/(double)node_nconn(local_node_id,0);
             }
           }
         }

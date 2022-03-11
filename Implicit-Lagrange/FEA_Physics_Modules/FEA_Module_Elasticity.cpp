@@ -3613,9 +3613,7 @@ void FEA_Module_Elasticity::compute_adjoint_gradients(const_host_vec_array desig
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
-  int strain_max_flag = simparam->strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int solve_flag, zero_strain_flag;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index;
 
@@ -3982,15 +3980,13 @@ void FEA_Module_Elasticity::compute_adjoint_gradients(const_host_vec_array desig
     }
     }
   }
-  
-    
   //debug print
 
 }
 
-/* ----------------------------------------------------------------------
-   Compute the gradient of strain energy with respect to nodal densities
-------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------------------
+   Compute the hessian*vector product of strain energy with respect to nodal densities
+---------------------------------------------------------------------------------------*/
 
 void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
   //local variable for host view in the dual view
@@ -4016,9 +4012,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
-  int strain_max_flag = simparam->strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int solve_flag, zero_strain_flag;
   LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_reduced_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index, global_dof_id;
 
