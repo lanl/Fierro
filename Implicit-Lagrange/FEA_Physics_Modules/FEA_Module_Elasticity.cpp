@@ -36,7 +36,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameters_Elasticity.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Elasticity.h"

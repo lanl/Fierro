@@ -35,6 +35,7 @@
 #include "Simulation_Parameters.h"
 #include "Implicit_Solver.h"
 #include "FEA_Module_Elasticity.h"
+#include "FEA_Module_Heat_Conduction.h"
 
 
 //Optimization Package
@@ -61,6 +62,7 @@
 #include "Strain_Energy_Constraint.h"
 #include "Strain_Energy_Minimize.h"
 #include "Strain_Energy_Objective.h"
+#include "Heat_Capacity_Potential_Minimize.h"
 
 //debug and performance includes
 #include <sys/time.h>

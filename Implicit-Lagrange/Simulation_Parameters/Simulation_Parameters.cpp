@@ -92,10 +92,4 @@ void Simulation_Parameters::input(){
   NBSF = 4; //number of surface density force conditions
   NBD = 2; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
 
-  //apply body forces
-  gravity_flag = false;
-  gravity_vector[0] = 9.81;
-  gravity_vector[1] = 0;
-  gravity_vector[2] = 0;
-
 }

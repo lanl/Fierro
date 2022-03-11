@@ -32,7 +32,7 @@ class Simulation_Parameters_Thermal: public Simulation_Parameters
   // --- Dimensional and mesh constants ---
   int num_dim;
   int p_order;
-  int unit_scaling;
+  real_t unit_scaling;
 
   //debug and performance reporting flags
   bool report_runtime_flag, multigrid_timers, direct_solver_flag;
