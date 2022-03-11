@@ -91,7 +91,6 @@ void Simulation_Parameters::input(){
   NB = 6; // number of boundaries
   NBSF = 4; //number of surface density force conditions
   NBD = 2; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
-           //note this only implies a fixed displacement on the surface if no other basis functions have support on the surface
 
   //apply body forces
   gravity_flag = false;

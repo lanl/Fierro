@@ -98,7 +98,7 @@ public:
   enum bc_type {NONE,TEMPERATURE_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
   
   //body force parameters
-  bool body_force_flag, thermal_flag, electric_flag;
+  bool thermal_flag, electric_flag;
   
   //stores the displacement value for the boundary condition on this nodal DOF
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Node_Temperature_Boundary_Conditions;

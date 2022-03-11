@@ -36,7 +36,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameters_Thermal.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Heat_Conduction.h"
@@ -67,7 +67,7 @@ using namespace utils;
 
 FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
   //create parameter object
-  simparam = new Simulation_Parameters();
+  simparam = new Simulation_Parameters_Thermal();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
   //create ref element object
@@ -235,11 +235,10 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   
   //Body Term Section
 
-  //apply gravity
-  gravity_flag = simparam->gravity_flag;
-  gravity_vector = simparam->gravity_vector;
+  //apply body terms
+  thermal_flag = simparam->thermal_flag;
 
-  if(electric_flag||body_force_flag||thermal_flag) body_term_flag = true;
+  if(electric_flag||thermal_flag) body_term_flag = true;
 
 }
 
