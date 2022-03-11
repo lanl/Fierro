@@ -110,6 +110,9 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
     node_temperatures(init,0) = 0;
   for(int init = 0; init < all_dof_map->getNodeNumElements(); init++)
     all_node_temperatures(init,0) = 0;
+
+  //construct specific dof map here if needed (more than one dof per node and not the coordinate dof map already provided) from node map
+  //this thermal module just equates the dof map and node map since theres one scalar dof per node
 }
 
 FEA_Module_Heat_Conduction::~FEA_Module_Heat_Conduction(){
@@ -2105,7 +2108,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
 
     //compute the previous multiplied by the Elastic (C) Matrix
     for(int irow=0; irow < Brows; irow++){
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+      for(int icol=0; icol < nodes_per_elem; icol++){
         CB_matrix_contribution(irow,icol) = 0;
         for(int span=0; span < Brows; span++){
           CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
@@ -2114,8 +2117,8 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
     }
     
     //compute the contributions of this quadrature point to all the local conductivity matrix elements
-    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+    for(int ifill=0; ifill < nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < nodes_per_elem; jfill++){
         matrix_term = 0;
         for(int span = 0; span < Brows; span++){
           matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
@@ -2132,20 +2135,19 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, igradient));
       
       //compute rhs product for this quadrature point contribution  
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        local_dof_id = all_dof_map->getLocalElement(nodes_in_elem(ielem, ifill/num_dim)*num_dim);
-        local_dof_id += ifill%num_dim;
-        global_dof_id = all_dof_map->getGlobalElement(local_dof_id);
-        if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_reduced_dof_original_map->isNodeGlobalElement(global_dof_id)){
+      for(int ifill=0; ifill < nodes_per_elem; ifill++){
+        global_dof_id = nodes_in_elem(ielem, ifill);
+        local_dof_id = all_node_map->getLocalElement(global_dof_id);
+        if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=TEMPERATURE_CONDITION&&local_reduced_dof_original_map->isNodeGlobalElement(global_dof_id)){
           local_reduced_dof_id = local_reduced_dof_original_map->getLocalElement(global_dof_id);
           inner_product = 0;
-          for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-            inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(jfill);
+          for(int jfill=0; jfill < nodes_per_elem; jfill++){
+            inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_temperatures(jfill);
             //debug
             //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
             //inner_product += Local_Matrix_Contribution(ifill, jfill);
           }
-          unbalanced_B_view(local_reduced_dof_id,0) += inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
+          unbalanced_B_view(local_reduced_dof_id,0) += inner_product*Element_Conductivity_Gradient*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
         }
       }
       } //density gradient loop
@@ -2241,7 +2243,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
 
   for(size_t ielem = 0; ielem < rnum_elem; ielem++){
     nodes_per_elem = elem->num_basis();
-
+    
     //initialize C matrix
     for(int irow = 0; irow < Brows; irow++)
       for(int icol = 0; icol < Brows; icol++)
@@ -2249,25 +2251,18 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
 
     //B matrix initialization
     for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+      for(int icol=0; icol < nodes_per_elem; icol++){
         CB_matrix(irow,icol) = 0;
       }
 
     //acquire set of nodes and nodal displacements for this local element
     for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
       local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
-      local_dof_idx = all_dof_map->getLocalElement(nodes_in_elem(ielem, node_loop)*num_dim);
-      local_dof_idy = local_dof_idx + 1;
-      local_dof_idz = local_dof_idx + 2;
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_displacements(node_loop*num_dim) = all_node_temperatures(local_dof_idx,0);
-      current_nodal_displacements(node_loop*num_dim+1) = all_node_temperatures(local_dof_idy,0);
-      current_nodal_displacements(node_loop*num_dim+2) = all_node_temperatures(local_dof_idz,0);
-      current_adjoint_displacements(node_loop*num_dim) = all_adjoint(local_dof_idx,0);
-      current_adjoint_displacements(node_loop*num_dim+1) = all_adjoint(local_dof_idy,0);
-      current_adjoint_displacements(node_loop*num_dim+2) = all_adjoint(local_dof_idz,0);
+      current_nodal_temperatures(node_loop) = all_node_temperatures(local_node_id,0);
+      current_adjoint_temperatures(node_loop) = all_adjoint(local_node_id,0);
       
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
     }
@@ -2370,31 +2365,27 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
     }
 
     //look up element material properties at this point as a function of density
-    Concavity_Element_Material_Properties(ielem, Element_Modulus_Concavity, Poisson_Ratio, current_density);
-    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
-    
-    Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Concavity_Elastic_Constant = Element_Modulus_Concavity/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5 - Poisson_Ratio;
-    -Element_Conductivity = 1 - Poisson_Ratio;
+    Concavity_Element_Material_Properties(ielem, Element_Conductivity_Concavity, Poisson_Ratio, current_density);
+    Gradient_Element_Material_Properties(ielem, Element_Conductivity_Gradient, Poisson_Ratio, current_density);
+
     //*fos << "Elastic Modulus Concavity" << Element_Modulus_Concavity << " " << Element_Modulus_Gradient << std::endl;
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
     //compute Isotropic Conductivity (C) matrix
     if(num_dim==2){
-      C_matrix(0,0) = -Element_Conductivity;
-      C_matrix(1,1) = -Element_Conductivity;
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
     }
     if(num_dim==3){
-      C_matrix(0,0) = -Element_Conductivity;
-      C_matrix(1,1) = -Element_Conductivity;
-      C_matrix(2,2) = -Element_Conductivity;
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
+      C_matrix(2,2) = -1;
     }
 
     //compute the previous multiplied by the Elastic (C) Matrix
     for(int irow=0; irow < Brows; irow++){
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+      for(int icol=0; icol < nodes_per_elem; icol++){
         CB_matrix_contribution(irow,icol) = 0;
         for(int span=0; span < Brows; span++){
           CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
@@ -2403,8 +2394,8 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
     }
     
     //compute the contributions of this quadrature point to all the local conductivity matrix elements
-      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+      for(int ifill=0; ifill < nodes_per_elem; ifill++){
+        for(int jfill=ifill; jfill < nodes_per_elem; jfill++){
           matrix_term = 0;
           for(int span = 0; span < Brows; span++){
             matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
@@ -2417,12 +2408,12 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       
     //compute inner product for this quadrature point contribution
     inner_product = 0;
-    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+    for(int ifill=0; ifill < nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < nodes_per_elem; jfill++){
         if(ifill==jfill)
-          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_temperatures(ifill)*current_nodal_temperatures(jfill);
         else
-          inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+          inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_temperatures(ifill)*current_nodal_temperatures(jfill);
       }
     }
 
@@ -2435,12 +2426,12 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
         //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))){
         temp_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-          hessvec(temp_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(jlocal_node_id,0)*
+          hessvec(temp_id,0) -= inner_product*Element_Conductivity_Concavity*basis_values(igradient)*all_direction_vec(jlocal_node_id,0)*
                                   basis_values(jgradient)*weight_multiply*0.5*invJacobian;
         }
         if(igradient!=jgradient&&map->isNodeGlobalElement(nodes_in_elem(ielem, jgradient))){
           temp_id = map->getLocalElement(nodes_in_elem(ielem, jgradient));
-          hessvec(jlocal_node_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(local_node_id,0)*
+          hessvec(jlocal_node_id,0) -= inner_product*Element_Conductivity_Gradient*basis_values(igradient)*all_direction_vec(local_node_id,0)*
                                       basis_values(jgradient)*weight_multiply*0.5*invJacobian;
 
         }
@@ -2449,9 +2440,9 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
     
     //compute inner product for this quadrature point contribution
     inner_product = 0;
-    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-      for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-        inner_product += Local_Matrix_Contribution(ifill, jfill)*current_adjoint_displacements(ifill)*current_nodal_displacements(jfill);
+    for(int ifill=0; ifill < nodes_per_elem; ifill++){
+      for(int jfill=0; jfill < nodes_per_elem; jfill++){
+        inner_product += Local_Matrix_Contribution(ifill, jfill)*current_adjoint_temperatures(ifill)*current_nodal_temperatures(jfill);
         //debug
         //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
         //inner_product += Local_Matrix_Contribution(ifill, jfill);
@@ -2465,22 +2456,22 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      hessvec(local_node_id,0) += inner_product*direction_vec_reduce*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*invJacobian;
-      }
+      hessvec(local_node_id,0) += inner_product*direction_vec_reduce*Element_Conductivity_Gradient*basis_values(igradient)*weight_multiply*invJacobian;
+    }
 
-      //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
+      //evaluate gradient of body term (such as energy source which depends on density) with respect to igradient
       if(body_term_flag){
         for(int igradient=0; igradient < nodes_per_elem; igradient++){
         if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
         local_node_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
         //look up element material properties at this point as a function of density
-        Gradient_Body_Term(ielem, current_density, gradient_force_density);
+        Gradient_Body_Term(ielem, current_density, gradient_specific_internal_energy_rate);
       
         //compute inner product for this quadrature point contribution
         inner_product = 0;
-        for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-          inner_product -= gradient_force_density[ifill%num_dim]*
-                           current_adjoint_displacements(ifill)*basis_values(ifill/num_dim);
+        for(int ifill=0; ifill < nodes_per_elem; ifill++){
+          inner_product -= gradient_specific_internal_energy_rate*
+                           current_adjoint_temperatures(ifill)*basis_values(ifill/num_dim);
         }
       
         //debug print
@@ -2504,8 +2495,8 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  host_vec_array all_node_strains = all_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  host_vec_array node_strains = node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  host_vec_array all_node_heat_fluxes = all_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  host_vec_array node_heat_fluxes = node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
@@ -2546,23 +2537,24 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_temperatures(elem->num_basis());
 
-  size_t Brows;
-  if(num_dim==2) Brows = 3;
-  if(num_dim==3) Brows = 6;
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> quad_strain(Brows);
+  size_t Brows = num_dim;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,elem->num_basis());
+  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> quad_heat_flux(Brows);
   FArrayKokkos<real_t, array_layout, device_type, memory_traits> projection_matrix(max_nodes_per_element,max_nodes_per_element);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> projection_vector(Brows,max_nodes_per_element);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> strain_vector(max_nodes_per_element);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> heat_flux_vector(max_nodes_per_element);
   //Teuchos::SerialSymDenseMatrix<LO,real_t> projection_matrix_pass;
   Teuchos::RCP<Teuchos::SerialDenseMatrix<LO,real_t>> projection_matrix_pass;
   //Teuchos::SerialDenseVector<LO,real_t> projection_vector_pass;
   Teuchos::RCP<Teuchos::SerialDenseVector<LO,real_t>> projection_vector_pass;
   //Teuchos::SerialDenseVector<LO,real_t> strain_vector_pass;
-  Teuchos::RCP<Teuchos::SerialDenseVector<LO,real_t>> strain_vector_pass;
+  Teuchos::RCP<Teuchos::SerialDenseVector<LO,real_t>> heat_flux_vector_pass;
   //Teuchos::SerialSpdDenseSolver<LO,real_t> projection_solver;
   Teuchos::SerialDenseSolver<LO,real_t> projection_solver;
 
@@ -2574,11 +2566,11 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   //local variable for host view in the dual view
   for(int init = 0; init < map->getNodeNumElements(); init++)
     for(int istrain = 0; istrain < Brows; istrain++)
-      node_strains(init,istrain) = 0;
+      node_heat_fluxes(init,istrain) = 0;
 
   for(int init = 0; init < all_node_map->getNodeNumElements(); init++)
     for(int istrain = 0; istrain < Brows; istrain++)
-      all_node_strains(init,istrain) = 0;
+      all_node_heat_fluxes(init,istrain) = 0;
   
 
   real_t current_density = 1;
@@ -2590,8 +2582,19 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
     nodes_per_elem = elem->num_basis();
     //B matrix initialization
     for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+      for(int icol=0; icol < nodes_per_elem; icol++){
         B_matrix(irow,icol) = 0;
+      }
+
+    //initialize C matrix
+    for(int irow = 0; irow < Brows; irow++)
+      for(int icol = 0; icol < Brows; icol++)
+        C_matrix(irow,icol) = 0;
+
+    //B matrix initialization
+    for(int irow=0; irow < Brows; irow++)
+      for(int icol=0; icol < nodes_per_elem; icol++){
+        CB_matrix(irow,icol) = 0;
       }
 
     //initialize projection matrix
@@ -2609,23 +2612,10 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
     //acquire set of nodes and nodal displacements for this local element
     for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
       local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
-      local_dof_idx = all_dof_map->getLocalElement(nodes_in_elem(ielem, node_loop)*num_dim);
-      local_dof_idy = local_dof_idx + 1;
-      local_dof_idz = local_dof_idx + 2;
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_displacements(node_loop*num_dim) = all_node_temperatures(local_dof_idx,0);
-      current_nodal_displacements(node_loop*num_dim+1) = all_node_temperatures(local_dof_idy,0);
-      current_nodal_displacements(node_loop*num_dim+2) = all_node_temperatures(local_dof_idz,0);
-
-      //debug print
-      /*
-      std::cout << "node index access x "<< local_node_id << std::endl;
-      std::cout << "local index access x "<< local_dof_idx << " displacement x " << current_nodal_displacements(node_loop*num_dim) <<std::endl;
-      std::cout << "local index access y "<< local_dof_idy << " displacement y " << current_nodal_displacements(node_loop*num_dim + 1) << std::endl;
-      std::cout << "local index access z "<< local_dof_idz << " displacement z " << current_nodal_displacements(node_loop*num_dim + 2) << std::endl; 
-      */
+      current_nodal_temperatures(node_loop) = all_node_temperatures(local_node_id,0);
     }
 
     //debug print of current_nodal_displacements
@@ -2719,13 +2709,24 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
                                            basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
       }
     }
+
+    //compute Isotropic Conductivity (C) matrix
+    if(num_dim==2){
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
+    }
+    if(num_dim==3){
+      C_matrix(0,0) = -1;
+      C_matrix(1,1) = -1;
+      C_matrix(2,2) = -1;
+    }
     
     //multiply by displacement vector to get strain at this quadrature point
     //division by J ommited since it is multiplied out later
     for(int irow=0; irow < Brows; irow++){
       quad_strain(irow) = 0;
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
-        quad_strain(irow) += B_matrix_contribution(irow,icol)*current_nodal_displacements(icol);
+      for(int icol=0; icol < nodes_per_elem; icol++){
+        quad_strain(irow) += B_matrix_contribution(irow,icol)*current_nodal_temperatures(icol);
       }
     }
 
@@ -2761,58 +2762,9 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
         //if(irow<=icol)
         projection_matrix(irow,icol) += weight_multiply*basis_values(irow)*basis_values(icol)*Jacobian;
       }
-
-    //accumulate B matrix
-    //for(int irow=0; irow < Brows; irow++)
-      //for(int icol=0; icol < num_dim*nodes_per_elem; icol++)
-        //B_matrix(irow,icol) += quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2)*B_matrix_contribution(irow,icol)*Jacobian;
-
-    
-    //debug print of B matrix per quadrature point
-    /*
-    std::cout << " ------------B MATRIX QUADRATURE CONTRIBUTION"<< ielem + 1 <<"--------------"<<std::endl;
-    for (int idof = 0; idof < Brows; idof++){
-      std::cout << "row: " << idof + 1 << " { ";
-      for (int istride = 0; istride < nodes_per_elem*num_dim; istride++){
-        std::cout << istride + 1 << " = " << B_matrix_contribution(idof,istride) << " , " ;
-      }
-      std::cout << " }"<< std::endl;
-    }
-    */
-    //end debug block
-    
     
     }
     
-    //debug print of projection vector across all components
-    /*
-    std::cout << " ------------Strain Projection Vector"<< ielem + 1 <<"--------------"<<std::endl;
-    for (int idof = 0; idof < Brows; idof++){
-      std::cout << "row: " << idof + 1 << " { ";
-      for (int istride = 0; istride < nodes_per_elem; istride++){
-        std::cout << istride + 1 << " = " << projection_vector(idof,istride) << " , " ;
-      }
-      std::cout << " }"<< std::endl;
-    }
-    std::fflush(stdout);
-    */
-    //end debug block
-    
-    //solve small linear system for nodal strain values
-    //scale for conditioning
-    /*
-    for(int irow=0; irow < nodes_per_elem; irow++)
-      for(int icol=0; icol < nodes_per_elem; icol++){
-        //if(irow<=icol)
-        projection_matrix(irow,icol) /= J_min;
-      }
-      */
-    //use percentages
-    for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < nodes_per_elem; icol++){
-        projection_vector(irow,icol) *= 100;
-      }
-      
     //construct matrix and vector wrappers for dense solver
     //projection_matrix_pass = Teuchos::rcp( new Teuchos::SerialSymDenseMatrix<LO,real_t>(Teuchos::View, true, projection_matrix.pointer(), nodes_per_elem, nodes_per_elem));
 
@@ -2875,17 +2827,6 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
     
   }
     
-  //debug print
-  
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Local Node Strains :" << std::endl;
-  //all_node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
-  
-
 }
 
 /* ----------------------------------------------------------------------

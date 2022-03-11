@@ -4295,7 +4295,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
     //look up element material properties at this point as a function of density
     Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
     
-    Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+   Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5 - Poisson_Ratio;
     Pressure_Term = 1 - Poisson_Ratio;
 
@@ -4367,7 +4367,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
             //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
             //inner_product += Local_Matrix_Contribution(ifill, jfill);
           }
-          unbalanced_B_view(local_reduced_dof_id,0) += inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
+          unbalanced_B_view(local_reduced_dof_id,0) += inner_product*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
         }
       }
       } //density gradient loop
