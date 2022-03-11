@@ -144,7 +144,7 @@ void FEA_Module_Heat_Conduction::init_boundaries(){
   //allocate nodal data
   Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes, "Node_DOF_Boundary_Condition_Type");
   Node_Temperature_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes);
-  Node_DOF_Flux_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes);
+  Node_Heat_Flux_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes);
 
   //initialize
   for(int init=0; init < nall_nodes*num_dim; init++)
@@ -225,9 +225,9 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Heat_Flux(surf_force_set_id,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Heat_Flux(surf_force_set_id,1) = 0;
-  Boundary_Surface_Heat_Flux(surf_force_set_id,2) = 0;
+  Boundary_Surface_Heat_Flux(surf_flux_set_id,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Heat_Flux(surf_flux_set_id,1) = 0;
+  Boundary_Surface_Heat_Flux(surf_flux_set_id,2) = 0;
   surf_flux_set_id++;
   *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
@@ -441,7 +441,7 @@ void FEA_Module_Heat_Conduction::init_assembly(){
   }
 
   //copy reduced content to non_repeat storage
-  Graph_Matrix = RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
+  Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
   for(int inode = 0; inode < nlocal_nodes; inode++)
     for(int istride = 0; istride < Graph_Matrix_Strides(inode); istride++)
       Graph_Matrix(inode,istride) = Repeat_Graph_Matrix(inode,istride);
@@ -1062,7 +1062,7 @@ void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density
   //init 
   gradient_specific_internal_energy_rate = 0;\
   if(thermal_flag){
-    specific_internal_energy_rate += simparam->specific_internal_energy_rate;
+    gradient_specific_internal_energy_rate += simparam->specific_internal_energy_rate;
   }
   
   /*
@@ -1113,7 +1113,7 @@ void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t iel
 void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Conductivity_Derivative, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
-  ElementConductivity_Derivative = 0;
+  Element_Conductivity_Derivative = 0;
   if(density < 0) density = 0;
   if(simparam->penalty_power>=2){
     for(int i = 0; i < simparam->penalty_power - 2; i++)
@@ -1177,7 +1177,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
-  size_t Brows = dum_dim;
+  size_t Brows = num_dim;
   FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,elem->num_basis());
   FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,elem->num_basis());
@@ -1483,8 +1483,7 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
 
       num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
       if(bc_option==0) {
-        bc_dim_set[0]=1;
-        displacement(0) = Boundary_Surface_Temperatures(surface_temp_set_id,0);
+        temperature = Boundary_Surface_Temperatures(surface_temp_set_id,0);
       }
       surface_temp_set_id++;
       
@@ -1887,8 +1886,8 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   GO current_global_index, global_dof_id;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Element_Conductivity_Gradient, Element_Conductivity_Concavity, specific_internal_energy_rate;
-  real_t Element_Conductivity;
+  real_t Element_Conductivity_Gradient, Element_Conductivity_Concavity, gradient_specific_internal_energy_rate;
+  real_t Element_Conductivity, specific_internal_energy_rate;
   real_t inner_product, matrix_term, Jacobian, invJacobian, weight_multiply;
   real_t direction_vec_reduce, local_direction_vec_reduce;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -2359,8 +2358,8 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
     }
 
     //look up element material properties at this point as a function of density
-    Concavity_Element_Material_Properties(ielem, Element_Conductivity_Concavity, Poisson_Ratio, current_density);
-    Gradient_Element_Material_Properties(ielem, Element_Conductivity_Gradient, Poisson_Ratio, current_density);
+    Concavity_Element_Material_Properties(ielem, Element_Conductivity_Concavity, current_density);
+    Gradient_Element_Material_Properties(ielem, Element_Conductivity_Gradient, current_density);
 
     //*fos << "Elastic Modulus Concavity" << Element_Modulus_Concavity << " " << Element_Modulus_Gradient << std::endl;
     //debug print
@@ -2787,7 +2786,7 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
           current_global_index = nodes_in_elem(ielem, node_loop);
           local_node_id = all_node_map->getLocalElement(current_global_index);
           current_heat_flux = (*heat_flux_vector_pass)(node_loop);
-          if(heat_max_flag){
+          if(flux_max_flag){
             if(fabs(current_heat_flux) > all_node_heat_fluxes(local_node_id, iflux)){
               all_node_heat_fluxes(local_node_id, iflux) = current_heat_flux;
 
@@ -3139,7 +3138,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //set bview to force vector data
   for(LO i=0; i < local_nrows_reduced; i++){
     access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    Bview_pass(i,0) = Nodal_Forces(access_index,0);
+    Bview_pass(i,0) = Nodal_RHS(access_index,0);
   }
   
   unbalanced_B = Teuchos::rcp(new MV(local_reduced_dof_map, Bview_pass));
@@ -3356,7 +3355,7 @@ int FEA_Module_Heat_Conduction::solve(){
   Tpetra::Import<LO, GO> ghost_temperature_importer(local_dof_map, all_dof_map);
 
   //comms to get displacements on all node map
-  all_node_temperatures_distributed->doImport(*node_temperatures_distributed, ghost_displacement_importer, Tpetra::INSERT);
+  all_node_temperatures_distributed->doImport(*node_temperatures_distributed, ghost_temperature_importer, Tpetra::INSERT);
 
   //if(myrank==0)
   //*fos << "All displacements :" << std::endl;

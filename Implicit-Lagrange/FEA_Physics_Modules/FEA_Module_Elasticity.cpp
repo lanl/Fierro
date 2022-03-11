@@ -697,7 +697,7 @@ void FEA_Module_Elasticity::init_assembly(){
   }
 
   //copy reduced content to non_repeat storage
-  Graph_Matrix = RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
+  Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
   for(int inode = 0; inode < nlocal_nodes; inode++)
     for(int istride = 0; istride < Graph_Matrix_Strides(inode); istride++)
       Graph_Matrix(inode,istride) = Repeat_Graph_Matrix(inode,istride);

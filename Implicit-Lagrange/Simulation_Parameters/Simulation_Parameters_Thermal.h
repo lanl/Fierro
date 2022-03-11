@@ -16,6 +16,7 @@ class Simulation_Parameters_Thermal: public Simulation_Parameters
   //==============================================================================
 
   // --- Boundary Conditions ---
+  int NB; // number of boundary patch sets to tag
   int NBSF; //number of surface heat flux boundary conditions
   int NBT; //number of temperature boundary conditions
 
@@ -38,7 +39,7 @@ class Simulation_Parameters_Thermal: public Simulation_Parameters
 
   //Body force parameters
   bool thermal_flag, electric_flag;
-  real_t specific_internal_energy_rate
+  real_t specific_internal_energy_rate;
 
   //Linear Solver Flags
   bool equilibrate_matrix_flag;

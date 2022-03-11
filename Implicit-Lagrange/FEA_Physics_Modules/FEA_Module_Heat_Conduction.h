@@ -71,6 +71,8 @@ public:
   void generate_applied_loads();
 
   void Temperature_Boundary_Conditions();
+
+  class Simulation_Parameters_Thermal *simparam;
   
   //Local FEA data
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Conductivity_Matrix_Assembly_Map;
