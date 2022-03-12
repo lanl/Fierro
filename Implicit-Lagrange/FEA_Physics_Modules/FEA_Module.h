@@ -213,6 +213,10 @@ public:
   //debug flags
   int gradient_print_sync;
 
+  //Topology Optimization parameter
+  int penalty_power;
+  bool nodal_density_flag;
+
   //runtime and counters for performance output
   double linear_solve_time, hessvec_time, hessvec_linear_time;
   int update_count, hessvec_count;

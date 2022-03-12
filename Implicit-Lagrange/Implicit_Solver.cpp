@@ -32,10 +32,9 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameter_Headers.h"
+#include "FEA_Module_Headers.h"
 #include "Implicit_Solver.h"
-#include "FEA_Module_Elasticity.h"
-#include "FEA_Module_Heat_Conduction.h"
 
 
 //Optimization Package
@@ -87,8 +86,8 @@ each surface to use for hammering metal into to form it.
 */
 
 Implicit_Solver::Implicit_Solver() : Solver(){
-  //create parameter object
-  simparam = new Simulation_Parameters();
+  //create parameter objects
+  simparam = new Simulation_Parameters_Topology_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
   //create ref element object
@@ -241,18 +240,8 @@ void Implicit_Solver::run(int argc, char *argv[]){
     
     //CPU time
     double current_cpu = CPU_Time();
-    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " update solve time " << fea_elasticity->linear_solve_time << " hess solve time " << fea_elasticity->hessvec_linear_time <<std::endl;
-    //debug return to avoid printing further
-
-    real_t dt = simparam->dt;
-    int cycle_stop = simparam->cycle_stop;
-    real_t &TIME = simparam->TIME;
-    real_t TFINAL = simparam->TFINAL;
-    int &cycle = simparam->cycle;
-    int graphics_cyc_ival = simparam->graphics_cyc_ival;
-    real_t graphics_dt_ival = simparam->graphics_dt_ival;
-    real_t graphics_time = simparam->graphics_dt_ival;
-    real_t &percent_comp = simparam->percent_comp;
+    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " update solve time "
+              << fea_elasticity->linear_solve_time << " hess solve time " << fea_elasticity->hessvec_linear_time <<std::endl;
 
     // Data writers
     tecplot_writer();

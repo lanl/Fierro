@@ -67,7 +67,7 @@ using namespace utils;
 
 FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
   //create parameter object
-  simparam = new Simulation_Parameters();
+  simparam = new Simulation_Parameters_Elasticity();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
   //create ref element object
@@ -978,7 +978,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1419,7 +1419,7 @@ void FEA_Module_Elasticity::Element_Material_Properties(size_t ielem, real_t &El
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
   if(density < 0) density = 0;
-  for(int i = 0; i < simparam->penalty_power; i++)
+  for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and stiffness
   Element_Modulus = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
@@ -1436,10 +1436,10 @@ void FEA_Module_Elasticity::Gradient_Element_Material_Properties(size_t ielem, r
   real_t penalty_product = 1;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
-  for(int i = 0; i < simparam->penalty_power - 1; i++)
+  for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus_Derivative = simparam->penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  Element_Modulus_Derivative = penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
 }
@@ -1453,11 +1453,11 @@ void FEA_Module_Elasticity::Concavity_Element_Material_Properties(size_t ielem, 
   real_t penalty_product = 1;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
-  if(simparam->penalty_power>=2){
-    for(int i = 0; i < simparam->penalty_power - 2; i++)
+  if(penalty_power>=2){
+    for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and stiffness
-    Element_Modulus_Derivative = simparam->penalty_power*(simparam->penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   }
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
@@ -1473,7 +1473,7 @@ void FEA_Module_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, array_l
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1863,7 +1863,7 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2405,7 +2405,7 @@ void FEA_Module_Elasticity::compute_element_masses(const_host_vec_array design_d
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_design_densities;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2598,7 +2598,7 @@ void FEA_Module_Elasticity::compute_nodal_gradients(const_host_vec_array design_
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   const_host_vec_array all_node_densities;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_elem = elem->num_basis();
@@ -2775,7 +2775,7 @@ void FEA_Module_Elasticity::compute_element_moments(const_host_vec_array design_
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_design_densities;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2975,7 +2975,7 @@ void FEA_Module_Elasticity::compute_moment_gradients(const_host_vec_array design
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   const_host_vec_array all_node_densities;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_elem = elem->num_basis();
@@ -3163,7 +3163,7 @@ void FEA_Module_Elasticity::compute_element_moments_of_inertia(const_host_vec_ar
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_design_densities;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3395,7 +3395,7 @@ void FEA_Module_Elasticity::compute_moment_of_inertia_gradients(const_host_vec_a
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   const_host_vec_array all_node_densities;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_elem = elem->num_basis();
@@ -3604,7 +3604,7 @@ void FEA_Module_Elasticity::compute_adjoint_gradients(const_host_vec_array desig
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3997,7 +3997,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);

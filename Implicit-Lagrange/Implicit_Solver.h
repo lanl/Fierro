@@ -154,7 +154,8 @@ public:
   elements::ref_element  *ref_elem;
   
 
-  class Simulation_Parameters *simparam;
+  //class Simulation_Parameters *simparam;
+  class Simulation_Parameters_Topology_Optimization *simparam;
   class FEA_Module_Elasticity *fea_elasticity;
   
   //Local FEA data

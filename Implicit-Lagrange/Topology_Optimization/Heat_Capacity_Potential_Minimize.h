@@ -72,7 +72,7 @@ public:
   bool nodal_density_flag_;
   size_t last_comm_step, last_solve_step, current_step;
 
-  HeatCapacityPotentialMinimize_TopOpt(FEA_Module_Thermal *FEM, bool nodal_density_flag) 
+  HeatCapacityPotentialMinimize_TopOpt(FEA_Module_Heat_Conduction *FEM, bool nodal_density_flag) 
     : FEM_(FEM), useLC_(true) {
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;

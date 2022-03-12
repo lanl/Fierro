@@ -631,7 +631,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1085,7 +1085,7 @@ void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
   if(density < 0) density = 0;
-  for(int i = 0; i < simparam->penalty_power; i++)
+  for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and conductivity
   Element_Conductivity = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Thermal_Conductivity/unit_scaling;
@@ -1100,10 +1100,10 @@ void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t iel
   real_t penalty_product = 1;
   Element_Conductivity_Derivative = 0;
   if(density < 0) density = 0;
-  for(int i = 0; i < simparam->penalty_power - 1; i++)
+  for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Conductivity_Derivative = simparam->penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Thermal_Conductivity/unit_scaling;
+  Element_Conductivity_Derivative = penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Thermal_Conductivity/unit_scaling;
 }
 
 /* --------------------------------------------------------------------------------
@@ -1115,11 +1115,11 @@ void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ie
   real_t penalty_product = 1;
   Element_Conductivity_Derivative = 0;
   if(density < 0) density = 0;
-  if(simparam->penalty_power>=2){
-    for(int i = 0; i < simparam->penalty_power - 2; i++)
+  if(penalty_power>=2){
+    for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and conductivity
-    Element_Conductivity_Derivative = simparam->penalty_power*(simparam->penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Thermal_Conductivity/unit_scaling;
+    Element_Conductivity_Derivative = penalty_power*(penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Thermal_Conductivity/unit_scaling;
   }
 }
 
@@ -1133,7 +1133,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1558,7 +1558,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1866,7 +1866,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);

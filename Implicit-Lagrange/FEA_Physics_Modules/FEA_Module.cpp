@@ -3,6 +3,7 @@
 #include "FEA_Module.h"
 #include "Implicit_Solver.h"
 #include "Simulation_Parameters.h"
+#include "Simulation_Parameters_Topology_Optimization.h"
 
 #define BC_EPSILON 1.0e-8
 using namespace utils;
@@ -69,6 +70,10 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
 
   //flag init
   body_term_flag = nonzero_bc_flag = false;
+
+  //TO parameters
+  penalty_power = Solver_Pointer->simparam->penalty_power;
+  nodal_density_flag = Solver_Pointer->simparam->nodal_density_flag;
 }
 
 FEA_Module::~FEA_Module() {}
