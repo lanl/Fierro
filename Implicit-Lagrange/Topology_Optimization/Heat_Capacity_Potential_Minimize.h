@@ -71,6 +71,7 @@ private:
 public:
   bool nodal_density_flag_;
   size_t last_comm_step, last_solve_step, current_step;
+  std::string FEA_Module = "Heat_Conduction";
 
   HeatCapacityPotentialMinimize_TopOpt(FEA_Module_Heat_Conduction *FEM, bool nodal_density_flag) 
     : FEM_(FEM), useLC_(true) {

@@ -13,6 +13,7 @@ Simulation_Parameters::Simulation_Parameters(){
   optimization_output_freq = 100;
   restart_file = false;
   tecplot_input = false;
+  nfea_modules = 0;
 }
 
 Simulation_Parameters::~Simulation_Parameters(){
@@ -38,4 +39,22 @@ void Simulation_Parameters::input(){
   //debug and performance report flags
   report_runtime_flag = 1;
 
+}
+
+void Simulation_Parameters::FEA_module_setup(){
+  
+  //initial buffer size for FEA module list storage
+  int buffer_size = 10;
+  FEA_Module_List = std::vector<std::string>(buffer_size);
+
+  //decides which FEA modules to setup based on user decided implicit solves
+  FEA_Module_List[0] = "Elasticity";
+  nfea_modules++;
+  FEA_Module_List[1] = "Heat_Conduction";
+  nfea_modules++;
+  //example for later
+  if(nfea_modules==buffer_size){
+    buffer_size += 10;
+    FEA_Module_List.resize(buffer_size);
+  }
 }

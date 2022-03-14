@@ -80,6 +80,7 @@ private:
 public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
+  std::string FEA_Module = "Elasticity";
 
   MomentOfInertiaConstraint_TopOpt(FEA_Module_Elasticity *FEM, bool nodal_density_flag, int inertia_component, bool inequality_flag=true, real_t constraint_value = 0) 
     : FEM_(FEM) {

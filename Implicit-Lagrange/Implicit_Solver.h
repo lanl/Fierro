@@ -6,6 +6,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
+#include <string>
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_oblackholestream.hpp>
@@ -53,6 +54,8 @@ namespace Xpetra{
   template<class floattype, class local_ind, class global_ind, class nodetype> 
   class Matrix;
 }
+
+class FEA_Module;
 
 class Implicit_Solver: public Solver{
 
@@ -109,6 +112,9 @@ public:
 
   void collect_information();
 
+  //process input to decide TO problem and FEA modules
+  void module_select();
+
   void setup_optimization_problem();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -156,7 +162,11 @@ public:
 
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters_Topology_Optimization *simparam;
-  class FEA_Module_Elasticity *fea_elasticity;
+
+  //set of enabled FEA modules
+  FEA_Module **fea_module;
+  std::string *fea_module_types;
+  int nfea_modules;
   
   //Local FEA data
   size_t nlocal_nodes;
@@ -215,9 +225,6 @@ public:
   CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NTopology_Condition_Patches;
-
-  //pointer to FEA solver object passed to objectives and constraints
-  Teuchos::RCP<FEA_Module_Elasticity> FEM_pass;
 
   //element selection parameters and data
   size_t max_nodes_per_element;

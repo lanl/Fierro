@@ -69,6 +69,7 @@ private:
 public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
+  std::string FEA_Module = "Elasticity";
 
   BoundedStrainConstraint_TopOpt(FEA_Module_Elasticity *FEM, bool nodal_density_flag, real_t maximum_strain) 
     : FEM_(FEM), useLC_(true) {

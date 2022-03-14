@@ -2,6 +2,8 @@
 #define IMPLICIT_SIMULATION_PARAMETERS_H
 
 #include "utilities.h"
+#include <stdio.h>
+#include <stdlib.h> 
 using namespace utils;
 
 class Simulation_Parameters
@@ -10,6 +12,7 @@ class Simulation_Parameters
   Simulation_Parameters();
   virtual ~Simulation_Parameters();
   virtual void input();
+  virtual void FEA_module_setup();
   //==============================================================================
   //   Mesh Variables
   //==============================================================================
@@ -38,6 +41,10 @@ class Simulation_Parameters
 
   //debug and performance reporting flags
   int report_runtime_flag;
+ 
+  //necessary FEA modules
+  std::vector<std::string> FEA_Module_List;
+  int nfea_modules;
 };
 
 #endif // end HEADER_H

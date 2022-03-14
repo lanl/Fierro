@@ -11,6 +11,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   Simulation_Parameters_Topology_Optimization();
   virtual ~Simulation_Parameters_Topology_Optimization();
   virtual void input();
+  virtual void FEA_module_setup();
   //==============================================================================
   //   Mesh Variables
   //==============================================================================
@@ -33,6 +34,11 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   real_t penalty_power;
 
   //volumes to hold density constant
+
+  //list of TO functions needed by problem
+  //necessary FEA modules
+  std::vector<std::string> TO_Module_List;
+  int nTO_modules;
 };
 
 #endif // end HEADER_H

@@ -106,6 +106,9 @@ Implicit_Solver::Implicit_Solver() : Solver(){
   std::ostream &out = std::cout;
   fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   (*fos).setOutputToRootOnly(0);
+
+  //FEA module data init
+  nfea_modules = 0;
 }
 
 Implicit_Solver::~Implicit_Solver(){
@@ -172,6 +175,9 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //set boundary conditions
     generate_tcs();
+
+    //process input to decide TO problem and FEA modules
+    module_select();
 
     //initialize TO design variable storage
     init_design();
