@@ -38,6 +38,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   //list of TO functions needed by problem
   //necessary FEA modules
   std::vector<std::string> TO_Module_List;
+  std::vector<int> TO_Module_My_FEA_Module;
   int nTO_modules;
 };
 

@@ -60,6 +60,7 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
   //initial buffer size for FEA module list storage
   int buffer_size = 10;
   FEA_Module_List = std::vector<std::string>(buffer_size);
+  TO_Module_My_FEA_Module = std::vector<int>(buffer_size);
   bool module_found = false;
   for(int imodule = 0; imodule < nTO_modules; imodule++){
 
@@ -69,8 +70,10 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
         if(FEA_Module_List[ifea] == Elasticity) module_found = true;
+        TO_Module_My_FEA_Module[imodule] = ifea;
       }
       if(!module_found){
+        TO_Module_My_FEA_Module[imodule] = nfea_modules;
         FEA_Module_List[nfea_modules++] = "Elasticity";
         module_found = true;
       }
@@ -79,18 +82,20 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
         if(FEA_Module_List[ifea] == Elasticity) module_found = true;
+        TO_Module_My_FEA_Module[imodule] = ifea;
       }
       if(!module_found){
+        TO_Module_My_FEA_Module[imodule] = nfea_modules;
         FEA_Module_List[nfea_modules++] = "Heat_Conduction";
         module_found = true;
       }
     }
     
     if(module_found){
-      nfea_modules++;
       if(nfea_modules==buffer_size){
         buffer_size += 10;
         FEA_Module_List.resize(buffer_size);
+        TO_Module_My_FEA_Module.resize(buffer_size);
       }
     }
   }

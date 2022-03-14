@@ -164,8 +164,8 @@ public:
   class Simulation_Parameters_Topology_Optimization *simparam;
 
   //set of enabled FEA modules
-  FEA_Module **fea_module;
-  std::string *fea_module_types;
+  std::vector<std::string> fea_module_types;
+  std::vector<FEA_Module*> fea_modules;
   int nfea_modules;
   
   //Local FEA data

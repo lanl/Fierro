@@ -169,56 +169,63 @@ void Implicit_Solver::run(int argc, char *argv[]){
     real_t linear_solve_time = 0;
     real_t hessvec_time = 0;
     real_t hessvec_linear_time = 0;
+    int nfea_modules = simparam->nfea_modules;
     
     // ---- Find Boundaries on mesh ---- //
     init_boundaries();
 
     //set boundary conditions
     generate_tcs();
+    
+    //construct list of FEA modules requested
+    simparam->FEA_module_setup();
 
-    //process input to decide TO problem and FEA modules
+    //process process list of requested FEA modules to construct list of objects
     module_select();
 
     //initialize TO design variable storage
     init_design();
-
-    //construct FEA module
-    fea_elasticity = new FEA_Module_Elasticity(this);
     
     //call boundary routines on fea modules
-    fea_elasticity->init_boundaries();
+    for(int imodule = 0; imodule < nfea_modules; imodule++)
+      fea_modules[imodule]->init_boundaries();
 
     //set boundary conditions for FEA modules
-    fea_elasticity->generate_bcs();
+    for(int imodule = 0; imodule < nfea_modules; imodule++)
+      fea_modules[imodule]->generate_bcs();
 
     //set applied loading conditions for FEA modules
-    fea_elasticity->generate_applied_loads();
+    for(int imodule = 0; imodule < nfea_modules; imodule++)
+      fea_modules[imodule]->generate_applied_loads();
 
     if(myrank == 0)
     std::cout << "Starting init assembly" << std::endl <<std::flush;
     //allocate and fill sparse structures needed for global solution in each FEA module
-    fea_elasticity->init_assembly();
+    for(int imodule = 0; imodule < nfea_modules; imodule++)
+      fea_modules[imodule]->init_assembly();
     
     //assemble the global solution (stiffness matrix etc. and nodal forces)
-    fea_elasticity->assemble_matrix();
+    for(int imodule = 0; imodule < nfea_modules; imodule++)
+      fea_modules[imodule]->assemble_matrix();
 
     if(myrank == 0)
     std::cout << "Finished matrix assembly" << std::endl <<std::flush;
     
-    fea_elasticity->assemble_vector();
-    //return;
-    //find each element's volume
-    fea_elasticity->compute_element_volumes();
+    for(int imodule = 0; imodule < nfea_modules; imodule++)
+      fea_modules[imodule]->assemble_vector();
 
-    fea_elasticity->linear_solver_parameters();
+    for(int imodule = 0; imodule < nfea_modules; imodule++)
+      fea_modules[imodule]->linear_solver_parameters();
     
     if(myrank == 0)
     std::cout << "Starting First Solve" << std::endl <<std::flush;
     
-    int solver_exit = fea_elasticity->solve();
-    if(solver_exit == EXIT_SUCCESS){
-      std::cout << "Linear Solver Error" << std::endl <<std::flush;
-      return;
+    for(int imodule = 0; imodule < nfea_modules; imodule++){
+      int solver_exit = fea_modules[imodule]->solve();
+      if(solver_exit == EXIT_SUCCESS){
+        std::cout << "Linear Solver Error" << std::endl <<std::flush;
+        return;
+      }
     }
     /*
     //debug print
@@ -246,15 +253,22 @@ void Implicit_Solver::run(int argc, char *argv[]){
     
     //CPU time
     double current_cpu = CPU_Time();
+    real_t linear_solve_time = 0;
+    real_t hessvec_linear_time = 0;
+    for(int imodule = 0; imodule < nfea_modules; imodule++){
+      linear_solve_time += fea_modules[imodule]->linear_solve_time;
+      hessvec_linear_time += fea_modules[imodule]->hessvec_linear_time;
+    }
+
     std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " update solve time "
-              << fea_elasticity->linear_solve_time << " hess solve time " << fea_elasticity->hessvec_linear_time <<std::endl;
+              << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
     tecplot_writer();
     // vtk_writer();
     if(myrank==0){
-      std::cout << "Total number of solves and assembly " << fea_elasticity->update_count <<std::endl;
-      std::cout << "Total number of hessvec counts " << fea_elasticity->hessvec_count <<std::endl;
+      std::cout << "Total number of solves and assembly " << fea_modules[0]->update_count <<std::endl;
+      std::cout << "Total number of hessvec counts " << fea_modules[0]->hessvec_count <<std::endl;
       std::cout << "End of Optimization" << std::endl;
     }
 }
@@ -1496,6 +1510,35 @@ void Implicit_Solver::init_maps(){
   //std::cout << "number of patches = " << mesh->num_patches() << std::endl;
   if(myrank == 0)
   std::cout << "End of map setup " << std::endl;
+}
+
+/* ----------------------------------------------------------------------
+   Construct list of objects for FEA modules 
+------------------------------------------------------------------------- */
+
+void Implicit_Solver::setup_optimization_problem(){
+  int nfea_modules = simparam->nfea_modules;
+
+  //allocate lists to size
+  fea_module_types = std::vector<std::string>(nfea_modules;
+  fea_modules = std::vector<FEA_Module*>(nfea_modules);
+  bool module_found = false;
+  
+  //list should not have repeats since that was checked by simulation parameters setups
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    //decides which FEA module objects to setup based on string.
+    //automate selection list later; use std::map maybe?
+    if(FEA_Module_List[imodule] == "Elasticity"){
+      fea_module_types[imodule] = "Elasticity"
+      fea_modules[imodule] = new FEA_Module_Elasticity(this);
+      module_found = true;
+    }
+    if(FEA_Module_List[imodule] == "Heat_Conduction"){
+      fea_module_types[imodule] = "Heat_Conduction"
+      fea_modules[imodule] = new FEA_Module_Heat_Conduction(this);
+      module_found = true; 
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------

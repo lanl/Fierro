@@ -126,6 +126,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
 
   //construct per element inertial property vectors
   Global_Element_Masses = Teuchos::rcp(new MV(element_map, 1));
+  Global_Element_Volumes = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_x = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_y = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_z = Teuchos::rcp(new MV(element_map, 1));
@@ -2401,6 +2402,7 @@ void FEA_Module_Elasticity::compute_element_masses(const_host_vec_array design_d
   size_t nonoverlap_nelements = element_map->getNodeNumElements();
   //initialize memory for volume storage
   host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+  if(!nodal_density_flag) compute_element_volumes();
   const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -5253,11 +5255,10 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
 void FEA_Module_Elasticity::compute_element_volumes(){
   //local number of uniquely assigned elements
   size_t nonoverlap_nelements = element_map->getNodeNumElements();
-  //initialize memory for volume storage
-  vec_array Element_Volumes("Element Volumes", nonoverlap_nelements, 1);
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
@@ -5406,9 +5407,6 @@ void FEA_Module_Elasticity::compute_element_volumes(){
     Element_Volumes(nonoverlapping_ielem,0) += weight_multiply*Jacobian;
     }
   }
-
-  //create global vector
-  Global_Element_Volumes = Teuchos::rcp(new MV(element_map, Element_Volumes));
 
   std::ostream &out = std::cout;
   Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
