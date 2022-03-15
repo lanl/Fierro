@@ -1516,11 +1516,11 @@ void Implicit_Solver::init_maps(){
    Construct list of objects for FEA modules 
 ------------------------------------------------------------------------- */
 
-void Implicit_Solver::setup_optimization_problem(){
+void Implicit_Solver::FEA_module_setup(){
   int nfea_modules = simparam->nfea_modules;
-
+  std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
   //allocate lists to size
-  fea_module_types = std::vector<std::string>(nfea_modules;
+  fea_module_types = std::vector<std::string>(nfea_modules);
   fea_modules = std::vector<FEA_Module*>(nfea_modules);
   bool module_found = false;
   
@@ -1548,6 +1548,11 @@ void Implicit_Solver::setup_optimization_problem(){
 void Implicit_Solver::setup_optimization_problem(){
   int num_dim = simparam->num_dim;
   bool nodal_density_flag = simparam->nodal_density_flag;
+  int nTO_modules = simparam->nTO_modules;
+  std::vector<std::string> TO_Module_List = simparam->TO_Module_List;
+  std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
+  std::vector<int> TO_Module_My_FEA_Module = simparam->TO_Module_My_FEA_Module;
+  std::vector<Simulation_Parameters_Topology_Optimization::function_type> TO_Function_Type = simparam->TO_Function_Type;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   GO current_node_index;
   LO local_node_index;
@@ -1564,20 +1569,68 @@ void Implicit_Solver::setup_optimization_problem(){
   auto parlist = ROL::getParametersFromXmlFile( filename );
   //ROL::ParameterList parlist;
 
-  // Objective function
-  ROL::Ptr<ROL::Objective<real_t>> obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_elasticity, nodal_density_flag);
   //Design variables to optimize
   ROL::Ptr<ROL::Vector<real_t>> x;
   if(nodal_density_flag)
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(design_node_densities_distributed);
   else
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities);
+  
+  //Instantiate (the one) objective function for the problem
+  ROL::Ptr<ROL::Objective<real_t>> obj;
+  bool objective_declared = false;
+  for(int imodule = 0; imodule < nTO_modules; imodule++){
+    if(TO_Function_Type[imodule]==OBJECTIVE){
+      if(TO_Module_List[imodule]=="Strain_Energy_Minimize"){
+        obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+      }
+      if(TO_Module_List[imodule]=="Heat_Capacity_Potential_Minimize"){
+        obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+      }
+      objective_declared = true;
+    }
+  }
+  
   //optimization problem interface that can have constraints added to it before passing to solver object
    ROL::Ptr<ROL::Problem<real_t>> problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+  
+  //ROL::Ptr<ROL::Constraint<double>>     lin_icon = ROL::makePtr<MyLinearInequalityConstraint<double>>();
+  //ROL::Ptr<ROL::Vector<double>>         lin_imul = ROL::makePtr<MyLinearInequalityConstraintMultiplier<double>>();
+  //ROL::Ptr<ROL:BoundConstraint<double>> lin_ibnd = ROL::makePtr<MyLinearInequalityConstraintBound<double>>();
+  //problem.addLinearConstraint("Linear Inequality Constraint",lin_icon,lin_imul,lin_ibnd);
+    
+  // TypeG (generally constrained) specification
+  //ROL::Ptr<ROL::Constraint<double>> econ = ROL::makePtr<MyEqualityConstraint<double>>();
+  //ROL::Ptr<ROL::Vector<double>>     emul = ROL::makePtr<MyEqualityConstraintMultiplier<double>>();
+  //problem.addConstraint("Equality Constraint",econ,emul);
+  ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+  ROL::Ptr<std::vector<real_t> > li_ptr2 = ROL::makePtr<std::vector<real_t>>(1,0.0);
+  ROL::Ptr<std::vector<real_t> > li_ptr3 = ROL::makePtr<std::vector<real_t>>(1,0.0);
+  ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+  ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,0.15);
 
+  ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
+  ROL::Ptr<ROL::Vector<real_t> > constraint_mul2 = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr2);
+  ROL::Ptr<ROL::Vector<real_t> > constraint_mul3 = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr3);
+  ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
+  ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
+  
+  //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag);
   //ROL::Ptr<ROL::Constraint<double>> lin_econ = ROL::makePtr<MyLinearEqualityConstraint<double>>();
   //ROL::Ptr<ROL::Vector<double>      lin_emul = ROL::makePtr<MyLinearEqualityConstraintMultiplier<double>>();
   //problem.addLinearConstraint("Linear Equality Constraint",lin_econ,lin_mul);
+
+  //define constraint objects
+  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_elasticity, nodal_density_flag, false, 0.2);
+  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint2 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_elasticity, nodal_density_flag, 2, false, 0.4);
+  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint3 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_elasticity, nodal_density_flag, 3, false);
+  //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_elasticity, nodal_density_flag);
+  ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
+  //problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
+  problem->addConstraint("equality Constraint 1",eq_constraint,constraint_mul);
+  //problem->addConstraint("equality Constraint 2",eq_constraint2,constraint_mul2);
+  //problem->addConstraint("equality Constraint 3",eq_constraint3,constraint_mul3);
+  //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
 
   //set bounds on design variables
   if(nodal_density_flag){
@@ -1658,28 +1711,6 @@ void Implicit_Solver::setup_optimization_problem(){
   ROL::Ptr<ROL::BoundConstraint<real_t> > bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
   problem->addBoundConstraint(bnd);
 
-  //ROL::Ptr<ROL::Constraint<double>>     lin_icon = ROL::makePtr<MyLinearInequalityConstraint<double>>();
-  //ROL::Ptr<ROL::Vector<double>>         lin_imul = ROL::makePtr<MyLinearInequalityConstraintMultiplier<double>>();
-  //ROL::Ptr<ROL:BoundConstraint<double>> lin_ibnd = ROL::makePtr<MyLinearInequalityConstraintBound<double>>();
-  //problem.addLinearConstraint("Linear Inequality Constraint",lin_icon,lin_imul,lin_ibnd);
-    
-  // TypeG (generally constrained) specification
-  //ROL::Ptr<ROL::Constraint<double>> econ = ROL::makePtr<MyEqualityConstraint<double>>();
-  //ROL::Ptr<ROL::Vector<double>>     emul = ROL::makePtr<MyEqualityConstraintMultiplier<double>>();
-  //problem.addConstraint("Equality Constraint",econ,emul);
-  ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
-  ROL::Ptr<std::vector<real_t> > li_ptr2 = ROL::makePtr<std::vector<real_t>>(1,0.0);
-  ROL::Ptr<std::vector<real_t> > li_ptr3 = ROL::makePtr<std::vector<real_t>>(1,0.0);
-  ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
-  ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,0.15);
-
-  ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
-  ROL::Ptr<ROL::Vector<real_t> > constraint_mul2 = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr2);
-  ROL::Ptr<ROL::Vector<real_t> > constraint_mul3 = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr3);
-  ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
-  ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
-  
-  //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag);
   //compute initial mass
   ROL::Ptr<ROL_MV> ROL_Element_Masses = ROL::makePtr<ROL_MV>(fea_elasticity->Global_Element_Masses);
   ROL::Elementwise::ReductionSum<real_t> sumreduc;
@@ -1691,17 +1722,6 @@ void Implicit_Solver::setup_optimization_problem(){
   
   real_t initial_mass = ROL_Element_Masses->reduce(sumreduc);
 
-  //define constraint objects
-  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_elasticity, nodal_density_flag, false, 0.2);
-  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint2 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_elasticity, nodal_density_flag, 2, false, 0.4);
-  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint3 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_elasticity, nodal_density_flag, 3, false);
-  //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_elasticity, nodal_density_flag);
-  ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
-  //problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
-  problem->addConstraint("equality Constraint 1",eq_constraint,constraint_mul);
-  //problem->addConstraint("equality Constraint 2",eq_constraint2,constraint_mul2);
-  //problem->addConstraint("equality Constraint 3",eq_constraint3,constraint_mul3);
-  //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
   problem->setProjectionAlgorithm(*parlist);
   //finalize problem
   problem->finalize(false,true,*fos);

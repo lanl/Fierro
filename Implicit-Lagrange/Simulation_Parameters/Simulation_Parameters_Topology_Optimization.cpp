@@ -21,11 +21,13 @@ void Simulation_Parameters_Topology_Optimization::input(){
   //initial buffer size for TO module list storage
   int buffer_size = 10;
   TO_Module_List = std::vector<std::string>(buffer_size);
-
+  TO_Function_Type = std::vector<function_type>(buffer_size);
   //decides which FEA modules to setup based on user decided implicit solves
   TO_Module_List[0] = "Strain_Energy_Minimize";
+  TO_Function_Type[0] = OBJECTIVE;
   nTO_modules++;
   TO_Module_List[1] = "Mass_Constraint";
+  TO_Function_Type[1] = EQUALITY_CONSTRAINT;
   nTO_modules++;
   //example for later
   if(nTO_modules==buffer_size){
@@ -69,7 +71,7 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
     if(TO_Module_List[imodule] == "Strain_Energy_Minimize"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == Elasticity) module_found = true;
+        if(FEA_Module_List[ifea] == "Elasticity") module_found = true;
         TO_Module_My_FEA_Module[imodule] = ifea;
       }
       if(!module_found){
@@ -81,7 +83,7 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
     if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == Elasticity) module_found = true;
+        if(FEA_Module_List[ifea] == "Heat_Conduction") module_found = true;
         TO_Module_My_FEA_Module[imodule] = ifea;
       }
       if(!module_found){
