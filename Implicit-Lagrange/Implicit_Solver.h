@@ -113,7 +113,7 @@ public:
   void collect_information();
 
   //process input to decide TO problem and FEA modules
-  void module_select();
+  void FEA_module_setup();
 
   void setup_optimization_problem();
   

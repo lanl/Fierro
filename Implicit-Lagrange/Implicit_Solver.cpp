@@ -169,7 +169,6 @@ void Implicit_Solver::run(int argc, char *argv[]){
     real_t linear_solve_time = 0;
     real_t hessvec_time = 0;
     real_t hessvec_linear_time = 0;
-    int nfea_modules = simparam->nfea_modules;
     
     // ---- Find Boundaries on mesh ---- //
     init_boundaries();
@@ -181,7 +180,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     simparam->FEA_module_setup();
 
     //process process list of requested FEA modules to construct list of objects
-    module_select();
+    FEA_module_setup();
 
     //initialize TO design variable storage
     init_design();
@@ -1559,7 +1558,7 @@ void Implicit_Solver::setup_optimization_problem(){
   LO local_node_index;
   int num_bdy_patches_in_set;
   size_t node_id, patch_id;
-  int num_boundary_sets = fea_elasticity->num_boundary_conditions;
+  int num_boundary_sets;
   int current_element_index, local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
@@ -1604,50 +1603,48 @@ void Implicit_Solver::setup_optimization_problem(){
   //ROL::Ptr<ROL::Constraint<double>> econ = ROL::makePtr<MyEqualityConstraint<double>>();
   //ROL::Ptr<ROL::Vector<double>>     emul = ROL::makePtr<MyEqualityConstraintMultiplier<double>>();
   //problem.addConstraint("Equality Constraint",econ,emul);
-
-  //Instantiate Constraint Functions
-  ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
-  ROL::Ptr<std::vector<real_t> > li_ptr2 = ROL::makePtr<std::vector<real_t>>(1,0.0);
-  ROL::Ptr<std::vector<real_t> > li_ptr3 = ROL::makePtr<std::vector<real_t>>(1,0.0);
-  ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
-  ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,0.15);
-
-  ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
-  ROL::Ptr<ROL::Vector<real_t> > constraint_mul2 = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr2);
-  ROL::Ptr<ROL::Vector<real_t> > constraint_mul3 = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr3);
-  ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
-  ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
   
   //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(this, nodal_density_flag);
   //ROL::Ptr<ROL::Constraint<double>> lin_econ = ROL::makePtr<MyLinearEqualityConstraint<double>>();
   //ROL::Ptr<ROL::Vector<double>      lin_emul = ROL::makePtr<MyLinearEqualityConstraintMultiplier<double>>();
   //problem.addLinearConstraint("Linear Equality Constraint",lin_econ,lin_mul);
 
-  //define constraint objects
-  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_elasticity, nodal_density_flag, false, 0.2);
-  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint2 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_elasticity, nodal_density_flag, 2, false, 0.4);
-  ROL::Ptr<ROL::Constraint<real_t>> eq_constraint3 = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_elasticity, nodal_density_flag, 3, false);
   //ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_elasticity, nodal_density_flag);
-  ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
   //problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
-  problem->addConstraint("equality Constraint 1",eq_constraint,constraint_mul);
   //problem->addConstraint("equality Constraint 2",eq_constraint2,constraint_mul2);
   //problem->addConstraint("equality Constraint 3",eq_constraint3,constraint_mul3);
   //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
   
   for(int imodule = 0; imodule < nTO_modules; imodule++){
+    ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+    ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
     if(TO_Function_Type[imodule]==EQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
-      ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
-      ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
       if(TO_Module_List[imodule]=="Mass_Constraint"){
         eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, false, Constraint_Arguments[imodule][0]);
       }
       if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
         eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Constraint_Arguments[imodule][0], false, Constraint_Arguments[imodule][1]);
       }
-      problem->addConstraint("equality Constraint",eq_constraint,constraint_mul);
+      problem->addConstraint("Equality Constraint",eq_constraint,constraint_mul);
+    }
+
+    if(TO_Function_Type[imodule]==INEQUALITY_CONSTRAINT){
+      //pointers are reference counting
+      ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
+      ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+      ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,Constraint_Arguments[imodule][0]);    
+      ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
+      ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
+      ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
+      if(TO_Module_List[imodule]=="Mass_Constraint"){
+        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+      }
+      if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
+        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Constraint_Arguments[imodule][0]);
+      }
+      problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
     }
   }
 
@@ -1668,30 +1665,33 @@ void Implicit_Solver::setup_optimization_problem(){
     }
 
     //set lower bounds for nodes on surfaces with boundary and loading conditions
-    for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
+    for(int imodule = 0; imodule < nfea_modules; imodule++){
+      num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
+      for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
 
-      num_bdy_patches_in_set = fea_elasticity->NBoundary_Condition_Patches(iboundary);
+        num_bdy_patches_in_set = fea_modules[imodule]->NBoundary_Condition_Patches(iboundary);
 
-      //loop over boundary patches for this boundary set
-      for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
+        //loop over boundary patches for this boundary set
+        for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
                 
-      // get the global id for this boundary patch
-      patch_id = fea_elasticity->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-      Surface_Nodes = Boundary_Patches(patch_id).node_set;
-      local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-      //debug print of local surface ids
-      //std::cout << " LOCAL SURFACE IDS " << std::endl;
-      //std::cout << local_surface_id << std::endl;
-      //acquire set of nodes for this face
-      for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
-        current_node_index = Surface_Nodes(node_loop);
-        if(map->isNodeGlobalElement(current_node_index)){
-          local_node_index = map->getLocalElement(current_node_index);
-          node_densities_lower_bound(local_node_index,0) = 1;
-        }
-      }
-      }
-    }
+          // get the global id for this boundary patch
+          patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
+          Surface_Nodes = Boundary_Patches(patch_id).node_set;
+          local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+          //debug print of local surface ids
+          //std::cout << " LOCAL SURFACE IDS " << std::endl;
+          //std::cout << local_surface_id << std::endl;
+          //acquire set of nodes for this face
+          for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+            current_node_index = Surface_Nodes(node_loop);
+            if(map->isNodeGlobalElement(current_node_index)){
+              ocal_node_index = map->getLocalElement(current_node_index);
+              node_densities_lower_bound(local_node_index,0) = 1;
+            }
+          }// node loop for
+        }//boundary patch for
+      }//boundary set for
+    }//module for
   
     //sync device view
     dual_node_densities_upper_bound.sync_device();
@@ -1730,7 +1730,7 @@ void Implicit_Solver::setup_optimization_problem(){
   ROL::Ptr<ROL::BoundConstraint<real_t> > bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
   problem->addBoundConstraint(bnd);
 
-  //compute initial mass
+  //compute initial constraint satisfaction
   ROL::Ptr<ROL_MV> ROL_Element_Masses = ROL::makePtr<ROL_MV>(fea_elasticity->Global_Element_Masses);
   ROL::Elementwise::ReductionSum<real_t> sumreduc;
   if(nodal_density_flag)
@@ -1775,7 +1775,7 @@ void Implicit_Solver::setup_optimization_problem(){
   //std::ostream outStream;
   solver.solve(*fos);
 
-  //print mass constraint for final design vector
+  //print final constraint satisfaction
   fea_elasticity->compute_element_masses(design_densities,false);
   real_t final_mass = ROL_Element_Masses->reduce(sumreduc);
   if(myrank==0)
