@@ -1552,6 +1552,7 @@ void Implicit_Solver::setup_optimization_problem(){
   std::vector<std::string> TO_Module_List = simparam->TO_Module_List;
   std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
   std::vector<int> TO_Module_My_FEA_Module = simparam->TO_Module_My_FEA_Module;
+  std::vector<std::vector<real_t>> Constraint_Arguments = simparam->Constraint_Arguments;
   std::vector<Simulation_Parameters_Topology_Optimization::function_type> TO_Function_Type = simparam->TO_Function_Type;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   GO current_node_index;
@@ -1603,6 +1604,8 @@ void Implicit_Solver::setup_optimization_problem(){
   //ROL::Ptr<ROL::Constraint<double>> econ = ROL::makePtr<MyEqualityConstraint<double>>();
   //ROL::Ptr<ROL::Vector<double>>     emul = ROL::makePtr<MyEqualityConstraintMultiplier<double>>();
   //problem.addConstraint("Equality Constraint",econ,emul);
+
+  //Instantiate Constraint Functions
   ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
   ROL::Ptr<std::vector<real_t> > li_ptr2 = ROL::makePtr<std::vector<real_t>>(1,0.0);
   ROL::Ptr<std::vector<real_t> > li_ptr3 = ROL::makePtr<std::vector<real_t>>(1,0.0);
@@ -1631,6 +1634,22 @@ void Implicit_Solver::setup_optimization_problem(){
   //problem->addConstraint("equality Constraint 2",eq_constraint2,constraint_mul2);
   //problem->addConstraint("equality Constraint 3",eq_constraint3,constraint_mul3);
   //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
+  
+  for(int imodule = 0; imodule < nTO_modules; imodule++){
+    if(TO_Function_Type[imodule]==EQUALITY_CONSTRAINT){
+      //pointers are reference counting
+      ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
+      ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
+      ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+      if(TO_Module_List[imodule]=="Mass_Constraint"){
+        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, false, Constraint_Arguments[imodule][0]);
+      }
+      if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
+        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Constraint_Arguments[imodule][0], false, Constraint_Arguments[imodule][1]);
+      }
+      problem->addConstraint("equality Constraint",eq_constraint,constraint_mul);
+    }
+  }
 
   //set bounds on design variables
   if(nodal_density_flag){
