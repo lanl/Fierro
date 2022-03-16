@@ -86,6 +86,10 @@ public:
   void generate_applied_loads();
 
   void Displacement_Boundary_Conditions();
+
+  void compute_output();
+
+  void collect_output();
   
   class Simulation_Parameters_Elasticity *simparam;
 
@@ -167,7 +171,12 @@ public:
   //update counters (first attempt at reducing redundant calls through ROL for Moments of Inertia and Center of Mass)
   int mass_update, com_update[3];
   int mass_gradient_update, com_gradient_update[3];
-  
+
+  //output dof data
+  //Global arrays with collected data used to print
+  const_host_vec_array collected_node_displacements;
+  const_host_vec_array collected_node_strains;
+  const_host_vec_array collected_node_stresses;
 };
 
 #endif // end HEADER_H

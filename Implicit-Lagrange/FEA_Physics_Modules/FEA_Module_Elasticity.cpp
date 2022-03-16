@@ -4789,6 +4789,64 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
 }
 
 /* -------------------------------------------------------------------------------------------
+   Prompts computation of elastic response output data. For now, nodal strains.
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::collect_output(){
+  
+  //collect nodal displacement information
+  if(myrank==0) nreduce_dof = num_nodes*num_dim;
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_dof_map =
+    Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nreduce_dof,0,comm));
+  
+  //importer from local node distribution to collected distribution
+  Tpetra::Import<LO, GO> dof_collection_importer(local_dof_map, global_reduce_dof_map);
+
+  Teuchos::RCP<MV> collected_node_displacements_distributed = Teuchos::rcp(new MV(global_reduce_dof_map, 1));
+
+  //set host views of the collected data to print out from
+  if(myrank==0){
+    collected_node_displacements = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+
+  //collect strain data
+  if(output_strain_flag){
+    if(num_dim==3) strain_count = 6;
+    else strain_count = 3;
+
+    //importer for strains, all nodes to global node set on rank 0
+    //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
+
+    //collected nodal density information
+    Teuchos::RCP<MV> collected_node_strains_distributed = Teuchos::rcp(new MV(global_reduce_map, strain_count));
+
+    //comms to collect
+    collected_node_strains_distributed->doImport(*(fea_elasticity->node_strains_distributed), node_collection_importer, Tpetra::INSERT);
+
+    //debug print
+    //std::ostream &out = std::cout;
+    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    //if(myrank==0)
+    //*fos << "Collected nodal displacements :" << std::endl;
+    //collected_node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+    //*fos << std::endl;
+    //std::fflush(stdout);
+
+    //host view to print from
+    if(myrank==0)
+      collected_node_strains = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+}
+
+/* -------------------------------------------------------------------------------------------
+   Prompts computation of elastic response output data. For now, nodal strains.
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::compute_output(){
+  compute_nodal_strains();
+}
+
+/* -------------------------------------------------------------------------------------------
    Compute the maximum nodal strains resulting from minimizing the L2 error
    between strain (subspace solution) and a nodal interpolation (nodal strains defined at each node)
    for each element. Mainly used for output and is approximate.

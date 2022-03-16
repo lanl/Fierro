@@ -2183,16 +2183,6 @@ void Implicit_Solver::collect_information(){
 
   //comms to collect
   collected_node_coords_distributed->doImport(*node_coords_distributed, node_collection_importer, Tpetra::INSERT);
-  
-  //collect nodal displacement information
-  if(myrank==0) nreduce_dof = num_nodes*num_dim;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_dof_map =
-    Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nreduce_dof,0,comm));
-  
-  //importer from local node distribution to collected distribution
-  Tpetra::Import<LO, GO> dof_collection_importer(local_dof_map, global_reduce_dof_map);
-
-  Teuchos::RCP<MV> collected_node_displacements_distributed = Teuchos::rcp(new MV(global_reduce_dof_map, 1));
 
   //comms to collect FEA module related vector data
   for (int imodule = 0; imodule < nfea_modules; imodule++){
@@ -2225,39 +2215,9 @@ void Implicit_Solver::collect_information(){
   //set host views of the collected data to print out from
   if(myrank==0){
     collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    collected_node_displacements = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
-
-  //collect strain data
-  if(output_strain_flag){
-    if(num_dim==3) strain_count = 6;
-    else strain_count = 3;
-
-    //importer for strains, all nodes to global node set on rank 0
-    //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
-
-    //collected nodal density information
-    Teuchos::RCP<MV> collected_node_strains_distributed = Teuchos::rcp(new MV(global_reduce_map, strain_count));
-
-    //comms to collect
-    collected_node_strains_distributed->doImport(*(fea_elasticity->node_strains_distributed), node_collection_importer, Tpetra::INSERT);
-
-    //debug print
-    //std::ostream &out = std::cout;
-    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(myrank==0)
-    //*fos << "Collected nodal displacements :" << std::endl;
-    //collected_node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
-    //std::fflush(stdout);
-
-    //host view to print from
-    if(myrank==0)
-      collected_node_strains = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
-  
 }
 
 /* ----------------------------------------------------------------------
@@ -2276,6 +2236,7 @@ void Implicit_Solver::tecplot_writer(){
 	std::stringstream count_temp;
   int time_step = 0;
   int temp_convert;
+  int noutput;
   bool displace_geometry = true;
   int output_strain_flag = simparam->output_strain_flag;
   for (int imodule = 0; imodule < nfea_modules; imodule++){
@@ -2298,15 +2259,16 @@ void Implicit_Solver::tecplot_writer(){
   convert_ijk_to_ensight(7) = 6;
 
   //compared to primitive unit cell, assumes orthogonal primitive unit cell
-  if(displace_geometry&&displacement_module>=0){
     if(myrank==0){
       //initial undeformed geometry
       count_temp.str("");
       count_temp << file_index;
       //file_index++;
 	    file_count = count_temp.str();
-    
-      current_file_name = base_file_name_undeformed + file_count + file_extension;
+      if(displace_geometry&&displacement_module>=0)
+        current_file_name = base_file_name_undeformed + file_count + file_extension;
+      else
+        current_file_name = base_file_name + file_count + file_extension;
       std::ofstream myfile (current_file_name.c_str()); //output filestream object for file output
 	    //read in position data
 	    myfile << std::fixed << std::setprecision(8);
@@ -2335,9 +2297,10 @@ void Implicit_Solver::tecplot_writer(){
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
         myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
-          for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+          noutput = fea_modules[imodule]->noutput;
+          for(int ioutput = 0; ioutput < noutput; ioutput++){
             if(!fea_modules[imodule]->output_names[ioutput].empty()){
-              myfile << std::setw(25) << fea_modules[imodule]->collected_node_module_output(nodeline,ioutput) << " ";
+              myfile << std::setw(25) << fea_modules[imodule]->collected_dof_module_output(nodeline*noutput + ioutput,0) << " ";
             }
           }
         }
@@ -2353,12 +2316,14 @@ void Implicit_Solver::tecplot_writer(){
 		  }
       myfile.close();
     }
-    if(myrank==0){
+    if(myrank==0&&(displacement_module>=0&&fea_modules[displacement_module]->displacement_index>0)){
       //deformed geometry
       count_temp.str("");
       count_temp << file_index;
       file_index++;
 	    file_count = count_temp.str();
+      int ndisp_output = fea_modules[displacement_module]->noutput;
+      int displacement_index = fea_modules[displacement_module]->displacement_index;
     
       current_file_name = base_file_name + file_count + file_extension;
       std::ofstream myfile (current_file_name.c_str()); //output filestream object for file output
@@ -2380,23 +2345,18 @@ void Implicit_Solver::tecplot_writer(){
 			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + collected_node_displacements(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + collected_node_displacements(nodeline*num_dim + 1,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + fea_modules[displacement_module]->collected_dof_module_output(nodeline*ndisp_output + displacement_index,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_dof_module_output(nodeline*ndisp_output + displacement_index + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + collected_node_displacements(nodeline*num_dim + 2,0) << " ";
-			  if(output_strain_flag){
-          myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
-          myfile << std::setw(25) << collected_node_strains(nodeline,0) << " ";
-          myfile << std::setw(25) << collected_node_strains(nodeline,1) << " ";
-          myfile << std::setw(25) << collected_node_strains(nodeline,2) << " ";
-          if(num_dim==3){
-            myfile << std::setw(25) << collected_node_strains(nodeline,3) << " ";
-            myfile << std::setw(25) << collected_node_strains(nodeline,4) << " ";
-            myfile << std::setw(25) << collected_node_strains(nodeline,5) << std::endl;
+			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_dof_module_output(nodeline*ndisp_output + displacement_index + 2,0) << " ";
+        for (int imodule = 0; imodule < nfea_modules; imodule++){
+          noutput = fea_modules[imodule]->noutput;
+          for(int ioutput = 0; ioutput < noutput; ioutput++){
+            if(!fea_modules[imodule]->output_names[ioutput].empty()){
+              myfile << std::setw(25) << fea_modules[imodule]->collected_dof_module_output(nodeline*noutput + ioutput,0) << " ";
+            }
           }
         }
-        else
-          myfile << std::setw(25) << collected_node_densities(nodeline,0) << std::endl;
 		  }
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
@@ -2408,55 +2368,6 @@ void Implicit_Solver::tecplot_writer(){
 		  }
       myfile.close();
     }
-  }
-  else{
-    if(myrank==0){
-      count_temp << file_index;
-      file_index++;
-	    file_count = count_temp.str();
-    
-      current_file_name = base_file_name + file_count + file_extension;
-      std::ofstream myfile (current_file_name.c_str()); //output filestream object for file output
-	    //read in position data
-	    myfile << std::fixed << std::setprecision(8);
-		
-		  //output header of the tecplot file
-
-		  myfile << "TITLE=\"results for TO code\" \n";
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
-      for (int imodule = 0; imodule < nfea_modules; imodule++){
-        for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
-          myfile << ", \"" << fea_modules[imodule]->output_names[ioutput] << "\"";
-        }
-      }
-      myfile << "\n";
-		  myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-			  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
-
-		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
-        if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
-			  myfile << std::setw(25) << collected_node_displacements(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << collected_node_displacements(nodeline*num_dim + 1,0) << " ";
-        if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_displacements(nodeline*num_dim + 2,0) << " ";
-			  myfile << std::setw(25) << collected_node_densities(nodeline,0) << std::endl;
-		  }
-		  for (int elementline = 0; elementline < num_elem; elementline++) {
-        //convert node ordering
-			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
-          temp_convert = convert_ijk_to_ensight(ii);
-				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
-			  }
-			  myfile << " \n";
-		  }
-      myfile.close();
-    }
-  }
-  
-
 }
 /* ----------------------------------------------------------------------
    Output Model Information in vtk format

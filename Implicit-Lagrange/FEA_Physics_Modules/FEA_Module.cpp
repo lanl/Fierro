@@ -74,6 +74,11 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   //TO parameters
   penalty_power = Solver_Pointer->simparam->penalty_power;
   nodal_density_flag = Solver_Pointer->simparam->nodal_density_flag;
+
+  //output data
+  noutput = 0;
+  displacement_index = -1;
+  output_names = NULL;
 }
 
 FEA_Module::~FEA_Module() {}

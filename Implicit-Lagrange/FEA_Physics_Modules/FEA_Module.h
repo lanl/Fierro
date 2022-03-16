@@ -4,6 +4,7 @@
 #include "utilities.h"
 #include "matar.h"
 #include "elements.h"
+#include <string>
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_oblackholestream.hpp>
@@ -111,6 +112,10 @@ public:
   virtual void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
 
   virtual int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
+
+  virtual void compute_output();
+
+  virtual void collect_output();
 
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
@@ -220,6 +225,12 @@ public:
   //runtime and counters for performance output
   double linear_solve_time, hessvec_time, hessvec_linear_time;
   int update_count, hessvec_count;
+
+  //nodal DOF output data
+  int noutput;
+  int displacement_index;
+  std::string *output_names;
+  const_host_vec_array collected_dof_module_output;
   
 };
 

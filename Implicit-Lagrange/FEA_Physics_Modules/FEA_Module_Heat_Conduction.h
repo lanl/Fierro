@@ -72,6 +72,10 @@ public:
 
   void Temperature_Boundary_Conditions();
 
+  void compute_output();
+
+  void collect_output();
+
   class Simulation_Parameters_Thermal *simparam;
   
   //Local FEA data

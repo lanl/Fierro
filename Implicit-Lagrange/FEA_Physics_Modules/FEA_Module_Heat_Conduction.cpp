@@ -2478,6 +2478,14 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
 }
 
 /* -------------------------------------------------------------------------------------------
+   Prompts computation of thermal response output data. For now, nodal heat fluxes.
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Heat_Conduction::compute_output(){
+  compute_nodal_heat_fluxes();
+}
+
+/* -------------------------------------------------------------------------------------------
    Compute the maximum nodal heat fluxes resulting from minimizing the L2 error
    between flux (subspace solution) and a nodal interpolation (nodal fluxes defined at each node)
    for each element. Mainly used for output and is approximate.
