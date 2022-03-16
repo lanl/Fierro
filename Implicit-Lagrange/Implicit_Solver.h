@@ -167,6 +167,7 @@ public:
   std::vector<std::string> fea_module_types;
   std::vector<FEA_Module*> fea_modules;
   int nfea_modules;
+  int displacement_module;
   
   //Local FEA data
   size_t nlocal_nodes;
@@ -212,9 +213,7 @@ public:
 
   //Global arrays with collected data used to print
   const_host_vec_array collected_node_coords;
-  const_host_vec_array collected_node_displacements;
   const_host_vec_array collected_node_densities;
-  const_host_vec_array collected_node_strains;
   const_host_elem_conn_array collected_nodes_in_elem;
   
   //Boundary Conditions Data

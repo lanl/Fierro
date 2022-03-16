@@ -109,6 +109,7 @@ Implicit_Solver::Implicit_Solver() : Solver(){
 
   //FEA module data init
   nfea_modules = 0;
+  displacement_module = -1;
 }
 
 Implicit_Solver::~Implicit_Solver(){
@@ -1531,6 +1532,7 @@ void Implicit_Solver::FEA_module_setup(){
       fea_module_types[imodule] = "Elasticity"
       fea_modules[imodule] = new FEA_Module_Elasticity(this);
       module_found = true;
+      displacement_module = imodule;
     }
     if(FEA_Module_List[imodule] == "Heat_Conduction"){
       fea_module_types[imodule] = "Heat_Conduction"
@@ -1737,9 +1739,9 @@ void Implicit_Solver::setup_optimization_problem(){
     design_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
     design_densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  fea_elasticity->compute_element_masses(design_densities,true);
+  //fea_elasticity->compute_element_masses(design_densities,true);
   
-  real_t initial_mass = ROL_Element_Masses->reduce(sumreduc);
+  //real_t initial_mass = ROL_Element_Masses->reduce(sumreduc);
 
   problem->setProjectionAlgorithm(*parlist);
   //finalize problem
@@ -1776,10 +1778,10 @@ void Implicit_Solver::setup_optimization_problem(){
   solver.solve(*fos);
 
   //print final constraint satisfaction
-  fea_elasticity->compute_element_masses(design_densities,false);
-  real_t final_mass = ROL_Element_Masses->reduce(sumreduc);
-  if(myrank==0)
-    std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
+  //fea_elasticity->compute_element_masses(design_densities,false);
+  //real_t final_mass = ROL_Element_Masses->reduce(sumreduc);
+  //if(myrank==0)
+    //std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
 }
 
 /* ----------------------------------------------------------------------
@@ -2192,8 +2194,12 @@ void Implicit_Solver::collect_information(){
 
   Teuchos::RCP<MV> collected_node_displacements_distributed = Teuchos::rcp(new MV(global_reduce_dof_map, 1));
 
-  //comms to collect
-  collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+  //comms to collect FEA module related vector data
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_module[imodule]->collect_output();
+    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+  }
+  
 
   //collected nodal density information
   Teuchos::RCP<MV> collected_node_densities_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
@@ -2270,9 +2276,13 @@ void Implicit_Solver::tecplot_writer(){
 	std::stringstream count_temp;
   int time_step = 0;
   int temp_convert;
-  int displace_geometry = 1;
+  bool displace_geometry = true;
   int output_strain_flag = simparam->output_strain_flag;
-  if(output_strain_flag) fea_elasticity->compute_nodal_strains();
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->compute_output();
+    //if(output_strain_flag) fea_elasticity->compute_nodal_strains();
+  }
+  
   collect_information();
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
@@ -2288,7 +2298,7 @@ void Implicit_Solver::tecplot_writer(){
   convert_ijk_to_ensight(7) = 6;
 
   //compared to primitive unit cell, assumes orthogonal primitive unit cell
-  if(displace_geometry){
+  if(displace_geometry&&displacement_module>=0){
     if(myrank==0){
       //initial undeformed geometry
       count_temp.str("");
@@ -2304,10 +2314,16 @@ void Implicit_Solver::tecplot_writer(){
 		  //output header of the tecplot file
 
 		  myfile << "TITLE=\"results for TO code\"" "\n";
-      if(output_strain_flag)
-      myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
-      else
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"" "\n";
+      //if(output_strain_flag)
+      //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
+      //else
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+      for (int imodule = 0; imodule < nfea_modules; imodule++){
+        for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+          myfile << ", \"" << fea_modules[imodule]->output_names[ioutput] << "\"";
+        }
+      }
+      myfile << "\n";
 
 		  myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
 			  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
@@ -2317,19 +2333,15 @@ void Implicit_Solver::tecplot_writer(){
 			  myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
-        if(output_strain_flag){
-          myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
-          myfile << std::setw(25) << collected_node_strains(nodeline,0) << " ";
-          myfile << std::setw(25) << collected_node_strains(nodeline,1) << " ";
-          myfile << std::setw(25) << collected_node_strains(nodeline,2) << " ";
-          if(num_dim==3){
-            myfile << std::setw(25) << collected_node_strains(nodeline,3) << " ";
-            myfile << std::setw(25) << collected_node_strains(nodeline,4) << " ";
-            myfile << std::setw(25) << collected_node_strains(nodeline,5) << std::endl;
+        myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        for (int imodule = 0; imodule < nfea_modules; imodule++){
+          for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+            if(!fea_modules[imodule]->output_names[ioutput].empty()){
+              myfile << std::setw(25) << fea_modules[imodule]->collected_node_module_output(nodeline,ioutput) << " ";
+            }
           }
         }
-        else
-          myfile << std::setw(25) << collected_node_densities(nodeline,0) << std::endl;
+        myfile << std::endl;
 		  }
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
@@ -2355,11 +2367,14 @@ void Implicit_Solver::tecplot_writer(){
 		
 		  //output header of the tecplot file
 
-		  myfile << "TITLE=\"results for TO code\"" "\n";
-		  if(output_strain_flag)
-      myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
-      else
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"" "\n";
+		  myfile << "TITLE=\"results for TO code\" \n";
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+      for (int imodule = 0; imodule < nfea_modules; imodule++){
+        for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+          myfile << ", \"" << fea_modules[imodule]->output_names[ioutput] << "\"";
+        }
+      }
+      myfile << "\n";
 
 		  myfile << "ZONE T=\"load step " << time_step + 1 << "\", NODES= " << num_nodes
 			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
@@ -2407,9 +2422,14 @@ void Implicit_Solver::tecplot_writer(){
 		
 		  //output header of the tecplot file
 
-		  myfile << "TITLE=\"results for TO code\"" "\n";
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"disp1\", \"disp2\", \"disp3\", \"density\"" "\n";
-
+		  myfile << "TITLE=\"results for TO code\" \n";
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+      for (int imodule = 0; imodule < nfea_modules; imodule++){
+        for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+          myfile << ", \"" << fea_modules[imodule]->output_names[ioutput] << "\"";
+        }
+      }
+      myfile << "\n";
 		  myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
 			  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
