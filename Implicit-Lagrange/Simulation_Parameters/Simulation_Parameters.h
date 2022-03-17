@@ -3,7 +3,8 @@
 
 #include "utilities.h"
 #include <stdio.h>
-#include <stdlib.h> 
+#include <vector>
+#include <string>
 using namespace utils;
 
 class Simulation_Parameters
@@ -22,9 +23,6 @@ class Simulation_Parameters
   int NC; // number of contours
   int NF; // number of fill
   int NB; // number of boundary patch sets to tag
-
-  // --- Graphics output variables ---
-  int output_strain_flag;
 
   // --- Dimensional and mesh constants ---
   int num_dim;

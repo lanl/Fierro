@@ -77,6 +77,7 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
 
   //output data
   noutput = 0;
+  displaced_mesh_flag = false;
 }
 
 FEA_Module::~FEA_Module() {}

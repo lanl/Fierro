@@ -27,9 +27,6 @@ void Simulation_Parameters::input(){
   //simulation spatial dimension
   num_dim = 3;
   unit_scaling = 1;
-    
-  // ---- graphics information ---- //
-  output_strain_flag = 1;
   
   //file readin parameters
   words_per_line = 1;

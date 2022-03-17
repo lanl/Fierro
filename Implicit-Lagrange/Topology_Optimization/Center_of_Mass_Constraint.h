@@ -73,11 +73,11 @@ private:
 public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
-  std::string FEA_Module = "Elasticity";
+  std::string my_fea_module = "Elasticity";
 
-  CenterOfMassConstraint_TopOpt(FEA_Module_Elasticity *FEM, bool nodal_density_flag, int constraint_component, bool inequality_flag=true, real_t constraint_value=0) 
-    : FEM_(FEM) {
-
+  CenterOfMassConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int constraint_component, bool inequality_flag=true, real_t constraint_value=0) 
+  {
+    FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);
     nodal_density_flag_ = nodal_density_flag;
     last_comm_step = last_solve_step = -1;
     current_step = 0;

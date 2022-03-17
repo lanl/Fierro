@@ -114,9 +114,9 @@ public:
 
   virtual int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
 
-  virtual void compute_output();
+  virtual void compute_output(){}
 
-  virtual void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> global_reduce_map);
+  virtual void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> global_reduce_map){}
 
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
@@ -230,11 +230,12 @@ public:
   //nodal DOF output data
   enum vector_styles {NODAL, DOF}; //multivector can store as ndof by 1 or nnode by vector_size
   int noutput;
+  bool displaced_mesh_flag;
   std::vector<std::vector<std::string>> output_dof_names;
-  std::vector<host_vec_array> collected_module_output;
+  std::vector<const_host_vec_array> collected_module_output;
   std::vector<vector_styles> vector_style;
-  std::vector<int> output_vector_sizes
-  host_vec_array collected_displacement_output;
+  std::vector<int> output_vector_sizes;
+  const_host_vec_array collected_displacement_output;
   
 };
 

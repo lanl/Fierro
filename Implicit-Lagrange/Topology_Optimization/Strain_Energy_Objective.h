@@ -71,9 +71,11 @@ private:
 public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
+  std::string my_fea_module = "Elasticity";
 
-  StrainEnergyObjective_TopOpt(FEA_Module_Elasticity *FEM, bool nodal_density_flag, real_t target_strain_energy) 
-    : FEM_(FEM), useLC_(true) {
+  StrainEnergyObjective_TopOpt(FEA_Module *FEM, bool nodal_density_flag, real_t target_strain_energy) 
+    : useLC_(true) {
+      FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);
       nodal_density_flag_ = nodal_density_flag;
       target_strain_energy_ = target_strain_energy;
       last_comm_step = last_solve_step = -1;

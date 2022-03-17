@@ -18,20 +18,21 @@ Simulation_Parameters_Topology_Optimization::~Simulation_Parameters_Topology_Opt
 }
 
 void Simulation_Parameters_Topology_Optimization::input(){
+  //Simulation_Parameters::input();
   //initial buffer size for TO module list storage
   int buffer_size = 10;
   TO_Module_List = std::vector<std::string>(buffer_size);
   TO_Function_Type = std::vector<function_type>(buffer_size);
   Constraint_Arguments = std::vector<std::vector<real_t>>(buffer_size);
   //use pushback to add arguments for each TO module
-
+  
   //TO objectives and constraints
   TO_Module_List[0] = "Strain_Energy_Minimize";
   TO_Function_Type[0] = OBJECTIVE;
   nTO_modules++;
   TO_Module_List[1] = "Mass_Constraint";
   TO_Function_Type[1] = EQUALITY_CONSTRAINT;
-  Constraint_Arguments[0].pushback(0.12);
+  Constraint_Arguments[0].push_back(0.12);
   nTO_modules++;
   //example for later
   if(nTO_modules==buffer_size){

@@ -4798,7 +4798,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
 void FEA_Module_Elasticity::init_output(){
   //check user parameters for output
   bool output_displacement_flag = simparam->output_displacement_flag;
-  bool displaced_mesh_flag = simparam->displaced_mesh_flag;
+  displaced_mesh_flag = simparam->displaced_mesh_flag;
   bool output_strain_flag = simparam->output_strain_flag;
   bool output_stress_flag = simparam->output_stress_flag;
   int num_dim = simparam->num_dim;
@@ -4811,8 +4811,8 @@ void FEA_Module_Elasticity::init_output(){
     noutput += 1;
     collected_module_output.resize(noutput);
 
-    vector_styles.resize(noutput);
-    vector_styles[noutput-1] = DOF;
+    vector_style.resize(noutput);
+    vector_style[noutput-1] = DOF;
 
     output_vector_sizes.resize(noutput);
     output_vector_sizes[noutput-1] = num_dim;
@@ -4828,8 +4828,8 @@ void FEA_Module_Elasticity::init_output(){
     noutput += 1;
     collected_module_output.resize(noutput);
 
-    vector_styles.resize(noutput);
-    vector_styles[noutput-1] = NODAL;
+    vector_style.resize(noutput);
+    vector_style[noutput-1] = NODAL;
 
     output_vector_sizes.resize(noutput);
     output_vector_sizes[noutput-1] = Brows;
@@ -4848,8 +4848,8 @@ void FEA_Module_Elasticity::init_output(){
     noutput += 1;
     collected_module_output.resize(noutput);
 
-    vector_styles.resize(noutput);
-    vector_styles[noutput-1] = NODAL;
+    vector_style.resize(noutput);
+    vector_style[noutput-1] = NODAL;
 
     output_vector_sizes.resize(noutput);
     output_vector_sizes[noutput-1] = Brows;
@@ -4872,7 +4872,7 @@ void FEA_Module_Elasticity::init_output(){
 void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
   
   bool output_displacement_flag = simparam->output_displacement_flag;
-  bool displaced_mesh_flag = simparam->displaced_mesh_flag;
+  displaced_mesh_flag = simparam->displaced_mesh_flag;
   bool output_strain_flag = simparam->output_strain_flag;
   bool output_stress_flag = simparam->output_stress_flag;
   int num_dim = simparam->num_dim;
@@ -4907,6 +4907,9 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
 
     //collected nodal density information
     Teuchos::RCP<MV> collected_node_strains_distributed = Teuchos::rcp(new MV(global_reduce_map, strain_count));
+    
+    //importer from local node distribution to collected distribution
+    Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
 
     //comms to collect
     collected_node_strains_distributed->doImport(*(node_strains_distributed), node_collection_importer, Tpetra::INSERT);
@@ -5407,7 +5410,7 @@ void FEA_Module_Elasticity::compute_element_volumes(){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+  host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;

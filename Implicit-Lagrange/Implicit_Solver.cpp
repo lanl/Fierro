@@ -89,6 +89,7 @@ Implicit_Solver::Implicit_Solver() : Solver(){
   //create parameter objects
   simparam = new Simulation_Parameters_Topology_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
+  simparam->Simulation_Parameters::input();
   simparam->input();
   //create ref element object
   ref_elem = new elements::ref_element();
@@ -253,8 +254,6 @@ void Implicit_Solver::run(int argc, char *argv[]){
     
     //CPU time
     double current_cpu = CPU_Time();
-    real_t linear_solve_time = 0;
-    real_t hessvec_linear_time = 0;
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       linear_solve_time += fea_modules[imodule]->linear_solve_time;
       hessvec_linear_time += fea_modules[imodule]->hessvec_linear_time;
@@ -1529,13 +1528,13 @@ void Implicit_Solver::FEA_module_setup(){
     //decides which FEA module objects to setup based on string.
     //automate selection list later; use std::map maybe?
     if(FEA_Module_List[imodule] == "Elasticity"){
-      fea_module_types[imodule] = "Elasticity"
+      fea_module_types[imodule] = "Elasticity";
       fea_modules[imodule] = new FEA_Module_Elasticity(this);
       module_found = true;
       displacement_module = imodule;
     }
     if(FEA_Module_List[imodule] == "Heat_Conduction"){
-      fea_module_types[imodule] = "Heat_Conduction"
+      fea_module_types[imodule] = "Heat_Conduction";
       fea_modules[imodule] = new FEA_Module_Heat_Conduction(this);
       module_found = true; 
     }
@@ -1582,11 +1581,11 @@ void Implicit_Solver::setup_optimization_problem(){
   ROL::Ptr<ROL::Objective<real_t>> obj;
   bool objective_declared = false;
   for(int imodule = 0; imodule < nTO_modules; imodule++){
-    if(TO_Function_Type[imodule]==OBJECTIVE){
-      if(TO_Module_List[imodule]=="Strain_Energy_Minimize"){
+    if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::OBJECTIVE){
+      if(TO_Module_List[imodule] == "Strain_Energy_Minimize"){
         obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
-      if(TO_Module_List[imodule]=="Heat_Capacity_Potential_Minimize"){
+      if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
         obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
       objective_declared = true;
@@ -1620,19 +1619,19 @@ void Implicit_Solver::setup_optimization_problem(){
   for(int imodule = 0; imodule < nTO_modules; imodule++){
     ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
     ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
-    if(TO_Function_Type[imodule]==EQUALITY_CONSTRAINT){
+    if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::EQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
       if(TO_Module_List[imodule]=="Mass_Constraint"){
         eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, false, Constraint_Arguments[imodule][0]);
       }
       if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
-        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Constraint_Arguments[imodule][0], false, Constraint_Arguments[imodule][1]);
+        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Constraint_Arguments[imodule][0], false, Constraint_Arguments[imodule][1]);
       }
       problem->addConstraint("Equality Constraint",eq_constraint,constraint_mul);
     }
 
-    if(TO_Function_Type[imodule]==INEQUALITY_CONSTRAINT){
+    if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::INEQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
       ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
@@ -1687,7 +1686,7 @@ void Implicit_Solver::setup_optimization_problem(){
           for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
             current_node_index = Surface_Nodes(node_loop);
             if(map->isNodeGlobalElement(current_node_index)){
-              ocal_node_index = map->getLocalElement(current_node_index);
+              local_node_index = map->getLocalElement(current_node_index);
               node_densities_lower_bound(local_node_index,0) = 1;
             }
           }// node loop for
@@ -1733,7 +1732,7 @@ void Implicit_Solver::setup_optimization_problem(){
   problem->addBoundConstraint(bnd);
 
   //compute initial constraint satisfaction
-  ROL::Ptr<ROL_MV> ROL_Element_Masses = ROL::makePtr<ROL_MV>(fea_elasticity->Global_Element_Masses);
+  //ROL::Ptr<ROL_MV> ROL_Element_Masses = ROL::makePtr<ROL_MV>(fea_elasticity->Global_Element_Masses);
   ROL::Elementwise::ReductionSum<real_t> sumreduc;
   if(nodal_density_flag)
     design_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2183,7 +2182,7 @@ void Implicit_Solver::collect_information(){
 
   //comms to collect FEA module related vector data
   for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_module[imodule]->collect_output(global_reduce_map);
+    fea_modules[imodule]->collect_output(global_reduce_map);
     //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
   }
   
@@ -2234,12 +2233,10 @@ void Implicit_Solver::tecplot_writer(){
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
-  bool displace_geometry = fea_modules[displacement_module]->simparam->displaced_mesh_flag;
-  int output_strain_flag = simparam->output_strain_flag;
-  host_vec_array current_collected_output;
+  bool displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+  const_host_vec_array current_collected_output;
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->compute_output();
-    //if(output_strain_flag) fea_elasticity->compute_nodal_strains();
   }
   
   collect_information();
@@ -2274,7 +2271,6 @@ void Implicit_Solver::tecplot_writer(){
 		  //output header of the tecplot file
 
 		  myfile << "TITLE=\"results for TO code\"" "\n";
-      //if(output_strain_flag)
       //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
       //else
 		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
@@ -2301,16 +2297,16 @@ void Implicit_Solver::tecplot_writer(){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
             current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
-            if(fea_modules[imodule]->vector_style[ioutput] == DOF){
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
-                myfile << std::setw(25) << fea_modules[imodule]->current_collected_output(nodeline*nvector + ivector,0) << " ";
+                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
               }
             }
-            if(fea_modules[imodule]->vector_style[ioutput] == NODAL){
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
-                myfile << std::setw(25) << fea_modules[ivector]->current_collected_output(nodeline,ivector) << " ";
+                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
               }
             }
           }
@@ -2365,16 +2361,16 @@ void Implicit_Solver::tecplot_writer(){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
             current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
-            if(fea_modules[imodule]->vector_style[ioutput] == DOF){
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
-                myfile << std::setw(25) << fea_modules[imodule]->current_collected_output(nodeline*nvector + ivector,0) << " ";
+                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
               }
             }
-            if(fea_modules[imodule]->vector_style[ioutput] == NODAL){
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
-                myfile << std::setw(25) << fea_modules[ivector]->current_collected_output(nodeline,ivector) << " ";
+                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
               }
             }
           }

@@ -2496,8 +2496,8 @@ void FEA_Module_Heat_Conduction::init_output(){
     noutput += 1;
     collected_module_output.resize(noutput);
 
-    vector_styles.resize(noutput);
-    vector_styles[noutput-1] = NODAL;
+    vector_style.resize(noutput);
+    vector_style[noutput-1] = NODAL;
 
     output_vector_sizes.resize(noutput);
     output_vector_sizes[noutput-1] = 1;
@@ -2511,8 +2511,8 @@ void FEA_Module_Heat_Conduction::init_output(){
     noutput += 1;
     collected_module_output.resize(noutput);
 
-    vector_styles.resize(noutput);
-    vector_styles[noutput-1] = NODAL;
+    vector_style.resize(noutput);
+    vector_style[noutput-1] = NODAL;
 
     output_vector_sizes.resize(noutput);
     output_vector_sizes[noutput-1] = num_dim;
@@ -2528,8 +2528,8 @@ void FEA_Module_Heat_Conduction::init_output(){
     noutput += 1;
     collected_module_output.resize(noutput);
 
-    vector_styles.resize(noutput);
-    vector_styles[noutput-1] = NODAL;
+    vector_style.resize(noutput);
+    vector_style[noutput-1] = NODAL;
 
     output_vector_sizes.resize(noutput);
     output_vector_sizes[noutput-1] = num_dim;
@@ -2568,7 +2568,7 @@ void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
 
   //set host views of the collected data to print out from
   if(myrank==0){
-   collected_module_output[collected_temperature_index] = collected_temperature_output = collected_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+   collected_module_output[collected_temperature_index] = collected_node_temperatures = collected_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   }
 
@@ -2580,6 +2580,9 @@ void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
 
     //collected nodal density information
     Teuchos::RCP<MV> collected_node_heat_fluxes_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+
+    //importer from local node distribution to collected distribution
+    Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
 
     //comms to collect
     collected_node_heat_fluxes_distributed->doImport(*(node_heat_fluxes_distributed), node_collection_importer, Tpetra::INSERT);
