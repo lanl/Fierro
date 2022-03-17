@@ -77,8 +77,6 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
 
   //output data
   noutput = 0;
-  displacement_index = -1;
-  output_names = NULL;
 }
 
 FEA_Module::~FEA_Module() {}

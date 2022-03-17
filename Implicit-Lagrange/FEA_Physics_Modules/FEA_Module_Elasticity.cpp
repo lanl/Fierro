@@ -136,6 +136,8 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   Global_Element_Moments_of_Inertia_xy = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_of_Inertia_xz = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_of_Inertia_yz = Teuchos::rcp(new MV(element_map, 1));
+
+  init_output();
 }
 
 FEA_Module_Elasticity::~FEA_Module_Elasticity(){
@@ -4788,11 +4790,87 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   hessvec_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
 }
 
+/* ----------------------------------------------------------------------------
+   Initialize output data structures
+------------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::init_output(){
+  //check user parameters for output
+  bool output_displacement_flag = simparam->output_displacement_flag;
+  bool displaced_mesh_flag = simparam->displaced_mesh_flag;
+  bool output_strain_flag = simparam->output_strain_flag;
+  bool output_stress_flag = simparam->output_stress_flag;
+  int num_dim = simparam->num_dim;
+  int Brows;
+  if(num_dim==3) Brows = 6;
+  else Brows = 3;
+
+  if(output_displacement_flag){
+    noutput += 1;
+    collected_module_output.resize(noutput);
+
+    vector_styles.resize(noutput);
+    vector_styles[noutput-1] = DOF;
+
+    output_vector_sizes.resize(noutput);
+    output_vector_sizes[noutput-1] = num_dim;
+
+    output_dof_names.resize(noutput);
+    output_dof_names[noutput-1].resize(num_dim);
+    output_dof_names[noutput-1][0] = "ux";
+    output_dof_names[noutput-1][1] = "uy";
+    output_dof_names[noutput-1][2] = "uz";
+  }
+  if(output_strain_flag){
+    noutput += 1;
+    collected_module_output.resize(noutput);
+
+    vector_styles.resize(noutput);
+    vector_styles[noutput-1] = NODAL;
+
+    output_vector_sizes.resize(noutput);
+    output_vector_sizes[noutput-1] = Brows;
+
+    output_dof_names.resize(noutput);
+    output_dof_names[noutput-1].resize(Brows);
+    output_dof_names[noutput-1][0] = "strain_xx";
+    output_dof_names[noutput-1][1] = "strain_yy";
+    output_dof_names[noutput-1][2] = "strain_zz";
+    output_dof_names[noutput-1][3] = "strain_xx";
+    output_dof_names[noutput-1][4] = "strain_yy";
+    output_dof_names[noutput-1][5] = "strain_zz";
+  }
+  if(output_stress_flag){
+    noutput += 1;
+    collected_module_output.resize(noutput);
+
+    vector_styles.resize(noutput);
+    vector_styles[noutput-1] = NODAL;
+
+    output_vector_sizes.resize(noutput);
+    output_vector_sizes[noutput-1] = Brows;
+
+    output_dof_names.resize(noutput);
+    output_dof_names[noutput-1].resize(Brows);
+    output_dof_names[noutput-1][0] = "stress_xx";
+    output_dof_names[noutput-1][1] = "stress_yy";
+    output_dof_names[noutput-1][2] = "stress_zz";
+    output_dof_names[noutput-1][3] = "stress_xx";
+    output_dof_names[noutput-1][4] = "stress_yy";
+    output_dof_names[noutput-1][5] = "stress_zz";
+  }
+}
+
 /* -------------------------------------------------------------------------------------------
    Prompts computation of elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::collect_output(){
+  
+  bool output_displacement_flag = simparam->output_displacement_flag;
+  bool displaced_mesh_flag = simparam->displaced_mesh_flag;
+  bool output_strain_flag = simparam->output_strain_flag;
+  bool output_stress_flag = simparam->output_stress_flag;
   
   //collect nodal displacement information
   if(myrank==0) nreduce_dof = num_nodes*num_dim;
@@ -4806,7 +4884,7 @@ void FEA_Module_Elasticity::collect_output(){
 
   //set host views of the collected data to print out from
   if(myrank==0){
-    collected_node_displacements = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    collected_displacement_output = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 
   //collect strain data

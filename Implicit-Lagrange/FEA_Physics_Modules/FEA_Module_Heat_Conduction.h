@@ -72,6 +72,8 @@ public:
 
   void Temperature_Boundary_Conditions();
 
+  void init_output();
+
   void compute_output();
 
   void collect_output();

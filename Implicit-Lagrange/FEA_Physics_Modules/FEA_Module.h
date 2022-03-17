@@ -5,6 +5,7 @@
 #include "matar.h"
 #include "elements.h"
 #include <string>
+#include <vector>
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_oblackholestream.hpp>
@@ -227,10 +228,13 @@ public:
   int update_count, hessvec_count;
 
   //nodal DOF output data
-  int noutput, ndof_output;
-  int displacement_index;
-  std::string *output_dof_names;
-  const_host_vec_array collected_dof_module_output;
+  enum vector_styles {NODAL, DOF}; //multivector can store as ndof by 1 or nnode by vector_size
+  int noutput;
+  std::vector<std::vector<std::string>> output_dof_names;
+  std::vector<host_vec_array> collected_module_output;
+  std::vector<vector_styles> vector_style;
+  std::vector<int> output_vector_sizes
+  host_vec_array collected_displacement_output;
   
 };
 

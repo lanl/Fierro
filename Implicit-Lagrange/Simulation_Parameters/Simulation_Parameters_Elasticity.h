@@ -22,7 +22,7 @@ class Simulation_Parameters_Elasticity : public Simulation_Parameters
 
 
   // --- Graphics output variables ---
-  bool output_strain_flag, strain_max_flag;
+  bool output_displacement_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
 
   // --- Isotropic Elastic Parameters
   real_t Elastic_Modulus, Poisson_Ratio;

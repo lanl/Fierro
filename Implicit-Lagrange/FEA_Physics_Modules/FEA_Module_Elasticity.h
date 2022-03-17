@@ -87,6 +87,8 @@ public:
 
   void Displacement_Boundary_Conditions();
 
+  void init_output();
+
   void compute_output();
 
   void collect_output();
@@ -174,7 +176,6 @@ public:
 
   //output dof data
   //Global arrays with collected data used to print
-  const_host_vec_array collected_node_displacements;
   const_host_vec_array collected_node_strains;
   const_host_vec_array collected_node_stresses;
 };

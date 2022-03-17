@@ -6,7 +6,10 @@ using namespace utils;
 Simulation_Parameters_Elasticity::Simulation_Parameters_Elasticity() : Simulation_Parameters(){
 
   //initialize data and flags to defaults
+  output_displacement_flag = false;
   output_strain_flag = false;
+  output_stress_flag = false;
+  displaced_mesh_flag = false;
   report_runtime_flag = false;
   unit_scaling = 1;
   strain_max_flag = false;
@@ -20,6 +23,13 @@ Simulation_Parameters_Elasticity::~Simulation_Parameters_Elasticity(){
 }
 
 void Simulation_Parameters_Elasticity::input(){
+
+  //output settings
+  output_displacement_flag = false;
+  displaced_mesh_flag = true;
+  output_strain_flag = true;
+  output_stress_flag = false;
+
   //multigrid_timers = true;
   equilibrate_matrix_flag = false;
 
