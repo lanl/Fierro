@@ -136,7 +136,8 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   Global_Element_Moments_of_Inertia_xy = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_of_Inertia_xz = Teuchos::rcp(new MV(element_map, 1));
   Global_Element_Moments_of_Inertia_yz = Teuchos::rcp(new MV(element_map, 1));
-
+  
+  //setup output
   init_output();
 }
 
@@ -4806,6 +4807,7 @@ void FEA_Module_Elasticity::init_output(){
   else Brows = 3;
 
   if(output_displacement_flag){
+    collected_displacement_index = noutput;
     noutput += 1;
     collected_module_output.resize(noutput);
 
@@ -4822,6 +4824,7 @@ void FEA_Module_Elasticity::init_output(){
     output_dof_names[noutput-1][2] = "uz";
   }
   if(output_strain_flag){
+    collected_strain_index = noutput;
     noutput += 1;
     collected_module_output.resize(noutput);
 
@@ -4841,6 +4844,7 @@ void FEA_Module_Elasticity::init_output(){
     output_dof_names[noutput-1][5] = "strain_zz";
   }
   if(output_stress_flag){
+    collected_stress_index = noutput;
     noutput += 1;
     collected_module_output.resize(noutput);
 
@@ -4865,18 +4869,23 @@ void FEA_Module_Elasticity::init_output(){
    Prompts computation of elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::collect_output(){
+void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
   
   bool output_displacement_flag = simparam->output_displacement_flag;
   bool displaced_mesh_flag = simparam->displaced_mesh_flag;
   bool output_strain_flag = simparam->output_strain_flag;
   bool output_stress_flag = simparam->output_stress_flag;
-  
-  //collect nodal displacement information
+  int num_dim = simparam->num_dim;
+  int strain_count;
+  GO nreduce_dof = 0;
+
+  //global reduce map
   if(myrank==0) nreduce_dof = num_nodes*num_dim;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_dof_map =
-    Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nreduce_dof,0,comm));
-  
+    Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_dof_map =
+      Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nreduce_dof,0,comm));
+
+  //collect nodal displacement information
+  if(output_displacement_flag){
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> dof_collection_importer(local_dof_map, global_reduce_dof_map);
 
@@ -4884,7 +4893,8 @@ void FEA_Module_Elasticity::collect_output(){
 
   //set host views of the collected data to print out from
   if(myrank==0){
-    collected_displacement_output = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+   collected_module_output[collected_displacement_index] = collected_displacement_output = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
   }
 
   //collect strain data
@@ -4899,7 +4909,7 @@ void FEA_Module_Elasticity::collect_output(){
     Teuchos::RCP<MV> collected_node_strains_distributed = Teuchos::rcp(new MV(global_reduce_map, strain_count));
 
     //comms to collect
-    collected_node_strains_distributed->doImport(*(fea_elasticity->node_strains_distributed), node_collection_importer, Tpetra::INSERT);
+    collected_node_strains_distributed->doImport(*(node_strains_distributed), node_collection_importer, Tpetra::INSERT);
 
     //debug print
     //std::ostream &out = std::cout;
@@ -4912,7 +4922,7 @@ void FEA_Module_Elasticity::collect_output(){
 
     //host view to print from
     if(myrank==0)
-      collected_node_strains = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      collected_module_output[collected_strain_index] = collected_node_strains = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 }
 
@@ -4921,7 +4931,10 @@ void FEA_Module_Elasticity::collect_output(){
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::compute_output(){
-  compute_nodal_strains();
+  bool output_strain_flag = simparam->output_strain_flag;
+  bool output_stress_flag = simparam->output_stress_flag;
+  if(output_strain_flag)
+    compute_nodal_strains();
 }
 
 /* -------------------------------------------------------------------------------------------

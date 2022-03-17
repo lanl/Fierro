@@ -2164,12 +2164,9 @@ int Implicit_Solver::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, r
 ------------------------------------------------------------------------- */
 
 void Implicit_Solver::collect_information(){
-  size_t nreduce_dof = 0;
-  size_t nreduce_nodes = 0;
-  size_t nreduce_elem = 0;
-  size_t num_dim = simparam->num_dim;
-  int strain_count;
-  int output_strain_flag = simparam->output_strain_flag;
+  GO nreduce_nodes = 0;
+  GO nreduce_elem = 0;
+  int num_dim = simparam->num_dim;
 
   //collect nodal coordinate information
   if(myrank==0) nreduce_nodes = num_nodes;
@@ -2186,7 +2183,7 @@ void Implicit_Solver::collect_information(){
 
   //comms to collect FEA module related vector data
   for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_module[imodule]->collect_output();
+    fea_module[imodule]->collect_output(global_reduce_map);
     //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
   }
   

@@ -91,7 +91,7 @@ public:
 
   void compute_output();
 
-  void collect_output();
+  void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
   
   class Simulation_Parameters_Elasticity *simparam;
 
@@ -176,6 +176,7 @@ public:
 
   //output dof data
   //Global arrays with collected data used to print
+  int collected_displacement_index, collected_strain_index, collected_stress_index;
   const_host_vec_array collected_node_strains;
   const_host_vec_array collected_node_stresses;
 };

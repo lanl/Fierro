@@ -6,6 +6,8 @@ using namespace utils;
 Simulation_Parameters_Thermal::Simulation_Parameters_Thermal() : Simulation_Parameters(){
 
   //initialize data and flags to defaults
+  output_temperature_flag = false;
+  output_temperature_gradient_flag = false;
   output_heat_flux_flag = false;
   report_runtime_flag = false;
   unit_scaling = 1;
@@ -32,6 +34,7 @@ void Simulation_Parameters_Thermal::input(){
   p_order = 0;
 
   // ---- graphics information ---- //
+  output_temperature_flag = true;
   output_heat_flux_flag = true;
   
   //Isotropic Conductivity parameters to move into a child class later

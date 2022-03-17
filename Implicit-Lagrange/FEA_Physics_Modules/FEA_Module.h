@@ -116,7 +116,7 @@ public:
 
   virtual void compute_output();
 
-  virtual void collect_output();
+  virtual void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> global_reduce_map);
 
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;

@@ -76,7 +76,7 @@ public:
 
   void compute_output();
 
-  void collect_output();
+  void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
   class Simulation_Parameters_Thermal *simparam;
   
@@ -135,6 +135,12 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map;
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Free_Indices;
   bool Hierarchy_Constructed;
+
+  //output dof data
+  //Global arrays with collected data used to print
+  int collected_temperature_index, collected_temperature_gradient_index, collected_heat_flux_index;
+  const_host_vec_array collected_node_heat_fluxes;
+  const_host_vec_array collected_node_temperatures;
   
 };
 

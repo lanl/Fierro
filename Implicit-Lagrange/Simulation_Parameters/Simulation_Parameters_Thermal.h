@@ -21,7 +21,7 @@ class Simulation_Parameters_Thermal: public Simulation_Parameters
   int NBT; //number of temperature boundary conditions
 
   // --- Graphics output variables ---
-  bool output_heat_flux_flag, flux_max_flag;
+  bool output_temperature_flag, output_temperature_gradient_flag, output_heat_flux_flag, flux_max_flag;
 
   // --- Constitutive Parameters ---
   real_t Thermal_Conductivity;

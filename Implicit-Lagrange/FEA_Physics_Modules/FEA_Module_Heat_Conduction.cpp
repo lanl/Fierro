@@ -113,6 +113,9 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
 
   //construct specific dof map here if needed (more than one dof per node and not the coordinate dof map already provided) from node map
   //this thermal module just equates the dof map and node map since theres one scalar dof per node
+
+  //output setup
+  init_output();
 }
 
 FEA_Module_Heat_Conduction::~FEA_Module_Heat_Conduction(){
@@ -2475,6 +2478,125 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
     }
   }//end element loop for hessian vector product
   hessvec_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
+}
+
+/* ----------------------------------------------------------------------------
+   Initialize output data structures
+------------------------------------------------------------------------------- */
+
+void FEA_Module_Heat_Conduction::init_output(){
+  //check user parameters for output
+  bool output_temperature_flag = simparam->output_temperature_flag;
+  bool output_temperature_gradient_flag = simparam->output_temperature_gradient_flag;
+  bool output_heat_flux_flag = simparam->output_heat_flux_flag;
+  int num_dim = simparam->num_dim;
+
+  if(output_temperature_flag){
+    collected_temperature_index = noutput;
+    noutput += 1;
+    collected_module_output.resize(noutput);
+
+    vector_styles.resize(noutput);
+    vector_styles[noutput-1] = NODAL;
+
+    output_vector_sizes.resize(noutput);
+    output_vector_sizes[noutput-1] = 1;
+
+    output_dof_names.resize(noutput);
+    output_dof_names[noutput-1].resize(1);
+    output_dof_names[noutput-1][0] = "Temperature";
+  }
+  if(output_temperature_gradient_flag){
+    collected_temperature_gradient_index = noutput;
+    noutput += 1;
+    collected_module_output.resize(noutput);
+
+    vector_styles.resize(noutput);
+    vector_styles[noutput-1] = NODAL;
+
+    output_vector_sizes.resize(noutput);
+    output_vector_sizes[noutput-1] = num_dim;
+
+    output_dof_names.resize(noutput);
+    output_dof_names[noutput-1].resize(num_dim);
+    output_dof_names[noutput-1][0] = "temperature_gradient_x";
+    output_dof_names[noutput-1][1] = "temperature_gradient_y";
+    output_dof_names[noutput-1][2] = "temperature_gradient_z";
+  }
+  if(output_heat_flux_flag){
+    collected_heat_flux_index = noutput;
+    noutput += 1;
+    collected_module_output.resize(noutput);
+
+    vector_styles.resize(noutput);
+    vector_styles[noutput-1] = NODAL;
+
+    output_vector_sizes.resize(noutput);
+    output_vector_sizes[noutput-1] = num_dim;
+
+    output_dof_names.resize(noutput);
+    output_dof_names[noutput-1].resize(num_dim);
+    output_dof_names[noutput-1][0] = "heat_flux_x";
+    output_dof_names[noutput-1][1] = "heat_flux_y";
+    output_dof_names[noutput-1][2] = "heat_flux_z";
+  }
+}
+
+/* -------------------------------------------------------------------------------------------
+   Prompts computation of elastic response output data. For now, nodal strains.
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
+  
+  bool output_temperature_flag = simparam->output_temperature_flag;
+  bool output_temperature_gradient_flag = simparam->output_temperature_gradient_flag;
+  bool output_heat_flux_flag = simparam->output_heat_flux_flag;
+  int num_dim = simparam->num_dim;
+
+  //global reduce map
+  /*
+  if(myrank==0) nreduce_dof = num_nodes*num_dim;
+    Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_dof_map =
+      Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nreduce_dof,0,comm));
+  */
+  //collect nodal displacement information
+  if(output_temperature_flag){
+  //importer from local node distribution to collected distribution
+  Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
+
+  Teuchos::RCP<MV> collected_node_temperatures_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
+
+  //set host views of the collected data to print out from
+  if(myrank==0){
+   collected_module_output[collected_temperature_index] = collected_temperature_output = collected_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+  }
+
+  //collect strain data
+  if(output_heat_flux_flag){
+
+    //importer for strains, all nodes to global node set on rank 0
+    //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
+
+    //collected nodal density information
+    Teuchos::RCP<MV> collected_node_heat_fluxes_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+
+    //comms to collect
+    collected_node_heat_fluxes_distributed->doImport(*(node_heat_fluxes_distributed), node_collection_importer, Tpetra::INSERT);
+
+    //debug print
+    //std::ostream &out = std::cout;
+    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    //if(myrank==0)
+    //*fos << "Collected nodal displacements :" << std::endl;
+    //collected_node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+    //*fos << std::endl;
+    //std::fflush(stdout);
+
+    //host view to print from
+    if(myrank==0)
+      collected_module_output[collected_heat_flux_index] = collected_node_heat_fluxes = collected_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
 }
 
 /* -------------------------------------------------------------------------------------------
