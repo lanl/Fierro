@@ -227,9 +227,9 @@ public:
   int update_count, hessvec_count;
 
   //nodal DOF output data
-  int noutput;
+  int noutput, ndof_output;
   int displacement_index;
-  std::string *output_names;
+  std::string *output_dof_names;
   const_host_vec_array collected_dof_module_output;
   
 };

@@ -2236,9 +2236,10 @@ void Implicit_Solver::tecplot_writer(){
 	std::stringstream count_temp;
   int time_step = 0;
   int temp_convert;
-  int noutput;
+  int noutput, nvector;
   bool displace_geometry = true;
   int output_strain_flag = simparam->output_strain_flag;
+  host_vec_array current_collected_output;
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->compute_output();
     //if(output_strain_flag) fea_elasticity->compute_nodal_strains();
@@ -2281,8 +2282,8 @@ void Implicit_Solver::tecplot_writer(){
       //else
 		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
       for (int imodule = 0; imodule < nfea_modules; imodule++){
-        for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
-          myfile << ", \"" << fea_modules[imodule]->output_names[ioutput] << "\"";
+        for(int ioutput = 0; ioutput < fea_modules[imodule]->ndof_output; ioutput++){
+          myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput] << "\"";
         }
       }
       myfile << "\n";
@@ -2299,8 +2300,15 @@ void Implicit_Solver::tecplot_writer(){
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            if(!fea_modules[imodule]->output_names[ioutput].empty()){
-              myfile << std::setw(25) << fea_modules[imodule]->collected_dof_module_output(nodeline*noutput + ioutput,0) << " ";
+            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            if(fea_modules[imodule]->output_style[ioutput] == DOF){
+              myfile << std::setw(25) << fea_modules[imodule]->current_collected_output(nodeline*noutput + ioutput,0) << " ";
+            }
+            if(fea_modules[imodule]->output_style[ioutput] == NODAL){
+              nvector = fea_modules[imodule]->nvectors[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << fea_modules[ivector]->current_collected_output(nodeline,ivector) << " ";
+              }
             }
           }
         }
@@ -2335,8 +2343,8 @@ void Implicit_Solver::tecplot_writer(){
 		  myfile << "TITLE=\"results for TO code\" \n";
 		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
       for (int imodule = 0; imodule < nfea_modules; imodule++){
-        for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
-          myfile << ", \"" << fea_modules[imodule]->output_names[ioutput] << "\"";
+        for(int ioutput = 0; ioutput < fea_modules[imodule]->ndof_output; ioutput++){
+          myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput] << "\"";
         }
       }
       myfile << "\n";
@@ -2345,15 +2353,22 @@ void Implicit_Solver::tecplot_writer(){
 			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + fea_modules[displacement_module]->collected_dof_module_output(nodeline*ndisp_output + displacement_index,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_dof_module_output(nodeline*ndisp_output + displacement_index + 1,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + fea_modules[displacement_module]->collected_displacement_output(nodeline*ndisp_output,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*ndisp_output + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_dof_module_output(nodeline*ndisp_output + displacement_index + 2,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*ndisp_output + 2,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            if(!fea_modules[imodule]->output_names[ioutput].empty()){
-              myfile << std::setw(25) << fea_modules[imodule]->collected_dof_module_output(nodeline*noutput + ioutput,0) << " ";
+            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            if(fea_modules[imodule]->output_style[ioutput] == DOF){
+              myfile << std::setw(25) << fea_modules[imodule]->current_collected_output(nodeline*noutput + ioutput,0) << " ";
+            }
+            if(fea_modules[imodule]->output_style[ioutput] == NODAL){
+              nvector = fea_modules[imodule]->nvectors[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << fea_modules[ivector]->current_collected_output(nodeline,ivector) << " ";
+              }
             }
           }
         }
