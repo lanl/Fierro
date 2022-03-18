@@ -70,6 +70,10 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
   simparam = new Simulation_Parameters_Thermal();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
+
+  //sets base class simparam pointer to avoid instancing the base simparam twice
+  FEA_Module::simparam = simparam;
+
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
@@ -150,7 +154,7 @@ void FEA_Module_Heat_Conduction::init_boundaries(){
   Node_Heat_Flux_Boundary_Conditions = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nall_nodes);
 
   //initialize
-  for(int init=0; init < nall_nodes*num_dim; init++)
+  for(int init=0; init < nall_nodes; init++)
     Node_DOF_Boundary_Condition_Type(init) = NONE;
 }
 
@@ -228,7 +232,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Heat_Flux(surf_flux_set_id,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Heat_Flux(surf_flux_set_id,0) = -0.5/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Heat_Flux(surf_flux_set_id,1) = 0;
   Boundary_Surface_Heat_Flux(surf_flux_set_id,2) = 0;
   surf_flux_set_id++;
@@ -2565,6 +2569,9 @@ void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
   Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
 
   Teuchos::RCP<MV> collected_node_temperatures_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
+
+  //comms to collect
+  collected_node_temperatures_distributed->doImport(*(node_temperatures_distributed), node_collection_importer, Tpetra::INSERT);
 
   //set host views of the collected data to print out from
   if(myrank==0){

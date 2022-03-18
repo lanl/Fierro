@@ -28,7 +28,8 @@ void Simulation_Parameters_Topology_Optimization::input(){
   //use pushback to add arguments for each TO module
   
   //TO objectives and constraints
-  TO_Module_List[0] = "Strain_Energy_Minimize";
+  //TO_Module_List[0] = "Strain_Energy_Minimize";
+  TO_Module_List[0] = "Heat_Capacity_Potential_Minimize";
   TO_Function_Type[0] = OBJECTIVE;
   nTO_modules++;
   TO_Module_List[1] = "Mass_Constraint";

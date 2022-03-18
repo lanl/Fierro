@@ -2234,7 +2234,9 @@ void Implicit_Solver::tecplot_writer(){
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
-  bool displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+  bool displace_geometry;
+  if(displacement_module!=-1)
+    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
   const_host_vec_array current_collected_output;
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->compute_output();
