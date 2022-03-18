@@ -232,9 +232,9 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Heat_Flux(surf_flux_set_id,0) = -0.5/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Heat_Flux(surf_flux_set_id,0) = 0;
   Boundary_Surface_Heat_Flux(surf_flux_set_id,1) = 0;
-  Boundary_Surface_Heat_Flux(surf_flux_set_id,2) = 0;
+  Boundary_Surface_Heat_Flux(surf_flux_set_id,2) = -0.5/simparam->unit_scaling/simparam->unit_scaling;
   surf_flux_set_id++;
   *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
@@ -744,11 +744,11 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       //set to -1 or 1 for an isoparametric space
         if(local_surface_id%2==0){
           quad_coordinate(2) = -1;
-          surface_sign = 1;
+          surface_sign = -1;
         }
         else{
           quad_coordinate(2) = 1;
-          surface_sign = -1;
+          surface_sign = 1;
         }
       }
       else if(local_surface_id<4){
@@ -759,11 +759,11 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       //set to -1 or 1 for an isoparametric space
         if(local_surface_id%2==0){
           quad_coordinate(1) = -1;
-          surface_sign = 1;
+          surface_sign = -1;
         }
         else{
           quad_coordinate(1) = 1;
-          surface_sign = -1;
+          surface_sign = 1;
         }
       }
       else if(local_surface_id<6){
@@ -774,11 +774,11 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       //set to -1 or 1 for an isoparametric space
         if(local_surface_id%2==0){
           quad_coordinate(0) = -1;
-          surface_sign = 1;
+          surface_sign = -1;
         }
         else{
           quad_coordinate(0) = 1;
-          surface_sign = -1;
+          surface_sign = 1;
         }
       }
       
@@ -852,10 +852,10 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
                pow(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1),2));
       
       //compute surface normal through cross product of the two tangent vectors
-      surface_normal[0] = surface_sign*JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2);
-      surface_normal[1] = surface_sign*JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2);
+      surface_normal[0] = surface_sign*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2));
+      surface_normal[1] = surface_sign*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2));
       if(num_dim==3)
-        surface_normal[2] = surface_sign*JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1);
+        surface_normal[2] = surface_sign*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1));
       else
         surface_normal[2] = 0;
       
@@ -901,7 +901,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
 
     //apply point forces
 
-    //apply contribution from non-zero displacement boundary conditions
+    //apply contribution from non-zero temperature boundary conditions
     if(nonzero_bc_flag){
       for(int irow = 0; irow < nlocal_nodes; irow++){
         for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
@@ -913,7 +913,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       }//for
     }
 
-    //apply body forces
+    //apply body terms
     if(body_term_flag){
       //initialize quadrature data
       elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
