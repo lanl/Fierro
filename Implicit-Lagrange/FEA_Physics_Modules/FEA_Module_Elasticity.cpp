@@ -6186,9 +6186,6 @@ int FEA_Module_Elasticity::solve(){
   const_host_vec_array reduced_node_displacements_host = reduced_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   host_vec_array node_displacements_host = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
-  for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
-    node_displacements_host(init,0) = 0;
-
   for(LO i=0; i < local_nrows_reduced; i++){
     access_index = local_dof_map->getLocalElement(Free_Indices(i));
     node_displacements_host(access_index,0) = reduced_node_displacements_host(i,0);

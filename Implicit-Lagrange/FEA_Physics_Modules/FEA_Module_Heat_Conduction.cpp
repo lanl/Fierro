@@ -3482,10 +3482,8 @@ int FEA_Module_Heat_Conduction::solve(){
   //populate node displacement multivector on the local dof map
   const_host_vec_array reduced_node_temperatures_host = reduced_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   host_vec_array node_temperatures_host = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-
-  for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
-    node_temperatures_host(init,0) = 0;
-
+  
+  //set free values from solution vector
   for(LO i=0; i < local_nrows_reduced; i++){
     access_index = local_dof_map->getLocalElement(Free_Indices(i));
     node_temperatures_host(access_index,0) = reduced_node_temperatures_host(i,0);
