@@ -2631,6 +2631,15 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   host_vec_array all_node_heat_fluxes = all_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   host_vec_array node_heat_fluxes = node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array Element_Densities;
+  //local variable for host view of densities from the dual view
+  //bool nodal_density_flag = simparam->nodal_density_flag;
+  const_host_vec_array all_node_densities;
+  if(nodal_density_flag)
+  all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  else
+  Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
@@ -2672,6 +2681,7 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_temperatures(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
   size_t Brows = num_dim;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,elem->num_basis());
@@ -2750,6 +2760,7 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
       current_nodal_temperatures(node_loop) = all_node_temperatures(local_node_id,0);
+      if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
     }
 
     //debug print of current_nodal_displacements
@@ -2855,7 +2866,7 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
       C_matrix(2,2) = -1;
     }
     
-    //multiply by displacement vector to get flux at this quadrature point
+    //multiply by temperature vector to get temperature gradient at this quadrature point
     //division by J ommited since it is multiplied out later
     for(int irow=0; irow < Brows; irow++){
       quad_temperature_gradient(irow) = 0;
@@ -2864,12 +2875,23 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
       }
     }
 
+    //compute density
+    current_density = 0;
+    if(nodal_density_flag)
+    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+      current_density += nodal_density(node_loop)*basis_values(node_loop);
+    }
+    //default constant element density
+    else{
+      current_density = Element_Densities(ielem,0);
+    }
+
     //look up element material properties at this point as a function of density
     Element_Material_Properties(ielem, Element_Conductivity, current_density);
     
     //compute heat flux with Fourier's law
     for(int irow=0; irow < Brows; irow++){
-      quad_temperature_gradient(irow) = 0;
+      quad_heat_flux(irow) = 0;
       for(int icol=0; icol < Brows; icol++){
         quad_heat_flux(irow) += Element_Conductivity*C_matrix(irow,icol)*quad_temperature_gradient(icol);
       }
@@ -3482,7 +3504,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //populate node displacement multivector on the local dof map
   const_host_vec_array reduced_node_temperatures_host = reduced_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   host_vec_array node_temperatures_host = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  
+
   //set free values from solution vector
   for(LO i=0; i < local_nrows_reduced; i++){
     access_index = local_dof_map->getLocalElement(Free_Indices(i));

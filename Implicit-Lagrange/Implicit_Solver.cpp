@@ -245,7 +245,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    //setup_optimization_problem();
+    setup_optimization_problem();
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
