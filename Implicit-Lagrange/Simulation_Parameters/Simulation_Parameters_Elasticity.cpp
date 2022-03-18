@@ -23,10 +23,13 @@ Simulation_Parameters_Elasticity::~Simulation_Parameters_Elasticity(){
 }
 
 void Simulation_Parameters_Elasticity::input(){
-
+  
+  Simulation_Parameters::input();
   //output settings
-  output_displacement_flag = false;
+  output_displacement_flag = true;
+  //requires displacement flag to be true
   displaced_mesh_flag = true;
+  
   output_strain_flag = true;
   output_stress_flag = false;
 

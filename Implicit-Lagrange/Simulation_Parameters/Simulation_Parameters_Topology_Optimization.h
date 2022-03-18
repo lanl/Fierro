@@ -42,7 +42,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   std::vector<std::string> TO_Module_List;
   std::vector<function_type> TO_Function_Type;
   std::vector<int> TO_Module_My_FEA_Module;
-  std::vector<std::vector<real_t>> Constraint_Arguments;
+  std::vector<std::vector<real_t>> Function_Arguments;
   int nTO_modules;
 };
 

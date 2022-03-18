@@ -177,16 +177,17 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //set boundary conditions
     generate_tcs();
+
+    //initialize TO design variable storage
+    init_design();
     
     //construct list of FEA modules requested
     simparam->FEA_module_setup();
 
     //process process list of requested FEA modules to construct list of objects
     FEA_module_setup();
-
-    //initialize TO design variable storage
-    init_design();
     
+    //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;
     //call boundary routines on fea modules
     for(int imodule = 0; imodule < nfea_modules; imodule++)
       fea_modules[imodule]->init_boundaries();
@@ -244,7 +245,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    setup_optimization_problem();
+    //setup_optimization_problem();
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -1516,7 +1517,7 @@ void Implicit_Solver::init_maps(){
 ------------------------------------------------------------------------- */
 
 void Implicit_Solver::FEA_module_setup(){
-  int nfea_modules = simparam->nfea_modules;
+  nfea_modules = simparam->nfea_modules;
   std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
   //allocate lists to size
   fea_module_types = std::vector<std::string>(nfea_modules);
@@ -1552,7 +1553,7 @@ void Implicit_Solver::setup_optimization_problem(){
   std::vector<std::string> TO_Module_List = simparam->TO_Module_List;
   std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
   std::vector<int> TO_Module_My_FEA_Module = simparam->TO_Module_My_FEA_Module;
-  std::vector<std::vector<real_t>> Constraint_Arguments = simparam->Constraint_Arguments;
+  std::vector<std::vector<real_t>> Function_Arguments = simparam->Function_Arguments;
   std::vector<Simulation_Parameters_Topology_Optimization::function_type> TO_Function_Type = simparam->TO_Function_Type;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   GO current_node_index;
@@ -1623,10 +1624,10 @@ void Implicit_Solver::setup_optimization_problem(){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
       if(TO_Module_List[imodule]=="Mass_Constraint"){
-        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, false, Constraint_Arguments[imodule][0]);
+        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, false, Function_Arguments[imodule][0]);
       }
       if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
-        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Constraint_Arguments[imodule][0], false, Constraint_Arguments[imodule][1]);
+        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, Function_Arguments[imodule][1]);
       }
       problem->addConstraint("Equality Constraint",eq_constraint,constraint_mul);
     }
@@ -1635,7 +1636,7 @@ void Implicit_Solver::setup_optimization_problem(){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
       ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
-      ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,Constraint_Arguments[imodule][0]);    
+      ROL::Ptr<std::vector<real_t> > lu_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][0]);    
       ROL::Ptr<ROL::Vector<real_t> > ll = ROL::makePtr<ROL::StdVector<real_t>>(ll_ptr);
       ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
       ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
@@ -1643,7 +1644,7 @@ void Implicit_Solver::setup_optimization_problem(){
         ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
       if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
-        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Constraint_Arguments[imodule][0]);
+        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0]);
       }
       problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
     }
@@ -2222,7 +2223,7 @@ void Implicit_Solver::collect_information(){
 
 void Implicit_Solver::tecplot_writer(){
   
-  size_t num_dim = simparam->num_dim;
+  int num_dim = simparam->num_dim;
 	std::string current_file_name;
 	std::string base_file_name= "TecplotTO";
   std::string base_file_name_undeformed= "TecplotTO_undeformed";
@@ -2357,6 +2358,7 @@ void Implicit_Solver::tecplot_writer(){
 			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
+        myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
@@ -2375,6 +2377,7 @@ void Implicit_Solver::tecplot_writer(){
             }
           }
         }
+        myfile << std::endl;
 		  }
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering

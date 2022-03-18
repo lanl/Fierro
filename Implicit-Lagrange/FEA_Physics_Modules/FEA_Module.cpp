@@ -21,10 +21,6 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   nghost_nodes = Solver_Pointer->nghost_nodes;
   max_nodes_per_element = Solver_Pointer->max_nodes_per_element;
 
-  //element select data
-  element_select = Solver_Pointer->element_select;
-  ref_elem = Solver_Pointer->ref_elem;
-
   hessvec_count = update_count = 0;
   linear_solve_time = hessvec_time = hessvec_linear_time = 0;
 
@@ -64,6 +60,11 @@ FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
   Global_Element_Densities = Solver_Pointer->Global_Element_Densities;
   Element_Types = Solver_Pointer->Element_Types;
 
+  //element select data
+  element_select = Solver_Pointer->element_select;
+  element_select->choose_3Delem_type(Element_Types(0), elem);
+  ref_elem = Solver_Pointer->ref_elem;
+
   //obtain boundary condition and loading data
   nboundary_patches = Solver_Pointer->nboundary_patches;
   Boundary_Patches = Solver_Pointer->Boundary_Patches;
@@ -89,8 +90,7 @@ FEA_Module::~FEA_Module() {}
 ------------------------------------------------------------------------- */
 
 void FEA_Module::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits){
-  
-  int num_boundary_sets = simparam->NB;
+
   int is_on_set;
   /*
   if (bdy_set == num_bdy_sets_){

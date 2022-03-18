@@ -22,7 +22,8 @@ Simulation_Parameters_Thermal::~Simulation_Parameters_Thermal(){
 }
 
 void Simulation_Parameters_Thermal::input(){
-
+  
+  Simulation_Parameters::input();
   //multigrid_timers = true;
   equilibrate_matrix_flag = false;
 

@@ -70,6 +70,10 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   simparam = new Simulation_Parameters_Elasticity();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
+  
+  //sets base class simparam pointer to avoid instancing the base simparam twice
+  FEA_Module::simparam = simparam;
+
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
@@ -188,6 +192,8 @@ void FEA_Module_Elasticity::init_boundary_sets (int num_sets){
     std::cout << " Warning: number of boundary conditions = 0";
     return;
   }
+  
+  //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
   NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
   Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
 
@@ -4890,6 +4896,9 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
   Tpetra::Import<LO, GO> dof_collection_importer(local_dof_map, global_reduce_dof_map);
 
   Teuchos::RCP<MV> collected_node_displacements_distributed = Teuchos::rcp(new MV(global_reduce_dof_map, 1));
+
+  //comms to collect
+  collected_node_displacements_distributed->doImport(*(node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
 
   //set host views of the collected data to print out from
   if(myrank==0){
