@@ -89,7 +89,7 @@ public:
       ROL_RHS = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_RHS);
       ROL_Temperatures = ROL::makePtr<ROL_MV>(FEM_->node_temperatures_distributed);
 
-      real_t current_heat_capacity_potential = ROL_Temperatures->dot(*ROL_RHS);
+      real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_RHS);
       std::cout.precision(10);
       if(FEM_->myrank==0)
       std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential << std::endl;
@@ -191,7 +191,7 @@ public:
     ROL_RHS = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_RHS);
     ROL_Temperatures = ROL::makePtr<ROL_MV>(FEM_->node_temperatures_distributed);
 
-    real_t current_heat_capacity_potential = ROL_Temperatures->dot(*ROL_RHS);
+    real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_RHS);
     std::cout.precision(10);
     if(FEM_->myrank==0)
     std::cout << "CURRENT HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential << std::endl;
@@ -230,6 +230,7 @@ public:
 
     if(nodal_density_flag_){
       FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
+      gp->scale(-1);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -282,6 +283,7 @@ public:
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
+    hvp->scale(-1);
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);
