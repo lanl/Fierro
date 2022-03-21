@@ -70,16 +70,18 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
   int buffer_size = 10;
   FEA_Module_List = std::vector<std::string>(buffer_size);
   TO_Module_My_FEA_Module = std::vector<int>(buffer_size);
-  bool module_found = false;
+  
   for(int imodule = 0; imodule < nTO_modules; imodule++){
-
+    bool module_found = false;
     //decides which FEA modules to setup based on user decided TO problem
     //automate selection list later; use std::map maybe?
     if(TO_Module_List[imodule] == "Strain_Energy_Minimize"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == "Elasticity") module_found = true;
-        TO_Module_My_FEA_Module[imodule] = ifea;
+        if(FEA_Module_List[ifea] == "Elasticity"){
+          module_found = true;
+          TO_Module_My_FEA_Module[imodule] = ifea;
+        }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
@@ -90,8 +92,10 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
     if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == "Heat_Conduction") module_found = true;
-        TO_Module_My_FEA_Module[imodule] = ifea;
+        if(FEA_Module_List[ifea] == "Heat_Conduction"){
+          module_found = true;
+          TO_Module_My_FEA_Module[imodule] = ifea;
+        }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
@@ -102,8 +106,10 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
     if(TO_Module_List[imodule] == "Mass_Constraint"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == "Elasticity") module_found = true;
-        TO_Module_My_FEA_Module[imodule] = ifea;
+        if(FEA_Module_List[ifea] == "Elasticity"){
+          module_found = true;
+          TO_Module_My_FEA_Module[imodule] = ifea;
+        }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
@@ -114,8 +120,10 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
     if(TO_Module_List[imodule] == "Moment_of_Inertia_Constraint"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == "Elasticity") module_found = true;
-        TO_Module_My_FEA_Module[imodule] = ifea;
+        if(FEA_Module_List[ifea] == "Elasticity"){
+          module_found = true;
+          TO_Module_My_FEA_Module[imodule] = ifea;
+        }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
