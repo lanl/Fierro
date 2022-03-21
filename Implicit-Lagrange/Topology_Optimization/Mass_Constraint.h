@@ -92,7 +92,7 @@ public:
     FEM_->mass = initial_mass = ROL_Element_Masses->reduce(sumreduc);
     //debug print
     if(FEM_->myrank==0)
-    std::cout << "INITIAL MASS: " << initial_mass << std::endl;
+      std::cout << "INITIAL MASS: " << initial_mass << std::endl;
     if(FEM_->mass_gradients_distributed.is_null())
       FEM_->mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
     constraint_gradients_distributed = FEM_->mass_gradients_distributed;

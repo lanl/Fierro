@@ -1533,11 +1533,16 @@ void Implicit_Solver::FEA_module_setup(){
       fea_modules[imodule] = new FEA_Module_Elasticity(this);
       module_found = true;
       displacement_module = imodule;
+      //debug print
+      *fos << " ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
+      
     }
     if(FEA_Module_List[imodule] == "Heat_Conduction"){
       fea_module_types[imodule] = "Heat_Conduction";
       fea_modules[imodule] = new FEA_Module_Heat_Conduction(this);
       module_found = true; 
+      //debug print
+      *fos << " HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
     }
   }
 }
@@ -1584,10 +1589,14 @@ void Implicit_Solver::setup_optimization_problem(){
   for(int imodule = 0; imodule < nTO_modules; imodule++){
     if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::OBJECTIVE){
       if(TO_Module_List[imodule] == "Strain_Energy_Minimize"){
+        //debug print
+        *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
       if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
-        obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        //debug print
+        *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
       objective_declared = true;
     }
@@ -1624,9 +1633,12 @@ void Implicit_Solver::setup_optimization_problem(){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
       if(TO_Module_List[imodule]=="Mass_Constraint"){
+        
+        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, false, Function_Arguments[imodule][0]);
       }
       if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
+        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, Function_Arguments[imodule][1]);
       }
       problem->addConstraint("Equality Constraint",eq_constraint,constraint_mul);
@@ -1641,9 +1653,11 @@ void Implicit_Solver::setup_optimization_problem(){
       ROL::Ptr<ROL::Vector<real_t> > lu = ROL::makePtr<ROL::StdVector<real_t>>(lu_ptr);
       ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
       if(TO_Module_List[imodule]=="Mass_Constraint"){
+        *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
       if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
+        *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0]);
       }
       problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
