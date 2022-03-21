@@ -199,7 +199,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = TEMPERATURE_CONDITION;
-  Boundary_Surface_Temperatures(surf_disp_set_id,0) = 0;
+  Boundary_Surface_Temperatures(surf_disp_set_id,0) = 10;
   if(Boundary_Surface_Temperatures(surf_disp_set_id,0)) nonzero_bc_flag = true;
   surf_disp_set_id++;
     
@@ -1988,7 +1988,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_temperatures(node_loop*num_dim) = all_node_temperatures(local_node_id,0);
+      current_nodal_temperatures(node_loop) = all_node_temperatures(local_node_id,0);
       
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
     }
