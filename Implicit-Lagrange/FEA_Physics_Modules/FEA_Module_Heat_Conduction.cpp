@@ -2148,7 +2148,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
             //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
             //inner_product += Local_Matrix_Contribution(ifill, jfill);
           }
-          unbalanced_B_view(local_reduced_dof_id,0) += inner_product*Element_Conductivity_Gradient*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
+          unbalanced_B_view(local_reduced_dof_id,0) += 2*inner_product*Element_Conductivity_Gradient*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
         }
       }
       } //density gradient loop
