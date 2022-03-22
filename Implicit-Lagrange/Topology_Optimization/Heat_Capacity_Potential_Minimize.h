@@ -52,7 +52,7 @@ class HeatCapacityPotentialMinimize_TopOpt : public ROL::Objective<real_t> {
 private:
 
   FEA_Module_Heat_Conduction *FEM_;
-  ROL::Ptr<ROL_MV> ROL_RHS;
+  ROL::Ptr<ROL_MV> ROL_Heat;
   ROL::Ptr<ROL_MV> ROL_Temperatures;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
@@ -86,10 +86,10 @@ public:
 
       constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
 
-      ROL_RHS = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_RHS);
+      ROL_Heat = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Heat);
       ROL_Temperatures = ROL::makePtr<ROL_MV>(FEM_->node_temperatures_distributed);
 
-      real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_RHS);
+      real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_Heat);
       std::cout.precision(10);
       if(FEM_->myrank==0)
       std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential << std::endl;
@@ -188,10 +188,10 @@ public:
     //*fos << std::endl;
     //std::fflush(stdout);
     
-    ROL_RHS = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_RHS);
+    ROL_Heat = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Heat);
     ROL_Temperatures = ROL::makePtr<ROL_MV>(FEM_->node_temperatures_distributed);
 
-    real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_RHS);
+    real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_Heat);
     std::cout.precision(10);
     if(FEM_->myrank==0)
     std::cout << "CURRENT HEAT CAPACITY POTENTIAL " << current_heat_capacity_potential << std::endl;

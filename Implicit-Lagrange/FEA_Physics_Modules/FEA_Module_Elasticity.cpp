@@ -118,6 +118,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   node_strains_distributed = Teuchos::rcp(new MV(map, strain_count));
   all_node_strains_distributed = Teuchos::rcp(new MV(all_node_map, strain_count));
   Global_Nodal_Forces = Teuchos::rcp(new MV(local_dof_map, 1));
+  Global_Nodal_RHS = Teuchos::rcp(new MV(local_dof_map, 1));
 
   //initialize displacements to 0
   //local variable for host view in the dual view
@@ -968,11 +969,6 @@ void FEA_Module_Elasticity::assemble_matrix(){
   //*fos << "Global Stiffness Matrix :" << std::endl;
   //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
-
-  //Print solution vector
-  //*fos << "Global Nodal Forces :" << std::endl;
-  //Global_Nodal_Forces->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
 }
 
 
@@ -985,7 +981,8 @@ void FEA_Module_Elasticity::assemble_vector(){
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
   //bool nodal_density_flag = simparam->nodal_density_flag;
@@ -1039,7 +1036,7 @@ void FEA_Module_Elasticity::assemble_vector(){
 
    //force vector initialization
   for(int i=0; i < num_dim*nlocal_nodes; i++)
-    Nodal_Forces(i,0) = 0;
+    Nodal_RHS(i,0) = 0;
 
   /*Loop through boundary sets and check if they apply surface forces.
   These sets can have overlapping nodes since applied loading conditions
@@ -1204,7 +1201,7 @@ void FEA_Module_Elasticity::assemble_vector(){
         std::cout << " ------------Element "<< current_element_index + 1 <<"--------------"<<std::endl;
         std::cout <<  " = , " << " Wedge Product: " << wedge_product << " local node " << local_nodes[node_count] << " node " << node_gid + 1<< " : s " 
         << quad_coordinate(0) << " t " << quad_coordinate(1) << " w " << quad_coordinate(2) << " basis value  "<< basis_values(local_nodes[node_count])
-        << " Nodal Force value"<< Nodal_Forces(num_dim*node_gid)+wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[0]*basis_values(local_nodes[node_count]);
+        << " Nodal Force value"<< Nodal_RHS(num_dim*node_gid)+wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[0]*basis_values(local_nodes[node_count]);
         
         std::cout << " }"<< std::endl;
         //end debug print block
@@ -1213,8 +1210,8 @@ void FEA_Module_Elasticity::assemble_vector(){
         // Accumulate force vector contribution from this quadrature point
         for(int idim = 0; idim < num_dim; idim++){
           if(force_density[idim]!=0)
-          //Nodal_Forces(num_dim*node_gid + idim) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
-          Nodal_Forces(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
+          //Nodal_RHS(num_dim*node_gid + idim) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
+          Nodal_RHS(num_dim*node_id + idim,0) += wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[idim]*basis_values(local_nodes[node_count]);
         }
       }
       }
@@ -1225,18 +1222,6 @@ void FEA_Module_Elasticity::assemble_vector(){
     //apply line distribution of forces
 
     //apply point forces
-
-    //apply contribution from non-zero displacement boundary conditions
-    if(nonzero_bc_flag){
-      for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
-        for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
-          dof_id = all_dof_map->getLocalElement(DOF_Graph_Matrix(irow,istride));
-          if((Node_DOF_Boundary_Condition_Type(dof_id)==DISPLACEMENT_CONDITION||X_DISPLACEMENT_CONDITION||Y_DISPLACEMENT_CONDITION||Z_DISPLACEMENT_CONDITION)&&Node_DOF_Displacement_Boundary_Conditions(dof_id)){
-            Nodal_Forces(irow,0) -= Stiffness_Matrix(irow,istride)*Node_DOF_Displacement_Boundary_Conditions(dof_id);  
-          }
-        }//for
-      }//for
-    }
 
     //apply body forces
     if(body_term_flag){
@@ -1346,17 +1331,32 @@ void FEA_Module_Elasticity::assemble_vector(){
 
         for(int idim = 0; idim < num_dim; idim++){
             if(force_density[idim]!=0)
-            Nodal_Forces(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
-          }
+            Nodal_RHS(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
         }
       }
+      }
+      }//for
+    }//if
+
+    //copy values into nodal force vector (used by other functions such as TO)
+    Tpetra::deep_copy(*Global_Nodal_Forces, *Global_Nodal_RHS);
+
+  //apply contribution from non-zero displacement boundary conditions
+    if(nonzero_bc_flag){
+      for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+        for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+          dof_id = all_dof_map->getLocalElement(DOF_Graph_Matrix(irow,istride));
+          if((Node_DOF_Boundary_Condition_Type(dof_id)==DISPLACEMENT_CONDITION||X_DISPLACEMENT_CONDITION||Y_DISPLACEMENT_CONDITION||Z_DISPLACEMENT_CONDITION)&&Node_DOF_Displacement_Boundary_Conditions(dof_id)){
+            Nodal_RHS(irow,0) -= Stiffness_Matrix(irow,istride)*Node_DOF_Displacement_Boundary_Conditions(dof_id);  
+          }
+        }//for
+      }//for
     }
-  }
     //debug print of force vector
     /*
     std::cout << "---------FORCE VECTOR-------------" << std::endl;
     for(int iforce=0; iforce < num_nodes*num_dim; iforce++)
-      std::cout << " DOF: "<< iforce+1 << ", "<< Nodal_Forces(iforce) << std::endl;
+      std::cout << " DOF: "<< iforce+1 << ", "<< Nodal_RHS(iforce) << std::endl;
     */
 
 }
@@ -5606,7 +5606,7 @@ int FEA_Module_Elasticity::solve(){
   //local variable for host view in the dual view
   const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  const_host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
@@ -5904,7 +5904,7 @@ int FEA_Module_Elasticity::solve(){
   //set bview to force vector data
   for(LO i=0; i < local_nrows_reduced; i++){
     access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    Bview_pass(i,0) = Nodal_Forces(access_index,0);
+    Bview_pass(i,0) = Nodal_RHS(access_index,0);
   }
   
   unbalanced_B = Teuchos::rcp(new MV(local_reduced_dof_map, Bview_pass));

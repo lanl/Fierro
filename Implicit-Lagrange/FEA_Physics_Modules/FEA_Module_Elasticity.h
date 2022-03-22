@@ -112,6 +112,7 @@ public:
   Teuchos::RCP<MV> all_cached_node_displacements_distributed;
   Teuchos::RCP<MV> all_node_strains_distributed;
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
+  Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MV> Global_Nodal_Forces;
   Teuchos::RCP<MV> mass_gradients_distributed;
   Teuchos::RCP<MV> center_of_mass_gradients_distributed;

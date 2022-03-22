@@ -103,6 +103,7 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
   all_node_temperatures_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
   node_heat_fluxes_distributed = Teuchos::rcp(new MV(map, num_dim));
   Global_Nodal_RHS = Teuchos::rcp(new MV(local_dof_map, 1));
+  Global_Nodal_Heat = Teuchos::rcp(new MV(local_dof_map, 1));
   all_node_temperature_gradients_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   all_node_heat_fluxes_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
 
@@ -901,18 +902,6 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
 
     //apply point forces
 
-    //apply contribution from non-zero temperature boundary conditions
-    if(nonzero_bc_flag){
-      for(int irow = 0; irow < nlocal_nodes; irow++){
-        for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
-          node_id = all_node_map->getLocalElement(Graph_Matrix(irow,istride));
-          if(Node_DOF_Boundary_Condition_Type(node_id)==TEMPERATURE_CONDITION&&Node_Temperature_Boundary_Conditions(node_id)){
-            Nodal_RHS(irow,0) -= Conductivity_Matrix(irow,istride)*Node_Temperature_Boundary_Conditions(node_id);  
-          }
-        }//for
-      }//for
-    }
-
     //apply body terms
     if(body_term_flag){
       //initialize quadrature data
@@ -1023,6 +1012,21 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       }
     }
   }
+  
+  //copy values into nodal heat vector (used by other functions such as TO)
+    Tpetra::deep_copy(*Global_Nodal_Heat, *Global_Nodal_RHS);
+
+  //apply contribution from non-zero temperature boundary conditions
+    if(nonzero_bc_flag){
+      for(int irow = 0; irow < nlocal_nodes; irow++){
+        for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
+          node_id = all_node_map->getLocalElement(Graph_Matrix(irow,istride));
+          if(Node_DOF_Boundary_Condition_Type(node_id)==TEMPERATURE_CONDITION&&Node_Temperature_Boundary_Conditions(node_id)){
+            Nodal_RHS(irow,0) -= Conductivity_Matrix(irow,istride)*Node_Temperature_Boundary_Conditions(node_id);  
+          }
+        }//for
+      }//for
+    }
     //debug print of force vector
     /*
     std::cout << "---------FORCE VECTOR-------------" << std::endl;

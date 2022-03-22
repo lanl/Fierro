@@ -98,6 +98,7 @@ public:
   Teuchos::RCP<MV> all_cached_node_temperatures_distributed;
   Teuchos::RCP<MV> all_node_temperature_gradients_distributed;
   Teuchos::RCP<MV> all_node_heat_fluxes_distributed;
+  Teuchos::RCP<MV> Global_Nodal_Heat;
   Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MAT> Global_Conductivity_Matrix;
   
