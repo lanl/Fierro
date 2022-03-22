@@ -4743,7 +4743,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
                                   basis_values(jgradient)*weight_multiply*0.5*invJacobian;
         }
         if(igradient!=jgradient&&map->isNodeGlobalElement(nodes_in_elem(ielem, jgradient))){
-          temp_id = map->getLocalElement(nodes_in_elem(ielem, jgradient));
+          //temp_id = map->getLocalElement(nodes_in_elem(ielem, jgradient));
           hessvec(jlocal_node_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(local_node_id,0)*
                                       basis_values(jgradient)*weight_multiply*0.5*invJacobian;
 

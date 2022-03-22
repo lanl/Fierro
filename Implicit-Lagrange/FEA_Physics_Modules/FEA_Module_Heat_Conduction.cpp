@@ -199,7 +199,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = TEMPERATURE_CONDITION;
-  Boundary_Surface_Temperatures(surf_disp_set_id,0) = 10;
+  Boundary_Surface_Temperatures(surf_disp_set_id,0) = 0;
   if(Boundary_Surface_Temperatures(surf_disp_set_id,0)) nonzero_bc_flag = true;
   surf_disp_set_id++;
     
@@ -1830,7 +1830,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) -= inner_product*Element_Conductivity_Gradient*basis_values(igradient)*weight_multiply*0.5*invJacobian;
+      design_gradients(local_node_id,0) -= inner_product*Element_Conductivity_Gradient*basis_values(igradient)*weight_multiply*invJacobian;
     }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
@@ -2427,12 +2427,12 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))){
         temp_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
           hessvec(temp_id,0) -= inner_product*Element_Conductivity_Concavity*basis_values(igradient)*all_direction_vec(jlocal_node_id,0)*
-                                  basis_values(jgradient)*weight_multiply*0.5*invJacobian;
+                                  basis_values(jgradient)*weight_multiply*invJacobian;
         }
         if(igradient!=jgradient&&map->isNodeGlobalElement(nodes_in_elem(ielem, jgradient))){
-          temp_id = map->getLocalElement(nodes_in_elem(ielem, jgradient));
-          hessvec(jlocal_node_id,0) -= inner_product*Element_Conductivity_Gradient*basis_values(igradient)*all_direction_vec(local_node_id,0)*
-                                      basis_values(jgradient)*weight_multiply*0.5*invJacobian;
+          //temp_id = map->getLocalElement(nodes_in_elem(ielem, jgradient));
+          hessvec(jlocal_node_id,0) -= inner_product*Element_Conductivity_Concavity*basis_values(igradient)*all_direction_vec(local_node_id,0)*
+                                      basis_values(jgradient)*weight_multiply*invJacobian;
 
         }
       }

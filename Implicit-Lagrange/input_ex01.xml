@@ -169,7 +169,7 @@
       <Parameter name="Constraint Scaling"                      type="double" value="1.e0"         />
       <!-- ===========  PENALTY PARAMETER UPDATE  =========== -->
       <Parameter name="Use Default Initial Penalty Parameter"   type="bool"   value="false"         />
-      <Parameter name="Initial Penalty Parameter"               type="double" value="8.e4"         />
+      <Parameter name="Initial Penalty Parameter"               type="double" value="1.e6"         />
       <Parameter name="Penalty Parameter Growth Factor"         type="double" value="1.e1"         />
       <Parameter name="Minimum Penalty Parameter Reciprocal"    type="double" value="0.1"          />
       <!-- ===========  OPTIMALITY TOLERANCE UPDATE  =========== -->
