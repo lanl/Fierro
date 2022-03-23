@@ -36,9 +36,10 @@ void Simulation_Parameters_Topology_Optimization::input(){
   TO_Function_Type[1] = INEQUALITY_CONSTRAINT;
   Function_Arguments[1].push_back(0);
   Function_Arguments[1].push_back(8);
-  TO_Module_List[1] = "Mass_Constraint";
-  TO_Function_Type[1] = EQUALITY_CONSTRAINT;
-  Function_Arguments[1].push_back(0.12);
+  nTO_modules++;
+  TO_Module_List[2] = "Mass_Constraint";
+  TO_Function_Type[2] = EQUALITY_CONSTRAINT;
+  Function_Arguments[2].push_back(0.12);
   nTO_modules++;
   //example for later
   if(nTO_modules==buffer_size){

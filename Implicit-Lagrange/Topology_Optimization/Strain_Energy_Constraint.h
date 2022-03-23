@@ -86,6 +86,10 @@ public:
       constraint_value_ = constraint_value;
       constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
 
+      //deep copy solve data into the cache variable
+      FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
+      all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
+
       ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
       ROL_Displacements = ROL::makePtr<ROL_MV>(FEM_->node_displacements_distributed);
 
@@ -151,8 +155,10 @@ public:
     ROL::Ptr<const MV> zp = getVector(z);
     ROL::Ptr<std::vector<real_t>> cp = dynamic_cast<ROL::StdVector<real_t>&>(c).getVector();
 
-    real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force);
-    std::cout << "CURRENT STRAIN ENERGY RATIO" << current_strain_energy/initial_strain_energy_ << std::endl;
+    real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
+    
+    if(FEM_->myrank==0)
+      std::cout << "CURRENT STRAIN ENERGY RATIO " << current_strain_energy/initial_strain_energy_ << std::endl;
 
     if(inequality_flag_)
       (*cp)[0] = current_strain_energy/initial_strain_energy_;
