@@ -56,7 +56,6 @@ private:
   ROL::Ptr<ROL_MV> ROL_Force;
   ROL::Ptr<ROL_MV> ROL_Displacements;
   ROL::Ptr<ROL_MV> ROL_Gradients;
-  Teuchos::RCP<MV> constraint_gradients_distributed;
   Teuchos::RCP<MV> all_node_displacements_distributed_temp;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
@@ -84,8 +83,6 @@ public:
       //deep copy solve data into the cache variable
       FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
       all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
-
-      constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
 
       ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
       ROL_Displacements = ROL::makePtr<ROL_MV>(FEM_->node_displacements_distributed);
@@ -229,8 +226,7 @@ public:
     host_vec_array objective_gradients = gp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
-    if(nodal_density_flag_){
-      FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
+    FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -242,18 +238,7 @@ public:
       //for(int i = 0; i < FEM_->nlocal_nodes; i++){
         //objective_gradients(i,0) *= -1;
       //}
-    }
-    else{
-      
-      //update per element volumes
-      //FEM_->compute_element_volumes();
-      //ROL_Element_Volumes = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Volumes);
-      //local view of element volumes
-      //const_host_vec_array element_volumes = FEM_->Global_Element_Volumes->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-      //for(int ig = 0; ig < rnum_elem; ig++)
-        //objective_gradients(ig,0) = element_volumes(ig,0);
-        
-    }
+    
     //std::cout << "Objective Gradient called"<< std::endl;
     //debug print of design variables
     //std::ostream &out = std::cout;
@@ -261,6 +246,7 @@ public:
     //if(FEM_->myrank==0)
     //*fos << "Gradient data :" << std::endl;
     //gp->describe(*fos,Teuchos::VERB_EXTREME);
+    
     //*fos << std::endl;
     //std::fflush(stdout);
     //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;

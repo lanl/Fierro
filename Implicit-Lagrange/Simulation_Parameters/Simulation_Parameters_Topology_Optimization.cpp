@@ -32,6 +32,10 @@ void Simulation_Parameters_Topology_Optimization::input(){
   TO_Module_List[0] = "Heat_Capacity_Potential_Minimize";
   TO_Function_Type[0] = OBJECTIVE;
   nTO_modules++;
+  TO_Module_List[1] = "Strain_Energy_Constraint";
+  TO_Function_Type[1] = INEQUALITY_CONSTRAINT;
+  Function_Arguments[1].push_back(0);
+  Function_Arguments[1].push_back(8);
   TO_Module_List[1] = "Mass_Constraint";
   TO_Function_Type[1] = EQUALITY_CONSTRAINT;
   Function_Arguments[1].push_back(0.12);
@@ -118,6 +122,20 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
       }
     }
     if(TO_Module_List[imodule] == "Moment_of_Inertia_Constraint"){
+      //check if module type was already allocated
+      for(int ifea = 0; ifea < nfea_modules; ifea++){
+        if(FEA_Module_List[ifea] == "Elasticity"){
+          module_found = true;
+          TO_Module_My_FEA_Module[imodule] = ifea;
+        }
+      }
+      if(!module_found){
+        TO_Module_My_FEA_Module[imodule] = nfea_modules;
+        FEA_Module_List[nfea_modules++] = "Elasticity";
+        module_found = true;
+      }
+    }
+    if(TO_Module_List[imodule] == "Strain_Energy_Constraint"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
         if(FEA_Module_List[ifea] == "Elasticity"){
