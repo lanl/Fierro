@@ -200,7 +200,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = TEMPERATURE_CONDITION;
-  Boundary_Surface_Temperatures(surf_disp_set_id,0) = 0;
+  Boundary_Surface_Temperatures(surf_disp_set_id,0) = 10;
   if(Boundary_Surface_Temperatures(surf_disp_set_id,0)) nonzero_bc_flag = true;
   surf_disp_set_id++;
     
@@ -1012,9 +1012,6 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       }
     }
   }
-  
-  //copy values into nodal heat vector (used by other functions such as TO)
-    Tpetra::deep_copy(*Global_Nodal_Heat, *Global_Nodal_RHS);
 
   //apply contribution from non-zero temperature boundary conditions
     if(nonzero_bc_flag){
@@ -3520,6 +3517,9 @@ int FEA_Module_Heat_Conduction::solve(){
 
   //comms to get displacements on all node map
   all_node_temperatures_distributed->doImport(*node_temperatures_distributed, ghost_temperature_importer, Tpetra::INSERT);
+
+  //compute nodal heat vector (used by other functions such as TO) due to inputs and constraints
+  Global_Conductivity_Matrix->apply(*node_temperatures_distributed,*Global_Nodal_Heat);
 
   //if(myrank==0)
   //*fos << "All displacements :" << std::endl;

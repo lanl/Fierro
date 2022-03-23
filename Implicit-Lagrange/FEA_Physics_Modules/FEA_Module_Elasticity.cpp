@@ -1338,9 +1338,6 @@ void FEA_Module_Elasticity::assemble_vector(){
       }//for
     }//if
 
-    //copy values into nodal force vector (used by other functions such as TO)
-    Tpetra::deep_copy(*Global_Nodal_Forces, *Global_Nodal_RHS);
-
   //apply contribution from non-zero displacement boundary conditions
     if(nonzero_bc_flag){
       for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
@@ -6196,6 +6193,9 @@ int FEA_Module_Elasticity::solve(){
 
   //comms to get displacements on all node map
   all_node_displacements_distributed->doImport(*node_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
+
+  //compute nodal force vector (used by other functions such as TO) due to inputs and constraints
+  Global_Stiffness_Matrix->apply(*node_displacements_distributed,*Global_Nodal_Forces);
 
   //if(myrank==0)
   //*fos << "All displacements :" << std::endl;
