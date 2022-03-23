@@ -58,6 +58,8 @@ private:
   Teuchos::RCP<MV> constraint_gradients_distributed;
   Teuchos::RCP<MV> all_node_displacements_distributed_temp;
   real_t initial_strain_energy_;
+  bool inequality_flag_;
+  real_t constraint_value_;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
 
@@ -90,7 +92,7 @@ public:
       initial_strain_energy_ = ROL_Displacements->dot(*ROL_Force)/2;
       std::cout.precision(10);
       if(FEM_->myrank==0)
-      std::cout << "INITIAL STRAIN ENERGY " << current_strain_energy << std::endl;
+      std::cout << "INITIAL STRAIN ENERGY " << initial_strain_energy_ << std::endl;
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
