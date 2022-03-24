@@ -1,5 +1,5 @@
-#ifndef STRAIN_ENERGY_CONSTRAINT_TOPOPT_H
-#define STRAIN_ENERGY_CONSTRAINT_TOPOPT_H
+#ifndef HEAT_CAPACITY_POTENTIAL_CONSTRAINT_TOPOPT_H
+#define HEAT_CAPACITY_POTENTIAL_CONSTRAINT_TOPOPT_H
 
 #include "matar.h"
 #include "elements.h"
@@ -20,9 +20,9 @@
 #include <ROL_TpetraMultiVector.hpp>
 #include "ROL_Constraint.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
-#include "FEA_Module_Elasticity.h"
+#include "FEA_Module_Heat_Conduction.h"
 
-class StrainEnergyConstraint_TopOpt : public ROL::Constraint<real_t> {
+class HeatCapacityPotentialConstraint_TopOpt : public ROL::Constraint<real_t> {
   
   typedef Tpetra::Map<>::local_ordinal_type LO;
   typedef Tpetra::Map<>::global_ordinal_type GO;
@@ -51,13 +51,13 @@ class StrainEnergyConstraint_TopOpt : public ROL::Constraint<real_t> {
 
 private:
 
-  FEA_Module_Elasticity *FEM_;
-  ROL::Ptr<ROL_MV> ROL_Force;
-  ROL::Ptr<ROL_MV> ROL_Displacements;
+  FEA_Module_Heat_Conduction *FEM_;
+  ROL::Ptr<ROL_MV> ROL_Heat;
+  ROL::Ptr<ROL_MV> ROL_Temperatures;
   ROL::Ptr<ROL_MV> ROL_Gradients;
+  Teuchos::RCP<MV> all_node_temperatures_distributed_temp;
   Teuchos::RCP<MV> constraint_gradients_distributed;
-  Teuchos::RCP<MV> all_node_displacements_distributed_temp;
-  real_t initial_strain_energy_;
+  real_t initial_heat_capacity_potential_;
   bool inequality_flag_;
   real_t constraint_value_;
 
@@ -74,11 +74,11 @@ private:
 public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
-  std::string my_fea_module = "Elasticity";
+  std::string my_fea_module = "Heat_Conduction";
 
-  StrainEnergyConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, bool inequality_flag=true, real_t constraint_value=0) 
+  HeatCapacityPotentialConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, bool inequality_flag=true, real_t constraint_value=0) 
     : useLC_(true) {
-      FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);
+      FEM_ = dynamic_cast<FEA_Module_Heat_Conduction*>(FEM);
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
@@ -87,16 +87,16 @@ public:
       constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
 
       //deep copy solve data into the cache variable
-      FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
-      all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
+      FEM_->all_cached_node_temperatures_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_temperatures_distributed), Teuchos::Copy));
+      all_node_temperatures_distributed_temp = FEM_->all_node_temperatures_distributed;
 
-      ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
-      ROL_Displacements = ROL::makePtr<ROL_MV>(FEM_->node_displacements_distributed);
+      ROL_Heat = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Heat);
+      ROL_Temperatures = ROL::makePtr<ROL_MV>(FEM_->node_temperatures_distributed);
 
-      initial_strain_energy_ = ROL_Displacements->dot(*ROL_Force)/2;
+      initial_heat_capacity_potential_ = ROL_Temperatures->dot(*ROL_Heat)/2;
       std::cout.precision(10);
       if(FEM_->myrank==0)
-        std::cout << "INITIAL STRAIN ENERGY " << initial_strain_energy_ << std::endl;
+        std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << initial_heat_capacity_potential_ << std::endl;
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -119,20 +119,20 @@ public:
       // and has been accepted as the new iterate
       /*assign temp pointer to the cache multivector (not the cache pointer) storage for a swap of the multivectors;
         this just avoids deep copy */
-      all_node_displacements_distributed_temp = FEM_->all_cached_node_displacements_distributed;
+      all_node_temperatures_distributed_temp = FEM_->all_cached_node_temperatures_distributed;
       // Cache the accepted value
-      FEM_->all_cached_node_displacements_distributed = FEM_->all_node_displacements_distributed;
+      FEM_->all_cached_node_temperatures_distributed = FEM_->all_node_temperatures_distributed;
     }
     else if (type == ROL::UpdateType::Revert) {
       // u_ was set to u=S(x) during a trial update
       // and has been rejected as the new iterate
       // Revert to cached value
       FEM_->comm_variables(zp);
-      FEM_->all_node_displacements_distributed = FEM_->all_cached_node_displacements_distributed;
+      FEM_->all_node_temperatures_distributed = FEM_->all_cached_node_temperatures_distributed;
     }
     else if (type == ROL::UpdateType::Trial) {
       // This is a new value of x
-      FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
+      FEM_->all_node_temperatures_distributed = all_node_temperatures_distributed_temp;
       //communicate density variables for ghosts
       FEM_->comm_variables(zp);
       //update deformation variables
@@ -144,8 +144,8 @@ public:
       // This is a new value of x used for,
       // e.g., finite-difference checks
       if(FEM_->myrank==0)
-        *fos << "called Temp" << std::endl;
-      FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
+      *fos << "called Temp" << std::endl;
+      FEM_->all_node_temperatures_distributed = all_node_temperatures_distributed_temp;
       FEM_->comm_variables(zp);
       FEM_->update_linear_solve(zp);
     }
@@ -155,15 +155,15 @@ public:
     ROL::Ptr<const MV> zp = getVector(z);
     ROL::Ptr<std::vector<real_t>> cp = dynamic_cast<ROL::StdVector<real_t>&>(c).getVector();
 
-    real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
+    real_t current_heat_capacity_potential = ROL_Temperatures->dot(*ROL_Heat)/2;
     
     if(FEM_->myrank==0)
-      std::cout << "CURRENT STRAIN ENERGY RATIO " << current_strain_energy/initial_strain_energy_ << std::endl;
+      std::cout << "CURRENT HEAT CAPACITY POTENTIAL RATIO " << current_heat_capacity_potential/initial_heat_capacity_potential_ << std::endl;
 
     if(inequality_flag_)
-      (*cp)[0] = current_strain_energy/initial_strain_energy_;
+      (*cp)[0] = current_heat_capacity_potential/initial_heat_capacity_potential_;
     else
-      (*cp)[0] = current_strain_energy/initial_strain_energy_ - constraint_value_;
+      (*cp)[0] = current_heat_capacity_potential/initial_heat_capacity_potential_ - constraint_value_;
   }
 
   
@@ -203,7 +203,7 @@ public:
       //*fos << std::endl;
       //std::fflush(stdout);
       for(int i = 0; i < nlocal_nodes; i++){
-        constraint_gradients(i,0) *= (*vp)[0]/initial_strain_energy_;
+        constraint_gradients(i,0) *= (*vp)[0]/initial_heat_capacity_potential_;
       }
     }
     else{
@@ -217,7 +217,7 @@ public:
       //*fos << std::endl;
       //std::fflush(stdout);
       for(int i = 0; i < rnum_elem; i++){
-        constraint_gradients(i,0) *= (*vp)[0]/initial_strain_energy_;
+        constraint_gradients(i,0) *= (*vp)[0]/initial_heat_capacity_potential_;
       }
     }
     //std::cout << "Ended constraint adjoint grad on task " <<FEM_->myrank  << std::endl;
@@ -240,12 +240,12 @@ public:
     FEM_->compute_adjoint_gradients(design_densities, constraint_gradients);
     if(nodal_density_flag_){
       for(int i = 0; i < nlocal_nodes; i++){
-        constraint_gradients(i,0) /= initial_strain_energy_;
+        constraint_gradients(i,0) /= initial_heat_capacity_potential_;
       }
     }
     else{
       for(int i = 0; i < rnum_elem; i++){
-        constraint_gradients(i,0) /= initial_strain_energy_;
+        constraint_gradients(i,0) /= initial_heat_capacity_potential_;
       }
     }
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
@@ -274,14 +274,14 @@ public:
 
     FEM_->compute_adjoint_hessian_vec(design_densities, constraint_hessvec, vp);
     for(int i = 0; i < nlocal_nodes; i++){
-      constraint_hessvec(i,0) *= (*up)[0]/initial_strain_energy_;
+      constraint_hessvec(i,0) *= (*up)[0]/initial_heat_capacity_potential_;
     }
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);
     //hvp->describe(*fos,Teuchos::VERB_EXTREME);
     if(FEM_->myrank==0)
-    *(FEM_->fos) << "Called Strain Energy Constraint Hessianvec" << std::endl;
+    *(FEM_->fos) << "Called Heat Capacity Potential Constraint Hessianvec" << std::endl;
     FEM_->hessvec_count++;
   }
 };

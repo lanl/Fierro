@@ -55,7 +55,6 @@ private:
   ROL::Ptr<ROL_MV> ROL_Heat;
   ROL::Ptr<ROL_MV> ROL_Temperatures;
   ROL::Ptr<ROL_MV> ROL_Gradients;
-  Teuchos::RCP<MV> constraint_gradients_distributed;
   Teuchos::RCP<MV> all_node_temperatures_distributed_temp;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
@@ -83,8 +82,6 @@ public:
       //deep copy solve data into the cache variable
       FEM_->all_cached_node_temperatures_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_temperatures_distributed), Teuchos::Copy));
       all_node_temperatures_distributed_temp = FEM_->all_node_temperatures_distributed;
-
-      constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
 
       ROL_Heat = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Heat);
       ROL_Temperatures = ROL::makePtr<ROL_MV>(FEM_->node_temperatures_distributed);
