@@ -1,13 +1,16 @@
 #include "utilities.h"
 #include "Simulation_Parameters_Topology_Optimization.h"
+#include <iostream>
 #include "elements.h"
 #include "swage.h"
+#include "Solver.h"
 
 using namespace utils;
 
-Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Optimization(){
+Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Optimization(Solver *solver_pointer){
 
   //initialize data and flags to defaults
+  solver_pointer_ = solver_pointer;
   report_runtime_flag = false;
   nodal_density_flag = true;
   penalty_power = 3;
@@ -94,7 +97,7 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         module_found = true;
       }
     }
-    if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
+    else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
         if(FEA_Module_List[ifea] == "Heat_Conduction"){
@@ -108,7 +111,7 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         module_found = true;
       }
     }
-    if(TO_Module_List[imodule] == "Mass_Constraint"){
+    else if(TO_Module_List[imodule] == "Mass_Constraint"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
         if(FEA_Module_List[ifea] == "Elasticity"){
@@ -122,7 +125,7 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         module_found = true;
       }
     }
-    if(TO_Module_List[imodule] == "Moment_of_Inertia_Constraint"){
+    else if(TO_Module_List[imodule] == "Moment_of_Inertia_Constraint"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
         if(FEA_Module_List[ifea] == "Elasticity"){
@@ -136,7 +139,7 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         module_found = true;
       }
     }
-    if(TO_Module_List[imodule] == "Strain_Energy_Constraint"){
+    else if(TO_Module_List[imodule] == "Strain_Energy_Constraint"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
         if(FEA_Module_List[ifea] == "Elasticity"){
@@ -149,6 +152,10 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         FEA_Module_List[nfea_modules++] = "Elasticity";
         module_found = true;
       }
+    }
+    else{
+      *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED TO FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule]<<"\" AT FEA MODULE PAIRING" << std::endl;
+      exit_solver(0);
     }
     
     if(module_found){

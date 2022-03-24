@@ -1529,12 +1529,16 @@ void Implicit_Solver::FEA_module_setup(){
       *fos << " ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
-    if(FEA_Module_List[imodule] == "Heat_Conduction"){
+    else if(FEA_Module_List[imodule] == "Heat_Conduction"){
       fea_module_types[imodule] = "Heat_Conduction";
       fea_modules[imodule] = new FEA_Module_Heat_Conduction(this);
       module_found = true; 
       //debug print
       *fos << " HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
+    }
+    else{
+      *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" <<FEA_Module_List[imodule]<<"\"" << std::endl;
+      exit_solver(0);
     }
   }
 }
@@ -1580,6 +1584,11 @@ void Implicit_Solver::setup_optimization_problem(){
   bool objective_declared = false;
   for(int imodule = 0; imodule < nTO_modules; imodule++){
     if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::OBJECTIVE){
+      //check if previous module already defined an objective, there must be one objective module
+      if(objective_declared){
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; ANOTHER OBJECTIVE FUNCTION WITH NAME \"" <<TO_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
+          exit_solver(0);
+      }
       if(TO_Module_List[imodule] == "Strain_Energy_Minimize"){
         //debug print
         *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
@@ -1589,6 +1598,10 @@ void Implicit_Solver::setup_optimization_problem(){
         //debug print
         *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+      }
+      else{
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
+        exit_solver(0);
       }
       objective_declared = true;
     }
@@ -1638,6 +1651,10 @@ void Implicit_Solver::setup_optimization_problem(){
         *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<StrainEnergyConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, false, Function_Arguments[imodule][0]);
       }
+      else{
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
+        exit_solver(0);
+      }
       problem->addConstraint("Equality Constraint",eq_constraint,constraint_mul);
     }
 
@@ -1660,6 +1677,10 @@ void Implicit_Solver::setup_optimization_problem(){
       else if(TO_Module_List[imodule]=="Strain_Energy_Constraint"){
         *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<StrainEnergyConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+      }
+      else{
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED INEQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
+        exit_solver(0);
       }
       problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
     }

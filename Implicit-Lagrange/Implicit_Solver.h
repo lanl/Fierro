@@ -143,7 +143,7 @@ public:
 
   int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
 
-  //debug and performance functions/variables
+  //debug and system functions/variables
   double CPU_Time();
   void init_clock();
   double initial_CPU_time;

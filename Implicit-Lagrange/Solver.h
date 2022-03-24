@@ -13,6 +13,8 @@ public:
 
   virtual void finalize() {}
 
+  virtual void exit_solver(int status);
+
   int setup_flag, finalize_flag;
 
 };

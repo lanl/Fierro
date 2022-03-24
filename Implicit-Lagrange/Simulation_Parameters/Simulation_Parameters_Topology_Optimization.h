@@ -5,10 +5,13 @@
 #include "Simulation_Parameters.h"
 using namespace utils;
 
+//forward declare
+class Solver;
+
 class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
 {
  public:
-  Simulation_Parameters_Topology_Optimization();
+  Simulation_Parameters_Topology_Optimization(Solver *solver_pointer);
   virtual ~Simulation_Parameters_Topology_Optimization();
   virtual void input();
   virtual void FEA_module_setup();
@@ -33,12 +36,15 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   //Topology Optimization parameters
   real_t penalty_power;
 
-  //volumes to hold density constant
+  //pointer to Solver object (just used to consolidate error handling for now)
+  Solver *solver_pointer_;
 
-  //list of TO functions needed by problem
+  //volumes to hold density constant
   
   //types of TO functions
   enum function_type {OBJECTIVE, EQUALITY_CONSTRAINT, INEQUALITY_CONSTRAINT, VECTOR_EQUALITY_CONSTRAINT, VECTOR_INEQUALITY_CONSTRAINT};
+
+  //list of TO functions needed by problem
   std::vector<std::string> TO_Module_List;
   std::vector<function_type> TO_Function_Type;
   std::vector<int> TO_Module_My_FEA_Module;
