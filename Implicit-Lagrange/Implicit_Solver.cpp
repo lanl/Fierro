@@ -1639,7 +1639,7 @@ void Implicit_Solver::setup_optimization_problem(){
       }
       else if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, Function_Arguments[imodule][1]);
+        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], false, Function_Arguments[imodule][0]);
       }
       else if(TO_Module_List[imodule]=="Strain_Energy_Constraint"){
         
@@ -1663,7 +1663,7 @@ void Implicit_Solver::setup_optimization_problem(){
       }
       else if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0]);
+        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
       }
       else if(TO_Module_List[imodule]=="Strain_Energy_Constraint"){
         *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
