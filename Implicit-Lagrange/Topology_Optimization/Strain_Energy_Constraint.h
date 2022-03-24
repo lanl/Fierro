@@ -256,19 +256,26 @@ public:
     (*jvp)[0] = gradient_dot_v;
   }
 
-  void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
+  void applyAdjointHessian(ROL::Vector<real_t> &ahuv, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, Real &tol) {
     // Unwrap hv
-    ROL::Ptr<MV> hvp = getVector(hv);
+    ROL::Ptr<MV> ahuvp = getVector(ahuv);
 
     // Unwrap v
     ROL::Ptr<const MV> vp = getVector(v);
+    ROL::Ptr<const std::vector<real_t>> up = dynamic_cast<const ROL::StdVector<real_t>&>(u).getVector();
     ROL::Ptr<const MV> zp = getVector(z);
     
-    host_vec_array constraint_hessvec = hvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array constraint_hessvec = ahuvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    
+    int rnum_elem = FEM_->rnum_elem;
+    int nlocal_nodes = FEM_->nlocal_nodes;
 
     FEM_->compute_adjoint_hessian_vec(design_densities, constraint_hessvec, vp);
+    for(int i = 0; i < nlocal_nodes; i++){
+      constraint_hessvec(i,0) *= (*up)[0]/initial_strain_energy_;
+    }
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);

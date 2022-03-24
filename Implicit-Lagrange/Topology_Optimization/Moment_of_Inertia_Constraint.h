@@ -517,13 +517,12 @@ public:
   }
   
   
-  void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                const ROL::Vector<real_t> &z, real_t &tol ) {
+  void applyAdjointHessian(ROL::Vector<real_t> &ahuv, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) {
     
     // Unwrap hv
-    ROL::Ptr<MV> hvp = getVector(hv);
+    ROL::Ptr<MV> ahuvp = getVector(ahuv);
 
-    hvp->putScalar(0);
+    ahuvp->putScalar(0);
     
   }
   /*

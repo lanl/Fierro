@@ -160,10 +160,10 @@ public:
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;
   }
 
-  void applyAdjointJacobian(ROL::Vector<real_t> &ajv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &x, real_t &tol) override {
+  void applyAdjointJacobian(ROL::Vector<real_t> &ajv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) override {
     //std::cout << "Started constraint adjoint grad on task " <<FEM_->myrank << std::endl;
      //get Tpetra multivector pointer from the ROL vector
-    ROL::Ptr<const MV> zp = getVector(x);
+    ROL::Ptr<const MV> zp = getVector(z);
     ROL::Ptr<const std::vector<real_t>> vp = dynamic_cast<const ROL::StdVector<real_t>&>(v).getVector();
     ROL::Ptr<MV> ajvp = getVector(ajv);
     
@@ -261,12 +261,12 @@ public:
   }
   
   
-  void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
+  void applyAdjointHessian(ROL::Vector<real_t> &ahuv, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) {
     
     // Unwrap hv
-    ROL::Ptr<MV> hvp = getVector(hv);
+    ROL::Ptr<MV> ahuvp = getVector(ahuv);
 
-    hvp->putScalar(0);
+    ahuvp->putScalar(0);
     
   }
   /*

@@ -160,6 +160,15 @@ public:
     //*fos << std::endl;
     //std::fflush(stdout);
   }
+
+  void hessVec(ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) {
+    
+    // Unwrap hv
+    ROL::Ptr<MV> hvp = getVector(hv);
+
+    hvp->putScalar(0);
+    
+  }
   /*
   void hessVec_12( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
                    const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
