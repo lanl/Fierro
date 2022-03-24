@@ -4842,9 +4842,9 @@ void FEA_Module_Elasticity::init_output(){
     output_dof_names[noutput-1][0] = "strain_xx";
     output_dof_names[noutput-1][1] = "strain_yy";
     output_dof_names[noutput-1][2] = "strain_zz";
-    output_dof_names[noutput-1][3] = "strain_xx";
-    output_dof_names[noutput-1][4] = "strain_yy";
-    output_dof_names[noutput-1][5] = "strain_zz";
+    output_dof_names[noutput-1][3] = "strain_xy";
+    output_dof_names[noutput-1][4] = "strain_xz";
+    output_dof_names[noutput-1][5] = "strain_yz";
   }
   if(output_stress_flag){
     collected_stress_index = noutput;
@@ -4862,9 +4862,9 @@ void FEA_Module_Elasticity::init_output(){
     output_dof_names[noutput-1][0] = "stress_xx";
     output_dof_names[noutput-1][1] = "stress_yy";
     output_dof_names[noutput-1][2] = "stress_zz";
-    output_dof_names[noutput-1][3] = "stress_xx";
-    output_dof_names[noutput-1][4] = "stress_yy";
-    output_dof_names[noutput-1][5] = "stress_zz";
+    output_dof_names[noutput-1][3] = "stress_xy";
+    output_dof_names[noutput-1][4] = "stress_xz";
+    output_dof_names[noutput-1][5] = "stress_yz";
   }
 }
 
