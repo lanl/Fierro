@@ -79,7 +79,7 @@ each surface to use for hammering metal into to form it.
 
 Implicit_Solver::Implicit_Solver() : Solver(){
   //create parameter objects
-  simparam = new Simulation_Parameters_Topology_Optimization();
+  simparam = new Simulation_Parameters_Topology_Optimization(this);
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->Simulation_Parameters::input();
   simparam->input();

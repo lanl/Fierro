@@ -9,7 +9,7 @@ Solver::Solver(){
 }
 
 void Solver::exit_solver(int status){
-  MPI_Barrier();
+  MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
   exit(status);
 }
