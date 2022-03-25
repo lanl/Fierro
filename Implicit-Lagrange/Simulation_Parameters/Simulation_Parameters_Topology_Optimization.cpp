@@ -35,6 +35,19 @@ void Simulation_Parameters_Topology_Optimization::input(){
   TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
+
+  //Combined objective format
+  /*
+  TO_Module_List[nTO_modules] = "Combined_Objective";
+  TO_Function_Type[nTO_modules] = OBJECTIVE;
+  nTO_modules++;
+  //add TO modules for objectives participating in the combined objective
+  TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
+  TO_Function_Type[nTO_modules] = COMBINED_OBJECTIVE_TERM;
+  nTO_modules++;
+  */
+
+  //Constraints
   TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Constraint";
   TO_Function_Type[nTO_modules] = INEQUALITY_CONSTRAINT;
   Function_Arguments[nTO_modules].push_back(0);
@@ -56,6 +69,7 @@ void Simulation_Parameters_Topology_Optimization::input(){
   Function_Arguments[nTO_modules].push_back(0);
   Function_Arguments[nTO_modules].push_back(3);
   nTO_modules++;
+
 
   //example for later
   if(nTO_modules==buffer_size){

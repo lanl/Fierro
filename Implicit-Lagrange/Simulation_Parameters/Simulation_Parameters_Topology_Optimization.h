@@ -42,7 +42,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   //volumes to hold density constant
   
   //types of TO functions
-  enum function_type {OBJECTIVE, EQUALITY_CONSTRAINT, INEQUALITY_CONSTRAINT, VECTOR_EQUALITY_CONSTRAINT, VECTOR_INEQUALITY_CONSTRAINT};
+  enum function_type {OBJECTIVE, COMBINED_OBJECTIVE_TERM, EQUALITY_CONSTRAINT, INEQUALITY_CONSTRAINT, VECTOR_EQUALITY_CONSTRAINT, VECTOR_INEQUALITY_CONSTRAINT};
 
   //list of TO functions needed by problem
   std::vector<std::string> TO_Module_List;
