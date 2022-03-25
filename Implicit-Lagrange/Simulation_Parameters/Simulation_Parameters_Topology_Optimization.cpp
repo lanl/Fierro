@@ -32,13 +32,13 @@ void Simulation_Parameters_Topology_Optimization::input(){
   
   //TO objectives and constraints
   //TO_Module_List[0] = "Strain_Energy_Minimize";
-  TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
+  TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
-  TO_Module_List[nTO_modules] = "Strain_Energy_Constraint";
+  TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Constraint";
   TO_Function_Type[nTO_modules] = INEQUALITY_CONSTRAINT;
   Function_Arguments[nTO_modules].push_back(0);
-  Function_Arguments[nTO_modules].push_back(8);
+  Function_Arguments[nTO_modules].push_back(12);
   nTO_modules++;
   TO_Module_List[nTO_modules] = "Mass_Constraint";
   TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
@@ -163,6 +163,20 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
         FEA_Module_List[nfea_modules++] = "Elasticity";
+        module_found = true;
+      }
+    }
+    else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Constraint"){
+      //check if module type was already allocated
+      for(int ifea = 0; ifea < nfea_modules; ifea++){
+        if(FEA_Module_List[ifea] == "Heat_Conduction"){
+          module_found = true;
+          TO_Module_My_FEA_Module[imodule] = ifea;
+        }
+      }
+      if(!module_found){
+        TO_Module_My_FEA_Module[imodule] = nfea_modules;
+        FEA_Module_List[nfea_modules++] = "Heat_Conduction";
         module_found = true;
       }
     }
