@@ -32,18 +32,31 @@ void Simulation_Parameters_Topology_Optimization::input(){
   
   //TO objectives and constraints
   //TO_Module_List[0] = "Strain_Energy_Minimize";
-  TO_Module_List[0] = "Heat_Capacity_Potential_Minimize";
-  TO_Function_Type[0] = OBJECTIVE;
+  TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
+  TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
-  TO_Module_List[1] = "Strain_Energy_Constraint";
-  TO_Function_Type[1] = INEQUALITY_CONSTRAINT;
-  Function_Arguments[1].push_back(0);
-  Function_Arguments[1].push_back(8);
+  TO_Module_List[nTO_modules] = "Strain_Energy_Constraint";
+  TO_Function_Type[nTO_modules] = INEQUALITY_CONSTRAINT;
+  Function_Arguments[nTO_modules].push_back(0);
+  Function_Arguments[nTO_modules].push_back(8);
   nTO_modules++;
-  TO_Module_List[2] = "Mass_Constraint";
-  TO_Function_Type[2] = EQUALITY_CONSTRAINT;
-  Function_Arguments[2].push_back(0.12);
+  TO_Module_List[nTO_modules] = "Mass_Constraint";
+  TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
+  Function_Arguments[nTO_modules].push_back(0.12);
   nTO_modules++;
+  
+  TO_Module_List[nTO_modules] = "Moment_of_Inertia_Constraint";
+  TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
+  Function_Arguments[nTO_modules].push_back(0.20);
+  Function_Arguments[nTO_modules].push_back(1);
+  nTO_modules++;
+  
+  TO_Module_List[nTO_modules] = "Moment_of_Inertia_Constraint";
+  TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
+  Function_Arguments[nTO_modules].push_back(0);
+  Function_Arguments[nTO_modules].push_back(3);
+  nTO_modules++;
+
   //example for later
   if(nTO_modules==buffer_size){
     buffer_size += 10;

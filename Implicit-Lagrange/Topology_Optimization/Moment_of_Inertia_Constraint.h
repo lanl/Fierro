@@ -59,8 +59,8 @@ private:
   ROL::Ptr<ROL_MV> ROL_Element_Moments_of_Inertia_xx, ROL_Element_Moments_of_Inertia_yy, ROL_Element_Moments_of_Inertia_zz;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
-  Teuchos::RCP<MV> center_of_mass_gradients_distributed;
-  Teuchos::RCP<MV> mass_gradients_distributed;
+  //Teuchos::RCP<MV> center_of_mass_gradients_distributed;
+  //Teuchos::RCP<MV> mass_gradients_distributed;
   real_t initial_moment_of_inertia, initial_Mxx, initial_Myy, initial_Mzz;
   bool inequality_flag_;
   real_t constraint_value_;
@@ -233,14 +233,6 @@ public:
       std::cout << "INITIAL MOMENT OF INERTIA YZ: " << initial_moment_of_inertia << std::endl;
     }
     constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
-
-    if(FEM_->mass_gradients_distributed.is_null()) 
-      FEM_->mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
-    mass_gradients_distributed = FEM_->mass_gradients_distributed;
-
-    if(FEM_->center_of_mass_gradients_distributed.is_null()) 
-      FEM_->center_of_mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, num_dim));
-    center_of_mass_gradients_distributed = FEM_->center_of_mass_gradients_distributed;
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {

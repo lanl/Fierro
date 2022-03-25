@@ -1556,6 +1556,8 @@ void Implicit_Solver::setup_optimization_problem(){
   std::vector<int> TO_Module_My_FEA_Module = simparam->TO_Module_My_FEA_Module;
   std::vector<std::vector<real_t>> Function_Arguments = simparam->Function_Arguments;
   std::vector<Simulation_Parameters_Topology_Optimization::function_type> TO_Function_Type = simparam->TO_Function_Type;
+  std::string constraint_base, constraint_name;
+  std::stringstream number_union;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   GO current_node_index;
   LO local_node_index;
@@ -1632,6 +1634,9 @@ void Implicit_Solver::setup_optimization_problem(){
   //problem->addLinearConstraint("Equality Constraint",eq_constraint,constraint_mul);
   
   for(int imodule = 0; imodule < nTO_modules; imodule++){
+    number_union.str(constraint_base);
+    number_union << imodule + 1;
+    constraint_name = number_union.str();
     ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
     ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
     if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::EQUALITY_CONSTRAINT){
@@ -1655,7 +1660,8 @@ void Implicit_Solver::setup_optimization_problem(){
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
       }
-      problem->addConstraint("Equality Constraint",eq_constraint,constraint_mul);
+      *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
+      problem->addConstraint(constraint_name, eq_constraint, constraint_mul);
     }
 
     if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::INEQUALITY_CONSTRAINT){
@@ -1682,8 +1688,10 @@ void Implicit_Solver::setup_optimization_problem(){
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED INEQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
       }
-      problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
+      *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
+      problem->addConstraint(constraint_name, ineq_constraint, constraint_mul, constraint_bnd);
     }
+    number_union.clear();
   }
 
   //set bounds on design variables
