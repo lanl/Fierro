@@ -3,11 +3,11 @@
 #include <iostream>
 #include "elements.h"
 #include "swage.h"
-#include "Solver.h"
+#include "Implicit_Solver.h"
 
 using namespace utils;
 
-Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Optimization(Solver *solver_pointer){
+Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Optimization(Implicit_Solver *solver_pointer){
 
   //initialize data and flags to defaults
   solver_pointer_ = solver_pointer;
@@ -154,8 +154,9 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
       }
     }
     else{
-      *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED TO FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule]<<"\" AT FEA MODULE PAIRING" << std::endl;
-      exit_solver(0);
+      *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED TOPOLOGY OPTIMIZATION FUNCTION REQUESTED WITH NAME \""
+                              <<TO_Module_List[imodule]<<"\" AT FEA MODULE PAIRING" << std::endl;
+      solver_pointer_->exit_solver(0);
     }
     
     if(module_found){
