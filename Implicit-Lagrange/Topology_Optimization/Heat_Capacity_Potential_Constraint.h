@@ -93,7 +93,7 @@ public:
       ROL_Heat = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Heat);
       ROL_Temperatures = ROL::makePtr<ROL_MV>(FEM_->node_temperatures_distributed);
 
-      initial_heat_capacity_potential_ = ROL_Temperatures->dot(*ROL_Heat)/2;
+      initial_heat_capacity_potential_ = ROL_Temperatures->dot(*ROL_Heat);
       std::cout.precision(10);
       if(FEM_->myrank==0)
         std::cout << "INITIAL HEAT CAPACITY POTENTIAL " << initial_heat_capacity_potential_ << std::endl;
@@ -155,7 +155,7 @@ public:
     ROL::Ptr<const MV> zp = getVector(z);
     ROL::Ptr<std::vector<real_t>> cp = dynamic_cast<ROL::StdVector<real_t>&>(c).getVector();
 
-    real_t current_heat_capacity_potential = ROL_Temperatures->dot(*ROL_Heat)/2;
+    real_t current_heat_capacity_potential = ROL_Temperatures->dot(*ROL_Heat);
     
     if(FEM_->myrank==0)
       std::cout << "CURRENT HEAT CAPACITY POTENTIAL RATIO " << current_heat_capacity_potential/initial_heat_capacity_potential_ << std::endl;
