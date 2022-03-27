@@ -158,7 +158,7 @@ public:
     real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
     
     if(FEM_->myrank==0)
-      std::cout << "CURRENT STRAIN ENERGY RATIO " << current_strain_energy/initial_strain_energy_/constraint_value_
+      std::cout << "CURRENT STRAIN ENERGY RATIO " << current_strain_energy/initial_strain_energy_/constraint_value_ << std::endl;
     if(inequality_flag_)
       (*cp)[0] = current_strain_energy/initial_strain_energy_/constraint_value_;
     else
