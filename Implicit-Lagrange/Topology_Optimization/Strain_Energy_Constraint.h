@@ -76,7 +76,7 @@ public:
   size_t last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Elasticity";
 
-  StrainEnergyConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, bool inequality_flag=true, real_t constraint_value=0) 
+  StrainEnergyConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, real_t constraint_value=0, bool inequality_flag=true,) 
     : useLC_(true) {
       FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);
       nodal_density_flag_ = nodal_density_flag;
@@ -161,9 +161,9 @@ public:
       std::cout << "CURRENT STRAIN ENERGY RATIO " << current_strain_energy/initial_strain_energy_ << std::endl;
 
     if(inequality_flag_)
-      (*cp)[0] = current_strain_energy/initial_strain_energy_;
+      (*cp)[0] = current_strain_energy/initial_strain_energy_/constraint_value_;
     else
-      (*cp)[0] = current_strain_energy/initial_strain_energy_ - constraint_value_;
+      (*cp)[0] = current_strain_energy/initial_strain_energy_/constraint_value_ - 1;
   }
 
   
@@ -203,7 +203,7 @@ public:
       //*fos << std::endl;
       //std::fflush(stdout);
       for(int i = 0; i < nlocal_nodes; i++){
-        constraint_gradients(i,0) *= (*vp)[0]/initial_strain_energy_;
+        constraint_gradients(i,0) *= (*vp)[0]/initial_strain_energy_/constraint_value_;
       }
     }
     else{
@@ -217,7 +217,7 @@ public:
       //*fos << std::endl;
       //std::fflush(stdout);
       for(int i = 0; i < rnum_elem; i++){
-        constraint_gradients(i,0) *= (*vp)[0]/initial_strain_energy_;
+        constraint_gradients(i,0) *= (*vp)[0]/initial_strain_energy_/constraint_value_;
       }
     }
     //std::cout << "Ended constraint adjoint grad on task " <<FEM_->myrank  << std::endl;
@@ -240,12 +240,12 @@ public:
     FEM_->compute_adjoint_gradients(design_densities, constraint_gradients);
     if(nodal_density_flag_){
       for(int i = 0; i < nlocal_nodes; i++){
-        constraint_gradients(i,0) /= initial_strain_energy_;
+        constraint_gradients(i,0) /= initial_strain_energy_/constraint_value_;
       }
     }
     else{
       for(int i = 0; i < rnum_elem; i++){
-        constraint_gradients(i,0) /= initial_strain_energy_;
+        constraint_gradients(i,0) /= initial_strain_energy_/constraint_value_;
       }
     }
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
@@ -274,7 +274,7 @@ public:
 
     FEM_->compute_adjoint_hessian_vec(design_densities, constraint_hessvec, vp);
     for(int i = 0; i < nlocal_nodes; i++){
-      constraint_hessvec(i,0) *= (*up)[0]/initial_strain_energy_;
+      constraint_hessvec(i,0) *= (*up)[0]/initial_strain_energy_/constraint_value_;
     }
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;

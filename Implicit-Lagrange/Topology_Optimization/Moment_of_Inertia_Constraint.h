@@ -82,7 +82,7 @@ public:
   size_t last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Elasticity";
 
-  MomentOfInertiaConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int inertia_component, bool inequality_flag=true, real_t constraint_value = 0) 
+  MomentOfInertiaConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int inertia_component, real_t constraint_value = 0, bool inequality_flag=true) 
   {
     
     FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);

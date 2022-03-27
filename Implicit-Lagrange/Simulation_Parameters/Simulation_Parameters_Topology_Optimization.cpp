@@ -51,7 +51,8 @@ void Simulation_Parameters_Topology_Optimization::input(){
   TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Constraint";
   TO_Function_Type[nTO_modules] = INEQUALITY_CONSTRAINT;
   Function_Arguments[nTO_modules].push_back(0);
-  Function_Arguments[nTO_modules].push_back(12);
+  Function_Arguments[nTO_modules].push_back(1);
+  Function_Arguments[nTO_modules].push_back(20);
   nTO_modules++;
   TO_Module_List[nTO_modules] = "Mass_Constraint";
   TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
