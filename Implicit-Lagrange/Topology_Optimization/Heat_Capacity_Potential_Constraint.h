@@ -158,7 +158,7 @@ public:
     real_t current_heat_capacity_potential = -ROL_Temperatures->dot(*ROL_Heat);
     
     if(FEM_->myrank==0)
-      std::cout << "CURRENT HEAT CAPACITY POTENTIAL RATIO " << current_heat_capacity_potential/initial_heat_capacity_potential_ << std::endl;
+      std::cout << "CURRENT HEAT CAPACITY POTENTIAL RATIO " << current_heat_capacity_potential/initial_heat_capacity_potential_/constraint_value_ << std::endl;
 
     if(inequality_flag_)
       (*cp)[0] = current_heat_capacity_potential/initial_heat_capacity_potential_/constraint_value_;
