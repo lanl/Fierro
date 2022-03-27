@@ -76,7 +76,7 @@ public:
   size_t last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Elasticity";
 
-  StrainEnergyConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, real_t constraint_value=0, bool inequality_flag=true,) 
+  StrainEnergyConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, real_t constraint_value=0, bool inequality_flag=true) 
     : useLC_(true) {
       FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);
       nodal_density_flag_ = nodal_density_flag;
