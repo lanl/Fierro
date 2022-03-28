@@ -11,5 +11,6 @@
 #include "Strain_Energy_Objective.h"
 #include "Heat_Capacity_Potential_Minimize.h"
 #include "Heat_Capacity_Potential_Constraint.h"
+#include "Multi_Objective.h"
 
 #endif // end HEADER_H

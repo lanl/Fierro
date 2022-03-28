@@ -1624,6 +1624,8 @@ void Implicit_Solver::setup_optimization_problem(){
             Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
           }
         }
+        //allocate multi objective function
+        obj = ROL::makePtr<Multi_Objective_TopOpt>(Multi_Objective_Terms, Multi_Objective_Weights);
       }
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
