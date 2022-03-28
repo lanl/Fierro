@@ -1551,18 +1551,23 @@ void Implicit_Solver::setup_optimization_problem(){
   int num_dim = simparam->num_dim;
   bool nodal_density_flag = simparam->nodal_density_flag;
   int nTO_modules = simparam->nTO_modules;
+  int nmulti_objective_modules = simparam->nmulti_objective_modules;
   std::vector<std::string> TO_Module_List = simparam->TO_Module_List;
   std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
   std::vector<int> TO_Module_My_FEA_Module = simparam->TO_Module_My_FEA_Module;
+  std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
+  std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
   std::vector<std::vector<real_t>> Function_Arguments = simparam->Function_Arguments;
   std::vector<Simulation_Parameters_Topology_Optimization::function_type> TO_Function_Type = simparam->TO_Function_Type;
+  std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
+
   std::string constraint_base, constraint_name;
   std::stringstream number_union;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
   GO current_node_index;
   LO local_node_index;
   int num_bdy_patches_in_set;
-  size_t node_id, patch_id;
+  size_t node_id, patch_id, module_id;
   int num_boundary_sets;
   int current_element_index, local_surface_id;
   const_host_vec_array design_densities;
@@ -1600,6 +1605,25 @@ void Implicit_Solver::setup_optimization_problem(){
         //debug print
         *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+      }
+      //Multi-Objective case
+      else if(TO_Module_List[imodule] == "Multi_Objective"){
+        //allocate vector of Objective Functions to pass
+        Multi_Objective_Terms = std::vector<ROL::Ptr<ROL::Objective<real_t>>>(nmulti_objective_modules);
+        for(int imulti = 0; imulti < nmulti_objective_modules; imulti++){
+          //get module index for objective term
+          module_id = Multi_Objective_Modules[imulti];
+          if(TO_Module_List[module_id] == "Strain_Energy_Minimize"){
+            //debug print
+            *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
+            Multi_Objective_Terms[imulti] = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+          }
+          else if(TO_Module_List[module_id] == "Heat_Capacity_Potential_Minimize"){
+            //debug print
+            *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
+            Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+          }
+        }
       }
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;

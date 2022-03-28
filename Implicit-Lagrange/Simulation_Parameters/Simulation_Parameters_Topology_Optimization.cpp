@@ -27,6 +27,8 @@ void Simulation_Parameters_Topology_Optimization::input(){
   int buffer_size = 10;
   TO_Module_List = std::vector<std::string>(buffer_size);
   TO_Function_Type = std::vector<function_type>(buffer_size);
+  Multi_Objective_Modules = std::vector<int>(buffer_size);
+  Multi_Objective_Weights = std::vector<real_t>(buffer_size);
   Function_Arguments = std::vector<std::vector<real_t>>(buffer_size);
   //use pushback to add arguments for each TO module
   
@@ -36,14 +38,22 @@ void Simulation_Parameters_Topology_Optimization::input(){
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
 
-  //Combined objective format
+  //Multi objective format
   /*
-  TO_Module_List[nTO_modules] = "Combined_Objective";
+  TO_Module_List[nTO_modules] = " Multi_Objective";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
-  //add TO modules for objectives participating in the combined objective
+  nmulti_objective_modules = 2;
+  //add TO modules for objectives participating in the multi objective
   TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
-  TO_Function_Type[nTO_modules] = COMBINED_OBJECTIVE_TERM;
+  TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
+  Multi_Objective_Modules[0] = nTO_modules;
+  Multi_Objective_Weights[0] = 0.25;
+  nTO_modules++;
+  TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+  TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
+  Multi_Objective_Modules[1] = nTO_modules;
+  Multi_Objective_Weights[1] = 0.75;
   nTO_modules++;
   */
 
