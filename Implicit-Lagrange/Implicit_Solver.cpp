@@ -1529,6 +1529,15 @@ void Implicit_Solver::FEA_module_setup(){
       *fos << " ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
+    if(FEA_Module_List[imodule] == "Inertial"){
+      fea_module_types[imodule] = "Inertial";
+      fea_modules[imodule] = new FEA_Module_Inertial(this);
+      module_found = true;
+      displacement_module = imodule;
+      //debug print
+      *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
+      
+    }
     else if(FEA_Module_List[imodule] == "Heat_Conduction"){
       fea_module_types[imodule] = "Heat_Conduction";
       fea_modules[imodule] = new FEA_Module_Heat_Conduction(this);

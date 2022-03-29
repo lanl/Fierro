@@ -155,28 +155,28 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
     else if(TO_Module_List[imodule] == "Mass_Constraint"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == "Elasticity"){
+        if(FEA_Module_List[ifea] == "Inertial"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Elasticity";
+        FEA_Module_List[nfea_modules++] = "Inertial";
         module_found = true;
       }
     }
     else if(TO_Module_List[imodule] == "Moment_of_Inertia_Constraint"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == "Elasticity"){
+        if(FEA_Module_List[ifea] == "Inertial"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Elasticity";
+        FEA_Module_List[nfea_modules++] = "Inertial";
         module_found = true;
       }
     }
