@@ -24,6 +24,9 @@ public:
   void compute_moment_gradients(const_host_vec_array design_densities, host_vec_array gradients, int moment_component);
 
   void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component);
+  
+  //forward declare
+  class Simulation_Parameters_Inertial *simparam;
 
   //Global FEA data
   Teuchos::RCP<MV> mass_gradients_distributed;

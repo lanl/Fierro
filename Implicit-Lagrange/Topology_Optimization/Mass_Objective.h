@@ -20,7 +20,7 @@
 #include <ROL_TpetraMultiVector.hpp>
 #include "ROL_Objective.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
-#include "FEA_Module_Elasticity.h"
+#include "FEA_Module_Inertial.h"
 
 class MassObjective_TopOpt : public ROL::Objective<real_t> {
   
@@ -51,7 +51,7 @@ class MassObjective_TopOpt : public ROL::Objective<real_t> {
 
 private:
 
-  FEA_Module_Elasticity *FEM_;
+  FEA_Module_Inertial *FEM_;
   ROL::Ptr<ROL_MV> ROL_Element_Masses;
 
   bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
@@ -67,10 +67,10 @@ private:
 public:
   bool nodal_density_flag_;
   size_t last_comm_step, current_step, last_solve_step;
-  std::string my_fea_module = "Elasticity";
+  std::string my_fea_module = "Inertial";
 
   MassObjective_TopOpt(FEA_Module *FEM, bool nodal_density_flag){
-    FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);
+    FEM_ = dynamic_cast<FEA_Module_Inertial*>(FEM);
     useLC_ = true;
     nodal_density_flag_ = nodal_density_flag;
     last_comm_step = last_solve_step = -1;
@@ -128,7 +128,6 @@ public:
     //get local view of the data
     host_vec_array objective_gradients = gp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    const_host_vec_array design_displacement = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
     if(last_comm_step!=current_step){

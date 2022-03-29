@@ -32,6 +32,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "FEA_Module_Inertial.h"
+#include "Simulation_Parameters_Inertial.h"
 #include "Implicit_Solver.h"
 
 #define MAX_ELEM_NODES 8
@@ -41,6 +42,11 @@ using namespace utils;
 
 
 FEA_Module_Inertial::FEA_Module_Inertial(Implicit_Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+  
+  //create parameter object
+  simparam = new Simulation_Parameters_Inertial();
+  // ---- Read input file, define state and boundary conditions ---- //
+  simparam->input();
   
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
