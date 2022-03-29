@@ -34,13 +34,13 @@ void Simulation_Parameters_Topology_Optimization::input(){
   
   //TO objectives and constraints
   //TO_Module_List[0] = "Strain_Energy_Minimize";
+  /*
   TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
-
+  */
   //Multi objective format
-  /*
-  TO_Module_List[nTO_modules] = " Multi_Objective";
+  TO_Module_List[nTO_modules] = "Multi_Objective";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
   nmulti_objective_modules = 2;
@@ -55,15 +55,17 @@ void Simulation_Parameters_Topology_Optimization::input(){
   Multi_Objective_Modules[1] = nTO_modules;
   Multi_Objective_Weights[1] = 0.75;
   nTO_modules++;
-  */
+  
 
   //Constraints
+  /*
   TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Constraint";
   TO_Function_Type[nTO_modules] = INEQUALITY_CONSTRAINT;
   Function_Arguments[nTO_modules].push_back(0);
   Function_Arguments[nTO_modules].push_back(1);
   Function_Arguments[nTO_modules].push_back(20);
   nTO_modules++;
+  */
   TO_Module_List[nTO_modules] = "Mass_Constraint";
   TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
   Function_Arguments[nTO_modules].push_back(0.12);
@@ -113,12 +115,13 @@ void Simulation_Parameters_Topology_Optimization::input(){
 void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
   
   //initial buffer size for FEA module list storage
+  bool module_found;
   int buffer_size = 10;
   FEA_Module_List = std::vector<std::string>(buffer_size);
   TO_Module_My_FEA_Module = std::vector<int>(buffer_size);
   
   for(int imodule = 0; imodule < nTO_modules; imodule++){
-    bool module_found = false;
+    module_found = false;
     //decides which FEA modules to setup based on user decided TO problem
     //automate selection list later; use std::map maybe?
     if(TO_Module_List[imodule] == "Strain_Energy_Minimize"){
@@ -204,6 +207,9 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         FEA_Module_List[nfea_modules++] = "Heat_Conduction";
         module_found = true;
       }
+    }
+    else if(TO_Module_List[imodule] == "Multi_Objective"){
+      module_found = true;
     }
     else{
       *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED TOPOLOGY OPTIMIZATION FUNCTION REQUESTED WITH NAME \""

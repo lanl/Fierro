@@ -1625,7 +1625,7 @@ void Implicit_Solver::setup_optimization_problem(){
           }
         }
         //allocate multi objective function
-        obj = ROL::makePtr<Multi_Objective_TopOpt>(Multi_Objective_Terms, Multi_Objective_Weights);
+        obj = ROL::makePtr<MultiObjective_TopOpt>(Multi_Objective_Terms, Multi_Objective_Weights);
       }
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;

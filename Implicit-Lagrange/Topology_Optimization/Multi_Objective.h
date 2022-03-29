@@ -73,8 +73,6 @@ public:
     Multi_Objective_Weights_ = Multi_Objective_Weights;
     nobjectives = Multi_Objective_Terms_.size();
     derivative_allocated = false;
-    //derivative storage
-    multi_derivative = Teuchos::rcp(new MV(FEM_->map, 1));
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -104,10 +102,19 @@ public:
     ROL::Ptr<MV> gp = getVector(g);
 
     if(!derivative_allocated){
-
+      //derivative storage
+      multi_derivative = Teuchos::rcp(new MV(gp->getMap(), 1));
+      derivative_allocated = true;
     }
-    gp->putScalar(0);
+    multi_derivative->putScalar(0);
 
+    for(int iobjective = 0; iobjective < nobjectives; iobjective++){
+      Multi_Objective_Terms_[iobjective]->gradient(g, z, tol);
+      multi_derivative->update(Multi_Objective_Weights_[iobjective], *gp, 1);
+    }
+
+    //copy values into g
+    Tpetra::deep_copy(*gp, *multi_derivative);
   }
   
   
@@ -119,9 +126,20 @@ public:
     ROL::Ptr<const MV> vp = getVector(v);
     ROL::Ptr<const MV> zp = getVector(z);
     
-    host_vec_array objective_hessvec = hvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    if(!derivative_allocated){
+      //derivative storage
+      multi_derivative = Teuchos::rcp(new MV(hvp->getMap(), 1));
+      derivative_allocated = true;
+    }
+    multi_derivative->putScalar(0);
+
+    for(int iobjective = 0; iobjective < nobjectives; iobjective++){
+      Multi_Objective_Terms_[iobjective]->hessVec(hv, v, z, tol);
+      multi_derivative->update(Multi_Objective_Weights_[iobjective], *hvp, 1);
+    }
+
+    //copy values into g
+    Tpetra::deep_copy(*hvp, *multi_derivative);
   }
 
 };
