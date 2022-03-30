@@ -239,12 +239,12 @@ public:
     FEM_->compute_adjoint_gradients(design_densities, constraint_gradients);
     if(nodal_density_flag_){
       for(int i = 0; i < nlocal_nodes; i++){
-        constraint_gradients(i,0) /= initial_strain_energy_/constraint_value_;
+        constraint_gradients(i,0) /= initial_strain_energy_*constraint_value_;
       }
     }
     else{
       for(int i = 0; i < rnum_elem; i++){
-        constraint_gradients(i,0) /= initial_strain_energy_/constraint_value_;
+        constraint_gradients(i,0) /= initial_strain_energy_*constraint_value_;
       }
     }
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
