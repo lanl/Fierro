@@ -12,7 +12,7 @@ Simulation_Parameters::Simulation_Parameters(){
   unit_scaling = 1;
   optimization_output_freq = 100;
   restart_file = false;
-  tecplot_input = false;
+  tecplot_input = ansys_dat_input = false;
   nfea_modules = 0;
   element_type = "Hex8";
 }
@@ -24,6 +24,7 @@ void Simulation_Parameters::input(){
   //file input flags
   tecplot_input = false;
   restart_file = false;
+  ansys_input = true;
 
   //simulation spatial dimension
   num_dim = 3;
@@ -32,7 +33,9 @@ void Simulation_Parameters::input(){
   //file readin parameters
   words_per_line = 1;
   tecplot_words_per_line = 3;
+  ansys_dat_node_words_per_line = 3;
   elem_words_per_line = 8;
+  ansys_dat_elem_words_per_line = 8;
   element_type = "Hex8";
 
   //debug and performance report flags

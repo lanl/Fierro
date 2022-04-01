@@ -977,6 +977,8 @@ void FEA_Module_Elasticity::assemble_vector(){
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   int current_element_index, local_surface_id, surf_dim1, surf_dim2;
+  int patch_node_count;
+  CArray<int> patch_local_node_ids;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -1052,6 +1054,7 @@ void FEA_Module_Elasticity::assemble_vector(){
       if(Element_Types(current_element_index)==elements::elem_types::Hex8){
 
       int local_nodes[4];
+      
       //set current quadrature point
       y_quad = iquad / num_gauss_points;
       x_quad = iquad % num_gauss_points;
