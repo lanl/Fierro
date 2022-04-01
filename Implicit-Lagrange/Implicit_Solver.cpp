@@ -62,7 +62,7 @@
 
 #define BUFFER_LINES 1000
 #define MAX_WORD 30
-#define MAX_ELEM_NODES 8
+#define MAX_ELEM_NODES 32
 #define STRAIN_EPSILON 0.000000001
 #define DENSITY_EPSILON 0.0001
 #define BC_EPSILON 1.0e-8
@@ -705,14 +705,39 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
   in->close();
   
   //std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
-  //copy temporary element storage to multivector storage
-  max_nodes_per_element = MAX_ELEM_NODES;
+  
+  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
+  
+  elements::elem_types::elem_type mesh_element_type;
+  if(simparam->element_type == "Hex8"){
+    mesh_element_type = elements::elem_types::Hex8;
+  }
+  else if(simparam->element_type == "Hex20"){
+    mesh_element_type = elements::elem_types::Hex20;
+  }
+  else if(simparam->element_type == "Hex32"){
+    mesh_element_type = elements::elem_types::Hex32;
+  }
 
+  //set element object pointer
+  if(simparam->num_dim==2){
+    element_select->choose_2Delem_type(Element_Types(0), elem2D);
+     max_nodes_per_element = elem2D->num_nodes();
+  }
+  else if(simparam->num_dim==3){
+    element_select->choose_3Delem_type(Element_Types(0), elem);
+     max_nodes_per_element = elem->num_nodes();
+  }
+
+  //simplified for now
+  for(int ielem = 0; ielem < rnum_elem; ielem++)
+    Element_Types(ielem) = mesh_element_type;
+  
+  //copy temporary element storage to multivector storage
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
   nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
-  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
   for(int ielem = 0; ielem < rnum_elem; ielem++)
     for(int inode = 0; inode < elem_words_per_line; inode++)
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
@@ -731,10 +756,6 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
   //construct overlapping element map (since different ranks can own the same elements due to the local node map)
   all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.get_kokkos_view(),0,comm));
 
-  //simplified for now
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    Element_Types(ielem) = elements::elem_types::Hex8;
-
   //element type selection (subject to change)
   // ---- Set Element Type ---- //
   // allocate element type memory
@@ -742,11 +763,6 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
 
   int NE = 1; // number of element types in problem
     
-  //set base type pointer to one of the existing derived type object references
-  if(simparam->num_dim==2)
-  element_select->choose_2Delem_type(Element_Types(0), elem2D);
-  else if(simparam->num_dim==3)
-  element_select->choose_3Delem_type(Element_Types(0), elem);
 
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
@@ -1134,13 +1150,33 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   
   std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
   //copy temporary element storage to multivector storage
-  max_nodes_per_element = MAX_ELEM_NODES;
+  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
+  
+  elements::elem_types::elem_type mesh_element_type;
+  if(simparam->element_type == "Hex8"){
+    mesh_element_type = elements::elem_types::Hex8;
+  }
+  else if(simparam->element_type == "Hex20"){
+    mesh_element_type = elements::elem_types::Hex20;
+  }
+  else if(simparam->element_type == "Hex32"){
+    mesh_element_type = elements::elem_types::Hex32;
+  }
+
+  //set element object pointer
+  if(simparam->num_dim==2){
+    element_select->choose_2Delem_type(Element_Types(0), elem2D);
+     max_nodes_per_element = elem2D->num_nodes();
+  }
+  else if(simparam->num_dim==3){
+    element_select->choose_3Delem_type(Element_Types(0), elem);
+     max_nodes_per_element = elem->num_nodes();
+  }
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
   nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
-  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
   for(int ielem = 0; ielem < rnum_elem; ielem++)
     for(int inode = 0; inode < elem_words_per_line; inode++)
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
@@ -1159,9 +1195,6 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   //construct overlapping element map (since different ranks can own the same elements due to the local node map)
   all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.get_kokkos_view(),0,comm));
 
-  //simplified for now
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    Element_Types(ielem) = elements::elem_types::Hex8;
 
   //element type selection (subject to change)
   // ---- Set Element Type ---- //
@@ -1169,12 +1202,6 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   //elements::elem_type_t* elem_choice;
 
   int NE = 1; // number of element types in problem
-    
-  //set base type pointer to one of the existing derived type object references
-  if(simparam->num_dim==2)
-  element_select->choose_2Delem_type(Element_Types(0), elem2D);
-  else if(simparam->num_dim==3)
-  element_select->choose_3Delem_type(Element_Types(0), elem);
 
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell

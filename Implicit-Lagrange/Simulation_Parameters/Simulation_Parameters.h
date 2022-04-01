@@ -33,6 +33,7 @@ class Simulation_Parameters
   real_t unit_scaling;
   bool restart_file;
   bool tecplot_input;
+  std::string element_type;
 
   //file output parameters
   int optimization_output_freq;

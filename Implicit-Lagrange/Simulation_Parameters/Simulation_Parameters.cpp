@@ -14,6 +14,7 @@ Simulation_Parameters::Simulation_Parameters(){
   restart_file = false;
   tecplot_input = false;
   nfea_modules = 0;
+  element_type = "Hex8";
 }
 
 Simulation_Parameters::~Simulation_Parameters(){
@@ -32,6 +33,7 @@ void Simulation_Parameters::input(){
   words_per_line = 1;
   tecplot_words_per_line = 3;
   elem_words_per_line = 8;
+  element_type = "Hex8";
 
   //debug and performance report flags
   report_runtime_flag = 1;
