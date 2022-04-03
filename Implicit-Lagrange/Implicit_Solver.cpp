@@ -145,11 +145,13 @@ void Implicit_Solver::run(int argc, char *argv[]){
     // ---- Read intial mesh, refine, and build connectivity ---- //
     if(simparam->tecplot_input)
       read_mesh_tecplot(argv[1]);
-    else if(simparam->ansys_input)
+    else if(simparam->ansys_dat_input)
       read_mesh_ansys_dat(argv[1]);
     else
       read_mesh_ensight(argv[1]);
-
+    
+    //debug
+    return;
     init_maps();
     
     std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
@@ -1312,40 +1314,70 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   //The elements section header does specify element count
   num_nodes = 0;
   if(myrank==0){
+    bool searching_for_nodes = true;
     //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
-    for (int j = 1; j <= 2; j++) {
+    while (searching_for_nodes&&in->good()) {
+      getline(*in, skip_line);
+      //std::cout << skip_line << std::endl;
+      line_parse.clear();
+      line_parse.str(skip_line);
+      //stop when the NODES= string is reached
+      while (!line_parse.eof()){
+        line_parse >> substring;
+        //std::cout << substring << std::endl;
+        if(!substring.compare("Nodes")){
+          searching_for_nodes = false;
+          break;
+        }
+      } //while
+      
+    }
+    if(searching_for_nodes){
+      std::cout << "FILE FORMAT ERROR" << std::endl;
+    }
+    //skip 2 lines
+    for (int j = 0; j < 2; j++) {
       getline(*in, skip_line);
       std::cout << skip_line << std::endl;
     } //for
-    getline(*in, read_line);
-    line_parse.str(read_line);
-    //stop when the NODES= string is reached
-    while (!line_parse.eof()){
+
+    //tally node count (bug in dat files seems to print wrong node count so read is done in two passes)
+    //stop when apparent "-1" zone delimiter is reacher
+    searching_for_nodes = true;
+    int node_tally = 0;
+    while (searching_for_nodes) {
+      getline(*in, read_line);
+      //std::cout << read_line << std::endl;
+      line_parse.clear();
+      line_parse.str(read_line);
       line_parse >> substring;
-      if(!substring.compare("NODES=")){
-        line_parse >> num_nodes;
+      
+      //std::cout << substring << std::endl;
+      if(substring == "-1"){
+        searching_for_nodes = false;
+          break;
       }
-    } //while
+      else{
+        node_tally++;
+      }
+      
+    }
+    num_nodes = node_tally;
     std::cout << "declared node count: " << num_nodes << std::endl;
   }
 
-  //task 0 reads file
-  if(myrank==0){
-  in = new std::ifstream();
-  in->open(MESH);
-    //skip 2 lines
-    for (int j = 1; j <= 2; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    } //for
-  }
-  
-  
   //broadcast number of nodes
   MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
   
   //construct contiguous parallel row map now that we know the number of nodes
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  
+  //close and reopen file for second pass now that global node count is known
+  if(myrank==0){
+    in->close();
+    //in = new std::ifstream();
+    in->open(MESH);
+  }
 
   // set the vertices in the mesh read in
   global_size_t local_nrows = map->getNodeNumElements();
@@ -1607,9 +1639,9 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   }
 
   // Close mesh input file
-  if(myrank==0)
-  in->close();
-  
+  if(myrank==0){
+    in->close();
+  }
   std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
   //copy temporary element storage to multivector storage
   Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
@@ -1715,7 +1747,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     dual_node_densities.sync_device();
     dual_node_densities.modify_device();
   }
-
+  
   //debug print element edof
   
   //std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
