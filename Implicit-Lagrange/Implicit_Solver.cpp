@@ -725,11 +725,11 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
 
   //set element object pointer
   if(simparam->num_dim==2){
-    element_select->choose_2Delem_type(Element_Types(0), elem2D);
+    element_select->choose_2Delem_type(mesh_element_type, elem2D);
      max_nodes_per_element = elem2D->num_nodes();
   }
   else if(simparam->num_dim==3){
-    element_select->choose_3Delem_type(Element_Types(0), elem);
+    element_select->choose_3Delem_type(mesh_element_type, elem);
      max_nodes_per_element = elem->num_nodes();
   }
 
@@ -1169,11 +1169,11 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
 
   //set element object pointer
   if(simparam->num_dim==2){
-    element_select->choose_2Delem_type(Element_Types(0), elem2D);
+    element_select->choose_2Delem_type(mesh_element_type, elem2D);
      max_nodes_per_element = elem2D->num_nodes();
   }
   else if(simparam->num_dim==3){
-    element_select->choose_3Delem_type(Element_Types(0), elem);
+    element_select->choose_3Delem_type(mesh_element_type, elem);
      max_nodes_per_element = elem->num_nodes();
   }
 
@@ -1291,7 +1291,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   std::string skip_line, read_line, substring, token;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop;
+  int buffer_loop, buffer_iteration, scan_loop, nodes_per_element;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -1557,12 +1557,9 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   //check that local assignments match global total
 
   
-  //read in element info (supported tecplot format currently assumes one type)
-
-  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(elem_words_per_line);
-  
+  //read in element info
   //seek element connectivity zone
-  etype_index = 0;
+  int etype_index = 0;
   if(myrank==0){
     bool searching_for_elements = true;
     //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
@@ -1630,23 +1627,41 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     }
   }
 
-  if(myrank==0){
-    getline(*in, read_line);
-    line_parse.str(read_line);
-    std::cout << "declared element count: " << num_elem << std::endl;
-    if(num_elem <= 0) std::cout << "ERROR, NO ELEMENTS IN MESH!!!!" << std::endl;
-  }
-
   //broadcast element type
   MPI_Bcast(&etype_index,1,MPI_INT,0,world);
+
+  elements::elem_types::elem_type mesh_element_type;
+  int elem_words_per_line_no_nodes = elem_words_per_line;
+  if(etype_index==1){
+    mesh_element_type = elements::elem_types::Hex8;
+    nodes_per_element = 8;
+    elem_words_per_line += 8;
+  }
+  else if(etype_index==2){
+    mesh_element_type = elements::elem_types::Hex20;
+    nodes_per_element = 20;
+    elem_words_per_line += 20;
+  }
+  else if(etype_index==3){
+    mesh_element_type = elements::elem_types::Hex32;
+    nodes_per_element = 32;
+    elem_words_per_line += 32;
+  }
+  else{
+    *fos << "ERROR: ANSYS ELEMENT TYPE NOT FOUND OR RECOGNIZED" << std::endl;
+    exit_solver(0);
+  }
   
   //broadcast number of elements
   MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
+  
+  *fos << "declared element count: " << num_elem << std::endl;
   //std::cout<<"before initial mesh initialization"<<std::endl;
   
   //read in element connectivity
   //we're gonna reallocate for the words per line expected for the element connectivity
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,elem_words_per_line,MAX_WORD);
+  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,elem_words_per_line,MAX_WORD); 
+  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(nodes_per_element);
 
   //calculate buffer iterations to read number of lines
   buffer_iterations = num_elem/BUFFER_LINES;
@@ -1708,11 +1723,11 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
       //add this element to the local list if any of its nodes belong to this rank according to the map
       //get list of nodes for each element line and check if they belong to the map
       assign_flag = 0;
-      for(int inode = 0; inode < elem_words_per_line; inode++){
+      for(int inode = elem_words_per_line_no_nodes; inode < elem_words_per_line; inode++){
         //as we loop through the nodes belonging to this element we store them
         //if any of these nodes belongs to this rank this list is used to store the element locally
         node_gid = atoi(&read_buffer(scan_loop,inode,0));
-        node_store(inode) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        node_store(inode-elem_words_per_line_no_nodes) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
         //first we add the elements to a dynamically allocated list
         if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
           assign_flag = 1;
@@ -1721,12 +1736,12 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
       }
 
       if(assign_flag){
-        for(int inode = 0; inode < elem_words_per_line; inode++){
-          if((rnum_elem-1)*elem_words_per_line + inode>=buffer_max){ 
-            element_temp.resize((rnum_elem-1)*elem_words_per_line + inode + BUFFER_LINES*elem_words_per_line);
-            buffer_max = (rnum_elem-1)*elem_words_per_line + inode + BUFFER_LINES*elem_words_per_line;
+        for(int inode = 0; inode < nodes_per_element; inode++){
+          if((rnum_elem-1)*nodes_per_element + inode>=buffer_max){ 
+            element_temp.resize((rnum_elem-1)*nodes_per_element + inode + BUFFER_LINES*nodes_per_element);
+            buffer_max = (rnum_elem-1)*nodes_per_element + inode + BUFFER_LINES*nodes_per_element;
           }
-          element_temp[(rnum_elem-1)*elem_words_per_line + inode] = node_store(inode); 
+          element_temp[(rnum_elem-1)*nodes_per_element + inode] = node_store(inode); 
           //std::cout << "VECTOR STORAGE FOR ELEM " << rnum_elem << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
         }
         //assign global element id to temporary list
@@ -1747,29 +1762,14 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
   //copy temporary element storage to multivector storage
   Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
-  
-  elements::elem_types::elem_type mesh_element_type;
-  if(etype_index==1){
-    mesh_element_type = elements::elem_types::Hex8;
-  }
-  else if(etype_index==2){
-    mesh_element_type = elements::elem_types::Hex20;
-  }
-  else if(etype_index==3){
-    mesh_element_type = elements::elem_types::Hex32;
-  }
-  else{
-    *fos << "ERROR: ANSYS ELEMENT TYPE NOT FOUND OR RECOGNIZED" << std::endl;
-    solver_exit(0);
-  }
 
   //set element object pointer
   if(simparam->num_dim==2){
-    element_select->choose_2Delem_type(Element_Types(0), elem2D);
+    element_select->choose_2Delem_type(mesh_element_type, elem2D);
      max_nodes_per_element = elem2D->num_nodes();
   }
   else if(simparam->num_dim==3){
-    element_select->choose_3Delem_type(Element_Types(0), elem);
+    element_select->choose_3Delem_type(mesh_element_type, elem);
      max_nodes_per_element = elem->num_nodes();
   }
 
@@ -1778,8 +1778,8 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    for(int inode = 0; inode < elem_words_per_line; inode++)
-      nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
+    for(int inode = 0; inode < nodes_per_element; inode++)
+      nodes_in_elem(ielem, inode) = element_temp[ielem*nodes_per_element + inode];
 
   //view storage for all local elements connected to local nodes on this rank
   CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
@@ -1787,6 +1787,22 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   //copy temporary global indices storage to view storage
   for(int ielem = 0; ielem < rnum_elem; ielem++)
     All_Element_Global_Indices(ielem) = global_indices_temp[ielem];
+
+  //debug print element edof
+  /*
+  std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
+  
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    std::cout << "elem:  " << All_Element_Global_Indices(ielem)+1 << std::endl;
+    for (int lnode = 0; lnode < 8; lnode++){
+        std::cout << "{ ";
+          std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
+        
+        std::cout << " }"<< std::endl;
+    }
+    std::cout << std::endl;
+  }
+  */
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
@@ -1815,8 +1831,6 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   convert_ensight_to_ijk(5) = 5;
   convert_ensight_to_ijk(6) = 7;
   convert_ensight_to_ijk(7) = 6;
-    
-  int nodes_per_element;
   
   if(num_dim==2)
   for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
@@ -1853,22 +1867,6 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     dual_node_densities.sync_device();
     dual_node_densities.modify_device();
   }
-  
-  //debug print element edof
-  
-  //std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
-
-  //for (int ielem = 0; ielem < rnum_elem; ielem++){
-    //std::cout << "elem:  " << ielem+1 << std::endl;
-    //for (int lnode = 0; lnode < 8; lnode++){
-        //std::cout << "{ ";
-          //std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
-        
-        //std::cout << " }"<< std::endl;
-    //}
-    //std::cout << std::endl;
-  //}
-  
  
 } // end read_mesh
 

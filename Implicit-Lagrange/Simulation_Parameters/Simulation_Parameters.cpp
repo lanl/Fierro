@@ -35,7 +35,7 @@ void Simulation_Parameters::input(){
   tecplot_words_per_line = 3;
   ansys_dat_node_words_per_line = 4;
   elem_words_per_line = 8;
-  ansys_dat_elem_words_per_line = 8;
+  ansys_dat_elem_words_per_line = 11;
   element_type = "Hex8";
 
   //debug and performance report flags
