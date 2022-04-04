@@ -1422,9 +1422,9 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam->tecplot_words_per_line;
-  if(restart_file) words_per_line++;
-  elem_words_per_line = simparam->elem_words_per_line;
+  words_per_line = simparam->ansys_dat_node_words_per_line;
+  //if(restart_file) words_per_line++;
+  elem_words_per_line = simparam->ansys_dat_elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
@@ -1432,6 +1432,36 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   int dof_limit = num_nodes;
   int buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
+  
+  //second pass to now read node coords with global node map defines
+  if(myrank==0){
+    bool searching_for_nodes = true;
+    //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
+    while (searching_for_nodes&&in->good()) {
+      getline(*in, skip_line);
+      //std::cout << skip_line << std::endl;
+      line_parse.clear();
+      line_parse.str(skip_line);
+      //stop when the NODES= string is reached
+      while (!line_parse.eof()){
+        line_parse >> substring;
+        //std::cout << substring << std::endl;
+        if(!substring.compare("Nodes")){
+          searching_for_nodes = false;
+          break;
+        }
+      } //while
+      
+    }
+    if(searching_for_nodes){
+      std::cout << "FILE FORMAT ERROR" << std::endl;
+    }
+    //skip 2 lines
+    for (int j = 0; j < 2; j++) {
+      getline(*in, skip_line);
+      std::cout << skip_line << std::endl;
+    } //for
+  }
   
   //read coords, also density if restarting
   read_index_start = 0;
@@ -1492,11 +1522,11 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
         node_rid = map->getLocalElement(node_gid);
         //extract nodal position from the read buffer
         //for tecplot format this is the three coords in the same line
-        dof_value = atof(&read_buffer(scan_loop,0,0));
-        node_coords(node_rid, 0) = dof_value * unit_scaling;
         dof_value = atof(&read_buffer(scan_loop,1,0));
-        node_coords(node_rid, 1) = dof_value * unit_scaling;
+        node_coords(node_rid, 0) = dof_value * unit_scaling;
         dof_value = atof(&read_buffer(scan_loop,2,0));
+        node_coords(node_rid, 1) = dof_value * unit_scaling;
+        dof_value = atof(&read_buffer(scan_loop,3,0));
         node_coords(node_rid, 2) = dof_value * unit_scaling;
         if(restart_file){
           dof_value = atof(&read_buffer(scan_loop,3,0));
@@ -1513,15 +1543,15 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   
   //debug print nodal positions and indices
   
-  //std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
-  //for (int inode = 0; inode < local_nrows; inode++){
-      //std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
-    //for (int istride = 0; istride < num_dim; istride++){
-       //std::cout << node_coords(inode,istride) << " , ";
-    //}
+  std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
+  for (int inode = 0; inode < local_nrows; inode++){
+      std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
+    for (int istride = 0; istride < num_dim; istride++){
+       std::cout << node_coords(inode,istride) << " , ";
+    }
     //std::cout << node_densities(inode,0);
-    //std::cout << " }"<< std::endl;
-  //}
+    std::cout << " }"<< std::endl;
+  }
   
 
   //check that local assignments match global total
