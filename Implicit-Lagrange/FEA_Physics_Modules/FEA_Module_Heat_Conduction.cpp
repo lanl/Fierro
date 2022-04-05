@@ -60,7 +60,7 @@
 #define MAX_ELEM_NODES 8
 #define FLUX_EPSILON 0.000000001
 #define DENSITY_EPSILON 0.0001
-#define BC_EPSILON 1.0e-8
+#define BC_EPSILON 1.0e-6
 
 using namespace utils;
 
@@ -228,14 +228,14 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   *fos << "tagging beam +z heat flux " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
-  value = 100;
+  value = 0.1;
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Heat_Flux(surf_flux_set_id,0) = 0;
   Boundary_Surface_Heat_Flux(surf_flux_set_id,1) = 0;
-  Boundary_Surface_Heat_Flux(surf_flux_set_id,2) = -0.5/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Heat_Flux(surf_flux_set_id,2) = -50/simparam->unit_scaling/simparam->unit_scaling;
   surf_flux_set_id++;
   *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;

@@ -60,7 +60,7 @@
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
 #define DENSITY_EPSILON 0.0001
-#define BC_EPSILON 1.0e-8
+#define BC_EPSILON 1.0e-6
 
 using namespace utils;
 
@@ -437,12 +437,12 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   *fos << "tagging beam +z force " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
-  value = 100;
+  value = 0.1;
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 12/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
@@ -1023,6 +1023,8 @@ void FEA_Module_Elasticity::assemble_vector(){
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
     force_density[0] = Boundary_Surface_Force_Densities(surface_force_set_id,0);
+    //debug print 
+    //std::cout << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
     force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
     force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
     surface_force_set_id++;
@@ -1043,6 +1045,8 @@ void FEA_Module_Elasticity::assemble_vector(){
     Surface_Nodes = Boundary_Patches(patch_id).node_set;
     //find element index this boundary patch is on
     current_element_index = Boundary_Patches(patch_id).element_id;
+    
+    //std::cout << " CURRENT ELEMENT INDEX " << current_element_index << std::endl;
     local_surface_id = Boundary_Patches(patch_id).local_patch_id;
     //debug print of local surface ids
     //std::cout << " LOCAL SURFACE IDS " << std::endl;
@@ -1054,7 +1058,6 @@ void FEA_Module_Elasticity::assemble_vector(){
       if(Element_Types(current_element_index)==elements::elem_types::Hex8){
 
       int local_nodes[4];
-      
       //set current quadrature point
       y_quad = iquad / num_gauss_points;
       x_quad = iquad % num_gauss_points;
@@ -1173,16 +1176,18 @@ void FEA_Module_Elasticity::assemble_vector(){
         if(!map->isNodeGlobalElement(node_id)) continue;
         node_id = map->getLocalElement(node_id);
         
-        /*
+        
         //debug print block
+        /*
         std::cout << " ------------Element "<< current_element_index + 1 <<"--------------"<<std::endl;
-        std::cout <<  " = , " << " Wedge Product: " << wedge_product << " local node " << local_nodes[node_count] << " node " << node_gid + 1<< " : s " 
+        std::cout <<  " = , " << " Wedge Product: " << wedge_product << " local node " << local_nodes[node_count] << " node " << nodes_in_elem(current_element_index, local_nodes[node_count]) + 1<< " : s " 
         << quad_coordinate(0) << " t " << quad_coordinate(1) << " w " << quad_coordinate(2) << " basis value  "<< basis_values(local_nodes[node_count])
-        << " Nodal Force value"<< Nodal_RHS(num_dim*node_gid)+wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[0]*basis_values(local_nodes[node_count]);
+        << " Nodal Force value"<< Nodal_RHS(num_dim*node_id,0)+wedge_product*quad_coordinate_weight(0)*quad_coordinate_weight(1)*force_density[0]*basis_values(local_nodes[node_count]);
         
         std::cout << " }"<< std::endl;
-        //end debug print block
         */
+        //end debug print block
+        
 
         // Accumulate force vector contribution from this quadrature point
         for(int idim = 0; idim < num_dim; idim++){

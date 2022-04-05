@@ -151,7 +151,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
       read_mesh_ensight(argv[1]);
     
     //debug
-    return;
+    //return;
     init_maps();
     
     std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
@@ -733,7 +733,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
      max_nodes_per_element = elem->num_nodes();
   }
 
-  //simplified for now
+  //1 type per mesh for now
   for(int ielem = 0; ielem < rnum_elem; ielem++)
     Element_Types(ielem) = mesh_element_type;
   
@@ -1166,6 +1166,10 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   else if(simparam->element_type == "Hex32"){
     mesh_element_type = elements::elem_types::Hex32;
   }
+
+  //1 type per mesh for now
+  for(int ielem = 0; ielem < rnum_elem; ielem++)
+    Element_Types(ielem) = mesh_element_type;
 
   //set element object pointer
   if(simparam->num_dim==2){
@@ -1772,6 +1776,10 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     element_select->choose_3Delem_type(mesh_element_type, elem);
      max_nodes_per_element = elem->num_nodes();
   }
+
+  //1 type per mesh for now
+  for(int ielem = 0; ielem < rnum_elem; ielem++)
+    Element_Types(ielem) = mesh_element_type;
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
   nodes_in_elem = dual_nodes_in_elem.view_host();
