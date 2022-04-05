@@ -43,6 +43,7 @@ class Simulation_Parameters
  
   //necessary FEA modules
   std::vector<std::string> FEA_Module_List;
+  std::vector<bool> fea_module_must_read;
   int nfea_modules;
 };
 

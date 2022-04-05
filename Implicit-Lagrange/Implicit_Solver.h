@@ -168,6 +168,7 @@ public:
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;
   std::vector<FEA_Module*> fea_modules;
+  std::vector<bool> fea_module_must_read;
   int nfea_modules;
   int displacement_module;
   

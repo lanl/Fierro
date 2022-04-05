@@ -182,6 +182,8 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //process process list of requested FEA modules to construct list of objects
     FEA_module_setup();
+
+    //Have modules read in boundary/loading conditions if file format provides it
     
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;
     //call boundary routines on fea modules
@@ -1758,11 +1760,58 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-
-  // Close mesh input file
+  
+  //check if ANSYS file has boundary and loading condition zones
+  bool No_Conditions = true;
   if(myrank==0){
+    bool searching_for_conditions = true;
+    //skip lines at the top with nonessential info; stop skipping when "Fixed Supports or Pressure" string is reached
+    while (searching_for_conditions&&in->good()) {
+      getline(*in, skip_line);
+      //std::cout << skip_line << std::endl;
+      line_parse.clear();
+      line_parse.str(skip_line);
+      //stop when the NODES= string is reached
+      while (!line_parse.eof()){
+        line_parse >> substring;
+        //std::cout << substring << std::endl;
+        if(!substring.compare("Supports")||!substring.compare("Pressure")){
+          No_Conditions = searching_for_conditions = false;
+          break;
+        }
+      } //while
+      
+    } //while
+  }
+  
+  //flag elasticity fea module for boundary/loading conditions readin that remains
+  if(!No_Conditions){
+    //look for elasticity module in Simulation Parameters data; if not declared add the module
+    int nfea_modules = simparam->nfea_modules;
+    bool elasticity_found = false;
+    std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
+    for(int imodule = 0; imodule < nfea_modules; imodule++){
+      if(FEA_Module_List[imodule]=="Elasticity"){ 
+        elasticity_found = true;
+        simparam->fea_module_must_read[imodule] = true;
+      }
+    }
+    
+    //add Elasticity module to requested modules in the Simulation Parameters data
+    if(!elasticity_found){
+      simparam->FEA_Module_List.pushback("Elasticity");
+      simparam->fea_module_must_read.pushback(true);
+      simparam->nfea_modules++;
+    }
+
+    
+  }
+
+  // Close mesh input file if no further readin is done by FEA modules for conditions
+  if(myrank==0&&No_Conditions){
     in->close();
   }
+
   std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
   //copy temporary element storage to multivector storage
   Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
@@ -2144,6 +2193,7 @@ void Implicit_Solver::init_maps(){
 void Implicit_Solver::FEA_module_setup(){
   nfea_modules = simparam->nfea_modules;
   std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
+  fea_module_must_read = simparam->fea_module_must_read;
   //allocate lists to size
   fea_module_types = std::vector<std::string>(nfea_modules);
   fea_modules = std::vector<FEA_Module*>(nfea_modules);

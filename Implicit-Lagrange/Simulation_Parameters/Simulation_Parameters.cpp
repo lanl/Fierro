@@ -48,6 +48,7 @@ void Simulation_Parameters::FEA_module_setup(){
   //initial buffer size for FEA module list storage
   int buffer_size = 10;
   FEA_Module_List = std::vector<std::string>(buffer_size);
+  fea_module_must_read = std::vector<bool>(buffer_size);
 
   //decides which FEA modules to setup based on user decided implicit solves
   FEA_Module_List[0] = "Elasticity";
@@ -58,5 +59,11 @@ void Simulation_Parameters::FEA_module_setup(){
   if(nfea_modules==buffer_size){
     buffer_size += 10;
     FEA_Module_List.resize(buffer_size);
+    fea_module_must_read.resize(buffer_size);
+  }
+
+  //initialize
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_module_must_read[imodule] = false;
   }
 }
