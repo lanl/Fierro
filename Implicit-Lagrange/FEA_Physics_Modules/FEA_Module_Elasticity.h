@@ -65,7 +65,7 @@ public:
 
   void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces);
 
-  void read_conditions_ansys_dat(std::ifstream *in);
+  void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header);
 
   //interfaces between user input and creating data structures for bcs
   void generate_bcs();

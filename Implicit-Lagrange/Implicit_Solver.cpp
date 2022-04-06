@@ -186,7 +186,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     //Have modules read in boundary/loading conditions if file format provides it
     for(int imodule = 0; imodule < nfea_modules; imodule++)
       if(fea_module_must_read[imodule])
-        fea_modules[imodule]->read_conditions_ansys_dat(in);
+        fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
 
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;
     //call boundary routines on fea modules
@@ -1767,6 +1767,8 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   //check if ANSYS file has boundary and loading condition zones
   bool No_Conditions = true;
   if(myrank==0){
+    if(in->good())
+      before_condition_header = in->tellg();
     bool searching_for_conditions = true;
     //skip lines at the top with nonessential info; stop skipping when "Fixed Supports or Pressure" string is reached
     while (searching_for_conditions&&in->good()) {

@@ -263,6 +263,7 @@ public:
 
   //file readin variables
   std::ifstream *in;
+  std::streampos before_condition_header;
   int words_per_line, elem_words_per_line;
 
   //file output variables

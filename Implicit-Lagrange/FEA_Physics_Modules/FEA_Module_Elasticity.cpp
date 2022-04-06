@@ -127,10 +127,11 @@ FEA_Module_Elasticity::~FEA_Module_Elasticity(){
 /* ----------------------------------------------------------------------
    Read ANSYS dat format mesh file
 ------------------------------------------------------------------------- */
-void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
+void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header){
 
   char ch;
   int num_dim = simparam->num_dim;
+  int buffer_lines = 1000;
   int p_order = simparam->p_order;
   real_t unit_scaling = simparam->unit_scaling;
   bool restart_file = simparam->restart_file;
@@ -158,6 +159,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
   //The elements section header does specify element count
   num_nodes = 0;
   if(myrank==0){
+    in->seekg(before_condition_header);
     bool searching_for_nodes = true;
     //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
     while (searching_for_nodes&&in->good()) {
@@ -215,13 +217,6 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
   
   //construct contiguous parallel row map now that we know the number of nodes
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
-  
-  //close and reopen file for second pass now that global node count is known
-  if(myrank==0){
-    in->close();
-    //in = new std::ifstream();
-    in->open(MESH);
-  }
 
   // set the vertices in the mesh read in
   global_size_t local_nrows = map->getNodeNumElements();
@@ -271,11 +266,11 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
   elem_words_per_line = simparam->ansys_dat_elem_words_per_line;
 
   //allocate read buffer
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
+  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines,words_per_line,MAX_WORD);
 
   int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
-  if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
+  int buffer_iterations = dof_limit/buffer_lines;
+  if(dof_limit%buffer_lines!=0) buffer_iterations++;
   
   //second pass to now read node coords with global node map defines
   if(myrank==0){
@@ -312,7 +307,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
   for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
     //pack buffer on rank 0
     if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
+      for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
         getline(*in,read_line);
         line_parse.clear();
         line_parse.str(read_line);
@@ -329,7 +324,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
     }
     else if(myrank==0){
       buffer_loop=0;
-      while(buffer_iteration*BUFFER_LINES+buffer_loop < num_nodes) {
+      while(buffer_iteration*buffer_lines+buffer_loop < num_nodes) {
         getline(*in,read_line);
         line_parse.clear();
         line_parse.str(read_line);
@@ -345,7 +340,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
     }
 
     //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*words_per_line*MAX_WORD,MPI_CHAR,0,world);
+    MPI_Bcast(read_buffer.pointer(),buffer_lines*words_per_line*MAX_WORD,MPI_CHAR,0,world);
     //broadcast how many nodes were read into this buffer iteration
     MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
 
@@ -379,27 +374,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
         //extract density if restarting
       }
     }
-    read_index_start+=BUFFER_LINES;
+    read_index_start+=buffer_lines;
   }
-
-  
-  //debug print of nodal data
-  
-  //debug print nodal positions and indices
-  /*
-  std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
-  for (int inode = 0; inode < local_nrows; inode++){
-      std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
-    for (int istride = 0; istride < num_dim; istride++){
-       std::cout << node_coords(inode,istride) << " , ";
-    }
-    //std::cout << node_densities(inode,0);
-    std::cout << " }"<< std::endl;
-  }
-  */
-
-  //check that local assignments match global total
-
   
   //read in element info
   //seek element connectivity zone
@@ -504,20 +480,20 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
   
   //read in element connectivity
   //we're gonna reallocate for the words per line expected for the element connectivity
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,elem_words_per_line,MAX_WORD); 
+  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines,elem_words_per_line,MAX_WORD); 
   CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(nodes_per_element);
 
   //calculate buffer iterations to read number of lines
-  buffer_iterations = num_elem/BUFFER_LINES;
+  buffer_iterations = num_elem/buffer_lines;
   int assign_flag;
 
   //dynamic buffer used to store elements before we know how many this rank needs
-  std::vector<size_t> element_temp(BUFFER_LINES*elem_words_per_line);
-  std::vector<size_t> global_indices_temp(BUFFER_LINES);
-  size_t buffer_max = BUFFER_LINES*elem_words_per_line;
-  size_t indices_buffer_max = BUFFER_LINES;
+  std::vector<size_t> element_temp(buffer_lines*elem_words_per_line);
+  std::vector<size_t> global_indices_temp(buffer_lines);
+  size_t buffer_max = buffer_lines*elem_words_per_line;
+  size_t indices_buffer_max = buffer_lines;
 
-  if(num_elem%BUFFER_LINES!=0) buffer_iterations++;
+  if(num_elem%buffer_lines!=0) buffer_iterations++;
   read_index_start = 0;
   //std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
   rnum_elem = 0;
@@ -525,7 +501,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
   for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
     //pack buffer on rank 0
     if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
+      for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
         getline(*in,read_line);
         line_parse.clear();
         line_parse.str(read_line);
@@ -539,7 +515,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
     }
     else if(myrank==0){
       buffer_loop=0;
-      while(buffer_iteration*BUFFER_LINES+buffer_loop < num_elem) {
+      while(buffer_iteration*buffer_lines+buffer_loop < num_elem) {
         getline(*in,read_line);
         line_parse.clear();
         line_parse.str(read_line);
@@ -555,7 +531,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
     }
 
     //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*elem_words_per_line*MAX_WORD,MPI_CHAR,0,world);
+    MPI_Bcast(read_buffer.pointer(),buffer_lines*elem_words_per_line*MAX_WORD,MPI_CHAR,0,world);
     //broadcast how many nodes were read into this buffer iteration
     MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
     
@@ -582,185 +558,21 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in){
       if(assign_flag){
         for(int inode = 0; inode < nodes_per_element; inode++){
           if((rnum_elem-1)*nodes_per_element + inode>=buffer_max){ 
-            element_temp.resize((rnum_elem-1)*nodes_per_element + inode + BUFFER_LINES*nodes_per_element);
-            buffer_max = (rnum_elem-1)*nodes_per_element + inode + BUFFER_LINES*nodes_per_element;
+            element_temp.resize((rnum_elem-1)*nodes_per_element + inode + buffer_lines*nodes_per_element);
+            buffer_max = (rnum_elem-1)*nodes_per_element + inode + buffer_lines*nodes_per_element;
           }
           element_temp[(rnum_elem-1)*nodes_per_element + inode] = node_store(inode); 
           //std::cout << "VECTOR STORAGE FOR ELEM " << rnum_elem << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
         }
         //assign global element id to temporary list
         if(rnum_elem-1>=indices_buffer_max){ 
-          global_indices_temp.resize(rnum_elem-1 + BUFFER_LINES);
-          indices_buffer_max = rnum_elem-1 + BUFFER_LINES;
+          global_indices_temp.resize(rnum_elem-1 + buffer_lines);
+          indices_buffer_max = rnum_elem-1 + buffer_lines;
         }
         global_indices_temp[rnum_elem-1] = elem_gid;
       }
     }
-    read_index_start+=BUFFER_LINES;
-  }
-  
-  //check if ANSYS file has boundary and loading condition zones
-  bool No_Conditions = true;
-  if(myrank==0){
-    bool searching_for_conditions = true;
-    //skip lines at the top with nonessential info; stop skipping when "Fixed Supports or Pressure" string is reached
-    while (searching_for_conditions&&in->good()) {
-      getline(*in, skip_line);
-      //std::cout << skip_line << std::endl;
-      line_parse.clear();
-      line_parse.str(skip_line);
-      //stop when the NODES= string is reached
-      while (!line_parse.eof()){
-        line_parse >> substring;
-        //std::cout << substring << std::endl;
-        if(!substring.compare("Supports")||!substring.compare("Pressure")){
-          No_Conditions = searching_for_conditions = false;
-          break;
-        }
-      } //while
-      
-    } //while
-  }
-  
-  //flag elasticity fea module for boundary/loading conditions readin that remains
-  if(!No_Conditions){
-    //look for elasticity module in Simulation Parameters data; if not declared add the module
-    int nfea_modules = simparam->nfea_modules;
-    bool elasticity_found = false;
-    std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
-    for(int imodule = 0; imodule < nfea_modules; imodule++){
-      if(FEA_Module_List[imodule]=="Elasticity"){ 
-        elasticity_found = true;
-        simparam->fea_module_must_read[imodule] = true;
-      }
-    }
-    
-    //add Elasticity module to requested modules in the Simulation Parameters data
-    if(!elasticity_found){
-      simparam->FEA_Module_List.push_back("Elasticity");
-      simparam->fea_module_must_read.push_back(true);
-      simparam->nfea_modules++;
-    }
-
-    
-  }
-
-  // Close mesh input file if no further readin is done by FEA modules for conditions
-  if(myrank==0&&No_Conditions){
-    in->close();
-  }
-
-  std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
-  //copy temporary element storage to multivector storage
-  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
-
-  //set element object pointer
-  if(simparam->num_dim==2){
-    element_select->choose_2Delem_type(mesh_element_type, elem2D);
-     max_nodes_per_element = elem2D->num_nodes();
-  }
-  else if(simparam->num_dim==3){
-    element_select->choose_3Delem_type(mesh_element_type, elem);
-     max_nodes_per_element = elem->num_nodes();
-  }
-
-  //1 type per mesh for now
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    Element_Types(ielem) = mesh_element_type;
-
-  dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
-  dual_nodes_in_elem.modify_host();
-
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    for(int inode = 0; inode < nodes_per_element; inode++)
-      nodes_in_elem(ielem, inode) = element_temp[ielem*nodes_per_element + inode];
-
-  //view storage for all local elements connected to local nodes on this rank
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
-
-  //copy temporary global indices storage to view storage
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    All_Element_Global_Indices(ielem) = global_indices_temp[ielem];
-
-  //debug print element edof
-  /*
-  std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
-  
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    std::cout << "elem:  " << All_Element_Global_Indices(ielem)+1 << std::endl;
-    for (int lnode = 0; lnode < 8; lnode++){
-        std::cout << "{ ";
-          std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
-        
-        std::cout << " }"<< std::endl;
-    }
-    std::cout << std::endl;
-  }
-  */
-
-  //delete temporary element connectivity and index storage
-  std::vector<size_t>().swap(element_temp);
-  std::vector<size_t>().swap(global_indices_temp);
-  
-  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.get_kokkos_view(),0,comm));
-
-
-  //element type selection (subject to change)
-  // ---- Set Element Type ---- //
-  // allocate element type memory
-  //elements::elem_type_t* elem_choice;
-
-  int NE = 1; // number of element types in problem
-
-  // Convert ijk index system to the finite element numbering convention
-  // for vertices in cell
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
-  convert_ensight_to_ijk(0) = 0;
-  convert_ensight_to_ijk(1) = 1;
-  convert_ensight_to_ijk(2) = 3;
-  convert_ensight_to_ijk(3) = 2;
-  convert_ensight_to_ijk(4) = 4;
-  convert_ensight_to_ijk(5) = 5;
-  convert_ensight_to_ijk(6) = 7;
-  convert_ensight_to_ijk(7) = 6;
-  
-  if(num_dim==2)
-  for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
-    //set nodes per element
-    element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
-    nodes_per_element = elem2D->num_nodes();
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-    }   
-        
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
-    }
-  }
-
-  if(num_dim==3)
-  for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
-    //set nodes per element
-    element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
-    nodes_per_element = elem->num_nodes();
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-    }   
-        
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
-    }
-  }
-
-  //synchronize device data
-  dual_node_coords.sync_device();
-  dual_node_coords.modify_device();
-  if(restart_file){
-    dual_node_densities.sync_device();
-    dual_node_densities.modify_device();
+    read_index_start+=buffer_lines;
   }
  
 } // end read_mesh

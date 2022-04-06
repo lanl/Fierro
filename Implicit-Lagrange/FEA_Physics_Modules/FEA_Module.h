@@ -91,7 +91,7 @@ public:
 
   virtual int solve() {}
 
-  virtual void read_conditions_ansys_dat(std::ifstream *in) {}
+  virtual void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header) {}
 
   virtual void linear_solver_parameters() {}
 
