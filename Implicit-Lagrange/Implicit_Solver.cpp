@@ -184,7 +184,10 @@ void Implicit_Solver::run(int argc, char *argv[]){
     FEA_module_setup();
 
     //Have modules read in boundary/loading conditions if file format provides it
-    
+    for(int imodule = 0; imodule < nfea_modules; imodule++)
+      if(fea_module_must_read[imodule])
+        fea_modules[imodule]->read_conditions_ansys_dat(in);
+
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;
     //call boundary routines on fea modules
     for(int imodule = 0; imodule < nfea_modules; imodule++)
@@ -1799,8 +1802,8 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     
     //add Elasticity module to requested modules in the Simulation Parameters data
     if(!elasticity_found){
-      simparam->FEA_Module_List.pushback("Elasticity");
-      simparam->fea_module_must_read.pushback(true);
+      simparam->FEA_Module_List.push_back("Elasticity");
+      simparam->fea_module_must_read.push_back(true);
       simparam->nfea_modules++;
     }
 

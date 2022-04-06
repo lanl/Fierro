@@ -12,6 +12,7 @@
 #include <Teuchos_Tuple.hpp>
 #include <Teuchos_VerboseObject.hpp>
 
+#include <fstream>
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
@@ -89,6 +90,8 @@ public:
   virtual void generate_applied_loads() {}
 
   virtual int solve() {}
+
+  virtual void read_conditions_ansys_dat(std::ifstream *in) {}
 
   virtual void linear_solver_parameters() {}
 
