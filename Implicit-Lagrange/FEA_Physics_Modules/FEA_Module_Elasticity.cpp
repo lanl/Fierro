@@ -197,10 +197,10 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       line_parse2.str(substring);
       while(line_parse2.good()){
       getline(line_parse2, token, ',');
-      if(!token.compare("FIXEDSU"){
+      if(!token.compare("FIXEDSU")){
 
       }
-      if(!token.compare("NODE"){
+      if(!token.compare("NODE")){
         
       }
       //read number of nodes/dof in boundary condition zone
@@ -217,58 +217,11 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 
   }
 
-  //broadcast number of nodes
-  MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
-  
-  //construct contiguous parallel row map now that we know the number of nodes
-  map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
-
   // set the vertices in the mesh read in
   global_size_t local_nrows = map->getNodeNumElements();
   nlocal_nodes = local_nrows;
-  //populate local row offset data from global data
-  global_size_t min_gid = map->getMinGlobalIndex();
-  global_size_t max_gid = map->getMaxGlobalIndex();
-  global_size_t index_base = map->getIndexBase();
-  //debug print
-  //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
-  //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> local_dof_indices(nlocal_nodes*num_dim, "local_dof_indices");
-  for(int i = 0; i < nlocal_nodes; i++){
-    for(int j = 0; j < num_dim; j++)
-    local_dof_indices(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
-  }
-  
-  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.get_kokkos_view(),0,comm) );
-
-  //allocate node storage with dual view
-  dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
-  if(restart_file)
-    dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
-
-  //local variable for host view in the dual view
-  host_vec_array node_coords = dual_node_coords.view_host();
-  if(restart_file)
-    node_densities = dual_node_densities.view_host();
-  //notify that the host view is going to be modified in the file readin
-  dual_node_coords.modify_host();
-  if(restart_file)
-    dual_node_densities.modify_host();
-
-  //old swage method
-  //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
-    
-  std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
-
-  // read the initial mesh coordinates
-  // x-coords
-  /*only task 0 reads in nodes and elements from the input file
-  stores node data in a buffer and communicates once the buffer cap is reached
-  or the data ends*/
 
   words_per_line = simparam->ansys_dat_node_words_per_line;
-  //if(restart_file) words_per_line++;
-  elem_words_per_line = simparam->ansys_dat_elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines,words_per_line,MAX_WORD);
@@ -276,36 +229,6 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   int dof_limit = num_nodes;
   int buffer_iterations = dof_limit/buffer_lines;
   if(dof_limit%buffer_lines!=0) buffer_iterations++;
-  
-  //second pass to now read node coords with global node map defines
-  if(myrank==0){
-    bool searching_for_nodes = true;
-    //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
-    while (searching_for_nodes&&in->good()) {
-      getline(*in, skip_line);
-      //std::cout << skip_line << std::endl;
-      line_parse.clear();
-      line_parse.str(skip_line);
-      //stop when the NODES= string is reached
-      while (!line_parse.eof()){
-        line_parse >> substring;
-        //std::cout << substring << std::endl;
-        if(!substring.compare("Nodes")){
-          searching_for_nodes = false;
-          break;
-        }
-      } //while
-      
-    }
-    if(searching_for_nodes){
-      std::cout << "FILE FORMAT ERROR" << std::endl;
-    }
-    //skip 2 lines
-    for (int j = 0; j < 2; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    } //for
-  }
   
   //read coords, also density if restarting
   read_index_start = 0;
@@ -451,37 +374,6 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       std::cout << skip_line << std::endl;
     }
   }
-
-  //broadcast element type
-  MPI_Bcast(&etype_index,1,MPI_INT,0,world);
-
-  elements::elem_types::elem_type mesh_element_type;
-  int elem_words_per_line_no_nodes = elem_words_per_line;
-  if(etype_index==1){
-    mesh_element_type = elements::elem_types::Hex8;
-    nodes_per_element = 8;
-    elem_words_per_line += 8;
-  }
-  else if(etype_index==2){
-    mesh_element_type = elements::elem_types::Hex20;
-    nodes_per_element = 20;
-    elem_words_per_line += 20;
-  }
-  else if(etype_index==3){
-    mesh_element_type = elements::elem_types::Hex32;
-    nodes_per_element = 32;
-    elem_words_per_line += 32;
-  }
-  else{
-    *fos << "ERROR: ANSYS ELEMENT TYPE NOT FOUND OR RECOGNIZED" << std::endl;
-    exit_solver(0);
-  }
-  
-  //broadcast number of elements
-  MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
-  
-  *fos << "declared element count: " << num_elem << std::endl;
-  //std::cout<<"before initial mesh initialization"<<std::endl;
   
   //read in element connectivity
   //we're gonna reallocate for the words per line expected for the element connectivity
@@ -580,7 +472,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     read_index_start+=buffer_lines;
   }
  
-} // end read_mesh
+} // end read_conditions_ansys_dat
 
 /* ----------------------------------------------------------------------------
    Initialize sets of element boundary surfaces and arrays for input conditions
@@ -623,13 +515,13 @@ void FEA_Module_Elasticity::init_boundary_sets (int num_sets){
   }
   
   //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
-  Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_sets);
+  Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_sets, "Boundary_Condition_Type_List");
   NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
   Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
   if(num_surface_disp_sets)
-    Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets,3);
+    Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets, 3, "Boundary_Surface_Force_Densities");
   if(num_surface_force_sets)
-    Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets,3);
+    Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets, 3, "Boundary_Surface_Displacements");
 
   //initialize data
   for(int iset = 0; iset < num_sets; iset++) NBoundary_Condition_Patches(iset) = 0;
@@ -643,39 +535,96 @@ void FEA_Module_Elasticity::init_boundary_sets (int num_sets){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::grow_boundary_sets(int num_sets){
-  num_boundary_conditions = simparam->NB;
-  num_surface_force_sets = simparam->NBSF;
-  num_surface_disp_sets = simparam->NBD;
   int num_dim = simparam->num_dim;
-  
-  // set the number of boundary sets
-  if(myrank == 0)
-    std::cout << "building boundary sets " << std::endl;
-  
-  //initialize to 1 since there must be at least 1 boundary set anyway; read in may occure later
-  if(num_boundary_conditions==0) num_boundary_conditions = 1;
 
   if(num_sets == 0){
-    std::cout << " Warning: number of boundary conditions = 0";
+    std::cout << " Warning: number of boundary conditions being set to 0";
+    return;
+  }
+
+  //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
+  if(num_sets>max_boundary_sets){
+    //temporary storage for previous data
+    CArrayKokkos<int, array_layout, HostSpace, memory_traits> Temp_Boundary_Condition_Type_List = Boundary_Condition_Type_List;
+    CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_NBoundary_Condition_Patches = NBoundary_Condition_Patches;
+    CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_Boundary_Condition_Patches = Boundary_Condition_Patches;
+    
+    max_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
+    Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(max_boundary_sets, "Boundary_Condition_Type_List");
+    NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_boundary_sets, "NBoundary_Condition_Patches");
+    Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_boundary_sets, nboundary_patches, "Boundary_Condition_Patches");
+
+    //copy previous data back over
+    for(int iset = 0; iset < num_boundary_conditions; iset++){
+      Boundary_Condition_Type_List(iset) = Temp_Boundary_Condition_Type_List(iset);
+      NBoundary_Condition_Patches(iset) = Temp_NBoundary_Condition_Patches(iset);
+      for(int ipatch = 0; ipatch < nboundary_patches; ipatch++){
+        Boundary_Condition_Patches(iset, ipatch) = Temp_Boundary_Condition_Patches(iset, ipatch);
+      }
+    }
+    
+    //initialize data
+    for(int iset = num_boundary_conditions; iset < max_boundary_sets; iset++) NBoundary_Condition_Patches(iset) = 0;
+
+    //initialize
+    for(int ibdy = num_boundary_conditions; ibdy < max_boundary_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Grow storage for displacement boundary conditions
+------------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::grow_displacement_condition_sets(int num_sets){
+  int num_dim = simparam->num_dim;
+  
+  if(num_sets == 0){
+    std::cout << " Warning: number of boundary conditions being set to 0";
     return;
   }
   
   //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
-  Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_sets);
-  NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
-  Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
-  if(num_surface_disp_sets)
-    Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets,3);
-  if(num_surface_force_sets)
-    Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets,3);
+  if(num_sets>max_disp_boundary_sets){
+    //temporary storage for previous data
+    CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets,3) Temp_Boundary_Surface_Displacements = Boundary_Surface_Displacements;
+    
+    max_disp_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
+    Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_disp_boundary_sets, 3, "Boundary_Condition_Type_List");
 
-  //initialize data
-  for(int iset = 0; iset < num_sets; iset++) NBoundary_Condition_Patches(iset) = 0;
-
-   //initialize
-  for(int ibdy=0; ibdy < num_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
+    //copy previous data back over
+    for(int iset = 0; iset < num_surface_disp_sets; iset++){
+      Boundary_Surface_Displacements(iset) = Temp_Boundary_Surface_Displacements(iset);
+    }
+  }
+  
 }
 
+/* ----------------------------------------------------------------------------
+   Grow boundary conditions sets of element boundary surfaces
+------------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
+  int num_dim = simparam->num_dim;
+  
+  if(num_sets == 0){
+    std::cout << " Warning: number of boundary conditions being set to 0";
+    return;
+  }
+  
+  //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
+  if(num_sets>max_load_boundary_sets){
+    //temporary storage for previous data
+    CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets,3) Temp_Boundary_Surface_Force_Densities = Boundary_Surface_Force_Densities;
+    
+    max_load_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
+    Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_load_boundary_sets, 3, "Boundary_Condition_Type_List");
+
+    //copy previous data back over
+    for(int iset = 0; iset < num_surface_force_sets; iset++){
+      Boundary_Surface_Force_Densities(iset) = Temp_Boundary_Surface_Force_Densities(iset);
+    }
+  }
+}
 
 /* ----------------------------------------------------------------------
    Assign sets of element boundary surfaces corresponding to user BCs

@@ -32,6 +32,10 @@ public:
   void init_boundary_sets(int num_boundary_sets);
 
   void grow_boundary_sets(int num_boundary_sets);
+
+  void grow_displacement_condition_sets(int num_boundary_sets);
+
+  void grow_loading_condition_sets(int num_boundary_sets);
   
   void init_assembly();
 
