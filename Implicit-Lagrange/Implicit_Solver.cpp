@@ -184,22 +184,23 @@ void Implicit_Solver::run(int argc, char *argv[]){
     FEA_module_setup();
 
     //Have modules read in boundary/loading conditions if file format provides it
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      if(fea_module_must_read[imodule])
+    for(int imodule = 0; imodule < nfea_modules; imodule++){
+      if(fea_module_must_read[imodule]){
         fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
+      }
+      else{
+        fea_modules[imodule]->init_boundaries();
+
+        //set boundary conditions for FEA modules
+        fea_modules[imodule]->generate_bcs();
+
+        //set applied loading conditions for FEA modules
+        fea_modules[imodule]->generate_applied_loads();
+      }
+    }
 
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;
     //call boundary routines on fea modules
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->init_boundaries();
-
-    //set boundary conditions for FEA modules
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->generate_bcs();
-
-    //set applied loading conditions for FEA modules
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->generate_applied_loads();
 
     if(myrank == 0)
     std::cout << "Starting init assembly" << std::endl <<std::flush;
