@@ -133,6 +133,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   char ch;
   int num_dim = simparam->num_dim;
   int buffer_lines = 1000;
+  int max_word = 30;
   int p_order = simparam->p_order;
   real_t unit_scaling = simparam->unit_scaling;
   int local_node_index, current_column_index;
@@ -161,7 +162,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     in->seekg(before_condition_header);
     bool searching_for_conditions = true;
     //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
-    while (searching_for_conditions&&in->good()) {
+    while (in->good()) {
       getline(*in, skip_line);
       //std::cout << skip_line << std::endl;
       line_parse.clear();
@@ -173,12 +174,43 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         if(!substring.compare("Supports")){
           searching_for_conditions = false;
           boundary_condition_zone = true;
-          break;
+          
+          if(boundary_condition_zone){
+            int dof_count;
+            bool per_node_flag = false;
+            bool zero_displacement = false;
+            getline(*in, read_line);
+            std::cout << read_line << std::endl;
+            line_parse.clear();
+            line_parse.str(read_line);
+            line_parse >> substring;
+            //parse boundary condition type out of jumble of comma delimited entries
+            line_parse2.clear();
+            line_parse2.str(substring);
+            while(line_parse2.good()){
+              getline(line_parse2, token, ',');
+              if(!token.compare("FIXEDSU")){
+                zero_displacement = true;
+              }
+              if(!token.compare("NODE")){
+                per_node_flag = true;
+              }
+            }
+            //read number of nodes/dof in boundary condition zone
+            line_parse >> dof_count;
+
+            //read print block formatting
+            if(per_node_flag){
+              //allocate read buffer
+              read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines,words_per_line,max_word);
+            }
+
+            //Apply Conditions to node
+          }
         }
         if(!substring.compare("Pressure")){
           searching_for_conditions = false;
           loading_condition_zone = true;
-          break;
         }
       } //while
       
@@ -186,45 +218,13 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     if(searching_for_conditions){
       std::cout << "FILE FORMAT ERROR" << std::endl;
     }
-    if(boundary_condition_zone){
-      getline(*in, read_line);
-      std::cout << read_line << std::endl;
-      line_parse.clear();
-      line_parse.str(read_line);
-      line_parse >> substring;
-      //parse boundary condition type out of jumble of comma delimited entries
-      line_parse2.clear();
-      line_parse2.str(substring);
-      while(line_parse2.good()){
-      getline(line_parse2, token, ',');
-      if(!token.compare("FIXEDSU")){
-
-      }
-      if(!token.compare("NODE")){
-        
-      }
-      //read number of nodes/dof in boundary condition zone
-      line_parse >> 
-    }
-    //element count should be the last token read in
-    num_elem = std::stod(token);
-    }
-    //read boundary condition type and number of fixed conditions
-    for (int j = 0; j < 2; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    } //for
 
   }
-
-  // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getNodeNumElements();
-  nlocal_nodes = local_nrows;
 
   words_per_line = simparam->ansys_dat_node_words_per_line;
 
   //allocate read buffer
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines,words_per_line,MAX_WORD);
+  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines,words_per_line,max_word);
 
   int dof_limit = num_nodes;
   int buffer_iterations = dof_limit/buffer_lines;
@@ -268,7 +268,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     }
 
     //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),buffer_lines*words_per_line*MAX_WORD,MPI_CHAR,0,world);
+    MPI_Bcast(read_buffer.pointer(),buffer_lines*words_per_line*max_word,MPI_CHAR,0,world);
     //broadcast how many nodes were read into this buffer iteration
     MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
 
@@ -295,10 +295,6 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         node_coords(node_rid, 1) = dof_value * unit_scaling;
         dof_value = atof(&read_buffer(scan_loop,3,0));
         node_coords(node_rid, 2) = dof_value * unit_scaling;
-        if(restart_file){
-          dof_value = atof(&read_buffer(scan_loop,3,0));
-          node_densities(node_rid, 0) = dof_value;
-        }
         //extract density if restarting
       }
     }
@@ -376,8 +372,9 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   }
   
   //read in element connectivity
+  elem_words_per_line = Solver_Pointer_->elem_words_per_line;
   //we're gonna reallocate for the words per line expected for the element connectivity
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines,elem_words_per_line,MAX_WORD); 
+  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines,elem_words_per_line,max_word); 
   CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(nodes_per_element);
 
   //calculate buffer iterations to read number of lines
@@ -428,7 +425,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     }
 
     //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),buffer_lines*elem_words_per_line*MAX_WORD,MPI_CHAR,0,world);
+    MPI_Bcast(read_buffer.pointer(),buffer_lines*elem_words_per_line*max_word,MPI_CHAR,0,world);
     //broadcast how many nodes were read into this buffer iteration
     MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
     
@@ -586,7 +583,7 @@ void FEA_Module_Elasticity::grow_displacement_condition_sets(int num_sets){
   //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
   if(num_sets>max_disp_boundary_sets){
     //temporary storage for previous data
-    CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets,3) Temp_Boundary_Surface_Displacements = Boundary_Surface_Displacements;
+    CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Temp_Boundary_Surface_Displacements = Boundary_Surface_Displacements;
     
     max_disp_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
     Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_disp_boundary_sets, 3, "Boundary_Condition_Type_List");
@@ -614,7 +611,7 @@ void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
   //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
   if(num_sets>max_load_boundary_sets){
     //temporary storage for previous data
-    CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets,3) Temp_Boundary_Surface_Force_Densities = Boundary_Surface_Force_Densities;
+    CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Temp_Boundary_Surface_Force_Densities = Boundary_Surface_Force_Densities;
     
     max_load_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
     Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_load_boundary_sets, 3, "Boundary_Condition_Type_List");
