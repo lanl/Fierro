@@ -143,6 +143,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int buffer_loop, buffer_iteration, scan_loop, nodes_per_element, words_per_line;
   size_t read_index_start, node_rid, elem_gid;
+  LO local_dof_id;
   GO node_gid;
   real_t dof_value;
   host_vec_array node_densities;
@@ -163,236 +164,147 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   //prompts all MPI ranks to expect more broadcasts
   int dof_count;
   bool searching_for_conditions = true;
-  bool surface_load_zone = false;
-  bool fixed_displacement_zone = false;
-  bool per_node_flag = false;
+  int  zone_condition_type = NONE;
   bool zero_displacement = false;
+  bool assign_flag;
   //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
   while (searching_for_conditions) {
     if(myrank==0){
-      getline(*in, skip_line);
-      //std::cout << skip_line << std::endl;
-      line_parse.clear();
-      line_parse.str(skip_line);
-      //stop when the NODES= string is reached
-      while (!line_parse.eof()){
+      while(searching_for_conditions&&in->good()){
+        getline(*in, skip_line);
+        //std::cout << skip_line << std::endl;
+        line_parse.clear();
+        line_parse.str(skip_line);
+        //stop when the NODES= string is reached
+        while (!line_parse.eof()){
+          line_parse >> substring;
+          //std::cout << substring << std::endl;
+          if(!substring.compare("Supports")){
+            searching_for_conditions = false;
+            zone_condition_type = DISPLACEMENT_CONDITION;
+          }
+          if(!substring.compare("Pressure")){
+            searching_for_conditions = false;
+            zone_condition_type = SURFACE_LOADING_CONDITION;
+          }
+        } //while
+      }//while
+    }
+    
+    //broadcast zone flags
+    MPI_Bcast(&zone_condition_type,1,MPI_INT,0,world);
+    //perform readin strategy according to zone type
+    if(zone_condition_type==DISPLACEMENT_CONDITION){
+      bool per_node_flag = false;
+      if(myrank==0){
+        getline(*in, read_line);
+        std::cout << read_line << std::endl;
+        line_parse.clear();
+        line_parse.str(read_line);
         line_parse >> substring;
-        //std::cout << substring << std::endl;
-        if(!substring.compare("Supports")){
-          searching_for_conditions = false;
-          fixed_displacement_zone = true;
-          
-            getline(*in, read_line);
-            std::cout << read_line << std::endl;
-            line_parse.clear();
-            line_parse.str(read_line);
-            line_parse >> substring;
-            //parse boundary condition type out of jumble of comma delimited entries
-            line_parse2.clear();
-            line_parse2.str(substring);
-            while(line_parse2.good()){
-              getline(line_parse2, token, ',');
-              if(!token.compare("FIXEDSU")){
-                zero_displacement = true;
-              }
-              if(!token.compare("NODE")){
-                per_node_flag = true;
+        //parse boundary condition specifics out of jumble of comma delimited entries
+        line_parse2.clear();
+        line_parse2.str(substring);
+        while(line_parse2.good()){
+        getline(line_parse2, token, ',');
+        if(!token.compare("FIXEDSU")){
+          nonzero_bc_flag = false;
+        }
+        if(!token.compare("NODE")){
+          per_node_flag = true;
+        }
+        }
+        //read number of nodes/dof in boundary condition zone
+        line_parse >> dof_count;
+        //skip 1 line
+        getline(*in, read_line);
+      }
+      //broadcast number of fixed support conditions to read in (global ids)
+      
+      MPI_Bcast(&dof_count,1,MPI_INT,0,world);
+
+      //calculate buffer iterations to read number of lines
+      buffer_iterations = dof_count/buffer_lines;
+
+      if(dof_count%buffer_lines!=0) buffer_iterations++;
+      read_index_start = 0;
+
+      //allocate read buffer
+      read_buffer = CArrayKokkos<GO, array_layout, HostSpace, memory_traits>(buffer_lines);
+      //read global indices being fixed on rank zero then broadcast buffer until list is complete
+      for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+        //pack buffer on rank 0
+        if(myrank==0&&buffer_iteration<buffer_iterations-1){
+          for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
+            *in >> read_buffer(buffer_loop);
+          }
+        }
+        else if(myrank==0){
+          buffer_loop=0;
+          while(buffer_iteration*BUFFER_LINES+buffer_loop < dof_count) {
+            *in >> read_buffer(buffer_loop);
+            buffer_loop++;
+          }
+        }
+
+        //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+        MPI_Bcast(read_buffer.pointer(),buffer_lines,MPI_LONG_LONG_INT,0,world);
+        //broadcast how many nodes were read into this buffer iteration
+        MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+
+        //debug_print
+        //std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+        //for(int iprint=0; iprint < buffer_loop; iprint++)
+        //std::cout<<"buffer packing: " << read_buffer(iprint) << std::endl;
+        //return;
+
+        //determine which data to store in the swage mesh members (the local node data)
+        //loop through read buffer
+        for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+          node_gid = read_buffer(scan_loop);
+          //let map decide if this node id belongs locally; if yes store data
+          if(all_node_map->isNodeGlobalElement(node_gid)){
+            //set local node index in this mpi rank
+            local_node_index = all_node_map->getLocalElement(node_gid);
+            if(nonzero_bc_flag){
+
+            }
+            else{
+              local_dof_id = num_dim*local_node_index;
+              Node_DOF_Boundary_Condition_Type(local_dof_id) = DISPLACEMENT_CONDITION;
+              Node_DOF_Displacement_Boundary_Conditions(local_dof_id) = 0;
+              Node_DOF_Boundary_Condition_Type(local_dof_id + 1) = DISPLACEMENT_CONDITION;
+              Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 1) = 0;
+              if(num_dim==3){
+                Node_DOF_Boundary_Condition_Type(local_dof_id + 2) = DISPLACEMENT_CONDITION;
+                Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 2) = 0;
               }
             }
-            //read number of nodes/dof in boundary condition zone
-            line_parse >> dof_count;
-            //read print block formatting
-  
+          }
         }
-        if(!substring.compare("Pressure")){
-          searching_for_conditions = false;
-          surface_load_zone = true;
-        }
-      } //while
-
-      //broadcast zone flags
-      MPI_Bcast(&searching_for_conditions,1,MPI_CXX_BOOL,0,world);
+        read_index_start+=BUFFER_LINES;
+      }
     }
+    
+    if(zone_condition_type==SURFACE_LOADING_CONDITION){
+
+    }
+
     if(myrank==0){
       //previous search on rank 0 for boundary condition keywords failed if search is still true
       if(searching_for_conditions){
         std::cout << "FILE FORMAT ERROR" << std::endl;
       }
       //check if there is yet more text to try reading for more boundary condition keywords
-      searching_for_conditions = in->good()
+      searching_for_conditions = in->good();
     }
     
     MPI_Bcast(&searching_for_conditions,1,MPI_CXX_BOOL,0,world);
   } //All rank while loop
+
+  //close file
+  if(myrank == 0) in->close();
   
-  
-  //read in element info
-  //seek element connectivity zone
-  int etype_index = 0;
-  if(myrank==0){
-    bool searching_for_elements = true;
-    //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
-    while (searching_for_elements&&in->good()) {
-      getline(*in, skip_line);
-      //std::cout << skip_line << std::endl;
-      line_parse.clear();
-      line_parse.str(skip_line);
-      //stop when the NODES= string is reached
-      while (!line_parse.eof()){
-        line_parse >> substring;
-        //std::cout << substring << std::endl;
-        if(!substring.compare("Elements")){
-          searching_for_elements = false;
-          break;
-        }
-      } //while
-      
-    }
-    if(searching_for_elements){
-      std::cout << "FILE FORMAT ERROR" << std::endl;
-    }
-
-    //read in element type from following line
-    getline(*in, read_line);
-    std::cout << read_line << std::endl;
-    line_parse.clear();
-    line_parse.str(read_line);
-    line_parse >> substring;
-    //std::cout << substring << std::endl;
-    if(!substring.compare("et,1,185")){
-      //Hex8 type
-      etype_index = 1;
-
-    }
-    else if(!substring.compare("et,1,186")){
-      //Hex20 type
-      etype_index = 2;
-    }
-    else{
-      etype_index = 0;
-    }
-     //for
-    
-    //seek element count line
-    //read in element count from the following line
-    getline(*in, read_line);
-    std::cout << read_line << std::endl;
-    line_parse.clear();
-    line_parse.str(read_line);
-    line_parse >> substring;
-    //parse element line out of jumble of comma delimited entries
-    line_parse.clear();
-    line_parse.str(substring);
-    while(line_parse.good()){
-      getline(line_parse, token, ',');
-    }
-    //element count should be the last token read in
-    num_elem = std::stod(token);
-
-    //skip line
-    for (int j = 0; j < 1; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    }
-  }
-  
-  //read in element connectivity
-  elem_words_per_line = Solver_Pointer_->elem_words_per_line;
-  //we're gonna reallocate for the words per line expected for the element connectivity
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_lines,elem_words_per_line,max_word); 
-  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(nodes_per_element);
-
-  //calculate buffer iterations to read number of lines
-  buffer_iterations = num_elem/buffer_lines;
-  int assign_flag;
-
-  //dynamic buffer used to store elements before we know how many this rank needs
-  std::vector<size_t> element_temp(buffer_lines*elem_words_per_line);
-  std::vector<size_t> global_indices_temp(buffer_lines);
-  size_t buffer_max = buffer_lines*elem_words_per_line;
-  size_t indices_buffer_max = buffer_lines;
-
-  if(num_elem%buffer_lines!=0) buffer_iterations++;
-  read_index_start = 0;
-  //std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
-  rnum_elem = 0;
-  //std::cout << "BUFFER ITERATIONS IS: " << buffer_iterations << std::endl;
-  for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
-    //pack buffer on rank 0
-    if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < elem_words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-      }
-    }
-    else if(myrank==0){
-      buffer_loop=0;
-      while(buffer_iteration*buffer_lines+buffer_loop < num_elem) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < elem_words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-        buffer_loop++;
-        //std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
-      }
-    }
-
-    //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),buffer_lines*elem_words_per_line*max_word,MPI_CHAR,0,world);
-    //broadcast how many nodes were read into this buffer iteration
-    MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
-    
-    //store element connectivity that belongs to this rank
-    //loop through read buffer
-    for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-      //set global node id (ensight specific order)
-      elem_gid = read_index_start + scan_loop;
-      //add this element to the local list if any of its nodes belong to this rank according to the map
-      //get list of nodes for each element line and check if they belong to the map
-      assign_flag = 0;
-      for(int inode = elem_words_per_line_no_nodes; inode < elem_words_per_line; inode++){
-        //as we loop through the nodes belonging to this element we store them
-        //if any of these nodes belongs to this rank this list is used to store the element locally
-        node_gid = atoi(&read_buffer(scan_loop,inode,0));
-        node_store(inode-elem_words_per_line_no_nodes) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
-        //first we add the elements to a dynamically allocated list
-        if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
-          assign_flag = 1;
-          rnum_elem++;
-        }
-      }
-
-      if(assign_flag){
-        for(int inode = 0; inode < nodes_per_element; inode++){
-          if((rnum_elem-1)*nodes_per_element + inode>=buffer_max){ 
-            element_temp.resize((rnum_elem-1)*nodes_per_element + inode + buffer_lines*nodes_per_element);
-            buffer_max = (rnum_elem-1)*nodes_per_element + inode + buffer_lines*nodes_per_element;
-          }
-          element_temp[(rnum_elem-1)*nodes_per_element + inode] = node_store(inode); 
-          //std::cout << "VECTOR STORAGE FOR ELEM " << rnum_elem << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
-        }
-        //assign global element id to temporary list
-        if(rnum_elem-1>=indices_buffer_max){ 
-          global_indices_temp.resize(rnum_elem-1 + buffer_lines);
-          indices_buffer_max = rnum_elem-1 + buffer_lines;
-        }
-        global_indices_temp[rnum_elem-1] = elem_gid;
-      }
-    }
-    read_index_start+=buffer_lines;
-  }
  
 } // end read_conditions_ansys_dat
 
@@ -573,6 +485,7 @@ void FEA_Module_Elasticity::generate_bcs(){
   Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
   Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
   Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
+  if(Boundary_Surface_Displacements(surf_disp_set_id,0)||Boundary_Surface_Displacements(surf_disp_set_id,1)||Boundary_Surface_Displacements(surf_disp_set_id,2)) nonzero_bc_flag = true;
   surf_disp_set_id++;
     
   *fos << "tagged a set " << std::endl;
