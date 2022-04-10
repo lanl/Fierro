@@ -141,7 +141,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   std::string skip_line, read_line, substring, token;
   std::stringstream line_parse, line_parse2;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop, nodes_per_element, words_per_line;
+  CArrayKokkos<GO, array_layout, HostSpace, memory_traits> read_buffer_indices;
+  int buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
   size_t read_index_start, node_rid, elem_gid;
   LO local_dof_id;
   GO node_gid;
@@ -162,7 +163,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   }
 
   //prompts all MPI ranks to expect more broadcasts
-  int dof_count;
+  GO dof_count;
   bool searching_for_conditions = true;
   int  zone_condition_type = NONE;
   bool zero_displacement = false;
@@ -230,38 +231,38 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       read_index_start = 0;
 
       //allocate read buffer
-      read_buffer = CArrayKokkos<GO, array_layout, HostSpace, memory_traits>(buffer_lines);
+      read_buffer_indices = CArrayKokkos<GO, array_layout, HostSpace, memory_traits>(buffer_lines);
       //read global indices being fixed on rank zero then broadcast buffer until list is complete
       for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
         //pack buffer on rank 0
         if(myrank==0&&buffer_iteration<buffer_iterations-1){
           for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
-            *in >> read_buffer(buffer_loop);
+            *in >> read_buffer_indices(buffer_loop);
           }
         }
         else if(myrank==0){
           buffer_loop=0;
-          while(buffer_iteration*BUFFER_LINES+buffer_loop < dof_count) {
-            *in >> read_buffer(buffer_loop);
+          while(buffer_iteration*buffer_lines+buffer_loop < dof_count) {
+            *in >> read_buffer_indices(buffer_loop);
             buffer_loop++;
           }
         }
 
         //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-        MPI_Bcast(read_buffer.pointer(),buffer_lines,MPI_LONG_LONG_INT,0,world);
+        MPI_Bcast(read_buffer_indices.pointer(),buffer_lines,MPI_LONG_LONG_INT,0,world);
         //broadcast how many nodes were read into this buffer iteration
         MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
 
         //debug_print
         //std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
         //for(int iprint=0; iprint < buffer_loop; iprint++)
-        //std::cout<<"buffer packing: " << read_buffer(iprint) << std::endl;
+        //std::cout<<"buffer packing: " << read_buffer_indices(iprint) << std::endl;
         //return;
 
         //determine which data to store in the swage mesh members (the local node data)
         //loop through read buffer
         for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-          node_gid = read_buffer(scan_loop);
+          node_gid = read_buffer_indices(scan_loop);
           //let map decide if this node id belongs locally; if yes store data
           if(all_node_map->isNodeGlobalElement(node_gid)){
             //set local node index in this mpi rank
@@ -282,12 +283,52 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             }
           }
         }
-        read_index_start+=BUFFER_LINES;
+        read_index_start+=buffer_lines;
       }
     }
     
     if(zone_condition_type==SURFACE_LOADING_CONDITION){
+      //grow structures for loading condition storage
+      num_boundary_conditions++;
+      if(num_boundary_conditions>max_boundary_sets) grow_boundary_sets(num_boundary_conditions);
+      num_surface_force_sets++;
+      if(num_surface_force_sets>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets);
+      
+      GO num_patches;
+      getline(*in, read_line);
+      std::cout << read_line << std::endl;
+      line_parse.clear();
+      line_parse.str(read_line);
+      line_parse >> substring;
+      //parse boundary condition specifics out of jumble of comma delimited entries
+      line_parse2.clear();
+      line_parse2.str(substring);
+      getline(line_parse2, token, ',');
+      getline(line_parse2, token, ',');
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = std::stod(token);
+      getline(line_parse2, token, ',');
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = std::stod(token);
+      getline(line_parse2, token, ',');
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = std::stod(token);
 
+      //skip 2 lines
+      getline(*in, read_line);
+      getline(*in, read_line);
+      //read number of surface patches
+      getline(*in, read_line);
+      std::cout << read_line << std::endl;
+      line_parse.clear();
+      line_parse.str(read_line);
+      line_parse >> substring;
+      //parse boundary condition specifics out of jumble of comma delimited entries
+      line_parse2.clear();
+      line_parse2.str(substring);
+      while(line_parse2.good()){
+        getline(line_parse2, token, ',');
+      }
+      //number of patches should be last read token
+      //element count should be the last token read in
+      num_patches = std::stod(token);
     }
 
     if(myrank==0){
@@ -362,6 +403,11 @@ void FEA_Module_Elasticity::init_boundary_sets (int num_sets){
 
    //initialize
   for(int ibdy=0; ibdy < num_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
+
+  //initialize maximum
+  max_boundary_sets = num_sets;
+  max_disp_boundary_sets = num_surface_disp_sets;
+  max_load_boundary_sets = num_surface_force_sets;
 }
 
 /* ----------------------------------------------------------------------------

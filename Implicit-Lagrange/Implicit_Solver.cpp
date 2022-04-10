@@ -1538,10 +1538,6 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
         node_coords(node_rid, 1) = dof_value * unit_scaling;
         dof_value = atof(&read_buffer(scan_loop,3,0));
         node_coords(node_rid, 2) = dof_value * unit_scaling;
-        if(restart_file){
-          dof_value = atof(&read_buffer(scan_loop,3,0));
-          node_densities(node_rid, 0) = dof_value;
-        }
         //extract density if restarting
       }
     }
