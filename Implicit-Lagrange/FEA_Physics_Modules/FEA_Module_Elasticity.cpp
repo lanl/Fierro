@@ -288,11 +288,14 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     }
     
     if(zone_condition_type==SURFACE_LOADING_CONDITION){
+      LO local_patch_index;
+      LO boundary_set_npatches = 0;
       //grow structures for loading condition storage
       num_boundary_conditions++;
       if(num_boundary_conditions>max_boundary_sets) grow_boundary_sets(num_boundary_conditions);
       num_surface_force_sets++;
       if(num_surface_force_sets>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets);
+      Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_LOADING_CONDITION;
       
       GO num_patches;
       real_t force_density[3];
@@ -410,13 +413,33 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 
         //determine which data to store in the swage mesh members (the local node data)
         //loop through read buffer
+        int belong_count;
         for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+          belong_count = 0;
           //judge if this patch could be relevant to this MPI rank
-
+          //all nodes of the patch must belong to the local + ghost set of nodes
+          for(int inode = 0; inode < nodes_per_patch; inode++){
+            node_gid = read_buffer_indices(scan_loop, inode);
+            if(all_node_map->isNodeGlobalElement(node_gid)){
+              belong_count++;
+            }
+          }
+          if(belong_count == nodes_per_patch){
+            //construct patch object and look for patch index; the assign patch index to the new loading condition set
+            Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(nodes_per_patch, "Surface_Nodes");
+            for(int inode = 0; inode < nodes_per_patch; inode++){
+              Surface_Nodes(inode) = read_buffer_indices(scan_loop, inode);
+            }
+            Node_Combination temp(Surface_Nodes);
+            //construct Node Combination object for this surface
+            local_patch_id = Solver_Pointer_->boundary_patch_to_index[temp];
+            Boundary_Condition_Patches(num_boundary_conditions-1,boundary_set_npatches++) = local_patch_id;
+          }
           //find patch id associated with node combination
         }
         read_index_start+=buffer_lines;
       }
+      NBoundary_Condition_Patches(num_boundary_conditions-1) = boundary_set_npatches;
     }
 
     if(myrank==0){
