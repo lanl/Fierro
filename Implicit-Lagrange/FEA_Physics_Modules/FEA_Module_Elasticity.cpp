@@ -222,7 +222,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       }
       //broadcast number of fixed support conditions to read in (global ids)
       
-      MPI_Bcast(&dof_count,1,MPI_INT,0,world);
+      MPI_Bcast(&dof_count,1,MPI_LONG_LONG_INT,0,world);
 
       //calculate buffer iterations to read number of lines
       buffer_iterations = dof_count/buffer_lines;
@@ -295,40 +295,128 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       if(num_surface_force_sets>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets);
       
       GO num_patches;
-      getline(*in, read_line);
-      std::cout << read_line << std::endl;
-      line_parse.clear();
-      line_parse.str(read_line);
-      line_parse >> substring;
-      //parse boundary condition specifics out of jumble of comma delimited entries
-      line_parse2.clear();
-      line_parse2.str(substring);
-      getline(line_parse2, token, ',');
-      getline(line_parse2, token, ',');
-      Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = std::stod(token);
-      getline(line_parse2, token, ',');
-      Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = std::stod(token);
-      getline(line_parse2, token, ',');
-      Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = std::stod(token);
-
-      //skip 2 lines
-      getline(*in, read_line);
-      getline(*in, read_line);
-      //read number of surface patches
-      getline(*in, read_line);
-      std::cout << read_line << std::endl;
-      line_parse.clear();
-      line_parse.str(read_line);
-      line_parse >> substring;
-      //parse boundary condition specifics out of jumble of comma delimited entries
-      line_parse2.clear();
-      line_parse2.str(substring);
-      while(line_parse2.good()){
+      real_t force_density[3];
+      if(myrank == 0){
+        getline(*in, read_line);
+        std::cout << read_line << std::endl;
+        line_parse.clear();
+        line_parse.str(read_line);
+        line_parse >> substring;
+        //parse boundary condition specifics out of jumble of comma delimited entries
+        line_parse2.clear();
+        line_parse2.str(substring);
         getline(line_parse2, token, ',');
+        getline(line_parse2, token, ',');
+        force_density[0]  = std::stod(token);
+        getline(line_parse2, token, ',');
+        force_density[1]  = std::stod(token);
+        getline(line_parse2, token, ',');
+        force_density[2]  = std::stod(token);
+
+        //skip 2 lines
+        getline(*in, read_line);
+        getline(*in, read_line);
+        //read number of surface patches
+        getline(*in, read_line);
+        std::cout << read_line << std::endl;
+        line_parse.clear();
+        line_parse.str(read_line);
+        line_parse >> substring;
+        //parse boundary condition specifics out of jumble of comma delimited entries
+        line_parse2.clear();
+        line_parse2.str(substring);
+        while(line_parse2.good()){
+          getline(line_parse2, token, ',');
+        }
+        //number of patches should be last read token
+        //element count should be the last token read in
+        num_patches = std::stoi(token);
+        //skip 1 more line
+        getline(*in, read_line);
       }
-      //number of patches should be last read token
-      //element count should be the last token read in
-      num_patches = std::stod(token);
+
+      //broadcast surface force density
+      MPI_Bcast(&force_density,3,MPI_DOUBLE,0,world);
+
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = force_density[0];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = force_density[1];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = force_density[2];
+      
+      //broadcast number of element surface patches subject to force density
+      MPI_Bcast(&num_patches,1,MPI_LONG_LONG_INT,0,world);
+      
+      int nodes_per_patch;
+      //select nodes per patch based on element type
+      if(Solver_Pointer_->mesh_element_type == elements::elem_types::Hex8){
+        nodes_per_patch = 4;
+      }
+      if(Solver_Pointer_->mesh_element_type == elements::elem_types::Hex20){
+        nodes_per_patch = 8;
+      }
+
+      //calculate buffer iterations to read number of lines
+      buffer_iterations = num_patches/buffer_lines;
+
+      if(num_patches%buffer_lines!=0) buffer_iterations++;
+      read_index_start = 0;
+      //allocate read buffer
+      read_buffer_indices = CArrayKokkos<GO, array_layout, HostSpace, memory_traits>(buffer_lines,nodes_per_patch);
+      int non_node_entries = 5;
+      words_per_line = nodes_per_patch + non_node_entries;
+
+      for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+        //pack buffer on rank 0
+        if(myrank==0&&buffer_iteration<buffer_iterations-1){
+          for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
+            getline(*in,read_line);
+            line_parse.clear();
+            line_parse.str(read_line);
+        
+            for(int iword = 0; iword < words_per_line; iword++){
+              //read portions of the line into the substring variable
+              line_parse >> substring;
+              //debug print
+              //std::cout<<" "<< substring <<std::endl;
+              //assign the substring variable as a word of the read buffer
+              if(iword>non_node_entries-1){
+                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring);
+              }
+            }
+          }
+        }
+        else if(myrank==0){
+          buffer_loop=0;
+          while(buffer_iteration*buffer_lines+buffer_loop < num_nodes) {
+            getline(*in,read_line);
+            line_parse.clear();
+            line_parse.str(read_line);
+            for(int iword = 0; iword < words_per_line; iword++){
+              //read portions of the line into the substring variable
+              line_parse >> substring;
+              //assign the substring variable as a word of the read buffer
+              if(iword>non_node_entries-1){
+                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring);
+              }
+            }
+            buffer_loop++;
+          }
+      
+        }
+
+        //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+        MPI_Bcast(read_buffer_indices.pointer(),buffer_lines*nodes_per_patch,MPI_LONG_LONG_INT,0,world);
+        //broadcast how many nodes were read into this buffer iteration
+        MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+
+        //determine which data to store in the swage mesh members (the local node data)
+        //loop through read buffer
+        for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+          //judge if this patch could be relevant to this MPI rank
+
+          //find patch id associated with node combination
+        }
+        read_index_start+=buffer_lines;
+      }
     }
 
     if(myrank==0){

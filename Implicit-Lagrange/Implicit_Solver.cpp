@@ -1624,7 +1624,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
       getline(line_parse, token, ',');
     }
     //element count should be the last token read in
-    num_elem = std::stod(token);
+    num_elem = std::stoi(token);
 
     //skip line
     for (int j = 0; j < 1; j++) {
