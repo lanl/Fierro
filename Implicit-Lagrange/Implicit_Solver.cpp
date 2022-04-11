@@ -2625,7 +2625,7 @@ void Implicit_Solver::Get_Boundary_Patches(){
       Patch_Nodes(npatches_repeat).local_patch_id = isurface;
       //test if this patch has already been added; if yes set boundary flags to 0
       current_combination = my_patches.insert(Patch_Nodes(npatches_repeat));
-      //if the set determines this is a duplicate access the original element's patch id and set flag to 0
+      //if the set determines this is a duplicate, access the original element's patch id and set flag to 0
       if(current_combination.second==false){
       //set original element flag to 0
       Patch_Boundary_Flags((*current_combination.first).patch_id) = 0;
@@ -2718,8 +2718,10 @@ void Implicit_Solver::Get_Boundary_Patches(){
       //if(remote_count == num_nodes_in_patch) my_rank_flag = false;
 
       //if all nodes were not local
-      if(my_rank_flag)
+      if(my_rank_flag){
         Boundary_Patches(nboundary_patches++) = Patch_Nodes(ipatch);
+        boundary_patch_to_index[Patch_Nodes(ipatch)] = nboundary_patches-1;
+      }
     }
   }
 

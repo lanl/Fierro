@@ -23,6 +23,7 @@
 #include "Tpetra_Details_EquilibrationInfo.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
+#include <map>
 
 //#include <Xpetra_Operator.hpp>
 //#include <MueLu.hpp>
@@ -225,6 +226,7 @@ public:
   size_t num_boundary_conditions;
   int current_bdy_id;
   CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
+  std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NTopology_Condition_Patches;
 
