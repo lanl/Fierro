@@ -347,10 +347,10 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       
       int nodes_per_patch;
       //select nodes per patch based on element type
-      if(Solver_Pointer_->mesh_element_type == elements::elem_types::Hex8){
+      if(Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex8){
         nodes_per_patch = 4;
       }
-      if(Solver_Pointer_->mesh_element_type == elements::elem_types::Hex20){
+      if(Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex20){
         nodes_per_patch = 8;
       }
 
