@@ -25,11 +25,12 @@ void Simulation_Parameters_Topology_Optimization::input(){
   //Simulation_Parameters::input();
   //initial buffer size for TO module list storage
   int buffer_size = 10;
-  TO_Module_List = std::vector<std::string>(buffer_size);
-  TO_Function_Type = std::vector<function_type>(buffer_size);
-  Multi_Objective_Modules = std::vector<int>(buffer_size);
-  Multi_Objective_Weights = std::vector<real_t>(buffer_size);
-  Function_Arguments = std::vector<std::vector<real_t>>(buffer_size);
+  TO_Module_List.resize(buffer_size);
+  TO_Function_Type.resize(buffer_size);
+  Multi_Objective_Modules.resize(buffer_size);
+  Multi_Objective_Weights.resize(buffer_size);
+  Function_Arguments.resize(buffer_size);
+  TO_Module_My_FEA_Module.resize(buffer_size);
   //use pushback to add arguments for each TO module
   
   //TO objectives and constraints
@@ -88,6 +89,11 @@ void Simulation_Parameters_Topology_Optimization::input(){
   if(nTO_modules==buffer_size){
     buffer_size += 10;
     TO_Module_List.resize(buffer_size);
+    TO_Function_Type.resize(buffer_size);
+    Multi_Objective_Modules.resize(buffer_size);
+    Multi_Objective_Weights.resize(buffer_size);
+    Function_Arguments.resize(buffer_size);
+    TO_Module_My_FEA_Module.resize(buffer_size);
   }
 
   //simulation spatial dimension
@@ -116,10 +122,10 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
   
   //initial buffer size for FEA module list storage
   bool module_found;
-  int buffer_size = 10;
-  FEA_Module_List = std::vector<std::string>(buffer_size);
-  TO_Module_My_FEA_Module = std::vector<int>(buffer_size);
-  fea_module_must_read = std::vector<bool>(buffer_size);
+  int buffer_size = 10 + nfea_modules;
+  FEA_Module_List.resize(buffer_size);
+  fea_module_must_read.resize(buffer_size);
+  int start_module = nfea_modules;
   
   for(int imodule = 0; imodule < nTO_modules; imodule++){
     module_found = false;
@@ -222,14 +228,13 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
       if(nfea_modules==buffer_size){
         buffer_size += 10;
         FEA_Module_List.resize(buffer_size);
-        TO_Module_My_FEA_Module.resize(buffer_size);
         fea_module_must_read.resize(buffer_size);
       }
     }
   }
 
   //initialize
-  for(int imodule = 0; imodule < nfea_modules; imodule++){
+  for(int imodule = start_module; imodule < nfea_modules; imodule++){
     fea_module_must_read[imodule] = false;
   }
 }
