@@ -2257,7 +2257,7 @@ void Implicit_Solver::setup_optimization_problem(){
 
   std::string constraint_base, constraint_name;
   std::stringstream number_union;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   GO current_node_index;
   LO local_node_index;
   int num_bdy_patches_in_set;
@@ -2564,7 +2564,7 @@ void Implicit_Solver::Get_Boundary_Patches(){
   size_t npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
   int local_node_id;
   int num_dim = simparam->num_dim;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //Surface_Nodes = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(4, "Surface_Nodes");
   

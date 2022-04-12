@@ -290,6 +290,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     if(zone_condition_type==SURFACE_LOADING_CONDITION){
       LO local_patch_index;
       LO boundary_set_npatches = 0;
+      CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
       //grow structures for loading condition storage
       num_boundary_conditions++;
       if(num_boundary_conditions>max_boundary_sets) grow_boundary_sets(num_boundary_conditions);
@@ -432,8 +433,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             }
             Node_Combination temp(Surface_Nodes);
             //construct Node Combination object for this surface
-            local_patch_id = Solver_Pointer_->boundary_patch_to_index[temp];
-            Boundary_Condition_Patches(num_boundary_conditions-1,boundary_set_npatches++) = local_patch_id;
+            local_patch_index = Solver_Pointer_->boundary_patch_to_index[temp];
+            Boundary_Condition_Patches(num_boundary_conditions-1,boundary_set_npatches++) = local_patch_index;
           }
           //find patch id associated with node combination
         }
@@ -1431,7 +1432,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
@@ -2698,7 +2699,7 @@ void FEA_Module_Elasticity::Displacement_Boundary_Conditions(){
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> displacement(num_dim);
   CArrayKokkos<int, array_layout, device_type, memory_traits> Displacement_Conditions(num_dim);
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   Number_DOF_BCS = 0;
   Displacement_Conditions(0) = X_DISPLACEMENT_CONDITION;
   Displacement_Conditions(1) = Y_DISPLACEMENT_CONDITION;

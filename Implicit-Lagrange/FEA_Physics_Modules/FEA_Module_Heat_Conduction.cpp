@@ -669,7 +669,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t heat_flux[3], wedge_product, Jacobian, current_density, weight_multiply, inner_product, surface_normal[3], surface_norm;
   real_t specific_internal_energy_rate;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
@@ -1465,7 +1465,7 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
   real_t temperature;
   CArrayKokkos<int, array_layout, device_type, memory_traits> Temperatures_Conditions(num_dim);
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes);
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   Number_DOF_BCS = 0;
 
   //host view of local nodal displacements
