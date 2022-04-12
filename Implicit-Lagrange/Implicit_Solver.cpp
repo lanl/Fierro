@@ -150,6 +150,12 @@ void Implicit_Solver::run(int argc, char *argv[]){
     else
       read_mesh_ensight(argv[1]);
     
+    //construct list of FEA modules requested
+    simparam->FEA_module_setup();
+
+    //process process list of requested FEA modules to construct list of objects
+    FEA_module_setup();
+
     //debug
     //return;
     init_maps();
@@ -176,12 +182,6 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //initialize TO design variable storage
     init_design();
-    
-    //construct list of FEA modules requested
-    simparam->FEA_module_setup();
-
-    //process process list of requested FEA modules to construct list of objects
-    FEA_module_setup();
 
     //Have modules read in boundary/loading conditions if file format provides it
     for(int imodule = 0; imodule < nfea_modules; imodule++){
@@ -1786,6 +1786,9 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     } //while
   }
   
+  //broadcast search condition
+  MPI_Bcast(&No_Conditions,1,MPI_CXX_BOOL,0,world);
+
   //flag elasticity fea module for boundary/loading conditions readin that remains
   if(!No_Conditions){
     //look for elasticity module in Simulation Parameters data; if not declared add the module
@@ -1801,9 +1804,16 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     
     //add Elasticity module to requested modules in the Simulation Parameters data
     if(!elasticity_found){
-      simparam->FEA_Module_List.push_back("Elasticity");
-      simparam->fea_module_must_read.push_back(true);
-      simparam->nfea_modules++;
+      if(nfea_modules==simparam->FEA_Module_List.capacity()){
+        simparam->FEA_Module_List.push_back("Elasticity");
+        simparam->fea_module_must_read.push_back(true);
+        simparam->nfea_modules++;
+      }
+      else{
+        simparam->FEA_Module_List[nfea_modules] = "Elasticity";
+        simparam->fea_module_must_read[nfea_modules]= true;
+        simparam->nfea_modules++;
+      }
     }
 
     

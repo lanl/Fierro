@@ -119,6 +119,7 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
   int buffer_size = 10;
   FEA_Module_List = std::vector<std::string>(buffer_size);
   TO_Module_My_FEA_Module = std::vector<int>(buffer_size);
+  fea_module_must_read = std::vector<bool>(buffer_size);
   
   for(int imodule = 0; imodule < nTO_modules; imodule++){
     module_found = false;
@@ -222,7 +223,12 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         buffer_size += 10;
         FEA_Module_List.resize(buffer_size);
         TO_Module_My_FEA_Module.resize(buffer_size);
+        fea_module_must_read.resize(buffer_size);
       }
     }
   }
+
+  //initialize
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_module_must_read[imodule] = false;
 }
