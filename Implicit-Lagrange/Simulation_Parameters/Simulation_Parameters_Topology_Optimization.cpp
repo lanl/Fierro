@@ -231,4 +231,5 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
   //initialize
   for(int imodule = 0; imodule < nfea_modules; imodule++){
     fea_module_must_read[imodule] = false;
+  }
 }
