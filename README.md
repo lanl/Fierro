@@ -50,9 +50,9 @@ BUILD_IMPLICIT_SOLVER=OFF (Tells cmake whether to build the implicit solver comp
 ## Building the explicit Lagrangian methods with Kokkos
 Explicit Lagrangian codes are being added to the repository that are written using MATAR+Kokkos and run with fine-grained parallellism on multi-core CPUs and GPUs.  Build scripts are provided for each Lagrangian code, and those scripts follow those used in the [MATAR](https://github.com/lanl/MATAR/) GitHub repository. The scripts to build the Lagrangian codes (that use MATAR+Kokkos) are in the scripts folder.  The user must update the modules loaded by the build scripts (for the compiler etc.), and then type
 ```
-source buildit
+source build-it.sh
 ```
-The buildit script sources the other scripts in the folder.  The compiled code will be in a folder (named after the explicit Lagrangian method) in the Fierro directory.  A range of scripts are provided for many architectures; however, they might not be correctly configured for the user's hardware.  The CPU architecture information needs to be listed if running with the Kokkos serial, OpenMP, and pthreads backends; GPU architecture information must be listed if using a Kokkos GPU backend. We refer the user to Kokkos compiling page to see the large list of compilation options,
+The build-it.sh script sources the other scripts in the folder.  The compiled code will be in a folder (named after the explicit Lagrangian method) in the Fierro directory.  A range of scripts are provided for many architectures; however, they might not be correctly configured for the user's hardware.  The CPU architecture information needs to be listed if running with the Kokkos serial, OpenMP, and pthreads backends; GPU architecture information must be listed if using a Kokkos GPU backend. We refer the user to Kokkos compiling page to see the large list of compilation options,
 ```
 https://github.com/kokkos/kokkos/wiki/Compiling
 ```
