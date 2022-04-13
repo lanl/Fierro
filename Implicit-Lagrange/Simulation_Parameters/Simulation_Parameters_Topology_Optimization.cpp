@@ -34,12 +34,11 @@ void Simulation_Parameters_Topology_Optimization::input(){
   //use pushback to add arguments for each TO module
   
   //TO objectives and constraints
-  //TO_Module_List[0] = "Strain_Energy_Minimize";
-  /*
+  
   TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
-  */
+  /*
   //Multi objective format
   TO_Module_List[nTO_modules] = "Multi_Objective";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
@@ -56,7 +55,7 @@ void Simulation_Parameters_Topology_Optimization::input(){
   Multi_Objective_Modules[1] = nTO_modules;
   Multi_Objective_Weights[1] = 0.75;
   nTO_modules++;
-  
+  */
 
   //Constraints
   /*

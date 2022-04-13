@@ -270,6 +270,9 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
           if(all_node_map->isNodeGlobalElement(node_gid)){
             //set local node index in this mpi rank
             local_node_index = all_node_map->getLocalElement(node_gid);
+            if(map->isNodeGlobalElement(node_gid)){
+              Number_DOF_BCS+=num_dim;
+            }
             if(nonzero_bc_flag){
 
             }
@@ -491,6 +494,8 @@ void FEA_Module_Elasticity::init_boundaries(){
   //initialize
   for(int init=0; init < nall_nodes*num_dim; init++)
     Node_DOF_Boundary_Condition_Type(init) = NONE;
+
+  Number_DOF_BCS = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -2710,7 +2715,6 @@ void FEA_Module_Elasticity::Displacement_Boundary_Conditions(){
   CArrayKokkos<int, array_layout, device_type, memory_traits> Displacement_Conditions(num_dim);
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
-  Number_DOF_BCS = 0;
   Displacement_Conditions(0) = X_DISPLACEMENT_CONDITION;
   Displacement_Conditions(1) = Y_DISPLACEMENT_CONDITION;
   Displacement_Conditions(2) = Z_DISPLACEMENT_CONDITION;
