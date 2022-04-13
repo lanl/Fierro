@@ -292,10 +292,10 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       LO boundary_set_npatches = 0;
       CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
       //grow structures for loading condition storage
+      if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions);
       num_boundary_conditions++;
-      if(num_boundary_conditions>max_boundary_sets) grow_boundary_sets(num_boundary_conditions);
+      if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets);
       num_surface_force_sets++;
-      if(num_surface_force_sets>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets);
       Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_LOADING_CONDITION;
       
       GO num_patches;
@@ -477,7 +477,7 @@ void FEA_Module_Elasticity::init_boundaries(){
   
   //initialize to 1 since there must be at least 1 boundary set anyway; read in may occure later
   if(num_boundary_conditions==0) num_boundary_conditions = 1;
-
+  //std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR INIT " << num_boundary_conditions <<std::endl;
   init_boundary_sets(num_boundary_conditions);
 
   //allocate nodal data
@@ -504,6 +504,7 @@ void FEA_Module_Elasticity::init_boundary_sets (int num_sets){
   //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
   Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_sets, "Boundary_Condition_Type_List");
   NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
+  //std::cout << "NBOUNDARY PATCHES ON RANK " << myrank << " FOR INIT IS " << nboundary_patches <<std::endl;
   Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
   if(num_surface_disp_sets)
     Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets, 3, "Boundary_Surface_Force_Densities");
@@ -544,9 +545,11 @@ void FEA_Module_Elasticity::grow_boundary_sets(int num_sets){
     max_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
     Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(max_boundary_sets, "Boundary_Condition_Type_List");
     NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_boundary_sets, "NBoundary_Condition_Patches");
+    //std::cout << "NBOUNDARY PATCHES ON RANK " << myrank << " FOR GROW " << nboundary_patches <<std::endl;
     Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_boundary_sets, nboundary_patches, "Boundary_Condition_Patches");
 
     //copy previous data back over
+    //std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR COPY " << max_boundary_sets <<std::endl;
     for(int iset = 0; iset < num_boundary_conditions; iset++){
       Boundary_Condition_Type_List(iset) = Temp_Boundary_Condition_Type_List(iset);
       NBoundary_Condition_Patches(iset) = Temp_NBoundary_Condition_Patches(iset);

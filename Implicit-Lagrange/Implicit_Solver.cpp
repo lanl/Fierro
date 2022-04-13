@@ -149,12 +149,6 @@ void Implicit_Solver::run(int argc, char *argv[]){
       read_mesh_ansys_dat(argv[1]);
     else
       read_mesh_ensight(argv[1]);
-    
-    //construct list of FEA modules requested
-    simparam->FEA_module_setup();
-
-    //process process list of requested FEA modules to construct list of objects
-    FEA_module_setup();
 
     //debug
     //return;
@@ -182,6 +176,12 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //initialize TO design variable storage
     init_design();
+
+    //construct list of FEA modules requested
+    simparam->FEA_module_setup();
+
+    //process process list of requested FEA modules to construct list of objects
+    FEA_module_setup();
 
     //Have modules read in boundary/loading conditions if file format provides it
     for(int imodule = 0; imodule < nfea_modules; imodule++){
