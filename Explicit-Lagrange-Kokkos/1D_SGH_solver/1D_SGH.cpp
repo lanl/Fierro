@@ -71,7 +71,7 @@ int main(int argc, char* argv[]){
     // mesh information
     const double  x_min = 0.0;
     const double  x_max = 100.0;
-    const int num_cells = 10000;
+    const int num_cells = 1000;
 
     // global model parameters
     const double sspd_min = 1.0E-3;
