@@ -2,4 +2,4 @@
 
 source sourceme-env.sh
 source kokkos-install.sh
-source openmp_cmake_build.sh
+source pthreads_cmake_build.sh
