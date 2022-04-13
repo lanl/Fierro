@@ -1,3 +1,8 @@
+module purge
+### Load environment modules here
+module load cmake
+module load gcc/9.4.0
+module list
 
 export scriptdir=`pwd`
 
@@ -7,8 +12,8 @@ export basedir=`pwd`
 export matardir=${basedir}/Elements/matar
 
 export srcdir=${basedir}/Explicit-Lagrange-Kokkos/1D_SGH_solver
-export builddir=${basedir}/build-1DSGH-serial
-export installdir=${basedir}/build-kokkos/install-kokkos-serial
+export builddir=${basedir}/build-1DSGH-openmp
+export installdir=${basedir}/build-kokkos/install-kokkos-openmp
 
 export SGH_BASE_DIR=${basedir}
 export SGH_SOURCE_DIR=${srcdir}
@@ -20,3 +25,6 @@ export KOKKOS_INSTALL_DIR=${installdir}/kokkos
 
 cd $scriptdir
 
+export OMP_NUM_THREADS=16
+export OMP_PROC_BIND=true
+export OMP_PROC_BIND=spread
