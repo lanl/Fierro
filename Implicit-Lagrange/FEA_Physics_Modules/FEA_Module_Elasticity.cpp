@@ -292,9 +292,9 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       LO boundary_set_npatches = 0;
       CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
       //grow structures for loading condition storage
-      if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions);
+      if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
       num_boundary_conditions++;
-      if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets);
+      if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
       num_surface_force_sets++;
       Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_LOADING_CONDITION;
       
@@ -588,7 +588,9 @@ void FEA_Module_Elasticity::grow_displacement_condition_sets(int num_sets){
 
     //copy previous data back over
     for(int iset = 0; iset < num_surface_disp_sets; iset++){
-      Boundary_Surface_Displacements(iset) = Temp_Boundary_Surface_Displacements(iset);
+      Boundary_Surface_Displacements(iset,0) = Temp_Boundary_Surface_Displacements(iset,0);
+      Boundary_Surface_Displacements(iset,1) = Temp_Boundary_Surface_Displacements(iset,1);
+      Boundary_Surface_Displacements(iset,2) = Temp_Boundary_Surface_Displacements(iset,2);
     }
   }
   
@@ -616,7 +618,9 @@ void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
 
     //copy previous data back over
     for(int iset = 0; iset < num_surface_force_sets; iset++){
-      Boundary_Surface_Force_Densities(iset) = Temp_Boundary_Surface_Force_Densities(iset);
+      Boundary_Surface_Force_Densities(iset,0) = Temp_Boundary_Surface_Force_Densities(iset,0);
+      Boundary_Surface_Force_Densities(iset,1) = Temp_Boundary_Surface_Force_Densities(iset,1);
+      Boundary_Surface_Force_Densities(iset,2) = Temp_Boundary_Surface_Force_Densities(iset,2);
     }
   }
 }
