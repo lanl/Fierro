@@ -165,12 +165,15 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   //prompts all MPI ranks to expect more broadcasts
   GO dof_count;
   bool searching_for_conditions = true;
+  bool found_no_conditions = true;
   int  zone_condition_type = NONE;
   bool zero_displacement = false;
   bool assign_flag;
   //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
   while (searching_for_conditions) {
     if(myrank==0){
+      //reset variables 
+      zone_condition_type = NONE;
       while(searching_for_conditions&&in->good()){
         getline(*in, skip_line);
         //std::cout << skip_line << std::endl;
@@ -181,11 +184,11 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
           line_parse >> substring;
           //std::cout << substring << std::endl;
           if(!substring.compare("Supports")){
-            searching_for_conditions = false;
+            searching_for_conditions = found_no_conditions = false;
             zone_condition_type = DISPLACEMENT_CONDITION;
           }
           if(!substring.compare("Pressure")){
-            searching_for_conditions = false;
+            searching_for_conditions = found_no_conditions = false;
             zone_condition_type = SURFACE_LOADING_CONDITION;
           }
         } //while
@@ -445,7 +448,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 
     if(myrank==0){
       //previous search on rank 0 for boundary condition keywords failed if search is still true
-      if(searching_for_conditions){
+      if(found_no_conditions){
         std::cout << "FILE FORMAT ERROR" << std::endl;
       }
       //check if there is yet more text to try reading for more boundary condition keywords
