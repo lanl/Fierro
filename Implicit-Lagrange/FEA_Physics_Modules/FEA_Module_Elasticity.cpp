@@ -390,7 +390,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         }
         else if(myrank==0){
           buffer_loop=0;
-          while(buffer_iteration*buffer_lines+buffer_loop < num_nodes) {
+          while(buffer_iteration*buffer_lines+buffer_loop < num_patches) {
             getline(*in,read_line);
             line_parse.clear();
             line_parse.str(read_line);
