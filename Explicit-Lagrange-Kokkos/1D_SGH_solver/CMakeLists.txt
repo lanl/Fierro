@@ -5,7 +5,7 @@ project (1DSGH)
 
 if (KOKKOS)
 
-  add_executable(1DSGH 1D_SGH.cpp)
+  add_executable(fierro1D 1D_SGH.cpp)
 
   add_definitions(-DHAVE_KOKKOS=1)
 
@@ -19,7 +19,7 @@ if (KOKKOS)
     add_definitions(-DHAVE_THREADS=1)
   endif()
 
-  target_link_libraries(1DSGH matar)
+  target_link_libraries(fierro1D matar)
 endif()
 
 

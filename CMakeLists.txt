@@ -104,6 +104,8 @@ include_directories(Elements/geometry)
 include_directories(Elements/slam)
 
 include_directories(Explicit-Lagrange-Kokkos/1D_SGH_solver)
+include_directories(Explicit-Lagrange-Kokkos/SGH_solver)
+
 
 if(BUILD_ELEMENTS)
 add_subdirectory(Elements/elements)
@@ -123,7 +125,7 @@ add_subdirectory(Explicit-Lagrange-Kokkos/1D_SGH_solver)
 endif()
 
 if(BUILD_SGH)
-MESSAGE("\nbuilding 3D SGH!  Here are the details: ")
+MESSAGE("\nbuilding SGH!  Here are the details: ")
 add_subdirectory(Elements/matar)
 add_subdirectory(Explicit-Lagrange-Kokkos/SGH_solver)
 endif()
