@@ -122,6 +122,13 @@ add_subdirectory(Elements/matar)
 add_subdirectory(Explicit-Lagrange-Kokkos/1D_SGH_solver)
 endif()
 
+if(BUILD_SGH)
+MESSAGE("\nbuilding 3D SGH!  Here are the details: ")
+add_subdirectory(Elements/matar)
+add_subdirectory(Explicit-Lagrange-Kokkos/SGH_solver)
+endif()
+
+
 if(BUILD_IMPLICIT_SOLVER)
 add_subdirectory(Implicit-Lagrange)
 endif()
