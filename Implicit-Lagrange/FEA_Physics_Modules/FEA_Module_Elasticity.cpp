@@ -265,7 +265,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         //determine which data to store in the swage mesh members (the local node data)
         //loop through read buffer
         for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-          node_gid = read_buffer_indices(scan_loop);
+          node_gid = read_buffer_indices(scan_loop)-1; //read indices are base 1, we need base 0
           //let map decide if this node id belongs locally; if yes store data
           if(all_node_map->isNodeGlobalElement(node_gid)){
             //set local node index in this mpi rank
@@ -405,7 +405,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
               line_parse >> substring;
               //assign the substring variable as a word of the read buffer
               if(iword>non_node_entries-1){
-                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring);
+                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring)-1; //make base 0, file has base 1
               }
             }
             buffer_loop++;
@@ -420,6 +420,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 
         //determine which data to store in the swage mesh members (the local node data)
         //loop through read buffer
+        std::cout << "BUFFER LOOP IS " << buffer_loop << " ASSIGNED ON RANK " << myrank << std::endl;
         int belong_count;
         for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
           belong_count = 0;
@@ -438,9 +439,13 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
               Surface_Nodes(inode) = read_buffer_indices(scan_loop, inode);
             }
             Node_Combination temp(Surface_Nodes);
+            //debug print
+            //std::cout << "PATCH NODES " << boundary_set_npatches +1 << " " << Surface_Nodes(0) << " " << Surface_Nodes(1) << " " << Surface_Nodes(2) << " " << Surface_Nodes(3) << " ASSIGNED ON RANK " << myrank << std::endl;
             //construct Node Combination object for this surface
             local_patch_index = Solver_Pointer_->boundary_patch_to_index[temp];
             Boundary_Condition_Patches(num_boundary_conditions-1,boundary_set_npatches++) = local_patch_index;
+            //debug print
+            //std::cout << "PATCH INDEX " << local_patch_index << " ASSIGNED ON RANK " << myrank << std::endl;
           }
           //find patch id associated with node combination
         }
