@@ -141,7 +141,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
   std::string skip_line, read_line, substring, token;
   std::stringstream line_parse, line_parse2;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  CArrayKokkos<GO, array_layout, HostSpace, memory_traits> read_buffer_indices;
+  CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
   int buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
   size_t read_index_start, node_rid, elem_gid;
   LO local_dof_id;
@@ -234,7 +234,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       read_index_start = 0;
 
       //allocate read buffer
-      read_buffer_indices = CArrayKokkos<GO, array_layout, HostSpace, memory_traits>(buffer_lines);
+      read_buffer_indices = CArrayKokkos<long long int, array_layout, HostSpace, memory_traits>(buffer_lines);
       //read global indices being fixed on rank zero then broadcast buffer until list is complete
       for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
         //pack buffer on rank 0
@@ -370,7 +370,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       if(num_patches%buffer_lines!=0) buffer_iterations++;
       read_index_start = 0;
       //allocate read buffer
-      read_buffer_indices = CArrayKokkos<GO, array_layout, HostSpace, memory_traits>(buffer_lines,nodes_per_patch);
+      read_buffer_indices = CArrayKokkos<long long int, array_layout, HostSpace, memory_traits>(buffer_lines,nodes_per_patch);
       int non_node_entries = 5;
       words_per_line = nodes_per_patch + non_node_entries;
 
@@ -420,7 +420,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 
         //determine which data to store in the swage mesh members (the local node data)
         //loop through read buffer
-        std::cout << "BUFFER LOOP IS " << buffer_loop << " ASSIGNED ON RANK " << myrank << std::endl;
+        //std::cout << "BUFFER LOOP IS " << buffer_loop << " ASSIGNED ON RANK " << myrank << std::endl;
         int belong_count;
         for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
           belong_count = 0;
