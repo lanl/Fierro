@@ -5325,7 +5325,7 @@ void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp){
   
   //solve for new nodal displacements
   int solver_exit = solve();
-  if(solver_exit == EXIT_SUCCESS){
+  if(solver_exit != EXIT_SUCCESS){
     std::cout << "Linear Solver Error" << std::endl <<std::flush;
     return;
   }
