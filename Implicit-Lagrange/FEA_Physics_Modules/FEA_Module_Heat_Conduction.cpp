@@ -3526,7 +3526,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //all_node_temperatures_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   
-  return !EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
 
 /* -------------------------------------------------------------------------------------------

@@ -5274,7 +5274,7 @@ int FEA_Module_Elasticity::solve(){
   //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   
-  return !EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
 
 /* -------------------------------------------------------------------------------------------

@@ -226,7 +226,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       int solver_exit = fea_modules[imodule]->solve();
-      if(solver_exit == EXIT_SUCCESS){
+      if(solver_exit != EXIT_SUCCESS){
         std::cout << "Linear Solver Error" << std::endl <<std::flush;
         return;
       }
