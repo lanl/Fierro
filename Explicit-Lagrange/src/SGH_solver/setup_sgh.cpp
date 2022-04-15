@@ -1,4 +1,4 @@
-/* setup.c */                                                               
+                                                              
 
 #include <stdlib.h>
 #include <string.h>
