@@ -89,7 +89,6 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   gradient_print_sync = 0;
 
   //boundary condition data
-  current_bdy_id = 0;
   max_boundary_sets = max_disp_boundary_sets = max_load_boundary_sets = num_surface_disp_sets = num_surface_force_sets = 0;
 
   //boundary condition flags
@@ -298,6 +297,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       LO boundary_set_npatches = 0;
       CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
       //grow structures for loading condition storage
+      //debug print
+      std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< num_surface_force_sets << std::endl;
       if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
       num_boundary_conditions++;
       if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
@@ -477,9 +478,9 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::init_boundaries(){
-  num_boundary_conditions = simparam->NB;
-  num_surface_force_sets = simparam->NBSF;
-  num_surface_disp_sets = simparam->NBD;
+  max_boundary_sets = simparam->NB;
+  max_load_boundary_sets = simparam->NBSF;
+  max_disp_boundary_sets = simparam->NBD;
   int num_dim = simparam->num_dim;
   
   // set the number of boundary sets
@@ -487,9 +488,9 @@ void FEA_Module_Elasticity::init_boundaries(){
     std::cout << "building boundary sets " << std::endl;
   
   //initialize to 1 since there must be at least 1 boundary set anyway; read in may occure later
-  if(num_boundary_conditions==0) num_boundary_conditions = 1;
+  if(max_boundary_sets==0) max_boundary_sets = 1;
   //std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR INIT " << num_boundary_conditions <<std::endl;
-  init_boundary_sets(num_boundary_conditions);
+  init_boundary_sets(max_boundary_sets);
 
   //allocate nodal data
   Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes*num_dim, "Node_DOF_Boundary_Condition_Type");
@@ -513,27 +514,23 @@ void FEA_Module_Elasticity::init_boundary_sets (int num_sets){
     std::cout << " Warning: number of boundary conditions = 0";
     return;
   }
-  
+  //initialize maximum
+  max_boundary_sets = num_sets;
+  if(max_load_boundary_sets == 0) max_load_boundary_sets = num_sets;
+  if(max_disp_boundary_sets == 0) max_disp_boundary_sets = num_sets;
   //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
   Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_sets, "Boundary_Condition_Type_List");
   NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
   //std::cout << "NBOUNDARY PATCHES ON RANK " << myrank << " FOR INIT IS " << nboundary_patches <<std::endl;
   Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
-  if(num_surface_disp_sets)
-    Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_force_sets, 3, "Boundary_Surface_Force_Densities");
-  if(num_surface_force_sets)
-    Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_disp_sets, 3, "Boundary_Surface_Displacements");
+  Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_load_boundary_sets, 3, "Boundary_Surface_Force_Densities");
+  Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_disp_boundary_sets, 3, "Boundary_Surface_Displacements");
 
   //initialize data
   for(int iset = 0; iset < num_sets; iset++) NBoundary_Condition_Patches(iset) = 0;
 
    //initialize
   for(int ibdy=0; ibdy < num_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
-
-  //initialize maximum
-  max_boundary_sets = num_sets;
-  max_disp_boundary_sets = num_surface_disp_sets;
-  max_load_boundary_sets = num_surface_force_sets;
 }
 
 /* ----------------------------------------------------------------------------
@@ -644,8 +641,6 @@ void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
 
 void FEA_Module_Elasticity::generate_bcs(){
   int num_dim = simparam->num_dim;
-  int bdy_set_id;
-  int surf_disp_set_id = 0;
   int bc_tag;
   real_t value;
   real_t fix_limits[4];
@@ -656,19 +651,21 @@ void FEA_Module_Elasticity::generate_bcs(){
   value = 0.0 * simparam->unit_scaling;
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  if(Boundary_Surface_Displacements(surf_disp_set_id,0)||Boundary_Surface_Displacements(surf_disp_set_id,1)||Boundary_Surface_Displacements(surf_disp_set_id,2)) nonzero_bc_flag = true;
-  surf_disp_set_id++;
+  if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+  if(num_surface_disp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_disp_sets+1);
+  //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
+  Boundary_Surface_Displacements(num_surface_disp_sets,0) = 0;
+  Boundary_Surface_Displacements(num_surface_disp_sets,1) = 0;
+  Boundary_Surface_Displacements(num_surface_disp_sets,2) = 0;
+  if(Boundary_Surface_Displacements(num_surface_disp_sets,0)||Boundary_Surface_Displacements(num_surface_disp_sets,1)||Boundary_Surface_Displacements(num_surface_disp_sets,2)) nonzero_bc_flag = true;
     
   *fos << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   *fos << std::endl;
+  num_boundary_conditions++;
+  num_surface_disp_sets++;
  /*
   // tag the y=10 plane,  (Direction, value, bdy_set)
   std::cout << "tagging y = 10 " << std::endl;
@@ -676,17 +673,17 @@ void FEA_Module_Elasticity::generate_bcs(){
   value = 10.0 * simparam->unit_scaling;
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
+  num_boundary_conditions = current_bdy_id++;
+  //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
+  Boundary_Surface_Displacements(num_surface_disp_sets,0) = 0;
+  Boundary_Surface_Displacements(num_surface_disp_sets,1) = 0;
+  Boundary_Surface_Displacements(num_surface_disp_sets,2) = 0;
+  num_surface_disp_sets++;
     
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
 
   // tag the x=10 plane,  (Direction, value, bdy_set)
@@ -695,17 +692,17 @@ void FEA_Module_Elasticity::generate_bcs(){
   value = 10.0 * simparam->unit_scaling;
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
+  num_boundary_conditions = current_bdy_id++;
+  //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
+  Boundary_Surface_Displacements(num_surface_disp_sets,0) = 0;
+  Boundary_Surface_Displacements(num_surface_disp_sets,1) = 0;
+  Boundary_Surface_Displacements(num_surface_disp_sets,2) = 0;
+  num_surface_disp_sets++;
     
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
  
   // tag the +z beam plane,  (Direction, value, bdy_set)
@@ -715,17 +712,17 @@ void FEA_Module_Elasticity::generate_bcs(){
   //real_t fix_limits[4];
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(surf_disp_set_id,0) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,1) = 0;
-  Boundary_Surface_Displacements(surf_disp_set_id,2) = 0;
-  surf_disp_set_id++;
+  num_boundary_conditions = current_bdy_id++;
+  //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
+  Boundary_Surface_Displacements(num_surface_disp_sets,0) = 0;
+  Boundary_Surface_Displacements(num_surface_disp_sets,1) = 0;
+  Boundary_Surface_Displacements(num_surface_disp_sets,2) = 0;
+  num_surface_disp_sets++;
     
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
   
   //This part should be changed so it interfaces with simparam to handle multiple input cases
@@ -733,11 +730,11 @@ void FEA_Module_Elasticity::generate_bcs(){
   std::cout << "tagging y = 0 " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 0.0;
-  bdy_set_id = 1;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
+  num_boundary_conditions = 1;
+  mesh->tag_bdys(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
     
 
@@ -745,11 +742,11 @@ void FEA_Module_Elasticity::generate_bcs(){
   std::cout << "tagging z = 0 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 0.0;
-  bdy_set_id = 2;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = DISPLACEMENT_CONDITION;
+  num_boundary_conditions = 2;
+  mesh->tag_bdys(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
   
   */
@@ -764,8 +761,6 @@ void FEA_Module_Elasticity::generate_bcs(){
 
 void FEA_Module_Elasticity::generate_applied_loads(){
   int num_dim = simparam->num_dim;
-  int bdy_set_id;
-  int surf_force_set_id = 0;
   int bc_tag;
   real_t value;
   
@@ -776,16 +771,16 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 2 * simparam->unit_scaling;
   //value = 2;
-  bdy_set_id = current_bdy_id++;
+  num_boundary_conditions = current_bdy_id++;
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam->unit_scaling/simparam->unit_scaling;
   surf_force_set_id++;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
   
   
@@ -793,16 +788,16 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 1 * simparam->unit_scaling;
   //value = 2;
-  bdy_set_id = current_bdy_id++;
+  num_boundary_conditions = current_bdy_id++;
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam->unit_scaling/simparam->unit_scaling;
   surf_force_set_id++;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
   
   
@@ -810,16 +805,16 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 2 * simparam->unit_scaling;
   //value = 2;
-  bdy_set_id = current_bdy_id++;
+  num_boundary_conditions = current_bdy_id++;
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 1/simparam->unit_scaling/simparam->unit_scaling;
   surf_force_set_id++;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
   */
   /*
@@ -827,32 +822,32 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 0 * simparam->unit_scaling;
   //value = 2;
-  bdy_set_id = current_bdy_id++;
+  num_boundary_conditions = current_bdy_id++;
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = -1/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
 
   std::cout << "tagging beam +x " << std::endl;
   bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 10 * simparam->unit_scaling;
   //value = 2;
-  bdy_set_id = current_bdy_id++;
+  num_boundary_conditions = current_bdy_id++;
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 1/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
   */
 
@@ -864,16 +859,16 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   load_limits_left[0] = load_limits_left[2] = 4;
   load_limits_left[1] = load_limits_left[3] = 6;
   //value = 2;
-  bdy_set_id = current_bdy_id++;
+  num_boundary_conditions = current_bdy_id++;
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id ,load_limits_left);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
+  tag_boundaries(bc_tag, value, num_boundary_conditions ,load_limits_left);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = 10/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
 
   std::cout << "tagging beam +y " << std::endl;
@@ -883,16 +878,16 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   load_limits_right[0] = load_limits_right[2] = 4;
   load_limits_right[1] = load_limits_right[3] = 6;
   //value = 2;
-  bdy_set_id = current_bdy_id++;
+  num_boundary_conditions = current_bdy_id++;
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id, load_limits_right);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
+  tag_boundaries(bc_tag, value, num_boundary_conditions, load_limits_right);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Force_Densities(surf_force_set_id,0) = -10/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
   Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
   surf_force_set_id++;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
   */
   
@@ -900,37 +895,41 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
   value = 0.1;
-  bdy_set_id = current_bdy_id++;
+  //grow arrays as needed
+  if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+  if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 12/simparam->unit_scaling/simparam->unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
+  Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 12/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Force_Densities(num_surface_force_sets,1) = 0;
+  Boundary_Surface_Force_Densities(num_surface_force_sets,2) = 0;
   *fos << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   *fos << std::endl;
+  
+  num_boundary_conditions++;
+  num_surface_force_sets++;
   
   /*
   std::cout << "tagging y = 2 " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 2.0;
-  bdy_set_id = 4;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
+  num_boundary_conditions = 4;
+  mesh->tag_bdys(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
 
   std::cout << "tagging z = 2 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 2.0;
-  bdy_set_id = 5;
-  mesh->tag_bdys(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
+  num_boundary_conditions = 5;
+  mesh->tag_bdys(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(num_boundary_conditions) << std::endl;
   std::cout << std::endl;
   */
   
@@ -1485,8 +1484,8 @@ void FEA_Module_Elasticity::assemble_vector(){
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
     force_density[0] = Boundary_Surface_Force_Densities(surface_force_set_id,0);
-    //debug print 
-    //std::cout << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
+    //debug print
+    std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< surface_force_set_id << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
     force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
     force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
     surface_force_set_id++;
