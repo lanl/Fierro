@@ -2228,7 +2228,6 @@ void Implicit_Solver::FEA_module_setup(){
       fea_module_types[imodule] = "Inertial";
       fea_modules[imodule] = new FEA_Module_Inertial(this);
       module_found = true;
-      displacement_module = imodule;
       //debug print
       *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
       
