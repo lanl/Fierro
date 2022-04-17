@@ -100,12 +100,19 @@ void read_mesh_ensight(char* MESH,
             mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
         }
     }
+    // update device side
+    mesh.nodes_in_elem.update_device();
     
     
     // intialize corner variables
     int num_corners = num_elem*mesh.num_nodes_in_elem;
     mesh.initialize_corners(num_corners);
     corner.initialize(num_corners, num_dims);
+
+
+
+
+
 
     // Close mesh input file
     fclose(in);

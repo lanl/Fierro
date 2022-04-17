@@ -14,7 +14,7 @@
 void input(CArrayKokkos <material_t> &material,
            CArrayKokkos <mat_fill_t> &mat_fill,
            CArrayKokkos <boundary_t> &boundary,
-           CArrayKokkos <double> &state_vars0){
+           CArrayKokkos <double> &state_vars){
     
     
     // Dimensions
@@ -40,7 +40,7 @@ void input(CArrayKokkos <material_t> &material,
     
     // --- declare model state variable array size ---
     num_state_vars = 6;  // 6 values for gamma_law gas
-    state_vars0 = CArrayKokkos <double> (num_materials, num_state_vars); // init values
+    state_vars = CArrayKokkos <double> (num_materials, num_state_vars); // init values
     
     // --- number of fill regions ---
     num_fills = 2;
@@ -74,19 +74,19 @@ void input(CArrayKokkos <material_t> &material,
         
         RUN({
             // gamma law model
-            // statev(0) = specific heat
-            // statev(1) = ref temperature
-            // statev(2) = ref density
-            // statev(3) = ref specific internal energy
-            // statev(4) = gamma
-            // statev(5) = minimum sound speed
+            // state_vars(0) = specific heat
+            // state_vars(1) = ref temperature
+            // state_vars(2) = ref density
+            // state_vars(3) = ref specific internal energy
+            // state_vars(4) = gamma
+            // state_vars(5) = minimum sound speed
             
             material(0).mat_model = ideal_gas; // EOS model
             material(0).b1        = 1.3333;    // linear slope of UsUp for Riemann solver
             
-            state_vars0(0,0) = 1.0;     // specific heat
-            state_vars0(0,4) = 5.0/3.0; // gamma value
-            state_vars0(0,5) = 1.0E-14; // minimum sound speed
+            state_vars(0,0) = 1.0;     // specific heat
+            state_vars(0,4) = 5.0/3.0; // gamma value
+            state_vars(0,5) = 1.0E-14; // minimum sound speed
             
             
             // global initial conditions
@@ -102,7 +102,7 @@ void input(CArrayKokkos <material_t> &material,
             
             // energy source initial conditions
             mat_fill(1).volume = region::sphere; // fill a sphere
-            mat_fill(1).mat_id = 1;              // material id
+            mat_fill(1).mat_id = 0;              // material id
             mat_fill(1).radius1 = 0.0;           // inner radius of fill region
             mat_fill(1).radius2 = 1.2/8.0;       // outer radius of fill region
             mat_fill(1).den = 1.0;               // initial density

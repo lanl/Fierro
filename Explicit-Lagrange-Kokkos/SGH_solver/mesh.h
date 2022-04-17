@@ -7,7 +7,7 @@
 
 #define PI 3.141592653589793
 
-// mesh
+// mesh sizes and connectivity data structures
 struct mesh_t {
     
     size_t num_dims;
@@ -17,20 +17,11 @@ struct mesh_t {
     size_t num_corners;
 
     
-    // mesh nodes ids
-    DCArrayKokkos <size_t> nodes;
-
-    // mesh elems ids
-    DCArrayKokkos <size_t> elems;
-
-    // mesh corner ids
-    DCArrayKokkos <size_t> corners;
-    
     // node ids in elem
     DCArrayKokkos <size_t> nodes_in_elem;
     
     // corner ids in elem
-    DCArrayKokkos <size_t> corners_in_elem;
+    CArrayKokkos <size_t> corners_in_elem;
     
     // corner ids in node
     RaggedRightArrayKokkos <size_t> corners_in_node;
@@ -40,7 +31,6 @@ struct mesh_t {
     void initialize_nodes(const size_t num_nodes_inp)
     {
         this->num_nodes = num_nodes_inp;
-        this->nodes = DCArrayKokkos <size_t> (num_nodes);
     }; // end method
     
     
@@ -53,9 +43,8 @@ struct mesh_t {
             num_nodes_in_elem *= 2;
         }
         this->num_elems = num_elems_inp;
-        this->elems = DCArrayKokkos <size_t> (num_elems);
         this->nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
-        this->corners_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
+        this->corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
     }; // end method
     
     
@@ -63,7 +52,6 @@ struct mesh_t {
     void initialize_corners(const size_t num_corners_inp)
     {
         this->num_corners = num_corners_inp;
-        this->corners = DCArrayKokkos <size_t> (num_corners);
     }; // end method
     
     
@@ -94,10 +82,11 @@ struct mesh_t {
         // the stride sizes are the num_corners_in_node at the node
         this -> corners_in_node = RaggedRightArrayKokkos <size_t> (num_corners_in_node);
 
-        
+        CArrayKokkos <size_t> count_saved_corners_in_node(num_nodes);
+
         // reset num_corners to zero
         FOR_ALL(node_gid, 0, num_nodes, {
-            num_corners_in_node(node_gid) = 0;
+            count_saved_corners_in_node(node_gid) = 0;
         });
         
         
@@ -109,7 +98,7 @@ struct mesh_t {
                 size_t node_gid = nodes_in_elem(elem_gid, node_lid);
                 
                 // the column index is the num corners saved
-                size_t j = num_corners_in_node(node_gid);
+                size_t j = count_saved_corners_in_node(node_gid);
 
                 // Save corner index to this node_gid
                 size_t corner_gid = node_lid + elem_gid*num_nodes_in_elem;
@@ -120,15 +109,14 @@ struct mesh_t {
                 corners_in_elem(elem_gid, corner_lid) = corner_gid;
 
                 // increment the number of corners saved to this node_gid
-                num_corners_in_node(node_gid) = num_corners_in_node(node_gid) + 1;
+                count_saved_corners_in_node(node_gid) = count_saved_corners_in_node(node_gid) + 1;
 
             });  // end FOR_ALL over nodes in element
         } // end for elem_gid
 
 
     } // end of build_corner_connectivity
-
-    
+  
 
 }; // end mesh_t
 
@@ -262,7 +250,7 @@ void read_mesh_ensight(char* MESH,
 void input(CArrayKokkos <material_t> &material,
            CArrayKokkos <mat_fill_t> &mat_fill,
            CArrayKokkos <boundary_t> &boundary,
-           CArrayKokkos <double> &state_vars0);
+           CArrayKokkos <double> &state_vars);
 
 
 KOKKOS_FUNCTION
@@ -279,8 +267,34 @@ void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const mesh_t &mesh);
 
 
-void setup(CArrayKokkos <material_t> &material,
-           CArrayKokkos <mat_fill_t> &mat_fill,
-           CArrayKokkos <boundary_t> &boundary);
+void setup( const CArrayKokkos <material_t> &material,
+            const CArrayKokkos <mat_fill_t> &mat_fill,
+            const CArrayKokkos <boundary_t> &boundary,
+            const mesh_t &mesh,
+            const DViewCArrayKokkos <double> &node_coords,
+            const DViewCArrayKokkos <double> &node_vel,
+            const DViewCArrayKokkos <double> &node_mass,      
+            const DViewCArrayKokkos <double> &elem_den,
+            const DViewCArrayKokkos <double> &elem_pres,
+            const DViewCArrayKokkos <double> &elem_stress,
+            const DViewCArrayKokkos <double> &elem_sspd,       
+            const DViewCArrayKokkos <double> &elem_sie,
+            const DViewCArrayKokkos <double> &elem_vol,
+            const DViewCArrayKokkos <double> &elem_mass,
+            const DViewCArrayKokkos <size_t> &elem_mat_id,
+            const DViewCArrayKokkos <double> &elem_statev,
+            const CArrayKokkos <double> &state_vars);
 
+void ensight( mesh_t &mesh,
+              DViewCArrayKokkos <double> &node_coords,
+              DViewCArrayKokkos <double> &node_vel,
+              DViewCArrayKokkos <double> &node_mass,
+              DViewCArrayKokkos <double> &elem_den,
+              DViewCArrayKokkos <double> &elem_pres,
+              DViewCArrayKokkos <double> &elem_stress,
+              DViewCArrayKokkos <double> &elem_sspd, 
+              DViewCArrayKokkos <double> &elem_sie,
+              DViewCArrayKokkos <double> &elem_vol,
+              DViewCArrayKokkos <double> &elem_mass,
+              DViewCArrayKokkos <size_t> &elem_mat_id);
 #endif 
