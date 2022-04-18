@@ -76,6 +76,11 @@ To run the fierro exectuable (see subsection above here to make the executable) 
 The user must supply a mesh when executing the code, a range of meshes are provided in the meshes/ folder in the repository.
 
 
+## Updating submodules
+The ELEMENTS library and MATAR library can be updated to the newest release using
+```
+git submodule update --remote --merge
+```
 
 
 
