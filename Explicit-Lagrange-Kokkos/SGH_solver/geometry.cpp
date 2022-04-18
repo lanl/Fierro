@@ -23,7 +23,7 @@ void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const DViewCArrayKokkos <double> &node_coords,
                  const mesh_t &mesh){
 
-    const size_t num_nodes = mesh.num_nodes_in_elem;
+    const size_t num_nodes = 8;
 
     double x_array[num_nodes];
     double y_array[num_nodes];
@@ -150,7 +150,7 @@ void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const DViewCArrayKokkos <double> &node_coords,
                  const mesh_t &mesh){
 
-    const size_t num_nodes = mesh.num_nodes_in_elem;
+    const size_t num_nodes = 8;
 
     double x_array[num_nodes];
     double y_array[num_nodes];
