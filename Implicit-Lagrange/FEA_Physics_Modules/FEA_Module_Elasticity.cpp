@@ -894,14 +894,14 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   *fos << "tagging beam +z force " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
-  value = 0.1;
+  value = 100;
   //grow arrays as needed
   if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
   if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, num_boundary_conditions);
   Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 12/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(num_surface_force_sets,1) = 0;
   Boundary_Surface_Force_Densities(num_surface_force_sets,2) = 0;
   *fos << "tagged a set " << std::endl;
