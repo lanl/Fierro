@@ -15,6 +15,16 @@
 ## Material models  
 The classical ideal gas model is the only material model implemented in the code, and it is useful for verification tests of the software and simple gas dynamic simulations.  A forthcoming version of the code will have C++ to Fortran interfaces to enable code users the ability to use their own material models and test them on quasi static problems or material dynamic applications.  The interfaces follow an industry standard format so that **Fierro** can be used for model research and development that has historically been done with commercial implicit or explicit finite element codes. 
 
+## Cloning the code
+If the user has set up ssh keys with GitHub, type
+```
+git clone --recursive ssh://git@github.com/lanl/Fierro.git
+```
+The code can also be cloned using
+```
+git clone --recursive https://github.com/lanl/Fierro.git
+```
+
 ## Building the code
 The user should create a new directory where the compiled code will reside.  
 ```
@@ -37,6 +47,19 @@ BUILD_EXPLICIT_SOLVER=ON (Tells cmake whether to build the explicit solver compo
 BUILD_IMPLICIT_SOLVER=OFF (Tells cmake whether to build the implicit solver components of Fierro. This requires the user to build Trilinos in the folder Fierro/Trilinos/build)
 ```
 
+## Building the explicit Lagrangian methods with Kokkos
+Explicit Lagrangian codes are being added to the repository that are written using MATAR+Kokkos and run with fine-grained parallellism on multi-core CPUs and GPUs.  Build scripts are provided for each Lagrangian code, and those scripts follow those used in the [MATAR](https://github.com/lanl/MATAR/) GitHub repository. The scripts to build the Lagrangian codes (that use MATAR+Kokkos) are in the scripts folder.  The user must update the modules loaded by the build scripts (for the compiler etc.), and then type
+```
+source build-it.sh
+```
+The build-it.sh script sources the other scripts in the folder.  The compiled code will be in a folder (named after the explicit Lagrangian method) in the Fierro directory.  A range of scripts are provided for many architectures; however, they might not be correctly configured for the user's hardware.  The CPU architecture information needs to be listed if running with the Kokkos serial, OpenMP, and pthreads backends; GPU architecture information must be listed if using a Kokkos GPU backend. We refer the user to Kokkos compiling page to see the large list of compilation options,
+```
+https://github.com/kokkos/kokkos/wiki/Compiling
+```
+If the scripts fail to build a Lagrangian code, then carefully review the modules used and the computer architecture settings.  A more lenghtly discussion of the build scripts is provided in the MATAR GitHub repository.  
+
+
+
 ## Trilinos Dependencies to Install
 OpenMPI
 g++
@@ -44,7 +67,8 @@ gfortran
 BLAS
 LAPACK
 
-## Running the code
+
+## Running the Fierro code using explicit Lagrangian methods 
 To run the fierro exectuable (see subsection above here to make the executable) go to bin/test and type
 ```
 ./fierro my_mesh.geo
@@ -52,6 +76,11 @@ To run the fierro exectuable (see subsection above here to make the executable) 
 The user must supply a mesh when executing the code, a range of meshes are provided in the meshes/ folder in the repository.
 
 
+## Updating submodules
+The ELEMENTS library and MATAR library can be updated to the newest release using
+```
+git submodule update --remote --merge
+```
 
 
 

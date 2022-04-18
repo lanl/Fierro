@@ -236,7 +236,7 @@ int main(int argc, char *argv[]){
 
         
         // state output for plotting
-        fprintf(out_cell_state, "cell_gid x y z r den pres sie vol\n");
+        fprintf(out_cell_state, "#cell_gid x y z r den pres sie vol\n");
 
         real_t x, y, z;
         std::cout<<"Num Cells: " << mesh.num_cells() << std::endl; 
@@ -273,7 +273,7 @@ int main(int argc, char *argv[]){
 
         
         // state output for plotting
-        fprintf(out_cell_state, "cell_gid x y z r den pres sie vol\n");
+        fprintf(out_cell_state, "#cell_gid x y z r den pres sie vol\n");
 
         real_t x, y, z;
         
@@ -310,7 +310,7 @@ int main(int argc, char *argv[]){
                 te_0-(ie+ke));
 
 
-        fprintf(out_elem_state, "x, y, z, r, den, pres, sie, ske, ste \n");
+        fprintf(out_elem_state, "#x, y, z, r, den, pres, sie, ske, ste \n");
 
 
         for(int elem_gid = 0; elem_gid < mesh.num_elems(); elem_gid++) {
@@ -350,7 +350,7 @@ int main(int argc, char *argv[]){
 
         
         // state output for plotting
-        fprintf(out_matpt_state, "x, y, z, r, den, pres, sie, vol \n");
+        fprintf(out_matpt_state, "#x, y, z, r, den, pres, sie, vol \n");
 
         real_t x, y, z;
         for (int elem_gid = 0; elem_gid < mesh.num_elems(); elem_gid++){

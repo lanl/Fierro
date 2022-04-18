@@ -37,7 +37,7 @@ endif()
 
 #add_compile_options(-g -O0)
 #add_compile_options(-g -O3)
-#set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 17)
 # Disable Kokkos warning about not supporting C++ extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -103,6 +103,10 @@ include_directories(Elements/common)
 include_directories(Elements/geometry)
 include_directories(Elements/slam)
 
+include_directories(Explicit-Lagrange-Kokkos/1D_SGH_solver)
+include_directories(Explicit-Lagrange-Kokkos/SGH_solver)
+
+
 if(BUILD_ELEMENTS)
 add_subdirectory(Elements/elements)
 add_subdirectory(Elements/swage)
@@ -113,6 +117,19 @@ add_subdirectory(Elements/slam)
 add_subdirectory(Elements/tests)
 add_subdirectory(Elements/mesh_tools)
 endif()
+
+if(BUILD_1D_SGH)
+MESSAGE("\nbuilding 1D SGH!  Here are the details: ")
+add_subdirectory(Elements/matar)
+add_subdirectory(Explicit-Lagrange-Kokkos/1D_SGH_solver)
+endif()
+
+if(BUILD_SGH)
+MESSAGE("\nbuilding SGH!  Here are the details: ")
+add_subdirectory(Elements/matar)
+add_subdirectory(Explicit-Lagrange-Kokkos/SGH_solver)
+endif()
+
 
 if(BUILD_IMPLICIT_SOLVER)
 add_subdirectory(Implicit-Lagrange)
