@@ -27,8 +27,6 @@ void setup( const CArrayKokkos <material_t> &material,
             const CArrayKokkos <double> &state_vars
            ){
 
-    const size_t num_nodes = mesh.num_nodes_in_elem;
-    
     
     //--- apply the fill instructions over the Elements---//
     
@@ -125,8 +123,8 @@ void setup( const CArrayKokkos <material_t> &material,
                 elem_statev(elem_gid,5) = state_vars(mat_id,5); // minimum sound speed    
 
                 // --- stress tensor ---
-                for(size_t i=0; i<num_dims; i++){
-                    for(size_t j=0; j<num_dims; j++){
+                for(size_t i=0; i<mesh.num_dims; i++){
+                    for(size_t j=0; j<mesh.num_dims; j++){
                         elem_stress(rk_level,elem_gid,i,j) = 0.0;
                     }        
                 }  // end for
@@ -266,8 +264,8 @@ void setup( const CArrayKokkos <material_t> &material,
         FOR_ALL(elem_gid, 0, mesh.num_elems, { 
 
             // stress
-            for(size_t i=0; i<num_dims; i++){
-                for(size_t j=0; j<num_dims; j++){
+            for(size_t i=0; i<mesh.num_dims; i++){
+                for(size_t j=0; j<mesh.num_dims; j++){
                     elem_stress(rk_level,elem_gid,i,j) = elem_stress(0,elem_gid,i,j);
                 }        
             }  // end for
@@ -279,7 +277,7 @@ void setup( const CArrayKokkos <material_t> &material,
         Kokkos::fence();
 
         FOR_ALL(node_gid, 0, mesh.num_nodes, {
-            for(size_t i=0; i<num_dims; i++){
+            for(size_t i=0; i<mesh.num_dims; i++){
                 node_coords(rk_level,node_gid,i) = node_coords(0,node_gid,i);
                 node_vel(rk_level,node_gid,i) = node_vel(rk_level,node_gid,i);
             }
