@@ -29,14 +29,15 @@ private:
 
 public:
     
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> node_set;
-  size_t patch_id, element_id, local_patch_id;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> node_set;
+  GO patch_id, element_id; 
+  LO local_patch_id;
 
   //Default Constructor
   Node_Combination(){}
 
   //Constructor with initialization
-  Node_Combination(CArrayKokkos<size_t, array_layout, device_type, memory_traits> &nodes_init) {
+  Node_Combination(CArrayKokkos<GO, array_layout, device_type, memory_traits> &nodes_init) {
     node_set = nodes_init;
   }
 

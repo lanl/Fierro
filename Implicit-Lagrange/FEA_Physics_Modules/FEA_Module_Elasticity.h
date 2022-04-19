@@ -30,6 +30,12 @@ public:
 
   //initializes memory for arrays used in the global stiffness matrix assembly
   void init_boundary_sets(int num_boundary_sets);
+
+  void grow_boundary_sets(int num_boundary_sets);
+
+  void grow_displacement_condition_sets(int num_boundary_sets);
+
+  void grow_loading_condition_sets(int num_boundary_sets);
   
   void init_assembly();
 
@@ -64,6 +70,8 @@ public:
   void Body_Term(size_t ielem, real_t density, real_t *forces);
 
   void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces);
+
+  void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header);
 
   //interfaces between user input and creating data structures for bcs
   void generate_bcs();
@@ -105,6 +113,8 @@ public:
   
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
    Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
+  int max_boundary_sets, max_disp_boundary_sets, max_load_boundary_sets;
+  int num_surface_disp_sets, num_surface_force_sets;
   
   //body force parameters
   bool gravity_flag, thermal_flag, electric_flag;

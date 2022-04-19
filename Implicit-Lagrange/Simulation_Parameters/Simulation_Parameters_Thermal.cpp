@@ -16,6 +16,10 @@ Simulation_Parameters_Thermal::Simulation_Parameters_Thermal() : Simulation_Para
   thermal_flag = false;
   multigrid_timers = false;
   equilibrate_matrix_flag = false;
+  // ---- boundary conditions ---- //
+  NB = 0;
+  NBSF = 0;
+  NBT = 0;
 }
 
 Simulation_Parameters_Thermal::~Simulation_Parameters_Thermal(){

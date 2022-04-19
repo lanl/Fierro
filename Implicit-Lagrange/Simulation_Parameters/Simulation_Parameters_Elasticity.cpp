@@ -17,6 +17,10 @@ Simulation_Parameters_Elasticity::Simulation_Parameters_Elasticity() : Simulatio
   gravity_flag = false;
   multigrid_timers = false;
   equilibrate_matrix_flag = false;
+  // ---- boundary conditions ---- //
+  NB = 0; 
+  NBSF = 0; 
+  NBD = 0;
 }
 
 Simulation_Parameters_Elasticity::~Simulation_Parameters_Elasticity(){

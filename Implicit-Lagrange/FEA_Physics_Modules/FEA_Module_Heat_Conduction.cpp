@@ -60,7 +60,7 @@
 #define MAX_ELEM_NODES 8
 #define FLUX_EPSILON 0.000000001
 #define DENSITY_EPSILON 0.0001
-#define BC_EPSILON 1.0e-8
+#define BC_EPSILON 1.0e-6
 
 using namespace utils;
 
@@ -228,14 +228,14 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   *fos << "tagging beam +z heat flux " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
-  value = 100;
+  value = 0.1;
   bdy_set_id = current_bdy_id++;
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, bdy_set_id);
   Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Heat_Flux(surf_flux_set_id,0) = 0;
   Boundary_Surface_Heat_Flux(surf_flux_set_id,1) = 0;
-  Boundary_Surface_Heat_Flux(surf_flux_set_id,2) = -0.5/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Heat_Flux(surf_flux_set_id,2) = -50/simparam->unit_scaling/simparam->unit_scaling;
   surf_flux_set_id++;
   *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
@@ -669,7 +669,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t heat_flux[3], wedge_product, Jacobian, current_density, weight_multiply, inner_product, surface_normal[3], surface_norm;
   real_t specific_internal_energy_rate;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
@@ -1465,7 +1465,7 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
   real_t temperature;
   CArrayKokkos<int, array_layout, device_type, memory_traits> Temperatures_Conditions(num_dim);
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes);
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   Number_DOF_BCS = 0;
 
   //host view of local nodal displacements
@@ -3526,7 +3526,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //all_node_temperatures_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   
-  return !EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
 
 /* -------------------------------------------------------------------------------------------
@@ -3577,7 +3577,7 @@ void FEA_Module_Heat_Conduction::update_linear_solve(Teuchos::RCP<const MV> zp){
   
   //solve for new nodal displacements
   int solver_exit = solve();
-  if(solver_exit == EXIT_SUCCESS){
+  if(solver_exit != EXIT_SUCCESS){
     std::cout << "Linear Solver Error" << std::endl <<std::flush;
     return;
   }
