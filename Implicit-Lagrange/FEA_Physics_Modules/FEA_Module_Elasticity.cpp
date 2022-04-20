@@ -4703,531 +4703,216 @@ int FEA_Module_Elasticity::solve(){
  
   //number of boundary conditions on this mpi rank
   global_size_t local_nboundaries = Number_DOF_BCS;
-  size_t local_nrows_reduced = nlocal_nodes*num_dim - local_nboundaries;
 
-  //obtain total number of boundary conditions on all ranks
-  global_size_t global_nboundaries = 0;
-  MPI_Allreduce(&local_nboundaries,&global_nboundaries,1,MPI_INT,MPI_SUM,world);
-  global_size_t nrows_reduced = nrows - global_nboundaries;
-  //std::cout << "GLOBAL BC DATA " << nrows_reduced << " " << nrows <<"\n ";  
+  //alter rows of RHS to be the boundary condition value on that node
+  size_t local_nrows = nlocal_nodes*num_dim;
+  for(LO i=0; i < local_nrows; i++){
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
 
-  //Rebalance distribution of the global stiffness matrix rows here later since
-  //rows and columns are being removed.
-
-  //global_size_t *entries_per_row = new global_size_t[local_nrows];
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Reduced_Stiffness_Matrix_Strides(local_nrows_reduced,"Reduced_Stiffness_Matrix_Strides");
-  row_pointers reduced_row_offsets_pass = row_pointers("reduced_row_offsets_pass", local_nrows_reduced+1);
-
-  //init row_offsets
-  for(int i=0; i < local_nrows_reduced+1; i++){
-    reduced_row_offsets_pass(i) = 0;
-  }
-  
-  //stores global indices belonging to this MPI rank from the non-reduced map corresponding to the reduced system
-  Free_Indices = CArrayKokkos<GO, array_layout, device_type, memory_traits>(local_nrows_reduced,"Free_Indices");
-  reduced_index = 0;
-  for(LO i=0; i < nlocal_nodes*num_dim; i++)
-    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)){
-        Free_Indices(reduced_index) = local_dof_map->getGlobalElement(i);
-        reduced_index++;
       }
-    
-  
-  //compute reduced matrix strides
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    reduced_row_count = 0;
-    for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
-      global_dof_index = DOF_Graph_Matrix(access_index,j);
-      row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
-        reduced_row_count++;
-      }
-    }
-    Reduced_Stiffness_Matrix_Strides(i) = reduced_row_count;
   }
-  
-  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Reduced_DOF_Graph_Matrix(Reduced_Stiffness_Matrix_Strides); //stores global dof indices
-  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Reduced_Local_DOF_Graph_Matrix(Reduced_Stiffness_Matrix_Strides); //stores local dof indices
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Reduced_Stiffness_Matrix(Reduced_Stiffness_Matrix_Strides);
-
-  //template compatible row offsets (may change to shallow copy later if it works on device types etc.)
-  row_pointers reduced_row_offsets = Reduced_DOF_Graph_Matrix.start_index_;
-    for(int ipass = 0; ipass < local_nrows_reduced+1; ipass++){
-      reduced_row_offsets_pass(ipass) = reduced_row_offsets(ipass);
-    }
-  
-  //construct maps to define set of global indices for the reduced node set
-  //stores indices that aren't contiguous due to removal of BCS
-  local_reduced_dof_original_map =
-    Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,Free_Indices.get_kokkos_view(),0,comm) );
-
-  //stores contiguous indices with an unbalanced local distribution
-  local_reduced_dof_map = 
-    Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,local_nrows_reduced,0,comm));
-  
-  //dual view of the local global index to reduced global index map
-  dual_vec_array dual_reduced_dof_original("dual_reduced_dof_original",local_nrows_reduced,1);
-
-  //local variable for host view in the dual view
-  host_vec_array reduced_dof_original = dual_reduced_dof_original.view_host();
-  //notify that the host view is going to be modified
-  dual_reduced_dof_original.modify_host();
-
-  //set contents
-  for(LO i=0; i < local_nrows_reduced; i++){
-    reduced_dof_original(i,0) = local_reduced_dof_map->getGlobalElement(i);
-  }
-  
-  //create a multivector where each local index entry stores the new reduced global index associated with each old global index
-  Teuchos::RCP<MV> local_reduced_global_indices = Teuchos::rcp(new MV(local_reduced_dof_original_map, dual_reduced_dof_original));
-  
-  //construct map of all indices including ghosts for the reduced system
-  //stores global indices belonging to this MPI rank and ghosts from the non-reduced map corresponding to the reduced system
-  size_t all_nrows_reduced = local_nrows_reduced + nghost_nodes*num_dim;
-  for(LO i=nlocal_nodes*num_dim; i < nall_nodes*num_dim; i++){
-      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION))
-      all_nrows_reduced--;
-  }
-  
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Free_Indices(all_nrows_reduced,"All_Free_Indices");
-
-  //debug print
-  /*
-  if(myrank==0||myrank==4){
-  std::cout << "DOF flags global :" << std::endl;
-  std::cout << "Reduced DOF Graph Matrix on Rank " << myrank << std::endl;
-  for(LO i=0; i < nall_nodes*num_dim; i++){
-    std::cout << all_dof_map->getGlobalElement(i) << " " << Node_DOF_Boundary_Condition_Type(i) <<" ";   
-    std::cout << std::endl;
-  }
-  std::fflush(stdout);
-  }
-  */
-  
-  reduced_index = 0;
-  for(LO i=0; i < nall_nodes*num_dim; i++)
-    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)){
-        All_Free_Indices(reduced_index) = all_dof_map->getGlobalElement(i);
-        reduced_index++;
-      }
-  
-  //construct map to define set of global indices for the reduced node set including ghosts
-  //passing invalid forces the map to count the global elements
-  all_reduced_dof_original_map =
-    Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Free_Indices.get_kokkos_view(),0,comm) );
-
-  //debug print
-  /*
-  *fos << "All reduced dof original indices :" << std::endl;
-  local_reduced_dof_original_map->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-
-  //debug print
-  *fos << "All reduced dof original indices :" << std::endl;
-  all_reduced_dof_original_map->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-  */
-
-  //communicate the new reduced global indices for ghost dof indices using the local information on other ranks through import
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(local_reduced_dof_original_map, all_reduced_dof_original_map);
-
-  Teuchos::RCP<MV> all_reduced_global_indices = Teuchos::rcp(new MV(all_reduced_dof_original_map, 1));
-
-  //comms to get reduced global indices for ghosts that are still free of BCs
-  all_reduced_global_indices->doImport(*local_reduced_global_indices, importer, Tpetra::INSERT);
-
-  const_host_vec_array all_reduced_global_indices_host = all_reduced_global_indices->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-
-  //debug print
-  /*
-  *fos << "All reduced global indices :" << std::endl;
-  all_reduced_global_indices->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-  */
-  
-  //store the new global indices for the reduced matrix graph
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    row_counter = 0;
-    for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
-      global_dof_index = DOF_Graph_Matrix(access_index,j);
-      row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
-        reduced_local_dof_index = all_reduced_dof_original_map->getLocalElement(global_dof_index);
-        //std::cout << "REDUCED LOCAL INDEX ON TASK " << myrank << " is " << Reduced_Stiffness_Matrix_Strides(i) << Reduced_DOF_Graph_Matrix(i,row_counter++) << std::endl;
-        Reduced_DOF_Graph_Matrix(i,row_counter++) = all_reduced_global_indices_host(reduced_local_dof_index,0);
-      }
-    }
-  }
-  
-  //store reduced stiffness matrix values
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    row_counter = 0;
-    for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
-      global_dof_index = DOF_Graph_Matrix(access_index,j);
-      row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
-        Reduced_Stiffness_Matrix(i,row_counter++) = Stiffness_Matrix(access_index,j);
-      }
-    }
-  }
-  
-  // create a Map for the reduced global stiffness matrix that is evenly distributed amongst mpi ranks
-  local_balanced_reduced_dof_map = 
-    Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,0,comm));
-
-    //debug print
-  /*
-  *fos << "local_reduced_dof_map :" << std::endl;
-  local_reduced_dof_map->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-
-  //debug print
-  *fos << "local_balanced_reduced_dof_map :" << std::endl;
-  local_balanced_reduced_dof_map->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-  */
-
-  //build column map
-  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap;
-  const Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > dommap = local_reduced_dof_map;
-
-  //debug print
-  /*
-  if(myrank==4){
-  std::cout << "Reduced DOF Graph Matrix on Rank " << myrank << std::endl;
-  for(LO i=0; i < local_nrows_reduced; i++){
-    for(LO j=0; j < Reduced_Stiffness_Matrix_Strides(i); j++){
-      std::cout << Reduced_DOF_Graph_Matrix(i,j) <<" ";
-    }
-    std::cout << std::endl;
-  }
-  }
-  */
-
-  Tpetra::Details::makeColMap<LO,GO,node_type>(colmap,dommap,Reduced_DOF_Graph_Matrix.get_kokkos_view(), nullptr);
-
-  /*//debug print of reduced row offsets
-  std::cout << " DEBUG PRINT FOR ROW OFFSETS" << std::endl;
-  for(int debug = 0; debug < local_nrows_reduced+1; debug++)
-  std::cout <<  reduced_row_offsets_pass(debug) << " ";
-  std::cout << std::endl;
-  //end debug print
-  */
-
-  //convert global indices to local indices using column map
-  for(LO i=0; i < local_nrows_reduced; i++)
-    for(LO j=0; j < Reduced_Stiffness_Matrix_Strides(i); j++)
-      Reduced_Local_DOF_Graph_Matrix(i,j) = colmap->getLocalElement(Reduced_DOF_Graph_Matrix(i,j));
-  
-  Teuchos::RCP<MAT> unbalanced_A = Teuchos::rcp(new MAT(local_reduced_dof_map, colmap, reduced_row_offsets_pass,
-                   Reduced_Local_DOF_Graph_Matrix.get_kokkos_view(), Reduced_Stiffness_Matrix.get_kokkos_view()));
-  unbalanced_A->fillComplete();
-  Teuchos::RCP<const_MAT> const_unbalanced_A(new const_MAT(*unbalanced_A));
   
   //This completes the setup for A matrix of the linear system
 
   //debug print of A matrix before balancing
   //*fos << "Reduced Stiffness Matrix :" << std::endl;
-  //const_unbalanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
-
-  //communicate reduced stiffness matrix entries for better load balancing
-  //create import object using the unbalanced map and the balanced map
-  Tpetra::Import<LO, GO> matrix_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
-  Teuchos::RCP<MAT> balanced_A = Tpetra::importAndFillCompleteCrsMatrix(const_unbalanced_A, matrix_importer, local_balanced_reduced_dof_map, local_balanced_reduced_dof_map);
-
-  //debug print of map
-  //if(myrank==0)
-  //*fos << "Reduced DOF Map :" << std::endl;
-  //local_balanced_reduced_dof_map->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
 
   //debug print of A matrix after balancing
   //if(myrank==0)
-  //*fos << "Reduced Stiffness Matrix :" << std::endl;
-  //balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << "Reduced RHS :" << std::endl;
+  //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   //std::fflush(stdout);
-  
-  // Create random X vector
-  size_t balanced_local_nrows = local_balanced_reduced_dof_map->getNodeNumElements();
-  //vec_array Xview_pass = vec_array("Xview_pass", balanced_local_nrows, 1);
-  //Xview_pass.assign_data(Xview.pointer());
-  X = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, 1));
-  //return !EXIT_SUCCESS;
-  //X->randomize();
-
-  // Create Kokkos view of RHS B vector (Force Vector)  
-  vec_array Bview_pass = vec_array("Bview_pass", local_nrows_reduced,1);
-
-  //set bview to force vector data
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    Bview_pass(i,0) = Nodal_RHS(access_index,0);
-  }
-  
-  unbalanced_B = Teuchos::rcp(new MV(local_reduced_dof_map, Bview_pass));
-  
-  //import object to rebalance force vector
-  Tpetra::Import<LO, GO> Bvec_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
-
-  balanced_B = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, 1));
-  
-  //comms to rebalance force vector
-  balanced_B->doImport(*unbalanced_B, Bvec_importer, Tpetra::INSERT);
-  
-  //if(myrank==0)
-  //*fos << "RHS :" << std::endl;
-  //balanced_B->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
 
   //debug print
   //if(update_count==42){
     //Tpetra::MatrixMarket::Writer<MAT> market_writer();
     //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *balanced_A, "A_matrix", "Stores stiffness matrix values");
   //}
-  //return !EXIT_SUCCESS;
-  // Create solver interface to KLU2 with Amesos2 factory method
-  //std::cout << "Creating solver" << std::endl <<std::flush;
-  if(simparam->direct_solver_flag){
-    // Before we do anything, check that KLU2 is enabled
-    if( !Amesos2::query("SuperLUDist") ){
-      std::cerr << "SuperLUDist not enabled in this run.  Exiting..." << std::endl;
-      return EXIT_SUCCESS;        // Otherwise CTest will pick it up as
-                                  // failure, which it isn't really
-    }
-    Teuchos::RCP<Amesos2::Solver<MAT,MV>> solver = Amesos2::create<MAT,MV>("SuperLUDist", balanced_A, X, balanced_B);
-    //Teuchos::RCP<Amesos2::Solver<MAT,MV>> solver = Amesos2::create<MAT,MV>("SuperLUDist", balanced_A, X, balanced_B);
-    //Teuchos::RCP<Amesos2::Solver<MAT,MV>> solver = Amesos2::create<MAT,MV>("KLU2", balanced_A, X, balanced_B);
-  
-    solver->setParameters( Teuchos::rcpFromRef(*Linear_Solve_Params) );
-    //declare non-contiguous map
-    //Create a Teuchos::ParameterList to hold solver parameters
-    //Teuchos::ParameterList amesos2_params("Amesos2");
-    //amesos2_params.sublist("KLU2").set("IsContiguous", false, "Are GIDs Contiguous");
-    //solver->setParameters( Teuchos::rcpFromRef(amesos2_params) );
-  
-    //Solve the system
-    //std::cout << "BEFORE LINEAR SOLVE" << std::endl << std::flush;
-    solver->symbolicFactorization().numericFactorization().solve();
-    //debug print of displacements
-    //std::ostream &out = std::cout;
-    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(myrank==0)
-    //*fos << "balanced_X: " << update_count << std::endl;
-    //X->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
-    //std::fflush(stdout);
-    //std::cout << "AFTER LINEAR SOLVE" << std::endl<< std::flush;
+
+  //dimension of the nullspace for linear elasticity
+  int nulldim = 6;
+  if(num_dim == 2) nulldim = 3;
+  using impl_scalar_type =
+    typename Kokkos::Details::ArithTraits<real_t>::val_type;
+  using mag_type = typename Kokkos::ArithTraits<impl_scalar_type>::mag_type;
+
+  xB = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(Global_Nodal_RHS));
+  X = node_displacements_distributed;
+  xX = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(X));
+  //Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > reduced_node_map = 
+  //Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced/num_dim,0,comm));
+
+  //set coordinates vector
+  Teuchos::RCP<MV> tcoordinates = Teuchos::rcp(new MV(local_dof_map, num_dim));
+  //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
+    
+  host_vec_array coordinates_view = tcoordinates->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  int dim_index;
+  real_t node_x, node_y, node_z;
+  //set coordinates components
+  for(LO i=0; i < local_nrows; i++){
+    dim_index = i % num_dim;
+    access_index = i/num_dim;
+    node_x = node_coords(access_index, 0);
+    node_y = node_coords(access_index, 1);
+    node_z = node_coords(access_index, 2);
+
+    coordinates_view(i,0) = node_x;
+    coordinates_view(i,1) = node_y;
+    coordinates_view(i,2) = node_z;
+  }// for
+    
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> coordinates = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tcoordinates));
+    
+  //nullspace vector
+  Teuchos::RCP<MV> tnullspace = Teuchos::rcp(new MV(local_dof_map, nulldim));
+  //set nullspace components
+  //init
+  tnullspace->putScalar(0);
+  //loop through dofs and compute nullspace components for each
+  host_vec_array nullspace_view = tnullspace->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+  //compute center
+  // Calculate center
+	real_t cx = tcoordinates->getVector(0)->meanValue();
+	real_t cy = tcoordinates->getVector(1)->meanValue();
+  //real_t cx = center_of_mass[0];
+  //real_t cy = center_of_mass[1];
+  real_t cz;
+  if(num_dim==3)
+	  cz = tcoordinates->getVector(2)->meanValue();
+    //cz = center_of_mass[2];
+
+  if(num_dim==3){
+    for(LO i=0; i < local_nrows; i++){
+      dim_index = i % num_dim;
+      access_index = i/num_dim;
+      node_x = node_coords(access_index, 0);
+      node_y = node_coords(access_index, 1);
+      node_z = node_coords(access_index, 2);
+      //set translational component
+      nullspace_view(i,dim_index) = 1;
+      //set rotational components
+      if(dim_index==0){
+        nullspace_view(i,3) = -node_y + cy;
+        nullspace_view(i,5) = node_z - cz;
+      }
+      if(dim_index==1){
+        nullspace_view(i,3) = node_x - cx;
+        nullspace_view(i,4) = -node_z + cz;
+      }
+      if(dim_index==2){
+        nullspace_view(i,4) = node_y - cy;
+        nullspace_view(i,5) = -node_x + cx;
+      }
+    }// for
   }
   else{
-    //dimension of the nullspace for linear elasticity
-    int nulldim = 6;
-    if(num_dim == 2) nulldim = 3;
-    using impl_scalar_type =
-      typename Kokkos::Details::ArithTraits<real_t>::val_type;
-    using mag_type = typename Kokkos::ArithTraits<impl_scalar_type>::mag_type;
-    // Instead of checking each time for rank, create a rank 0 stream
+    for(LO i=0; i < local_nrows; i++){
+      dim_index = i % num_dim;
+      access_index = i/num_dim;
+      node_x = node_coords(access_index, 0);
+      node_y = node_coords(access_index, 1);
+      //set translational component
+      nullspace_view(i,dim_index) = 1;
+      //set rotational components
+      if(dim_index==0){
+        nullspace_view(i,3) = -node_y + cy;
+      }
+      if(dim_index==1){
+        nullspace_view(i,3) = node_x - cx;
+      }
+    }// for
+  }
 
-    xbalanced_B = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(balanced_B));
-    xX = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(X));
-    //Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > reduced_node_map = 
-    //Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced/num_dim,0,comm));
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> nullspace = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tnullspace));
 
-    //set coordinates vector
-    Teuchos::RCP<MV> unbalanced_coordinates_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, num_dim));
-    //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
-    
-    host_vec_array unbalanced_coordinates_view = unbalanced_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    int dim_index;
-    real_t node_x, node_y, node_z;
-    //set coordinates components
-      for(LO i=0; i < local_nrows_reduced; i++){
-        global_dof_index = Free_Indices(i);
-        global_index = Free_Indices(i)/num_dim;
-        dim_index = global_dof_index % num_dim;
-        access_index = map->getLocalElement(global_index);
-        node_x = node_coords(access_index, 0);
-        node_y = node_coords(access_index, 1);
-        node_z = node_coords(access_index, 2);
+  //normalize components
+  Kokkos::View<mag_type*, Kokkos::HostSpace> norms2("norms2", nulldim);
+  tnullspace->norm2(norms2);
+  Kokkos::View<impl_scalar_type*, device_type> scaling_values("scaling_values", nulldim);
+  for (int i = 0; i < nulldim; i++)
+      scaling_values(i) = norms2(0) / norms2(i);
+  tnullspace->scale(scaling_values);
 
-        unbalanced_coordinates_view(i,0) = node_x;
-        unbalanced_coordinates_view(i,1) = node_y;
-        unbalanced_coordinates_view(i,2) = node_z;
-      }// for
-    
-    //balanced coordinates vector
-    Teuchos::RCP<MV> tcoordinates = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, num_dim));
-    //rebalance coordinates vector
-    tcoordinates->doImport(*unbalanced_coordinates_distributed, Bvec_importer, Tpetra::INSERT);
-    Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> coordinates = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tcoordinates));
-    
-    //nullspace vector
-    Teuchos::RCP<MV> unbalanced_nullspace_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, nulldim));
-    //set nullspace components
-    //init
-    unbalanced_nullspace_distributed->putScalar(0);
-    //loop through dofs and compute nullspace components for each
-    host_vec_array unbalanced_nullspace_view = unbalanced_nullspace_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-
-    //compute center
-    // Calculate center
-	  real_t cx = tcoordinates->getVector(0)->meanValue();
-	  real_t cy = tcoordinates->getVector(1)->meanValue();
-    //real_t cx = center_of_mass[0];
-    //real_t cy = center_of_mass[1];
-    real_t cz;
-    if(num_dim==3)
-	    cz = tcoordinates->getVector(2)->meanValue();
-      //cz = center_of_mass[2];
-
-    if(num_dim==3){
-      for(LO i=0; i < local_nrows_reduced; i++){
-        global_dof_index = Free_Indices(i);
-        global_index = Free_Indices(i)/num_dim;
-        dim_index = global_dof_index % num_dim;
-        access_index = map->getLocalElement(global_index);
-        node_x = node_coords(access_index, 0);
-        node_y = node_coords(access_index, 1);
-        node_z = node_coords(access_index, 2);
-        //set translational component
-        unbalanced_nullspace_view(i,dim_index) = 1;
-        //set rotational components
-        if(dim_index==0){
-          unbalanced_nullspace_view(i,3) = -node_y + cy;
-          unbalanced_nullspace_view(i,5) = node_z - cz;
-        }
-        if(dim_index==1){
-          unbalanced_nullspace_view(i,3) = node_x - cx;
-          unbalanced_nullspace_view(i,4) = -node_z + cz;
-        }
-        if(dim_index==2){
-          unbalanced_nullspace_view(i,4) = node_y - cy;
-          unbalanced_nullspace_view(i,5) = -node_x + cx;
-        }
-      }// for
-    }
-    else{
-      for(LO i=0; i < local_nrows_reduced; i++){
-        global_dof_index = Free_Indices(i);
-        global_index = Free_Indices(i)/num_dim;
-        dim_index = global_dof_index % num_dim;
-        access_index = map->getLocalElement(global_index);
-        node_x = node_coords(access_index, 0);
-        node_y = node_coords(access_index, 1);
-        //set translational component
-        unbalanced_nullspace_view(i,dim_index) = 1;
-        //set rotational components
-        if(dim_index==0){
-          unbalanced_nullspace_view(i,3) = -node_y + cy;
-        }
-        if(dim_index==1){
-          unbalanced_nullspace_view(i,3) = node_x - cx;
-        }
-      }// for
-    }
-    
-    //balanced nullspace vector
-    Teuchos::RCP<MV> tnullspace = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, nulldim));
-    //rebalance nullspace vector
-    tnullspace->doImport(*unbalanced_nullspace_distributed, Bvec_importer, Tpetra::INSERT);
-    Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> nullspace = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tnullspace));
-
-    //normalize components
-    Kokkos::View<mag_type*, Kokkos::HostSpace> norms2("norms2", nulldim);
-    tnullspace->norm2(norms2);
-    Kokkos::View<impl_scalar_type*, device_type> scaling_values("scaling_values", nulldim);
-    for (int i = 0; i < nulldim; i++)
-        scaling_values(i) = norms2(0) / norms2(i);
-    tnullspace->scale(scaling_values);
-
-    Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> material = Teuchos::null;
-    Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xbalanced_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(balanced_A));
-    xwrap_balanced_A = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xbalanced_A));
-    //xwrap_balanced_A->SetFixedBlockSize(1);
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> material = Teuchos::null;
+  Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xcrs_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(Global_Stiffness_Matrix));
+  xA = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xcrs_A));
+  //xwrap_balanced_A->SetFixedBlockSize(1);
    
-    //randomize initial vector
-    xX->setSeed(100);
-    xX->randomize();
+  //randomize initial vector
+  xX->setSeed(100);
+  xX->randomize();
     
-     if(simparam->equilibrate_matrix_flag){
-      Solver_Pointer_->equilibrateMatrix(xwrap_balanced_A,"diag");
-      Solver_Pointer_->preScaleRightHandSides(*balanced_B,"diag");
-      Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
-     }
+  if(simparam->equilibrate_matrix_flag){
+    Solver_Pointer_->equilibrateMatrix(xA,"diag");
+    Solver_Pointer_->preScaleRightHandSides(*balanced_B,"diag");
+    Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
+  }
 
-    //debug print
-    //if(myrank==0)
-    //*fos << "Xpetra A matrix :" << std::endl;
-    //xX->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
-    //std::fflush(stdout);
+  //debug print
+  //if(myrank==0)
+  //*fos << "Xpetra A matrix :" << std::endl;
+  //xX->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+  //std::fflush(stdout);
     
-    int num_iter = 2000;
-    double solve_tol = 1e-06;
-    int cacheSize = 0;
-    std::string solveType         = "belos";
-    std::string belosType         = "cg";
-    // =========================================================================
-    // Preconditioner construction
-    // =========================================================================
-    //bool useML   = Linear_Solve_Params->isParameter("use external multigrid package") && (Linear_Solve_Params->get<std::string>("use external multigrid package") == "ml");
-    //out<<"*********** MueLu ParameterList ***********"<<std::endl;
-    //out<<*Linear_Solve_Params;
-    //out<<"*******************************************"<<std::endl;
+  int num_iter = 2000;
+  double solve_tol = 1e-06;
+  int cacheSize = 0;
+  std::string solveType         = "belos";
+  std::string belosType         = "cg";
+  // =========================================================================
+  // Preconditioner construction
+  // =========================================================================
+  //bool useML   = Linear_Solve_Params->isParameter("use external multigrid package") && (Linear_Solve_Params->get<std::string>("use external multigrid package") == "ml");
+  //out<<"*********** MueLu ParameterList ***********"<<std::endl;
+  //out<<*Linear_Solve_Params;
+  //out<<"*******************************************"<<std::endl;
     
-    //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
     
-    comm->barrier();
-    //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
-    if(Hierarchy_Constructed){
-      ReuseXpetraPreconditioner(xwrap_balanced_A, H);
-    }
-    else{
-      PreconditionerSetup(xwrap_balanced_A,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
-      Hierarchy_Constructed = true;
-    }
-    comm->barrier();
+  comm->barrier();
+  //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
+  if(Hierarchy_Constructed){
+    ReuseXpetraPreconditioner(xA, H);
+  }
+  else{
+    PreconditionerSetup(xA,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
+    Hierarchy_Constructed = true;
+  }
+  comm->barrier();
     
-    //H->Write(-1, -1);
-    //H->describe(*fos,Teuchos::VERB_EXTREME);
+  //H->Write(-1, -1);
+  //H->describe(*fos,Teuchos::VERB_EXTREME);
     
+  // =========================================================================
+  // System solution (Ax = b)
+  // =========================================================================
 
-    // =========================================================================
-    // System solution (Ax = b)
-    // =========================================================================
+  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
+  SystemSolve(xA,xX,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  linear_solve_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
+  comm->barrier();
 
-    real_t current_cpu_time = Solver_Pointer_->CPU_Time();
-    SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
-    linear_solve_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
-    comm->barrier();
+  if(simparam->equilibrate_matrix_flag){
+    Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
+  }
 
-    if(simparam->equilibrate_matrix_flag){
-      Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
-    }
-
-    if(simparam->multigrid_timers){
+  if(simparam->multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
-        reportParams->set("How to merge timer sets",   "Union");
-        reportParams->set("alwaysWriteLocal",          false);
-        reportParams->set("writeGlobalStats",          true);
-        reportParams->set("writeZeroTimers",           false);
+    reportParams->set("How to merge timer sets",   "Union");
+    reportParams->set("alwaysWriteLocal",          false);
+    reportParams->set("writeGlobalStats",          true);
+    reportParams->set("writeZeroTimers",           false);
     std::ios_base::fmtflags ff(fos->flags());
     *fos << std::fixed;
     Teuchos::TimeMonitor::report(comm.ptr(), *fos, "", reportParams);
     *fos << std::setiosflags(ff);
     //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
-    }
   }
   //return !EXIT_SUCCESS;
   //timing statistics for LU solver
@@ -5240,25 +4925,6 @@ int FEA_Module_Elasticity::solve(){
   //*fos << "Solution:" << std::endl;
   //X->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
-  
-
-  //communicate solution on reduced map to the all node map vector for post processing of strain etc.
-  //intermediate storage on the unbalanced reduced system
-  Teuchos::RCP<MV> reduced_node_displacements_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, 1));
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> reduced_displacement_importer(local_balanced_reduced_dof_map, local_reduced_dof_map);
-
-  //comms to get displacements on reduced unbalanced displacement vector
-  reduced_node_displacements_distributed->doImport(*X, reduced_displacement_importer, Tpetra::INSERT);
-
-  //populate node displacement multivector on the local dof map
-  const_host_vec_array reduced_node_displacements_host = reduced_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  host_vec_array node_displacements_host = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    node_displacements_host(access_index,0) = reduced_node_displacements_host(i,0);
-  }
   
   //import for displacement of ghosts
   Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);

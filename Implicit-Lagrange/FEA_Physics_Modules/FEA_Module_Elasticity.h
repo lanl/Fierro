@@ -133,12 +133,10 @@ public:
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
 
   //multigrid solver data and functions
-  Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
+  Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xA;
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
   Teuchos::RCP<MV> X;
-  Teuchos::RCP<MV> unbalanced_B;
-  Teuchos::RCP<MV> balanced_B;
-  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xbalanced_B;
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xB;
   Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_original_map;
