@@ -112,10 +112,18 @@ include_directories(Elements/geometry)
 include_directories(Elements/slam)
 
 if(BUILD_1D_KOKKOS_SGH)
+if(NOT BUILD_IMPLICIT_SOLVER)
+find_package(Kokkos REQUIRED) #new
+add_definitions(-DHAVE_KOKKOS=1)
+endif()
 include_directories(Explicit-Lagrange-Kokkos/1D_SGH_solver)
 endif()
 
 if(BUILD_KOKKOS_SGH)
+if(NOT BUILD_IMPLICIT_SOLVER)
+find_package(Kokkos REQUIRED) #new
+add_definitions(-DHAVE_KOKKOS=1)
+endif()
 include_directories(Explicit-Lagrange-Kokkos/SGH_solver)
 endif()
 

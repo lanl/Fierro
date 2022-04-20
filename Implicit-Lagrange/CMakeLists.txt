@@ -56,4 +56,3 @@ target_link_libraries (fea_modules ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${
 target_link_libraries (main fea_modules)
 #set_property(TARGET main PROPERTY LINKER_LANGUAGE Fortran)
 
-add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)

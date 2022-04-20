@@ -4,9 +4,6 @@ project (FierroSGH)
 
 add_executable(FierroSGH driver.cpp read_mesh.cpp geometry.cpp input.cpp eos.cpp setup.cpp outputs.cpp)
 
-find_package(Kokkos REQUIRED) #new
-add_definitions(-DHAVE_KOKKOS=1)
-
 if (CUDA)
   add_definitions(-DHAVE_CUDA=1)
 elseif (HIP)
