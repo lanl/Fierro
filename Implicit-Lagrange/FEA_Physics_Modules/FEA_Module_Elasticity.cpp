@@ -92,7 +92,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   max_boundary_sets = max_disp_boundary_sets = max_load_boundary_sets = num_surface_disp_sets = num_surface_force_sets = 0;
 
   //boundary condition flags
-  body_term_flag = gravity_flag = thermal_flag = electric_flag = false;
+  matrix_bc_reduced = body_term_flag = gravity_flag = thermal_flag = electric_flag = false;
 
   //construct globally distributed displacement, strain, and force vectors
   int num_dim = simparam->num_dim;
@@ -106,6 +106,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   all_node_strains_distributed = Teuchos::rcp(new MV(all_node_map, strain_count));
   Global_Nodal_Forces = Teuchos::rcp(new MV(local_dof_map, 1));
   Global_Nodal_RHS = Teuchos::rcp(new MV(local_dof_map, 1));
+  bool adjoints_allocated = false;
 
   //initialize displacements to 0
   //local variable for host view in the dual view
@@ -3251,10 +3252,19 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  host_vec_array unbalanced_B_view = unbalanced_B->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   const_host_vec_array direction_vec = direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = xX;
-  Teuchos::RCP<MV> lambda = X;
+
+  if(adjoints_allocated){
+    adjoint_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
+    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
+    all_adjoint_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    adjoints_allocated = true;
+  }
+  Teuchos::RCP<MV> lambda = adjoint_displacements_distributed;
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(lambda));
+  
+  host_vec_array adjoint_equation_RHS_view = adjoint_equation_RHS_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+  
   const_host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
   int num_dim = simparam->num_dim;
@@ -3322,8 +3332,8 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
     hessvec(inode,0) = 0;
   
   //initialize RHS vector
-  for(int i=0; i < local_reduced_dof_map->getNodeNumElements(); i++)
-    unbalanced_B_view(i,0) = 0;
+  for(int i=0; i < local_dof_map->getNodeNumElements(); i++)
+    adjoint_equation_RHS_view(i,0) = 0;
   
   //sum components of direction vector
   direction_vec_reduce = local_direction_vec_reduce = 0;
@@ -3600,8 +3610,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
         local_dof_id = all_dof_map->getLocalElement(nodes_in_elem(ielem, ifill/num_dim)*num_dim);
         local_dof_id += ifill%num_dim;
         global_dof_id = all_dof_map->getGlobalElement(local_dof_id);
-        if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_reduced_dof_original_map->isNodeGlobalElement(global_dof_id)){
-          local_reduced_dof_id = local_reduced_dof_original_map->getLocalElement(global_dof_id);
+        if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_dof_map->isNodeGlobalElement(global_dof_id)){
           inner_product = 0;
           for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
             inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(jfill);
@@ -3609,13 +3618,18 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
             //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
             //inner_product += Local_Matrix_Contribution(ifill, jfill);
           }
-          unbalanced_B_view(local_reduced_dof_id,0) += inner_product*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
+          adjoint_equation_RHS_view(local_dof_id,0) += inner_product*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
         }
       }
       } //density gradient loop
     }//quadrature loop
   }//element index loop
-  
+
+  //set adjoint equation RHS terms to 0 if they correspond to a boundary constraint DOF index
+  for(int i=0; i < local_dof_map->getNodeNumElements(); i++){
+    if(Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)
+      adjoint_equation_RHS_view(i,0) = 0;
+  }
   //*fos << "Elastic Modulus Gradient" << Element_Modulus_Gradient <<std::endl;
   //*fos << "DISPLACEMENT" << std::endl;
   //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
@@ -3652,12 +3666,12 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->preScaleRightHandSides(*balanced_B,"diag");
+    Solver_Pointer_->preScaleRightHandSides(*B,"diag");
     Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
   real_t current_cpu_time2 = Solver_Pointer_->CPU_Time();
   comm->barrier();
-  SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   hessvec_linear_time += Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
@@ -4675,7 +4689,7 @@ int FEA_Module_Elasticity::solve(){
   //local variable for host view in the dual view
   const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  const_host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
@@ -4703,11 +4717,23 @@ int FEA_Module_Elasticity::solve(){
  
   //number of boundary conditions on this mpi rank
   global_size_t local_nboundaries = Number_DOF_BCS;
+  Original_RHS_Entries = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(local_nboundaries);  
 
+  //alter rows of RHS to be the boundary condition value on that node
+  //first pass counts strides for storage
+  row_counter = 0;
+  for(LO i=0; i < local_nrows; i++){
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      Original_RHS_Entries(row_counter) = Nodal_RHS(i);
+      row_counter++;
+      Nodal_RHS(i) = Node_DOF_Displacement_Boundary_Conditions(i);
+    }
+  }//row for
+  
+  //change entries of Stiffness matrix corresponding to BCs to 0s (off diagonal elements) and 1 (diagonal elements)
   //storage for original stiffness matrix values
   Original_Stiffness_Entries_Strides = CArrayKokkos<int, array_layout, device_type, memory_traits>(local_nrows);
 
-  //alter rows of RHS to be the boundary condition value on that node
   //first pass counts strides for storage
   for(LO i=0; i < local_nrows; i++){
     Original_Stiffness_Entries_Strides(i) = 0;
@@ -4758,6 +4784,8 @@ int FEA_Module_Elasticity::solve(){
       }
     }
   }//row for
+
+  matrix_bc_reduced = true;
   
   //This completes the setup for A matrix of the linear system
 
@@ -4978,6 +5006,16 @@ int FEA_Module_Elasticity::solve(){
 
   //comms to get displacements on all node map
   all_node_displacements_distributed->doImport(*node_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
+
+  //reinsert global stiffness values corresponding to BC indices to facilitate strain energy calculation
+  for(LO i = 0; i < local_nrows; i++){
+    for(LO j = 0; j < Original_Stiffness_Entries_Strides(i); j++){
+      access_index = Original_Stiffness_Entry_Indices(i,j);
+      Stiffness_Matrix(i,access_index) = Original_Stiffness_Entries(i,j);
+    }
+  }//row for
+
+  matrix_bc_reduced = false;
 
   //compute nodal force vector (used by other functions such as TO) due to inputs and constraints
   Global_Stiffness_Matrix->apply(*node_displacements_distributed,*Global_Nodal_Forces);

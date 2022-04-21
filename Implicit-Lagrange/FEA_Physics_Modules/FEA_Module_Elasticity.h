@@ -101,6 +101,7 @@ public:
   RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Stiffness_Entries;
   RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Stiffness_Entry_Indices;
   CArrayKokkos<int, array_layout, device_type, memory_traits> Original_Stiffness_Entries_Strides;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_RHS_Entries;
 
   //Global FEA data
   Teuchos::RCP<MV> node_displacements_distributed;
@@ -108,6 +109,10 @@ public:
   Teuchos::RCP<MV> all_node_displacements_distributed;
   Teuchos::RCP<MV> all_cached_node_displacements_distributed;
   Teuchos::RCP<MV> all_node_strains_distributed;
+  bool adjoints_allocated;
+  Teuchos::RCP<MV> adjoint_displacements_distributed;
+  Teuchos::RCP<MV> adjoint_equation_RHS_distributed;
+  Teuchos::RCP<MV> all_adjoint_displacements_distributed;
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
   Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MV> Global_Nodal_Forces;
@@ -118,6 +123,7 @@ public:
    Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
   int max_boundary_sets, max_disp_boundary_sets, max_load_boundary_sets;
   int num_surface_disp_sets, num_surface_force_sets;
+  bool matric_bc_reduced;
   
   //body force parameters
   bool gravity_flag, thermal_flag, electric_flag;
