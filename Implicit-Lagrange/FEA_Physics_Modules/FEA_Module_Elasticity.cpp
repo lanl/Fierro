@@ -4684,7 +4684,7 @@ int FEA_Module_Elasticity::solve(){
   size_t access_index, row_access_index, row_counter;
   global_size_t reduced_row_count;
   GO global_index, global_dof_index;
-  LO reduced_local_dof_index;
+  LO local_dof_index;
 
   //*fos << Amesos2::version() << std::endl << std::endl;
 
@@ -4699,18 +4699,65 @@ int FEA_Module_Elasticity::solve(){
   //construct global data for example; normally this would be from file input and distributed
   //according to the row map at that point
   global_size_t nrows = num_nodes*num_dim;
-  
+  size_t local_nrows = nlocal_nodes*num_dim;
  
   //number of boundary conditions on this mpi rank
   global_size_t local_nboundaries = Number_DOF_BCS;
 
-  //alter rows of RHS to be the boundary condition value on that node
-  size_t local_nrows = nlocal_nodes*num_dim;
-  for(LO i=0; i < local_nrows; i++){
-      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+  //storage for original stiffness matrix values
+  Original_Stiffness_Entries_Strides = CArrayKokkos<int, array_layout, device_type, memory_traits>(local_nrows);
 
+  //alter rows of RHS to be the boundary condition value on that node
+  //first pass counts strides for storage
+  for(LO i=0; i < local_nrows; i++){
+    Original_Stiffness_Entries_Strides(i) = 0;
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      Original_Stiffness_Entries_Strides(i) = Stiffness_Matrix_Strides(i);
+    }
+    else{
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_index = DOF_Graph_Matrix(j);
+        local_dof_index = all_dof_map->getLocalElement(global_index);
+        if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+          Original_Stiffness_Entries_Strides(i)++;
+        }
+      }//stride for
+    }
+  }//row for
+  
+  //assign old stiffness matrix entries
+  LO stride_index;
+  Original_Stiffness_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+  Original_Stiffness_Entry_Indices = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+  for(LO i=0; i < local_nrows; i++){
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_index = DOF_Graph_Matrix(j);
+        local_dof_index = all_dof_map->getLocalElement(global_index);
+        Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
+        Original_Stiffness_Entry_Indices(i,j) = j;
+        if(local_dof_index == i){
+          Stiffness_Matrix(i,j) = 1;
+        }
+        else{     
+          Stiffness_Matrix(i,j) = 0;
+        }
+      }//stride for
+    }
+    else{
+      stride_index = 0;
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_index = DOF_Graph_Matrix(j);
+        local_dof_index = all_dof_map->getLocalElement(global_index);
+        if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+          Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
+          Original_Stiffness_Entry_Indices(i,stride_index) = j;   
+          Stiffness_Matrix(i,j) = 0;
+          stride_index++;
+        }
       }
-  }
+    }
+  }//row for
   
   //This completes the setup for A matrix of the linear system
 
