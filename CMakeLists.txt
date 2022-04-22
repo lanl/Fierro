@@ -141,11 +141,17 @@ endif()
 
 if(BUILD_1D_KOKKOS_SGH)
 MESSAGE("\nbuilding 1D SGH!  Here are the details: ")
+if(NOT BUILD_ELEMENTS)
+add_subdirectory(Elements/matar)
+endif()
 add_subdirectory(Explicit-Lagrange-Kokkos/1D_SGH_solver)
 endif()
 
 if(BUILD_KOKKOS_SGH)
 MESSAGE("\nbuilding SGH!  Here are the details: ")
+if(NOT BUILD_ELEMENTS)
+add_subdirectory(Elements/matar)
+endif()
 add_subdirectory(Explicit-Lagrange-Kokkos/SGH_solver)
 endif()
 

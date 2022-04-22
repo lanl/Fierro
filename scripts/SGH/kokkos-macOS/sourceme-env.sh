@@ -25,6 +25,4 @@ export KOKKOS_INSTALL_DIR=${installdir}/kokkos
 
 cd $scriptdir
 
-export OMP_NUM_THREADS=16
-export OMP_PROC_BIND=true
-export OMP_PROC_BIND=spread
+
