@@ -4740,6 +4740,12 @@ int FEA_Module_Elasticity::solve(){
   //storage for original stiffness matrix values
   Original_Stiffness_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(local_nrows);
 
+  //debug print of A matrix before applying BCS
+  //*fos << "Reduced Stiffness Matrix :" << std::endl;
+  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+  
+
   //first pass counts strides for storage
   for(LO i=0; i < local_nrows; i++){
     Original_Stiffness_Entries_Strides(i) = 0;
@@ -4749,7 +4755,7 @@ int FEA_Module_Elasticity::solve(){
     else{
       for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
         global_dof_index = DOF_Graph_Matrix(i,j);
-        local_dof_index = all_dof_map->getLocalElement(global_index);
+        local_dof_index = all_dof_map->getLocalElement(global_dof_index);
         if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
           Original_Stiffness_Entries_Strides(i)++;
         }
@@ -4765,7 +4771,7 @@ int FEA_Module_Elasticity::solve(){
     if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
       for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
         global_dof_index = DOF_Graph_Matrix(i,j);
-        local_dof_index = all_dof_map->getLocalElement(global_index);
+        local_dof_index = all_dof_map->getLocalElement(global_dof_index);
         Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
         Original_Stiffness_Entry_Indices(i,j) = j;
         if(local_dof_index == i){
@@ -4780,7 +4786,7 @@ int FEA_Module_Elasticity::solve(){
       stride_index = 0;
       for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
         global_dof_index = DOF_Graph_Matrix(i,j);
-        local_dof_index = all_dof_map->getLocalElement(global_index);
+        local_dof_index = all_dof_map->getLocalElement(global_dof_index);
         if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
           Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
           Original_Stiffness_Entry_Indices(i,stride_index) = j;   
@@ -4795,17 +4801,21 @@ int FEA_Module_Elasticity::solve(){
   
   //This completes the setup for A matrix of the linear system
 
-  //debug print of A matrix before balancing
-  //*fos << "Reduced Stiffness Matrix :" << std::endl;
-  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
+  //debug print of A matrix
+  /*
+  *fos << "Reduced Stiffness Matrix :" << std::endl;
+  Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  *fos << std::endl;
+  */
 
   //debug print of A matrix after balancing
-  //if(myrank==0)
-  //*fos << "Reduced RHS :" << std::endl;
-  //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
+  /*
+  if(myrank==0)
+  *fos << "Reduced RHS :" << std::endl;
+  Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
+  *fos << std::endl;
+  std::fflush(stdout);
+  */
 
   //debug print
   //if(update_count==42){
