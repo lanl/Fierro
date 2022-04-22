@@ -100,7 +100,7 @@ public:
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
   RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Stiffness_Entries;
   RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Stiffness_Entry_Indices;
-  CArrayKokkos<int, array_layout, device_type, memory_traits> Original_Stiffness_Entries_Strides;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Stiffness_Entries_Strides;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_RHS_Entries;
 
   //Global FEA data
@@ -123,7 +123,7 @@ public:
    Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
   int max_boundary_sets, max_disp_boundary_sets, max_load_boundary_sets;
   int num_surface_disp_sets, num_surface_force_sets;
-  bool matric_bc_reduced;
+  bool matrix_bc_reduced;
   
   //body force parameters
   bool gravity_flag, thermal_flag, electric_flag;
