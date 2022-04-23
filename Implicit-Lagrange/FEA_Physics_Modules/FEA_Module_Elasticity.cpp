@@ -106,7 +106,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   all_node_strains_distributed = Teuchos::rcp(new MV(all_node_map, strain_count));
   Global_Nodal_Forces = Teuchos::rcp(new MV(local_dof_map, 1));
   Global_Nodal_RHS = Teuchos::rcp(new MV(local_dof_map, 1));
-  bool adjoints_allocated = false;
+  adjoints_allocated = false;
 
   //initialize displacements to 0
   //local variable for host view in the dual view
@@ -3254,7 +3254,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   const_host_vec_array direction_vec = direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
-  if(adjoints_allocated){
+  if(!adjoints_allocated){
     adjoint_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     all_adjoint_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
@@ -3274,6 +3274,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   int z_quad,y_quad,x_quad, direct_product_count;
   LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_reduced_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index, global_dof_id;
+  size_t local_nrows = nlocal_nodes*num_dim;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Element_Modulus_Gradient, Element_Modulus_Concavity, Poisson_Ratio, gradient_force_density[3];
