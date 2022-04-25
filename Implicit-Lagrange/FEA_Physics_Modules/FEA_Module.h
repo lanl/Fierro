@@ -12,6 +12,7 @@
 #include <Teuchos_Tuple.hpp>
 #include <Teuchos_VerboseObject.hpp>
 
+#include <fstream>
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
@@ -88,7 +89,9 @@ public:
   //interfaces between user input and creating data structures for applied loads
   virtual void generate_applied_loads() {}
 
-  virtual int solve() {}
+  virtual int solve() {return 0;}
+
+  virtual void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header) {}
 
   virtual void linear_solver_parameters() {}
 

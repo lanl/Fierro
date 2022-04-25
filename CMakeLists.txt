@@ -18,6 +18,14 @@ if(NOT DEFINED BUILD_IMPLICIT_SOLVER)
   set(BUILD_IMPLICIT_SOLVER OFF)
 endif()
 
+if(NOT DEFINED BUILD_KOKKOS_SGH)
+  set(BUILD_KOKKOS_SGH OFF)
+endif()
+
+if(NOT DEFINED BUILD_1D_KOKKOS_SGH)
+  set(BUILD_1D_KOKKOS_SGH OFF)
+endif()
+
 if(NOT DEFINED PARALLEL_DIRECT_SOLVER)
   set(PARALLEL_DIRECT_SOLVER OFF)
 endif()
@@ -103,8 +111,21 @@ include_directories(Elements/common)
 include_directories(Elements/geometry)
 include_directories(Elements/slam)
 
+if(BUILD_1D_KOKKOS_SGH)
+if(NOT BUILD_IMPLICIT_SOLVER)
+find_package(Kokkos REQUIRED) #new
+add_definitions(-DHAVE_KOKKOS=1)
+endif()
 include_directories(Explicit-Lagrange-Kokkos/1D_SGH_solver)
+endif()
+
+if(BUILD_KOKKOS_SGH)
+if(NOT BUILD_IMPLICIT_SOLVER)
+find_package(Kokkos REQUIRED) #new
+add_definitions(-DHAVE_KOKKOS=1)
+endif()
 include_directories(Explicit-Lagrange-Kokkos/SGH_solver)
+endif()
 
 
 if(BUILD_ELEMENTS)
@@ -118,15 +139,19 @@ add_subdirectory(Elements/tests)
 add_subdirectory(Elements/mesh_tools)
 endif()
 
-if(BUILD_1D_SGH)
+if(BUILD_1D_KOKKOS_SGH)
 MESSAGE("\nbuilding 1D SGH!  Here are the details: ")
+if(NOT BUILD_ELEMENTS)
 add_subdirectory(Elements/matar)
+endif()
 add_subdirectory(Explicit-Lagrange-Kokkos/1D_SGH_solver)
 endif()
 
-if(BUILD_SGH)
+if(BUILD_KOKKOS_SGH)
 MESSAGE("\nbuilding SGH!  Here are the details: ")
+if(NOT BUILD_ELEMENTS)
 add_subdirectory(Elements/matar)
+endif()
 add_subdirectory(Explicit-Lagrange-Kokkos/SGH_solver)
 endif()
 

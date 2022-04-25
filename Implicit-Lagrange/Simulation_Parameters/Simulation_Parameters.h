@@ -28,11 +28,12 @@ class Simulation_Parameters
   int num_dim;
 
   //file input parameters 
-  int words_per_line, elem_words_per_line, tecplot_words_per_line;
+  int words_per_line, elem_words_per_line, tecplot_words_per_line, ansys_dat_node_words_per_line, ansys_dat_elem_words_per_line;
   char *format_specification;  //per line file format when reading dofs
   real_t unit_scaling;
   bool restart_file;
-  bool tecplot_input;
+  bool tecplot_input, ansys_dat_input;
+  std::string element_type;
 
   //file output parameters
   int optimization_output_freq;
@@ -42,6 +43,7 @@ class Simulation_Parameters
  
   //necessary FEA modules
   std::vector<std::string> FEA_Module_List;
+  std::vector<bool> fea_module_must_read;
   int nfea_modules;
 };
 

@@ -23,6 +23,7 @@
 #include "Tpetra_Details_EquilibrationInfo.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
+#include <map>
 
 //#include <Xpetra_Operator.hpp>
 //#include <MueLu.hpp>
@@ -104,6 +105,8 @@ public:
   void read_mesh_ensight(char *MESH);
 
   void read_mesh_tecplot(char *MESH);
+
+  void read_mesh_ansys_dat(char *MESH);
   
   //setup ghosts and element maps
   void init_maps();
@@ -166,6 +169,7 @@ public:
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;
   std::vector<FEA_Module*> fea_modules;
+  std::vector<bool> fea_module_must_read;
   int nfea_modules;
   int displacement_module;
   
@@ -222,6 +226,7 @@ public:
   size_t num_boundary_conditions;
   int current_bdy_id;
   CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
+  std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NTopology_Condition_Patches;
 
@@ -260,6 +265,7 @@ public:
 
   //file readin variables
   std::ifstream *in;
+  std::streampos before_condition_header;
   int words_per_line, elem_words_per_line;
 
   //file output variables
