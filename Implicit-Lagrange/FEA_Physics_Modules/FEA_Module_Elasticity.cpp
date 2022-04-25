@@ -5041,9 +5041,9 @@ int FEA_Module_Elasticity::solve(){
   //print allocation of the solution vector to check distribution
   
   //if(myrank==0)
-  *fos << "Solution:" << std::endl;
-  X->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
+  //*fos << "Solution:" << std::endl;
+  //X->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
   
   //import for displacement of ghosts
   Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
