@@ -1382,6 +1382,8 @@ void FEA_Module_Elasticity::assemble_matrix(){
   Matrix_alloc = 1;
   }
 
+  matrix_bc_reduced = false;
+
   //filter small negative numbers (that should have been 0 from cancellation) from floating point error
   /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
@@ -3827,9 +3829,10 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
 
     //compute density
     current_density = 0;
-    if(nodal_density_flag)
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      current_density += nodal_density(node_loop)*basis_values(node_loop);
+    if(nodal_density_flag){
+      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+        current_density += nodal_density(node_loop)*basis_values(node_loop);
+      }
     }
     //default constant element density
     else{
@@ -4724,7 +4727,8 @@ int FEA_Module_Elasticity::solve(){
  
   //number of boundary conditions on this mpi rank
   global_size_t local_nboundaries = Number_DOF_BCS;
-  Original_RHS_Entries = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(local_nboundaries);  
+  Original_RHS_Entries = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(local_nboundaries);
+  real_t diagonal_bc_scaling = Stiffness_Matrix(0,0);
 
   //alter rows of RHS to be the boundary condition value on that node
   //first pass counts strides for storage
@@ -4733,7 +4737,7 @@ int FEA_Module_Elasticity::solve(){
     if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
       Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
       row_counter++;
-      Nodal_RHS(i,0) = Node_DOF_Displacement_Boundary_Conditions(i);
+      Nodal_RHS(i,0) = Node_DOF_Displacement_Boundary_Conditions(i)*diagonal_bc_scaling;
     }
   }//row for
   
@@ -4745,9 +4749,11 @@ int FEA_Module_Elasticity::solve(){
   //*fos << "Reduced Stiffness Matrix :" << std::endl;
   //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
-  
+  Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Stiffness_Matrix, "A_matrix", "Stores stiffness matrix values");
 
   //first pass counts strides for storage
+  if(!matrix_bc_reduced){
   for(LO i=0; i < local_nrows; i++){
     Original_Stiffness_Entries_Strides(i) = 0;
     if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
@@ -4776,7 +4782,7 @@ int FEA_Module_Elasticity::solve(){
         Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
         Original_Stiffness_Entry_Indices(i,j) = j;
         if(local_dof_index == i){
-          Stiffness_Matrix(i,j) = 1;
+          Stiffness_Matrix(i,j) = diagonal_bc_scaling;
         }
         else{     
           Stiffness_Matrix(i,j) = 0;
@@ -4799,7 +4805,7 @@ int FEA_Module_Elasticity::solve(){
   }//row for
 
   matrix_bc_reduced = true;
-  
+  }
   //This completes the setup for A matrix of the linear system
 
   //debug print of A matrix
@@ -4817,12 +4823,10 @@ int FEA_Module_Elasticity::solve(){
   *fos << std::endl;
   std::fflush(stdout);
   */
-
+  
   //debug print
-  //if(update_count==42){
-    //Tpetra::MatrixMarket::Writer<MAT> market_writer();
-    //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *balanced_A, "A_matrix", "Stores stiffness matrix values");
-  //}
+  Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Stiffness_Matrix, "A_matrix2", "Stores stiffness matrix values");
 
   //dimension of the nullspace for linear elasticity
   int nulldim = 6;
@@ -4900,6 +4904,14 @@ int FEA_Module_Elasticity::solve(){
         nullspace_view(i,4) = node_y - cy;
         nullspace_view(i,5) = -node_x + cx;
       }
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        nullspace_view(i,0) = 0;
+        nullspace_view(i,1) = 0;
+        nullspace_view(i,2) = 0;
+        nullspace_view(i,3) = 0;
+        nullspace_view(i,4) = 0;
+        nullspace_view(i,5) = 0;
+      }
     }// for
   }
   else{
@@ -4912,10 +4924,15 @@ int FEA_Module_Elasticity::solve(){
       nullspace_view(i,dim_index) = 1;
       //set rotational components
       if(dim_index==0){
-        nullspace_view(i,3) = -node_y + cy;
+        nullspace_view(i,2) = -node_y + cy;
       }
       if(dim_index==1){
-        nullspace_view(i,3) = node_x - cx;
+        nullspace_view(i,2) = node_x - cx;
+      }
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        nullspace_view(i,0) = 0;
+        nullspace_view(i,1) = 0;
+        nullspace_view(i,2) = 0;
       }
     }// for
   }
@@ -4938,6 +4955,15 @@ int FEA_Module_Elasticity::solve(){
   //randomize initial vector
   xX->setSeed(100);
   xX->randomize();
+
+  //initialize BC components
+  
+  host_vec_array X_view = X->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  for(LO i=0; i < local_nrows; i++){
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      X_view(i,0) = Node_DOF_Displacement_Boundary_Conditions(i);
+    }
+  }//row for
     
   if(simparam->equilibrate_matrix_flag){
     Solver_Pointer_->equilibrateMatrix(xA,"diag");
@@ -5015,9 +5041,9 @@ int FEA_Module_Elasticity::solve(){
   //print allocation of the solution vector to check distribution
   
   //if(myrank==0)
-  //*fos << "Solution:" << std::endl;
-  //X->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
+  *fos << "Solution:" << std::endl;
+  X->describe(*fos,Teuchos::VERB_EXTREME);
+  *fos << std::endl;
   
   //import for displacement of ghosts
   Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
@@ -5026,14 +5052,15 @@ int FEA_Module_Elasticity::solve(){
   all_node_displacements_distributed->doImport(*node_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
 
   //reinsert global stiffness values corresponding to BC indices to facilitate strain energy calculation
-  for(LO i = 0; i < local_nrows; i++){
-    for(LO j = 0; j < Original_Stiffness_Entries_Strides(i); j++){
-      access_index = Original_Stiffness_Entry_Indices(i,j);
-      Stiffness_Matrix(i,access_index) = Original_Stiffness_Entries(i,j);
-    }
-  }//row for
-
-  matrix_bc_reduced = false;
+  if(matrix_bc_reduced){
+    for(LO i = 0; i < local_nrows; i++){
+      for(LO j = 0; j < Original_Stiffness_Entries_Strides(i); j++){
+        access_index = Original_Stiffness_Entry_Indices(i,j);
+        Stiffness_Matrix(i,access_index) = Original_Stiffness_Entries(i,j);
+      }
+    }//row for
+    matrix_bc_reduced = false;
+  }
 
   //compute nodal force vector (used by other functions such as TO) due to inputs and constraints
   Global_Stiffness_Matrix->apply(*node_displacements_distributed,*Global_Nodal_Forces);
