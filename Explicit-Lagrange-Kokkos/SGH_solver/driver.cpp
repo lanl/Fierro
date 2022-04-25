@@ -13,27 +13,31 @@
 #include "variables.h"
 #include "matar.h"
 
-size_t num_dims = 3;
+
 
 
 //==============================================================================
 //   Variables, setting default inputs
 //==============================================================================
 
-size_t num_materials;
-size_t num_state_vars = 6;  // gamma_law has 6 parameters
 
+
+// --- num vars ----
+size_t num_dims = 3;
+
+size_t num_materials;
+size_t num_state_vars;
 
 size_t num_fills;
 size_t num_boundaries;
-
+size_t num_bdy_sets;
 
 
 // --- Graphics output variables ---
-int graphics_id = 0;
+size_t graphics_id = 0;
 int graphics_cyc_ival = 50;
 
-double graphics_times[2000];
+CArray <double> graphics_times(2000);
 double graphics_dt_ival = 1.0e8;
 double graphics_time = graphics_dt_ival;  // the times for writing graphics dump
 
@@ -108,14 +112,18 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    read the input file
         // ---------------------------------------------------------------------  
-        input(material, mat_fill, boundary, state_vars);
+        input(material, mat_fill, boundary, state_vars,
+              num_materials, num_fills, num_boundaries,
+              num_dims, num_state_vars);
 
 
         // ---------------------------------------------------------------------
         //    read in supplied mesh
         // --------------------------------------------------------------------- 
-        read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims);
+        read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
         mesh.build_corner_connectivity();
+        mesh.build_elem_elem_connectivity();
+        //mesh.build_patch_connectivity();
         
         
         // ---------------------------------------------------------------------
@@ -126,6 +134,7 @@ int main(int argc, char *argv[]){
         const size_t num_nodes = mesh.num_nodes;
         const size_t num_elems = mesh.num_elems;
         const size_t num_corners = mesh.num_corners;
+
         
         // allocate elem_statev
         elem.statev = CArray <double> (num_elems, num_state_vars);
@@ -142,6 +151,7 @@ int main(int argc, char *argv[]){
         //     mesh struct or passing the arrays will be roughly equivalent 
         //     for memory movement.
 
+        
         // create Dual Views of the individual node struct variables
         DViewCArrayKokkos <double> node_coords(&node.coords(0,0,0),
                                                rk_num_bins,
@@ -153,8 +163,9 @@ int main(int argc, char *argv[]){
                                             num_nodes,
                                             num_dims);
 
-        DViewCArrayKokkos <double> node_mass(&node.mass(0,0,0),
+        DViewCArrayKokkos <double> node_mass(&node.mass(0),
                                              num_nodes);
+        
         
         // create Dual Views of the individual elem struct variables
         DViewCArrayKokkos <double> elem_den(&elem.den(0),
@@ -227,14 +238,17 @@ int main(int argc, char *argv[]){
                elem_mass,
                elem_mat_id,
                elem_statev,
-               state_vars
+               state_vars,
+               num_fills,
+               rk_num_bins,
+               num_bdy_sets
            );
         
         // intialize time, time_step, and cycles
         time_value = 0.0;
         dt = dt_start;
         graphics_id = 0;
-        graphics_times[0] = 0.0;
+        graphics_times(0) = 0.0;
         graphics_time = graphics_dt_ival;  // the times for writing graphics dump
 
         
@@ -262,7 +276,10 @@ int main(int argc, char *argv[]){
                  elem_sie,
                  elem_vol,
                  elem_mass,
-                 elem_mat_id );
+                 elem_mat_id,
+                 graphics_times,
+                 graphics_id,
+                 time_value);
 
         // output files
         FILE *out_elem_state;  //element average state

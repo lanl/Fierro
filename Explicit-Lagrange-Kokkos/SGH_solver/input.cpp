@@ -14,8 +14,12 @@
 void input(CArrayKokkos <material_t> &material,
            CArrayKokkos <mat_fill_t> &mat_fill,
            CArrayKokkos <boundary_t> &boundary,
-           CArrayKokkos <double> &state_vars){
-    
+           CArrayKokkos <double> &state_vars,
+           size_t &num_materials,
+           size_t &num_fills,
+           size_t &num_boundaries,
+           size_t &num_dims,
+           size_t &num_state_vars){
     
     // Dimensions
     num_dims = 3;
@@ -39,8 +43,9 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // --- declare model state variable array size ---
-    num_state_vars = 6;  // 6 values for gamma_law gas
+    num_state_vars = 6;  // 6 values for gamma_law gas, it is a memory block
     state_vars = CArrayKokkos <double> (num_materials, num_state_vars); // init values
+    
     
     // --- number of fill regions ---
     num_fills = 2;
@@ -84,6 +89,7 @@ void input(CArrayKokkos <material_t> &material,
             material(0).mat_model = ideal_gas; // EOS model
             material(0).b1        = 1.3333;    // linear slope of UsUp for Riemann solver
             
+            material(0).num_state_vars = 6;  // actual num_state_vars
             state_vars(0,0) = 1.0;     // specific heat
             state_vars(0,4) = 5.0/3.0; // gamma value
             state_vars(0,5) = 1.0E-14; // minimum sound speed

@@ -7,15 +7,88 @@
 
 #define PI 3.141592653589793
 
+/*
+==========================
+Nodal indexing convention
+==========================
+
+              K
+              ^         J
+              |        /
+              |       /
+              |      /
+      7------------------6
+     /|                 /|
+    / |                / |
+   /  |               /  |
+  /   |              /   |
+ /    |             /    |
+4------------------5     |
+|     |            |     | ----> I
+|     |            |     |
+|     |            |     |
+|     |            |     |
+|     3------------|-----2
+|    /             |    /
+|   /              |   /
+|  /               |  /
+| /                | /
+|/                 |/
+0------------------1
+
+nodes are ordered for outward normal
+patch 0: [0,4,7,3]  xi-minus dir
+patch 1: [1,2,6,5]  xi-plus  dir
+patch 2: [0,1,5,4]  eta-minus dir
+patch 3: [2,3,7,6]  eta-plus  dir
+patch 4: [0,3,2,1]  zeta-minus dir
+patch 6: [4,5,6,7]  zeta-plus  dir
+
+*/
+
+// sort in ascending order using bubble sort
+KOKKOS_INLINE_FUNCTION
+void bubble_sort(size_t arr[], size_t num){
+    
+    for (size_t i=0; i<(num-1); i++){
+        for (size_t j=0; j<(num-i-1); j++){
+            
+            if (arr[j]>arr[j+1]){
+                size_t temp = arr[j];
+                arr[j] = arr[j+1];
+                arr[j+1] = temp;
+            } // end if
+            
+        } // end for j
+    } // end for i
+} // end function
+
+
 // mesh sizes and connectivity data structures
 struct mesh_t {
     
     size_t num_dims;
+    
     size_t num_nodes;
-    size_t num_nodes_in_elem;
+    
     size_t num_elems;
-    size_t num_corners;
+    size_t num_nodes_in_elem;
+    size_t num_patches_in_elem;
 
+    size_t num_corners;
+    
+    size_t num_patches;
+    size_t num_bdy_patches;
+    size_t num_bdy_sets;
+    size_t num_nodes_in_patch;
+
+    
+    // corner ids in node
+    RaggedRightArrayKokkos <size_t> corners_in_node;
+    CArrayKokkos <size_t> num_corners_in_node;
+    
+    // elem ids in node
+    RaggedRightArrayKokkos <size_t> elems_in_node;
     
     // node ids in elem
     DCArrayKokkos <size_t> nodes_in_elem;
@@ -23,42 +96,58 @@ struct mesh_t {
     // corner ids in elem
     CArrayKokkos <size_t> corners_in_elem;
     
-    // corner ids in node
-    RaggedRightArrayKokkos <size_t> corners_in_node;
-    CArrayKokkos <size_t> num_corners_in_node;
+    // elem ids in elem
+    RaggedRightArrayKokkos <size_t> elems_in_elem;
+    CArrayKokkos <size_t> num_elems_in_elem;
+    
+    // patch ids in elem
+    CArrayKokkos <size_t> patches_in_elem;
+    
+    // node ids in a patch
+    CArrayKokkos <size_t> nodes_in_patch;
+    
+    // patch ids in bdy set
+    DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
+    
+    // bdy_patches
+    CArrayKokkos <size_t> bdy_patches;
+    
+    // element ids in a patch
+    CArrayKokkos <size_t> elems_in_patch;
+    
     
     // initialization methods
     void initialize_nodes(const size_t num_nodes_inp)
     {
-        this->num_nodes = num_nodes_inp;
+        num_nodes = num_nodes_inp;
     }; // end method
     
     
     // initialization methods
     void initialize_elems(const size_t num_elems_inp, const size_t num_dims_inp)
     {
-        this->num_dims = num_dims_inp;
-        this->num_nodes_in_elem = 1;
+        num_dims = num_dims_inp;
+        num_nodes_in_elem = 1;
         for (int dim=0; dim<num_dims; dim++){
             num_nodes_in_elem *= 2;
         }
-        this->num_elems = num_elems_inp;
-        this->nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
-        this->corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
+        num_elems = num_elems_inp;
+        nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
+        corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
     }; // end method
     
     
     // initialization methods
     void initialize_corners(const size_t num_corners_inp)
     {
-        this->num_corners = num_corners_inp;
+        num_corners = num_corners_inp;
     }; // end method
     
     
     // build the corner mesh connectivity arrays
     void build_corner_connectivity(){
         
-        this -> num_corners_in_node = CArrayKokkos <size_t> (num_nodes); // stride sizes
+        num_corners_in_node = CArrayKokkos <size_t> (num_nodes); // stride sizes
         
         // initializing the number of corners (node-cell pair) to be zero
         FOR_ALL(node_gid, 0, num_nodes, {
@@ -80,7 +169,7 @@ struct mesh_t {
         
         
         // the stride sizes are the num_corners_in_node at the node
-        this -> corners_in_node = RaggedRightArrayKokkos <size_t> (num_corners_in_node);
+        corners_in_node = RaggedRightArrayKokkos <size_t> (num_corners_in_node);
 
         CArrayKokkos <size_t> count_saved_corners_in_node(num_nodes);
 
@@ -90,7 +179,10 @@ struct mesh_t {
         });
         
         
-        // populate the cells connected to a node list and corners in a node
+        // he elems_in_elem data type
+        elems_in_node = RaggedRightArrayKokkos <size_t> (num_corners_in_node);
+        
+        // populate the elems connected to a node list and corners in a node
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++){
             FOR_ALL(node_lid, 0, num_nodes_in_elem, {
                 
@@ -103,6 +195,8 @@ struct mesh_t {
                 // Save corner index to this node_gid
                 size_t corner_gid = node_lid + elem_gid*num_nodes_in_elem;
                 corners_in_node(node_gid, j) = corner_gid;
+                
+                elems_in_node(node_gid, j) = elem_gid; // save the elem_gid
 
                 // Save corner index to element
                 size_t corner_lid = node_lid;
@@ -113,10 +207,263 @@ struct mesh_t {
 
             });  // end FOR_ALL over nodes in element
         } // end for elem_gid
-
-
+     
     } // end of build_corner_connectivity
-  
+    
+    
+    // build elem connectivity arrays
+    void build_elem_elem_connectivity(){
+        
+        // find the max number of elems around a node
+        size_t max_num_elems_in_node;
+        size_t max_num_lcl;
+        REDUCE_MAX(node_gid, 0, num_nodes, max_num_lcl, {
+            
+            // num_corners_in_node = num_elems_in_node
+            size_t max_num = num_corners_in_node(node_gid);
+            
+            if (max_num > max_num_lcl) max_num_lcl = max_num;
+                    
+        }, max_num_elems_in_node); // end parallel reduction on max
+        Kokkos::fence();
+        
+        // a temporary ragged array to save the elems around an elem
+        DynamicRaggedRightArrayKokkos <size_t> temp_elems_in_elem(num_nodes, num_nodes_in_elem*max_num_elems_in_node);
+        
+        num_elems_in_elem = CArrayKokkos <size_t> (num_elems);
+        FOR_ALL(elem_gid, 0, num_elems, {
+            num_elems_in_elem(elem_gid) = 0;
+        });
+        Kokkos::fence();
+        
+        // find and save neighboring elem_gids of an elem
+        FOR_ALL (elem_gid, 0, num_elems, {
+            for (int node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+                
+                // get the gid for the node
+                size_t node_id = nodes_in_elem(elem_gid, node_lid);
+                
+                // loop over all elems connected to node_gid
+                for (int elem_lid = 0; elem_lid < num_corners_in_node(node_id); elem_lid++){
+                    
+                    // get the global id for the neighboring elem
+                    size_t neighbor_elem_gid = elems_in_node(node_id, elem_lid);
+                    
+                    // a flag to save (=1) or not (=0)
+                    size_t save = 1;
+                    
+                    // a true neighbor_elem_id is not equal to elem_gid
+                    if (neighbor_elem_gid == elem_gid ){
+                        save = 0;  // don't save
+                    } // end if
+                    
+                    // check to see if the neighbor_elem_gid has been saved already
+                    size_t num_saved = temp_elems_in_elem.stride(elem_gid);
+                    for (size_t i=0; i<num_saved; i++){
+                        
+                        if (neighbor_elem_gid == temp_elems_in_elem(elem_gid,i)){
+                            save=0;   // don't save, it has been saved already
+                        } // end if
+                        
+                    } // end for i
+                    
+                    if (save==1){
+                        // save the neighboring elem_gid
+                        temp_elems_in_elem(elem_gid, num_saved) = neighbor_elem_gid;
+                        
+                        // increment the number of neighboring elements saved
+                        temp_elems_in_elem.stride(elem_gid)++;
+                    } // end if save
+                    
+                } // end for elem_lid in a node
+
+            }  // end for node_lid in an elem
+            
+            // save the actial stride size
+            num_elems_in_elem(elem_gid) = temp_elems_in_elem.stride(elem_gid);
+            
+        }); // end FOR_ALL elems
+        Kokkos::fence();
+        
+        
+        // compress out the extra space in the temp_elems_in_elem
+        elems_in_elem = RaggedRightArrayKokkos <size_t> (num_elems_in_elem);
+        
+        FOR_ALL (elem_gid, 0, num_elems, {
+            for (size_t i=0; i<num_elems_in_elem(elem_gid); i++){
+                elems_in_elem(elem_gid, i) = temp_elems_in_elem(elem_gid, i);
+            } // end for i
+        });  // end FOR_ALL elems
+        Kokkos::fence();
+        
+    } // end of build_elem_elem_connectivity
+        
+    
+    // build the patches
+    void build_patch_connectivity(){
+        
+        // building patches
+        //CArrayKokkos <size_t> hash_patch(num_nodes, num_nodes, num_nodes,2);  // very slow
+        DViewCArrayKokkos <size_t> node_ordering_in_cell;  // node lids in a patch
+        
+        num_nodes_in_patch = 2*(num_dims-1);  // 2 (2D) or 4 (3D)
+        num_patches_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
+        
+        
+        if(num_dims == 3) {
+            size_t node_lids_in_patch_in_elem_3D[24] =
+               {0,4,7,3,
+                1,2,6,5,
+                0,1,5,4,
+                2,3,7,6,
+                0,3,2,1,
+                4,5,6,7};
+            node_ordering_in_cell = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem_3D[0],6,4);
+        }
+        else {
+            //   y
+            //   |
+            // 4---3
+            // |   |  -- x
+            // 1---2
+            //
+            size_t node_lids_in_patch_in_elem_2D[8] =
+               {1,4,
+                3,2,
+                1,2,
+                4,3};
+            node_ordering_in_cell = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem_2D[0],4,2);
+        } // end if
+        
+        
+        
+
+        // hash array
+        CArrayKokkos <long int> hash_arr;
+        if(num_dims==2){
+            hash_arr = CArrayKokkos <long int> (num_nodes + num_nodes*num_nodes);
+        }
+        else
+        {
+            hash_arr = CArrayKokkos <long int> (num_nodes + num_nodes*num_nodes +
+                                                num_nodes*num_nodes*num_nodes);
+        } // end if
+        
+        // save the hash keys
+        CArrayKokkos <size_t> hash_keys_in_elem (num_elems, num_patches_in_elem);
+        
+        
+        // step 1) initialize the hash_arr = -1 at the patch hash_key values
+        for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++){
+            
+            FOR_ALL(patch_lid, 0, num_patches_in_elem, {
+                
+                size_t sorted_patch_nodes[num_nodes_in_patch];
+                
+                // first save the patch nodes
+                for (size_t node_lid = 0; node_lid<num_nodes_in_patch; node_lid++){
+                    sorted_patch_nodes[node_lid] = node_ordering_in_cell(patch_lid,node_lid);
+                }  // end for node_lid
+                
+                // sort nodes from smallest to largest
+                bubble_sort(sorted_patch_nodes, num_nodes_in_patch);
+                
+                size_t hash_key;
+                if(num_dims==2) {
+                    hash_key = sorted_patch_nodes[0] + num_nodes*sorted_patch_nodes[1];
+                }
+                else {
+                    hash_key = sorted_patch_nodes[1] + num_nodes*sorted_patch_nodes[2] +
+                               num_nodes*num_nodes*sorted_patch_nodes[3];  // 3 largest node values
+                } // end if on dims
+                
+                // save hash_keys in the this elem
+                hash_keys_in_elem(elem_gid,patch_lid) = hash_key;
+                
+                hash_arr(hash_key) = -1; // tag the hash_array as having a patch
+
+            }); // end for patch_lid
+            
+        } // end for elem_gid
+        
+        
+        // step 2) count the number of patches in the mesh
+        RUN({
+            // serial execution on a GPU
+            size_t patch_gid = 0;
+            for (size_t elem_gid=0; elem_gid<num_elems; elem_gid++){
+                for (size_t patch_lid=0; patch_lid<num_patches_in_elem; patch_lid++) {
+                    
+                    size_t hash_key = hash_keys_in_elem(elem_gid,patch_lid);
+                    
+                    // check to see if it is a new patch
+                    if (hash_arr(hash_key) == -1){
+                        hash_arr(hash_key) = patch_gid; // save the patch_gid
+                        patch_gid++;
+                    } // end if a new patch
+                    
+                } // end for patch_lid
+            } // end for elem_gid
+            
+            num_patches = patch_gid;
+        }); // end RUN
+        
+        printf("num_patches = %zu \n", num_patches);
+        
+        // allocate memory for the patch structures in mesh_t
+        patches_in_elem = CArrayKokkos <size_t> (num_elems, num_patches_in_elem);
+        elems_in_patch =  CArrayKokkos <size_t> (num_patches, 2);
+        nodes_in_patch = CArrayKokkos <size_t> (num_patches, num_nodes_in_patch);
+        
+        // a temporary variable to help populate patch structures
+        CArrayKokkos <size_t> num_elems_in_patch_saved (num_patches);
+        
+        // initialize the number of elems in a patch saved to zero
+        FOR_ALL(patch_gid, 0, num_patches, {
+            num_elems_in_patch_saved(patch_gid) = 0;
+        });
+        
+        
+        // step 3) populate the patch data structures with indices
+        FOR_ALL(elem_gid, 0, num_elems, {
+            for (size_t patch_lid=0; patch_lid<num_patches_in_elem; patch_lid++) {
+                
+                // get the patch_gid
+                size_t hash_key = hash_keys_in_elem(elem_gid,patch_lid);
+                size_t patch_gid = hash_arr(hash_key);
+                
+                patches_in_elem(elem_gid, patch_lid) = patch_gid;
+                
+                // save the elem_gid to the patch
+                size_t num_saved = num_elems_in_patch_saved(patch_gid);
+                elems_in_patch(patch_gid, num_saved) = elem_gid;
+                
+                // save the nodes in the patch if it is a new patch
+                if (num_saved == 0){
+                    // save the patch nodes
+                    for (size_t node_lid = 0; node_lid<num_nodes_in_patch; node_lid++){
+                        nodes_in_patch(patch_gid,node_lid) = node_ordering_in_cell(patch_lid,node_lid);
+                    }  // end for node_lid
+                } // end if num_saved
+                
+            } // end for patch_lid
+            
+        }); // end FOR_ALL elem_gid
+        
+        
+    } // end patch connectivity method
+    
+    
+    void init_bdy_sets (size_t num_sets){
+        
+        if(num_sets == 0){
+            printf("ERROR: number of boundary sets = 0, setting it = 1");
+            num_sets = 1;
+        }
+        num_bdy_sets = num_sets;
+        bdy_patches_in_set = DynamicRaggedRightArrayKokkos <size_t> (num_sets, num_bdy_patches);
+    } // end of init_bdy_sets method
+
 
 }; // end mesh_t
 
@@ -244,13 +591,19 @@ void read_mesh_ensight(char* MESH,
                        node_t &node,
                        elem_t &elem,
                        corner_t &corner,
-                       size_t num_dims);
+                       const size_t num_dims,
+                       const size_t rk_num_bins);
 
 
 void input(CArrayKokkos <material_t> &material,
            CArrayKokkos <mat_fill_t> &mat_fill,
            CArrayKokkos <boundary_t> &boundary,
-           CArrayKokkos <double> &state_vars);
+           CArrayKokkos <double> &state_vars,
+           size_t &num_materials,
+           size_t &num_fills,
+           size_t &num_boundaries,
+           size_t &num_dims,
+           size_t &num_state_vars);
 
 
 KOKKOS_FUNCTION
@@ -283,7 +636,10 @@ void setup( const CArrayKokkos <material_t> &material,
             const DViewCArrayKokkos <double> &elem_mass,
             const DViewCArrayKokkos <size_t> &elem_mat_id,
             const DViewCArrayKokkos <double> &elem_statev,
-            const CArrayKokkos <double> &state_vars);
+            const CArrayKokkos <double> &state_vars,
+            const size_t num_fills,
+            const size_t rk_num_bins,
+            const size_t num_bdy_sets);
 
 void ensight( mesh_t &mesh,
               DViewCArrayKokkos <double> &node_coords,
@@ -296,5 +652,8 @@ void ensight( mesh_t &mesh,
               DViewCArrayKokkos <double> &elem_sie,
               DViewCArrayKokkos <double> &elem_vol,
               DViewCArrayKokkos <double> &elem_mass,
-              DViewCArrayKokkos <size_t> &elem_mat_id);
+              DViewCArrayKokkos <size_t> &elem_mat_id,
+              CArray <double> &graphics_times,
+              size_t graphics_id,
+              double time_value);
 #endif 
