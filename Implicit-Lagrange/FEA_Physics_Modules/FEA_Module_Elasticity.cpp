@@ -4904,6 +4904,7 @@ int FEA_Module_Elasticity::solve(){
         nullspace_view(i,4) = node_y - cy;
         nullspace_view(i,5) = -node_x + cx;
       }
+      /*
       if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
         nullspace_view(i,0) = 0;
         nullspace_view(i,1) = 0;
@@ -4912,6 +4913,7 @@ int FEA_Module_Elasticity::solve(){
         nullspace_view(i,4) = 0;
         nullspace_view(i,5) = 0;
       }
+      */
     }// for
   }
   else{
@@ -4957,14 +4959,14 @@ int FEA_Module_Elasticity::solve(){
   xX->randomize();
 
   //initialize BC components
-  
+  /*
   host_vec_array X_view = X->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   for(LO i=0; i < local_nrows; i++){
     if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
       X_view(i,0) = Node_DOF_Displacement_Boundary_Conditions(i);
     }
   }//row for
-    
+  */
   if(simparam->equilibrate_matrix_flag){
     Solver_Pointer_->equilibrateMatrix(xA,"diag");
     Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
