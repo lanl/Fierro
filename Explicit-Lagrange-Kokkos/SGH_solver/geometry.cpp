@@ -185,3 +185,80 @@ void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
 
 
 
+KOKKOS_FUNCTION
+void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
+                   const size_t elem_gid,
+                   const DViewCArrayKokkos <double> &node_coords,
+                   const mesh_t &mesh){
+
+    const size_t num_nodes = mesh.num_nodes_in_elem;
+
+    double x_array[num_nodes];
+    double y_array[num_nodes];
+    
+    // x, y coordinates of elem vertices
+    auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
+    auto y  = ViewCArrayKokkos <double> (y_array, num_nodes);
+
+    // get the coordinates of the nodes(rk,elem,node) in this element
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++){
+        x(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+        y(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+    } // end for
+
+    /* ensight node order   0 1 2 3
+       Flanaghan node order 3 4 1 2
+    */
+    
+    B_matrix(0,0) = 0.5*(y(3)-y(1));
+                  
+    B_matrix(1,0) = 0.5*(y(0)-y(2));
+                  
+    B_matrix(2,0) = 0.5*(y(1)-y(3));
+                  
+    B_matrix(3,0) = 0.5*(y(2)-y(0));
+                 
+
+    B_matrix(0,1) = 0.5*(x(1)-x(3));
+                 
+    B_matrix(1,1) = 0.5*(x(2)-x(0));
+                  
+    B_matrix(2,1) = 0.5*(x(3)-x(1));
+                  
+    B_matrix(3,1) = 0.5*(x(0)-x(2));
+
+
+} // end subroutine
+
+
+KOKKOS_FUNCTION
+void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
+                  const size_t elem_gid,
+                  const DViewCArrayKokkos <double> &node_coords,
+                  const mesh_t &mesh){
+
+    const size_t num_nodes = mesh.num_nodes_in_elem;
+
+    double x_array[num_nodes];
+    double y_array[num_nodes];
+    
+    // x, y coordinates of elem vertices
+    auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
+    auto y  = ViewCArrayKokkos <double> (y_array, num_nodes);
+     
+    // get the coordinates of the nodes(rk,elem,node) in this element
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++){
+        x(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+        y(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+    } // end for
+
+    /* ensight node order   0 1 2 3
+       Flanaghan node order 3 4 1 2
+    */
+    
+    // element volume
+    elem_vol(elem_gid) = 0.5*((x(0)-x(2))*(y(1)-y(3))+(x(3)-x(1))*(y(0)-y(2)));
+
+} // end subroutine
+
+

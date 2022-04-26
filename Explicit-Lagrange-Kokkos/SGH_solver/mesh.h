@@ -688,12 +688,24 @@ void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const DViewCArrayKokkos <double> &node_coords,
                  const mesh_t &mesh);
 
+KOKKOS_FUNCTION
+void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
+                  const size_t elem_gid,
+                  const DViewCArrayKokkos <double> &node_coords,
+                  const mesh_t &mesh);
 
 KOKKOS_FUNCTION
 void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
                  const mesh_t &mesh);
+
+KOKKOS_FUNCTION
+void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
+                   const size_t elem_gid,
+                   const DViewCArrayKokkos <double> &node_coords,
+                   const mesh_t &mesh);
+
 
 
 void setup( const CArrayKokkos <material_t> &material,
