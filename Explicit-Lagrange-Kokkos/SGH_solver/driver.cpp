@@ -123,7 +123,7 @@ int main(int argc, char *argv[]){
         read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
         mesh.build_corner_connectivity();
         mesh.build_elem_elem_connectivity();
-        //mesh.build_patch_connectivity();
+        mesh.build_patch_connectivity();
         
         
         // ---------------------------------------------------------------------

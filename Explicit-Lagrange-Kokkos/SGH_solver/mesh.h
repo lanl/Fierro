@@ -106,14 +106,16 @@ struct mesh_t {
     // node ids in a patch
     CArrayKokkos <size_t> nodes_in_patch;
     
+    // element ids in a patch
+    CArrayKokkos <size_t> elems_in_patch;
+    
     // patch ids in bdy set
     DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
     
     // bdy_patches
     CArrayKokkos <size_t> bdy_patches;
     
-    // element ids in a patch
-    CArrayKokkos <size_t> elems_in_patch;
+
     
     
     // initialization methods
@@ -293,6 +295,7 @@ struct mesh_t {
             for (size_t i=0; i<num_elems_in_elem(elem_gid); i++){
                 elems_in_elem(elem_gid, i) = temp_elems_in_elem(elem_gid, i);
             } // end for i
+            //printf("num neighbors = %ld \n", num_elems_in_elem(elem_gid));
         });  // end FOR_ALL elems
         Kokkos::fence();
         
@@ -303,118 +306,183 @@ struct mesh_t {
     void build_patch_connectivity(){
         
         // building patches
-        //CArrayKokkos <size_t> hash_patch(num_nodes, num_nodes, num_nodes,2);  // very slow
-        DViewCArrayKokkos <size_t> node_ordering_in_cell;  // node lids in a patch
+        DViewCArrayKokkos <size_t> node_ordering_in_elem;  // node lids in a patch
         
         num_nodes_in_patch = 2*(num_dims-1);  // 2 (2D) or 4 (3D)
         num_patches_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
         
+        size_t node_lids_in_patch_in_elem[24];
         
         if(num_dims == 3) {
-            size_t node_lids_in_patch_in_elem_3D[24] =
-               {0,4,7,3,
-                1,2,6,5,
-                0,1,5,4,
-                2,3,7,6,
-                0,3,2,1,
-                4,5,6,7};
-            node_ordering_in_cell = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem_3D[0],6,4);
+            size_t temp_node_lids[24] = {0,4,7,3,
+                                         1,2,6,5,
+                                         0,1,5,4,
+                                         2,3,7,6,
+                                         0,3,2,1,
+                                         4,5,6,7};
+            
+            for (size_t i=0; i<24; i++){
+                node_lids_in_patch_in_elem[i] = temp_node_lids[i];
+            } // end for i
+
         }
         else {
             //   y
             //   |
-            // 4---3
+            // 3---2
             // |   |  -- x
-            // 1---2
+            // 0---1
             //
-            size_t node_lids_in_patch_in_elem_2D[8] =
-               {1,4,
-                3,2,
+            size_t temp_node_lids[8] =
+               {0,3,
                 1,2,
-                4,3};
-            node_ordering_in_cell = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem_2D[0],4,2);
-        } // end if
-        
-        
-        
-
-        // hash array
-        CArrayKokkos <long int> hash_arr;
-        if(num_dims==2){
-            hash_arr = CArrayKokkos <long int> (num_nodes + num_nodes*num_nodes);
-        }
-        else
-        {
-            hash_arr = CArrayKokkos <long int> (num_nodes + num_nodes*num_nodes +
-                                                num_nodes*num_nodes*num_nodes);
-        } // end if
-        
-        // save the hash keys
-        CArrayKokkos <size_t> hash_keys_in_elem (num_elems, num_patches_in_elem);
-        
-        
-        // step 1) initialize the hash_arr = -1 at the patch hash_key values
-        for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++){
+                0,1,
+                3,2};
             
-            FOR_ALL(patch_lid, 0, num_patches_in_elem, {
+            for (size_t i=0; i<8; i++){
+                node_lids_in_patch_in_elem[i] = temp_node_lids[i];
+            } // end for i
+
+        } // end if on dims
+        
+        node_ordering_in_elem = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem[0],num_patches_in_elem,num_nodes_in_patch);
+        
+        
+        // for saviong the hash keys of the patches and then the nighboring elem_gid
+        CArrayKokkos <long int> hash_keys_in_elem (num_elems, num_patches_in_elem);
+        
+        // for saving the adjacient patch_lid, which is the slide_lid
+        //CArrayKokkos <size_t> neighboring_side_lids (num_elems, num_patches_in_elem);
+        
+        // allocate memory for the patches in the elem
+        patches_in_elem = CArrayKokkos <size_t> (num_elems, num_patches_in_elem);
+        
+        // a temporary storaage for the patch_gids that are on the mesh boundary
+        CArrayKokkos <size_t> temp_bdy_patches(num_elems*num_patches_in_elem);
+        
+        // step 1) calculate the hash values for each patch in the element
+        FOR_ALL (elem_gid, 0, num_elems, {
+            
+            for (size_t patch_lid = 0; patch_lid<num_patches_in_elem; patch_lid++) {
                 
-                size_t sorted_patch_nodes[num_nodes_in_patch];
+                size_t sorted_patch_nodes[num_patches_in_elem];
                 
                 // first save the patch nodes
-                for (size_t node_lid = 0; node_lid<num_nodes_in_patch; node_lid++){
-                    sorted_patch_nodes[node_lid] = node_ordering_in_cell(patch_lid,node_lid);
+                for (size_t patch_node_lid = 0; patch_node_lid<num_nodes_in_patch; patch_node_lid++){
+                    
+                    // get the local node index of the element for this patch and node in patch
+                    size_t node_lid = node_ordering_in_elem(patch_lid, patch_node_lid);
+                    
+                    // get and save the global index of the node
+                    sorted_patch_nodes[patch_node_lid] = nodes_in_elem(elem_gid, node_lid);
+                    
                 }  // end for node_lid
                 
                 // sort nodes from smallest to largest
                 bubble_sort(sorted_patch_nodes, num_nodes_in_patch);
                 
-                size_t hash_key;
+                long int hash_key;
                 if(num_dims==2) {
-                    hash_key = sorted_patch_nodes[0] + num_nodes*sorted_patch_nodes[1];
+                    hash_key = (sorted_patch_nodes[0] + num_nodes*sorted_patch_nodes[1]);
                 }
                 else {
-                    hash_key = sorted_patch_nodes[1] + num_nodes*sorted_patch_nodes[2] +
-                               num_nodes*num_nodes*sorted_patch_nodes[3];  // 3 largest node values
+                    hash_key = (sorted_patch_nodes[1] + num_nodes*sorted_patch_nodes[2] +
+                                num_nodes*num_nodes*sorted_patch_nodes[3]);  // 3 largest node values
                 } // end if on dims
                 
                 // save hash_keys in the this elem
-                hash_keys_in_elem(elem_gid,patch_lid) = hash_key;
+                hash_keys_in_elem(elem_gid,patch_lid) = -hash_key;  // negative values are keys
                 
-                hash_arr(hash_key) = -1; // tag the hash_array as having a patch
-
-            }); // end for patch_lid
+            } // end for patch_lid
             
-        } // end for elem_gid
+        }); // end FOR_ALL elem_gid
         
+
         
-        // step 2) count the number of patches in the mesh
+        // step 2: walk around the elements and save the elem pairs that have the same hash_key
         RUN({
-            // serial execution on a GPU
+            // serial execution on GPU
+            
             size_t patch_gid = 0;
-            for (size_t elem_gid=0; elem_gid<num_elems; elem_gid++){
-                for (size_t patch_lid=0; patch_lid<num_patches_in_elem; patch_lid++) {
+            size_t bdy_patch_gid = 0;
+            for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
+            
+                for (size_t patch_lid = 0; patch_lid<num_patches_in_elem; patch_lid++) {
+                
+                    long int hash_key = hash_keys_in_elem(elem_gid,patch_lid);
+                
+                    if (hash_key<0){
+                        
+                        for (size_t neighbor_elem_lid=0; neighbor_elem_lid<num_elems_in_elem(elem_gid); neighbor_elem_lid++){
                     
-                    size_t hash_key = hash_keys_in_elem(elem_gid,patch_lid);
+                            // get the neighboring element global index
+                            size_t neighbor_elem_gid = elems_in_elem(elem_gid, neighbor_elem_lid);
                     
-                    // check to see if it is a new patch
-                    if (hash_arr(hash_key) == -1){
-                        hash_arr(hash_key) = patch_gid; // save the patch_gid
-                        patch_gid++;
-                    } // end if a new patch
+                            for (size_t neighbor_patch_lid=0; neighbor_patch_lid<num_patches_in_elem; neighbor_patch_lid++){
                     
+                                // this hash is from the nodes on the patch
+                                long int neighbor_hash_key = hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid);
+                    
+                                if (neighbor_hash_key == hash_keys_in_elem(elem_gid,patch_lid)){
+                    
+                                    // save the respective elem_gid's as they are patch neighbors
+                                    hash_keys_in_elem(elem_gid, patch_lid) = neighbor_elem_gid;
+                                    hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid) = elem_gid;
+                                    
+                                    // save the patch_lids for the adjacient sides
+                                    //neighboring_side_lids(elem_gid, patch_lid) = neighbor_patch_lid;
+                                    //neighboring_side_lids(neighbor_elem_gid, neighbor_patch_lid) = patch_lid;
+                                    
+                                    // save the patch_gid
+                                    patches_in_elem(elem_gid, patch_lid) = patch_gid;
+                                    patches_in_elem(neighbor_elem_gid, neighbor_patch_lid) = patch_gid;
+                    
+                                    patch_gid++;
+                                } // end if
+                    
+                            } // end for loop over a neighbors patch set
+                        } // end for loop over elem neighbors
+                    } // end if hash<0
+    
                 } // end for patch_lid
-            } // end for elem_gid
+                
+                // remaining negative hash key values are the boundary patches
+                for (size_t patch_lid=0; patch_lid<num_patches_in_elem; patch_lid++) {
+                
+                    if( hash_keys_in_elem(elem_gid,patch_lid)<0 ){
+                
+                        hash_keys_in_elem(elem_gid,patch_lid) = elem_gid;
+                        //neighboring_side_lids(elem_gid, patch_lid) = patch_lid;
+                        
+                        patches_in_elem(elem_gid, patch_lid) = patch_gid;
+                        temp_bdy_patches(bdy_patch_gid) = patch_gid;
+                        
+                        patch_gid++;
+                        bdy_patch_gid++;
+                
+                    } // end if
+                
+                }  // end for over patch_lid
+                
+            }  // end for over elem_gid
             
             num_patches = patch_gid;
+            num_bdy_patches = bdy_patch_gid;
+            
         }); // end RUN
         
-        printf("num_patches = %zu \n", num_patches);
         
-        // allocate memory for the patch structures in mesh_t
-        patches_in_elem = CArrayKokkos <size_t> (num_elems, num_patches_in_elem);
-        elems_in_patch =  CArrayKokkos <size_t> (num_patches, 2);
+        //size_t mesh_1D = 60;
+        //size_t exact_num_patches = (mesh_1D*mesh_1D)*(mesh_1D+1)*3;
+        //size_t exact_num_bdy_patches = (mesh_1D*mesh_1D)*6;
+        //printf("num_patches = %zu, exact = %zu \n", num_patches, exact_num_patches);
+        //printf("num_bdy_patches = %zu exact = %zu \n", num_bdy_patches, exact_num_bdy_patches);
+        printf("Num patches = %zu \n", num_patches);
+        printf("Num boundary patches = %zu \n", num_bdy_patches);
+        
+        elems_in_patch = CArrayKokkos <size_t> (num_patches, 2);
         nodes_in_patch = CArrayKokkos <size_t> (num_patches, num_nodes_in_patch);
-        
+    
         // a temporary variable to help populate patch structures
         CArrayKokkos <size_t> num_elems_in_patch_saved (num_patches);
         
@@ -423,32 +491,40 @@ struct mesh_t {
             num_elems_in_patch_saved(patch_gid) = 0;
         });
         
-        
-        // step 3) populate the patch data structures with indices
-        FOR_ALL(elem_gid, 0, num_elems, {
-            for (size_t patch_lid=0; patch_lid<num_patches_in_elem; patch_lid++) {
+        for(size_t elem_gid=0; elem_gid<num_elems; elem_gid++) {
+            
+            FOR_ALL (patch_lid, 0, num_patches_in_elem, {
                 
-                // get the patch_gid
-                size_t hash_key = hash_keys_in_elem(elem_gid,patch_lid);
-                size_t patch_gid = hash_arr(hash_key);
+                size_t patch_gid = patches_in_elem(elem_gid, patch_lid);
                 
-                patches_in_elem(elem_gid, patch_lid) = patch_gid;
-                
-                // save the elem_gid to the patch
                 size_t num_saved = num_elems_in_patch_saved(patch_gid);
+                
                 elems_in_patch(patch_gid, num_saved) = elem_gid;
                 
-                // save the nodes in the patch if it is a new patch
-                if (num_saved == 0){
-                    // save the patch nodes
-                    for (size_t node_lid = 0; node_lid<num_nodes_in_patch; node_lid++){
-                        nodes_in_patch(patch_gid,node_lid) = node_ordering_in_cell(patch_lid,node_lid);
-                    }  // end for node_lid
-                } // end if num_saved
+                // record that an elem_gid was saved
+                num_elems_in_patch_saved(patch_gid) ++;
                 
-            } // end for patch_lid
+                // save the nodes on this patch
+                for (size_t patch_node_lid = 0; patch_node_lid<num_nodes_in_patch; patch_node_lid++){
+                    
+                    // get the local node index of the element for this patch and node in patch
+                    size_t node_lid = node_ordering_in_elem(patch_lid, patch_node_lid);
+                    
+                    // get and save the global index of the node
+                    nodes_in_patch(patch_gid, patch_node_lid) = nodes_in_elem(elem_gid, node_lid);
+                }  // end for node_lid
+                
+            }); // end FOR_ALL patch_lid
             
-        }); // end FOR_ALL elem_gid
+        } // end for
+        
+        
+        // allocate memory for boundary patches
+        bdy_patches = CArrayKokkos <size_t> (num_bdy_patches);
+        
+        FOR_ALL (bdy_patch_gid, 0, num_bdy_patches, {
+            bdy_patches(bdy_patch_gid) = temp_bdy_patches(bdy_patch_gid);
+        }); // end FOR_ALL bdy_patch_gid
         
         
     } // end patch connectivity method
