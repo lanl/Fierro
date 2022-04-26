@@ -4823,10 +4823,6 @@ int FEA_Module_Elasticity::solve(){
   *fos << std::endl;
   std::fflush(stdout);
   */
-  
-  //debug print
-  Tpetra::MatrixMarket::Writer<MAT> market_writer();
-  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Stiffness_Matrix, "A_matrix2", "Stores stiffness matrix values");
 
   //dimension of the nullspace for linear elasticity
   int nulldim = 6;
@@ -4994,7 +4990,9 @@ int FEA_Module_Elasticity::solve(){
   //out<<"*******************************************"<<std::endl;
     
   //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
-    
+  //debug print
+  Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Stiffness_Matrix, "A_matrix2", "Stores stiffness matrix values");  
   comm->barrier();
   //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
   if(Hierarchy_Constructed){
