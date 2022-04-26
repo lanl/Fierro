@@ -46,6 +46,7 @@
 #include <Xpetra_Operator.hpp>
 #include <Xpetra_Map.hpp>
 #include <Xpetra_MultiVector.hpp>
+#include <Xpetra_IO.hpp>
 #include <MueLu.hpp>
 #include <MueLu_BaseClass.hpp>
 #ifdef HAVE_MUELU_EXPLICIT_INSTANTIATION
@@ -4991,8 +4992,9 @@ int FEA_Module_Elasticity::solve(){
     
   //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
   //debug print
-  Tpetra::MatrixMarket::Writer<MAT> market_writer();
-  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Stiffness_Matrix, "A_matrix2", "Stores stiffness matrix values");  
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Stiffness_Matrix, "A_matrix2", "Stores stiffness matrix values");  
+  Xpetra::IO<real_t,LO,GO,node_type>WriteLocal("A_matrixlocal.txt", *xA);
   comm->barrier();
   //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
   if(Hierarchy_Constructed){
