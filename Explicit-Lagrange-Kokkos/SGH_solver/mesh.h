@@ -83,12 +83,17 @@ struct mesh_t {
     size_t num_nodes_in_patch;
 
     
+    // ---- nodes ----
+    
     // corner ids in node
     RaggedRightArrayKokkos <size_t> corners_in_node;
     CArrayKokkos <size_t> num_corners_in_node;
     
     // elem ids in node
     RaggedRightArrayKokkos <size_t> elems_in_node;
+    
+    
+    // ---- elems ----
     
     // node ids in elem
     DCArrayKokkos <size_t> nodes_in_elem;
@@ -103,19 +108,23 @@ struct mesh_t {
     // patch ids in elem
     CArrayKokkos <size_t> patches_in_elem;
     
+    
+    // ---- patches ----
+    
     // node ids in a patch
     CArrayKokkos <size_t> nodes_in_patch;
     
     // element ids in a patch
     CArrayKokkos <size_t> elems_in_patch;
     
-    // patch ids in bdy set
-    DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
+    
+    // ---- bdy ----
     
     // bdy_patches
     CArrayKokkos <size_t> bdy_patches;
     
-
+    // patch ids in bdy set
+    DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
     
     
     // initialization methods
@@ -530,17 +539,16 @@ struct mesh_t {
     } // end patch connectivity method
     
     
-    void init_bdy_sets (size_t num_sets){
+    void init_bdy_sets (size_t num_bcs){
         
-        if(num_sets == 0){
-            printf("ERROR: number of boundary sets = 0, setting it = 1");
-            num_sets = 1;
+        if(num_bcs == 0){
+            printf("ERROR: number of boundary sets = 0, set it = 1");
+            num_bcs = 1;
         }
-        num_bdy_sets = num_sets;
-        bdy_patches_in_set = DynamicRaggedRightArrayKokkos <size_t> (num_sets, num_bdy_patches);
+        num_bdy_sets = num_bcs;
+        bdy_patches_in_set = DynamicRaggedRightArrayKokkos <size_t> (num_bcs, num_bdy_patches);
     } // end of init_bdy_sets method
-
-
+    
 }; // end mesh_t
 
 
@@ -711,7 +719,7 @@ void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
 void setup( const CArrayKokkos <material_t> &material,
             const CArrayKokkos <mat_fill_t> &mat_fill,
             const CArrayKokkos <boundary_t> &boundary,
-            const mesh_t &mesh,
+            mesh_t &mesh,
             const DViewCArrayKokkos <double> &node_coords,
             const DViewCArrayKokkos <double> &node_vel,
             const DViewCArrayKokkos <double> &node_mass,      
@@ -744,4 +752,19 @@ void ensight( mesh_t &mesh,
               CArray <double> &graphics_times,
               size_t graphics_id,
               double time_value);
+
+
+void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
+              const int bdy_set,
+              mesh_t &mesh,
+              const DViewCArrayKokkos <double> &node_coords);
+
+
+KOKKOS_FUNCTION
+size_t check_bdy(const size_t patch_gid,
+                 const int this_bc_tag,
+                 const double val,
+                 const mesh_t &mesh,
+                 const DViewCArrayKokkos <double> &node_coords);
+
 #endif 

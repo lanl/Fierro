@@ -29,8 +29,7 @@ size_t num_materials;
 size_t num_state_vars;
 
 size_t num_fills;
-size_t num_boundaries;
-size_t num_bdy_sets;
+size_t num_bcs;
 
 
 // --- Graphics output variables ---
@@ -113,7 +112,7 @@ int main(int argc, char *argv[]){
         //    read the input file
         // ---------------------------------------------------------------------  
         input(material, mat_fill, boundary, state_vars,
-              num_materials, num_fills, num_boundaries,
+              num_materials, num_fills, num_bcs,
               num_dims, num_state_vars);
 
 
@@ -241,7 +240,7 @@ int main(int argc, char *argv[]){
                state_vars,
                num_fills,
                rk_num_bins,
-               num_bdy_sets
+               num_bcs
            );
         
         // intialize time, time_step, and cycles

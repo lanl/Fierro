@@ -17,7 +17,7 @@ void input(CArrayKokkos <material_t> &material,
            CArrayKokkos <double> &state_vars,
            size_t &num_materials,
            size_t &num_fills,
-           size_t &num_boundaries,
+           size_t &num_bcs,
            size_t &num_dims,
            size_t &num_state_vars){
     
@@ -52,9 +52,9 @@ void input(CArrayKokkos <material_t> &material,
     mat_fill = CArrayKokkos <mat_fill_t> (num_fills); // create fills
     
     
-    // --- number of boundaries ---
-    num_boundaries = 6;
-    boundary = CArrayKokkos <boundary_t> (num_boundaries);  // create boundaries
+    // --- number of boundary conditions ---
+    num_bcs= 6;
+    boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
     int test_problem = 1;

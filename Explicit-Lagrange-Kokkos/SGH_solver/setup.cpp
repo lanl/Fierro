@@ -10,7 +10,7 @@
 void setup( const CArrayKokkos <material_t> &material,
             const CArrayKokkos <mat_fill_t> &mat_fill,
             const CArrayKokkos <boundary_t> &boundary,
-            const mesh_t &mesh,
+            mesh_t &mesh,
             const DViewCArrayKokkos <double> &node_coords,
             const DViewCArrayKokkos <double> &node_vel,
             const DViewCArrayKokkos <double> &node_mass,      
@@ -26,16 +26,27 @@ void setup( const CArrayKokkos <material_t> &material,
             const CArrayKokkos <double> &state_vars,
             const size_t num_fills,
             const size_t rk_num_bins,
-            const size_t num_bdy_sets
+            const size_t num_bcs
            ){
 
     
     //--- calculate bdy sets ---//
-    // mesh.init_bdy_sets(num_bdy_sets);
-    // loop over bdy
-    FOR_ALL (bdy_lid, 0, num_bdy_sets, {
-        // tag boundaries
-    });
+    mesh.init_bdy_sets(num_bcs);
+    printf("Num BC's = %zu\n", num_bcs);
+    
+    // loop over BCs
+    for (int this_bdy = 0; this_bdy < num_bcs; this_bdy++){
+        
+        tag_bdys(boundary, this_bdy, mesh, node_coords);
+        
+        RUN({
+            printf("Boundary Condition number %d \n", this_bdy);
+            printf("Num bdy patches in this set = %zu \n", mesh.bdy_patches_in_set.stride(this_bdy));
+        });
+
+    }// end for
+
+
     
     
     //--- apply the fill instructions over the Elements---//
@@ -147,11 +158,6 @@ void setup( const CArrayKokkos <material_t> &material,
                                             elem_sspd,
                                             elem_den,
                                             elem_sie );
-
-
-
-                //printf("p = %f, d = %f, e = %f, \n", elem_pres(elem_gid), elem_den(elem_gid), elem_sie(elem_gid));
-
 
 
                 // loop over the nodes of this element and apply velocity
@@ -310,10 +316,150 @@ void setup( const CArrayKokkos <material_t> &material,
 
 
     
-    
-    
+} // end of setup
 
-} // end of input
+
+
+// set planes for tagging sub sets of boundary patches
+// bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+// val = plane value, cyl radius, sphere radius
+void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
+              const int bdy_set,
+              mesh_t &mesh,
+              const DViewCArrayKokkos <double> &node_coords){
+
+    size_t num_dims = mesh.num_dims;
+    
+    if (bdy_set == mesh.num_bdy_sets){
+        printf(" ERROR: number of boundary sets must be increased by %zu",
+                  bdy_set-mesh.num_bdy_sets+1);
+        exit(0);
+    } // end if
+    
+    
+    // save the boundary patches to this set that are on the plane, spheres, etc.
+    FOR_ALL (bdy_patch_lid, 0, mesh.num_bdy_patches, {
+        
+        // tag boundaries
+        int bc_tag_id = boundary(bdy_set).surface;
+        double val = boundary(bdy_set).value;
+        
+        // save the patch index
+        size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
+        
+        
+        // check to see if this patch is on the specified plane
+        size_t is_on_bdy = check_bdy(bdy_patch_gid,
+                                     bc_tag_id,
+                                     val,
+                                     mesh,
+                                     node_coords); // no=0, yes=1  // WARNING THIS CAUSES COMPILER ERRORS
+         
+        
+        if (is_on_bdy == 1){
+            size_t index = mesh.bdy_patches_in_set.stride(bdy_set);
+            mesh.bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
+            
+            // increment the number of boundary patches saved
+            mesh.bdy_patches_in_set.stride(bdy_set) ++;
+        } // end if
+        
+        //printf("is on bdy = %d \n", is_on_bdy);
+        
+    }); // end FOR_ALL bdy_patch
+   
+} // end tag
+
+
+
+// routine for checking to see if a vertex is on a boundary
+// bc_tag = 0 xplane, 1 yplane, 3 zplane, 4 cylinder, 5 is shell
+// val = plane value, radius, radius
+KOKKOS_FUNCTION
+size_t check_bdy(const size_t patch_gid,
+                 const int this_bc_tag,
+                 const double val,
+                 const mesh_t &mesh,
+                 const DViewCArrayKokkos <double> &node_coords){
+    
+    
+    size_t num_dims = mesh.num_dims;
+    
+    // default bool is not on the boundary
+    size_t is_on_bdy = 0;
+    
+    // the patch coordinates
+    double these_patch_coords[num_dims];
+    
+    // loop over the nodes on the patch
+    for (size_t patch_node_lid=0; patch_node_lid<mesh.num_nodes_in_patch; patch_node_lid++){
+        
+        // get the nodal_gid for this node in the patch
+        size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
+        
+        for (size_t dim = 0; dim < num_dims; dim++){
+            these_patch_coords[dim] = node_coords(0, node_gid, dim);  // (rk, node_gid, dim)
+        } // end for dim
+        
+        
+        // a x-plane
+        if (this_bc_tag == 0){
+            
+            if ( fabs(these_patch_coords[0] - val) <= 1.0e-8 ) is_on_bdy += 1;
+            
+        }// end if on type
+        
+        // a y-plane
+        else if (this_bc_tag == 1){
+            
+            if ( fabs(these_patch_coords[1] - val) <= 1.0e-8 ) is_on_bdy += 1;
+            
+        }// end if on type
+        
+        // a z-plane
+        else if (this_bc_tag == 2){
+            
+            if ( fabs(these_patch_coords[2] - val) <= 1.0e-8 ) is_on_bdy += 1;
+            
+        }// end if on type
+        
+        
+        // cylinderical shell where radius = sqrt(x^2 + y^2)
+        else if (this_bc_tag == 3){
+            
+            real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
+                            these_patch_coords[1]*these_patch_coords[1]);
+            
+            if ( fabs(R - val) <= 1.0e-8 ) is_on_bdy += 1;
+            
+            
+        }// end if on type
+        
+        // spherical shell where radius = sqrt(x^2 + y^2 + z^2)
+        else if (this_bc_tag == 4){
+            
+            real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
+                            these_patch_coords[1]*these_patch_coords[1] +
+                            these_patch_coords[2]*these_patch_coords[2]);
+            
+            if ( fabs(R - val) <= 1.0e-8 ) is_on_bdy += 1;
+            
+        } // end if on type
+        
+    } // end for nodes in the patch
+    
+    // if all nodes in the patch are on the surface
+    if (is_on_bdy == mesh.num_nodes_in_patch){
+        is_on_bdy = 1;
+    }
+    else {
+        is_on_bdy = 0;
+    }
+    
+    
+    return is_on_bdy;
+    
+} // end method to check bdy
 
 
 
