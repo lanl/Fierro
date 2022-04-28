@@ -1378,6 +1378,8 @@ void FEA_Module_Elasticity::assemble_matrix(){
   }
   
   if(!Matrix_alloc){
+  //Teuchos::RCP<Teuchos::ParameterList> crs_matrix_params = Teuchos::rcp(new Teuchos::ParameterList("crsmatrix"));
+  //crs_matrix_params->set("sorted", false);
   Global_Stiffness_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view()));
   Global_Stiffness_Matrix->fillComplete();
   Matrix_alloc = 1;
@@ -4750,8 +4752,8 @@ int FEA_Module_Elasticity::solve(){
   //*fos << "Reduced Stiffness Matrix :" << std::endl;
   //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
-  Tpetra::MatrixMarket::Writer<MAT> market_writer();
-  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Stiffness_Matrix, "A_matrix", "Stores stiffness matrix values");
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Stiffness_Matrix, "A_matrix", "Stores stiffness matrix values");
 
   //first pass counts strides for storage
   if(!matrix_bc_reduced){
@@ -4994,9 +4996,14 @@ int FEA_Module_Elasticity::solve(){
   //debug print
   //Tpetra::MatrixMarket::Writer<MAT> market_writer();
   //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Stiffness_Matrix, "A_matrix2", "Stores stiffness matrix values");  
-  Xpetra::IO<real_t,LO,GO,node_type>WriteLocal("A_matrixlocal.txt", *xA);
+  //Xpetra::IO<real_t,LO,GO,node_type>WriteLocal("A_matrixlocal.txt", *xA);
   comm->barrier();
   //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
+  Teuchos::RCP<Tpetra::Vector<real_t,LO,GO,node_type>> tdiagonal = Teuchos::rcp(new Tpetra::Vector<real_t,LO,GO,node_type>(local_dof_map));
+  //Teuchos::RCP<Xpetra::Vector<real_t,LO,GO,node_type>> diagonal = Teuchos::rcp(new Xpetra::Vector<real_t,LO,GO,node_type>(tdiagonal));
+  //Global_Stiffness_Matrix->getLocalDiagCopy(*tdiagonal);
+  //tdiagonal->describe(*fos,Teuchos::VERB_EXTREME);
   if(Hierarchy_Constructed){
     ReuseXpetraPreconditioner(xA, H);
   }
