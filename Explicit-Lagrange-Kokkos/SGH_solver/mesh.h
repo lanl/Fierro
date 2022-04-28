@@ -126,6 +126,9 @@ struct mesh_t {
     // patch ids in bdy set
     DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
     
+    // node ids in bdy_patch set
+    RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
+    CArrayKokkos <size_t> num_bdy_nodes_in_set;
     
     // initialization methods
     void initialize_nodes(const size_t num_nodes_inp)
@@ -406,7 +409,6 @@ struct mesh_t {
             
         }); // end FOR_ALL elem_gid
         
-
         
         // step 2: walk around the elements and save the elem pairs that have the same hash_key
         RUN({
@@ -478,6 +480,7 @@ struct mesh_t {
             num_patches = patch_gid;
             num_bdy_patches = bdy_patch_gid;
             
+        
         }); // end RUN
         
         
@@ -548,6 +551,11 @@ struct mesh_t {
         num_bdy_sets = num_bcs;
         bdy_patches_in_set = DynamicRaggedRightArrayKokkos <size_t> (num_bcs, num_bdy_patches);
     } // end of init_bdy_sets method
+    
+    
+    //void init_bdy_nodes_in_set (){
+    //    bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (num_bdy_nodes_in_set);
+    //} // end of init_bdy_sets method
     
 }; // end mesh_t
 
@@ -721,7 +729,7 @@ void setup( const CArrayKokkos <material_t> &material,
             const CArrayKokkos <boundary_t> &boundary,
             mesh_t &mesh,
             const DViewCArrayKokkos <double> &node_coords,
-            const DViewCArrayKokkos <double> &node_vel,
+            DViewCArrayKokkos <double> &node_vel,
             const DViewCArrayKokkos <double> &node_mass,      
             const DViewCArrayKokkos <double> &elem_den,
             const DViewCArrayKokkos <double> &elem_pres,
@@ -767,4 +775,14 @@ size_t check_bdy(const size_t patch_gid,
                  const mesh_t &mesh,
                  const DViewCArrayKokkos <double> &node_coords);
 
+
+void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
+                             mesh_t &mesh);
+
+
+void boundary_velocity(const mesh_t &mesh,
+                       const CArrayKokkos <boundary_t> &boundary,
+                       DViewCArrayKokkos <double> &node_vel);
+
+    
 #endif 

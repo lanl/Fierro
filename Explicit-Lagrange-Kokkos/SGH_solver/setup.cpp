@@ -12,7 +12,7 @@ void setup( const CArrayKokkos <material_t> &material,
             const CArrayKokkos <boundary_t> &boundary,
             mesh_t &mesh,
             const DViewCArrayKokkos <double> &node_coords,
-            const DViewCArrayKokkos <double> &node_vel,
+            DViewCArrayKokkos <double> &node_vel,
             const DViewCArrayKokkos <double> &node_mass,      
             const DViewCArrayKokkos <double> &elem_den,
             const DViewCArrayKokkos <double> &elem_pres,
@@ -36,16 +36,21 @@ void setup( const CArrayKokkos <material_t> &material,
     
     // loop over BCs
     for (int this_bdy = 0; this_bdy < num_bcs; this_bdy++){
-        
         tag_bdys(boundary, this_bdy, mesh, node_coords);
+    }// end for
+    
+    build_boundry_node_sets(boundary, mesh);
+    
+    // loop over BCs
+    for (int this_bdy = 0; this_bdy < num_bcs; this_bdy++){
         
         RUN({
             printf("Boundary Condition number %d \n", this_bdy);
-            printf("Num bdy patches in this set = %zu \n", mesh.bdy_patches_in_set.stride(this_bdy));
+            printf("  Num bdy patches in this set = %zu \n", mesh.bdy_patches_in_set.stride(this_bdy));
+            printf("  Num bdy nodes in this set = %zu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
         });
 
     }// end for
-
 
     
     
@@ -311,8 +316,9 @@ void setup( const CArrayKokkos <material_t> &material,
 
     } // end for rk_level
     
-
-    //boundary_velocity();
+    
+    // apply BC's to velocity
+    boundary_velocity(mesh, boundary, node_vel);
 
 
     
@@ -462,4 +468,87 @@ size_t check_bdy(const size_t patch_gid,
 } // end method to check bdy
 
 
+
+void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
+                             mesh_t &mesh){
+    
+    // build boundary nodes in each boundary set
+    
+    mesh.num_bdy_nodes_in_set = CArrayKokkos <size_t> (mesh.num_bdy_sets);
+    CArrayKokkos <long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes);
+    
+    DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_set (mesh.num_bdy_sets, mesh.num_bdy_patches*mesh.num_nodes_in_patch);
+    
+    // Parallel loop over boundary sets on device
+    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
+        
+        // finde the number of patches_in_set
+        size_t num_bdy_patches_in_set = mesh.bdy_patches_in_set.stride(bdy_set);
+        
+        // Loop over boundary patches in boundary set
+        for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
+            
+                // get the global id for this boundary patch
+                size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+                
+                // apply boundary condition at nodes on boundary
+                for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+                    
+                    size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                    
+                    temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = -1;
+                        
+                } // end for node_lid
+            
+        } // end for bdy_patch_gid
+        
+        
+        // Loop over boundary patches in boundary set
+        for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
+            
+                // get the global id for this boundary patch
+                size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+                
+                // apply boundary condition at nodes on boundary
+                for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+                    
+                    size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                    
+                    if (temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) == -1){
+                        
+                        // replace -1 with node_gid to denote the node was already saved
+                        temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = node_gid;
+                        
+                        size_t num_saved = mesh.num_bdy_nodes_in_set(bdy_set);
+                        temp_nodes_in_set(bdy_set, num_saved) = node_gid;
+                        
+                        // increment the number of saved nodes
+                        temp_nodes_in_set.stride(bdy_set)++;
+                        mesh.num_bdy_nodes_in_set(bdy_set)++;
+                    } // end if
+                    
+                } // end for node_lid
+            
+        } // end for bdy_patch_gid
+        
+    }); // end FOR_ALL bdy_set
+    
+    
+    // allocate the RaggedRight bdy_nodes_in_set array
+    mesh.bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (mesh.num_bdy_nodes_in_set);
+    //mesh.init_bdy_nodes_in_set();
+
+    for(size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++){
+        
+        // Loop over boundary patches in boundary set
+        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set(bdy_set), {
+            
+            // save the bdy_node_gid
+            mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_nodes_in_set(bdy_set, bdy_node_lid);
+            
+        }); // end FOR_ALL
+        
+    } // end for bdy_set
+    
+} // end method to build boundary nodes
 
