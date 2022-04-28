@@ -1233,8 +1233,7 @@ void FEA_Module_Elasticity::init_assembly(){
   }
 
   //sort values and indices
-  Tpetra::Import_Util::sortCrsEntries<row_pointers, CArrayKokkos<LO, array_layout, device_type, memory_traits>::TArray1D, RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>::TArray1D>
-    (row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
+  Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
   
   //Teuchos::RCP<Teuchos::ParameterList> crs_matrix_params = Teuchos::rcp(new Teuchos::ParameterList("crsmatrix"));
   //crs_matrix_params->set("sorted", false);
@@ -1404,11 +1403,16 @@ void FEA_Module_Elasticity::assemble_matrix(){
   Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap = Global_Stiffness_Matrix->getCrsGraph()->getColMap();
 
   //unsorted local column indices
-  //row offsets with compatible template arguments
+
+  size_t nnz = DOF_Graph_Matrix.size();
+
+  //debug print
+  //std::cout << "DOF GRAPH SIZE ON RANK " << myrank << " IS " << nnz << std::endl;
+  
   //local indices in the graph using the constructed column map
   CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
-  
-  //row offsets with compatible template arguments
+
+  //row offsets
   row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
   row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
   for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
@@ -1424,8 +1428,16 @@ void FEA_Module_Elasticity::assemble_matrix(){
   }
 
   //sort values and indices
-  Tpetra::Import_Util::sortCrsEntries<row_pointers, CArrayKokkos<LO, array_layout, device_type, memory_traits>::TArray1D, RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>::TArray1D>
-    (row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
+  Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
+
+  //set global indices for DOF graph from sorted local indices
+  entrycount = 0;
+  for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+    for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+      DOF_Graph_Matrix(irow,istride) = colmap->getGlobalElement(stiffness_local_indices(entrycount));
+      entrycount++;
+    }
+  }
 
   //debug print of A matrix
   //*fos << "Global Stiffness Matrix :" << std::endl;
