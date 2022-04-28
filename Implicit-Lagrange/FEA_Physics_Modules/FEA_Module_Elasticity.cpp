@@ -28,6 +28,7 @@
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
+#include "Tpetra_Import_Util2.hpp"
 #include "MatrixMarket_Tpetra.hpp"
 #include <set>
 
@@ -1217,11 +1218,11 @@ void FEA_Module_Elasticity::init_assembly(){
   CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
   
   //row offsets with compatible template arguments
-    row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
-    row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
-    for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
-      row_offsets_pass(ipass) = row_offsets(ipass);
-    }
+  row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+  row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
+  for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
+    row_offsets_pass(ipass) = row_offsets(ipass);
+  }
 
   size_t entrycount = 0;
   for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
@@ -1230,6 +1231,10 @@ void FEA_Module_Elasticity::init_assembly(){
       entrycount++;
     }
   }
+
+  //sort values and indices
+  Tpetra::Import_Util::sortCrsEntries<row_pointers, CArrayKokkos<LO, array_layout, device_type, memory_traits>::TArray1D, RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>::TArray1D>
+    (row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
   
   //Teuchos::RCP<Teuchos::ParameterList> crs_matrix_params = Teuchos::rcp(new Teuchos::ParameterList("crsmatrix"));
   //crs_matrix_params->set("sorted", false);
@@ -1316,6 +1321,18 @@ void FEA_Module_Elasticity::assemble_matrix(){
     //std::cout << std::endl;
   }
 
+  //reset unsorted DOF Graph corresponding to assembly mapped values
+  //debug print
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof/num_dim,istride/num_dim)*num_dim + istride%num_dim;
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
+
   //assemble the global stiffness matrix
   if(num_dim==2)
   for (int ielem = 0; ielem < rnum_elem; ielem++){
@@ -1383,6 +1400,38 @@ void FEA_Module_Elasticity::assemble_matrix(){
 
   matrix_bc_reduced = false;
 
+  
+  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap = Global_Stiffness_Matrix->getCrsGraph()->getColMap();
+
+  //unsorted local column indices
+  //row offsets with compatible template arguments
+  //local indices in the graph using the constructed column map
+  CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
+  
+  //row offsets with compatible template arguments
+  row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+  row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
+  for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
+    row_offsets_pass(ipass) = row_offsets(ipass);
+  }
+
+  size_t entrycount = 0;
+  for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+    for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+      stiffness_local_indices(entrycount) = colmap->getLocalElement(DOF_Graph_Matrix(irow,istride));
+      entrycount++;
+    }
+  }
+
+  //sort values and indices
+  Tpetra::Import_Util::sortCrsEntries<row_pointers, CArrayKokkos<LO, array_layout, device_type, memory_traits>::TArray1D, RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>::TArray1D>
+    (row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
+
+  //debug print of A matrix
+  //*fos << "Global Stiffness Matrix :" << std::endl;
+  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+
   //filter small negative numbers (that should have been 0 from cancellation) from floating point error
   /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
@@ -1396,16 +1445,8 @@ void FEA_Module_Elasticity::assemble_matrix(){
     //std::cout << std::endl;
   }
   */
-  //This completes the setup for A matrix of the linear system
   
-  //file to debug print
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
 
-  //debug print of A matrix
-  //*fos << "Global Stiffness Matrix :" << std::endl;
-  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
 }
 
 
