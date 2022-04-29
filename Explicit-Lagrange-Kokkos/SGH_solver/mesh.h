@@ -409,7 +409,8 @@ struct mesh_t {
             
         }); // end FOR_ALL elem_gid
         
-        
+        DCArrayKokkos <size_t> num_values(2);
+	
         // step 2: walk around the elements and save the elem pairs that have the same hash_key
         RUN_CLASS({
             // serial execution on GPU
@@ -477,12 +478,16 @@ struct mesh_t {
                 
             }  // end for over elem_gid
             
-            num_patches = patch_gid;
-            num_bdy_patches = bdy_patch_gid;
+            num_values(0) = patch_gid;   //num_patches = patch_gid;
+            num_values(1) = num_patches; //num_bdy_patches = bdy_patch_gid;
             
         
         }); // end RUN
         
+	num_values.update_host();
+	num_patches = num_values.host(0);
+	num_patches = num_values.host(1);
+	
         
         //size_t mesh_1D = 60;
         //size_t exact_num_patches = (mesh_1D*mesh_1D)*(mesh_1D+1)*3;
