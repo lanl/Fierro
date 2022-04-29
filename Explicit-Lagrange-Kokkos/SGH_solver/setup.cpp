@@ -39,6 +39,7 @@ void setup( const CArrayKokkos <material_t> &material,
         tag_bdys(boundary, this_bdy, mesh, node_coords);
     }// end for
     
+    printf("building boundary node set \n");
     build_boundry_node_sets(boundary, mesh);
     
     // loop over BCs
@@ -366,6 +367,7 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
     } // end if
     
     
+    
     // save the boundary patches to this set that are on the plane, spheres, etc.
     FOR_ALL (bdy_patch_lid, 0, mesh.num_bdy_patches, {
         
@@ -382,7 +384,7 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
                                      bc_tag_id,
                                      val,
                                      mesh,
-                                     node_coords); // no=0, yes=1  // WARNING THIS CAUSES COMPILER ERRORS
+                                     node_coords); // no=0, yes=1
          
         
         if (is_on_bdy == 1){
@@ -498,15 +500,17 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
     // build boundary nodes in each boundary set
     
     mesh.num_bdy_nodes_in_set = CArrayKokkos <size_t> (mesh.num_bdy_sets);
-    CArrayKokkos <long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes);
+    CArrayKokkos <long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes);
     
     DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_set (mesh.num_bdy_sets, mesh.num_bdy_patches*mesh.num_nodes_in_patch);
     
+    
     // Parallel loop over boundary sets on device
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
-        
+	
         // finde the number of patches_in_set
         size_t num_bdy_patches_in_set = mesh.bdy_patches_in_set.stride(bdy_set);
+	printf("num_bdy_patches_in_set = %lu \n", num_bdy_patches_in_set);
         
         // Loop over boundary patches in boundary set
         for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
@@ -543,6 +547,7 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
                         temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = node_gid;
                         
                         size_t num_saved = mesh.num_bdy_nodes_in_set(bdy_set);
+			
                         temp_nodes_in_set(bdy_set, num_saved) = node_gid;
                         
                         // increment the number of saved nodes
@@ -555,16 +560,23 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
         } // end for bdy_patch_gid
         
     }); // end FOR_ALL bdy_set
+    Kokkos::fence();
+    
+    printf("allocating a ragged right array \n");
+    printf(" mesh.num_bdy_nodes_in_set(0) = %lu \n", mesh.num_bdy_nodes_in_set(0));  // there is problem here!
+    printf(" mesh.num_bdy_nodes_in_set(1) = %lu \n", mesh.num_bdy_nodes_in_set(1));
+    printf(" mesh.num_bdy_nodes_in_set(2) = %lu \n", mesh.num_bdy_nodes_in_set(2));
     
     
     // allocate the RaggedRight bdy_nodes_in_set array
     mesh.bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (mesh.num_bdy_nodes_in_set);
-    //mesh.init_bdy_nodes_in_set();
 
     for(size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++){
         
         // Loop over boundary patches in boundary set
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set(bdy_set), {
+	
+	
             
             // save the bdy_node_gid
             mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_nodes_in_set(bdy_set, bdy_node_lid);

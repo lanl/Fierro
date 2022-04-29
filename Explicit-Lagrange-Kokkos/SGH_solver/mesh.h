@@ -470,23 +470,26 @@ struct mesh_t {
                         temp_bdy_patches(bdy_patch_gid) = patch_gid;
                         
                         patch_gid++;
-                        bdy_patch_gid++;
+                        bdy_patch_gid++;  
                 
                     } // end if
+		    
                 
                 }  // end for over patch_lid
                 
             }  // end for over elem_gid
             
-            num_values(0) = patch_gid;   //num_patches = patch_gid;
-            num_values(1) = num_patches; //num_bdy_patches = bdy_patch_gid;
-            
-        
+	    
+	    // the num_values is because the values passed in are const, so a const pointer is needed
+            num_values(0) = patch_gid;     // num_patches = patch_gid;
+            num_values(1) = bdy_patch_gid; // num_bdy_patches = bdy_patch_gid;
+	    
         }); // end RUN
+	Kokkos::fence();
         
 	num_values.update_host();
 	num_patches = num_values.host(0);
-	num_patches = num_values.host(1);
+	num_bdy_patches = num_values.host(1);
 	
         
         //size_t mesh_1D = 60;
