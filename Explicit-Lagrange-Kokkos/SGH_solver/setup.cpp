@@ -13,7 +13,7 @@ void setup( const CArrayKokkos <material_t> &material,
             mesh_t &mesh,
             const DViewCArrayKokkos <double> &node_coords,
             DViewCArrayKokkos <double> &node_vel,
-            const DViewCArrayKokkos <double> &node_mass,      
+            DViewCArrayKokkos <double> &node_mass,
             const DViewCArrayKokkos <double> &elem_den,
             const DViewCArrayKokkos <double> &elem_pres,
             const DViewCArrayKokkos <double> &elem_stress,
@@ -32,22 +32,22 @@ void setup( const CArrayKokkos <material_t> &material,
     
     //--- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
-    printf("Num BC's = %zu\n", num_bcs);
+    printf("Num BC's = %lu\n", num_bcs);
     
     // loop over BCs
-    for (int this_bdy = 0; this_bdy < num_bcs; this_bdy++){
+    for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
         tag_bdys(boundary, this_bdy, mesh, node_coords);
     }// end for
     
     build_boundry_node_sets(boundary, mesh);
     
     // loop over BCs
-    for (int this_bdy = 0; this_bdy < num_bcs; this_bdy++){
+    for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
         
         RUN({
-            printf("Boundary Condition number %d \n", this_bdy);
-            printf("  Num bdy patches in this set = %zu \n", mesh.bdy_patches_in_set.stride(this_bdy));
-            printf("  Num bdy nodes in this set = %zu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
+            printf("Boundary Condition number %lu \n", this_bdy);
+            printf("  Num bdy patches in this set = %lu \n", mesh.bdy_patches_in_set.stride(this_bdy));
+            printf("  Num bdy nodes in this set = %lu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
         });
 
     }// end for
@@ -84,7 +84,7 @@ void setup( const CArrayKokkos <material_t> &material,
             elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
             elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
                 
-            //printf("elem id = %d, elem_coords = %f, %f, %f \n", elem_gid, elem_coords[0], elem_coords[1], elem_coords[2]);
+            //printf("elem id = %lu, elem_coords = %f, %f, %f \n", elem_gid, elem_coords[0], elem_coords[1], elem_coords[2]);
 
             // spherical radius
             double radius = sqrt( elem_coords[0]*elem_coords[0] +
@@ -320,7 +320,30 @@ void setup( const CArrayKokkos <material_t> &material,
     // apply BC's to velocity
     boundary_velocity(mesh, boundary, node_vel);
 
-
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        
+        node_mass(node_gid) = 0.0;
+        
+        if(mesh.num_dims==3){
+            
+            for(size_t elem_lid=0; elem_lid<mesh.num_corners_in_node(node_gid); elem_lid++){
+                size_t elem_gid = mesh.elems_in_node(node_gid,elem_lid);
+                node_mass(node_gid) += 1.0/8.0*elem_den(0,elem_gid);
+            } // end for elem_lid
+            
+        }// end if dims=3
+        else {
+            
+            for(size_t elem_lid=0; elem_lid<mesh.num_corners_in_node(node_gid); elem_lid++){
+                // placeholder for corner masses
+                size_t elem_gid = mesh.elems_in_node(node_gid,elem_lid);
+                node_mass(node_gid) += 1.0/4.0*elem_den(0,elem_gid);
+            } // end for elem_lid
+            
+        } // end else
+        
+    }); // end FOR_ALL
+    
     
 } // end of setup
 

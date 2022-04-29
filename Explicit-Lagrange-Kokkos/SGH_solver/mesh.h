@@ -361,7 +361,7 @@ struct mesh_t {
         
         
         // for saviong the hash keys of the patches and then the nighboring elem_gid
-        CArrayKokkos <long int> hash_keys_in_elem (num_elems, num_patches_in_elem);
+        CArrayKokkos <long long int> hash_keys_in_elem (num_elems, num_patches_in_elem);
         
         // for saving the adjacient patch_lid, which is the slide_lid
         //CArrayKokkos <size_t> neighboring_side_lids (num_elems, num_patches_in_elem);
@@ -393,7 +393,7 @@ struct mesh_t {
                 // sort nodes from smallest to largest
                 bubble_sort(sorted_patch_nodes, num_nodes_in_patch);
                 
-                long int hash_key;
+                long long int hash_key;
                 if(num_dims==2) {
                     hash_key = (sorted_patch_nodes[0] + num_nodes*sorted_patch_nodes[1]);
                 }
@@ -420,7 +420,7 @@ struct mesh_t {
             
                 for (size_t patch_lid = 0; patch_lid<num_patches_in_elem; patch_lid++) {
                 
-                    long int hash_key = hash_keys_in_elem(elem_gid,patch_lid);
+                    long long int hash_key = hash_keys_in_elem(elem_gid,patch_lid);
                 
                     if (hash_key<0){
                         
@@ -432,7 +432,7 @@ struct mesh_t {
                             for (size_t neighbor_patch_lid=0; neighbor_patch_lid<num_patches_in_elem; neighbor_patch_lid++){
                     
                                 // this hash is from the nodes on the patch
-                                long int neighbor_hash_key = hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid);
+                                long long int neighbor_hash_key = hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid);
                     
                                 if (neighbor_hash_key == hash_keys_in_elem(elem_gid,patch_lid)){
                     
@@ -487,10 +487,10 @@ struct mesh_t {
         //size_t mesh_1D = 60;
         //size_t exact_num_patches = (mesh_1D*mesh_1D)*(mesh_1D+1)*3;
         //size_t exact_num_bdy_patches = (mesh_1D*mesh_1D)*6;
-        //printf("num_patches = %zu, exact = %zu \n", num_patches, exact_num_patches);
-        //printf("num_bdy_patches = %zu exact = %zu \n", num_bdy_patches, exact_num_bdy_patches);
-        printf("Num patches = %zu \n", num_patches);
-        printf("Num boundary patches = %zu \n", num_bdy_patches);
+        //printf("num_patches = %lu, exact = %lu \n", num_patches, exact_num_patches);
+        //printf("num_bdy_patches = %lu exact = %lu \n", num_bdy_patches, exact_num_bdy_patches);
+        printf("Num patches = %lu \n", num_patches);
+        printf("Num boundary patches = %lu \n", num_bdy_patches);
         
         elems_in_patch = CArrayKokkos <size_t> (num_patches, 2);
         nodes_in_patch = CArrayKokkos <size_t> (num_patches, num_nodes_in_patch);
@@ -730,7 +730,7 @@ void setup( const CArrayKokkos <material_t> &material,
             mesh_t &mesh,
             const DViewCArrayKokkos <double> &node_coords,
             DViewCArrayKokkos <double> &node_vel,
-            const DViewCArrayKokkos <double> &node_mass,      
+            DViewCArrayKokkos <double> &node_mass,
             const DViewCArrayKokkos <double> &elem_den,
             const DViewCArrayKokkos <double> &elem_pres,
             const DViewCArrayKokkos <double> &elem_stress,
@@ -745,22 +745,35 @@ void setup( const CArrayKokkos <material_t> &material,
             const size_t rk_num_bins,
             const size_t num_bdy_sets);
 
-void ensight( mesh_t &mesh,
-              DViewCArrayKokkos <double> &node_coords,
-              DViewCArrayKokkos <double> &node_vel,
-              DViewCArrayKokkos <double> &node_mass,
-              DViewCArrayKokkos <double> &elem_den,
-              DViewCArrayKokkos <double> &elem_pres,
-              DViewCArrayKokkos <double> &elem_stress,
-              DViewCArrayKokkos <double> &elem_sspd, 
-              DViewCArrayKokkos <double> &elem_sie,
-              DViewCArrayKokkos <double> &elem_vol,
-              DViewCArrayKokkos <double> &elem_mass,
-              DViewCArrayKokkos <size_t> &elem_mat_id,
+void ensight( const mesh_t &mesh,
+              const DViewCArrayKokkos <double> &node_coords,
+              const DViewCArrayKokkos <double> &node_vel,
+              const DViewCArrayKokkos <double> &node_mass,
+              const DViewCArrayKokkos <double> &elem_den,
+              const DViewCArrayKokkos <double> &elem_pres,
+              const DViewCArrayKokkos <double> &elem_stress,
+              const DViewCArrayKokkos <double> &elem_sspd,
+              const DViewCArrayKokkos <double> &elem_sie,
+              const DViewCArrayKokkos <double> &elem_vol,
+              const DViewCArrayKokkos <double> &elem_mass,
+              const DViewCArrayKokkos <size_t> &elem_mat_id,
               CArray <double> &graphics_times,
               size_t graphics_id,
-              double time_value);
+              const double time_value);
 
+void state_file( const mesh_t &mesh,
+                 const DViewCArrayKokkos <double> &node_coords,
+                 const DViewCArrayKokkos <double> &node_vel,
+                 const DViewCArrayKokkos <double> &node_mass,
+                 const DViewCArrayKokkos <double> &elem_den,
+                 const DViewCArrayKokkos <double> &elem_pres,
+                 const DViewCArrayKokkos <double> &elem_stress,
+                 const DViewCArrayKokkos <double> &elem_sspd,
+                 const DViewCArrayKokkos <double> &elem_sie,
+                 const DViewCArrayKokkos <double> &elem_vol,
+                 const DViewCArrayKokkos <double> &elem_mass,
+                 const DViewCArrayKokkos <size_t> &elem_mat_id,
+                 const double time_value );
 
 void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
               const int bdy_set,

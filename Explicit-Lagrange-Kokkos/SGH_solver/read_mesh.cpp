@@ -40,10 +40,10 @@ void read_mesh_ensight(char* MESH,
 
     // --- Read in the nodes in the mesh ---
     
-    int num_nodes = 0;
+    size_t num_nodes = 0;
     
-    fscanf(in,"%d",&num_nodes);
-    printf("Num nodes read in %d\n" , num_nodes);
+    fscanf(in,"%lu",&num_nodes);
+    printf("Num nodes read in %lu\n" , num_nodes);
     
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
@@ -82,10 +82,10 @@ void read_mesh_ensight(char* MESH,
     
 
     // --- read in the elements in the mesh ---
-    int num_elem = 0;
+    size_t num_elem = 0;
     
-    fscanf(in,"%d",&num_elem);
-    printf("Num elements read in %d\n" , num_elem);
+    fscanf(in,"%lu",&num_elem);
+    printf("Num elements read in %lu\n" , num_elem);
 
     // intialize elem variables
     mesh.initialize_elems(num_elem, num_dims);
@@ -95,7 +95,7 @@ void read_mesh_ensight(char* MESH,
     for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
         for (int node_lid = 0; node_lid < 8; node_lid++){
             
-            fscanf(in,"%d",&mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
+            fscanf(in,"%lu",&mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
 
             // shift to start node index space at 0
             mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;

@@ -263,6 +263,21 @@ int main(int argc, char *argv[]){
         elem_mass.update_device();
         elem_mat_id.update_device();
 
+        // write out state file
+        state_file( mesh,
+                    node_coords,
+                    node_vel,
+                    node_mass,
+                    elem_den,
+                    elem_pres,
+                    elem_stress,
+                    elem_sspd,
+                    elem_sie,
+                    elem_vol,
+                    elem_mass,
+                    elem_mat_id,
+                    time_value );
+        
         // write out ensight file
         ensight( mesh,
                  node_coords,
@@ -280,13 +295,7 @@ int main(int argc, char *argv[]){
                  graphics_id,
                  time_value);
 
-        // output files
-        FILE *out_elem_state;  //element average state
-
-        // output files
-        out_elem_state  = fopen("elem_state_t0", "w");
-
-        fclose(out_elem_state);
+        
         
 
         // Calculate total energy at time=0
@@ -297,6 +306,7 @@ int main(int argc, char *argv[]){
         // get_timestep();
 
         // call hydro here
+        // hydro_sgh()
 
         // calculate total energy at time=t_end
         

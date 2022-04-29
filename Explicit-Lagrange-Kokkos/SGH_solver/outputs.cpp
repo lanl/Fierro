@@ -9,21 +9,21 @@
 // This function write outs the data to an ensight case file
 //------------------------------------------------------------------------------
 
-void ensight( mesh_t &mesh,
-              DViewCArrayKokkos <double> &node_coords,
-              DViewCArrayKokkos <double> &node_vel,
-              DViewCArrayKokkos <double> &node_mass,
-              DViewCArrayKokkos <double> &elem_den,
-              DViewCArrayKokkos <double> &elem_pres,
-              DViewCArrayKokkos <double> &elem_stress,
-              DViewCArrayKokkos <double> &elem_sspd, 
-              DViewCArrayKokkos <double> &elem_sie,
-              DViewCArrayKokkos <double> &elem_vol,
-              DViewCArrayKokkos <double> &elem_mass,
-              DViewCArrayKokkos <size_t> &elem_mat_id,
+void ensight( const mesh_t &mesh,
+              const DViewCArrayKokkos <double> &node_coords,
+              const DViewCArrayKokkos <double> &node_vel,
+              const DViewCArrayKokkos <double> &node_mass,
+              const DViewCArrayKokkos <double> &elem_den,
+              const DViewCArrayKokkos <double> &elem_pres,
+              const DViewCArrayKokkos <double> &elem_stress,
+              const DViewCArrayKokkos <double> &elem_sspd,
+              const DViewCArrayKokkos <double> &elem_sie,
+              const DViewCArrayKokkos <double> &elem_vol,
+              const DViewCArrayKokkos <double> &elem_mass,
+              const DViewCArrayKokkos <size_t> &elem_mat_id,
               CArray <double> &graphics_times,
               size_t graphics_id,
-              double time_value) {
+              const double time_value) {
 
     printf("Writing Ensight output\n");
     const int num_scalar_vars = 9;
@@ -143,7 +143,7 @@ void ensight( mesh_t &mesh,
     //  ---------------------------------------------------------------------------
     //  Write the Geometry file
     //  ---------------------------------------------------------------------------
-    sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
+    sprintf(filename, "ensight/data/%s.%05lu.geo", name, graphics_id);
     // filename has the full string
     
     out[0] = fopen(filename, "w");
@@ -161,7 +161,7 @@ void ensight( mesh_t &mesh,
     
     // --- vertices ---
     fprintf(out[0],"coordinates\n");
-    fprintf(out[0],"%10d\n",num_nodes);
+    fprintf(out[0],"%10lu\n",num_nodes);
     
     // write all components of the point coordinates
     for (int node_gid = 0; node_gid < num_nodes; node_gid++){
@@ -179,14 +179,14 @@ void ensight( mesh_t &mesh,
     
     // --- elements ---
     fprintf(out[0],"hexa8\n");
-    fprintf(out[0],"%10d\n",num_elems);
+    fprintf(out[0],"%10lu\n",num_elems);
 
     
     // write all global point numbers for this cell
     for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
 
-            fprintf(out[0],"%10d\t",mesh.nodes_in_elem(elem_gid, node_lid) + 1); // note: node_gid starts at 1
+            fprintf(out[0],"%10lu\t",mesh.nodes_in_elem(elem_gid, node_lid) + 1); // note: node_gid starts at 1
         }
         fprintf(out[0],"\n");
     }
@@ -202,7 +202,7 @@ void ensight( mesh_t &mesh,
     for (int var=0; var<num_scalar_vars; var++){
         
         // write a scalar value
-        sprintf(filename,"ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+        sprintf(filename,"ensight/data/%s.%05lu.%s", name, graphics_id, scalar_var_names[var]);
 
         out[0]=fopen(filename,"w");
         
@@ -228,7 +228,7 @@ void ensight( mesh_t &mesh,
     // ensight vector vars = (position, velocity, force)
     for (int var=0; var<num_vec_vars; var++){
         
-        sprintf(filename,"ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+        sprintf(filename,"ensight/data/%s.%05lu.%s", name, graphics_id, vec_var_names[var]);
         
         out[0]=fopen(filename,"w");
         // fprintf(out[0],"Per_node vector values\n");
@@ -290,7 +290,7 @@ void ensight( mesh_t &mesh,
     
     fprintf(out[0],"TIME\n");
     fprintf(out[0],"time set: 1\n");
-    fprintf(out[0],"number of steps: %4d\n",graphics_id+1);
+    fprintf(out[0],"number of steps: %4lu\n",graphics_id+1);
     fprintf(out[0],"filename start number: 0\n");
     fprintf(out[0],"filename increment: 1\n");
     fprintf(out[0],"time values: \n");
@@ -312,6 +312,95 @@ void ensight( mesh_t &mesh,
     
 } // end of Ensight function
 
+
+
+void state_file( const mesh_t &mesh,
+                 const DViewCArrayKokkos <double> &node_coords,
+                 const DViewCArrayKokkos <double> &node_vel,
+                 const DViewCArrayKokkos <double> &node_mass,
+                 const DViewCArrayKokkos <double> &elem_den,
+                 const DViewCArrayKokkos <double> &elem_pres,
+                 const DViewCArrayKokkos <double> &elem_stress,
+                 const DViewCArrayKokkos <double> &elem_sspd,
+                 const DViewCArrayKokkos <double> &elem_sie,
+                 const DViewCArrayKokkos <double> &elem_vol,
+                 const DViewCArrayKokkos <double> &elem_mass,
+                 const DViewCArrayKokkos <size_t> &elem_mat_id,
+                 const double time_value ) {
+    
+    struct stat st;
+    
+    if(stat("state",&st) != 0)
+        system("mkdir state");
+    
+    
+    //  ---------------------------------------------------------------------------
+    //  Setup of file and directoring for exporting
+    //  ---------------------------------------------------------------------------
+    
+    // output file
+    FILE *out_elem_state;  //element average state
+    char filename[128];
+    
+    sprintf(filename, "state/elem_state_t%6.5e.txt", time_value);
+    
+    // output files
+    out_elem_state  = fopen(filename, "w");
+
+    // write state dump
+    fprintf(out_elem_state, "# state dump file\n");
+    fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
+    
+    
+
+            
+
+
+
+    
+    // write out values for the elem
+    for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++){
+        
+        double elem_coords[3];
+        elem_coords[0] = 0.0;
+        elem_coords[1] = 0.0;
+        elem_coords[2] = 0.0;
+        // get the coordinates of the element center
+        for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+            elem_coords[0] += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+            elem_coords[1] += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+            elem_coords[2] += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+        } // end loop over nodes in element
+        elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
+        elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
+        elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
+        
+        
+        double rad2 = sqrt(elem_coords[0]*elem_coords[0] +
+                           elem_coords[1]*elem_coords[1]);
+        
+        double rad3 = sqrt(elem_coords[0]*elem_coords[0] +
+                           elem_coords[1]*elem_coords[1] +
+                           elem_coords[2]*elem_coords[2]);
+        
+        fprintf( out_elem_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
+                 elem_coords[0],
+                 elem_coords[1],
+                 elem_coords[2],
+                 rad2,
+                 rad3,
+                 elem_den.host(elem_gid),
+                 elem_pres.host(elem_gid),
+                 elem_sie.host(elem_gid),
+                 elem_sspd.host(elem_gid),
+                 elem_vol.host(elem_gid),
+                 elem_mass.host(elem_gid) );
+        
+    }; // end for
+    
+    fclose(out_elem_state);
+    
+};
 
 
 
