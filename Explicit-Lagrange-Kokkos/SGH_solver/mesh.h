@@ -411,7 +411,7 @@ struct mesh_t {
         
         
         // step 2: walk around the elements and save the elem pairs that have the same hash_key
-        RUN({
+        RUN_CLASS({
             // serial execution on GPU
             
             size_t patch_gid = 0;
