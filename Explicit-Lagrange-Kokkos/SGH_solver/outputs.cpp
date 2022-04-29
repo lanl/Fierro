@@ -49,7 +49,6 @@ void ensight( const mesh_t &mesh,
     const size_t num_nodes = mesh.num_nodes;
     const size_t num_elems = mesh.num_elems;
     const size_t num_dims  = mesh.num_dims;
-    const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
 
     // save the cell state to an array for exporting to graphics files
     auto elem_fields = CArray <double> (num_elems, num_scalar_vars);

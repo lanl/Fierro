@@ -25,9 +25,9 @@ void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 
     const size_t num_nodes = 8;
 
-    double x_array[num_nodes];
-    double y_array[num_nodes];
-    double z_array[num_nodes];
+    double x_array[8];
+    double y_array[8];
+    double z_array[8];
     
     // x, y, z coordinates of elem vertices
     auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
@@ -152,9 +152,9 @@ void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
 
     const size_t num_nodes = 8;
 
-    double x_array[num_nodes];
-    double y_array[num_nodes];
-    double z_array[num_nodes];
+    double x_array[8];
+    double y_array[8];
+    double z_array[8];
     
     // x, y, z coordinates of elem vertices
     auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
@@ -191,10 +191,10 @@ void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
                    const DViewCArrayKokkos <double> &node_coords,
                    const mesh_t &mesh){
 
-    const size_t num_nodes = mesh.num_nodes_in_elem;
+    const size_t num_nodes = 4;
 
-    double x_array[num_nodes];
-    double y_array[num_nodes];
+    double x_array[4];
+    double y_array[4];
     
     // x, y coordinates of elem vertices
     auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);
@@ -237,10 +237,10 @@ void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                   const DViewCArrayKokkos <double> &node_coords,
                   const mesh_t &mesh){
 
-    const size_t num_nodes = mesh.num_nodes_in_elem;
+    const size_t num_nodes = 4;
 
-    double x_array[num_nodes];
-    double y_array[num_nodes];
+    double x_array[4];
+    double y_array[4];
     
     // x, y coordinates of elem vertices
     auto x  = ViewCArrayKokkos <double> (x_array, num_nodes);

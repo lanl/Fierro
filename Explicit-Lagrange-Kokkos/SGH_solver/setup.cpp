@@ -418,7 +418,7 @@ size_t check_bdy(const size_t patch_gid,
     size_t is_on_bdy = 0;
     
     // the patch coordinates
-    double these_patch_coords[num_dims];
+    double these_patch_coords[3];  // Note: cannot allocated array with num_dims
     
     // loop over the nodes on the patch
     for (size_t patch_node_lid=0; patch_node_lid<mesh.num_nodes_in_patch; patch_node_lid++){

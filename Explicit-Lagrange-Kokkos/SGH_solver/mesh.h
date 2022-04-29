@@ -48,7 +48,7 @@ patch 6: [4,5,6,7]  zeta-plus  dir
 
 // sort in ascending order using bubble sort
 KOKKOS_INLINE_FUNCTION
-void bubble_sort(size_t arr[], size_t num){
+void bubble_sort(size_t arr[], const size_t num){
     
     for (size_t i=0; i<(num-1); i++){
         for (size_t j=0; j<(num-i-1); j++){
@@ -164,13 +164,13 @@ struct mesh_t {
         num_corners_in_node = CArrayKokkos <size_t> (num_nodes); // stride sizes
         
         // initializing the number of corners (node-cell pair) to be zero
-        FOR_ALL(node_gid, 0, num_nodes, {
+        FOR_ALL_CLASS(node_gid, 0, num_nodes, {
             num_corners_in_node(node_gid) = 0;
         });
         
         
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++){
-            FOR_ALL(node_lid, 0, num_nodes_in_elem,{
+            FOR_ALL_CLASS(node_lid, 0, num_nodes_in_elem,{
                 
                 // get the global_id of the node
                 size_t node_gid = nodes_in_elem(elem_gid, node_lid);
@@ -188,7 +188,7 @@ struct mesh_t {
         CArrayKokkos <size_t> count_saved_corners_in_node(num_nodes);
 
         // reset num_corners to zero
-        FOR_ALL(node_gid, 0, num_nodes, {
+        FOR_ALL_CLASS(node_gid, 0, num_nodes, {
             count_saved_corners_in_node(node_gid) = 0;
         });
         
@@ -198,7 +198,7 @@ struct mesh_t {
         
         // populate the elems connected to a node list and corners in a node
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++){
-            FOR_ALL(node_lid, 0, num_nodes_in_elem, {
+            FOR_ALL_CLASS(node_lid, 0, num_nodes_in_elem, {
                 
                 // get the global_id of the node
                 size_t node_gid = nodes_in_elem(elem_gid, node_lid);
@@ -231,7 +231,7 @@ struct mesh_t {
         // find the max number of elems around a node
         size_t max_num_elems_in_node;
         size_t max_num_lcl;
-        REDUCE_MAX(node_gid, 0, num_nodes, max_num_lcl, {
+        REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
             
             // num_corners_in_node = num_elems_in_node
             size_t max_num = num_corners_in_node(node_gid);
@@ -245,13 +245,13 @@ struct mesh_t {
         DynamicRaggedRightArrayKokkos <size_t> temp_elems_in_elem(num_nodes, num_nodes_in_elem*max_num_elems_in_node);
         
         num_elems_in_elem = CArrayKokkos <size_t> (num_elems);
-        FOR_ALL(elem_gid, 0, num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elems, {
             num_elems_in_elem(elem_gid) = 0;
         });
         Kokkos::fence();
         
         // find and save neighboring elem_gids of an elem
-        FOR_ALL (elem_gid, 0, num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elems, {
             for (int node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
                 
                 // get the gid for the node
@@ -303,7 +303,7 @@ struct mesh_t {
         // compress out the extra space in the temp_elems_in_elem
         elems_in_elem = RaggedRightArrayKokkos <size_t> (num_elems_in_elem);
         
-        FOR_ALL (elem_gid, 0, num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elems, {
             for (size_t i=0; i<num_elems_in_elem(elem_gid); i++){
                 elems_in_elem(elem_gid, i) = temp_elems_in_elem(elem_gid, i);
             } // end for i
@@ -373,11 +373,11 @@ struct mesh_t {
         CArrayKokkos <size_t> temp_bdy_patches(num_elems*num_patches_in_elem);
         
         // step 1) calculate the hash values for each patch in the element
-        FOR_ALL (elem_gid, 0, num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elems, {
             
             for (size_t patch_lid = 0; patch_lid<num_patches_in_elem; patch_lid++) {
                 
-                size_t sorted_patch_nodes[num_patches_in_elem];
+                size_t sorted_patch_nodes[4];  // note: cannot be allocated with num_nodes_in_patch
                 
                 // first save the patch nodes
                 for (size_t patch_node_lid = 0; patch_node_lid<num_nodes_in_patch; patch_node_lid++){
@@ -499,13 +499,13 @@ struct mesh_t {
         CArrayKokkos <size_t> num_elems_in_patch_saved (num_patches);
         
         // initialize the number of elems in a patch saved to zero
-        FOR_ALL(patch_gid, 0, num_patches, {
+        FOR_ALL_CLASS(patch_gid, 0, num_patches, {
             num_elems_in_patch_saved(patch_gid) = 0;
         });
         
         for(size_t elem_gid=0; elem_gid<num_elems; elem_gid++) {
             
-            FOR_ALL (patch_lid, 0, num_patches_in_elem, {
+            FOR_ALL_CLASS(patch_lid, 0, num_patches_in_elem, {
                 
                 size_t patch_gid = patches_in_elem(elem_gid, patch_lid);
                 
@@ -534,7 +534,7 @@ struct mesh_t {
         // allocate memory for boundary patches
         bdy_patches = CArrayKokkos <size_t> (num_bdy_patches);
         
-        FOR_ALL (bdy_patch_gid, 0, num_bdy_patches, {
+        FOR_ALL_CLASS(bdy_patch_gid, 0, num_bdy_patches, {
             bdy_patches(bdy_patch_gid) = temp_bdy_patches(bdy_patch_gid);
         }); // end FOR_ALL bdy_patch_gid
         
