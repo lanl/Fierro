@@ -14,7 +14,8 @@ void read_mesh_ensight(char* MESH,
                        node_t &node,
                        elem_t &elem,
                        corner_t &corner,
-                       size_t num_dims){
+                       const size_t num_dims,
+                       const size_t rk_num_bins){
 
     const size_t rk_level = 0;
 
@@ -94,7 +95,7 @@ void read_mesh_ensight(char* MESH,
     for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
         for (int node_lid = 0; node_lid < 8; node_lid++){
             
-            fscanf(in,"%d",&mesh.nodes_in_elem.host(elem_gid, node_lid));
+            fscanf(in,"%d",&mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
 
             // shift to start node index space at 0
             mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;

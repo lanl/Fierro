@@ -60,7 +60,7 @@
 #include <sys/resource.h>
 #include <ctime>
 
-#define BUFFER_LINES 1000
+#define BUFFER_LINES 20000
 #define MAX_WORD 30
 #define MAX_ELEM_NODES 32
 #define STRAIN_EPSILON 0.000000001

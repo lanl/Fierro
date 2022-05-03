@@ -2,7 +2,7 @@
 // This code contains the equation of state information (constitutive relations)
 //------------------------------------------------------------------------------
 #include "state.h"
-#include "variables.h"
+
 
 
 

@@ -5,7 +5,6 @@
 #include "matar.h"
 #include "state.h"
 #include "mesh.h"
-#include "variables.h"
 
 
 void setup( const CArrayKokkos <material_t> &material,
@@ -24,9 +23,20 @@ void setup( const CArrayKokkos <material_t> &material,
             const DViewCArrayKokkos <double> &elem_mass,
             const DViewCArrayKokkos <size_t> &elem_mat_id,
             const DViewCArrayKokkos <double> &elem_statev,
-            const CArrayKokkos <double> &state_vars
+            const CArrayKokkos <double> &state_vars,
+            const size_t num_fills,
+            const size_t rk_num_bins,
+            const size_t num_bdy_sets
            ){
 
+    
+    //--- calculate bdy sets ---//
+    // mesh.init_bdy_sets(num_bdy_sets);
+    // loop over bdy
+    FOR_ALL (bdy_lid, 0, num_bdy_sets, {
+        // tag boundaries
+    });
+    
     
     //--- apply the fill instructions over the Elements---//
     
@@ -246,9 +256,19 @@ void setup( const CArrayKokkos <material_t> &material,
                         }
                     } // end of switch
 
-               
-
                 }// end loop over nodes of element
+                
+                
+                if(mat_fill(f_id).velocity == init_conds::tg_vortex)
+                {
+                    elem_pres(elem_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;
+                
+                    // p = rho*ie*(gamma - 1)
+                    size_t mat_id = f_id;
+                    double gamma = elem_statev(elem_gid,4); // gamma value
+                    elem_sie(rk_level, elem_gid) =
+                                    elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
+                } // end if
 
             } // end if fill
           
@@ -257,7 +277,7 @@ void setup( const CArrayKokkos <material_t> &material,
   
     } // end for loop over fills
 
-
+    
     // fill all rk_bins
     for (size_t rk_level=1; rk_level<rk_num_bins; rk_level++){
         
@@ -285,6 +305,7 @@ void setup( const CArrayKokkos <material_t> &material,
 
     } // end for rk_level
     
+
     //boundary_velocity();
 
 

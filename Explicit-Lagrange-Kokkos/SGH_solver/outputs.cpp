@@ -1,6 +1,5 @@
 #include "mesh.h"
 #include "state.h"
-#include "variables.h"
 
 #include <cstring>
 #include <sys/stat.h>
@@ -21,7 +20,10 @@ void ensight( mesh_t &mesh,
               DViewCArrayKokkos <double> &elem_sie,
               DViewCArrayKokkos <double> &elem_vol,
               DViewCArrayKokkos <double> &elem_mass,
-              DViewCArrayKokkos <size_t> &elem_mat_id) {
+              DViewCArrayKokkos <size_t> &elem_mat_id,
+              CArray <double> &graphics_times,
+              size_t graphics_id,
+              double time_value) {
 
     printf("Writing Ensight output\n");
     const int num_scalar_vars = 9;
@@ -293,10 +295,10 @@ void ensight( mesh_t &mesh,
     fprintf(out[0],"filename increment: 1\n");
     fprintf(out[0],"time values: \n");
     
-    graphics_times[graphics_id]=time_value;
+    graphics_times(graphics_id)=time_value;
     
     for (int i=0;i<=graphics_id;i++) {
-        fprintf(out[0],"%12.5e\n",graphics_times[i]);
+        fprintf(out[0],"%12.5e\n",graphics_times(i));
     }
     fclose(out[0]);
     
