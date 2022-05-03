@@ -298,6 +298,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     if(zone_condition_type==SURFACE_LOADING_CONDITION){
       LO local_patch_index;
       LO boundary_set_npatches = 0;
+      bool look_at_end = false;
       CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
       //grow structures for loading condition storage
       //debug print
@@ -310,6 +311,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       
       GO num_patches;
       real_t force_density[3];
+      force_density[0] = force_density[1] = force_density[2] = 0;
       if(myrank == 0){
         getline(*in, read_line);
         std::cout << read_line << std::endl;
@@ -319,17 +321,24 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         //parse boundary condition specifics out of jumble of comma delimited entries
         line_parse2.clear();
         line_parse2.str(substring);
+        //this first token should be the word local, otherwise the traction is printed at file end
         getline(line_parse2, token, ',');
-        getline(line_parse2, token, ',');
-        force_density[0]  = std::stod(token);
-        getline(line_parse2, token, ',');
-        force_density[1]  = std::stod(token);
-        getline(line_parse2, token, ',');
-        force_density[2]  = std::stod(token);
+        if(token.compare("local")){
+          look_at_end = true;
+        }
+        
+        if(!look_at_end){
+          getline(line_parse2, token, ',');
+          force_density[0]  = std::stod(token);
+          getline(line_parse2, token, ',');
+          force_density[1]  = std::stod(token);
+          getline(line_parse2, token, ',');
+          force_density[2]  = std::stod(token);
 
         //skip 2 lines
-        getline(*in, read_line);
-        getline(*in, read_line);
+          getline(*in, read_line);
+          getline(*in, read_line);
+        }
         //read number of surface patches
         getline(*in, read_line);
         std::cout << read_line << std::endl;
@@ -348,13 +357,6 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         //skip 1 more line
         getline(*in, read_line);
       }
-
-      //broadcast surface force density
-      MPI_Bcast(&force_density,3,MPI_DOUBLE,0,world);
-
-      Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = force_density[0];
-      Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = force_density[1];
-      Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = force_density[2];
       
       //broadcast number of element surface patches subject to force density
       MPI_Bcast(&num_patches,1,MPI_LONG_LONG_INT,0,world);
@@ -456,6 +458,43 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         read_index_start+=buffer_lines;
       }
       NBoundary_Condition_Patches(num_boundary_conditions-1) = boundary_set_npatches;
+      
+      //get surface pressure from the end of the file
+      if(myrank==0){
+        if(look_at_end){
+          bool found_pressure = false;
+          real_t pressure;
+          while(in->good()){
+            getline(*in, read_line);
+            std::cout << read_line << std::endl;
+            line_parse.clear();
+            line_parse.str(read_line);
+            line_parse >> substring;
+            //parse for surface pressure token "sf" then obtain pressure value
+            line_parse2.clear();
+            line_parse2.str(substring);
+            while(line_parse2.good()){
+              getline(line_parse2, token, ',');
+              if(!token.compare("sf")){
+                found_pressure = true;
+              }
+            }
+            if(found_pressure){
+              //last token read in from the line should be the pressure
+              pressure = std::stod(token);
+              break;
+            }
+          }
+          force_density[0] = pressure;
+        }
+      }
+
+      //broadcast surface force density
+      MPI_Bcast(&force_density,3,MPI_DOUBLE,0,world);
+
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = force_density[0];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = force_density[1];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = force_density[2];
     }
 
     if(myrank==0){
@@ -1534,7 +1573,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   These sets can have overlapping nodes since applied loading conditions
   are assumed to be additive*/
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
-    if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION) continue;
+    if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION||Boundary_Condition_Type_List(iboundary)!=SURFACE_PRESSURE_CONDITION) continue;
     //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
@@ -1674,6 +1713,10 @@ void FEA_Module_Elasticity::assemble_vector(){
         JT_row2(2) += nodal_positions(node_loop,2)*surf_basis_derivative_s2(node_loop);
       }
       
+      //if this is a surface pressure condition use the normal to repopulate the force density (pressure stored in 0 by convention)
+      if(Boundary_Condition_Type_List(iboundary)==SURFACE_PRESSURE_CONDITION){
+        
+      }
 
       //compute jacobian for this surface
       //compute the determinant of the Jacobian
