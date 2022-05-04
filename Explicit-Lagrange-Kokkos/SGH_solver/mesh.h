@@ -784,7 +784,6 @@ void state_file( const mesh_t &mesh,
                  const double time_value );
 
 void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
-              const int bdy_set,
               mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords);
 

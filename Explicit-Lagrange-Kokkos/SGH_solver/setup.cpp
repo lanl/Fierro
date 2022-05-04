@@ -34,12 +34,9 @@ void setup( const CArrayKokkos <material_t> &material,
     mesh.init_bdy_sets(num_bcs);
     printf("Num BC's = %lu\n", num_bcs);
     
-    // loop over BCs
-    for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
-        tag_bdys(boundary, this_bdy, mesh, node_coords);
-    }// end for
-    
-    printf("building boundary node set \n");
+    // tag boundary patches in the set
+    tag_bdys(boundary, mesh, node_coords);
+
     build_boundry_node_sets(boundary, mesh);
     
     // loop over BCs
@@ -50,6 +47,7 @@ void setup( const CArrayKokkos <material_t> &material,
             printf("  Num bdy patches in this set = %lu \n", mesh.bdy_patches_in_set.stride(this_bdy));
             printf("  Num bdy nodes in this set = %lu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
         });
+	Kokkos::fence();
 
     }// end for
 
@@ -59,8 +57,6 @@ void setup( const CArrayKokkos <material_t> &material,
     
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++){
-        
-        //printf("---- fill ---\n");
             
         // parallel loop over elements in mesh
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -85,8 +81,7 @@ void setup( const CArrayKokkos <material_t> &material,
             elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
             elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
                 
-            //printf("elem id = %lu, elem_coords = %f, %f, %f \n", elem_gid, elem_coords[0], elem_coords[1], elem_coords[2]);
-
+            
             // spherical radius
             double radius = sqrt( elem_coords[0]*elem_coords[0] +
                                   elem_coords[1]*elem_coords[1] +
@@ -141,7 +136,7 @@ void setup( const CArrayKokkos <material_t> &material,
                 
                 // specific internal energy
                 elem_sie(0, elem_gid) = mat_fill(f_id).sie;
-                
+		
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
 
                 size_t mat_id = elem_mat_id(elem_gid);
@@ -164,8 +159,8 @@ void setup( const CArrayKokkos <material_t> &material,
                                             elem_sspd,
                                             elem_den,
                                             elem_sie );
-
-
+					    
+		
                 // loop over the nodes of this element and apply velocity
                 for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
 
@@ -288,6 +283,7 @@ void setup( const CArrayKokkos <material_t> &material,
         Kokkos::fence();
   
     } // end for loop over fills
+    
 
     
     // fill all rk_bins
@@ -305,7 +301,6 @@ void setup( const CArrayKokkos <material_t> &material,
             elem_sie(rk_level,elem_gid) = elem_sie(0,elem_gid);
 
         }); // end parallel for
-
         Kokkos::fence();
 
         FOR_ALL(node_gid, 0, mesh.num_nodes, {
@@ -314,12 +309,15 @@ void setup( const CArrayKokkos <material_t> &material,
                 node_vel(rk_level,node_gid,i) = node_vel(rk_level,node_gid,i);
             }
         });
+	Kokkos::fence();
 
     } // end for rk_level
     
     
+    
     // apply BC's to velocity
     boundary_velocity(mesh, boundary, node_vel);
+    
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         
@@ -344,6 +342,7 @@ void setup( const CArrayKokkos <material_t> &material,
         } // end else
         
     }); // end FOR_ALL
+    Kokkos::fence();
     
     
 } // end of setup
@@ -354,22 +353,21 @@ void setup( const CArrayKokkos <material_t> &material,
 // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
 // val = plane value, cyl radius, sphere radius
 void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
-              const int bdy_set,
               mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords){
 
     size_t num_dims = mesh.num_dims;
     
-    if (bdy_set == mesh.num_bdy_sets){
-        printf(" ERROR: number of boundary sets must be increased by %zu",
-                  bdy_set-mesh.num_bdy_sets+1);
-        exit(0);
-    } // end if
+    //if (bdy_set == mesh.num_bdy_sets){
+    //    printf(" ERROR: number of boundary sets must be increased by %zu",
+    //              bdy_set-mesh.num_bdy_sets+1);
+    //    exit(0);
+    //} // end if
     
-    
+    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, { 
     
     // save the boundary patches to this set that are on the plane, spheres, etc.
-    FOR_ALL (bdy_patch_lid, 0, mesh.num_bdy_patches, {
+    for (size_t bdy_patch_lid=0; bdy_patch_lid<mesh.num_bdy_patches; bdy_patch_lid++){
         
         // tag boundaries
         int bc_tag_id = boundary(bdy_set).surface;
@@ -395,9 +393,9 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
             mesh.bdy_patches_in_set.stride(bdy_set) ++;
         } // end if
         
-        //printf("is on bdy = %d \n", is_on_bdy);
         
-    }); // end FOR_ALL bdy_patch
+    } // end for bdy_patch
+    });  // end FOR_ALL bdy_sets
    
 } // end tag
 
@@ -510,7 +508,6 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
 	
         // finde the number of patches_in_set
         size_t num_bdy_patches_in_set = mesh.bdy_patches_in_set.stride(bdy_set);
-	printf("num_bdy_patches_in_set = %lu \n", num_bdy_patches_in_set);
         
         // Loop over boundary patches in boundary set
         for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
@@ -562,28 +559,26 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
     }); // end FOR_ALL bdy_set
     Kokkos::fence();
     
-    printf("allocating a ragged right array \n");
-    printf(" mesh.num_bdy_nodes_in_set(0) = %lu \n", mesh.num_bdy_nodes_in_set(0));  // there is problem here!
-    printf(" mesh.num_bdy_nodes_in_set(1) = %lu \n", mesh.num_bdy_nodes_in_set(1));
-    printf(" mesh.num_bdy_nodes_in_set(2) = %lu \n", mesh.num_bdy_nodes_in_set(2));
-    
+   
     
     // allocate the RaggedRight bdy_nodes_in_set array
     mesh.bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (mesh.num_bdy_nodes_in_set);
 
-    for(size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++){
+
+    FOR_ALL (bdy_set, 0, mesh.num_bdy_sets, {
         
+	
+	
         // Loop over boundary patches in boundary set
-        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set(bdy_set), {
-	
-	
-            
+        for (size_t bdy_node_lid=0; bdy_node_lid<mesh.num_bdy_nodes_in_set(bdy_set); bdy_node_lid++){
+
             // save the bdy_node_gid
             mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_nodes_in_set(bdy_set, bdy_node_lid);
             
-        }); // end FOR_ALL
+        } // end for
         
-    } // end for bdy_set
+    }); // end FOR_ALL bdy_set
+    
     
 } // end method to build boundary nodes
 

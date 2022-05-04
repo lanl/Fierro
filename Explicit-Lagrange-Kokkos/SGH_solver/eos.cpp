@@ -31,7 +31,7 @@ void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
     
     // pressure
     elem_pres(elem_gid) = (gamma - 1.0)*
-                           elem_sie(elem_gid)*elem_den(elem_gid);
+                           elem_sie(1,elem_gid)*elem_den(elem_gid);
 
     // sound speed
     elem_sspd(elem_gid) = gamma*(gamma - 1.0)*elem_sie(elem_gid);

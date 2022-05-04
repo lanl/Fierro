@@ -25,7 +25,6 @@ void ensight( const mesh_t &mesh,
               size_t graphics_id,
               const double time_value) {
 
-    printf("Writing Ensight output\n");
     const int num_scalar_vars = 9;
     const int num_vec_vars = 2;
 
@@ -54,6 +53,7 @@ void ensight( const mesh_t &mesh,
     auto elem_fields = CArray <double> (num_elems, num_scalar_vars);
     int elem_switch = 1;
 
+
     DCArrayKokkos <double> speed(num_elems);
     FOR_ALL(elem_gid, 0, num_elems, {
             
@@ -80,6 +80,7 @@ void ensight( const mesh_t &mesh,
         speed(elem_gid) = sqrt(speed_sqrd);
     }); // end parallel for
     speed.update_host();
+
 
     // save the output scale fields to a single 2D array
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++){
@@ -185,7 +186,7 @@ void ensight( const mesh_t &mesh,
     for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
 
-            fprintf(out[0],"%10lu\t",mesh.nodes_in_elem(elem_gid, node_lid) + 1); // note: node_gid starts at 1
+            fprintf(out[0],"%10lu\t",mesh.nodes_in_elem.host(elem_gid, node_lid) + 1); // note: node_gid starts at 1
         }
         fprintf(out[0],"\n");
     }
@@ -350,11 +351,6 @@ void state_file( const mesh_t &mesh,
     fprintf(out_elem_state, "# state dump file\n");
     fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
     
-    
-
-            
-
-
 
     
     // write out values for the elem
@@ -364,16 +360,18 @@ void state_file( const mesh_t &mesh,
         elem_coords[0] = 0.0;
         elem_coords[1] = 0.0;
         elem_coords[2] = 0.0;
+	
+	
         // get the coordinates of the element center
-        for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-            elem_coords[0] += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-            elem_coords[1] += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
-            elem_coords[2] += node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+        for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+            elem_coords[0] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
+            elem_coords[1] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
+            elem_coords[2] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
         } // end loop over nodes in element
+	
         elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
         elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
         elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
-        
         
         double rad2 = sqrt(elem_coords[0]*elem_coords[0] +
                            elem_coords[1]*elem_coords[1]);
@@ -381,7 +379,7 @@ void state_file( const mesh_t &mesh,
         double rad3 = sqrt(elem_coords[0]*elem_coords[0] +
                            elem_coords[1]*elem_coords[1] +
                            elem_coords[2]*elem_coords[2]);
-        
+			   
         fprintf( out_elem_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
                  elem_coords[0],
                  elem_coords[1],
@@ -390,15 +388,17 @@ void state_file( const mesh_t &mesh,
                  rad3,
                  elem_den.host(elem_gid),
                  elem_pres.host(elem_gid),
-                 elem_sie.host(elem_gid),
+                 elem_sie.host(1,elem_gid),
                  elem_sspd.host(elem_gid),
                  elem_vol.host(elem_gid),
                  elem_mass.host(elem_gid) );
+	
         
     }; // end for
     
-    fclose(out_elem_state);
     
+    fclose(out_elem_state);
+ 
 };
 
 

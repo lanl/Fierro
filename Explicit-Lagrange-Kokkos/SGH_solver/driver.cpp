@@ -250,19 +250,27 @@ int main(int argc, char *argv[]){
         graphics_times(0) = 0.0;
         graphics_time = graphics_dt_ival;  // the times for writing graphics dump
 
-        
+	
+	        
         // ---------------------------------------------------------------------
         //   t=0 ensight and state output
         // ---------------------------------------------------------------------
-        elem_den.update_device();
-        elem_pres.update_device();
-        elem_stress.update_device();
-        elem_sspd.update_device();
-        elem_sie.update_device();
-        elem_vol.update_device();
-        elem_mass.update_device();
-        elem_mat_id.update_device();
-
+        elem_den.update_host();
+        elem_pres.update_host();
+        elem_stress.update_host();
+        elem_sspd.update_host();
+        elem_sie.update_host();
+        elem_vol.update_host();
+        elem_mass.update_host();
+        elem_mat_id.update_host();
+	
+	node_coords.update_host();
+	node_vel.update_host();
+	node_mass.update_host();
+        Kokkos::fence();
+	
+	printf("Writing outputs to file\n");
+	
         // write out state file
         state_file( mesh,
                     node_coords,
@@ -277,7 +285,8 @@ int main(int argc, char *argv[]){
                     elem_mass,
                     elem_mat_id,
                     time_value );
-        
+		    
+	
         // write out ensight file
         ensight( mesh,
                  node_coords,
@@ -293,7 +302,7 @@ int main(int argc, char *argv[]){
                  elem_mat_id,
                  graphics_times,
                  graphics_id,
-                 time_value);
+                 time_value );
 
         
         
