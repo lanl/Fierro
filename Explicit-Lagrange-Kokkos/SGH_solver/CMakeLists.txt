@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1.3)
 
 project (FierroSGH)
 
-add_executable(FierroSGH driver.cpp read_mesh.cpp geometry.cpp boundary.cpp input.cpp eos.cpp setup.cpp outputs.cpp)
+add_executable(FierroSGH driver.cpp read_mesh.cpp geometry.cpp boundary.cpp input.cpp eos.cpp setup.cpp outputs.cpp sgh_hydro.cpp)
 
 if (CUDA)
   add_definitions(-DHAVE_CUDA=1)

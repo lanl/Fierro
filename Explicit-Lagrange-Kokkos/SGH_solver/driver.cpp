@@ -10,7 +10,6 @@
 
 #include "mesh.h"
 #include "state.h"
-#include "variables.h"
 #include "matar.h"
 
 
@@ -34,7 +33,7 @@ size_t num_bcs;
 
 // --- Graphics output variables ---
 size_t graphics_id = 0;
-int graphics_cyc_ival = 50;
+size_t graphics_cyc_ival = 50;
 
 CArray <double> graphics_times(2000);
 double graphics_dt_ival = 1.0e8;
@@ -111,9 +110,26 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    read the input file
         // ---------------------------------------------------------------------  
-        input(material, mat_fill, boundary, state_vars,
-              num_materials, num_fills, num_bcs,
-              num_dims, num_state_vars);
+        input(material,
+              mat_fill,
+              boundary,
+              state_vars,
+              num_materials,
+              num_fills,
+              num_bcs,
+              num_dims,
+              num_state_vars,
+              dt_start,
+              time_final,
+              dt_max,
+              dt_min,
+              dt_cfl,
+              graphics_dt_ival,
+              graphics_cyc_ival,
+              cycle_stop,
+              rk_num_stages
+              );
+
 
 
         // ---------------------------------------------------------------------

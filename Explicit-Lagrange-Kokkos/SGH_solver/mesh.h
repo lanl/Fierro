@@ -703,7 +703,17 @@ void input(CArrayKokkos <material_t> &material,
            size_t &num_fills,
            size_t &num_boundaries,
            size_t &num_dims,
-           size_t &num_state_vars);
+           size_t &num_state_vars,
+           double &dt_start,
+           double &time_final,
+           double &dt_max,
+           double &dt_min,
+           double &dt_cfl,
+           double &graphics_dt_ival,
+           size_t &graphics_cyc_ival,
+           size_t &cycle_stop,
+           size_t &rk_num_stages
+           );
 
 
 KOKKOS_FUNCTION
