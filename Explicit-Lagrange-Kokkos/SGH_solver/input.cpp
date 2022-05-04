@@ -37,7 +37,7 @@ void input(CArrayKokkos <material_t> &material,
     dt_min = 1.e-8;
     dt_max = 1.e-2;
     dt_start = 1.e-5;
-    cycle_stop = 100000000;
+    cycle_stop = 1;
 
 
     // ---- graphics information ----

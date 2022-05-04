@@ -237,27 +237,26 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
         // ---------------------------------------------------------------------
-        setup( material,
-               mat_fill,
-               boundary,
-               mesh,
-               node_coords,
-               node_vel,
-               node_mass,      
-               elem_den,
-               elem_pres,
-               elem_stress,
-               elem_sspd,       
-               elem_sie,
-               elem_vol,
-               elem_mass,
-               elem_mat_id,
-               elem_statev,
-               state_vars,
-               num_fills,
-               rk_num_bins,
-               num_bcs
-           );
+        setup(material,
+              mat_fill,
+              boundary,
+              mesh,
+              node_coords,
+              node_vel,
+              node_mass,
+              elem_den,
+              elem_pres,
+              elem_stress,
+              elem_sspd,
+              elem_sie,
+              elem_vol,
+              elem_mass,
+              elem_mat_id,
+              elem_statev,
+              state_vars,
+              num_fills,
+              rk_num_bins,
+              num_bcs);
         
         // intialize time, time_step, and cycles
         time_value = 0.0;
@@ -280,45 +279,45 @@ int main(int argc, char *argv[]){
         elem_mass.update_host();
         elem_mat_id.update_host();
 	
-	node_coords.update_host();
-	node_vel.update_host();
-	node_mass.update_host();
+        node_coords.update_host();
+        node_vel.update_host();
+        node_mass.update_host();
         Kokkos::fence();
-	
-	printf("Writing outputs to file\n");
+        
+        printf("Writing outputs to file\n");
 	
         // write out state file
-        state_file( mesh,
-                    node_coords,
-                    node_vel,
-                    node_mass,
-                    elem_den,
-                    elem_pres,
-                    elem_stress,
-                    elem_sspd,
-                    elem_sie,
-                    elem_vol,
-                    elem_mass,
-                    elem_mat_id,
-                    time_value );
+        state_file(mesh,
+                   node_coords,
+                   node_vel,
+                   node_mass,
+                   elem_den,
+                   elem_pres,
+                   elem_stress,
+                   elem_sspd,
+                   elem_sie,
+                   elem_vol,
+                   elem_mass,
+                   elem_mat_id,
+                   time_value);
 		    
 	
         // write out ensight file
-        ensight( mesh,
-                 node_coords,
-                 node_vel,
-                 node_mass,
-                 elem_den,
-                 elem_pres,
-                 elem_stress,
-                 elem_sspd, 
-                 elem_sie,
-                 elem_vol,
-                 elem_mass,
-                 elem_mat_id,
-                 graphics_times,
-                 graphics_id,
-                 time_value );
+        ensight(mesh,
+                node_coords,
+                node_vel,
+                node_mass,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
+                elem_vol,
+                elem_mass,
+                elem_mat_id,
+                graphics_times,
+                graphics_id,
+                time_value);
 
         
         
@@ -328,10 +327,41 @@ int main(int argc, char *argv[]){
         double ie = 0.0;
         double te_0 = ke + ie;
 
-        // get_timestep();
 
-        // call hydro here
-        // hydro_sgh()
+
+        // ---------------------------------------------------------------------
+        //   Calculate the SGH solution
+        // ---------------------------------------------------------------------
+        sgh_solve(material,
+                  boundary,
+                  mesh,
+                  node_coords,
+                  node_vel,
+                  node_mass,
+                  elem_den,
+                  elem_pres,
+                  elem_stress,
+                  elem_sspd,
+                  elem_sie,
+                  elem_vol,
+                  elem_mass,
+                  elem_mat_id,
+                  elem_statev,
+                  time_value,
+                  time_final,
+                  dt_max,
+                  dt_min,
+                  dt_cfl,
+                  graphics_time,
+                  graphics_cyc_ival,
+                  graphics_dt_ival,
+                  cycle_stop,
+                  rk_num_stages,
+                  dt,
+                  fuzz,
+                  tiny,
+                  small);
+
 
         // calculate total energy at time=t_end
         

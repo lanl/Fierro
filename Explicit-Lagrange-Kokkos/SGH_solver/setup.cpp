@@ -306,7 +306,7 @@ void setup( const CArrayKokkos <material_t> &material,
         FOR_ALL(node_gid, 0, mesh.num_nodes, {
             for(size_t i=0; i<mesh.num_dims; i++){
                 node_coords(rk_level,node_gid,i) = node_coords(0,node_gid,i);
-                node_vel(rk_level,node_gid,i) = node_vel(rk_level,node_gid,i);
+                node_vel(rk_level,node_gid,i) = node_vel(0,node_gid,i);
             }
         });
 	Kokkos::fence();
