@@ -333,7 +333,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
           force_density[1]  = std::stod(token);
           getline(line_parse2, token, ',');
           force_density[2]  = std::stod(token);
-
+        
         //skip 2 lines
           getline(*in, read_line);
           getline(*in, read_line);
@@ -353,6 +353,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         //number of patches should be last read token
         //element count should be the last token read in
         num_patches = std::stoi(token);
+        
+        //std::cout << " NUMBER OF BOUNDARY PATCHES "<< num_patches << std::endl;
         //skip 1 more line
         getline(*in, read_line);
       }
@@ -361,10 +363,10 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       MPI_Bcast(&look_at_end,1,MPI_CXX_BOOL,0,world);
 
       if(look_at_end){
-        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_LOADING_CONDITION;
+        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_PRESSURE_CONDITION;
       }
       else{
-        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_PRESSURE_CONDITION;
+        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_LOADING_CONDITION;
       }
         
       
@@ -501,7 +503,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 
       //broadcast surface force density
       MPI_Bcast(&force_density,3,MPI_DOUBLE,0,world);
-
+      
+      //std::cout << " FORCE DENSITY "<< force_density[0] << std::endl;
       Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = force_density[0];
       Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = force_density[1];
       Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = force_density[2];
@@ -1583,7 +1586,9 @@ void FEA_Module_Elasticity::assemble_vector(){
   These sets can have overlapping nodes since applied loading conditions
   are assumed to be additive*/
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
-    if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION||Boundary_Condition_Type_List(iboundary)!=SURFACE_PRESSURE_CONDITION) continue;
+    
+    if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION&&Boundary_Condition_Type_List(iboundary)!=SURFACE_PRESSURE_CONDITION) continue;
+    //std::cout << " NUMBER OF BOUNDARY PATCHES "<< NBoundary_Condition_Patches(iboundary) << std::endl;
     //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
@@ -1593,7 +1598,7 @@ void FEA_Module_Elasticity::assemble_vector(){
     force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
     force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
     surface_force_set_id++;
-
+    std::cout << " FORCE DENSITY "<< force_density[0] << std::endl;
     real_t pointer_basis_values[elem->num_basis()];
     ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
 
