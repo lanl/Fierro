@@ -5276,3 +5276,17 @@ void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp){
       //MPI_Abort(world,4);
   //}
 }
+
+/* -------------------------------------------------------------------------------------------
+   enforce constraints on nodes due to BCS
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densities_lower_bound){
+
+  int num_dim = simparam->num_dim;
+  for(int i = 0; i < nlocal_nodes*num_dim; i++){
+    if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
+      node_densities_lower_bound(i/num_dim) = 1;
+    }
+  }
+}

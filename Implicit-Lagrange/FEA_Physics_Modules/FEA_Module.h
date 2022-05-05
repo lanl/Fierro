@@ -121,6 +121,8 @@ public:
 
   virtual void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> global_reduce_map){}
 
+  virtual void node_density_constraints(host_vec_array node_densities_lower_bound){}
+
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   
