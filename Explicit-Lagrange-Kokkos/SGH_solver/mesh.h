@@ -837,9 +837,11 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                DViewCArrayKokkos <double> &elem_sspd,
                DViewCArrayKokkos <double> &elem_sie,
                DViewCArrayKokkos <double> &elem_vol,
+               DViewCArrayKokkos <double> &elem_div,
                DViewCArrayKokkos <double> &elem_mass,
                DViewCArrayKokkos <size_t> &elem_mat_id,
                DViewCArrayKokkos <double> &elem_statev,
+               DViewCArrayKokkos <double> corner_force,
                double &time_value,
                const double time_final,
                const double dt_max,
@@ -879,5 +881,33 @@ void get_timestep(mesh_t &mesh,
                   double dt,
                   const double fuzz);
 
+void get_divergence(DViewCArrayKokkos <double> &elem_div,
+                    const mesh_t &mesh,
+                    const DViewCArrayKokkos <double> &node_coords,
+                    const DViewCArrayKokkos <double> &node_vel,
+                    const DViewCArrayKokkos <double> &elem_vol);
+
+KOKKOS_FUNCTION
+void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
+                 const mesh_t &mesh,
+                 const DViewCArrayKokkos <double> &node_vel,
+                 const ViewCArrayKokkos <double> &b_matrix,
+                 const double elem_vol,
+                 const size_t elem_gid);
+
+void get_force_sgh(const CArrayKokkos <material_t> &material,
+                   const mesh_t &mesh,
+                   const DViewCArrayKokkos <double> &node_coords,
+                   const DViewCArrayKokkos <double> &node_vel,
+                   const DViewCArrayKokkos <double> &elem_den,
+                   const DViewCArrayKokkos <double> &elem_pres,
+                   const DViewCArrayKokkos <double> &elem_stress,
+                   const DViewCArrayKokkos <double> &elem_sspd,
+                   const DViewCArrayKokkos <double> &elem_vol,
+                   const DViewCArrayKokkos <double> &elem_div,
+                   const DViewCArrayKokkos <size_t> &elem_mat_id,
+                   DViewCArrayKokkos <double> &corner_force,
+                   const double fuzz,
+                   const double small);
 
 #endif 

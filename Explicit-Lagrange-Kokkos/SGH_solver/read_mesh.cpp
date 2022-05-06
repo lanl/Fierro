@@ -110,7 +110,17 @@ void read_mesh_ensight(char* MESH,
     mesh.initialize_corners(num_corners);
     corner.initialize(num_corners, num_dims);
 
-
+    
+    // save the node coords to the current RK value
+    FOR_ALL(node_gid, 0, num_nodes, {
+        
+        for(int rk=1; rk<rk_num_bins; rk++){
+            for (int dim = 0; dim < num_dims; dim++){
+                node.coords(rk, node_gid, dim) = node.coords(0, node_gid, dim);
+            } // end for dim
+        } // end for rk
+        
+    });
 
 
 

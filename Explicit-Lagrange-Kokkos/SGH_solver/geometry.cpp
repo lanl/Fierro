@@ -16,6 +16,8 @@
 //    w is the 1 gauss point for the cell (everything is evaluted at this point)
 //    J^{-T} is the inverse transpose of the Jacobi matrix
 //    \nabla_{xi} is the gradient opperator in the reference coordinates
+//
+//   B_p is the OUTWARD corner area normal at node p
 //------------------------------------------------------------------------------
 KOKKOS_FUNCTION
 void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
@@ -36,9 +38,9 @@ void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-        y(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 1);
-        z(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+        x(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+        y(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+        z(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
     } // end for
 
     double twelth = 1./12.;
@@ -163,9 +165,9 @@ void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
     
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-        y(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 1);
-        z(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+        x(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+        y(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+        z(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
     } // end for
 
     double twelth = 1./12.;
@@ -202,8 +204,8 @@ void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-        y(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+        x(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+        y(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
     } // end for
 
     /* ensight node order   0 1 2 3
@@ -248,8 +250,8 @@ void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
      
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-        y(node_lid) = node_coords(0, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+        x(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+        y(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
     } // end for
 
     /* ensight node order   0 1 2 3

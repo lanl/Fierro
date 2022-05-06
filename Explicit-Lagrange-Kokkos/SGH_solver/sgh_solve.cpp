@@ -17,9 +17,11 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                DViewCArrayKokkos <double> &elem_sspd,
                DViewCArrayKokkos <double> &elem_sie,
                DViewCArrayKokkos <double> &elem_vol,
+               DViewCArrayKokkos <double> &elem_div,
                DViewCArrayKokkos <double> &elem_mass,
                DViewCArrayKokkos <size_t> &elem_mat_id,
                DViewCArrayKokkos <double> &elem_statev,
+               DViewCArrayKokkos <double> corner_force,
                double &time_value,
                const double time_final,
                const double dt_max,
@@ -91,11 +93,28 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             double rk_alpha = 1.0/((double)rk_num_stages - (double)rk_stage);
             
             
-            // Calculate cell velocity gradient
-            //get_velgrad();
+            // Calculate velocity diveregence for the element
+            get_divergence(elem_div,
+                           mesh,
+                           node_coords,
+                           node_vel,
+                           elem_vol);
             
             // ---- calculate the forces on the vertices ---- //
-            //get_force_sgh();
+            get_force_sgh(material,
+                          mesh,
+                          node_coords,
+                          node_vel,
+                          elem_den,
+                          elem_pres,
+                          elem_stress,
+                          elem_sspd,
+                          elem_vol,
+                          elem_div,
+                          elem_mat_id,
+                          corner_force,
+                          fuzz,
+                          small);
             
             // ---- apply force boundary conditions to the boundary patches---- //
             //boundary_force();

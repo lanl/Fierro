@@ -204,6 +204,10 @@ int main(int argc, char *argv[]){
 
         DViewCArrayKokkos <double> elem_vol(&elem.vol(0),
                                             num_elems);
+        
+        DViewCArrayKokkos <double> elem_div(&elem.div(0),
+                                            num_elems);
+        
 
         DViewCArrayKokkos <double> elem_mass(&elem.mass(0),
                                              num_elems);
@@ -344,9 +348,11 @@ int main(int argc, char *argv[]){
                   elem_sspd,
                   elem_sie,
                   elem_vol,
+                  elem_div,
                   elem_mass,
                   elem_mat_id,
                   elem_statev,
+                  corner_force,
                   time_value,
                   time_final,
                   dt_max,

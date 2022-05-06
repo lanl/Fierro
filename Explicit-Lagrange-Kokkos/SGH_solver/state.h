@@ -51,6 +51,9 @@ struct elem_t {
     // vol
     CArray <double> vol;
     
+    // divergence of velocity
+    CArray <double> div;
+    
     // mass of elem
     CArray <double> mass;
     
@@ -69,6 +72,7 @@ struct elem_t {
         this->sspd   = CArray <double> (num_elems);
         this->sie    = CArray <double> (num_rk, num_elems);
         this->vol    = CArray <double> (num_elems);
+        this->div    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
     }; // end method
