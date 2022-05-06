@@ -61,7 +61,7 @@ void setup( const CArrayKokkos <material_t> &material,
         // parallel loop over elements in mesh
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
-            const size_t rk_level = 0;
+            const size_t rk_level = 1;
 
             // calculate the coordinates and radius of the element
             double elem_coords[3]; // note:initialization with a list won't work
@@ -135,7 +135,7 @@ void setup( const CArrayKokkos <material_t> &material,
                 elem_mass(elem_gid) = elem_den(elem_gid)*elem_vol(elem_gid);
                 
                 // specific internal energy
-                elem_sie(0, elem_gid) = mat_fill(f_id).sie;
+                elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 		
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
 
@@ -160,7 +160,7 @@ void setup( const CArrayKokkos <material_t> &material,
                                             elem_den,
                                             elem_sie );
 					    
-		
+                
                 // loop over the nodes of this element and apply velocity
                 for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
 
@@ -286,6 +286,7 @@ void setup( const CArrayKokkos <material_t> &material,
     
 
     
+    /*
     // fill all rk_bins
     for (size_t rk_level=1; rk_level<rk_num_bins; rk_level++){
         
@@ -309,10 +310,10 @@ void setup( const CArrayKokkos <material_t> &material,
                 node_vel(rk_level,node_gid,i) = node_vel(0,node_gid,i);
             }
         });
-	Kokkos::fence();
+        Kokkos::fence();
 
     } // end for rk_level
-    
+    */
     
     
     // apply BC's to velocity

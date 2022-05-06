@@ -319,7 +319,6 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
         phi = alpha*phi;
 
 
-
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem

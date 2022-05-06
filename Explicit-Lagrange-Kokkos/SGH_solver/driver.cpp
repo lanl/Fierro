@@ -266,8 +266,7 @@ int main(int argc, char *argv[]){
         graphics_id = 0;
         graphics_times(0) = 0.0;
         graphics_time = graphics_dt_ival;  // the times for writing graphics dump
-
-
+        
 
         // ---------------------------------------------------------------------
         //   Calculate the SGH solution
