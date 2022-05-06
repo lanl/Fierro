@@ -715,6 +715,9 @@ void input(CArrayKokkos <material_t> &material,
            size_t &rk_num_stages
            );
 
+void get_vol(const DViewCArrayKokkos <double> &elem_vol,
+             const DViewCArrayKokkos <double> &node_coords,
+             const mesh_t &mesh);
 
 KOKKOS_FUNCTION
 void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
@@ -763,6 +766,22 @@ void setup(const CArrayKokkos <material_t> &material,
            const size_t rk_num_bins,
            const size_t num_bdy_sets);
 
+void write_outputs (const mesh_t &mesh,
+                    DViewCArrayKokkos <double> &node_coords,
+                    DViewCArrayKokkos <double> &node_vel,
+                    DViewCArrayKokkos <double> &node_mass,
+                    DViewCArrayKokkos <double> &elem_den,
+                    DViewCArrayKokkos <double> &elem_pres,
+                    DViewCArrayKokkos <double> &elem_stress,
+                    DViewCArrayKokkos <double> &elem_sspd,
+                    DViewCArrayKokkos <double> &elem_sie,
+                    DViewCArrayKokkos <double> &elem_vol,
+                    DViewCArrayKokkos <double> &elem_mass,
+                    DViewCArrayKokkos <size_t> &elem_mat_id,
+                    CArray <double> &graphics_times,
+                    size_t &graphics_id,
+                    const double time_value);
+
 void ensight(const mesh_t &mesh,
              const DViewCArrayKokkos <double> &node_coords,
              const DViewCArrayKokkos <double> &node_vel,
@@ -776,7 +795,7 @@ void ensight(const mesh_t &mesh,
              const DViewCArrayKokkos <double> &elem_mass,
              const DViewCArrayKokkos <size_t> &elem_mat_id,
              CArray <double> &graphics_times,
-             size_t graphics_id,
+             size_t &graphics_id,
              const double time_value);
 
 void state_file(const mesh_t &mesh,
@@ -849,13 +868,15 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                const double dt_cfl,
                double &graphics_time,
                size_t graphics_cyc_ival,
-               size_t graphics_dt_ival,
+               double graphics_dt_ival,
                const size_t cycle_stop,
                const size_t rk_num_stages,
                double dt,
                const double fuzz,
                const double tiny,
-               const double small);
+               const double small,
+               CArray <double> &graphics_times,
+               size_t &graphics_id);
 
 
 void rk_init(DViewCArrayKokkos <double> &node_coords,
@@ -878,7 +899,7 @@ void get_timestep(mesh_t &mesh,
                   const double dt_max,
                   const double dt_min,
                   const double dt_cfl,
-                  double dt,
+                  double &dt,
                   const double fuzz);
 
 void get_divergence(DViewCArrayKokkos <double> &elem_div,
@@ -909,5 +930,40 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                    DViewCArrayKokkos <double> &corner_force,
                    const double fuzz,
                    const double small);
+
+void update_velocity_sgh(double rk_alpha,
+                         double dt,
+                         const mesh_t &mesh,
+                         DViewCArrayKokkos <double> &node_vel,
+                         const DViewCArrayKokkos <double> &node_mass,
+                         const DViewCArrayKokkos <double> &corner_force
+                         );
+
+void update_energy_sgh(double rk_alpha,
+                       double dt,
+                       const mesh_t &mesh,
+                       const DViewCArrayKokkos <double> &node_vel,
+                       DViewCArrayKokkos <double> &elem_sie,
+                       const DViewCArrayKokkos <double> &elem_mass,
+                       const DViewCArrayKokkos <double> &corner_force);
+
+void update_position_sgh(double rk_alpha,
+                         double dt,
+                         const mesh_t &mesh,
+                         DViewCArrayKokkos <double> &node_coords,
+                         const DViewCArrayKokkos <double> &node_vel);
+
+void update_state(const CArrayKokkos <material_t> &material,
+                  size_t num_elems,
+                  DViewCArrayKokkos <double> &elem_den,
+                  DViewCArrayKokkos <double> &elem_pres,
+                  DViewCArrayKokkos <double> &elem_stress,
+                  DViewCArrayKokkos <double> &elem_sspd,
+                  const DViewCArrayKokkos <double> &elem_sie,
+                  const DViewCArrayKokkos <double> &elem_vol,
+                  const DViewCArrayKokkos <double> &elem_mass,
+                  const DViewCArrayKokkos <size_t> &elem_mat_id,
+                  const DViewCArrayKokkos <double> &elem_statev);
+
 
 #endif 

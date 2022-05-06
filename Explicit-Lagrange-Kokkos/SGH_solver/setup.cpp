@@ -327,7 +327,7 @@ void setup( const CArrayKokkos <material_t> &material,
             
             for(size_t elem_lid=0; elem_lid<mesh.num_corners_in_node(node_gid); elem_lid++){
                 size_t elem_gid = mesh.elems_in_node(node_gid,elem_lid);
-                node_mass(node_gid) += 1.0/8.0*elem_den(0,elem_gid);
+                node_mass(node_gid) += 1.0/8.0*elem_mass(elem_gid);
             } // end for elem_lid
             
         }// end if dims=3
@@ -336,7 +336,7 @@ void setup( const CArrayKokkos <material_t> &material,
             for(size_t elem_lid=0; elem_lid<mesh.num_corners_in_node(node_gid); elem_lid++){
                 // placeholder for corner masses
                 size_t elem_gid = mesh.elems_in_node(node_gid,elem_lid);
-                node_mass(node_gid) += 1.0/4.0*elem_den(0,elem_gid);
+                node_mass(node_gid) += 1.0/4.0*elem_mass(elem_gid);
             } // end for elem_lid
             
         } // end else

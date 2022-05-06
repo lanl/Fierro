@@ -29,20 +29,37 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                const double dt_cfl,
                double &graphics_time,
                size_t graphics_cyc_ival,
-               size_t graphics_dt_ival,
+               double graphics_dt_ival,
                const size_t cycle_stop,
                const size_t rk_num_stages,
                double dt,
                const double fuzz,
                const double tiny,
-               const double small
+               const double small,
+               CArray <double> &graphics_times,
+               size_t &graphics_id
                ){
     
+    
+    printf("Writing outputs to file at %f \n", time_value);
+    write_outputs(mesh,
+                  node_coords,
+                  node_vel,
+                  node_mass,
+                  elem_den,
+                  elem_pres,
+                  elem_stress,
+                  elem_sspd,
+                  elem_sie,
+                  elem_vol,
+                  elem_mass,
+                  elem_mat_id,
+                  graphics_times,
+                  graphics_id,
+                  time_value);
+    
     // a flag to exit the calculation
-    size_t stop_calc = 0;
-    
-    
-    printf("cycle stop = %lu \n", cycle_stop);
+    size_t stop_calc=0;
     
 	// loop over the max number of time integration cycles
 	for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -64,12 +81,13 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                      dt_cfl,
                      dt,
                      fuzz);
+        
         if (cycle==0){
-            printf("time step = %f \n", dt);
+            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
         // print time step every 10 cycles
         else if (cycle%10==0){
-            printf("time step = %f \n", dt);
+            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
         
         
@@ -89,18 +107,20 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
 
-            // ---- RK coefficient ---- //
+            
+            // ---- RK coefficient ----
             double rk_alpha = 1.0/((double)rk_num_stages - (double)rk_stage);
             
             
-            // Calculate velocity diveregence for the element
+            // ---- Calculate velocity diveregence for the element ----
             get_divergence(elem_div,
                            mesh,
                            node_coords,
                            node_vel,
                            elem_vol);
             
-            // ---- calculate the forces on the vertices ---- //
+            
+            // ---- calculate the forces on the vertices ----
             get_force_sgh(material,
                           mesh,
                           node_coords,
@@ -116,25 +136,52 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                           fuzz,
                           small);
             
-            // ---- apply force boundary conditions to the boundary patches---- //
-            //boundary_force();
+            
+            // ---- Update nodal velocities ---- //
+            update_velocity_sgh(rk_alpha,
+                                dt,
+                                mesh,
+                                node_vel,
+                                node_mass,
+                                corner_force);
+            
+            // ---- apply force boundary conditions to the boundary patches----
             boundary_velocity(mesh, boundary, node_vel);
             
             
-            // ---- Update nodal velocities ---- //
-            //update_velocity_sgh(rk_alpha);
+            // ---- Update specific internal energy in the elements ----
+            update_energy_sgh(rk_alpha,
+                              dt,
+                              mesh,
+                              node_vel,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
             
-            // ---- Update specific internal energy in the elements ---- //
-            //update_energy_sgh(rk_alpha);
             
-            // ---- Update nodal positions ---- //
-            //update_position_sgh(rk_alpha);
+            // ---- Update nodal positions ----
+            update_position_sgh(rk_alpha,
+                                dt,
+                                mesh,
+                                node_coords,
+                                node_vel);
             
-            // ---- Calculate cell volume for next time step ---- //
-            //get_vol_hex(mesh, ref_elem);
+            
+            // ---- Calculate cell volume for next time step ----
+            get_vol(elem_vol, node_coords, mesh);
             
             // ---- Calculate cell state (den,pres,sound speed) for next time step ---- //
-            //update_state_sgh();
+            update_state(material,
+                         mesh.num_elems,
+                         elem_den,
+                         elem_pres,
+                         elem_stress,
+                         elem_sspd,
+                         elem_sie,
+                         elem_vol,
+                         elem_mass,
+                         elem_mat_id,
+                         elem_statev);
             
         } // end of RK loop
 	        
@@ -143,11 +190,49 @@ void sgh_solve(CArrayKokkos <material_t> &material,
 
 	    // increment the time
 	    time_value+=dt;
-
-	   	// end of calculation
-    	if (time_value>=time_final) break;
     	
-	    //run_info(cycle);
-	    
-	} // end for cycle loop
+        
+        size_t write = 0;
+        if ((cycle+1)%graphics_cyc_ival == 0 && cycle>0){
+            write = 1;
+        }
+        else if (cycle == cycle_stop) {
+            write = 1;
+        }
+        else if (time_value >= time_final){
+            write = 1;
+        }
+        else if (time_value >= graphics_time){
+            write = 1;
+        }
+            
+        // write outputs
+        if (write == 1){
+            printf("Writing outputs to file at %f \n", graphics_time);
+            write_outputs(mesh,
+                          node_coords,
+                          node_vel,
+                          node_mass,
+                          elem_den,
+                          elem_pres,
+                          elem_stress,
+                          elem_sspd,
+                          elem_sie,
+                          elem_vol,
+                          elem_mass,
+                          elem_mat_id,
+                          graphics_times,
+                          graphics_id,
+                          time_value);
+            
+            graphics_time = time_value + graphics_dt_ival;
+        } // end if
+        
+        
+        // end of calculation
+        if (time_value>=time_final) break;
+        
+    } // end for cycle loop
+    
+    
 }

@@ -60,7 +60,7 @@ void get_timestep(mesh_t &mesh,
                   const double dt_max,
                   const double dt_min,
                   const double dt_cfl,
-                  double dt,
+                  double &dt,
                   const double fuzz){
 
     

@@ -6,6 +6,23 @@
 #include "state.h"
 
 
+void update_position_sgh(double rk_alpha,
+                         double dt,
+                         const mesh_t &mesh,
+                         DViewCArrayKokkos <double> &node_coords,
+                         const DViewCArrayKokkos <double> &node_vel){
+    
+    // loop over all the nodes in the mesh
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+
+        for (int dim = 0; dim < mesh.num_dims; dim++){
+            double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
+            node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha*dt*half_vel;
+        }
+        
+    }); // end parallel for over nodes
+    
+} // end subroutine
 
 
 // -----------------------------------------------------------------------------
@@ -143,6 +160,28 @@ void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 
 } // end subroutine
 
+
+
+void get_vol(const DViewCArrayKokkos <double> &elem_vol,
+             const DViewCArrayKokkos <double> &node_coords,
+             const mesh_t &mesh){
+    
+    const size_t num_dims = mesh.num_dims;
+    
+    if (num_dims == 2){
+        FOR_ALL(elem_gid, 0, mesh.num_elems, {
+            get_vol_quad(elem_vol, elem_gid, node_coords, mesh);
+        });
+        Kokkos::fence();
+    }
+    else {
+        FOR_ALL(elem_gid, 0, mesh.num_elems, {
+            get_vol_hex(elem_vol, elem_gid, node_coords, mesh);
+        });
+        Kokkos::fence();
+    } // end if
+    
+} // end subroutine
 
 
 // Exact volume for a hex element

@@ -5,6 +5,76 @@
 #include <sys/stat.h>
 
 
+
+
+void write_outputs (const mesh_t &mesh,
+                    DViewCArrayKokkos <double> &node_coords,
+                    DViewCArrayKokkos <double> &node_vel,
+                    DViewCArrayKokkos <double> &node_mass,
+                    DViewCArrayKokkos <double> &elem_den,
+                    DViewCArrayKokkos <double> &elem_pres,
+                    DViewCArrayKokkos <double> &elem_stress,
+                    DViewCArrayKokkos <double> &elem_sspd,
+                    DViewCArrayKokkos <double> &elem_sie,
+                    DViewCArrayKokkos <double> &elem_vol,
+                    DViewCArrayKokkos <double> &elem_mass,
+                    DViewCArrayKokkos <size_t> &elem_mat_id,
+                    CArray <double> &graphics_times,
+                    size_t &graphics_id,
+                    const double time_value){
+    
+    // ---------------------------------------------------------------------
+    //   t=tval ensight and state output
+    // ---------------------------------------------------------------------
+    elem_den.update_host();
+    elem_pres.update_host();
+    elem_stress.update_host();
+    elem_sspd.update_host();
+    elem_sie.update_host();
+    elem_vol.update_host();
+    elem_mass.update_host();
+    elem_mat_id.update_host();
+    
+    node_coords.update_host();
+    node_vel.update_host();
+    node_mass.update_host();
+    Kokkos::fence();
+    
+    // write out state file
+    state_file(mesh,
+               node_coords,
+               node_vel,
+               node_mass,
+               elem_den,
+               elem_pres,
+               elem_stress,
+               elem_sspd,
+               elem_sie,
+               elem_vol,
+               elem_mass,
+               elem_mat_id,
+               time_value);
+    
+    
+    // write out ensight file
+    ensight(mesh,
+            node_coords,
+            node_vel,
+            node_mass,
+            elem_den,
+            elem_pres,
+            elem_stress,
+            elem_sspd,
+            elem_sie,
+            elem_vol,
+            elem_mass,
+            elem_mat_id,
+            graphics_times,
+            graphics_id,
+            time_value);
+}
+
+
 // -----------------------------------------------------------------------------
 // This function write outs the data to an ensight case file
 //------------------------------------------------------------------------------
@@ -22,7 +92,7 @@ void ensight( const mesh_t &mesh,
               const DViewCArrayKokkos <double> &elem_mass,
               const DViewCArrayKokkos <size_t> &elem_mat_id,
               CArray <double> &graphics_times,
-              size_t graphics_id,
+              size_t &graphics_id,
               const double time_value) {
 
     const int num_scalar_vars = 9;

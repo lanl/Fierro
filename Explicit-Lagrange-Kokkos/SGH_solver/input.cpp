@@ -37,12 +37,12 @@ void input(CArrayKokkos <material_t> &material,
     dt_min = 1.e-8;
     dt_max = 1.e-2;
     dt_start = 1.e-5;
-    cycle_stop = 1;
+    cycle_stop = 10000;
 
 
     // ---- graphics information ----
     graphics_cyc_ival = 1000000;
-    graphics_dt_ival  = 0.025;
+    graphics_dt_ival  = 0.05;
 
     
     // --- number of material regions ---

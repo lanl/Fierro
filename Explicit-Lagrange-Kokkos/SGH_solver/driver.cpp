@@ -54,7 +54,6 @@ size_t rk_num_bins = 2;
 
 size_t cycle = 0;
 size_t cycle_stop = 1000000000;
-size_t stop_calc = 0;    // a flag to end the calculation when = 1
 
 
 // --- Precision variables ---
@@ -232,10 +231,9 @@ int main(int argc, char *argv[]){
         //   calculate geometry
         // ---------------------------------------------------------------------
         node_coords.update_device();
-        FOR_ALL(elem_gid, 0, mesh.num_elems, {
-            get_vol_hex(elem_vol, elem_gid, node_coords, mesh);
-        });
         Kokkos::fence();
+        
+        get_vol(elem_vol, node_coords, mesh);
 
 
         // ---------------------------------------------------------------------
@@ -268,68 +266,6 @@ int main(int argc, char *argv[]){
         graphics_id = 0;
         graphics_times(0) = 0.0;
         graphics_time = graphics_dt_ival;  // the times for writing graphics dump
-
-	
-	        
-        // ---------------------------------------------------------------------
-        //   t=0 ensight and state output
-        // ---------------------------------------------------------------------
-        elem_den.update_host();
-        elem_pres.update_host();
-        elem_stress.update_host();
-        elem_sspd.update_host();
-        elem_sie.update_host();
-        elem_vol.update_host();
-        elem_mass.update_host();
-        elem_mat_id.update_host();
-	
-        node_coords.update_host();
-        node_vel.update_host();
-        node_mass.update_host();
-        Kokkos::fence();
-        
-        printf("Writing outputs to file\n");
-	
-        // write out state file
-        state_file(mesh,
-                   node_coords,
-                   node_vel,
-                   node_mass,
-                   elem_den,
-                   elem_pres,
-                   elem_stress,
-                   elem_sspd,
-                   elem_sie,
-                   elem_vol,
-                   elem_mass,
-                   elem_mat_id,
-                   time_value);
-		    
-	
-        // write out ensight file
-        ensight(mesh,
-                node_coords,
-                node_vel,
-                node_mass,
-                elem_den,
-                elem_pres,
-                elem_stress,
-                elem_sspd,
-                elem_sie,
-                elem_vol,
-                elem_mass,
-                elem_mat_id,
-                graphics_times,
-                graphics_id,
-                time_value);
-
-        
-        
-
-        // Calculate total energy at time=0
-        double ke = 0.0;
-        double ie = 0.0;
-        double te_0 = ke + ie;
 
 
 
@@ -366,7 +302,9 @@ int main(int argc, char *argv[]){
                   dt,
                   fuzz,
                   tiny,
-                  small);
+                  small,
+                  graphics_times,
+                  graphics_id);
 
 
         // calculate total energy at time=t_end
