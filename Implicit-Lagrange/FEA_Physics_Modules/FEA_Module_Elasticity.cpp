@@ -243,12 +243,14 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         if(myrank==0&&buffer_iteration<buffer_iterations-1){
           for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
             *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
           }
         }
         else if(myrank==0){
           buffer_loop=0;
           while(buffer_iteration*buffer_lines+buffer_loop < dof_count) {
             *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
             buffer_loop++;
           }
         }
@@ -407,7 +409,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
               //std::cout<<" "<< substring <<std::endl;
               //assign the substring variable as a word of the read buffer
               if(iword>non_node_entries-1){
-                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring);
+                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring)-1;
               }
             }
           }
@@ -461,6 +463,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             //std::cout << "PATCH NODES " << boundary_set_npatches +1 << " " << Surface_Nodes(0) << " " << Surface_Nodes(1) << " " << Surface_Nodes(2) << " " << Surface_Nodes(3) << " ASSIGNED ON RANK " << myrank << std::endl;
             //construct Node Combination object for this surface
             local_patch_index = Solver_Pointer_->boundary_patch_to_index[temp];
+            //debug print
+            //std::cout << "MAPPED PATCH NODES " << boundary_set_npatches +1 << " " << Boundary_Patches(local_patch_index).node_set(0) << " " << Boundary_Patches(local_patch_index).node_set(1) << " " << Boundary_Patches(local_patch_index).node_set(2) << " " << Boundary_Patches(local_patch_index).node_set(3) << " ASSIGNED ON RANK " << myrank << std::endl;
             Boundary_Condition_Patches(num_boundary_conditions-1,boundary_set_npatches++) = local_patch_index;
             //debug print
             //std::cout << "PATCH INDEX " << local_patch_index << " ASSIGNED ON RANK " << myrank << std::endl;
@@ -1557,7 +1561,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply, surface_normal[3];
+  real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply, surface_normal[3], pressure;
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
@@ -1586,19 +1590,23 @@ void FEA_Module_Elasticity::assemble_vector(){
   These sets can have overlapping nodes since applied loading conditions
   are assumed to be additive*/
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
-    
     if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION&&Boundary_Condition_Type_List(iboundary)!=SURFACE_PRESSURE_CONDITION) continue;
-    //std::cout << " NUMBER OF BOUNDARY PATCHES "<< NBoundary_Condition_Patches(iboundary) << std::endl;
+    std::cout << " NUMBER OF BOUNDARY PATCHES "<< NBoundary_Condition_Patches(iboundary) << std::endl;
     //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
-    force_density[0] = Boundary_Surface_Force_Densities(surface_force_set_id,0);
-    //debug print
-    //std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< surface_force_set_id << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
-    force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
-    force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
+    if(Boundary_Condition_Type_List(iboundary)==SURFACE_LOADING_CONDITION){
+      force_density[0] = Boundary_Surface_Force_Densities(surface_force_set_id,0);
+      //debug print
+      //std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< surface_force_set_id << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
+      force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
+      force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
+    }
+    else{
+      pressure = Boundary_Surface_Force_Densities(surface_force_set_id,0);
+    }
     surface_force_set_id++;
-    std::cout << " FORCE DENSITY "<< force_density[0] << std::endl;
+    //std::cout << " FORCE DENSITY "<< force_density[0] << std::endl;
     real_t pointer_basis_values[elem->num_basis()];
     ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
 
@@ -1615,7 +1623,19 @@ void FEA_Module_Elasticity::assemble_vector(){
     Surface_Nodes = Boundary_Patches(patch_id).node_set;
     //find element index this boundary patch is on
     current_element_index = Boundary_Patches(patch_id).element_id;
-    
+    //debug
+    /*
+    bool local_exists = false;
+    for(int i = 0; i < Surface_Nodes.size(); i++){
+      if(map->isNodeGlobalElement(Surface_Nodes(i))){
+        local_count++;
+        local_exists = true;
+      }
+    }
+    if(local_exists) {
+      //std::cout << "LOCAL PATCH COUNT ON RANK " << myrank << " IS " << local_count << std::endl;
+    }
+    */
     //std::cout << " CURRENT ELEMENT INDEX " << current_element_index << std::endl;
     local_surface_id = Boundary_Patches(patch_id).local_patch_id;
     //debug print of local surface ids
@@ -1760,11 +1780,11 @@ void FEA_Module_Elasticity::assemble_vector(){
         surface_normal[0] = surface_normal[0]/wedge_product;
         surface_normal[1] = surface_normal[1]/wedge_product;
         surface_normal[2] = surface_normal[2]/wedge_product;
-        force_density[0] = force_density[0]*surface_normal[0];
+        force_density[0] = pressure*surface_normal[0];
         //debug print
         //std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< surface_force_set_id << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
-        force_density[1] = force_density[1]*surface_normal[1];
-        force_density[2] = force_density[2]*surface_normal[2];
+        force_density[1] = pressure*surface_normal[1];
+        force_density[2] = pressure*surface_normal[2];
       }
 
       //compute shape functions at this point for the element type
@@ -5286,7 +5306,7 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
   int num_dim = simparam->num_dim;
   for(int i = 0; i < nlocal_nodes*num_dim; i++){
     if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
-      node_densities_lower_bound(i/num_dim) = 1;
+      node_densities_lower_bound(i/num_dim,0) = 1;
     }
   }
 }

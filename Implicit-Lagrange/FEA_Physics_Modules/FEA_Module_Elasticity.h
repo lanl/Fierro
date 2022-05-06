@@ -86,6 +86,8 @@ public:
   void compute_output();
 
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
+
+  void node_density_constraints(host_vec_array node_densities_lower_bound);
   
   class Simulation_Parameters_Elasticity *simparam;
 
