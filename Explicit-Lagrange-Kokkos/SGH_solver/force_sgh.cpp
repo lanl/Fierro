@@ -220,7 +220,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
             double mu_term;
             
             // Coding to use shock direction
-            if (use_shock_dir == 0){
+            if (use_shock_dir == 1){
                 // this is denominator of the Riamann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction

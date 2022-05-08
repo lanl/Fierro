@@ -281,6 +281,7 @@ void setup( const CArrayKokkos <material_t> &material,
           
         }); // end FOR_ALL element loop
         Kokkos::fence();
+        
   
     } // end for loop over fills
     
@@ -561,14 +562,10 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
     Kokkos::fence();
     
    
-    
     // allocate the RaggedRight bdy_nodes_in_set array
     mesh.bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (mesh.num_bdy_nodes_in_set);
 
-
     FOR_ALL (bdy_set, 0, mesh.num_bdy_sets, {
-        
-	
 	
         // Loop over boundary patches in boundary set
         for (size_t bdy_node_lid=0; bdy_node_lid<mesh.num_bdy_nodes_in_set(bdy_set); bdy_node_lid++){

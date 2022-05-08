@@ -34,7 +34,6 @@ void rk_init(DViewCArrayKokkos <double> &node_coords,
         for(size_t i=0; i<num_dims; i++){
             node_coords(0,node_gid,i) = node_coords(1,node_gid,i);
             node_vel(0,node_gid,i) = node_vel(1,node_gid,i);
-            
         }
     }); // end parallel for
     Kokkos::fence();
