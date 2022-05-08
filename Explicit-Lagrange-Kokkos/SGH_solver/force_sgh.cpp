@@ -54,27 +54,14 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
         // velocity gradient
         double vel_grad_array[9];
         
-        // --- Create arrays to aid the force calculation ---
-        
-
+        // --- Create views of arrays to aid the force calculation ---
+    
         ViewCArrayKokkos <double> tau(tau_array, num_dims, num_dims);
-        
-
         ViewCArrayKokkos <double> area(area_array, num_nodes_in_elem, num_dims);
-        
-
         ViewCArrayKokkos <double> shock_dir(shock_dir_array, num_dims);
-        
-
         ViewCArrayKokkos <double> sum(sum_array, 4);
-        
-
         ViewCArrayKokkos <double> muc(muc_array, num_nodes_in_elem);
-        
-
         ViewCArrayKokkos <double> vel_star(vel_star_array, num_dims);
-        
-
         ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
         
         
@@ -94,13 +81,6 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                     node_coords,
                     mesh);
     
-        // the -1 is for the inward surface area normal,
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-            for (size_t dim = 0; dim < num_dims; dim++){
-                area(node_lid, dim) = (-1.0)*area(node_lid,dim);
-            } // end for
-        } // end for
-        
         
         // --- Calculate the velocity gradient ---
         get_velgrad(vel_grad,
@@ -110,8 +90,29 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                     vol,
                     elem_gid);
         
-        double div = vel_grad(0,0) + vel_grad(1,1) + vel_grad(2,2);
         
+        // the -1 is for the inward surface area normal,
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+            for (size_t dim = 0; dim < num_dims; dim++){
+                area(node_lid, dim) = (-1.0)*area(node_lid,dim);
+            } // end for
+        } // end for
+        
+    
+        
+        double div = elem_div(elem_gid);
+        
+    
+        // vel = [u,v,w]
+        //            [du/dx,  du/dy,  du/dz]
+        // vel_grad = [dv/dx,  dv/dy,  dv/dz]
+        //            [dw/dx,  dw/dy,  dw/dz]
+        double curl[3];
+        curl[0] = vel_grad(2,1) - vel_grad(1,2);  // dw/dy - dv/dz
+        curl[1] = vel_grad(0,2) - vel_grad(2,0);  // du/dz - dw/dx
+        curl[2] = vel_grad(1,0) - vel_grad(0,1);  // dv/dx - du/dy
+        
+        double mag_curl = sqrt(curl[0]*curl[0] + curl[1]*curl[1] + curl[2]*curl[2]);
         
         
         // --- Calculate the Cauchy stress ---
@@ -317,6 +318,9 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
         //alpha = fmax(-fabs(div0)/div0 * alpha, 0.0);  // this should be if(div0<0) alpha=alpha else alpha=0
         
         phi = alpha*phi;
+        
+        // curl limiter on Q
+        // phi_curl = fmin(1.0, fabs(div)/(mag_curl + fuzz));  // disable Q when vorticity is high
 
 
         // ---- Calculate the Riemann force on each node ----
