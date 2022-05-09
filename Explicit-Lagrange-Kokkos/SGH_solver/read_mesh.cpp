@@ -112,7 +112,7 @@ void read_mesh_ensight(char* MESH,
 
     
     // save the node coords to the current RK value
-    FOR_ALL(node_gid, 0, num_nodes, {
+    for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
         
         for(int rk=1; rk<rk_num_bins; rk++){
             for (int dim = 0; dim < num_dims; dim++){
@@ -120,7 +120,7 @@ void read_mesh_ensight(char* MESH,
             } // end for dim
         } // end for rk
         
-    });
+    } // end parallel for
 
 
 

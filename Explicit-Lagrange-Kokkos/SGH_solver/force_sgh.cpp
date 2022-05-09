@@ -172,7 +172,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
             // Create view of nodal velocity
-            ViewCArray <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) )*(vel(0) - vel_star(0) )
