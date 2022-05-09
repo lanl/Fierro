@@ -128,7 +128,7 @@ struct mesh_t {
     
     // node ids in bdy_patch set
     RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
-    CArrayKokkos <size_t> num_bdy_nodes_in_set;
+    DCArrayKokkos <size_t> num_bdy_nodes_in_set;
     
     // initialization methods
     void initialize_nodes(const size_t num_nodes_inp)

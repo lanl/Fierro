@@ -13,13 +13,14 @@ void boundary_velocity(const mesh_t &mesh,
 
     
     // Loop over boundary sets
-    FOR_ALL(bdy_set,0, mesh.num_bdy_sets,{
+    for (size_t bdy_set=0; bdy_set<mesh.num_bdy_sets; bdy_set++){
         
-	// reflected (boundary array is on the device)
-        if(boundary(bdy_set).hydro_bc == 1){
-	        
-            // Loop over boundary nodes in a boundary set
-            for (size_t bdy_node_lid=0; bdy_node_lid<mesh.num_bdy_nodes_in_set(bdy_set); bdy_node_lid++) {
+        
+        // Loop over boundary nodes in a boundary set
+        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+                
+            // reflected (boundary array is on the device)
+            if(boundary(bdy_set).hydro_bc == 1){
             
                 // directions with hydro_bc:
                 // x_plane  = 0,
@@ -31,11 +32,11 @@ void boundary_velocity(const mesh_t &mesh,
                     
                 // Set velocity to zero in that directdion
                 node_vel(1, bdy_node_gid, direction) = 0.0;
+                        
+            } // end if
                 
-            } // end for bdy_node_lid
+        }); // end for bdy_node_lid
 	    
-	} // end if
-       
-    }); // end FOR_ALL bdy_set
+    } // end for bdy_set
     
 } // end boundary_velocity function
