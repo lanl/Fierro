@@ -34,7 +34,7 @@ void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
                            elem_sie(1,elem_gid)*elem_den(elem_gid);
     
     // sound speed
-    elem_sspd(elem_gid) = gamma*(gamma - 1.0)*elem_sie(elem_gid);
+    elem_sspd(elem_gid) = gamma*(gamma - 1.0)*elem_sie(1,elem_gid);
     elem_sspd(elem_gid) = sqrt(elem_sspd(elem_gid));
     
     // ensure soundspeed is great than min specified
