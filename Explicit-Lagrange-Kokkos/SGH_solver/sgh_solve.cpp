@@ -3,7 +3,7 @@
 
 #include "state.h"
 #include "mesh.h"
-
+#include <chrono>
 
 void sgh_solve(CArrayKokkos <material_t> &material,
                CArrayKokkos <boundary_t> &boundary,
@@ -60,6 +60,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     // a flag to exit the calculation
     size_t stop_calc=0;
+    
+    auto time_1 = std::chrono::high_resolution_clock::now();
     
 	// loop over the max number of time integration cycles
 	for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -236,5 +238,11 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         
     } // end for cycle loop
     
+    
+    auto time_2 = std::chrono::high_resolution_clock::now();
+    auto calc_time = std::chrono::duration_cast
+                           <std::chrono::nanoseconds>(time_2 - time_1).count();
+    
+    printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
     
 }
