@@ -1780,11 +1780,11 @@ void FEA_Module_Elasticity::assemble_vector(){
         surface_normal[0] = surface_normal[0]/wedge_product;
         surface_normal[1] = surface_normal[1]/wedge_product;
         surface_normal[2] = surface_normal[2]/wedge_product;
-        force_density[0] = pressure*surface_normal[0];
+        force_density[0] = -pressure*surface_normal[0];
         //debug print
         //std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< surface_force_set_id << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
-        force_density[1] = pressure*surface_normal[1];
-        force_density[2] = pressure*surface_normal[2];
+        force_density[1] = -pressure*surface_normal[1];
+        force_density[2] = -pressure*surface_normal[2];
       }
 
       //compute shape functions at this point for the element type
@@ -4760,13 +4760,16 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
     //projection_matrix_pass->print(std::cout);
 
     strain_vector_pass = Teuchos::rcp( new Teuchos::SerialDenseVector<LO,real_t>(Teuchos::View, strain_vector.pointer(), nodes_per_elem));
+    //strain_vector_pass->print(std::cout);
     //loop through strain components and solve for nodal values of that component
     for(int istrain = 0; istrain < Brows; istrain++){
       //check if projection vector is zero due to zero strains
-      zero_strain_flag = 1;
+      zero_strain_flag = 0;
+      /*
       for(int icol=0; icol < nodes_per_elem; icol++){
         if(fabs(projection_vector(istrain,icol))>STRAIN_EPSILON) zero_strain_flag = 0;
       }
+      */
       if(!zero_strain_flag){
         projection_vector_pass = Teuchos::rcp( new Teuchos::SerialDenseVector<LO,real_t>(Teuchos::View, &projection_vector(istrain,0), nodes_per_elem));
         projection_matrix_pass = Teuchos::rcp( new Teuchos::SerialDenseMatrix<LO,real_t>(Teuchos::Copy, projection_matrix.pointer(), nodes_per_elem, nodes_per_elem, nodes_per_elem));
@@ -4821,7 +4824,7 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
   //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   //if(myrank==0)
   //*fos << "Local Node Strains :" << std::endl;
-  //all_node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  //node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   //std::fflush(stdout);
   
