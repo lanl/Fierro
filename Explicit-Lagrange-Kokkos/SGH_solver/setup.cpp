@@ -150,21 +150,29 @@ void setup( const CArrayKokkos <material_t> &material,
                         elem_stress(rk_level,elem_gid,i,j) = 0.0;
                     }        
                 }  // end for
+                
+                // cut out the node_gids for this element
+                ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
-                // --- Pressure ---
-                material(mat_id).mat_model( elem_pres,
-                                            elem_gid,
-                                            elem_mat_id,
-                                            elem_statev,
-                                            elem_sspd,
-                                            elem_den,
-                                            elem_sie );
+                // --- Pressure and stress ---
+                material(mat_id).mat_model(elem_pres,
+                                           elem_stress,
+                                           elem_gid,
+                                           elem_mat_id(elem_gid),
+                                           elem_statev,
+                                           elem_sspd,
+                                           elem_den(elem_gid),
+                                           elem_sie(1,elem_gid),
+                                           elem_node_gids,
+                                           node_coords,
+                                           node_vel,
+                                           elem_vol(elem_gid));
 					    
                 
                 // loop over the nodes of this element and apply velocity
                 for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
 
-                    // get the mesh node index        
+                    // get the mesh node index
                     size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
                 

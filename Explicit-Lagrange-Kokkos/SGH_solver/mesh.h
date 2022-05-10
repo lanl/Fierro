@@ -712,8 +712,7 @@ void input(CArrayKokkos <material_t> &material,
            double &graphics_dt_ival,
            size_t &graphics_cyc_ival,
            size_t &cycle_stop,
-           size_t &rk_num_stages
-           );
+           size_t &rk_num_stages);
 
 void get_vol(const DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
@@ -723,25 +722,25 @@ KOKKOS_FUNCTION
 void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
-                 const mesh_t &mesh);
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids);
 
 KOKKOS_FUNCTION
 void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                   const size_t elem_gid,
                   const DViewCArrayKokkos <double> &node_coords,
-                  const mesh_t &mesh);
+                  const ViewCArrayKokkos <size_t>  &elem_node_gids);
 
 KOKKOS_FUNCTION
 void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
-                 const mesh_t &mesh);
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids);
 
 KOKKOS_FUNCTION
 void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
-                   const mesh_t &mesh);
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids);
 
 
 
@@ -836,13 +835,31 @@ void boundary_velocity(const mesh_t &mesh,
 
 KOKKOS_FUNCTION
 void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
+               const DViewCArrayKokkos <double> &elem_stress,
                const size_t elem_gid,
-               const DViewCArrayKokkos <size_t> &mat_id,
+               const size_t mat_id,
                const DViewCArrayKokkos <double> &elem_state_vars,
                const DViewCArrayKokkos <double> &elem_sspd,
-               const DViewCArrayKokkos <double> &elem_den,
-               const DViewCArrayKokkos <double> &elem_sie);
+               const double den,
+               const double sie,
+               const ViewCArrayKokkos <size_t>  &elem_node_gids,
+               const DViewCArrayKokkos <double> &node_coords,
+               const DViewCArrayKokkos <double> &node_vel,
+               const double vol);
 
+KOKKOS_FUNCTION
+void user_mat_model(const DViewCArrayKokkos <double> &elem_pres,
+                    const DViewCArrayKokkos <double> &elem_stress,
+                    const size_t elem_gid,
+                    const size_t mat_id,
+                    const DViewCArrayKokkos <double> &elem_state_vars,
+                    const DViewCArrayKokkos <double> &elem_sspd,
+                    const double den,
+                    const double sie,
+                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                    const DViewCArrayKokkos <double> &node_coords,
+                    const DViewCArrayKokkos <double> &node_vel,
+                    const double vol);
 
 void sgh_solve(CArrayKokkos <material_t> &material,
                CArrayKokkos <boundary_t> &boundary,
@@ -903,18 +920,28 @@ void get_timestep(mesh_t &mesh,
                   const double fuzz);
 
 void get_divergence(DViewCArrayKokkos <double> &elem_div,
-                    const mesh_t &mesh,
+                    const mesh_t mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
                     const DViewCArrayKokkos <double> &elem_vol);
 
 KOKKOS_FUNCTION
 void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
-                 const mesh_t &mesh,
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids,
                  const DViewCArrayKokkos <double> &node_vel,
                  const ViewCArrayKokkos <double> &b_matrix,
                  const double elem_vol,
                  const size_t elem_gid);
+
+KOKKOS_FUNCTION
+void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
+                        ViewCArrayKokkos <double> &W_tensor,
+                        const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                        const size_t elem_gid,
+                        const DViewCArrayKokkos <double> &node_coords,
+                        const DViewCArrayKokkos <double> &node_vel,
+                        const double vol
+                        );
 
 void get_force_sgh(const CArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
@@ -954,7 +981,9 @@ void update_position_sgh(double rk_alpha,
                          const DViewCArrayKokkos <double> &node_vel);
 
 void update_state(const CArrayKokkos <material_t> &material,
-                  size_t num_elems,
+                  const mesh_t &mesh,
+                  const DViewCArrayKokkos <double> &node_coords,
+                  const DViewCArrayKokkos <double> &node_vel,
                   DViewCArrayKokkos <double> &elem_den,
                   DViewCArrayKokkos <double> &elem_pres,
                   DViewCArrayKokkos <double> &elem_stress,

@@ -87,21 +87,23 @@ void input(CArrayKokkos <material_t> &material,
         
         RUN({
             // gamma law model
-            // state_vars(0) = specific heat
-            // state_vars(1) = ref temperature
-            // state_vars(2) = ref density
-            // state_vars(3) = ref specific internal energy
-            // state_vars(4) = gamma
-            // state_vars(5) = minimum sound speed
+            // statev(0) = gamma
+            // statev(1) = minimum sound speed
+            // statev(2) = specific heat
+            // statev(3) = ref temperature
+            // statev(4) = ref density
+            // statev(5) = ref specific internal energy
             
             material(0).mat_model = ideal_gas; // EOS model
-            material(0).b1        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1        = 1.0;       // accoustic coefficient
+            material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+            material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 6;  // actual num_state_vars
-            state_vars(0,0) = 1.0;     // specific heat
-            state_vars(0,4) = 5.0/3.0; // gamma value
-            state_vars(0,5) = 1.0E-14; // minimum sound speed
-            
+            state_vars(0,0) = 5.0/3.0; // gamma value
+            state_vars(0,1) = 1.0E-14; // minimum sound speed
+            state_vars(0,2) = 1.0;     // specific heat
             
             // global initial conditions
             mat_fill(0).volume = region::global; // fill everywhere
@@ -175,12 +177,15 @@ void input(CArrayKokkos <material_t> &material,
         RUN({
             
             material(0).mat_model = ideal_gas; // EOS model
-            material(0).b1        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1        = 1.0;       // accoustic coefficient
+            material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+            material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 6;  // actual num_state_vars
-            state_vars(0,0) = 1.0;     // specific heat
-            state_vars(0,4) = 5.0/3.0; // gamma value
-            state_vars(0,5) = 1.0E-14; // minimum sound speed
+            state_vars(0,0) = 5.0/3.0; // gamma value
+            state_vars(0,1) = 1.0E-14; // minimum sound speed
+            state_vars(0,2) = 1.0;     // specific heat c_v
             
             // Global instructions
             mat_fill(0).volume = region::global;   // fill everywhere

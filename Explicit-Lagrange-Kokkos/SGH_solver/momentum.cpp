@@ -51,14 +51,12 @@ void update_velocity_sgh(double rk_alpha,
 } // end subroutine update_velocity
 
 
-
-
 // -----------------------------------------------------------------------------
 // This function calculates the velocity gradient
 //------------------------------------------------------------------------------
 KOKKOS_FUNCTION
 void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
-                 const mesh_t &mesh,
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids,
                  const DViewCArrayKokkos <double> &node_vel,
                  const ViewCArrayKokkos <double> &b_matrix,
                  const double elem_vol,
@@ -78,7 +76,7 @@ void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
     for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
         
         // Get node gid
-        size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+        size_t node_gid = elem_node_gids(node_lid);
 
         u(node_lid) = node_vel(1, node_gid, 0);
         v(node_lid) = node_vel(1, node_gid, 1);
@@ -145,7 +143,7 @@ void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
 // This subroutine to calculate the velocity divergence in all elements
 //------------------------------------------------------------------------------
 void get_divergence(DViewCArrayKokkos <double> &elem_div,
-                    const mesh_t &mesh,
+                    const mesh_t mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
                     const DViewCArrayKokkos <double> &elem_vol){
@@ -163,6 +161,8 @@ void get_divergence(DViewCArrayKokkos <double> &elem_div,
         ViewCArrayKokkos <double> v(v_array, num_nodes_in_elem); // y-dir vel component
         ViewCArrayKokkos <double> w(w_array, num_nodes_in_elem); // z-dir vel component
         
+        // cut out the node_gids for this element
+        ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
         
         // The b_matrix are the outward corner area normals
         double b_matrix_array[24];
@@ -170,13 +170,13 @@ void get_divergence(DViewCArrayKokkos <double> &elem_div,
         get_bmatrix(b_matrix,
                     elem_gid,
                     node_coords,
-                    mesh);
+                    elem_node_gids);
         
         // get the vertex velocities for the cell
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
         
             // Get node gid
-            size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            size_t node_gid = elem_node_gids(node_lid);
     
             u(node_lid) = node_vel(1, node_gid, 0);
             v(node_lid) = node_vel(1, node_gid, 1);
@@ -212,3 +212,58 @@ void get_divergence(DViewCArrayKokkos <double> &elem_div,
     
 } // end subroutine
 
+
+// The velocity gradient can be decomposed into symmetric and antisymmetric tensors
+// L = vel_grad
+// D = sym(L)
+// W = antisym(L)
+KOKKOS_FUNCTION
+void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
+                        ViewCArrayKokkos <double> &W_tensor,
+                        const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                        const size_t elem_gid,
+                        const DViewCArrayKokkos <double> &node_coords,
+                        const DViewCArrayKokkos <double> &node_vel,
+                        const double vol
+                        ){
+    
+    
+    // --- Calculate the velocity gradient ---
+    
+    const size_t num_dims = 3;
+    const size_t num_nodes_in_elem = 8;
+    
+    // corner area normals
+    double area_array[24];
+    ViewCArrayKokkos <double> area(area_array, num_nodes_in_elem, num_dims);
+    // get the B matrix which are the OUTWARD corner area normals
+    get_bmatrix(area,
+                elem_gid,
+                node_coords,
+                elem_node_gids);
+    
+    double vel_grad_array[9];
+    ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
+    get_velgrad(vel_grad,
+                elem_node_gids,
+                node_vel,
+                area,
+                vol,
+                elem_gid);
+    
+    // initialize to zero
+    for(size_t i=0; i<num_dims; i++){
+        for(size_t j=0; j<num_dims; j++){
+            D_tensor(i,j) = 0.0;
+            W_tensor(i,j) = 0.0;
+        }
+    } // end for
+    
+    for(size_t i=0; i<num_dims; i++){
+        for(size_t j=0; j<num_dims; j++){
+            D_tensor(i,j) += 0.5*(vel_grad(i,j) + vel_grad(j,i));
+            W_tensor(i,j) += 0.5*(vel_grad(i,j) - vel_grad(j,i));
+        }
+    } // end for
+    
+} // end function to calculate D and W

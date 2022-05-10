@@ -172,7 +172,9 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
             // ---- Calculate cell state (den,pres,sound speed) for next time step ---- //
             update_state(material,
-                         mesh.num_elems,
+                         mesh,
+                         node_coords,
+                         node_vel,
                          elem_den,
                          elem_pres,
                          elem_stress,

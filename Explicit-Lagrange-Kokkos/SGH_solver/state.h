@@ -112,15 +112,23 @@ struct material_t {
     
     // eos fcn pointer
     void (*mat_model) (const DViewCArrayKokkos <double> &elem_pres,
+                       const DViewCArrayKokkos <double> &elem_stress,
                        const size_t elem_gid,
-                       const DViewCArrayKokkos <size_t> &mat_id,
+                       const size_t mat_id,
                        const DViewCArrayKokkos <double> &elem_state_vars,
                        const DViewCArrayKokkos <double> &elem_sspd,
-                       const DViewCArrayKokkos <double> &elem_den,
-                       const DViewCArrayKokkos <double> &elem_sie);
+                       const double den,
+                       const double sie,
+                       const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                       const DViewCArrayKokkos <double> &node_coords,
+                       const DViewCArrayKokkos <double> &node_vel,
+                       const double vol);
     
     size_t num_state_vars;
-    double b1;    // linar coefficient in Riemann solver
+    double q1;    // acoustic coefficient in Riemann solver for compresion
+    double q1ex;  // acoustic coefficient in Riemann solver for expansion
+    double q2;    // linear coefficient in Riemann solver for compression
+    double q2ex;  // linear coefficient in Riemann solver for expansion
 }; // end material_t
 
 

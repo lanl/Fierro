@@ -233,6 +233,7 @@ int main(int argc, char *argv[]){
         node_coords.update_device();
         Kokkos::fence();
         
+        
         get_vol(elem_vol, node_coords, mesh);
 
 

@@ -40,7 +40,7 @@ KOKKOS_FUNCTION
 void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
-                 const mesh_t &mesh){
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids){
 
     const size_t num_nodes = 8;
 
@@ -55,9 +55,9 @@ void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-        y(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
-        z(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        z(node_lid) = node_coords(1, elem_node_gids(node_lid), 2);
     } // end for
 
     double twelth = 1./12.;
@@ -170,13 +170,21 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
     
     if (num_dims == 2){
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
-            get_vol_quad(elem_vol, elem_gid, node_coords, mesh);
+            
+            // cut out the node_gids for this element
+            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 2);
+            get_vol_quad(elem_vol, elem_gid, node_coords, elem_node_gids);
+            
         });
         Kokkos::fence();
     }
     else {
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
-            get_vol_hex(elem_vol, elem_gid, node_coords, mesh);
+            
+            // cut out the node_gids for this element
+            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+            get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);
+            
         });
         Kokkos::fence();
     } // end if
@@ -189,7 +197,7 @@ KOKKOS_FUNCTION
 void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
-                 const mesh_t &mesh){
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids){
 
     const size_t num_nodes = 8;
 
@@ -204,9 +212,9 @@ void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
     
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-        y(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
-        z(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        z(node_lid) = node_coords(1, elem_node_gids(node_lid), 2);
     } // end for
 
     double twelth = 1./12.;
@@ -230,7 +238,7 @@ KOKKOS_FUNCTION
 void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
-                   const mesh_t &mesh){
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids){
 
     const size_t num_nodes = 4;
 
@@ -243,8 +251,8 @@ void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-        y(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
     } // end for
 
     /* ensight node order   0 1 2 3
@@ -276,7 +284,7 @@ KOKKOS_FUNCTION
 void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                   const size_t elem_gid,
                   const DViewCArrayKokkos <double> &node_coords,
-                  const mesh_t &mesh){
+                  const ViewCArrayKokkos <size_t>  &elem_node_gids){
 
     const size_t num_nodes = 4;
 
@@ -289,8 +297,8 @@ void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
      
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-        y(node_lid) = node_coords(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
     } // end for
 
     /* ensight node order   0 1 2 3

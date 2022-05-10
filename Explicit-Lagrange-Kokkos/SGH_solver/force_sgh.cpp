@@ -74,17 +74,19 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
         ViewCArrayKokkos <double> stress(&elem_stress(1, elem_gid, 0,0), 3, 3);
         
         
+        // cut out the node_gids for this element
+        ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
         
         // get the B matrix which are the OUTWARD corner area normals
         get_bmatrix(area,
                     elem_gid,
                     node_coords,
-                    mesh);
+                    elem_node_gids);
     
         
         // --- Calculate the velocity gradient ---
         get_velgrad(vel_grad,
-                    mesh,
+                    elem_node_gids,
                     node_vel,
                     area,
                     vol,
@@ -163,7 +165,6 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
 
         double mag;       // magnitude of the area normal
         double mag_vel;   // magnitude of velocity
-        double imped_coef = 1.0; // coeffiicent on linear term of impeadance in expansion
 
         // loop over the nodes of the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -205,14 +206,14 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
             
 
             // cell divergence indicates compression or expansions
-            
+            size_t mat_id = elem_mat_id(elem_gid);
             if (div < 0){ // element in compression
-                size_t mat_id = elem_mat_id(elem_gid);
                 muc(node_lid) = elem_den(elem_gid) *
-                               (elem_sspd(elem_gid) + material(mat_id).b1*mag_vel);
+                               (material(mat_id).q1*elem_sspd(elem_gid) + material(mat_id).q2*mag_vel);
             }
             else { // element in expansion
-                muc(node_lid) = imped_coef * elem_den(elem_gid)*elem_sspd(elem_gid);
+                muc(node_lid) = elem_den(elem_gid) *
+                               (material(mat_id).q1ex*elem_sspd(elem_gid) + material(mat_id).q2ex*mag_vel);
             } // end if on divergence sign
            
 
