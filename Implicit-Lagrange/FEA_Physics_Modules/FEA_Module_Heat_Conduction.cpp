@@ -656,7 +656,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   int nodes_per_elem = max_nodes_per_element;
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign;
+  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
   CArray<real_t> legendre_nodes_1D(num_gauss_points);
@@ -667,7 +667,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  real_t heat_flux[3], wedge_product, Jacobian, current_density, weight_multiply, inner_product, surface_normal[3], surface_norm;
+  real_t heat_flux[3], wedge_product, Jacobian, current_density, weight_multiply, inner_product, surface_normal[3], surface_norm, normal_displacement;
   real_t specific_internal_energy_rate;
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   
@@ -794,9 +794,10 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       local_nodes[3] = elem->surface_to_dof_lid(local_surface_id,3);
 
       //acquire set of nodes for this face
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        current_node_index = Surface_Nodes(node_loop);
-        local_node_id = all_node_map->getLocalElement(current_node_index);
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        //current_node_index = Surface_Nodes(node_loop);
+        //local_node_id = all_node_map->getLocalElement(current_node_index);
+        local_node_id = all_node_map->getLocalElement(nodes_in_elem(current_element_index, node_loop));
         nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
         nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
         nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
@@ -806,16 +807,19 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
         //compute shape function derivatives
         elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+        elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
       }
       else if(local_surface_id<4){
         //compute shape function derivatives
         elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
+        elem->partial_eta_basis(basis_derivative_s3,quad_coordinate);
       }
       else if(local_surface_id<6){
         //compute shape function derivatives
         elem->partial_eta_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
+        elem->partial_xi_basis(basis_derivative_s3,quad_coordinate);
       }
 
       //set values relevant to this surface
@@ -829,20 +833,30 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       JT_row1(0) = 0;
       JT_row1(1) = 0;
       JT_row1(2) = 0;
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        JT_row1(0) += nodal_positions(node_loop,0)*surf_basis_derivative_s1(node_loop);
-        JT_row1(1) += nodal_positions(node_loop,1)*surf_basis_derivative_s1(node_loop);
-        JT_row1(2) += nodal_positions(node_loop,2)*surf_basis_derivative_s1(node_loop);
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
       }
 
       //derivative of x,y,z w.r.t t
       JT_row2(0) = 0;
       JT_row2(1) = 0;
       JT_row2(2) = 0;
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        JT_row2(0) += nodal_positions(node_loop,0)*surf_basis_derivative_s2(node_loop);
-        JT_row2(1) += nodal_positions(node_loop,1)*surf_basis_derivative_s2(node_loop);
-        JT_row2(2) += nodal_positions(node_loop,2)*surf_basis_derivative_s2(node_loop);
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t t
+      JT_row3(0) = 0;
+      JT_row3(1) = 0;
+      JT_row3(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
       }
       
 
@@ -851,19 +865,30 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
       wedge_product = sqrt(pow(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2),2)+
                pow(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2),2)+
                pow(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1),2));
+
+      //compute the determinant of the Jacobian
+      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
       
       //compute surface normal through cross product of the two tangent vectors
-      surface_normal[0] = surface_sign*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2));
-      surface_normal[1] = surface_sign*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2));
+      surface_normal[0] = (JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2));
+      surface_normal[1] = -(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2));
       if(num_dim==3)
-        surface_normal[2] = surface_sign*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1));
+        surface_normal[2] = (JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1));
       else
         surface_normal[2] = 0;
       
+      //compute sign of the normal by finding s3 displacement corresponding to x,y,z displacement along normal (Cramer's rule)
+      normal_displacement = (surface_normal[0]*surface_normal[0]+surface_normal[1]*surface_normal[1]+surface_normal[2]*surface_normal[2])/Jacobian;
+      normal_sign = -1;
+      if(signbit(normal_displacement)==signbit(surface_sign)){
+        normal_sign = 1;
+      }
       //normalize
-      surface_normal[0] = surface_normal[0]/wedge_product;
-      surface_normal[1] = surface_normal[1]/wedge_product;
-      surface_normal[2] = surface_normal[2]/wedge_product;
+      surface_normal[0] *= normal_sign/wedge_product;
+      surface_normal[1] *= normal_sign/wedge_product;
+      surface_normal[2] *= normal_sign/wedge_product;
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
 
