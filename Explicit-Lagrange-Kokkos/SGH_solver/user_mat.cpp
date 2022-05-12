@@ -144,9 +144,9 @@ void user_strength_model_vpsc(const DViewCArrayKokkos <double> &elem_pres,
     double dW_values[9];
     double drot_values[9];
     
-    ViewCMatrix <double> deps(&deps_values[0], num_dims, num_dims);
-    ViewCMatrix <double> dW(&dW_values[0], num_dims, num_dims);
-    ViewCMatrix <double> drot(&drot_values[0], num_dims, num_dims);
+    ViewCMatrixKokkos <double> deps(&deps_values[0], num_dims, num_dims);
+    ViewCMatrixKokkos <double> dW(&dW_values[0], num_dims, num_dims);
+    ViewCMatrixKokkos <double> drot(&drot_values[0], num_dims, num_dims);
     
     // calculate strain and rotation increments
     for (size_t i = 1; i <= 3; i++) {
