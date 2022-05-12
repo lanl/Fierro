@@ -138,14 +138,26 @@ void setup(const CArrayKokkos <material_t> &material,
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 		
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
-
-                size_t mat_id = elem_mat_id(elem_gid);
+                size_t mat_id = elem_mat_id(elem_gid); // short name
                 
-                // set statevars for the region where mat_id resides
-                elem_statev(elem_gid,0) = state_vars(mat_id,0); // gamma value
-                elem_statev(elem_gid,1) = state_vars(mat_id,1); // minimum sound speed
-                elem_statev(elem_gid,2) = state_vars(mat_id,2); // specific heat
-
+                
+                // get state_vars from the input file or read them in
+                if (material(mat_id).read_state_vars == 1){
+                    // a place holder until an external file reader is added here
+                    // read a file to get each elem state vars
+                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
+                        elem_statev(elem_gid,var) = state_vars(mat_id,var);
+                    } // end for
+                    
+                    // setup_material(elem_gid, elem_statev);  // user must provide files to read
+                }
+                else{
+                    // set state vars for the region where mat_id resides
+                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
+                        elem_statev(elem_gid,var) = state_vars(mat_id,var);
+                    } // end for
+                } // end logical on type
+                
                 // --- stress tensor ---
                 for(size_t i=0; i<mesh.num_dims; i++){
                     for(size_t j=0; j<mesh.num_dims; j++){
