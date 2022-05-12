@@ -18,7 +18,7 @@ void input(CArrayKokkos <material_t> &material,
            size_t &num_fills,
            size_t &num_bcs,
            size_t &num_dims,
-           size_t &num_state_vars,
+           size_t &max_num_state_vars,
            double &dt_start,
            double &time_final,
            double &dt_max,
@@ -51,8 +51,8 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // --- declare model state variable array size ---
-    num_state_vars = 6;  // 6 values for gamma_law gas, it is a memory block
-    state_vars = CArrayKokkos <double> (num_materials, num_state_vars); // init values
+    max_num_state_vars = 6;  // it is a memory block
+    state_vars = CArrayKokkos <double> (num_materials, max_num_state_vars); // init values
     
     
     // --- number of fill regions ---
@@ -94,7 +94,11 @@ void input(CArrayKokkos <material_t> &material,
             // statev(4) = ref density
             // statev(5) = ref specific internal energy
             
-            material(0).mat_model = ideal_gas; // EOS model
+            material(0).eos_model = ideal_gas; // EOS model is required
+            
+            material(0).strength_type = model::none;
+            material(0).strength_model = NULL;  // not needed, but illistrates the syntax
+            
             material(0).q1        = 1.0;       // accoustic coefficient
             material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
             material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
@@ -176,7 +180,7 @@ void input(CArrayKokkos <material_t> &material,
         
         RUN({
             
-            material(0).mat_model = ideal_gas; // EOS model
+            material(0).eos_model = ideal_gas; // EOS model
             material(0).q1        = 1.0;       // accoustic coefficient
             material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
             material(0).q1ex      = 1.0;       // accoustic coefficient in expansion

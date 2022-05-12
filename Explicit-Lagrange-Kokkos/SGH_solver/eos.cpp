@@ -17,11 +17,7 @@ void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
                const DViewCArrayKokkos <double> &elem_state_vars,
                const DViewCArrayKokkos <double> &elem_sspd,
                const double den,
-               const double sie,
-               const ViewCArrayKokkos <size_t>  &elem_node_gids,
-               const DViewCArrayKokkos <double> &node_coords,
-               const DViewCArrayKokkos <double> &node_vel,
-               const double vol){
+               const double sie){
     
 
     // statev(0) = gamma

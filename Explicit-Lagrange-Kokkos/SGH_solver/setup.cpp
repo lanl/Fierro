@@ -7,26 +7,26 @@
 #include "mesh.h"
 
 
-void setup( const CArrayKokkos <material_t> &material,
-            const CArrayKokkos <mat_fill_t> &mat_fill,
-            const CArrayKokkos <boundary_t> &boundary,
-            mesh_t &mesh,
-            const DViewCArrayKokkos <double> &node_coords,
-            DViewCArrayKokkos <double> &node_vel,
-            DViewCArrayKokkos <double> &node_mass,
-            const DViewCArrayKokkos <double> &elem_den,
-            const DViewCArrayKokkos <double> &elem_pres,
-            const DViewCArrayKokkos <double> &elem_stress,
-            const DViewCArrayKokkos <double> &elem_sspd,       
-            const DViewCArrayKokkos <double> &elem_sie,
-            const DViewCArrayKokkos <double> &elem_vol,
-            const DViewCArrayKokkos <double> &elem_mass,
-            const DViewCArrayKokkos <size_t> &elem_mat_id,
-            const DViewCArrayKokkos <double> &elem_statev,
-            const CArrayKokkos <double> &state_vars,
-            const size_t num_fills,
-            const size_t rk_num_bins,
-            const size_t num_bcs
+void setup(const CArrayKokkos <material_t> &material,
+           const CArrayKokkos <mat_fill_t> &mat_fill,
+           const CArrayKokkos <boundary_t> &boundary,
+           mesh_t &mesh,
+           const DViewCArrayKokkos <double> &node_coords,
+           DViewCArrayKokkos <double> &node_vel,
+           DViewCArrayKokkos <double> &node_mass,
+           const DViewCArrayKokkos <double> &elem_den,
+           const DViewCArrayKokkos <double> &elem_pres,
+           const DViewCArrayKokkos <double> &elem_stress,
+           const DViewCArrayKokkos <double> &elem_sspd,
+           const DViewCArrayKokkos <double> &elem_sie,
+           const DViewCArrayKokkos <double> &elem_vol,
+           const DViewCArrayKokkos <double> &elem_mass,
+           const DViewCArrayKokkos <size_t> &elem_mat_id,
+           const DViewCArrayKokkos <double> &elem_statev,
+           const CArrayKokkos <double> &state_vars,
+           const size_t num_fills,
+           const size_t rk_num_bins,
+           const size_t num_bcs
            ){
 
     
@@ -140,9 +140,11 @@ void setup( const CArrayKokkos <material_t> &material,
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
 
                 size_t mat_id = elem_mat_id(elem_gid);
-                elem_statev(elem_gid,0) = state_vars(mat_id,0); // specific heat
-                elem_statev(elem_gid,4) = state_vars(mat_id,4); // gamma value
-                elem_statev(elem_gid,5) = state_vars(mat_id,5); // minimum sound speed    
+                
+                // set statevars for the region where mat_id resides
+                elem_statev(elem_gid,0) = state_vars(mat_id,0); // gamma value
+                elem_statev(elem_gid,1) = state_vars(mat_id,1); // minimum sound speed
+                elem_statev(elem_gid,2) = state_vars(mat_id,2); // specific heat
 
                 // --- stress tensor ---
                 for(size_t i=0; i<mesh.num_dims; i++){
@@ -153,20 +155,17 @@ void setup( const CArrayKokkos <material_t> &material,
                 
                 // cut out the node_gids for this element
                 ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
-
+                
+                
                 // --- Pressure and stress ---
-                material(mat_id).mat_model(elem_pres,
+                material(mat_id).eos_model(elem_pres,
                                            elem_stress,
                                            elem_gid,
                                            elem_mat_id(elem_gid),
                                            elem_statev,
                                            elem_sspd,
                                            elem_den(elem_gid),
-                                           elem_sie(1,elem_gid),
-                                           elem_node_gids,
-                                           node_coords,
-                                           node_vel,
-                                           elem_vol(elem_gid));
+                                           elem_sie(1,elem_gid));
 					    
                 
                 // loop over the nodes of this element and apply velocity
@@ -293,37 +292,7 @@ void setup( const CArrayKokkos <material_t> &material,
   
     } // end for loop over fills
     
-
-    
-    /*
-    // fill all rk_bins
-    for (size_t rk_level=1; rk_level<rk_num_bins; rk_level++){
-        
-        FOR_ALL(elem_gid, 0, mesh.num_elems, { 
-
-            // stress
-            for(size_t i=0; i<mesh.num_dims; i++){
-                for(size_t j=0; j<mesh.num_dims; j++){
-                    elem_stress(rk_level,elem_gid,i,j) = elem_stress(0,elem_gid,i,j);
-                }        
-            }  // end for
-
-            elem_sie(rk_level,elem_gid) = elem_sie(0,elem_gid);
-
-        }); // end parallel for
-        Kokkos::fence();
-
-        FOR_ALL(node_gid, 0, mesh.num_nodes, {
-            for(size_t i=0; i<mesh.num_dims; i++){
-                node_coords(rk_level,node_gid,i) = node_coords(0,node_gid,i);
-                node_vel(rk_level,node_gid,i) = node_vel(0,node_gid,i);
-            }
-        });
-        Kokkos::fence();
-
-    } // end for rk_level
-    */
-    
+   
     
     // apply BC's to velocity
     boundary_velocity(mesh, boundary, node_vel);

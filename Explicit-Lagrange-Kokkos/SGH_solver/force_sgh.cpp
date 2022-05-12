@@ -7,13 +7,14 @@
 
 
 // -----------------------------------------------------------------------------
-// This function calculates the corner forces
+// This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
 void get_force_sgh(const CArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
                    const DViewCArrayKokkos <double> &elem_den,
+                   const DViewCArrayKokkos <double> &elem_sie,
                    const DViewCArrayKokkos <double> &elem_pres,
                    const DViewCArrayKokkos <double> &elem_stress,
                    const DViewCArrayKokkos <double> &elem_sspd,
@@ -22,7 +23,10 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
                    DViewCArrayKokkos <double> &corner_force,
                    const double fuzz,
-                   const double small
+                   const double small,
+                   const DViewCArrayKokkos <double> &elem_statev,
+                   const double dt,
+                   const double rk_alpha
                    ){
     
 
@@ -346,12 +350,48 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                         + area(node_lid, 2)*tau(2, dim)
                         + phi*muc(node_lid)*(vel_star(dim) - node_vel(1, node_gid, dim));
 
-                } // end loop over dimension
+            } // end loop over dimension
 
-            } // end for loop over nodes in elem
+        } // end for loop over nodes in elem
+        
+        
+        
+        // --- Update Stress ---
+        // calculate the new stress at the next rk level, if it is a hypo model
+        
+        size_t mat_id = elem_mat_id(elem_gid);
+        
+        // hypo elastic plastic model
+        if(material(mat_id).strength_type == model::hypo){
+
+            // cut out the node_gids for this element
+            ViewCArrayKokkos <size_t>   elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+            
+            // --- call strength model ---
+            material(mat_id).strength_model(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            mat_id,
+                                            elem_statev,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(elem_gid),
+                                            vel_grad,
+                                            elem_node_gids,
+                                            node_coords,
+                                            node_vel,
+                                            elem_vol(elem_gid),
+                                            dt,
+                                            rk_alpha);
+            
+        } // end logical on hypo strength model
+        
 
     }); // end parallel for loop over elements
 
+    
+    
+    
 } // end of routine
 
 

@@ -20,7 +20,7 @@ void boundary_velocity(const mesh_t &mesh,
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
                 
             // reflected (boundary array is on the device)
-            if(boundary(bdy_set).hydro_bc == 1){
+            if(boundary(bdy_set).hydro_bc == bdy::reflected){
             
                 // directions with hydro_bc:
                 // x_plane  = 0,

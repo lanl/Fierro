@@ -8,14 +8,15 @@
 
 void update_position_sgh(double rk_alpha,
                          double dt,
-                         const mesh_t &mesh,
+                         const size_t num_dims,
+                         const size_t num_nodes,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
     
     // loop over all the nodes in the mesh
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+    FOR_ALL(node_gid, 0, num_nodes, {
 
-        for (int dim = 0; dim < mesh.num_dims; dim++){
+        for (int dim = 0; dim < num_dims; dim++){
             double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
             node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha*dt*half_vel;
         }

@@ -37,8 +37,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                const double tiny,
                const double small,
                CArray <double> &graphics_times,
-               size_t &graphics_id
-               ){
+               size_t &graphics_id){
     
     
     printf("Writing outputs to file at %f \n", time_value);
@@ -122,12 +121,13 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                            elem_vol);
             
             
-            // ---- calculate the forces on the vertices ----
+            // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             get_force_sgh(material,
                           mesh,
                           node_coords,
                           node_vel,
                           elem_den,
+                          elem_sie,
                           elem_pres,
                           elem_stress,
                           elem_sspd,
@@ -136,8 +136,11 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                           elem_mat_id,
                           corner_force,
                           fuzz,
-                          small);
-            
+                          small,
+                          elem_statev,
+                          dt,
+                          rk_alpha);
+
             
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
@@ -164,7 +167,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             // ---- Update nodal positions ----
             update_position_sgh(rk_alpha,
                                 dt,
-                                mesh,
+                                mesh.num_dims,
+                                mesh.num_nodes,
                                 node_coords,
                                 node_vel);
             
@@ -172,7 +176,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             // ---- Calculate cell volume for next time step ----
             get_vol(elem_vol, node_coords, mesh);
             
-            // ---- Calculate cell state (den,pres,sound speed) for next time step ---- //
+            
+            // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
             update_state(material,
                          mesh,
                          node_coords,
@@ -185,7 +190,16 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                          elem_vol,
                          elem_mass,
                          elem_mat_id,
-                         elem_statev);
+                         elem_statev,
+                         dt,
+                         rk_alpha);
+            
+            // ----
+            // Notes on strength:
+            //    1) hyper-elastic strength models are called in update_state
+            //    2) hypo-elastic strength models are called in get_force
+            //    3) strength models must be added by the user in user_mat.cpp
+
             
         } // end of RK loop
 	        

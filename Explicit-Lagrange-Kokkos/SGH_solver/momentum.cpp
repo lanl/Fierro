@@ -60,7 +60,8 @@ void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
                  const DViewCArrayKokkos <double> &node_vel,
                  const ViewCArrayKokkos <double> &b_matrix,
                  const double elem_vol,
-                 const size_t elem_gid){
+                 const size_t elem_gid
+                 ){
     
 
     const size_t num_nodes_in_elem = 8;
@@ -146,7 +147,8 @@ void get_divergence(DViewCArrayKokkos <double> &elem_div,
                     const mesh_t mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
-                    const DViewCArrayKokkos <double> &elem_vol){
+                    const DViewCArrayKokkos <double> &elem_vol
+                    ){
     
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL (elem_gid, 0, mesh.num_elems, {
@@ -220,6 +222,7 @@ void get_divergence(DViewCArrayKokkos <double> &elem_div,
 KOKKOS_FUNCTION
 void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
                         ViewCArrayKokkos <double> &W_tensor,
+                        const ViewCArrayKokkos <double> &vel_grad,
                         const ViewCArrayKokkos <size_t>  &elem_node_gids,
                         const size_t elem_gid,
                         const DViewCArrayKokkos <double> &node_coords,
@@ -231,25 +234,6 @@ void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
     // --- Calculate the velocity gradient ---
     
     const size_t num_dims = 3;
-    const size_t num_nodes_in_elem = 8;
-    
-    // corner area normals
-    double area_array[24];
-    ViewCArrayKokkos <double> area(area_array, num_nodes_in_elem, num_dims);
-    // get the B matrix which are the OUTWARD corner area normals
-    get_bmatrix(area,
-                elem_gid,
-                node_coords,
-                elem_node_gids);
-    
-    double vel_grad_array[9];
-    ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
-    get_velgrad(vel_grad,
-                elem_node_gids,
-                node_vel,
-                area,
-                vol,
-                elem_gid);
     
     // initialize to zero
     for(size_t i=0; i<num_dims; i++){
