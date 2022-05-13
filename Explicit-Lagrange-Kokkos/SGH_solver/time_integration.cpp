@@ -38,6 +38,8 @@ void rk_init(DViewCArrayKokkos <double> &node_coords,
     }); // end parallel for
     Kokkos::fence();
     
+    return;
+    
 } // end rk_init
 
 
@@ -145,6 +147,8 @@ void get_timestep(mesh_t &mesh,
     
     // make dt be exact for final time
     dt = fmin(dt, time_final-time_value);
+    
+    return;
     
 } // end get_timestep
 

@@ -45,4 +45,5 @@ void update_energy_sgh(double rk_alpha,
 
     }); // end parallel loop over the elements
     
+    return;
 } // end subroutine

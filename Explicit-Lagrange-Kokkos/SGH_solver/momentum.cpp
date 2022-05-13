@@ -48,6 +48,8 @@ void update_velocity_sgh(double rk_alpha,
         
     }); // end for parallel for over nodes
     
+    return;
+    
 } // end subroutine update_velocity
 
 
@@ -136,6 +138,9 @@ void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
                    + w(4)*b_matrix(4,2) + w(5)*b_matrix(5,2)
                    + w(6)*b_matrix(6,2) + w(7)*b_matrix(7,2))*inverse_vol;
 
+    
+    return;
+    
 } // end function
 
 
@@ -212,6 +217,8 @@ void get_divergence(DViewCArrayKokkos <double> &elem_div,
         
     });  // end parallel for over elem_gid
     
+    return;
+    
 } // end subroutine
 
 
@@ -249,5 +256,7 @@ void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
             W_tensor(i,j) += 0.5*(vel_grad(i,j) - vel_grad(j,i));
         }
     } // end for
+    
+    return;
     
 } // end function to calculate D and W

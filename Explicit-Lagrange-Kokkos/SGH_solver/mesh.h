@@ -134,6 +134,9 @@ struct mesh_t {
     void initialize_nodes(const size_t num_nodes_inp)
     {
         num_nodes = num_nodes_inp;
+        
+        return;
+        
     }; // end method
     
     
@@ -148,6 +151,9 @@ struct mesh_t {
         num_elems = num_elems_inp;
         nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
+        
+        return;
+        
     }; // end method
     
     
@@ -155,6 +161,9 @@ struct mesh_t {
     void initialize_corners(const size_t num_corners_inp)
     {
         num_corners = num_corners_inp;
+        
+        return;
+        
     }; // end method
     
     
@@ -222,6 +231,8 @@ struct mesh_t {
             });  // end FOR_ALL over nodes in element
         } // end for elem_gid
      
+        return;
+        
     } // end of build_corner_connectivity
     
     
@@ -310,6 +321,8 @@ struct mesh_t {
             //printf("num neighbors = %ld \n", num_elems_in_elem(elem_gid));
         });  // end FOR_ALL elems
         Kokkos::fence();
+      
+        return;
         
     } // end of build_elem_elem_connectivity
         
@@ -485,11 +498,11 @@ struct mesh_t {
             num_values(1) = bdy_patch_gid; // num_bdy_patches = bdy_patch_gid;
 	    
         }); // end RUN
-	Kokkos::fence();
+        Kokkos::fence();
         
-	num_values.update_host();
-	num_patches = num_values.host(0);
-	num_bdy_patches = num_values.host(1);
+        num_values.update_host();
+        num_patches = num_values.host(0);
+        num_bdy_patches = num_values.host(1);
 	
         
         //size_t mesh_1D = 60;
@@ -546,6 +559,7 @@ struct mesh_t {
             bdy_patches(bdy_patch_gid) = temp_bdy_patches(bdy_patch_gid);
         }); // end FOR_ALL bdy_patch_gid
         
+        return;
         
     } // end patch connectivity method
     
@@ -558,6 +572,9 @@ struct mesh_t {
         }
         num_bdy_sets = num_bcs;
         bdy_patches_in_set = DynamicRaggedRightArrayKokkos <size_t> (num_bcs, num_bdy_patches);
+        
+        return;
+        
     } // end of init_bdy_sets method
     
     

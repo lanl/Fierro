@@ -128,4 +128,6 @@ void read_mesh_ensight(char* MESH,
     // Close mesh input file
     fclose(in);
 
+    return;
+    
 }

@@ -190,6 +190,8 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
         Kokkos::fence();
     } // end if
     
+    return;
+    
 } // end subroutine
 
 
@@ -231,6 +233,8 @@ void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
          x(2)*(y(0)*(-z(1) + z(3)) + y(5)*( z(1) - z(6)) + y(1)*(z(0) + z(3) - z(5) - z(6)) + y(7)*(-z(3) + z(6)) + y(6)*(z(1) - z(3) + z(5) - z(7)) + y(3)*(-z(0) - z(1) + z(6) + z(7))) +
          x(4)*(y(1)*(-z(0) + z(5)) + y(7)*( z(0) + z(3)  - z(5) - z(6)) + y(3)*(z(0) - z(7)) + y(0)*(z(1) - z(3) + z(5) - z(7)) + y(6)*(-z(5) + z(7)) + y(5)*(-z(0) - z(1) + z(6) + z(7))))*twelth;
 
+    return;
+    
 } // end subroutine
 
 
@@ -278,6 +282,8 @@ void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
     B_matrix(3,1) = 0.5*(x(0)-x(2));
 
 
+    return;
+    
 } // end subroutine
 
 
@@ -309,6 +315,8 @@ void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
     // element volume
     elem_vol(elem_gid) = 0.5*((x(0)-x(2))*(y(1)-y(3))+(x(3)-x(1))*(y(0)-y(2)));
 
+    return;
+    
 } // end subroutine
 
 

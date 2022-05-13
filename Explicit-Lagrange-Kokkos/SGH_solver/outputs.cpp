@@ -72,7 +72,10 @@ void write_outputs (const mesh_t &mesh,
             graphics_times,
             graphics_id,
             time_value);
-}
+    
+    return;
+    
+} // end of write outputs
 
 
 // -----------------------------------------------------------------------------
@@ -380,6 +383,8 @@ void ensight( const mesh_t &mesh,
     // increment graphics id counter
     graphics_id++;
     
+    return;
+    
 } // end of Ensight function
 
 
@@ -469,7 +474,9 @@ void state_file( const mesh_t &mesh,
     
     fclose(out_elem_state);
  
-};
+    return;
+    
+}; // end of state output
 
 
 

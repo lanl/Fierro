@@ -222,7 +222,7 @@ void input(CArrayKokkos <material_t> &material,
 
     }
 
-    
+    return;
 
 } // end of input
 

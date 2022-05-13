@@ -390,7 +390,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
     }); // end parallel for loop over elements
 
     
-    
+    return;
     
 } // end of routine
 

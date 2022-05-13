@@ -42,5 +42,6 @@ void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
         elem_sspd(elem_gid) = csmin;
     } // end if
 
+    return;
 } // end of ideal_gas
 

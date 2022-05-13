@@ -109,6 +109,8 @@ void update_state(const CArrayKokkos <material_t> &material,
     }); // end parallel for
     Kokkos::fence();
     
+    return;
+    
 } // end method to update state
 
 

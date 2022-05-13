@@ -259,4 +259,6 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
     
-}
+    return;
+    
+} // end of SGH solve
