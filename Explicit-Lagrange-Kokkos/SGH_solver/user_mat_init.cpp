@@ -23,7 +23,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
     // initialize to zero
     for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
         for(size_t var=0; var<num_state_vars; var++){
-            file_state_vars(mat_id,elem_gid,var) = 0.0;
+            file_state_vars.host(mat_id,elem_gid,var) = 0.0;
         }
     }
     
