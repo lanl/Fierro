@@ -766,7 +766,9 @@ void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <double> &state_vars,
            const size_t num_fills,
            const size_t rk_num_bins,
-           const size_t num_bdy_sets);
+           const size_t num_bdy_sets,
+           const size_t num_materials,
+           const size_t num_state_vars);
 
 
 void write_outputs (const mesh_t &mesh,
@@ -896,6 +898,12 @@ void user_strength_model_vpsc(const DViewCArrayKokkos <double> &elem_pres,
                               const double vol,
                               const double dt,
                               const double rk_alpha);
+
+
+void user_model_init(const DCArrayKokkos <double> &file_state_vars,
+                     const size_t num_state_vars,
+                     const size_t mat_id,
+                     const size_t num_elems);
 
 
 void sgh_solve(CArrayKokkos <material_t> &material,

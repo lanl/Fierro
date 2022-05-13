@@ -26,7 +26,9 @@ void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <double> &state_vars,
            const size_t num_fills,
            const size_t rk_num_bins,
-           const size_t num_bcs
+           const size_t num_bcs,
+           const size_t num_materials,
+           const size_t num_state_vars
            ){
 
     
@@ -50,7 +52,55 @@ void setup(const CArrayKokkos <material_t> &material,
 	Kokkos::fence();
 
     }// end for
-
+    
+    
+    // ---- Read model values from a file ----
+    // check to see if state_vars come from an external file
+    DCArrayKokkos <size_t> read_from_file(num_materials);
+    FOR_ALL(mat_id, 0, num_materials, {
+        
+        read_from_file(mat_id) = material(0).read_state_vars;
+        
+    }); // end parallel for
+    Kokkos::fence();
+    
+    read_from_file.update_host(); // copy to CPU if code is to read from a file
+    Kokkos::fence();
+    
+    // make memory to store state_vars from an external file
+    DCArrayKokkos <double> file_state_vars(num_materials,mesh.num_elems,num_state_vars);
+    DCArrayKokkos <size_t> mat_num_state_vars(num_materials); // actual number of state_vars
+    FOR_ALL(mat_id, 0, num_materials, {
+        
+        mat_num_state_vars(mat_id) = material(mat_id).num_state_vars;
+        
+    }); // end parallel for
+    Kokkos::fence();
+    
+    // copy actual number of state_vars to host
+    mat_num_state_vars.update_host();
+    Kokkos::fence();
+    
+    for (size_t mat_id=0; mat_id<num_materials; mat_id++){
+        
+        if (read_from_file.host(mat_id) == 1){
+            
+            size_t num_vars = mat_num_state_vars.host(mat_id);
+            
+            user_model_init(file_state_vars,
+                            num_vars,
+                            mat_id,
+                            mesh.num_elems);
+            
+            // copy the values to the device
+            file_state_vars.update_device();
+            Kokkos::fence();
+            
+        } // end if
+        
+    } // end for
+    
+    
     
     
     //--- apply the fill instructions over the Elements---//
@@ -143,24 +193,25 @@ void setup(const CArrayKokkos <material_t> &material,
                 
                 // get state_vars from the input file or read them in
                 if (material(mat_id).read_state_vars == 1){
-                    // a place holder until an external file reader is added here
-                    // read a file to get each elem state vars
+                    
+                    // use the values read from a file to get elem state vars
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
-                        elem_statev(elem_gid,var) = state_vars(mat_id,var);
+                        elem_statev(elem_gid,var) = file_state_vars(mat_id,elem_gid,var);
                     } // end for
                     
-                    // setup_material(elem_gid, elem_statev);  // user must provide files to read
                 }
                 else{
+                    // use the values in the input file
                     // set state vars for the region where mat_id resides
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
                         elem_statev(elem_gid,var) = state_vars(mat_id,var);
                     } // end for
+                    
                 } // end logical on type
                 
                 // --- stress tensor ---
-                for(size_t i=0; i<mesh.num_dims; i++){
-                    for(size_t j=0; j<mesh.num_dims; j++){
+                for (size_t i=0; i<mesh.num_dims; i++){
+                    for (size_t j=0; j<mesh.num_dims; j++){
                         elem_stress(rk_level,elem_gid,i,j) = 0.0;
                     }        
                 }  // end for
@@ -335,6 +386,7 @@ void setup(const CArrayKokkos <material_t> &material,
     }); // end FOR_ALL
     Kokkos::fence();
     
+    return;
     
 } // end of setup
 
@@ -388,6 +440,7 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
     } // end for bdy_patch
     });  // end FOR_ALL bdy_sets
    
+    return;
 } // end tag
 
 
@@ -569,5 +622,6 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
     // update the host side for the number nodes in a bdy_set
     mesh.num_bdy_nodes_in_set.update_host();
     
+    return;
 } // end method to build boundary nodes
 

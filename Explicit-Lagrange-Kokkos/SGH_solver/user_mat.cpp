@@ -35,6 +35,9 @@ void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
     }
     elem_pres(elem_gid) *= 1.0/3.0;
     
+    
+    return;
+    
 } // end for user_eos_model
 
 
@@ -76,7 +79,8 @@ void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
     //------------------------------------------------------------------------------
 
     
-
+    return;
+    
 } // end of user mat
 
 
@@ -158,7 +162,7 @@ void user_strength_model_vpsc(const DViewCArrayKokkos <double> &elem_pres,
     
     
     
-    
+    return;
     
 } // end of ideal_gas
 

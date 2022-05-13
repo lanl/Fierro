@@ -39,4 +39,5 @@ void boundary_velocity(const mesh_t &mesh,
 	    
     } // end for bdy_set
     
+    return;
 } // end boundary_velocity function

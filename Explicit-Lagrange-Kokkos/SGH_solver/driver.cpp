@@ -259,7 +259,9 @@ int main(int argc, char *argv[]){
               state_vars,
               num_fills,
               rk_num_bins,
-              num_bcs);
+              num_bcs,
+              num_materials,
+              num_state_vars);
         
         // intialize time, time_step, and cycles
         time_value = 0.0;
