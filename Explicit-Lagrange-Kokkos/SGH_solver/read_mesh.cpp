@@ -21,6 +21,12 @@ void read_mesh_ensight(char* MESH,
 
 	FILE *in;
     char ch;
+    
+    
+    size_t num_nodes_in_elem = 1;
+    for (int dim=0; dim<num_dims; dim++){
+        num_nodes_in_elem *= 2;
+    }
 
 
     //read the mesh    WARNING: assumes a .geo file
@@ -63,7 +69,13 @@ void read_mesh_ensight(char* MESH,
 
     // z-coords
     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-        fscanf(in,"%le",&node.coords(rk_level,node_id, 2));
+        if(num_dims==3){
+            fscanf(in,"%le",&node.coords(rk_level,node_id, 2));
+        } else
+        {
+            double dummy;
+            fscanf(in,"%le",&dummy);
+        }
     }
 
     
@@ -89,11 +101,11 @@ void read_mesh_ensight(char* MESH,
 
     // intialize elem variables
     mesh.initialize_elems(num_elem, num_dims);
-    elem.initialize(rk_num_bins, num_nodes, num_dims);
+    elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
 
     // for each cell read the list of associated nodes
     for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
-        for (int node_lid = 0; node_lid < 8; node_lid++){
+        for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
             
             fscanf(in,"%lu",&mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
 

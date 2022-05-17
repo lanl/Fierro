@@ -141,6 +141,9 @@ void ensight( const mesh_t &mesh,
             if (mesh.num_dims == 3){
                 elem_vel[2] += node_vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
             }
+            else {
+                elem_vel[3] = 0.0;
+            }
         } // end loop over nodes in element
         elem_vel[0] = elem_vel[0]/mesh.num_nodes_in_elem;
         elem_vel[1] = elem_vel[1]/mesh.num_nodes_in_elem;
@@ -246,12 +249,23 @@ void ensight( const mesh_t &mesh,
     }
     
     for (int node_gid = 0; node_gid < num_nodes; node_gid++){
-        fprintf(out[0],"%12.5e\n",node_coords.host(1, node_gid, 2));
+        if(num_dims==3){
+            fprintf(out[0],"%12.5e\n",node_coords.host(1, node_gid, 2));
+        }
+        else
+        {
+            fprintf(out[0],"%12.5e\n",0.0);
+        }
     }
     
     
     // --- elements ---
-    fprintf(out[0],"hexa8\n");
+    if(num_dims==3){
+        fprintf(out[0],"hexa8\n");
+    }
+    else {
+        fprintf(out[0],"quad4\n");
+    }
     fprintf(out[0],"%10lu\n",num_elems);
 
     
@@ -282,7 +296,12 @@ void ensight( const mesh_t &mesh,
         fprintf(out[0],"Per_elem scalar values\n");
         fprintf(out[0],"part\n");
         fprintf(out[0],"%10d\n",1);
-        fprintf(out[0],"hexa8\n");  // e.g., hexa8
+        if(num_dims==3){
+            fprintf(out[0],"hexa8\n");
+        }
+        else {
+            fprintf(out[0],"quad4\n");
+        }
         
         for (int elem_id=0; elem_id<num_elems; elem_id++) {
             fprintf(out[0],"%12.5e\n",elem_fields(elem_id, var));
@@ -408,6 +427,7 @@ void state_file( const mesh_t &mesh,
     if(stat("state",&st) != 0)
         system("mkdir state");
     
+    size_t num_dims = mesh.num_dims;
     
     //  ---------------------------------------------------------------------------
     //  Setup of file and directoring for exporting
@@ -441,7 +461,12 @@ void state_file( const mesh_t &mesh,
         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
             elem_coords[0] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
             elem_coords[1] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
-            elem_coords[2] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
+            if(num_dims == 3){
+                elem_coords[2] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
+            }
+            else {
+                elem_coords[2] = 0.0;
+            }
         } // end loop over nodes in element
 	
         elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
@@ -454,7 +479,7 @@ void state_file( const mesh_t &mesh,
         double rad3 = sqrt(elem_coords[0]*elem_coords[0] +
                            elem_coords[1]*elem_coords[1] +
                            elem_coords[2]*elem_coords[2]);
-			   
+        
         fprintf( out_elem_state,"%f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t %f\t \n",
                  elem_coords[0],
                  elem_coords[1],

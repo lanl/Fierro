@@ -125,6 +125,9 @@ void setup(const CArrayKokkos <material_t> &material,
                 elem_coords[1] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3){
                     elem_coords[2] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                } else
+                {
+                    elem_coords[2] = 0.0;
                 }
             } // end loop over nodes in element
             elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
@@ -246,7 +249,7 @@ void setup(const CArrayKokkos <material_t> &material,
                         
                             node_vel(rk_level, node_gid, 0) = mat_fill(f_id).u;
                             node_vel(rk_level, node_gid, 1) = mat_fill(f_id).v;
-                            node_vel(rk_level, node_gid, 2) = mat_fill(f_id).w;
+                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).w;
                             
                         
                             break;
@@ -277,7 +280,7 @@ void setup(const CArrayKokkos <material_t> &material,
                         
                             node_vel(rk_level, node_gid, 0) = mat_fill(f_id).speed*dir[0];
                             node_vel(rk_level, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                            node_vel(rk_level, node_gid, 2) = 0.0;
+                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = 0.0;
                             
                             break;
                         }
@@ -308,7 +311,7 @@ void setup(const CArrayKokkos <material_t> &material,
                         
                             node_vel(rk_level, node_gid, 0) = mat_fill(f_id).speed*dir[0];
                             node_vel(rk_level, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                            node_vel(rk_level, node_gid, 2) = mat_fill(f_id).speed*dir[2];
+                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).speed*dir[2];
 
                             break;
                         }
@@ -327,7 +330,7 @@ void setup(const CArrayKokkos <material_t> &material,
                         
                             node_vel(rk_level, node_gid, 0) = sin(PI * node_coords(rk_level,node_gid, 0)) * cos(PI * node_coords(rk_level,node_gid, 1)); 
                             node_vel(rk_level, node_gid, 1) =  -1.0*cos(PI * node_coords(rk_level,node_gid, 0)) * sin(PI * node_coords(rk_level,node_gid, 1)); 
-                            node_vel(rk_level, node_gid, 2) = 0.0;
+                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = 0.0;
 
                             break;
                         }
