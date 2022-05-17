@@ -318,7 +318,6 @@ struct mesh_t {
             for (size_t i=0; i<num_elems_in_elem(elem_gid); i++){
                 elems_in_elem(elem_gid, i) = temp_elems_in_elem(elem_gid, i);
             } // end for i
-            //printf("num neighbors = %ld \n", num_elems_in_elem(elem_gid));
         });  // end FOR_ALL elems
         Kokkos::fence();
       
@@ -411,12 +410,12 @@ struct mesh_t {
                     hash_key = (sorted_patch_nodes[0] + num_nodes*sorted_patch_nodes[1]);
                 }
                 else {
-                    hash_key = (sorted_patch_nodes[1] + num_nodes*sorted_patch_nodes[2] +
-                                num_nodes*num_nodes*sorted_patch_nodes[3]);  // 3 largest node values
+                    hash_key = (sorted_patch_nodes[0] + sorted_patch_nodes[1]*num_nodes + num_nodes*num_nodes*sorted_patch_nodes[2] +
+                                num_nodes*num_nodes*num_nodes*sorted_patch_nodes[3]);  // 3 largest node values
                 } // end if on dims
                 
                 // save hash_keys in the this elem
-                hash_keys_in_elem(elem_gid,patch_lid) = -hash_key;  // negative values are keys
+                hash_keys_in_elem(elem_gid, patch_lid) = -hash_key;  // negative values are keys
                 
             } // end for patch_lid
             
@@ -431,22 +430,27 @@ struct mesh_t {
             size_t patch_gid = 0;
             size_t bdy_patch_gid = 0;
             for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
-            
+                
                 for (size_t patch_lid = 0; patch_lid<num_patches_in_elem; patch_lid++) {
                 
                     long long int hash_key = hash_keys_in_elem(elem_gid,patch_lid);
-                
+                    size_t exit = 0;
+                    
                     if (hash_key<0){
                         
+                        // find the nighboring patch with the same hash_key
+                        
                         for (size_t neighbor_elem_lid=0; neighbor_elem_lid<num_elems_in_elem(elem_gid); neighbor_elem_lid++){
-                    
+                             
+                            
                             // get the neighboring element global index
                             size_t neighbor_elem_gid = elems_in_elem(elem_gid, neighbor_elem_lid);
-                    
+                            
                             for (size_t neighbor_patch_lid=0; neighbor_patch_lid<num_patches_in_elem; neighbor_patch_lid++){
                     
                                 // this hash is from the nodes on the patch
                                 long long int neighbor_hash_key = hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid);
+                                
                     
                                 if (neighbor_hash_key == hash_keys_in_elem(elem_gid,patch_lid)){
                     
@@ -463,11 +467,22 @@ struct mesh_t {
                                     patches_in_elem(neighbor_elem_gid, neighbor_patch_lid) = patch_gid;
                     
                                     patch_gid++;
+                                    
+                                    exit = 1;
+                                    break;
                                 } // end if
                     
                             } // end for loop over a neighbors patch set
+                            
+                            if (exit==1) break;
+                            
                         } // end for loop over elem neighbors
+                    
+                    
                     } // end if hash<0
+                    
+                
+                    
     
                 } // end for patch_lid
                 

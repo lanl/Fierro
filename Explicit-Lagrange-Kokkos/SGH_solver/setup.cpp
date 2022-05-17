@@ -471,28 +471,28 @@ size_t check_bdy(const size_t patch_gid,
         size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
         
         for (size_t dim = 0; dim < num_dims; dim++){
-            these_patch_coords[dim] = node_coords(0, node_gid, dim);  // (rk, node_gid, dim)
+            these_patch_coords[dim] = node_coords(1, node_gid, dim);  // (rk, node_gid, dim)
         } // end for dim
         
         
         // a x-plane
         if (this_bc_tag == 0){
             
-            if ( fabs(these_patch_coords[0] - val) <= 1.0e-8 ) is_on_bdy += 1;
+            if ( fabs(these_patch_coords[0] - val) <= 1.0e-6 ) is_on_bdy += 1;
             
         }// end if on type
         
         // a y-plane
         else if (this_bc_tag == 1){
             
-            if ( fabs(these_patch_coords[1] - val) <= 1.0e-8 ) is_on_bdy += 1;
+            if ( fabs(these_patch_coords[1] - val) <= 1.0e-6 ) is_on_bdy += 1;
             
         }// end if on type
         
         // a z-plane
         else if (this_bc_tag == 2){
             
-            if ( fabs(these_patch_coords[2] - val) <= 1.0e-8 ) is_on_bdy += 1;
+            if ( fabs(these_patch_coords[2] - val) <= 1.0e-6 ) is_on_bdy += 1;
             
         }// end if on type
         
