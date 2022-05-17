@@ -410,8 +410,8 @@ struct mesh_t {
                     hash_key = (sorted_patch_nodes[0] + num_nodes*sorted_patch_nodes[1]);
                 }
                 else {
-                    hash_key = (sorted_patch_nodes[0] + sorted_patch_nodes[1]*num_nodes + num_nodes*num_nodes*sorted_patch_nodes[2] +
-                                num_nodes*num_nodes*num_nodes*sorted_patch_nodes[3]);  // 3 largest node values
+                    hash_key = (sorted_patch_nodes[1] + num_nodes*sorted_patch_nodes[2] +
+                                num_nodes*num_nodes*sorted_patch_nodes[3]);  // 3 largest node values
                 } // end if on dims
                 
                 // save hash_keys in the this elem
