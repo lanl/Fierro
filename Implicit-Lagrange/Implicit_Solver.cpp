@@ -18,6 +18,8 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+
+#include <Xpetra_MultiVector.hpp>
 #include <Kokkos_View.hpp>
 #include <Kokkos_Parallel.hpp>
 #include <Kokkos_Parallel_Reduce.hpp>
@@ -36,6 +38,11 @@
 #include "FEA_Module_Headers.h"
 #include "Implicit_Solver.h"
 
+//Repartition Package
+#include <Zoltan2_XpetraMultiVectorAdapter.hpp>
+#include <Zoltan2_PartitioningProblem.hpp>
+#include <Zoltan2_PartitioningSolution.hpp>
+#include <Zoltan2_InputTraits.hpp>
 
 //Optimization Package
 #include "ROL_Algorithm.hpp"
@@ -2196,6 +2203,29 @@ void Implicit_Solver::init_maps(){
   //std::cout << "number of patches = " << mesh->num_patches() << std::endl;
   if(myrank == 0)
   std::cout << "End of map setup " << std::endl;
+}
+
+/* ----------------------------------------------------------------------
+   Initialize Ghost and Non-Overlapping Element Maps
+------------------------------------------------------------------------- */
+
+void Implicit_Solver::repartition_nodes(){
+  char ch;
+  int num_dim = simparam->num_dim;
+  int p_order = simparam->p_order;
+  real_t unit_scaling = simparam->unit_scaling;
+  int local_node_index, current_column_index;
+  size_t strain_count;
+  std::stringstream line_parse;
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
+  int nodes_per_element;
+  GO node_gid;
+  
+  typedef Xpetra::MultiVector<real_t,LO,GO,node_type> xvector_t;
+  typedef Zoltan2::XpetraMultiVectorAdapter<xvector_t> inputAdapter_t;
+  
+  Zoltan2::PartitioningProblem<inputAdapter_t> *problem;
+  
 }
 
 /* ----------------------------------------------------------------------
