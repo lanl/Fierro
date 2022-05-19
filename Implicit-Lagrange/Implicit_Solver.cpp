@@ -354,12 +354,15 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
   //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
 
   //allocate node storage with dual view
-  dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
+  //dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
 
   //local variable for host view in the dual view
-  host_vec_array node_coords = dual_node_coords.view_host();
+  
+  node_coords_distributed = Teuchos::rcp(new MV(map, dual_node_coords));
+  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
-  dual_node_coords.modify_host();
+  //dual_node_coords.modify_host();
 
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
@@ -566,11 +569,12 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
     read_index_start+=BUFFER_LINES;
   }
   
-  
+  //repartition node distribution
+  repartition_nodes();
+
   //synchronize device data
-  dual_node_coords.sync_device();
-  dual_node_coords.modify_device();
-  node_coords_distributed = Teuchos::rcp(new MV(map, dual_node_coords));
+  //dual_node_coords.sync_device();
+  //dual_node_coords.modify_device();
 
   //debug print of nodal data
   
@@ -914,18 +918,24 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
 
   //allocate node storage with dual view
-  dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
-  if(restart_file)
-    dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
+  //dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
+  //if(restart_file)
+    //dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
 
   //local variable for host view in the dual view
-  host_vec_array node_coords = dual_node_coords.view_host();
-  if(restart_file)
-    node_densities = dual_node_densities.view_host();
+  node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  if(restart_file){
+    design_node_densities_distributed = Teuchos::rcp(new MV(map, num_dim));
+    node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  }
+  //host_vec_array node_coords = dual_node_coords.view_host();
+  //if(restart_file)
+    //node_densities = dual_node_densities.view_host();
   //notify that the host view is going to be modified in the file readin
-  dual_node_coords.modify_host();
-  if(restart_file)
-    dual_node_densities.modify_host();
+  //dual_node_coords.modify_host();
+  //if(restart_file)
+    //dual_node_densities.modify_host();
 
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
@@ -1024,15 +1034,16 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
     read_index_start+=BUFFER_LINES;
   }
 
-  
+  //repartition node distribution
+  repartition_nodes();
+
   //synchronize device data
-  dual_node_coords.sync_device();
-  dual_node_coords.modify_device();
-  if(restart_file){
-    dual_node_densities.sync_device();
-    dual_node_densities.modify_device();
-  }
-  node_coords_distributed = Teuchos::rcp(new MV(map, dual_node_coords));
+  //dual_node_coords.sync_device();
+  //dual_node_coords.modify_device();
+  //if(restart_file){
+    //dual_node_densities.sync_device();
+    //dual_node_densities.modify_device();
+  //}
 
   //debug print of nodal data
   
@@ -1394,18 +1405,22 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
 
   //allocate node storage with dual view
-  dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
-  if(restart_file)
-    dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
+  //dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
+  //if(restart_file)
+    //dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
 
   //local variable for host view in the dual view
-  host_vec_array node_coords = dual_node_coords.view_host();
-  if(restart_file)
-    node_densities = dual_node_densities.view_host();
+  node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //host_vec_array node_coords = dual_node_coords.view_host();
+  if(restart_file){
+    design_node_densities_distributed = Teuchos::rcp(new MV(map, num_dim));
+    node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  }
   //notify that the host view is going to be modified in the file readin
-  dual_node_coords.modify_host();
-  if(restart_file)
-    dual_node_densities.modify_host();
+  //dual_node_coords.modify_host();
+  //if(restart_file)
+    //dual_node_densities.modify_host();
 
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
@@ -1529,15 +1544,17 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
+  
+  //repartition node distribution
+  repartition_nodes();
 
   //synchronize device data
-  dual_node_coords.sync_device();
-  dual_node_coords.modify_device();
-  if(restart_file){
-    dual_node_densities.sync_device();
-    dual_node_densities.modify_device();
-  }
-  node_coords_distributed = Teuchos::rcp(new MV(map, dual_node_coords));
+  //dual_node_coords.sync_device();
+  //dual_node_coords.modify_device();
+  //if(restart_file){
+    //dual_node_densities.sync_device();
+    //dual_node_densities.modify_device();
+  //}
 
   //debug print of nodal data
   
@@ -2212,7 +2229,9 @@ void Implicit_Solver::repartition_nodes(){
   //construct input adapted needed by Zoltan2 problem
   typedef Xpetra::MultiVector<real_t,LO,GO,node_type> xvector_t;
   typedef Zoltan2::XpetraMultiVectorAdapter<xvector_t> inputAdapter_t;
+  typedef Zoltan2::EvaluatePartition<inputAdapter_t> quality_t;
   
+  Teuchos::RCP<xvector_t> xpetra_node_coords = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(node_coords_distributed));
   Teuchos::RCP<inputAdapter_t> problem_adapter =  Teuchos::rcp(new inputAdapter_t(xpetra_node_coords));
 
   // Create parameters for an RCB problem
@@ -2228,8 +2247,8 @@ void Implicit_Solver::repartition_nodes(){
   params.set("imbalance_tolerance", tolerance );
   params.set("num_global_parts", nranks);
   
-  Teuchos::RCP<Zoltan2::PartitioningProblem<inputAdapter_t> > problem; =
-           Teuchos::rcp(new Zoltan2::PartitioningProblem<inputAdapter_t>(problem_adapter, &params));
+  Teuchos::RCP<Zoltan2::PartitioningProblem<inputAdapter_t> > problem =
+           Teuchos::rcp(new Zoltan2::PartitioningProblem<inputAdapter_t>(&(*problem_adapter), &params));
    
   // Solve the problem
 
@@ -2237,16 +2256,16 @@ void Implicit_Solver::repartition_nodes(){
 
   // create metric object where communicator is Teuchos default
 
-  quality_t *metricObject1 = new quality_t(problem_adapter, &params, //problem1->getComm(),
+  quality_t *metricObject1 = new quality_t(&(*problem_adapter), &params, //problem1->getComm(),
 					   &problem->getSolution());
   // Check the solution.
 
-  if (rank == 0) {
+  if (myrank == 0) {
     metricObject1->printMetrics(std::cout);
   }
 
-  if (rank == 0){
-    scalar_t imb = metricObject1->getObjectCountImbalance();
+  if (myrank == 0){
+    real_t imb = metricObject1->getObjectCountImbalance();
     if (imb <= tolerance)
       std::cout << "pass: " << imb << std::endl;
     else
@@ -2257,16 +2276,26 @@ void Implicit_Solver::repartition_nodes(){
 
   //migrate rows of the vector so they correspond to the partition recommended by Zoltan2
   Teuchos::RCP<MV> partitioned_node_coords_distributed;
+  Teuchos::RCP<xvector_t> xpartitioned_node_coords_distributed =
+                          Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(partitioned_node_coords_distributed));
+
   problem_adapter->applyPartitioningSolution(*xpetra_node_coords, xpartitioned_node_coords_distributed, problem->getSolution());
   node_coords_distributed = partitioned_node_coords_distributed;
 
   //migrate density vector if this is a restart file read
   if(simparam->restart_file){
+    Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(node_coords_distributed->getMap(), 1));
 
+    //create import object using local node indices map and all indices map
+    Tpetra::Import<LO, GO> importer(map, node_coords_distributed->getMap());
+
+    //comms to get ghosts
+    partitioned_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
+    design_node_densities_distributed = partitioned_node_coords_distributed;
   }
 
   //update nlocal_nodes and node map
-  map = node_coords_distributed->getMap();
+  map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*(node_coords_distributed->getMap())));
   nlocal_nodes = map->getNodeNumElements();
   
 }
@@ -3775,10 +3804,10 @@ void Implicit_Solver::init_design(){
   //set densities
   if(nodal_density_flag){
     if(!simparam->restart_file){
-      dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes, 1);
-      host_vec_array node_densities = dual_node_densities.view_host();
+      design_node_densities_distributed = Teuchos::rcp(new MV(map, num_dim));
+      host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //notify that the host view is going to be modified in the file readin
-      dual_node_densities.modify_host();
+      //dual_node_densities.modify_host();
     
       //debug Tecplot file readin of initial densities (only works on runs with 1 MPI rank this way)
       std::string skip_line, read_line, substring;
@@ -3811,10 +3840,9 @@ void Implicit_Solver::init_design(){
     }
 
     //sync device view
-    dual_node_densities.sync_device();
+    //dual_node_densities.sync_device();
     }
     //allocate global vector information
-    design_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities));
     all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
 
     //communicate ghost information to the all vector
