@@ -358,7 +358,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
 
   //local variable for host view in the dual view
   
-  node_coords_distributed = Teuchos::rcp(new MV(map, dual_node_coords));
+  node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
@@ -926,7 +926,7 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   if(restart_file){
-    design_node_densities_distributed = Teuchos::rcp(new MV(map, num_dim));
+    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
     node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   }
   //host_vec_array node_coords = dual_node_coords.view_host();
@@ -1414,7 +1414,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   if(restart_file){
-    design_node_densities_distributed = Teuchos::rcp(new MV(map, num_dim));
+    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
     node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   }
   //notify that the host view is going to be modified in the file readin
@@ -2280,7 +2280,7 @@ void Implicit_Solver::repartition_nodes(){
                           Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(partitioned_node_coords_distributed));
 
   problem_adapter->applyPartitioningSolution(*xpetra_node_coords, xpartitioned_node_coords_distributed, problem->getSolution());
-  node_coords_distributed = partitioned_node_coords_distributed;
+  *node_coords_distributed = Xpetra::toTpetra<real_t,LO,GO,node_type>(*xpartitioned_node_coords_distributed);
 
   //migrate density vector if this is a restart file read
   if(simparam->restart_file){
@@ -3804,7 +3804,7 @@ void Implicit_Solver::init_design(){
   //set densities
   if(nodal_density_flag){
     if(!simparam->restart_file){
-      design_node_densities_distributed = Teuchos::rcp(new MV(map, num_dim));
+      design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
       host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //notify that the host view is going to be modified in the file readin
       //dual_node_densities.modify_host();
