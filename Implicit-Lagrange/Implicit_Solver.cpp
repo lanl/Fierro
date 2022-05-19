@@ -2291,7 +2291,7 @@ void Implicit_Solver::repartition_nodes(){
 
     //comms to get ghosts
     partitioned_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
-    design_node_densities_distributed = partitioned_node_coords_distributed;
+    design_node_densities_distributed = partitioned_node_densities_distributed;
   }
 
   //update nlocal_nodes and node map
