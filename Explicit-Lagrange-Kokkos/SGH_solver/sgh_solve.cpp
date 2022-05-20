@@ -21,7 +21,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                DViewCArrayKokkos <double> &elem_mass,
                DViewCArrayKokkos <size_t> &elem_mat_id,
                DViewCArrayKokkos <double> &elem_statev,
-               DViewCArrayKokkos <double> corner_force,
+               DViewCArrayKokkos <double> &corner_force,
+               DViewCArrayKokkos <double> &corner_mass,
                double &time_value,
                const double time_final,
                const double dt_max,
@@ -274,6 +275,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             get_vol(elem_vol, node_coords, mesh);
             
             
+            
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
             if(mesh.num_dims==2){
                 update_state2D(material,
@@ -315,6 +317,52 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             //    2) hypo-elastic strength models are called in get_force
             //    3) strength models must be added by the user in user_mat.cpp
 
+            
+            // calculate the new corner masses if 2D
+            if(mesh.num_dims==2){
+                
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+                    
+                    // facial area of the corners
+                    double corner_areas_array[4];
+                    
+                    ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
+                    ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+                    
+                    get_area_weights2D(corner_areas,
+                                       elem_gid,
+                                       node_coords,
+                                       elem_node_gids);
+                    
+                    // loop over the corners of the element and calculate the mass
+                    for (size_t corner_lid=0; corner_lid<4; corner_lid++){
+                        
+                        size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+                        corner_mass(corner_gid) = corner_areas(corner_lid)*elem_den(elem_gid);
+                        
+                    } // end for over corners
+                    
+                }); // end parallel for over elem_gid
+                Kokkos::fence();
+                
+                
+                // calculate the nodal mass
+                FOR_ALL(node_gid, 0, mesh.num_nodes, {
+                    
+                    node_mass(node_gid) = 0.0;
+                    
+                    for(size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(node_gid); corner_lid++){
+                        
+                        size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
+                        node_mass(node_gid) += corner_mass(corner_gid);
+                    } // end for elem_lid
+                        
+                }); // end parallel for over node_gid
+                Kokkos::fence();
+            
+            } // end of if 2D-RZ
+            
+            
             
         } // end of RK loop
 	        

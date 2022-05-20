@@ -292,6 +292,7 @@ int main(int argc, char *argv[]){
                   elem_mat_id,
                   elem_statev,
                   corner_force,
+                  corner_mass,
                   time_value,
                   time_final,
                   dt_max,
