@@ -532,7 +532,6 @@ size_t check_bdy(const size_t patch_gid,
             real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
                             these_patch_coords[1]*these_patch_coords[1]);
             
-            printf("radius = %f \n", val);
             if ( fabs(R - val) <= 1.0e-7 ) is_on_bdy += 1;
             
             

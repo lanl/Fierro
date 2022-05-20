@@ -63,10 +63,6 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     double KE_t0 = 0;
     double TE_t0 = 0;
     
-    double IE_tend = 0;
-    double KE_tend = 0;
-    double TE_tend = 0;
-    
     double IE_sum = 0;
     double KE_sum = 0;
     
@@ -97,15 +93,11 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         }
         
     }, KE_sum);
-    KE_t0 = 0.5*KE_sum;
     Kokkos::fence();
+    KE_t0 = 0.5*KE_sum;
     
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
-    
-    printf("Time=0, KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
-    printf("Time=End, KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
-    printf("total energy conservation error = %f \n", TE_tend - TE_t0);
     
     
     // a flag to exit the calculation
@@ -384,6 +376,9 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     
     // ---- Calculate energy tallies ----
+    double IE_tend = 0;
+    double KE_tend = 0;
+    double TE_tend = 0;
     
     IE_loc_sum = 0.0;
     KE_loc_sum = 0.0;
@@ -415,8 +410,9 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
         
     }, KE_sum);
-    KE_tend = 0.5*KE_sum;
     Kokkos::fence();
+    KE_tend = 0.5*KE_sum;
+    
     
     // extensive TE
     TE_tend = IE_tend + KE_tend;
