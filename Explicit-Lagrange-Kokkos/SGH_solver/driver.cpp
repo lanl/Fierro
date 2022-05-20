@@ -223,8 +223,8 @@ int main(int argc, char *argv[]){
                                                 num_corners, 
                                                 num_dims);
 
-        DViewCArrayKokkos <double> corner_mass (&corner.mass(0), 
-                                                num_corners);
+        DViewCArrayKokkos <double> corner_mass(&corner.mass(0),
+                                               num_corners);
         
         
         // ---------------------------------------------------------------------
@@ -257,6 +257,7 @@ int main(int argc, char *argv[]){
               elem_mat_id,
               elem_statev,
               state_vars,
+              corner_mass,
               num_fills,
               rk_num_bins,
               num_bcs,

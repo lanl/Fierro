@@ -142,7 +142,7 @@ void ensight( const mesh_t &mesh,
                 elem_vel[2] += node_vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
             }
             else {
-                elem_vel[3] = 0.0;
+                elem_vel[2] = 0.0;
             }
         } // end loop over nodes in element
         elem_vel[0] = elem_vel[0]/mesh.num_nodes_in_elem;

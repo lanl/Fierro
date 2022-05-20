@@ -57,6 +57,57 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                   graphics_id,
                   time_value);
     
+    
+    // extensive energy tallies over the entire mesh
+    double IE_t0 = 0;
+    double KE_t0 = 0;
+    double TE_t0 = 0;
+    
+    double IE_tend = 0;
+    double KE_tend = 0;
+    double TE_tend = 0;
+    
+    double IE_sum = 0;
+    double KE_sum = 0;
+    
+    double IE_loc_sum = 0;
+    double KE_loc_sum = 0;
+    
+    // extensive IE
+    REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
+        
+        IE_loc_sum += elem_mass(elem_gid)*elem_sie(1,elem_gid);
+        
+    }, IE_sum);
+    IE_t0 = IE_sum;
+    
+    // extensive KE
+    REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
+        
+        double ke = 0;
+        for (size_t dim=0; dim<mesh.num_dims; dim++){
+            ke += node_vel(1,node_gid,dim)*node_vel(1,node_gid,dim); // 1/2 at end
+        } // end for
+        
+        if(mesh.num_dims==2){
+            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
+        }
+        else{
+            KE_loc_sum += node_mass(node_gid)*ke;
+        }
+        
+    }, KE_sum);
+    KE_t0 = 0.5*KE_sum;
+    Kokkos::fence();
+    
+    // extensive TE
+    TE_t0 = IE_t0 + KE_t0;
+    
+    printf("Time=0, KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
+    printf("Time=End, KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
+    printf("total energy conservation error = %f \n", TE_tend - TE_t0);
+    
+    
     // a flag to exit the calculation
     size_t stop_calc=0;
     
@@ -69,19 +120,37 @@ void sgh_solve(CArrayKokkos <material_t> &material,
 	    if (stop_calc == 1) break;
 
 	    // get the step
-	    get_timestep(mesh,
-                     node_coords,
-                     node_vel,
-                     elem_sspd,
-                     elem_vol,
-                     time_value,
-                     graphics_time,
-                     time_final,
-                     dt_max,
-                     dt_min,
-                     dt_cfl,
-                     dt,
-                     fuzz);
+        if(mesh.num_dims==2){
+            get_timestep2D(mesh,
+                           node_coords,
+                           node_vel,
+                           elem_sspd,
+                           elem_vol,
+                           time_value,
+                           graphics_time,
+                           time_final,
+                           dt_max,
+                           dt_min,
+                           dt_cfl,
+                           dt,
+                           fuzz);
+        }
+        else {
+            get_timestep(mesh,
+                         node_coords,
+                         node_vel,
+                         elem_sspd,
+                         elem_vol,
+                         time_value,
+                         graphics_time,
+                         time_final,
+                         dt_max,
+                         dt_min,
+                         dt_cfl,
+                         dt,
+                         fuzz);
+        } // end if 2D
+        
         
         if (cycle==0){
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -104,7 +173,9 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                 mesh.num_dims,
                 mesh.num_elems,
                 mesh.num_nodes);
-	        
+	    
+        
+        
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++){
 
@@ -114,32 +185,64 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
             
             // ---- Calculate velocity diveregence for the element ----
-            get_divergence(elem_div,
-                           mesh,
-                           node_coords,
-                           node_vel,
-                           elem_vol);
+            if(mesh.num_dims==2){
+                get_divergence2D(elem_div,
+                                 mesh,
+                                 node_coords,
+                                 node_vel,
+                                 elem_vol);
+            }
+            else {
+                get_divergence(elem_div,
+                               mesh,
+                               node_coords,
+                               node_vel,
+                               elem_vol);
+            } // end if 2D
             
             
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
-            get_force_sgh(material,
-                          mesh,
-                          node_coords,
-                          node_vel,
-                          elem_den,
-                          elem_sie,
-                          elem_pres,
-                          elem_stress,
-                          elem_sspd,
-                          elem_vol,
-                          elem_div,
-                          elem_mat_id,
-                          corner_force,
-                          fuzz,
-                          small,
-                          elem_statev,
-                          dt,
-                          rk_alpha);
+            if(mesh.num_dims==2){
+                get_force_sgh2D(material,
+                                mesh,
+                                node_coords,
+                                node_vel,
+                                elem_den,
+                                elem_sie,
+                                elem_pres,
+                                elem_stress,
+                                elem_sspd,
+                                elem_vol,
+                                elem_div,
+                                elem_mat_id,
+                                corner_force,
+                                fuzz,
+                                small,
+                                elem_statev,
+                                dt,
+                                rk_alpha);
+            }
+            else {
+                get_force_sgh(material,
+                              mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              fuzz,
+                              small,
+                              elem_statev,
+                              dt,
+                              rk_alpha);
+            }
+            
 
             
             // ---- Update nodal velocities ---- //
@@ -154,11 +257,13 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             boundary_velocity(mesh, boundary, node_vel);
             
             
+            
             // ---- Update specific internal energy in the elements ----
             update_energy_sgh(rk_alpha,
                               dt,
                               mesh,
                               node_vel,
+                              node_coords,
                               elem_sie,
                               elem_mass,
                               corner_force);
@@ -178,22 +283,40 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
             
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
-            update_state(material,
-                         mesh,
-                         node_coords,
-                         node_vel,
-                         elem_den,
-                         elem_pres,
-                         elem_stress,
-                         elem_sspd,
-                         elem_sie,
-                         elem_vol,
-                         elem_mass,
-                         elem_mat_id,
-                         elem_statev,
-                         dt,
-                         rk_alpha);
-            
+            if(mesh.num_dims==2){
+                update_state2D(material,
+                               mesh,
+                               node_coords,
+                               node_vel,
+                               elem_den,
+                               elem_pres,
+                               elem_stress,
+                               elem_sspd,
+                               elem_sie,
+                               elem_vol,
+                               elem_mass,
+                               elem_mat_id,
+                               elem_statev,
+                               dt,
+                               rk_alpha);
+            }
+            else{
+                update_state(material,
+                             mesh,
+                             node_coords,
+                             node_vel,
+                             elem_den,
+                             elem_pres,
+                             elem_stress,
+                             elem_sspd,
+                             elem_sie,
+                             elem_vol,
+                             elem_mass,
+                             elem_mat_id,
+                             elem_statev,
+                             dt,
+                             rk_alpha);
+            }
             // ----
             // Notes on strength:
             //    1) hyper-elastic strength models are called in update_state
@@ -258,6 +381,49 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                            <std::chrono::nanoseconds>(time_2 - time_1).count();
     
     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
+    
+    
+    // ---- Calculate energy tallies ----
+    
+    IE_loc_sum = 0.0;
+    KE_loc_sum = 0.0;
+    IE_sum = 0.0;
+    KE_sum = 0.0;
+    
+    // extensive IE
+    REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
+        
+        IE_loc_sum += elem_mass(elem_gid)*elem_sie(1,elem_gid);
+        
+    }, IE_sum);
+    IE_tend = IE_sum;
+    
+    // extensive KE
+    REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
+        
+        double ke = 0;
+        for (size_t dim=0; dim<mesh.num_dims; dim++){
+            ke += node_vel(1,node_gid,dim)*node_vel(1,node_gid,dim); // 1/2 at end
+        } // end for
+        
+        if(mesh.num_dims==2){
+            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
+        }
+        else{
+            KE_loc_sum += node_mass(node_gid)*ke;
+        }
+            
+        
+    }, KE_sum);
+    KE_tend = 0.5*KE_sum;
+    Kokkos::fence();
+    
+    // extensive TE
+    TE_tend = IE_tend + KE_tend;
+    
+    printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
+    printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
+    printf("total energy conservation error = %f \n\n", TE_tend - TE_t0);
     
     return;
     

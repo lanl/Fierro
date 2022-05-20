@@ -7,6 +7,7 @@ void update_energy_sgh(double rk_alpha,
                        double dt,
                        const mesh_t &mesh,
                        const DViewCArrayKokkos <double> &node_vel,
+                       const DViewCArrayKokkos <double> &node_coords,
                        DViewCArrayKokkos <double> &elem_sie,
                        const DViewCArrayKokkos <double> &elem_mass,
                        const DViewCArrayKokkos <double> &corner_force){
@@ -28,12 +29,17 @@ void update_energy_sgh(double rk_alpha,
             
             // Get the corner global id for the local corner id
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+            
+            double node_radius = 1;
+            if(mesh.num_dims==2){
+                node_radius = node_coords(1,node_gid,1);
+            }
 
             // calculate the Power=F dot V for this corner
             for (size_t dim=0; dim<mesh.num_dims; dim++){
                 
                 double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
-                elem_power += corner_force(corner_gid, dim)*half_vel;
+                elem_power += corner_force(corner_gid, dim)*node_radius*half_vel;
                 
             } // end for dim
             

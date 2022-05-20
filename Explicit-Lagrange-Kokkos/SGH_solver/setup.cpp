@@ -24,6 +24,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
            const DViewCArrayKokkos <double> &elem_statev,
            const CArrayKokkos <double> &state_vars,
+           const DViewCArrayKokkos <double> &corner_mass,
            const size_t num_fills,
            const size_t rk_num_bins,
            const size_t num_bcs,
@@ -49,7 +50,7 @@ void setup(const CArrayKokkos <material_t> &material,
             printf("  Num bdy patches in this set = %lu \n", mesh.bdy_patches_in_set.stride(this_bdy));
             printf("  Num bdy nodes in this set = %lu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
         });
-	Kokkos::fence();
+        Kokkos::fence();
 
     }// end for
     
@@ -99,8 +100,6 @@ void setup(const CArrayKokkos <material_t> &material,
         } // end if
         
     } // end for
-    
-    
     
     
     //--- apply the fill instructions over the Elements---//
@@ -213,14 +212,12 @@ void setup(const CArrayKokkos <material_t> &material,
                 } // end logical on type
                 
                 // --- stress tensor ---
-                for (size_t i=0; i<mesh.num_dims; i++){
-                    for (size_t j=0; j<mesh.num_dims; j++){
+                for (size_t i=0; i<3; i++){
+                    for (size_t j=0; j<3; j++){
                         elem_stress(rk_level,elem_gid,i,j) = 0.0;
                     }        
                 }  // end for
                 
-                // cut out the node_gids for this element
-                ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
                 
                 
                 // --- Pressure and stress ---
@@ -363,7 +360,36 @@ void setup(const CArrayKokkos <material_t> &material,
     // apply BC's to velocity
     boundary_velocity(mesh, boundary, node_vel);
     
-
+    
+    // calculate the corner massess if 2D
+    if(mesh.num_dims==2){
+        
+        FOR_ALL(elem_gid, 0, mesh.num_elems, {
+            
+            // facial area of the corners
+            double corner_areas_array[4];
+            
+            ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
+            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+            
+            get_area_weights2D(corner_areas,
+                               elem_gid,
+                               node_coords,
+                               elem_node_gids);
+            
+            // loop over the corners of the element and calculate the mass
+            for (size_t corner_lid=0; corner_lid<4; corner_lid++){
+                
+                size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+                corner_mass(corner_gid) = corner_areas(corner_lid)*elem_den(elem_gid);
+                
+            } // end for over corners
+        });
+    
+    } // end of
+    
+    
+    // calculate the nodal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         
         node_mass(node_gid) = 0.0;
@@ -378,10 +404,10 @@ void setup(const CArrayKokkos <material_t> &material,
         }// end if dims=3
         else {
             
-            for(size_t elem_lid=0; elem_lid<mesh.num_corners_in_node(node_gid); elem_lid++){
-                // placeholder for corner masses
-                size_t elem_gid = mesh.elems_in_node(node_gid,elem_lid);
-                node_mass(node_gid) += 1.0/4.0*elem_mass(elem_gid);
+            for(size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(node_gid); corner_lid++){
+                
+                size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
+                node_mass(node_gid) += corner_mass(corner_gid);
             } // end for elem_lid
             
         } // end else
@@ -410,37 +436,37 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
     //    exit(0);
     //} // end if
     
-    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, { 
-    
-    // save the boundary patches to this set that are on the plane, spheres, etc.
-    for (size_t bdy_patch_lid=0; bdy_patch_lid<mesh.num_bdy_patches; bdy_patch_lid++){
+    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
         
         // tag boundaries
         int bc_tag_id = boundary(bdy_set).surface;
         double val = boundary(bdy_set).value;
         
-        // save the patch index
-        size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
-        
-        
-        // check to see if this patch is on the specified plane
-        size_t is_on_bdy = check_bdy(bdy_patch_gid,
-                                     bc_tag_id,
-                                     val,
-                                     mesh,
-                                     node_coords); // no=0, yes=1
-         
-        
-        if (is_on_bdy == 1){
-            size_t index = mesh.bdy_patches_in_set.stride(bdy_set);
-            mesh.bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
+        // save the boundary patches to this set that are on the plane, spheres, etc.
+        for (size_t bdy_patch_lid=0; bdy_patch_lid<mesh.num_bdy_patches; bdy_patch_lid++){
             
-            // increment the number of boundary patches saved
-            mesh.bdy_patches_in_set.stride(bdy_set) ++;
-        } // end if
+            // save the patch index
+            size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
+            
+            
+            // check to see if this patch is on the specified plane
+            size_t is_on_bdy = check_bdy(bdy_patch_gid,
+                                         bc_tag_id,
+                                         val,
+                                         mesh,
+                                         node_coords); // no=0, yes=1
+            
+            if (is_on_bdy == 1){
+                size_t index = mesh.bdy_patches_in_set.stride(bdy_set);
+                mesh.bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
+                
+                // increment the number of boundary patches saved
+                mesh.bdy_patches_in_set.stride(bdy_set) ++;
+            } // end if
+            
+            
+        } // end for bdy_patch
         
-        
-    } // end for bdy_patch
     });  // end FOR_ALL bdy_sets
    
     return;
@@ -449,7 +475,7 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
 
 
 // routine for checking to see if a vertex is on a boundary
-// bc_tag = 0 xplane, 1 yplane, 3 zplane, 4 cylinder, 5 is shell
+// bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
 // val = plane value, radius, radius
 KOKKOS_FUNCTION
 size_t check_bdy(const size_t patch_gid,
@@ -481,21 +507,21 @@ size_t check_bdy(const size_t patch_gid,
         // a x-plane
         if (this_bc_tag == 0){
             
-            if ( fabs(these_patch_coords[0] - val) <= 1.0e-6 ) is_on_bdy += 1;
+            if ( fabs(these_patch_coords[0] - val) <= 1.0e-7 ) is_on_bdy += 1;
             
         }// end if on type
         
         // a y-plane
         else if (this_bc_tag == 1){
             
-            if ( fabs(these_patch_coords[1] - val) <= 1.0e-6 ) is_on_bdy += 1;
+            if ( fabs(these_patch_coords[1] - val) <= 1.0e-7 ) is_on_bdy += 1;
             
         }// end if on type
         
         // a z-plane
         else if (this_bc_tag == 2){
             
-            if ( fabs(these_patch_coords[2] - val) <= 1.0e-6 ) is_on_bdy += 1;
+            if ( fabs(these_patch_coords[2] - val) <= 1.0e-7 ) is_on_bdy += 1;
             
         }// end if on type
         
@@ -506,7 +532,8 @@ size_t check_bdy(const size_t patch_gid,
             real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
                             these_patch_coords[1]*these_patch_coords[1]);
             
-            if ( fabs(R - val) <= 1.0e-8 ) is_on_bdy += 1;
+            printf("radius = %f \n", val);
+            if ( fabs(R - val) <= 1.0e-7 ) is_on_bdy += 1;
             
             
         }// end if on type
@@ -518,7 +545,7 @@ size_t check_bdy(const size_t patch_gid,
                             these_patch_coords[1]*these_patch_coords[1] +
                             these_patch_coords[2]*these_patch_coords[2]);
             
-            if ( fabs(R - val) <= 1.0e-8 ) is_on_bdy += 1;
+            if ( fabs(R - val) <= 1.0e-7 ) is_on_bdy += 1;
             
         } // end if on type
         

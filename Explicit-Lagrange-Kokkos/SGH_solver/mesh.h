@@ -751,6 +751,7 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
              const mesh_t &mesh);
 
+
 KOKKOS_FUNCTION
 void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const size_t elem_gid,
@@ -763,6 +764,12 @@ void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                   const size_t elem_gid,
                   const DViewCArrayKokkos <double> &node_coords,
                   const ViewCArrayKokkos <size_t>  &elem_node_gids);
+
+
+KOKKOS_FUNCTION
+double get_area_quad(const size_t elem_gid,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const ViewCArrayKokkos <size_t>  &elem_node_gids);
 
 
 KOKKOS_FUNCTION
@@ -796,6 +803,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
            const DViewCArrayKokkos <double> &elem_statev,
            const CArrayKokkos <double> &state_vars,
+           const DViewCArrayKokkos <double> &corner_mass,
            const size_t num_fills,
            const size_t rk_num_bins,
            const size_t num_bdy_sets,
@@ -997,11 +1005,33 @@ void get_timestep(mesh_t &mesh,
                   const double fuzz);
 
 
+void get_timestep2D(mesh_t &mesh,
+                    DViewCArrayKokkos <double> &node_coords,
+                    DViewCArrayKokkos <double> &node_vel,
+                    DViewCArrayKokkos <double> &elem_sspd,
+                    DViewCArrayKokkos <double> &elem_vol,
+                    double time_value,
+                    const double graphics_time,
+                    const double time_final,
+                    const double dt_max,
+                    const double dt_min,
+                    const double dt_cfl,
+                    double &dt,
+                    const double fuzz);
+
+
 void get_divergence(DViewCArrayKokkos <double> &elem_div,
                     const mesh_t mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
                     const DViewCArrayKokkos <double> &elem_vol);
+
+
+void get_divergence2D(DViewCArrayKokkos <double> &elem_div,
+                      const mesh_t mesh,
+                      const DViewCArrayKokkos <double> &node_coords,
+                      const DViewCArrayKokkos <double> &node_vel,
+                      const DViewCArrayKokkos <double> &elem_vol);
 
 
 KOKKOS_FUNCTION
@@ -1012,6 +1042,14 @@ void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
                  const double elem_vol,
                  const size_t elem_gid);
 
+
+KOKKOS_FUNCTION
+void get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                   const DViewCArrayKokkos <double> &node_vel,
+                   const ViewCArrayKokkos <double> &b_matrix,
+                   const double elem_area,
+                   const size_t elem_gid);
 
 KOKKOS_FUNCTION
 void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
@@ -1044,6 +1082,26 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                    const double rk_alpha);
 
 
+void get_force_sgh2D(const CArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_sie,
+                     const DViewCArrayKokkos <double> &elem_pres,
+                     const DViewCArrayKokkos <double> &elem_stress,
+                     const DViewCArrayKokkos <double> &elem_sspd,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     DViewCArrayKokkos <double> &corner_force,
+                     const double fuzz,
+                     const double small,
+                     const DViewCArrayKokkos <double> &elem_statev,
+                     const double dt,
+                     const double rk_alpha);
+
+
 void update_velocity_sgh(double rk_alpha,
                          double dt,
                          const mesh_t &mesh,
@@ -1056,10 +1114,10 @@ void update_energy_sgh(double rk_alpha,
                        double dt,
                        const mesh_t &mesh,
                        const DViewCArrayKokkos <double> &node_vel,
+                       const DViewCArrayKokkos <double> &node_coords,
                        DViewCArrayKokkos <double> &elem_sie,
                        const DViewCArrayKokkos <double> &elem_mass,
                        const DViewCArrayKokkos <double> &corner_force);
-
 
 
 void update_position_sgh(double rk_alpha,
@@ -1087,6 +1145,37 @@ void update_state(const CArrayKokkos <material_t> &material,
                   const double rk_alpha);
 
 
+void update_state2D(const CArrayKokkos <material_t> &material,
+                    const mesh_t &mesh,
+                    const DViewCArrayKokkos <double> &node_coords,
+                    const DViewCArrayKokkos <double> &node_vel,
+                    DViewCArrayKokkos <double> &elem_den,
+                    DViewCArrayKokkos <double> &elem_pres,
+                    DViewCArrayKokkos <double> &elem_stress,
+                    DViewCArrayKokkos <double> &elem_sspd,
+                    const DViewCArrayKokkos <double> &elem_sie,
+                    const DViewCArrayKokkos <double> &elem_vol,
+                    const DViewCArrayKokkos <double> &elem_mass,
+                    const DViewCArrayKokkos <size_t> &elem_mat_id,
+                    const DViewCArrayKokkos <double> &elem_statev,
+                    const double dt,
+                    const double rk_alpha);
+
+
+KOKKOS_FUNCTION
+void get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
+                        const size_t elem_gid,
+                        const DViewCArrayKokkos <double> &node_coords,
+                        const ViewCArrayKokkos <size_t>  &elem_node_gids);
+
+
+KOKKOS_FUNCTION
+double heron(const double x1,
+             const double y1,
+             const double x2,
+             const double y2,
+             const double x3,
+             const double y3);
 
 
 #endif 
