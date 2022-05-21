@@ -5027,10 +5027,11 @@ int FEA_Module_Elasticity::solve(){
   //set coordinates vector
   Teuchos::RCP<MV> tcoordinates = Teuchos::rcp(new MV(local_dof_map, num_dim));
   //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
-    
+
   host_vec_array coordinates_view = tcoordinates->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   int dim_index;
   real_t node_x, node_y, node_z;
+  /*
   //set coordinates components
   for(LO i=0; i < local_nrows; i++){
     dim_index = i % num_dim;
@@ -5043,7 +5044,8 @@ int FEA_Module_Elasticity::solve(){
     coordinates_view(i,1) = node_y;
     coordinates_view(i,2) = node_z;
   }// for
-    
+  */
+  tcoordinates = node_coords_distributed;  
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> coordinates = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tcoordinates));
     
   //nullspace vector
@@ -5135,7 +5137,7 @@ int FEA_Module_Elasticity::solve(){
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> material = Teuchos::null;
   Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xcrs_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(Global_Stiffness_Matrix));
   xA = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xcrs_A));
-  //xwrap_balanced_A->SetFixedBlockSize(1);
+  xA->SetFixedBlockSize(num_dim);
    
   //randomize initial vector
   xX->setSeed(100);
