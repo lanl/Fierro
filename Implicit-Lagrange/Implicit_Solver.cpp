@@ -2243,7 +2243,8 @@ void Implicit_Solver::repartition_nodes(){
   params.set("debug_procs", "0");
   params.set("error_check_level", "debug_mode_assertions");
 
-  params.set("algorithm", "rcb");
+  //params.set("algorithm", "rcb");
+  params.set("algorithm", "multijagged");
   params.set("imbalance_tolerance", tolerance );
   params.set("num_global_parts", nranks);
   
