@@ -43,7 +43,7 @@ void Simulation_Parameters_Thermal::input(){
   output_heat_flux_flag = true;
   
   //Isotropic Conductivity parameters to move into a child class later
-  Thermal_Conductivity = 17;
+  Thermal_Conductivity = 10;
 
   //Gauss-Legendre parameters
   num_gauss_points = 2;

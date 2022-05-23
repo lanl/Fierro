@@ -87,9 +87,9 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
 
   Matrix_alloc=0;
   gradient_print_sync = 0;
-
+  
   //boundary condition data
-  current_bdy_id = 0;
+  max_boundary_sets = max_temp_boundary_sets = max_load_boundary_sets = num_surface_temp_sets = num_surface_flux_sets = 0;
 
   //boundary condition flags
   body_term_flag = thermal_flag = electric_flag = false;
@@ -132,22 +132,18 @@ FEA_Module_Heat_Conduction::~FEA_Module_Heat_Conduction(){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::init_boundaries(){
-  int num_boundary_sets = simparam->NB;
-  int num_surface_flux_sets = simparam->NBSF;
-  int num_surface_temp_sets = simparam->NBT;
-  int num_dim = simparam->num_dim;
+  max_boundary_sets = simparam->NB;
+  max_load_boundary_sets = simparam->NBSF;
+  max_temp_boundary_sets = simparam->NBT;
   
   // set the number of boundary sets
   if(myrank == 0)
     std::cout << "building boundary sets " << std::endl;
-  
-  init_boundary_sets(num_boundary_sets);
-  Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_boundary_sets); 
-  Boundary_Surface_Heat_Flux = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_flux_sets,3);
-  Boundary_Surface_Temperatures = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_surface_temp_sets,1);
 
-  //initialize
-  for(int ibdy=0; ibdy < num_boundary_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
+  //initialize to 1 since there must be at least 1 boundary set anyway; read in may occure later
+  if(max_boundary_sets==0) max_boundary_sets = 1;
+  //std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR INIT " << num_boundary_conditions <<std::endl;
+  init_boundary_sets(max_boundary_sets);
 
   //allocate nodal data
   Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes, "Node_DOF_Boundary_Condition_Type");
@@ -157,6 +153,8 @@ void FEA_Module_Heat_Conduction::init_boundaries(){
   //initialize
   for(int init=0; init < nall_nodes; init++)
     Node_DOF_Boundary_Condition_Type(init) = NONE;
+
+  Number_DOF_BCS = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -164,19 +162,131 @@ void FEA_Module_Heat_Conduction::init_boundaries(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::init_boundary_sets (int num_sets){
-    
-  num_boundary_conditions = num_sets;
+
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions = 0";
     return;
   }
+  //initialize maximum
+  max_boundary_sets = num_sets;
+  if(max_load_boundary_sets == 0) max_load_boundary_sets = num_sets;
+  if(max_temp_boundary_sets == 0) max_temp_boundary_sets = num_sets;
+  //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
+  Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(num_sets, "Boundary_Condition_Type_List");
   NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
+  //std::cout << "NBOUNDARY PATCHES ON RANK " << myrank << " FOR INIT IS " << nboundary_patches <<std::endl;
   Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
+  Boundary_Surface_Heat_Flux = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_load_boundary_sets, 3, "Boundary_Surface_Heat_Flux");
+  Boundary_Surface_Temperatures = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_temp_boundary_sets, 3, "Boundary_Surface_Temperatures");
 
   //initialize data
   for(int iset = 0; iset < num_sets; iset++) NBoundary_Condition_Patches(iset) = 0;
+
+   //initialize
+  for(int ibdy=0; ibdy < num_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
 }
 
+/* ----------------------------------------------------------------------------
+   Grow boundary conditions sets of element boundary surfaces
+------------------------------------------------------------------------------- */
+
+void FEA_Module_Heat_Conduction::grow_boundary_sets(int num_sets){
+  int num_dim = simparam->num_dim;
+
+  if(num_sets == 0){
+    std::cout << " Warning: number of boundary conditions being set to 0";
+    return;
+  }
+
+  //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
+  if(num_sets>max_boundary_sets){
+    //temporary storage for previous data
+    CArrayKokkos<int, array_layout, HostSpace, memory_traits> Temp_Boundary_Condition_Type_List = Boundary_Condition_Type_List;
+    CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_NBoundary_Condition_Patches = NBoundary_Condition_Patches;
+    CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_Boundary_Condition_Patches = Boundary_Condition_Patches;
+    
+    max_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
+    Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(max_boundary_sets, "Boundary_Condition_Type_List");
+    NBoundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_boundary_sets, "NBoundary_Condition_Patches");
+    //std::cout << "NBOUNDARY PATCHES ON RANK " << myrank << " FOR GROW " << nboundary_patches <<std::endl;
+    Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_boundary_sets, nboundary_patches, "Boundary_Condition_Patches");
+
+    //copy previous data back over
+    //std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR COPY " << max_boundary_sets <<std::endl;
+    for(int iset = 0; iset < num_boundary_conditions; iset++){
+      Boundary_Condition_Type_List(iset) = Temp_Boundary_Condition_Type_List(iset);
+      NBoundary_Condition_Patches(iset) = Temp_NBoundary_Condition_Patches(iset);
+      for(int ipatch = 0; ipatch < nboundary_patches; ipatch++){
+        Boundary_Condition_Patches(iset, ipatch) = Temp_Boundary_Condition_Patches(iset, ipatch);
+      }
+    }
+    
+    //initialize data
+    for(int iset = num_boundary_conditions; iset < max_boundary_sets; iset++) NBoundary_Condition_Patches(iset) = 0;
+
+    //initialize
+    for(int ibdy = num_boundary_conditions; ibdy < max_boundary_sets; ibdy++) Boundary_Condition_Type_List(ibdy) = NONE;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Grow storage for temperature boundary conditions
+------------------------------------------------------------------------------- */
+
+void FEA_Module_Heat_Conduction::grow_temperature_condition_sets(int num_sets){
+  int num_dim = simparam->num_dim;
+  
+  if(num_sets == 0){
+    std::cout << " Warning: number of boundary conditions being set to 0";
+    return;
+  }
+  
+  //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
+  if(num_sets>max_temp_boundary_sets){
+    //temporary storage for previous data
+    CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Temp_Boundary_Surface_Temperatures = Boundary_Surface_Temperatures;
+    
+    max_temp_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
+    Boundary_Surface_Temperatures = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_temp_boundary_sets, 3, "Boundary_Surface_Temperatures");
+
+    //copy previous data back over
+    for(int iset = 0; iset < num_surface_temp_sets; iset++){
+      Boundary_Surface_Temperatures(iset,0) = Temp_Boundary_Surface_Temperatures(iset,0);
+      Boundary_Surface_Temperatures(iset,1) = Temp_Boundary_Surface_Temperatures(iset,1);
+      Boundary_Surface_Temperatures(iset,2) = Temp_Boundary_Surface_Temperatures(iset,2);
+    }
+  }
+  
+}
+
+/* ----------------------------------------------------------------------------
+   Grow boundary conditions sets of element boundary surfaces
+------------------------------------------------------------------------------- */
+
+void FEA_Module_Heat_Conduction::grow_loading_condition_sets(int num_sets){
+  int num_dim = simparam->num_dim;
+  
+  if(num_sets == 0){
+    std::cout << " Warning: number of boundary conditions being set to 0";
+    return;
+  }
+  
+  //std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
+  if(num_sets>max_load_boundary_sets){
+    //temporary storage for previous data
+    CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Temp_Boundary_Surface_Heat_Flux = Boundary_Surface_Heat_Flux;
+    
+    max_load_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
+    Boundary_Surface_Heat_Flux = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_load_boundary_sets, 3, "Boundary_Surface_Heat_Flux");
+
+    //copy previous data back over
+    for(int iset = 0; iset < num_surface_flux_sets; iset++){
+      Boundary_Surface_Heat_Flux(iset,0) = Temp_Boundary_Surface_Heat_Flux(iset,0);
+      Boundary_Surface_Heat_Flux(iset,1) = Temp_Boundary_Surface_Heat_Flux(iset,1);
+      Boundary_Surface_Heat_Flux(iset,2) = Temp_Boundary_Surface_Heat_Flux(iset,2);
+    }
+  }
+}
 
 /* ----------------------------------------------------------------------
    Assign sets of element boundary surfaces corresponding to user BCs
@@ -184,8 +294,6 @@ void FEA_Module_Heat_Conduction::init_boundary_sets (int num_sets){
 
 void FEA_Module_Heat_Conduction::generate_bcs(){
   int num_dim = simparam->num_dim;
-  int bdy_set_id;
-  int surf_disp_set_id = 0;
   int bc_tag;
   real_t value;
   real_t fix_limits[4];
@@ -196,19 +304,21 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   value = 0.0 * simparam->unit_scaling;
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
-  bdy_set_id = current_bdy_id++;
+  if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+  if(num_surface_temp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_temp_sets+1);
   //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = TEMPERATURE_CONDITION;
-  Boundary_Surface_Temperatures(surf_disp_set_id,0) = 10;
-  if(Boundary_Surface_Temperatures(surf_disp_set_id,0)) nonzero_bc_flag = true;
-  surf_disp_set_id++;
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = TEMPERATURE_CONDITION;
+  Boundary_Surface_Temperatures(num_surface_temp_sets,0) = 20;
+  if(Boundary_Surface_Temperatures(num_surface_temp_sets,0)) nonzero_bc_flag = true;
     
   *fos << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   *fos << std::endl;
-
-  //Tag nodes for Boundary conditions such as displacements
+  
+  num_boundary_conditions++;
+  num_surface_temp_sets++;
+  //Tag nodes for Boundary conditions such as temperatures
   Temperature_Boundary_Conditions();
 } // end generate_bcs
 
@@ -218,8 +328,6 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
 
 void FEA_Module_Heat_Conduction::generate_applied_loads(){
   int num_dim = simparam->num_dim;
-  int bdy_set_id;
-  int surf_flux_set_id = 0;
   int bc_tag;
   real_t value;
   
@@ -228,19 +336,26 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   *fos << "tagging beam +z heat flux " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
-  value = 0.1;
-  bdy_set_id = current_bdy_id++;
+  value = 100;
+  
+  //grow arrays as needed
+  if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+  if(num_surface_flux_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_flux_sets+1);
+
   //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, bdy_set_id);
-  Boundary_Condition_Type_List(bdy_set_id) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Heat_Flux(surf_flux_set_id,0) = 0;
-  Boundary_Surface_Heat_Flux(surf_flux_set_id,1) = 0;
-  Boundary_Surface_Heat_Flux(surf_flux_set_id,2) = -50/simparam->unit_scaling/simparam->unit_scaling;
-  surf_flux_set_id++;
+  tag_boundaries(bc_tag, value, num_boundary_conditions);
+  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
+  Boundary_Surface_Heat_Flux(num_surface_flux_sets,0) = 0;
+  Boundary_Surface_Heat_Flux(num_surface_flux_sets,1) = 0;
+  Boundary_Surface_Heat_Flux(num_surface_flux_sets,2) = -1/simparam->unit_scaling/simparam->unit_scaling;
+
   *fos << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(bdy_set_id) << std::endl;
+  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
   *fos << std::endl;
   
+  num_boundary_conditions++;
+  num_surface_flux_sets++;
+
   //Body Term Section
 
   //apply body terms

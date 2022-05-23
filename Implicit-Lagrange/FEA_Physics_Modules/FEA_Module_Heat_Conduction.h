@@ -31,6 +31,12 @@ public:
 
   //initializes memory for arrays used in the global stiffness matrix assembly
   void init_boundary_sets(int num_boundary_sets);
+
+  void grow_boundary_sets(int num_boundary_sets);
+
+  void grow_temperature_condition_sets(int num_boundary_sets);
+
+  void grow_loading_condition_sets(int num_boundary_sets);
   
   void init_assembly();
 
@@ -105,6 +111,9 @@ public:
   //Boundary Conditions Data
   
   enum bc_type {NONE,TEMPERATURE_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
+  int max_boundary_sets, max_temp_boundary_sets, max_load_boundary_sets;
+  int num_surface_temp_sets, num_surface_flux_sets;
+  bool matrix_bc_reduced;
   
   //body force parameters
   bool thermal_flag, electric_flag;

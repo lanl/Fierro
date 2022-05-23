@@ -653,7 +653,7 @@ void FEA_Module_Elasticity::grow_displacement_condition_sets(int num_sets){
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Temp_Boundary_Surface_Displacements = Boundary_Surface_Displacements;
     
     max_disp_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
-    Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_disp_boundary_sets, 3, "Boundary_Condition_Type_List");
+    Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_disp_boundary_sets, 3, "Boundary_Surface_Displacements");
 
     //copy previous data back over
     for(int iset = 0; iset < num_surface_disp_sets; iset++){
@@ -683,7 +683,7 @@ void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Temp_Boundary_Surface_Force_Densities = Boundary_Surface_Force_Densities;
     
     max_load_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
-    Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_load_boundary_sets, 3, "Boundary_Condition_Type_List");
+    Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_load_boundary_sets, 3, "Boundary_Surface_Force_Densities");
 
     //copy previous data back over
     for(int iset = 0; iset < num_surface_force_sets; iset++){
