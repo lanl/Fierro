@@ -4890,10 +4890,8 @@ int FEA_Module_Elasticity::solve(){
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
-  size_t reduced_index;
   int max_stride = 0;
   size_t access_index, row_access_index, row_counter;
-  global_size_t reduced_row_count;
   GO global_index, global_dof_index;
   LO local_dof_index;
 
@@ -5025,7 +5023,7 @@ int FEA_Module_Elasticity::solve(){
   //Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced/num_dim,0,comm));
 
   //set coordinates vector
-  Teuchos::RCP<MV> tcoordinates = Teuchos::rcp(new MV(local_dof_map, num_dim));
+  Teuchos::RCP<MV> tcoordinates;
   //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
 
   host_vec_array coordinates_view = tcoordinates->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
