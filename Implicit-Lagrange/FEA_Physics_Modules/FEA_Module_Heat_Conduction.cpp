@@ -106,6 +106,7 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
   Global_Nodal_Heat = Teuchos::rcp(new MV(local_dof_map, 1));
   all_node_temperature_gradients_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   all_node_heat_fluxes_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  adjoints_allocated = false;
 
   //initialize temperatures to 0
   //local variable for host view in the dual view
@@ -3727,4 +3728,18 @@ void FEA_Module_Heat_Conduction::update_linear_solve(Teuchos::RCP<const MV> zp){
       //MPI_Barrier(world);
       //MPI_Abort(world,4);
   //}
+}
+
+/* -------------------------------------------------------------------------------------------
+   enforce constraints on nodes due to BCS
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Heat_Conduction::node_density_constraints(host_vec_array node_densities_lower_bound){
+
+  int num_dim = simparam->num_dim;
+  for(int i = 0; i < nlocal_nodes; i++){
+    if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
+      node_densities_lower_bound(i,0) = 1;
+    }
+  }
 }
