@@ -60,7 +60,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
         
         // --- Create views of arrays to aid the force calculation ---
     
-        ViewCArrayKokkos <double> tau(tau_array, 3, 3);
+        ViewCArrayKokkos <double> tau(tau_array, num_dims, num_dims);
         ViewCArrayKokkos <double> area(area_array, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> shock_dir(shock_dir_array, num_dims);
         ViewCArrayKokkos <double> sum(sum_array, 4);
@@ -451,7 +451,7 @@ void get_force_sgh2D(const CArrayKokkos <material_t> &material,
         
         // --- Create views of arrays to aid the force calculation ---
     
-        ViewCArrayKokkos <double> tau(tau_array, num_dims, num_dims);
+        ViewCArrayKokkos <double> tau(tau_array, 3, 3);
         ViewCArrayKokkos <double> area(area_array, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> shock_dir(shock_dir_array, num_dims);
         ViewCArrayKokkos <double> sum(sum_array, 4);
