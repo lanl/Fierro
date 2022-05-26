@@ -113,7 +113,7 @@ public:
   bool adjoints_allocated;
   Teuchos::RCP<MV> adjoint_temperatures_distributed;
   Teuchos::RCP<MV> adjoint_equation_RHS_distributed;
-  Teuchos::RCP<MV> all_adjoint_temperatues_distributed;
+  Teuchos::RCP<MV> all_adjoint_temperatures_distributed;
   Teuchos::RCP<MV> Global_Nodal_Heat;
   Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MAT> Global_Conductivity_Matrix;

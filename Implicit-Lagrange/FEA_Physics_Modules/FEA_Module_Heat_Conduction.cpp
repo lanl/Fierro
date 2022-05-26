@@ -28,6 +28,7 @@
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
+#include "Tpetra_Import_Util2.hpp"
 #include "MatrixMarket_Tpetra.hpp"
 #include <set>
 
@@ -725,7 +726,7 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
   entrycount = 0;
   for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
     for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
-      DOF_Graph_Matrix(irow,istride) = colmap->getGlobalElement(Conductivity_local_indices(entrycount));
+      DOF_Graph_Matrix(irow,istride) = colmap->getGlobalElement(conductivity_local_indices(entrycount));
       entrycount++;
     }
   }
@@ -2333,19 +2334,11 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       adjoint_equation_RHS_view(i,0) = 0;
   }
 
-  //*fos << "RHS vector" << std::endl;
-  //unbalanced_B->describe(*fos,Teuchos::VERB_EXTREME);
-  //balance RHS vector due to missing BC dofs
-  //import object to rebalance force vector
-  Tpetra::Import<LO, GO> Bvec_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
-  
-  //comms to rebalance force vector
-  balanced_B->doImport(*unbalanced_B, Bvec_importer, Tpetra::INSERT);
 
   //assign old Conductivity matrix entries
   if(!matrix_bc_reduced){
   LO stride_index;
-  for(LO i=0; i < local_nrows; i++){
+  for(LO i=0; i < nlocal_nodes; i++){
     if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)){
       for(LO j = 0; j < Conductivity_Matrix_Strides(i); j++){
         global_dof_id = DOF_Graph_Matrix(i,j);
@@ -2406,7 +2399,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   }
   real_t current_cpu_time2 = Solver_Pointer_->CPU_Time();
   comm->barrier();
-  SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   hessvec_linear_time += Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
@@ -3188,14 +3181,14 @@ int FEA_Module_Heat_Conduction::solve(){
   //local variable for host view in the dual view
   const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  const_host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
   int max_stride = 0;
   size_t access_index, row_access_index, row_counter;
   GO global_index, global_dof_index;
-  LO reduced_local_dof_index;
+  LO local_dof_index;
 
   //*fos << Amesos2::version() << std::endl << std::endl;
 
@@ -3220,17 +3213,17 @@ int FEA_Module_Heat_Conduction::solve(){
   //alter rows of RHS to be the boundary condition value on that node
   //first pass counts strides for storage
   row_counter = 0;
-  for(LO i=0; i < local_nrows; i++){
+  for(LO i=0; i < nlocal_nodes; i++){
     if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)){
       Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
       row_counter++;
-      Nodal_RHS(i,0) = Node_DOF_Displacement_Boundary_Conditions(i)*diagonal_bc_scaling;
+      Nodal_RHS(i,0) = Node_Temperature_Boundary_Conditions(i)*diagonal_bc_scaling;
     }
   }//row for
   
   //change entries of Conductivity matrix corresponding to BCs to 0s (off diagonal elements) and 1 (diagonal elements)
   //storage for original Conductivity matrix values
-  Original_Conductivity_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(local_nrows);
+  Original_Conductivity_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes);
 
   //debug print of A matrix before applying BCS
   //*fos << "Reduced Conductivity Matrix :" << std::endl;
@@ -3241,7 +3234,7 @@ int FEA_Module_Heat_Conduction::solve(){
 
   //first pass counts strides for storage
   if(!matrix_bc_reduced){
-  for(LO i=0; i < local_nrows; i++){
+  for(LO i=0; i < nlocal_nodes; i++){
     Original_Conductivity_Entries_Strides(i) = 0;
     if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)){
       Original_Conductivity_Entries_Strides(i) = Conductivity_Matrix_Strides(i);
@@ -3261,7 +3254,7 @@ int FEA_Module_Heat_Conduction::solve(){
   LO stride_index;
   Original_Conductivity_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Conductivity_Entries_Strides);
   Original_Conductivity_Entry_Indices = RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>(Original_Conductivity_Entries_Strides);
-  for(LO i=0; i < local_nrows; i++){
+  for(LO i=0; i < nlocal_nodes; i++){
     if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)){
       for(LO j = 0; j < Conductivity_Matrix_Strides(i); j++){
         global_dof_index = DOF_Graph_Matrix(i,j);
@@ -3313,7 +3306,7 @@ int FEA_Module_Heat_Conduction::solve(){
     // Instead of checking each time for rank, create a rank 0 stream
 
   xB = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(Global_Nodal_RHS));
-  X = node_displacements_distributed;
+  X = node_temperatures_distributed;
   xX = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(X));
 
   Teuchos::RCP<MV> tcoordinates;
@@ -3321,7 +3314,7 @@ int FEA_Module_Heat_Conduction::solve(){
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> coordinates = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tcoordinates));
     
   //nullspace vector
-  Teuchos::RCP<MV> tnullspace = Teuchos::rcp(new MV(llocal_dof_map, 1));
+  Teuchos::RCP<MV> tnullspace = Teuchos::rcp(new MV(local_dof_map, 1));
   tnullspace->putScalar(1);
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> nullspace = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tnullspace));
 
@@ -3337,7 +3330,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //initialize BC components
   /*
   host_vec_array X_view = X->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  for(LO i=0; i < local_nrows; i++){
+  for(LO i=0; i < nlocal_nodes; i++){
     if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)){
       X_view(i,0) = Node_DOF_Displacement_Boundary_Conditions(i);
     }
@@ -3431,7 +3424,7 @@ int FEA_Module_Heat_Conduction::solve(){
 
   //reinsert global conductivity values corresponding to BC indices to facilitate heat potential calculation
   if(matrix_bc_reduced){
-    for(LO i = 0; i < local_nrows; i++){
+    for(LO i = 0; i < nlocal_nodes; i++){
       for(LO j = 0; j < Original_Conductivity_Entries_Strides(i); j++){
         access_index = Original_Conductivity_Entry_Indices(i,j);
         Conductivity_Matrix(i,access_index) = Original_Conductivity_Entries(i,j);
