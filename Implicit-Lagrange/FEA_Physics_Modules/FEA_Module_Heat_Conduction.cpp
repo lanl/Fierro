@@ -1177,7 +1177,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
     if(nonzero_bc_flag){
       for(int irow = 0; irow < nlocal_nodes; irow++){
         for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
-          node_id = all_node_map->getLocalElement(Graph_Matrix(irow,istride));
+          node_id = all_node_map->getLocalElement(DOF_Graph_Matrix(irow,istride));
           if(Node_DOF_Boundary_Condition_Type(node_id)==TEMPERATURE_CONDITION&&Node_Temperature_Boundary_Conditions(node_id)){
             Nodal_RHS(irow,0) -= Conductivity_Matrix(irow,istride)*Node_Temperature_Boundary_Conditions(node_id);  
           }
@@ -1626,7 +1626,6 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
   CArrayKokkos<int, array_layout, device_type, memory_traits> Temperatures_Conditions(num_dim);
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes);
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
-  Number_DOF_BCS = 0;
 
   //host view of local nodal temperatures
   host_vec_array node_temperatures_host = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
