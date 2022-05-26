@@ -3823,7 +3823,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 
   //*fos << "RHS vector" << std::endl;
-  //unbalanced_B->describe(*fos,Teuchos::VERB_EXTREME);
+  //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
 
   //assign old stiffness matrix entries
   if(!matrix_bc_reduced){
@@ -3882,7 +3882,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   // System solution (Ax = b)
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
-  //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
   if(simparam->equilibrate_matrix_flag){
     Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
     Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
@@ -5026,7 +5026,6 @@ int FEA_Module_Elasticity::solve(){
   Teuchos::RCP<MV> tcoordinates;
   //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
 
-  host_vec_array coordinates_view = tcoordinates->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   int dim_index;
   real_t node_x, node_y, node_z;
   /*
@@ -5176,7 +5175,7 @@ int FEA_Module_Elasticity::solve(){
   //out<<*Linear_Solve_Params;
   //out<<"*******************************************"<<std::endl;
     
-  //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
   //debug print
   //Tpetra::MatrixMarket::Writer<MAT> market_writer();
   //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Stiffness_Matrix, "A_matrix2", "Stores stiffness matrix values");  
@@ -5224,7 +5223,7 @@ int FEA_Module_Elasticity::solve(){
     *fos << std::fixed;
     Teuchos::TimeMonitor::report(comm.ptr(), *fos, "", reportParams);
     *fos << std::setiosflags(ff);
-    //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+    //xA->describe(*fos,Teuchos::VERB_EXTREME);
   }
   //return !EXIT_SUCCESS;
   //timing statistics for LU solver

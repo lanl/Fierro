@@ -706,13 +706,13 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
 
   //row offsets
   row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
-  row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
-  for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
+  row_pointers row_offsets_pass("row_offsets", nlocal_nodes+1);
+  for(int ipass = 0; ipass < nlocal_nodes + 1; ipass++){
     row_offsets_pass(ipass) = row_offsets(ipass);
   }
 
   size_t entrycount = 0;
-  for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+  for(int irow = 0; irow < nlocal_nodes; irow++){
     for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
       conductivity_local_indices(entrycount) = colmap->getLocalElement(DOF_Graph_Matrix(irow,istride));
       entrycount++;
@@ -724,7 +724,7 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
 
   //set global indices for DOF graph from sorted local indices
   entrycount = 0;
-  for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+  for(int irow = 0; irow < nlocal_nodes; irow++){
     for(int istride = 0; istride < Conductivity_Matrix_Strides(irow); istride++){
       DOF_Graph_Matrix(irow,istride) = colmap->getGlobalElement(conductivity_local_indices(entrycount));
       entrycount++;
@@ -2040,7 +2040,6 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  host_vec_array unbalanced_B_view = unbalanced_B->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   const_host_vec_array direction_vec = direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
   if(!adjoints_allocated){
@@ -2392,9 +2391,9 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   // System solution (Ax = b)
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
-  //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->preScaleRightHandSides(*balanced_B,"diag");
+    Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
     Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
   real_t current_cpu_time2 = Solver_Pointer_->CPU_Time();
@@ -3298,7 +3297,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //debug print
   //if(update_count==42){
     //Tpetra::MatrixMarket::Writer<MAT> market_writer();
-    //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *balanced_A, "A_matrix", "Stores conductivity matrix values");
+    //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Conductivity_Matrix, "A_matrix", "Stores conductivity matrix values");
   //}
   using impl_scalar_type =
     typename Kokkos::Details::ArithTraits<real_t>::val_type;
@@ -3321,7 +3320,7 @@ int FEA_Module_Heat_Conduction::solve(){
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> material = Teuchos::null;
   Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xcrs_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(Global_Conductivity_Matrix));
   xA = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xcrs_A));
-  xA->SetFixedBlockSize(num_dim);
+  //xA->SetFixedBlockSize(num_dim);
    
   //randomize initial vector
   xX->setSeed(100);
@@ -3362,7 +3361,7 @@ int FEA_Module_Heat_Conduction::solve(){
   //out<<*Linear_Solve_Params;
   //out<<"*******************************************"<<std::endl;
     
-  //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
   //debug print
   //Tpetra::MatrixMarket::Writer<MAT> market_writer();
   //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Conductivity_Matrix, "A_matrix2", "Stores Conductivity matrix values");  
@@ -3410,7 +3409,7 @@ int FEA_Module_Heat_Conduction::solve(){
     *fos << std::fixed;
     Teuchos::TimeMonitor::report(comm.ptr(), *fos, "", reportParams);
     *fos << std::setiosflags(ff);
-    //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+    //xA->describe(*fos,Teuchos::VERB_EXTREME);
   }
   //return !EXIT_SUCCESS;
   //timing statistics for LU solver
