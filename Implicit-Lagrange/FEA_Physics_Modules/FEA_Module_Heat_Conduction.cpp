@@ -579,7 +579,16 @@ void FEA_Module_Heat_Conduction::init_assembly(){
   Conductivity_Matrix_Strides = Graph_Matrix_Strides;
 
   Conductivity_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Conductivity_Matrix_Strides);
-  DOF_Graph_Matrix = Graph_Matrix;
+  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Conductivity_Matrix_Strides);
+  for (int idof = 0; idof < nlocal_nodes; idof++){
+    for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
+      DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof,istride);
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
 
   //construct distributed conductivity matrix and force vector from local kokkos data
   
@@ -640,6 +649,17 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
   for (int idof = 0; idof < nlocal_nodes; idof++){
     for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
       Conductivity_Matrix(idof,istride) = 0;
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
+
+  //reset unsorted DOF Graph corresponding to assembly mapped values
+  for (int idof = 0; idof < nlocal_nodes; idof++){
+    for (int istride = 0; istride < Conductivity_Matrix_Strides(idof); istride++){
+      DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof,istride);
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
     }
@@ -3227,8 +3247,8 @@ int FEA_Module_Heat_Conduction::solve(){
   //*fos << "Reduced Conductivity Matrix :" << std::endl;
   //Global_Conductivity_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
-  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
-  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Conductivity_Matrix, "A_matrix", "Stores Conductivity matrix values");
+  Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Conductivity_Matrix, "A_matrix", "Stores conductivity matrix values");
 
   //first pass counts strides for storage
   if(!matrix_bc_reduced){
@@ -3362,8 +3382,8 @@ int FEA_Module_Heat_Conduction::solve(){
     
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
   //debug print
-  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
-  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Conductivity_Matrix, "A_matrix2", "Stores Conductivity matrix values");  
+  Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix_reduced.txt", *Global_Conductivity_Matrix, "A_matrix_reduced", "Stores Conductivity matrix values");  
   //Xpetra::IO<real_t,LO,GO,node_type>WriteLocal("A_matrixlocal.txt", *xA);
   comm->barrier();
   //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
@@ -3377,7 +3397,7 @@ int FEA_Module_Heat_Conduction::solve(){
   }
   else{
     PreconditionerSetup(xA,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
-    Hierarchy_Constructed = true;
+    //Hierarchy_Constructed = true;
   }
   comm->barrier();
     

@@ -87,7 +87,6 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   //preconditioner construction
   Hierarchy_Constructed = false;
 
-  Matrix_alloc=0;
   gradient_print_sync = 0;
 
   //boundary condition data
