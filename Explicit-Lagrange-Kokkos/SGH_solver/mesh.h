@@ -1049,6 +1049,7 @@ void get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
                    const DViewCArrayKokkos <double> &node_vel,
                    const ViewCArrayKokkos <double> &b_matrix,
+                   const double elem_vol,
                    const double elem_area,
                    const size_t elem_gid);
 

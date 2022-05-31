@@ -152,6 +152,7 @@ void get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
                    const DViewCArrayKokkos <double> &node_vel,
                    const ViewCArrayKokkos <double> &b_matrix,
+                   const double elem_vol,
                    const double elem_area,
                    const size_t elem_gid
                    ){
@@ -175,25 +176,37 @@ void get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
         
     } // end for
     
+    // initialize to zero
+    for (size_t i=0; i<3; i++){
+        for (size_t j=0; j<3; j++){
+            vel_grad(i,j) = 0.0;
+        }
+    }
+    
+
+    double mean_radius = elem_vol/elem_area;
+    double elem_vel_r = 0.25*(v(0) + v(1) + v(2) + v(3));
+    
     
     // --- calculate the velocity gradient terms ---
-    double inverse_vol = 1.0/elem_area;
+    double inverse_area = 1.0/elem_area;
     
     // x-dir
     vel_grad(0,0) = (u(0)*b_matrix(0,0) + u(1)*b_matrix(1,0)
-                   + u(2)*b_matrix(2,0) + u(3)*b_matrix(3,0))*inverse_vol;
+                   + u(2)*b_matrix(2,0) + u(3)*b_matrix(3,0))*inverse_area;
     
     vel_grad(0,1) = (u(0)*b_matrix(0,1) + u(1)*b_matrix(1,1)
-                   + u(2)*b_matrix(2,1) + u(3)*b_matrix(3,1))*inverse_vol;
+                   + u(2)*b_matrix(2,1) + u(3)*b_matrix(3,1))*inverse_area;
     
     
     // y-dir
     vel_grad(1,0) = (v(0)*b_matrix(0,0) + v(1)*b_matrix(1,0)
-                   + v(2)*b_matrix(2,0) + v(3)*b_matrix(3,0))*inverse_vol;
+                   + v(2)*b_matrix(2,0) + v(3)*b_matrix(3,0))*inverse_area;
     
     vel_grad(1,1) = (v(0)*b_matrix(0,1) + v(1)*b_matrix(1,1)
-                   + v(2)*b_matrix(2,1) + v(3)*b_matrix(3,1))*inverse_vol;
+                   + v(2)*b_matrix(2,1) + v(3)*b_matrix(3,1))*inverse_area;
     
+    vel_grad(2,2) = elem_vel_r/mean_radius;  // + avg(vel_R)/R
     
     return;
     

@@ -37,7 +37,7 @@ void input(CArrayKokkos <material_t> &material,
     dt_min = 1.e-8;
     dt_max = 1.e-2;
     dt_start = 1.e-5;
-    cycle_stop = 10000;
+    cycle_stop = 1000000;
 
 
     // ---- graphics information ----
@@ -308,6 +308,56 @@ void input(CArrayKokkos <material_t> &material,
             boundary(2).surface = bdy::z_plane;
             boundary(2).value = 0.0;
             boundary(2).hydro_bc = bdy::reflected;
+            
+        });  // end RUN
+            
+    } // end if Noh
+    
+    
+    // Noh 2D
+    if (test_problem == 16){
+
+        time_final = 0.6;
+        
+        RUN({
+            
+            material(0).eos_model = ideal_gas; // EOS model
+            material(0).q1        = 1.0;       // accoustic coefficient
+            material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+            material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
+            
+            material(0).num_state_vars = 3;  // actual num_state_vars
+            state_vars(0,0) = 5.0/3.0; // gamma value
+            state_vars(0,1) = 1.0E-14; // minimum sound speed
+            state_vars(0,2) = 1.0;     // specific heat c_v
+            
+            // Global instructions
+            mat_fill(0).volume = region::global;   // fill everywhere
+            mat_fill(0).mat_id = 0;                // material id
+            mat_fill(0).den = 1.0;                   // intial density
+            mat_fill(0).sie = 1e-9;             // intial specific internal energy
+            
+            mat_fill(0).velocity = init_conds::radial;
+            mat_fill(0).speed = -1.0;
+            
+            // ---- boundary conditions ---- //
+            
+            // Tag X plane
+            boundary(0).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+            boundary(0).value = 0.0;
+            boundary(0).hydro_bc = bdy::reflected;
+            
+            // Tag Y plane
+            boundary(1).surface = bdy::y_plane;
+            boundary(1).value = 0.0;
+            boundary(1).hydro_bc = bdy::reflected;
+            
+            // Tag Y plane
+            boundary(2).surface = bdy::cylinder;
+            boundary(2).value = 0.01;
+            boundary(2).hydro_bc = bdy::fixed;
+            
             
         });  // end RUN
             
