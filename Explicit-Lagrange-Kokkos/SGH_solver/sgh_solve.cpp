@@ -60,15 +60,15 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     
     // extensive energy tallies over the entire mesh
-    double IE_t0 = 0;
-    double KE_t0 = 0;
-    double TE_t0 = 0;
+    double IE_t0 = 0.0;
+    double KE_t0 = 0.0;
+    double TE_t0 = 0.0;
     
-    double IE_sum = 0;
-    double KE_sum = 0;
+    double IE_sum = 0.0;
+    double KE_sum = 0.0;
     
-    double IE_loc_sum = 0;
-    double KE_loc_sum = 0;
+    double IE_loc_sum = 0.0;
+    double KE_loc_sum = 0.0;
     
     // extensive IE
     REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
@@ -111,6 +111,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
 
 	    // stop calculation if flag
 	    if (stop_calc == 1) break;
+        
 
 	    // get the step
         if(mesh.num_dims==2){
@@ -424,9 +425,9 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     
     // ---- Calculate energy tallies ----
-    double IE_tend = 0;
-    double KE_tend = 0;
-    double TE_tend = 0;
+    double IE_tend = 0.0;
+    double KE_tend = 0.0;
+    double TE_tend = 0.0;
     
     IE_loc_sum = 0.0;
     KE_loc_sum = 0.0;

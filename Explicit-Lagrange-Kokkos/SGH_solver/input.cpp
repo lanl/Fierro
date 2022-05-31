@@ -37,7 +37,7 @@ void input(CArrayKokkos <material_t> &material,
     dt_min = 1.e-8;
     dt_max = 1.e-2;
     dt_start = 1.e-5;
-    cycle_stop = 1000000;
+    cycle_stop = 100000;
 
 
     // ---- graphics information ----
@@ -222,7 +222,8 @@ void input(CArrayKokkos <material_t> &material,
             mat_fill(1).den = 1.0;               // initial density
             double vol = PI*( pow((mat_fill(1).radius2),3)
                             - pow((mat_fill(1).radius1),3) );
-            mat_fill(1).sie = 0.5*(0.49339/vol);
+            //vol = 4./3.* PI * ( pow((mat_fill(1).radius2),3) - pow((mat_fill(1).radius1),3) )/2.0;
+            mat_fill(1).sie = (0.5*0.49339/vol);
             
             mat_fill(1).velocity = init_conds::cartesian;
             mat_fill(1).u = 0.0;   // initial x-dir velocity

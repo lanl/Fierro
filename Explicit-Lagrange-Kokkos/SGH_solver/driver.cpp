@@ -128,6 +128,7 @@ int main(int argc, char *argv[]){
               cycle_stop,
               rk_num_stages
               );
+        
 
 
 
@@ -191,13 +192,13 @@ int main(int argc, char *argv[]){
         DViewCArrayKokkos <double> elem_stress(&elem.stress(0,0,0,0),
                                                rk_num_bins,
                                                num_elems,
-                                               num_dims,
-                                               num_dims);
+                                               3,
+                                               3); // always 3D even in 2D-RZ
 
         DViewCArrayKokkos <double> elem_sspd(&elem.sspd(0),
                                              num_elems);
 
-        DViewCArrayKokkos <double> elem_sie(&elem.sie(0),
+        DViewCArrayKokkos <double> elem_sie(&elem.sie(0,0),
                                             rk_num_bins,
                                             num_elems);
 
@@ -219,7 +220,7 @@ int main(int argc, char *argv[]){
                                                num_state_vars );
         
         // create Dual Views of the corner struct variables
-        DViewCArrayKokkos <double> corner_force(&corner.force(0,0,0), 
+        DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
                                                 num_corners, 
                                                 num_dims);
 

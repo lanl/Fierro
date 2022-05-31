@@ -193,7 +193,7 @@ void ensight( const mesh_t &mesh,
         vec_fields(node_gid, 1, 0) = node_vel.host(1, node_gid, 0);
         vec_fields(node_gid, 1, 1) = node_vel.host(1, node_gid, 1);
         if(num_dims == 2){ 
-            vec_fields(node_gid,0,2) = 0.0;
+            vec_fields(node_gid,1,2) = 0.0;
         } else{
             vec_fields(node_gid, 1, 2) = node_vel.host(1, node_gid, 2);
         }
