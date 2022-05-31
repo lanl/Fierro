@@ -17,8 +17,9 @@ void rk_init(DViewCArrayKokkos <double> &node_coords,
     // save elem quantities
     FOR_ALL(elem_gid, 0, num_elems, {
 
-        for(size_t i=0; i<num_dims; i++){
-            for(size_t j=0; j<num_dims; j++){
+        // stress is always 3D even with 2D-RZ
+        for(size_t i=0; i<3; i++){
+            for(size_t j=0; j<3; j++){
                 elem_stress(0,elem_gid,i,j) = elem_stress(1,elem_gid,i,j);
             }
         }  // end for

@@ -212,6 +212,7 @@ void setup(const CArrayKokkos <material_t> &material,
                 } // end logical on type
                 
                 // --- stress tensor ---
+                // always 3D even for 2D-RZ
                 for (size_t i=0; i<3; i++){
                     for (size_t j=0; j<3; j++){
                         elem_stress(rk_level,elem_gid,i,j) = 0.0;
