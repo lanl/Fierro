@@ -75,8 +75,10 @@ void read_mesh_ensight(char* MESH,
         {
             double dummy;
             fscanf(in,"%le",&dummy);
+            
+            //printf("dummy = %le\n", dummy);
         }
-    }
+    } // end for
 
     
     ch = (char)fgetc(in);

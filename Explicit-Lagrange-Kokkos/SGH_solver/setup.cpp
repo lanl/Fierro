@@ -382,7 +382,7 @@ void setup(const CArrayKokkos <material_t> &material,
             for (size_t corner_lid=0; corner_lid<4; corner_lid++){
                 
                 size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-                corner_mass(corner_gid) = corner_areas(corner_lid)*elem_den(elem_gid);
+                corner_mass(corner_gid) = corner_areas(corner_lid)*elem_den(elem_gid); // node radius is added later
                 
             } // end for over corners
         });
@@ -405,10 +405,13 @@ void setup(const CArrayKokkos <material_t> &material,
         }// end if dims=3
         else {
             
+            // 2D-RZ
             for(size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(node_gid); corner_lid++){
                 
                 size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
-                node_mass(node_gid) += corner_mass(corner_gid);
+                node_mass(node_gid) += corner_mass(corner_gid);  // sans the radius so it is areal node mass
+                
+                corner_mass(corner_gid) *= node_coords(1,node_gid,1); // true corner mass now
             } // end for elem_lid
             
         } // end else

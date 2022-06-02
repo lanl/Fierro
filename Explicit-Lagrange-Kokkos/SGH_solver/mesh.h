@@ -351,10 +351,10 @@ struct mesh_t {
 
         }
         else {
-            //   y
+            //   J
             //   |
             // 3---2
-            // |   |  -- x
+            // |   |  -- I
             // 0---1
             //
             size_t temp_node_lids[8] =

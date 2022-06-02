@@ -59,6 +59,9 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                   time_value);
     
     
+    
+    CArrayKokkos <double> node_extensive_mass(mesh.num_nodes);
+    
     // extensive energy tallies over the entire mesh
     double IE_t0 = 0.0;
     double KE_t0 = 0.0;
@@ -99,6 +102,18 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
+    
+    
+    // save the nodal mass
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        
+        double radius = 1.0;
+        if(mesh.num_dims == 2){
+            radius = node_coords(1,node_gid,1);
+        }
+        node_extensive_mass(node_gid) = node_mass(node_gid)*radius;
+        
+    }); // end parallel for
     
     
     // a flag to exit the calculation
@@ -322,44 +337,66 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             // calculate the new corner masses if 2D
             if(mesh.num_dims==2){
                 
+                // calculate the nodal areal mass
+                FOR_ALL(node_gid, 0, mesh.num_nodes, {
+                    
+                    node_mass(node_gid) = 0.0;
+                    
+                    if (node_coords(1,node_gid,1) > 1.0e-14){
+                        node_mass(node_gid) = node_extensive_mass(node_gid)/node_coords(1,node_gid,1);
+                    }
+
+                }); // end parallel for over node_gid
+                Kokkos::fence();
+                
+                
+                // -----------------------------------------------
+                // Calcualte the areal mass for nodes on the axis
+                // -----------------------------------------------
+                // The node order of the 2D element is
+                //
+                //  J
+                //   |
+                // 3---2
+                // |   |  -- I
+                // 0---1
+                //
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
                     
-                    // facial area of the corners
-                    double corner_areas_array[4];
-                    
-                    ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
-                    ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
-                    
-                    get_area_weights2D(corner_areas,
-                                       elem_gid,
-                                       node_coords,
-                                       elem_node_gids);
-                    
                     // loop over the corners of the element and calculate the mass
-                    for (size_t corner_lid=0; corner_lid<4; corner_lid++){
+                    for (size_t node_lid=0; node_lid<4; node_lid++){
                         
-                        size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-                        corner_mass(corner_gid) = corner_areas(corner_lid)*elem_den(elem_gid);
+                        size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                        size_t node_minus_gid;
+                        size_t node_plus_gid;
+                        
+                        
+                        if (node_coords(1,node_gid,1) < 1e-13){
+                            // node is on the axis
+                            
+                            // minus node
+                            if (node_lid==0){
+                                node_minus_gid = mesh.nodes_in_elem(elem_gid, 3);
+                            } else {
+                                node_minus_gid = mesh.nodes_in_elem(elem_gid, node_lid-1);
+                            }
+                            
+                            // plus node
+                            if (node_lid==3){
+                                node_plus_gid = mesh.nodes_in_elem(elem_gid, 0);
+                            } else {
+                                node_plus_gid = mesh.nodes_in_elem(elem_gid, node_lid+1);
+                            }
+                            
+                            node_mass(node_gid) = fmax(node_mass(node_plus_gid), node_mass(node_minus_gid))/2.0;
+                            
+                        } // end if
                         
                     } // end for over corners
                     
                 }); // end parallel for over elem_gid
                 Kokkos::fence();
                 
-                
-                // calculate the nodal mass
-                FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                    
-                    node_mass(node_gid) = 0.0;
-                    
-                    for(size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(node_gid); corner_lid++){
-                        
-                        size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
-                        node_mass(node_gid) += corner_mass(corner_gid);
-                    } // end for elem_lid
-                        
-                }); // end parallel for over node_gid
-                Kokkos::fence();
             
             } // end of if 2D-RZ
             
@@ -468,7 +505,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
     printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
-    printf("total energy conservation error = %f \n\n", TE_tend - TE_t0);
+    printf("total energy conservation error = %e \n\n", TE_tend - TE_t0);
     
     return;
     
