@@ -139,6 +139,7 @@ int main(int argc, char *argv[]){
         mesh.build_corner_connectivity();
         mesh.build_elem_elem_connectivity();
         mesh.build_patch_connectivity();
+        mesh.build_node_node_connectivity();
         
         
         // ---------------------------------------------------------------------

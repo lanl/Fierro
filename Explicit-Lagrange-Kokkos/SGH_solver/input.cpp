@@ -61,7 +61,7 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // --- number of boundary conditions ---
-    num_bcs= 6;  // =6 for Sedov
+    num_bcs=6;  // =6 for Sedov
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---

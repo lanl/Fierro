@@ -78,7 +78,9 @@ struct mesh_t {
     size_t num_corners;
     
     size_t num_patches;
+    
     size_t num_bdy_patches;
+    size_t num_bdy_nodes;
     size_t num_bdy_sets;
     size_t num_nodes_in_patch;
 
@@ -91,6 +93,10 @@ struct mesh_t {
     
     // elem ids in node
     RaggedRightArrayKokkos <size_t> elems_in_node;
+    
+    // node ids in node
+    RaggedRightArrayKokkos <size_t> nodes_in_node;
+    CArrayKokkos <size_t> num_nodes_in_node;
     
     
     // ---- elems ----
@@ -122,6 +128,9 @@ struct mesh_t {
     
     // bdy_patches
     CArrayKokkos <size_t> bdy_patches;
+    
+    // bdy nodes
+    CArrayKokkos <size_t> bdy_nodes;
     
     // patch ids in bdy set
     DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
@@ -516,6 +525,8 @@ struct mesh_t {
         Kokkos::fence();
         
         num_values.update_host();
+        Kokkos::fence();
+        
         num_patches = num_values.host(0);
         num_bdy_patches = num_values.host(1);
 	
@@ -574,9 +585,194 @@ struct mesh_t {
             bdy_patches(bdy_patch_gid) = temp_bdy_patches(bdy_patch_gid);
         }); // end FOR_ALL bdy_patch_gid
         
+        
+        
+        
+        // find and store the boundary nodes
+        CArrayKokkos <size_t> temp_bdy_nodes(num_nodes);
+        CArrayKokkos <long long int> hash_bdy_nodes(num_nodes);
+        
+        FOR_ALL_CLASS (node_gid, 0, num_nodes, {
+            hash_bdy_nodes(node_gid) = -1;
+        }); // end for node_gid
+        
+        // Parallel loop over boundary patches
+        DCArrayKokkos <size_t> num_bdy_nodes_saved(1);
+        
+        RUN_CLASS({
+            num_bdy_nodes_saved(0) = 0;
+            for (size_t bdy_patch_gid=0; bdy_patch_gid<num_bdy_patches; bdy_patch_gid++) {
+                
+                // get the global index of the patch that is on the boundary
+                size_t patch_gid = bdy_patches(bdy_patch_gid);
+                
+                // tag the boundary nodes
+                for (size_t node_lid=0; node_lid<num_nodes_in_patch; node_lid++){
+                    
+                    size_t node_gid = nodes_in_patch(patch_gid, node_lid);
+                    
+                    if (hash_bdy_nodes(node_gid) < 0){
+                        hash_bdy_nodes(node_gid) = node_gid;
+                        temp_bdy_nodes(num_bdy_nodes_saved(0)) = node_gid;
+                        
+                        //printf("bdy_node = %lu \n", node_gid);
+                        num_bdy_nodes_saved(0)++;
+                    } // end if
+                    
+                } // end for node_lid
+                
+            } // end for loop over bdy_patch_gid
+            
+        });  // end RUN
+        Kokkos::fence();
+        
+        // copy value to host (CPU)
+        num_bdy_nodes_saved.update_host();
+        Kokkos::fence();
+        
+        // save the number of bdy_nodes to mesh_t
+        num_bdy_nodes = num_bdy_nodes_saved.host(0);
+        
+        bdy_nodes = CArrayKokkos <size_t> (num_bdy_nodes);
+        
+        FOR_ALL_CLASS (node_gid, 0, num_bdy_nodes, {
+            bdy_nodes(node_gid) = temp_bdy_nodes(node_gid);
+        }); // end for boundary node_gid
+        
+        printf("Num boundary nodes = %lu \n", num_bdy_nodes);
+        
         return;
         
     } // end patch connectivity method
+    
+    
+    
+    // build the patches
+    void build_node_node_connectivity(){
+        
+        
+        DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_nodes(num_nodes, num_nodes);
+        
+        num_nodes_in_node = CArrayKokkos <size_t> (num_nodes);
+        
+        // walk over the patches and save the node node connectivity
+        RUN_CLASS({
+            if (num_dims==3){
+                
+                for (size_t patch_gid=0; patch_gid<num_patches; patch_gid++){
+                    for (size_t node_lid=0; node_lid<num_nodes_in_patch; node_lid++){
+                        
+                        // the first node on the edge
+                        size_t node_gid_0 = nodes_in_patch(patch_gid, node_lid);
+                        
+                        // second node on this edge
+                        size_t node_gid_1;
+                        
+                        if (node_lid == num_nodes_in_patch-1){
+                            node_gid_1 = nodes_in_patch(patch_gid, 0);
+                        }
+                        else {
+                            node_gid_1 = nodes_in_patch(patch_gid, node_lid+1);
+                        } // end if
+                        
+                        size_t num_saved_0 = temp_nodes_in_nodes.stride(node_gid_0);
+                        size_t num_saved_1 = temp_nodes_in_nodes.stride(node_gid_1);
+                        
+                        size_t save_0 = 1;
+                        size_t save_1 = 1;
+                        
+                        // check to see if the node_gid_1 was already saved
+                        for (size_t contents_lid=0; contents_lid<num_saved_0; contents_lid++){
+                            if (temp_nodes_in_nodes(node_gid_0, contents_lid) == node_gid_1){
+                                save_0 = 0; // don't save, it was already saved
+                            }
+                        }
+                        
+                        // check to see if the node_gid_0 was already saved
+                        for (size_t contents_lid=0; contents_lid<num_saved_1; contents_lid++){
+                            if (temp_nodes_in_nodes(node_gid_1, contents_lid) == node_gid_0){
+                                save_1 = 0;  // don't save, it was already saved
+                            }
+                        }
+                        
+                        if (save_0 == 1){
+                            // save the second node to the first node
+                            temp_nodes_in_nodes(node_gid_0, num_saved_0) = node_gid_1;
+                            
+                            temp_nodes_in_nodes.stride(node_gid_0)++;
+                        }
+                        
+                        if (save_1 == 1){
+                            // save the first node to the second node
+                            temp_nodes_in_nodes(node_gid_1, num_saved_1) = node_gid_0;
+                            
+                            // increment the number of nodes in a node saved
+                            temp_nodes_in_nodes.stride(node_gid_1)++;
+                        }
+                        
+                        // save the strides
+                        num_nodes_in_node(node_gid_0) = temp_nodes_in_nodes.stride(node_gid_0);
+                        num_nodes_in_node(node_gid_1) = temp_nodes_in_nodes.stride(node_gid_1);
+                        
+                    } // end for node in patch
+                } // end for patches
+                
+            } // end if 3D
+            else {
+                for (size_t patch_gid=0; patch_gid<num_patches; patch_gid++){
+                    
+                    // the first node on the edge
+                    size_t node_gid_0 = nodes_in_patch(patch_gid, 0);
+                    
+                    // second node on this edge
+                    size_t node_gid_1 = nodes_in_patch(patch_gid, 1);
+                    
+                    size_t num_saved_0 = temp_nodes_in_nodes.stride(node_gid_0);
+                    size_t num_saved_1 = temp_nodes_in_nodes.stride(node_gid_1);
+                    
+                    // save the second node to the first node
+                    temp_nodes_in_nodes(node_gid_0, num_saved_0) = node_gid_1;
+                    
+                    // save the first node to the second node
+                    temp_nodes_in_nodes(node_gid_1, num_saved_1) = node_gid_0;
+                    
+                    // increment the number of nodes in a node saved
+                    temp_nodes_in_nodes.stride(node_gid_0)++;
+                    temp_nodes_in_nodes.stride(node_gid_1)++;
+                    
+                    // save the strides
+                    num_nodes_in_node(node_gid_0) = temp_nodes_in_nodes.stride(node_gid_0);
+                    num_nodes_in_node(node_gid_1) = temp_nodes_in_nodes.stride(node_gid_1);
+                        
+                } // end for patches
+                
+            } // end if 2D
+            
+        });  // end RUN
+        Kokkos::fence();
+        
+        nodes_in_node = RaggedRightArrayKokkos <size_t> (num_nodes_in_node);
+        
+        // save the connectivity
+        FOR_ALL(node_gid, 0, num_nodes, {
+            
+            size_t num_saved = 0;
+            for (size_t node_lid=0; node_lid<num_nodes_in_node(node_gid); node_lid++){
+                
+                nodes_in_node(node_gid, num_saved) = temp_nodes_in_nodes(node_gid, num_saved);
+                
+                // increment the number of nodes in node saved
+                num_saved ++;
+                
+            } // end for node_lid
+            
+            
+        }); // end parallel for over nodes
+        
+    } // end of node node connectivity
+    
+    
+
     
     
     void init_bdy_sets (size_t num_bcs){
@@ -592,10 +788,7 @@ struct mesh_t {
         
     } // end of init_bdy_sets method
     
-    
-    //void init_bdy_nodes_in_set (){
-    //    bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (num_bdy_nodes_in_set);
-    //} // end of init_bdy_sets method
+
     
 }; // end mesh_t
 

@@ -342,7 +342,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                     
                     node_mass(node_gid) = 0.0;
                     
-                    if (node_coords(1,node_gid,1) > 1.0e-14){
+                    if (node_coords(1,node_gid,1) > tiny){
                         node_mass(node_gid) = node_extensive_mass(node_gid)/node_coords(1,node_gid,1);
                     }
 
@@ -355,7 +355,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                 // -----------------------------------------------
                 // The node order of the 2D element is
                 //
-                //  J
+                //   J
                 //   |
                 // 3---2
                 // |   |  -- I
@@ -371,7 +371,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                         size_t node_plus_gid;
                         
                         
-                        if (node_coords(1,node_gid,1) < 1e-13){
+                        if (node_coords(1,node_gid,1) < tiny){
                             // node is on the axis
                             
                             // minus node

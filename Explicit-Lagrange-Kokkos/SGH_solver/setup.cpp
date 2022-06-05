@@ -572,10 +572,13 @@ size_t check_bdy(const size_t patch_gid,
 void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
                              mesh_t &mesh){
     
+    
+
+
     // build boundary nodes in each boundary set
     
     mesh.num_bdy_nodes_in_set = DCArrayKokkos <size_t> (mesh.num_bdy_sets);
-    CArrayKokkos <long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes);
+    CArrayKokkos <long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_bdy_nodes);
     
     DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_set (mesh.num_bdy_sets, mesh.num_bdy_patches*mesh.num_nodes_in_patch);
     
