@@ -360,7 +360,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                 // 3---2
                 // |   |  -- I
                 // 0---1
-                //
+                /*
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
                     
                     // loop over the corners of the element and calculate the mass
@@ -396,6 +396,27 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                     
                 }); // end parallel for over elem_gid
                 Kokkos::fence();
+                 */
+                
+                FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
+                    
+                    size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
+                    
+                    if (node_coords(1,node_gid,1) < tiny){
+                        // node is on the axis
+                        
+                        for(size_t node_lid=0; node_lid<mesh.num_nodes_in_node(node_gid); node_lid++){
+                            
+                            size_t node_neighbor_gid = mesh.nodes_in_node(node_gid, node_lid);
+                            
+                            node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid)/2.0);
+                            
+                        } // end for over neighboring nodes
+                        
+                    } // end if
+                    
+                }); // end parallel for over elem_gid
+                
                 
             
             } // end of if 2D-RZ
