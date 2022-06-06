@@ -754,7 +754,7 @@ struct mesh_t {
         nodes_in_node = RaggedRightArrayKokkos <size_t> (num_nodes_in_node);
         
         // save the connectivity
-        FOR_ALL(node_gid, 0, num_nodes, {
+        FOR_ALL_CLASS(node_gid, 0, num_nodes, {
             
             size_t num_saved = 0;
             for (size_t node_lid=0; node_lid<num_nodes_in_node(node_gid); node_lid++){
