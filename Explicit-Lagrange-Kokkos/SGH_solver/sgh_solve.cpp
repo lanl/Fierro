@@ -409,8 +409,10 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                             
                             size_t node_neighbor_gid = mesh.nodes_in_node(node_gid, node_lid);
                             
-                            node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid)/2.0);
-                            
+                            // if the node is off the axis, use it's areal mass on the boundary
+                            if (node_coords(1,node_neighbor_gid,1) > tiny){
+                                node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid)/2.0);
+                            }
                         } // end for over neighboring nodes
                         
                     } // end if
