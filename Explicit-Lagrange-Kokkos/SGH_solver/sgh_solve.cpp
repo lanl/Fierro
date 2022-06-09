@@ -165,7 +165,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
         // print time step every 10 cycles
-        else if (cycle%10==0){
+        else if (cycle%20==0){
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
         
@@ -192,7 +192,6 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             // ---- RK coefficient ----
             double rk_alpha = 1.0/((double)rk_num_stages - (double)rk_stage);
             
-            
             // ---- Calculate velocity diveregence for the element ----
             if(mesh.num_dims==2){
                 get_divergence2D(elem_div,
@@ -208,7 +207,6 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                                node_vel,
                                elem_vol);
             } // end if 2D
-            
             
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             if(mesh.num_dims==2){
@@ -253,7 +251,6 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             }
             
 
-            
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
                                 dt,

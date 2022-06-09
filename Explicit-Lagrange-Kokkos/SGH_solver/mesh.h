@@ -302,11 +302,14 @@ struct mesh_t {
                     } // end for i
                     
                     if (save==1){
-                        // save the neighboring elem_gid
-                        temp_elems_in_elem(elem_gid, num_saved) = neighbor_elem_gid;
                         
                         // increment the number of neighboring elements saved
                         temp_elems_in_elem.stride(elem_gid)++;
+                        
+                        // save the neighboring elem_gid
+                        temp_elems_in_elem(elem_gid, num_saved) = neighbor_elem_gid;
+                        
+                        
                     } // end if save
                     
                 } // end for elem_lid in a node
@@ -696,18 +699,23 @@ struct mesh_t {
                         }
                         
                         if (save_0 == 1){
+                            // increment the number of nodes in a node saved
+                            temp_nodes_in_nodes.stride(node_gid_0)++;
+                            
                             // save the second node to the first node
                             temp_nodes_in_nodes(node_gid_0, num_saved_0) = node_gid_1;
                             
-                            temp_nodes_in_nodes.stride(node_gid_0)++;
+                            
                         }
                         
                         if (save_1 == 1){
+                            // increment the number of nodes in a node saved
+                            temp_nodes_in_nodes.stride(node_gid_1)++;
+                            
                             // save the first node to the second node
                             temp_nodes_in_nodes(node_gid_1, num_saved_1) = node_gid_0;
                             
-                            // increment the number of nodes in a node saved
-                            temp_nodes_in_nodes.stride(node_gid_1)++;
+                            
                         }
                         
                         // save the strides
@@ -730,15 +738,16 @@ struct mesh_t {
                     size_t num_saved_0 = temp_nodes_in_nodes.stride(node_gid_0);
                     size_t num_saved_1 = temp_nodes_in_nodes.stride(node_gid_1);
                     
+                    // increment the number of nodes in a node saved
+                    temp_nodes_in_nodes.stride(node_gid_0)++;
+                    temp_nodes_in_nodes.stride(node_gid_1)++;
+                    
                     // save the second node to the first node
                     temp_nodes_in_nodes(node_gid_0, num_saved_0) = node_gid_1;
                     
                     // save the first node to the second node
                     temp_nodes_in_nodes(node_gid_1, num_saved_1) = node_gid_0;
                     
-                    // increment the number of nodes in a node saved
-                    temp_nodes_in_nodes.stride(node_gid_0)++;
-                    temp_nodes_in_nodes.stride(node_gid_1)++;
                     
                     // save the strides
                     num_nodes_in_node(node_gid_0) = temp_nodes_in_nodes.stride(node_gid_0);

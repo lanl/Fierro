@@ -461,11 +461,14 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
                                          node_coords); // no=0, yes=1
             
             if (is_on_bdy == 1){
+                
                 size_t index = mesh.bdy_patches_in_set.stride(bdy_set);
-                mesh.bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
                 
                 // increment the number of boundary patches saved
                 mesh.bdy_patches_in_set.stride(bdy_set) ++;
+                
+                
+                mesh.bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
             } // end if
             
             
@@ -619,16 +622,17 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
                     
                     if (temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) == -1){
                         
+                        size_t num_saved = mesh.num_bdy_nodes_in_set(bdy_set);
+                        
+                        mesh.num_bdy_nodes_in_set(bdy_set)++;
+                        
                         // replace -1 with node_gid to denote the node was already saved
                         temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = node_gid;
                         
-                        size_t num_saved = mesh.num_bdy_nodes_in_set(bdy_set);
-			
+                        // increment the number of saved nodes, create memory
+                        temp_nodes_in_set.stride(bdy_set)++;
                         temp_nodes_in_set(bdy_set, num_saved) = node_gid;
                         
-                        // increment the number of saved nodes
-                        temp_nodes_in_set.stride(bdy_set)++;
-                        mesh.num_bdy_nodes_in_set(bdy_set)++;
                     } // end if
                     
                 } // end for node_lid

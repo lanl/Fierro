@@ -67,7 +67,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
         ViewCArrayKokkos <double> muc(muc_array, num_nodes_in_elem);
         ViewCArrayKokkos <double> vel_star(vel_star_array, num_dims);
         ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
-        
+
         
         // --- abviatations of variables ---
         
@@ -80,6 +80,8 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
         
         // cut out the node_gids for this element
         ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+        
+        
         
         // get the B matrix which are the OUTWARD corner area normals
         get_bmatrix(area_normal,
@@ -133,6 +135,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
         for (int i = 0; i < num_dims; i++){
             tau(i, i) -= elem_pres(elem_gid);
         } // end for
+        
         
 
 
@@ -203,7 +206,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                 
                 // estimate of the shock direction
                 for (int dim = 0; dim < num_dims; dim++){
-                    shock_dir(node_lid, dim) = area_normal(node_lid, dim)/mag;
+                    shock_dir(dim) = area_normal(node_lid, dim)/mag;
                 }
                 
             } // end if mag_vel
@@ -230,9 +233,9 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                 // on velocity in the numerator.  It filters on the shock
                 // direction
                 mu_term = muc(node_lid)*
-                           fabs( shock_dir(0)*area_normal(0)
-                               + shock_dir(1)*area_normal(1)
-                               + shock_dir(2)*area_normal(2) );
+                           fabs( shock_dir(0)*area_normal(node_lid,0)
+                               + shock_dir(1)*area_normal(node_lid,1)
+                               + shock_dir(2)*area_normal(node_lid,2) );
             }
             else {
                // Using a full tensoral Riemann jump relation
@@ -265,7 +268,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                 vel_star(i) = 0.0;
             }
         } // end if
-            
+
             
             
         // ---- Calculate the shock detector for the Riemann-solver ----
@@ -588,7 +591,7 @@ void get_force_sgh2D(const CArrayKokkos <material_t> &material,
                 
                 // estimate of the shock direction
                 for (int dim = 0; dim < num_dims; dim++){
-                    shock_dir(node_lid, dim) = area_normal(node_lid, dim)/mag;
+                    shock_dir(dim) = area_normal(node_lid, dim)/mag;
                 }
                 
             } // end if mag_vel
