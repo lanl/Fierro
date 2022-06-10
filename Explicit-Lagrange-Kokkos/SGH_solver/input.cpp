@@ -7,6 +7,43 @@
 #include "mesh.h"
 
 
+// Problem choice:
+//     sedov 3D and RZ
+//     sod3D x  (set up for 3D 200x1x1 mesh)
+//     sod3D y  (set up for 3D 1x200x1 mesh)
+//     sod3D z  (set up for 3D 1x1x200 mesh)
+//     double rarefaction (set up for 3D 30x1x1 mesh)
+//     Noh 3D and RZ
+//     Triple point
+//     Taylor Green Vortex (add source)
+//     Shockless Noh (fix boundary conditions)
+//     Taylor Anvil
+namespace test
+{
+    
+    // applying initial conditions
+    enum setup
+    {
+        none = 0,
+        Sedov3D = 1,
+        SedovRZ = 2,
+        
+        Noh3D = 3,
+        NohRZ = 4,
+        
+        SodZ = 5,
+        Sod3DX = 6,
+        Sod3DY = 7,
+        Sod3DZ = 8,
+        
+        TriplePoint = 9,
+        TaylorAnvil = 10,
+    };
+    
+} // end of initial conditions namespace
+
+test::setup test_problem;
+
 // -----------------------------------------------------------------------------
 // The user must input their parameters inside this function
 //------------------------------------------------------------------------------
@@ -42,7 +79,7 @@ void input(CArrayKokkos <material_t> &material,
 
     // ---- graphics information ----
     graphics_cyc_ival = 1000000;
-    graphics_dt_ival  = 0.05;
+    graphics_dt_ival  = 0.25;
 
     
     // --- number of material regions ---
@@ -65,26 +102,15 @@ void input(CArrayKokkos <material_t> &material,
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
-    int test_problem = 1;
+    test_problem = test::Sedov3D;
     
     
     // ---- fill instructions and intial conditions ---- //
-    
-    // Problem choice:
-    // 1 = sedov (set up for 3D 30x30x30 mesh)
-    // 2 = sod x  (set up for 3D 200x1x1 mesh)
-    // 3 = sod y  (set up for 3D 1x200x1 mesh)
-    // 4 = sod z  (set up for 3D 1x1x200 mesh)
-    // 5 = double rarefaction (set up for 3D 30x1x1 mesh)
-    // 6 = Noh 3D
-    // 7 = Triple point
-    // 8 = Taylor Green Vortex (add source)
-    // 9 = Shockless Noh (fix boundary conditions)
-    // 10 = Taylor Anvil
-    
+
     
     // Sedov blast wave test case
-    if (test_problem == 1){
+    if (test_problem == test::Sedov3D){
+        time_final = 1.0;  // 1.0 for Sedov
         
         RUN({
             // gamma law model
@@ -176,8 +202,8 @@ void input(CArrayKokkos <material_t> &material,
     } // end if Sedov
     
     // 2D RZ Sedov blast wave test case
-    if (test_problem == 11){
-        
+    if (test_problem == test::SedovRZ){
+        time_final = 1.0;  // 1.0 for Sedov
         RUN({
             // gamma law model
             // statev(0) = gamma
@@ -267,7 +293,7 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // Noh 3D
-    if (test_problem == 6){
+    if (test_problem == test::Noh3D){
 
         time_final = 0.6;
         
@@ -316,7 +342,7 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // Noh 2D
-    if (test_problem == 16){
+    if (test_problem == test::NohRZ){
 
         time_final = 0.6;
         
@@ -365,8 +391,213 @@ void input(CArrayKokkos <material_t> &material,
     } // end if Noh
     
     
+    // Sod in Z direction in RZ coordinates (eq. to x-dir)
+    if (test_problem == test::SodZ){
+        
+        time_final = 0.2;  // 1.0 for Sedov
+        
+        RUN({
+            // gamma law model
+            // statev(0) = gamma
+            // statev(1) = minimum sound speed
+            // statev(2) = specific heat
+            // statev(3) = ref temperature
+            // statev(4) = ref density
+            // statev(5) = ref specific internal energy
+            
+            material(0).eos_model = ideal_gas; // EOS model is required
+            
+            material(0).strength_type = model::none;
+            material(0).strength_model = NULL;  // not needed, but illistrates the syntax
+            
+            material(0).q1        = 1.0;       // accoustic coefficient
+            material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+            material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
+            
+            material(0).num_state_vars = 3;  // actual num_state_vars
+            material(0).read_state_vars = 0; // no, state_vars declared here
+            state_vars(0,0) = 1.4; // gamma value
+            state_vars(0,1) = 1.0E-14; // minimum sound speed
+            state_vars(0,2) = 1.0;     // specific heat
+            
+            // global initial conditions
+            mat_fill(0).volume = region::global; // fill everywhere
+            mat_fill(0).mat_id = 0;              // material id
+            mat_fill(0).den = 1.0;               // intial density
+            mat_fill(0).sie = 2.5;            // intial specific internal energy
+            
+            mat_fill(0).velocity = init_conds::cartesian;
+            mat_fill(0).u = 0.0;   // initial x-dir velocity
+            mat_fill(0).v = 0.0;   // initial y-dir velocity
+            mat_fill(0).w = 0.0;   // initial z-dir velocity
+            
+            // energy source initial conditions
+            mat_fill(1).volume = region::box;    // fill a box
+            mat_fill(1).mat_id = 0;              // material id
+            mat_fill(1).x1 = 0.5;           //
+            mat_fill(1).x2 = 1.0;           //
+            mat_fill(1).y1 = 0.0;           //
+            mat_fill(1).y2 = 1.0;           //
+            mat_fill(1).z1 = 0.0;           //
+            mat_fill(1).z2 = 1.0;           //
+            mat_fill(1).den = 0.125;        // initial density
+            mat_fill(1).sie = 2.5;          // initial specific internal energy
+            
+            
+            mat_fill(1).velocity = init_conds::cartesian;
+            mat_fill(1).u = 0.0;   // initial x-dir velocity
+            mat_fill(1).v = 0.0;   // initial y-dir velocity
+            mat_fill(1).w = 0.0;   // initial z-dir velocity
+
+
+
+            // ---- boundary conditions ---- //
+            
+            // Tag X plane
+            boundary(0).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+            boundary(0).value = 0.0;
+            boundary(0).hydro_bc = bdy::reflected;
+            
+            // Tag Y plane
+            boundary(1).surface = bdy::y_plane;
+            boundary(1).value = 0.0;
+            boundary(1).hydro_bc = bdy::reflected;
+            
+            
+            // Tag X plane
+            boundary(2).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+            boundary(2).value = 1.0;
+            boundary(2).hydro_bc = bdy::reflected;
+
+            // Tag Y plane
+            boundary(3).surface = bdy::y_plane;
+            boundary(3).value = 0.1;
+            boundary(3).hydro_bc = bdy::reflected;
+            
+        });  // end RUN
+
+    } // end if SodZ
+    
+    
+    // Triple point
+    if (test_problem == test::TriplePoint){
+        
+        time_final = 4.0; 
+        
+        RUN({
+            // gamma law model
+            // statev(0) = gamma
+            // statev(1) = minimum sound speed
+            // statev(2) = specific heat
+            // statev(3) = ref temperature
+            // statev(4) = ref density
+            // statev(5) = ref specific internal energy
+            
+            material(0).eos_model = ideal_gas; // EOS model is required
+            
+            material(0).strength_type = model::none;
+            material(0).strength_model = NULL;  // not needed, but illistrates the syntax
+            
+            material(0).q1        = 1.0;       // accoustic coefficient
+            material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+            material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
+            
+            material(0).num_state_vars = 3;  // actual num_state_vars
+            material(0).read_state_vars = 0; // no, state_vars declared here
+            state_vars(0,0) = 5.0/3.0; // gamma value
+            state_vars(0,1) = 1.0E-14; // minimum sound speed
+            state_vars(0,2) = 1.0;     // specific heat
+            
+            // global initial conditions
+            mat_fill(0).volume = region::global; // fill everywhere
+            mat_fill(0).mat_id = 0;              // material id
+            mat_fill(0).den = 1.0;               // intial density
+            mat_fill(0).sie = 2.5;            // intial specific internal energy
+            
+            mat_fill(0).velocity = init_conds::cartesian;
+            mat_fill(0).u = 0.0;   // initial x-dir velocity
+            mat_fill(0).v = 0.0;   // initial y-dir velocity
+            mat_fill(0).w = 0.0;   // initial z-dir velocity
+            
+            
+            // initial conditions, region 1
+            mat_fill(1).volume = region::box;    // fill a box
+            mat_fill(1).mat_id = 0;              // material id
+            mat_fill(1).x1 = 1.0;           //
+            mat_fill(1).x2 = 7.0;           //
+            mat_fill(1).y1 = 0.0;           //
+            mat_fill(1).y2 = 1.5;           //
+            mat_fill(1).z1 = 0.0;           //
+            mat_fill(1).z2 = 1.0;           //
+            mat_fill(1).den = 1.0;          // initial density
+            mat_fill(1).sie = 0.25;         // initial specific internal energy
+            
+            mat_fill(1).velocity = init_conds::cartesian;
+            mat_fill(1).u = 0.0;   // initial x-dir velocity
+            mat_fill(1).v = 0.0;   // initial y-dir velocity
+            mat_fill(1).w = 0.0;   // initial z-dir velocity
+            
+            // initial conditions, region 2
+            mat_fill(2).volume = region::box;    // fill a box
+            mat_fill(2).mat_id = 0;              // material id
+            mat_fill(2).x1 = 1.0;           //
+            mat_fill(2).x2 = 7.0;           //
+            mat_fill(2).y1 = 1.5;           //
+            mat_fill(2).y2 = 3.0;           //
+            mat_fill(2).z1 = 0.0;           //
+            mat_fill(2).z2 = 1.0;           //
+            mat_fill(2).den = 0.1;        // initial density
+            mat_fill(2).sie = 2.5;          // initial specific internal energy
+            
+            mat_fill(2).velocity = init_conds::cartesian;
+            mat_fill(2).u = 0.0;   // initial x-dir velocity
+            mat_fill(2).v = 0.0;   // initial y-dir velocity
+            mat_fill(2).w = 0.0;   // initial z-dir velocity
+
+
+
+            // ---- boundary conditions ---- //
+            
+            // Tag X = 0 plane
+            boundary(0).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+            boundary(0).value = 0.0;
+            boundary(0).hydro_bc = bdy::reflected;
+            
+            // Tag Y = 0 plane
+            boundary(1).surface = bdy::y_plane;
+            boundary(1).value = 0.0;
+            boundary(1).hydro_bc = bdy::reflected;
+            
+            // Tag Z = 0 plane
+            boundary(2).surface = bdy::z_plane;
+            boundary(2).value = 0.0;
+            boundary(2).hydro_bc = bdy::reflected;
+
+
+            // Tag X = 7 plane
+            boundary(3).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
+            boundary(3).value = 6.0;  // some meshes are 7 and others are 6
+            boundary(3).hydro_bc = bdy::reflected;
+            
+            // Tag Y = 3 plane
+            boundary(4).surface = bdy::y_plane;
+            boundary(4).value = 3.0;
+            boundary(4).hydro_bc = bdy::reflected;
+            
+            // Tag Z = 1 plane
+            boundary(5).surface = bdy::z_plane;
+            boundary(5).value = 1.0;
+            boundary(5).hydro_bc = bdy::reflected;
+            
+        });  // end RUN
+
+    } // end if SodZ
+    
+    
     // Taylor Anvil
-    if (test_problem == 10){
+    if (test_problem == test::TaylorAnvil){
 
         time_final = 25.0;
         
