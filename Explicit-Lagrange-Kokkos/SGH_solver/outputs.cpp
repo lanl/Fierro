@@ -402,6 +402,8 @@ void ensight( const mesh_t &mesh,
     // increment graphics id counter
     graphics_id++;
     
+    delete[] name;
+    
     return;
     
 } // end of Ensight function

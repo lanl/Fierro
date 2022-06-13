@@ -654,7 +654,22 @@ struct mesh_t {
     void build_node_node_connectivity(){
         
         
-        DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_nodes(num_nodes, num_nodes);
+        // find the max number of elems around a node
+        size_t max_num_elems_in_node;
+        size_t max_num_lcl;
+        REDUCE_MAX_CLASS(node_gid, 0, num_nodes, max_num_lcl, {
+            
+            // num_corners_in_node = num_elems_in_node
+            size_t max_num = num_corners_in_node(node_gid);
+            
+            if (max_num > max_num_lcl) max_num_lcl = max_num;
+                    
+        }, max_num_elems_in_node); // end parallel reduction on max
+        Kokkos::fence();
+        
+        // each elem corner will contribute 3 edges to the node. Those edges will likely be the same
+        // ones from an adjacent element so it is a safe estimate to multiply by 3
+        DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_nodes(num_nodes, max_num_elems_in_node*3);
         
         num_nodes_in_node = CArrayKokkos <size_t> (num_nodes);
         
