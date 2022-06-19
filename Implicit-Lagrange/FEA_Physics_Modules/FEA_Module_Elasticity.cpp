@@ -28,6 +28,7 @@
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
+#include "Tpetra_Import_Util2.hpp"
 #include "MatrixMarket_Tpetra.hpp"
 #include <set>
 
@@ -46,6 +47,7 @@
 #include <Xpetra_Operator.hpp>
 #include <Xpetra_Map.hpp>
 #include <Xpetra_MultiVector.hpp>
+#include <Xpetra_IO.hpp>
 #include <MueLu.hpp>
 #include <MueLu_BaseClass.hpp>
 #ifdef HAVE_MUELU_EXPLICIT_INSTANTIATION
@@ -85,14 +87,13 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   //preconditioner construction
   Hierarchy_Constructed = false;
 
-  Matrix_alloc=0;
   gradient_print_sync = 0;
 
   //boundary condition data
   max_boundary_sets = max_disp_boundary_sets = max_load_boundary_sets = num_surface_disp_sets = num_surface_force_sets = 0;
 
   //boundary condition flags
-  body_term_flag = gravity_flag = thermal_flag = electric_flag = false;
+  matrix_bc_reduced = body_term_flag = gravity_flag = thermal_flag = electric_flag = false;
 
   //construct globally distributed displacement, strain, and force vectors
   int num_dim = simparam->num_dim;
@@ -106,6 +107,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   all_node_strains_distributed = Teuchos::rcp(new MV(all_node_map, strain_count));
   Global_Nodal_Forces = Teuchos::rcp(new MV(local_dof_map, 1));
   Global_Nodal_RHS = Teuchos::rcp(new MV(local_dof_map, 1));
+  adjoints_allocated = false;
 
   //initialize displacements to 0
   //local variable for host view in the dual view
@@ -240,12 +242,14 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         if(myrank==0&&buffer_iteration<buffer_iterations-1){
           for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
             *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
           }
         }
         else if(myrank==0){
           buffer_loop=0;
           while(buffer_iteration*buffer_lines+buffer_loop < dof_count) {
             *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
             buffer_loop++;
           }
         }
@@ -295,6 +299,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     if(zone_condition_type==SURFACE_LOADING_CONDITION){
       LO local_patch_index;
       LO boundary_set_npatches = 0;
+      bool look_at_end = false;
       CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
       //grow structures for loading condition storage
       //debug print
@@ -303,10 +308,10 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       num_boundary_conditions++;
       if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
       num_surface_force_sets++;
-      Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_LOADING_CONDITION;
       
       GO num_patches;
       real_t force_density[3];
+      force_density[0] = force_density[1] = force_density[2] = 0;
       if(myrank == 0){
         getline(*in, read_line);
         std::cout << read_line << std::endl;
@@ -316,17 +321,24 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         //parse boundary condition specifics out of jumble of comma delimited entries
         line_parse2.clear();
         line_parse2.str(substring);
+        //this first token should be the word local, otherwise the traction is printed at file end
         getline(line_parse2, token, ',');
-        getline(line_parse2, token, ',');
-        force_density[0]  = std::stod(token);
-        getline(line_parse2, token, ',');
-        force_density[1]  = std::stod(token);
-        getline(line_parse2, token, ',');
-        force_density[2]  = std::stod(token);
-
+        if(token.compare("local")){
+          look_at_end = true;
+        }
+        
+        if(!look_at_end){
+          getline(line_parse2, token, ',');
+          force_density[0]  = std::stod(token);
+          getline(line_parse2, token, ',');
+          force_density[1]  = std::stod(token);
+          getline(line_parse2, token, ',');
+          force_density[2]  = std::stod(token);
+        
         //skip 2 lines
-        getline(*in, read_line);
-        getline(*in, read_line);
+          getline(*in, read_line);
+          getline(*in, read_line);
+        }
         //read number of surface patches
         getline(*in, read_line);
         std::cout << read_line << std::endl;
@@ -342,16 +354,22 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         //number of patches should be last read token
         //element count should be the last token read in
         num_patches = std::stoi(token);
+        
+        //std::cout << " NUMBER OF BOUNDARY PATCHES "<< num_patches << std::endl;
         //skip 1 more line
         getline(*in, read_line);
       }
 
-      //broadcast surface force density
-      MPI_Bcast(&force_density,3,MPI_DOUBLE,0,world);
+      //broadcast number of element surface patches subject to force density
+      MPI_Bcast(&look_at_end,1,MPI_CXX_BOOL,0,world);
 
-      Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = force_density[0];
-      Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = force_density[1];
-      Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = force_density[2];
+      if(look_at_end){
+        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_PRESSURE_CONDITION;
+      }
+      else{
+        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_LOADING_CONDITION;
+      }
+        
       
       //broadcast number of element surface patches subject to force density
       MPI_Bcast(&num_patches,1,MPI_LONG_LONG_INT,0,world);
@@ -390,7 +408,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
               //std::cout<<" "<< substring <<std::endl;
               //assign the substring variable as a word of the read buffer
               if(iword>non_node_entries-1){
-                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring);
+                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring)-1;
               }
             }
           }
@@ -444,6 +462,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             //std::cout << "PATCH NODES " << boundary_set_npatches +1 << " " << Surface_Nodes(0) << " " << Surface_Nodes(1) << " " << Surface_Nodes(2) << " " << Surface_Nodes(3) << " ASSIGNED ON RANK " << myrank << std::endl;
             //construct Node Combination object for this surface
             local_patch_index = Solver_Pointer_->boundary_patch_to_index[temp];
+            //debug print
+            //std::cout << "MAPPED PATCH NODES " << boundary_set_npatches +1 << " " << Boundary_Patches(local_patch_index).node_set(0) << " " << Boundary_Patches(local_patch_index).node_set(1) << " " << Boundary_Patches(local_patch_index).node_set(2) << " " << Boundary_Patches(local_patch_index).node_set(3) << " ASSIGNED ON RANK " << myrank << std::endl;
             Boundary_Condition_Patches(num_boundary_conditions-1,boundary_set_npatches++) = local_patch_index;
             //debug print
             //std::cout << "PATCH INDEX " << local_patch_index << " ASSIGNED ON RANK " << myrank << std::endl;
@@ -453,6 +473,44 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
         read_index_start+=buffer_lines;
       }
       NBoundary_Condition_Patches(num_boundary_conditions-1) = boundary_set_npatches;
+      
+      //get surface pressure from the end of the file
+      if(myrank==0){
+        if(look_at_end){
+          bool found_pressure = false;
+          real_t pressure;
+          while(in->good()){
+            getline(*in, read_line);
+            std::cout << read_line << std::endl;
+            line_parse.clear();
+            line_parse.str(read_line);
+            line_parse >> substring;
+            //parse for surface pressure token "sf" then obtain pressure value
+            line_parse2.clear();
+            line_parse2.str(substring);
+            while(line_parse2.good()){
+              getline(line_parse2, token, ',');
+              if(!token.compare("sf")){
+                found_pressure = true;
+              }
+            }
+            if(found_pressure){
+              //last token read in from the line should be the pressure
+              pressure = std::stod(token);
+              break;
+            }
+          }
+          force_density[0] = pressure;
+        }
+      }
+
+      //broadcast surface force density
+      MPI_Bcast(&force_density,3,MPI_DOUBLE,0,world);
+      
+      //std::cout << " FORCE DENSITY "<< force_density[0] << std::endl;
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = force_density[0];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = force_density[1];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = force_density[2];
     }
 
     if(myrank==0){
@@ -594,7 +652,7 @@ void FEA_Module_Elasticity::grow_displacement_condition_sets(int num_sets){
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Temp_Boundary_Surface_Displacements = Boundary_Surface_Displacements;
     
     max_disp_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
-    Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_disp_boundary_sets, 3, "Boundary_Condition_Type_List");
+    Boundary_Surface_Displacements = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_disp_boundary_sets, 3, "Boundary_Surface_Displacements");
 
     //copy previous data back over
     for(int iset = 0; iset < num_surface_disp_sets; iset++){
@@ -624,7 +682,7 @@ void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Temp_Boundary_Surface_Force_Densities = Boundary_Surface_Force_Densities;
     
     max_load_boundary_sets = num_sets + 5; //5 is an arbitrary buffer
-    Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_load_boundary_sets, 3, "Boundary_Condition_Type_List");
+    Boundary_Surface_Force_Densities = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(max_load_boundary_sets, 3, "Boundary_Surface_Force_Densities");
 
     //copy previous data back over
     for(int iset = 0; iset < num_surface_force_sets; iset++){
@@ -1175,6 +1233,67 @@ void FEA_Module_Elasticity::init_assembly(){
     //debug print
     //std::cout << std::endl;
   }
+
+  //construct distributed stiffness matrix and force vector from local kokkos data
+  //build column map for the global stiffness matrix
+  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap;
+  const Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > dommap = local_dof_map;
+  
+  //debug print
+  /*
+    std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      //debug print
+      std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    std::cout << std::endl;
+  } */
+
+  //debug print of stiffness matrix
+  /*
+  std::cout << " ------------SPARSE STIFFNESS MATRIX ON TASK"<< myrank << std::endl;
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+      std::cout << "row: " << idof + 1 << " { ";
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+        std::cout << istride + 1 << " = " << Stiffness_Matrix(idof,istride) << " , " ;
+    }
+    std::cout << " }"<< std::endl;
+  }
+  */
+  Tpetra::Details::makeColMap<LO,GO,node_type>(colmap,dommap,DOF_Graph_Matrix.get_kokkos_view(), nullptr);
+
+  size_t nnz = DOF_Graph_Matrix.size();
+
+  //debug print
+  //std::cout << "DOF GRAPH SIZE ON RANK " << myrank << " IS " << nnz << std::endl;
+  
+  //local indices in the graph using the constructed column map
+  CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
+  
+  //row offsets with compatible template arguments
+  row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+  row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
+  for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
+    row_offsets_pass(ipass) = row_offsets(ipass);
+  }
+
+  size_t entrycount = 0;
+  for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+    for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+      stiffness_local_indices(entrycount) = colmap->getLocalElement(DOF_Graph_Matrix(irow,istride));
+      entrycount++;
+    }
+  }
+
+  //sort values and indices
+  Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
+  
+  //Teuchos::RCP<Teuchos::ParameterList> crs_matrix_params = Teuchos::rcp(new Teuchos::ParameterList("crsmatrix"));
+  //crs_matrix_params->set("sorted", false);
+  Global_Stiffness_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view()));
+  Global_Stiffness_Matrix->fillComplete();
   
   /*
   //debug print nodal positions and indices
@@ -1256,6 +1375,18 @@ void FEA_Module_Elasticity::assemble_matrix(){
     //std::cout << std::endl;
   }
 
+  //reset unsorted DOF Graph corresponding to assembly mapped values
+  //debug print
+  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+      DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof/num_dim,istride/num_dim)*num_dim + istride%num_dim;
+      //debug print
+      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
+    }
+    //debug print
+    //std::cout << std::endl;
+  }
+
   //assemble the global stiffness matrix
   if(num_dim==2)
   for (int ielem = 0; ielem < rnum_elem; ielem++){
@@ -1321,36 +1452,12 @@ void FEA_Module_Elasticity::assemble_matrix(){
     }
   }
 
-  //construct distributed stiffness matrix and force vector from local kokkos data
-  
-  //build column map for the global stiffness matrix
-  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap;
-  const Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > dommap = local_dof_map;
-  
-  //debug print
-  /*
-    std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
-  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
-    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      //debug print
-      std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
-    }
-    //debug print
-    std::cout << std::endl;
-  } */
+  matrix_bc_reduced = false;
 
-  //debug print of stiffness matrix
-  /*
-  std::cout << " ------------SPARSE STIFFNESS MATRIX ON TASK"<< myrank << std::endl;
-  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
-      std::cout << "row: " << idof + 1 << " { ";
-    for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-        std::cout << istride + 1 << " = " << Stiffness_Matrix(idof,istride) << " , " ;
-    }
-    std::cout << " }"<< std::endl;
-  }
-  */
-  Tpetra::Details::makeColMap<LO,GO,node_type>(colmap,dommap,DOF_Graph_Matrix.get_kokkos_view(), nullptr);
+  
+  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap = Global_Stiffness_Matrix->getCrsGraph()->getColMap();
+
+  //unsorted local column indices
 
   size_t nnz = DOF_Graph_Matrix.size();
 
@@ -1359,13 +1466,13 @@ void FEA_Module_Elasticity::assemble_matrix(){
   
   //local indices in the graph using the constructed column map
   CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
-  
-  //row offsets with compatible template arguments
-    row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
-    row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
-    for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
-      row_offsets_pass(ipass) = row_offsets(ipass);
-    }
+
+  //row offsets
+  row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+  row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
+  for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
+    row_offsets_pass(ipass) = row_offsets(ipass);
+  }
 
   size_t entrycount = 0;
   for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
@@ -1374,12 +1481,23 @@ void FEA_Module_Elasticity::assemble_matrix(){
       entrycount++;
     }
   }
-  
-  if(!Matrix_alloc){
-  Global_Stiffness_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view()));
-  Global_Stiffness_Matrix->fillComplete();
-  Matrix_alloc = 1;
+
+  //sort values and indices
+  Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
+
+  //set global indices for DOF graph from sorted local indices
+  entrycount = 0;
+  for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+    for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+      DOF_Graph_Matrix(irow,istride) = colmap->getGlobalElement(stiffness_local_indices(entrycount));
+      entrycount++;
+    }
   }
+
+  //debug print of A matrix
+  //*fos << "Global Stiffness Matrix :" << std::endl;
+  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
 
   //filter small negative numbers (that should have been 0 from cancellation) from floating point error
   /*
@@ -1394,16 +1512,8 @@ void FEA_Module_Elasticity::assemble_matrix(){
     //std::cout << std::endl;
   }
   */
-  //This completes the setup for A matrix of the linear system
   
-  //file to debug print
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
 
-  //debug print of A matrix
-  //*fos << "Global Stiffness Matrix :" << std::endl;
-  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
 }
 
 
@@ -1437,7 +1547,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   int nodes_per_elem = max_nodes_per_element;
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  int current_element_index, local_surface_id, surf_dim1, surf_dim2;
+  int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign;
   int patch_node_count;
   CArray<int> patch_local_node_ids;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -1450,7 +1560,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply;
+  real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply, surface_normal[3], pressure, normal_displacement;
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
@@ -1469,6 +1579,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s3(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_values(nodes_per_elem,num_dim);
 
    //force vector initialization
@@ -1479,17 +1590,23 @@ void FEA_Module_Elasticity::assemble_vector(){
   These sets can have overlapping nodes since applied loading conditions
   are assumed to be additive*/
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
-    if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION) continue;
+    if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION&&Boundary_Condition_Type_List(iboundary)!=SURFACE_PRESSURE_CONDITION) continue;
+    std::cout << " NUMBER OF BOUNDARY PATCHES "<< NBoundary_Condition_Patches(iboundary) << std::endl;
     //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
-    force_density[0] = Boundary_Surface_Force_Densities(surface_force_set_id,0);
-    //debug print
-    std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< surface_force_set_id << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
-    force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
-    force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
+    if(Boundary_Condition_Type_List(iboundary)==SURFACE_LOADING_CONDITION){
+      force_density[0] = Boundary_Surface_Force_Densities(surface_force_set_id,0);
+      //debug print
+      //std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< surface_force_set_id << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
+      force_density[1] = Boundary_Surface_Force_Densities(surface_force_set_id,1);
+      force_density[2] = Boundary_Surface_Force_Densities(surface_force_set_id,2);
+    }
+    else{
+      pressure = Boundary_Surface_Force_Densities(surface_force_set_id,0);
+    }
     surface_force_set_id++;
-
+    //std::cout << " FORCE DENSITY "<< force_density[0] << std::endl;
     real_t pointer_basis_values[elem->num_basis()];
     ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
 
@@ -1506,7 +1623,19 @@ void FEA_Module_Elasticity::assemble_vector(){
     Surface_Nodes = Boundary_Patches(patch_id).node_set;
     //find element index this boundary patch is on
     current_element_index = Boundary_Patches(patch_id).element_id;
-    
+    //debug
+    /*
+    bool local_exists = false;
+    for(int i = 0; i < Surface_Nodes.size(); i++){
+      if(map->isNodeGlobalElement(Surface_Nodes(i))){
+        local_count++;
+        local_exists = true;
+      }
+    }
+    if(local_exists) {
+      //std::cout << "LOCAL PATCH COUNT ON RANK " << myrank << " IS " << local_count << std::endl;
+    }
+    */
     //std::cout << " CURRENT ELEMENT INDEX " << current_element_index << std::endl;
     local_surface_id = Boundary_Patches(patch_id).local_patch_id;
     //debug print of local surface ids
@@ -1529,10 +1658,14 @@ void FEA_Module_Elasticity::assemble_vector(){
       quad_coordinate(0) = legendre_nodes_1D(x_quad);
       quad_coordinate(1) = legendre_nodes_1D(y_quad);
       //set to -1 or 1 for an isoparametric space
-        if(local_surface_id%2==0)
-        quad_coordinate(2) = -1;
-        else
-        quad_coordinate(2) = 1;
+        if(local_surface_id%2==0){
+          quad_coordinate(2) = -1;
+          surface_sign = -1;
+        }
+        else{
+          quad_coordinate(2) = 1;
+          surface_sign = 1;
+        }
       }
       else if(local_surface_id<4){
       surf_dim1 = 0;
@@ -1540,10 +1673,14 @@ void FEA_Module_Elasticity::assemble_vector(){
       quad_coordinate(0) = legendre_nodes_1D(x_quad);
       quad_coordinate(2) = legendre_nodes_1D(y_quad);
       //set to -1 or 1 for an isoparametric space
-        if(local_surface_id%2==0)
-        quad_coordinate(1) = -1;
-        else
-        quad_coordinate(1) = 1;
+        if(local_surface_id%2==0){
+          quad_coordinate(1) = -1;
+          surface_sign = -1;
+        }
+        else{
+          quad_coordinate(1) = 1;
+          surface_sign = 1;
+        }
       }
       else if(local_surface_id<6){
       surf_dim1 = 1;
@@ -1551,10 +1688,14 @@ void FEA_Module_Elasticity::assemble_vector(){
       quad_coordinate(1) = legendre_nodes_1D(x_quad);
       quad_coordinate(2) = legendre_nodes_1D(y_quad);
       //set to -1 or 1 for an isoparametric space
-        if(local_surface_id%2==0)
-        quad_coordinate(0) = -1;
-        else
-        quad_coordinate(0) = 1;
+        if(local_surface_id%2==0){
+          quad_coordinate(0) = -1;
+          surface_sign = -1;
+        }
+        else{
+          quad_coordinate(0) = 1;
+          surface_sign = 1;
+        }
       }
       
       //set current quadrature weight
@@ -1568,9 +1709,10 @@ void FEA_Module_Elasticity::assemble_vector(){
       local_nodes[3] = elem->surface_to_dof_lid(local_surface_id,3);
 
       //acquire set of nodes for this face
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        current_node_index = Surface_Nodes(node_loop);
-        local_node_id = all_node_map->getLocalElement(current_node_index);
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        //current_node_index = Surface_Nodes(node_loop);
+        //local_node_id = all_node_map->getLocalElement(current_node_index);
+        local_node_id = all_node_map->getLocalElement(nodes_in_elem(current_element_index, node_loop));
         nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
         nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
         nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
@@ -1580,16 +1722,19 @@ void FEA_Module_Elasticity::assemble_vector(){
         //compute shape function derivatives
         elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+        elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
       }
       else if(local_surface_id<4){
         //compute shape function derivatives
         elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
+        elem->partial_eta_basis(basis_derivative_s3,quad_coordinate);
       }
       else if(local_surface_id<6){
         //compute shape function derivatives
         elem->partial_eta_basis(basis_derivative_s1,quad_coordinate);
         elem->partial_mu_basis(basis_derivative_s2,quad_coordinate);
+        elem->partial_xi_basis(basis_derivative_s3,quad_coordinate);
       }
 
       //set values relevant to this surface
@@ -1603,28 +1748,69 @@ void FEA_Module_Elasticity::assemble_vector(){
       JT_row1(0) = 0;
       JT_row1(1) = 0;
       JT_row1(2) = 0;
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        JT_row1(0) += nodal_positions(node_loop,0)*surf_basis_derivative_s1(node_loop);
-        JT_row1(1) += nodal_positions(node_loop,1)*surf_basis_derivative_s1(node_loop);
-        JT_row1(2) += nodal_positions(node_loop,2)*surf_basis_derivative_s1(node_loop);
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
       }
 
       //derivative of x,y,z w.r.t t
       JT_row2(0) = 0;
       JT_row2(1) = 0;
       JT_row2(2) = 0;
-      for(int node_loop=0; node_loop < 4; node_loop++){
-        JT_row2(0) += nodal_positions(node_loop,0)*surf_basis_derivative_s2(node_loop);
-        JT_row2(1) += nodal_positions(node_loop,1)*surf_basis_derivative_s2(node_loop);
-        JT_row2(2) += nodal_positions(node_loop,2)*surf_basis_derivative_s2(node_loop);
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
       }
-      
+
+      //derivative of x,y,z w.r.t t
+      JT_row3(0) = 0;
+      JT_row3(1) = 0;
+      JT_row3(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+      }
 
       //compute jacobian for this surface
       //compute the determinant of the Jacobian
       wedge_product = sqrt(pow(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2),2)+
                pow(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2),2)+
                pow(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1),2));
+      
+      //compute the determinant of the Jacobian
+      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+      
+      //if this is a surface pressure condition use the normal to repopulate the force density (pressure stored in 0 by convention)
+      if(Boundary_Condition_Type_List(iboundary)==SURFACE_PRESSURE_CONDITION){
+        //compute surface normal through cross product of the two tangent vectors
+        surface_normal[0] = (JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2));
+        surface_normal[1] = -(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2));
+        if(num_dim==3)
+          surface_normal[2] = (JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1));
+        else
+          surface_normal[2] = 0;
+        
+        //compute sign of the normal by finding s3 displacement corresponding to x,y,z displacement along normal (Cramer's rule)
+        normal_displacement = (surface_normal[0]*surface_normal[0]+surface_normal[1]*surface_normal[1]+surface_normal[2]*surface_normal[2])/Jacobian;
+        normal_sign = -1;
+        if(signbit(normal_displacement)==signbit(surface_sign)){
+          normal_sign = 1;
+        }
+        //normalize
+        surface_normal[0] *= normal_sign/wedge_product;
+        surface_normal[1] *= normal_sign/wedge_product;
+        surface_normal[2] *= normal_sign/wedge_product;
+        force_density[0] = -pressure*surface_normal[0];
+        //debug print
+        //std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< surface_force_set_id << " FORCE DENSITY ON SURFACE BC " << force_density[0] << std::endl;
+        force_density[1] = -pressure*surface_normal[1];
+        force_density[2] = -pressure*surface_normal[2];
+      }
 
       //compute shape functions at this point for the element type
       elem->basis(basis_values,quad_coordinate);
@@ -3251,18 +3437,29 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  host_vec_array unbalanced_B_view = unbalanced_B->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   const_host_vec_array direction_vec = direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = xX;
-  Teuchos::RCP<MV> lambda = X;
+
+  if(!adjoints_allocated){
+    adjoint_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
+    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
+    all_adjoint_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    adjoints_allocated = true;
+  }
+  Teuchos::RCP<MV> lambda = adjoint_displacements_distributed;
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(lambda));
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xB = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(adjoint_equation_RHS_distributed));
+  
+  host_vec_array adjoint_equation_RHS_view = adjoint_equation_RHS_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+  
   const_host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_reduced_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
+  LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index, global_dof_id;
+  size_t local_nrows = nlocal_nodes*num_dim;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Element_Modulus_Gradient, Element_Modulus_Concavity, Poisson_Ratio, gradient_force_density[3];
@@ -3322,8 +3519,8 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
     hessvec(inode,0) = 0;
   
   //initialize RHS vector
-  for(int i=0; i < local_reduced_dof_map->getNodeNumElements(); i++)
-    unbalanced_B_view(i,0) = 0;
+  for(int i=0; i < local_dof_map->getNodeNumElements(); i++)
+    adjoint_equation_RHS_view(i,0) = 0;
   
   //sum components of direction vector
   direction_vec_reduce = local_direction_vec_reduce = 0;
@@ -3537,7 +3734,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
     //look up element material properties at this point as a function of density
     Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
     
-   Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+    Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5 - Poisson_Ratio;
     Pressure_Term = 1 - Poisson_Ratio;
 
@@ -3600,8 +3797,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
         local_dof_id = all_dof_map->getLocalElement(nodes_in_elem(ielem, ifill/num_dim)*num_dim);
         local_dof_id += ifill%num_dim;
         global_dof_id = all_dof_map->getGlobalElement(local_dof_id);
-        if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_reduced_dof_original_map->isNodeGlobalElement(global_dof_id)){
-          local_reduced_dof_id = local_reduced_dof_original_map->getLocalElement(global_dof_id);
+        if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_dof_map->isNodeGlobalElement(global_dof_id)){
           inner_product = 0;
           for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
             inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(jfill);
@@ -3609,25 +3805,60 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
             //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
             //inner_product += Local_Matrix_Contribution(ifill, jfill);
           }
-          unbalanced_B_view(local_reduced_dof_id,0) += inner_product*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
+          adjoint_equation_RHS_view(local_dof_id,0) += inner_product*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
         }
       }
       } //density gradient loop
     }//quadrature loop
   }//element index loop
-  
+
+  //set adjoint equation RHS terms to 0 if they correspond to a boundary constraint DOF index
+  for(int i=0; i < local_dof_map->getNodeNumElements(); i++){
+    if(Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)
+      adjoint_equation_RHS_view(i,0) = 0;
+  }
   //*fos << "Elastic Modulus Gradient" << Element_Modulus_Gradient <<std::endl;
   //*fos << "DISPLACEMENT" << std::endl;
   //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 
   //*fos << "RHS vector" << std::endl;
-  //unbalanced_B->describe(*fos,Teuchos::VERB_EXTREME);
-  //balance RHS vector due to missing BC dofs
-  //import object to rebalance force vector
-  Tpetra::Import<LO, GO> Bvec_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
+  //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
+
+  //assign old stiffness matrix entries
+  if(!matrix_bc_reduced){
+  LO stride_index;
+  for(LO i=0; i < local_nrows; i++){
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_id = DOF_Graph_Matrix(i,j);
+        local_dof_id = all_dof_map->getLocalElement(global_dof_id);
+        Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
+        Original_Stiffness_Entry_Indices(i,j) = j;
+        if(local_dof_id == i){
+          Stiffness_Matrix(i,j) = 1;
+        }
+        else{     
+          Stiffness_Matrix(i,j) = 0;
+        }
+      }//stride for
+    }
+    else{
+      stride_index = 0;
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_id = DOF_Graph_Matrix(i,j);
+        local_dof_id = all_dof_map->getLocalElement(global_dof_id);
+        if((Node_DOF_Boundary_Condition_Type(local_dof_id)==DISPLACEMENT_CONDITION)){
+          Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
+          Original_Stiffness_Entry_Indices(i,stride_index) = j;   
+          Stiffness_Matrix(i,j) = 0;
+          stride_index++;
+        }
+      }
+    }
+  }//row for
   
-  //comms to rebalance force vector
-  balanced_B->doImport(*unbalanced_B, Bvec_importer, Tpetra::INSERT);
+  matrix_bc_reduced = true;
+  }
   
   //solve for adjoint vector
   int num_iter = 2000;
@@ -3650,14 +3881,14 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   // System solution (Ax = b)
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
-  //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->preScaleRightHandSides(*balanced_B,"diag");
+    Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
     Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
   real_t current_cpu_time2 = Solver_Pointer_->CPU_Time();
   comm->barrier();
-  SystemSolve(xwrap_balanced_A,xlambda,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   hessvec_linear_time += Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
@@ -3666,38 +3897,13 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   }
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
-  //*fos << "LAMBDA" << std::endl;
-  //lambda->describe(*fos,Teuchos::VERB_EXTREME);
-  //communicate adjoint vector to original all dof map for simplicity now (optimize out later)
-  Teuchos::RCP<MV> adjoint_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
-  Teuchos::RCP<MV> all_adjoint_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
-  //communicate solution on reduced map to the all node map vector for post processing of strain etc.
-  //intermediate storage on the unbalanced reduced system
-  Teuchos::RCP<MV> reduced_adjoint_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, 1));
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> reduced_adjoint_importer(local_balanced_reduced_dof_map, local_reduced_dof_map);
-
-  //comms to get displacements on reduced unbalanced displacement vector
-  reduced_adjoint_distributed->doImport(*lambda, reduced_adjoint_importer, Tpetra::INSERT);
-
-  //populate node displacement multivector on the local dof map
-  const_host_vec_array reduced_adjoint_host = reduced_adjoint_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  host_vec_array adjoint_host = adjoint_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-
-  for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
-    adjoint_host(init,0) = 0;
-
-  for(LO i=0; i < local_reduced_dof_original_map->getNodeNumElements(); i++){
-   local_reduced_dof_id = local_dof_map->getLocalElement(Free_Indices(i));
-    adjoint_host(local_reduced_dof_id,0) = reduced_adjoint_host(i,0);
-  }
   
   //import for displacement of ghosts
   Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
 
   //comms to get displacements on all node map
-  all_adjoint_distributed->doImport(*adjoint_distributed, ghost_displacement_importer, Tpetra::INSERT);
-  host_vec_array all_adjoint = all_adjoint_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  all_adjoint_displacements_distributed->doImport(*adjoint_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
+  host_vec_array all_adjoint = all_adjoint_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //*fos << "ALL ADJOINT" << std::endl;
   //all_adjoint_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 //now that adjoint is computed, calculate the hessian vector product
@@ -3806,9 +4012,10 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
 
     //compute density
     current_density = 0;
-    if(nodal_density_flag)
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      current_density += nodal_density(node_loop)*basis_values(node_loop);
+    if(nodal_density_flag){
+      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+        current_density += nodal_density(node_loop)*basis_values(node_loop);
+      }
     }
     //default constant element density
     else{
@@ -4578,13 +4785,16 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
     //projection_matrix_pass->print(std::cout);
 
     strain_vector_pass = Teuchos::rcp( new Teuchos::SerialDenseVector<LO,real_t>(Teuchos::View, strain_vector.pointer(), nodes_per_elem));
+    //strain_vector_pass->print(std::cout);
     //loop through strain components and solve for nodal values of that component
     for(int istrain = 0; istrain < Brows; istrain++){
       //check if projection vector is zero due to zero strains
-      zero_strain_flag = 1;
+      zero_strain_flag = 0;
+      /*
       for(int icol=0; icol < nodes_per_elem; icol++){
         if(fabs(projection_vector(istrain,icol))>STRAIN_EPSILON) zero_strain_flag = 0;
       }
+      */
       if(!zero_strain_flag){
         projection_vector_pass = Teuchos::rcp( new Teuchos::SerialDenseVector<LO,real_t>(Teuchos::View, &projection_vector(istrain,0), nodes_per_elem));
         projection_matrix_pass = Teuchos::rcp( new Teuchos::SerialDenseMatrix<LO,real_t>(Teuchos::Copy, projection_matrix.pointer(), nodes_per_elem, nodes_per_elem, nodes_per_elem));
@@ -4639,7 +4849,7 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
   //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   //if(myrank==0)
   //*fos << "Local Node Strains :" << std::endl;
-  //all_node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  //node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   //std::fflush(stdout);
   
@@ -4675,16 +4885,14 @@ int FEA_Module_Elasticity::solve(){
   //local variable for host view in the dual view
   const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  const_host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
-  size_t reduced_index;
   int max_stride = 0;
   size_t access_index, row_access_index, row_counter;
-  global_size_t reduced_row_count;
   GO global_index, global_dof_index;
-  LO reduced_local_dof_index;
+  LO local_dof_index;
 
   //*fos << Amesos2::version() << std::endl << std::endl;
 
@@ -4699,535 +4907,322 @@ int FEA_Module_Elasticity::solve(){
   //construct global data for example; normally this would be from file input and distributed
   //according to the row map at that point
   global_size_t nrows = num_nodes*num_dim;
-  
+  size_t local_nrows = nlocal_nodes*num_dim;
  
   //number of boundary conditions on this mpi rank
   global_size_t local_nboundaries = Number_DOF_BCS;
-  size_t local_nrows_reduced = nlocal_nodes*num_dim - local_nboundaries;
+  Original_RHS_Entries = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(local_nboundaries);
+  real_t diagonal_bc_scaling = Stiffness_Matrix(0,0);
 
-  //obtain total number of boundary conditions on all ranks
-  global_size_t global_nboundaries = 0;
-  MPI_Allreduce(&local_nboundaries,&global_nboundaries,1,MPI_INT,MPI_SUM,world);
-  global_size_t nrows_reduced = nrows - global_nboundaries;
-  //std::cout << "GLOBAL BC DATA " << nrows_reduced << " " << nrows <<"\n ";  
-
-  //Rebalance distribution of the global stiffness matrix rows here later since
-  //rows and columns are being removed.
-
-  //global_size_t *entries_per_row = new global_size_t[local_nrows];
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Reduced_Stiffness_Matrix_Strides(local_nrows_reduced,"Reduced_Stiffness_Matrix_Strides");
-  row_pointers reduced_row_offsets_pass = row_pointers("reduced_row_offsets_pass", local_nrows_reduced+1);
-
-  //init row_offsets
-  for(int i=0; i < local_nrows_reduced+1; i++){
-    reduced_row_offsets_pass(i) = 0;
-  }
-  
-  //stores global indices belonging to this MPI rank from the non-reduced map corresponding to the reduced system
-  Free_Indices = CArrayKokkos<GO, array_layout, device_type, memory_traits>(local_nrows_reduced,"Free_Indices");
-  reduced_index = 0;
-  for(LO i=0; i < nlocal_nodes*num_dim; i++)
-    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)){
-        Free_Indices(reduced_index) = local_dof_map->getGlobalElement(i);
-        reduced_index++;
-      }
-    
-  
-  //compute reduced matrix strides
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    reduced_row_count = 0;
-    for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
-      global_dof_index = DOF_Graph_Matrix(access_index,j);
-      row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
-        reduced_row_count++;
-      }
+  //alter rows of RHS to be the boundary condition value on that node
+  //first pass counts strides for storage
+  row_counter = 0;
+  for(LO i=0; i < local_nrows; i++){
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
+      row_counter++;
+      Nodal_RHS(i,0) = Node_DOF_Displacement_Boundary_Conditions(i)*diagonal_bc_scaling;
     }
-    Reduced_Stiffness_Matrix_Strides(i) = reduced_row_count;
-  }
+  }//row for
   
-  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Reduced_DOF_Graph_Matrix(Reduced_Stiffness_Matrix_Strides); //stores global dof indices
-  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Reduced_Local_DOF_Graph_Matrix(Reduced_Stiffness_Matrix_Strides); //stores local dof indices
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Reduced_Stiffness_Matrix(Reduced_Stiffness_Matrix_Strides);
+  //change entries of Stiffness matrix corresponding to BCs to 0s (off diagonal elements) and 1 (diagonal elements)
+  //storage for original stiffness matrix values
+  Original_Stiffness_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(local_nrows);
 
-  //template compatible row offsets (may change to shallow copy later if it works on device types etc.)
-  row_pointers reduced_row_offsets = Reduced_DOF_Graph_Matrix.start_index_;
-    for(int ipass = 0; ipass < local_nrows_reduced+1; ipass++){
-      reduced_row_offsets_pass(ipass) = reduced_row_offsets(ipass);
+  //debug print of A matrix before applying BCS
+  //*fos << "Reduced Stiffness Matrix :" << std::endl;
+  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Stiffness_Matrix, "A_matrix", "Stores stiffness matrix values");
+
+  //first pass counts strides for storage
+  if(!matrix_bc_reduced){
+  for(LO i=0; i < local_nrows; i++){
+    Original_Stiffness_Entries_Strides(i) = 0;
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      Original_Stiffness_Entries_Strides(i) = Stiffness_Matrix_Strides(i);
     }
+    else{
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_index = DOF_Graph_Matrix(i,j);
+        local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+        if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+          Original_Stiffness_Entries_Strides(i)++;
+        }
+      }//stride for
+    }
+  }//row for
   
-  //construct maps to define set of global indices for the reduced node set
-  //stores indices that aren't contiguous due to removal of BCS
-  local_reduced_dof_original_map =
-    Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,Free_Indices.get_kokkos_view(),0,comm) );
-
-  //stores contiguous indices with an unbalanced local distribution
-  local_reduced_dof_map = 
-    Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,local_nrows_reduced,0,comm));
-  
-  //dual view of the local global index to reduced global index map
-  dual_vec_array dual_reduced_dof_original("dual_reduced_dof_original",local_nrows_reduced,1);
-
-  //local variable for host view in the dual view
-  host_vec_array reduced_dof_original = dual_reduced_dof_original.view_host();
-  //notify that the host view is going to be modified
-  dual_reduced_dof_original.modify_host();
-
-  //set contents
-  for(LO i=0; i < local_nrows_reduced; i++){
-    reduced_dof_original(i,0) = local_reduced_dof_map->getGlobalElement(i);
-  }
-  
-  //create a multivector where each local index entry stores the new reduced global index associated with each old global index
-  Teuchos::RCP<MV> local_reduced_global_indices = Teuchos::rcp(new MV(local_reduced_dof_original_map, dual_reduced_dof_original));
-  
-  //construct map of all indices including ghosts for the reduced system
-  //stores global indices belonging to this MPI rank and ghosts from the non-reduced map corresponding to the reduced system
-  size_t all_nrows_reduced = local_nrows_reduced + nghost_nodes*num_dim;
-  for(LO i=nlocal_nodes*num_dim; i < nall_nodes*num_dim; i++){
-      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION))
-      all_nrows_reduced--;
-  }
-  
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Free_Indices(all_nrows_reduced,"All_Free_Indices");
-
-  //debug print
-  /*
-  if(myrank==0||myrank==4){
-  std::cout << "DOF flags global :" << std::endl;
-  std::cout << "Reduced DOF Graph Matrix on Rank " << myrank << std::endl;
-  for(LO i=0; i < nall_nodes*num_dim; i++){
-    std::cout << all_dof_map->getGlobalElement(i) << " " << Node_DOF_Boundary_Condition_Type(i) <<" ";   
-    std::cout << std::endl;
-  }
-  std::fflush(stdout);
-  }
-  */
-  
-  reduced_index = 0;
-  for(LO i=0; i < nall_nodes*num_dim; i++)
-    if((Node_DOF_Boundary_Condition_Type(i)!=DISPLACEMENT_CONDITION)){
-        All_Free_Indices(reduced_index) = all_dof_map->getGlobalElement(i);
-        reduced_index++;
-      }
-  
-  //construct map to define set of global indices for the reduced node set including ghosts
-  //passing invalid forces the map to count the global elements
-  all_reduced_dof_original_map =
-    Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Free_Indices.get_kokkos_view(),0,comm) );
-
-  //debug print
-  /*
-  *fos << "All reduced dof original indices :" << std::endl;
-  local_reduced_dof_original_map->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-
-  //debug print
-  *fos << "All reduced dof original indices :" << std::endl;
-  all_reduced_dof_original_map->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-  */
-
-  //communicate the new reduced global indices for ghost dof indices using the local information on other ranks through import
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(local_reduced_dof_original_map, all_reduced_dof_original_map);
-
-  Teuchos::RCP<MV> all_reduced_global_indices = Teuchos::rcp(new MV(all_reduced_dof_original_map, 1));
-
-  //comms to get reduced global indices for ghosts that are still free of BCs
-  all_reduced_global_indices->doImport(*local_reduced_global_indices, importer, Tpetra::INSERT);
-
-  const_host_vec_array all_reduced_global_indices_host = all_reduced_global_indices->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-
-  //debug print
-  /*
-  *fos << "All reduced global indices :" << std::endl;
-  all_reduced_global_indices->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-  */
-  
-  //store the new global indices for the reduced matrix graph
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    row_counter = 0;
-    for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
-      global_dof_index = DOF_Graph_Matrix(access_index,j);
-      row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
-        reduced_local_dof_index = all_reduced_dof_original_map->getLocalElement(global_dof_index);
-        //std::cout << "REDUCED LOCAL INDEX ON TASK " << myrank << " is " << Reduced_Stiffness_Matrix_Strides(i) << Reduced_DOF_Graph_Matrix(i,row_counter++) << std::endl;
-        Reduced_DOF_Graph_Matrix(i,row_counter++) = all_reduced_global_indices_host(reduced_local_dof_index,0);
+  //assign old stiffness matrix entries
+  LO stride_index;
+  Original_Stiffness_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+  Original_Stiffness_Entry_Indices = RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+  for(LO i=0; i < local_nrows; i++){
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_index = DOF_Graph_Matrix(i,j);
+        local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+        Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
+        Original_Stiffness_Entry_Indices(i,j) = j;
+        if(local_dof_index == i){
+          Stiffness_Matrix(i,j) = diagonal_bc_scaling;
+        }
+        else{     
+          Stiffness_Matrix(i,j) = 0;
+        }
+      }//stride for
+    }
+    else{
+      stride_index = 0;
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_index = DOF_Graph_Matrix(i,j);
+        local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+        if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+          Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
+          Original_Stiffness_Entry_Indices(i,stride_index) = j;   
+          Stiffness_Matrix(i,j) = 0;
+          stride_index++;
+        }
       }
     }
+  }//row for
+
+  matrix_bc_reduced = true;
   }
-  
-  //store reduced stiffness matrix values
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    row_counter = 0;
-    for(LO j=0; j < Stiffness_Matrix_Strides(access_index); j++){
-      global_dof_index = DOF_Graph_Matrix(access_index,j);
-      row_access_index = all_dof_map->getLocalElement(global_dof_index);
-      if((Node_DOF_Boundary_Condition_Type(row_access_index)!=DISPLACEMENT_CONDITION)){
-        Reduced_Stiffness_Matrix(i,row_counter++) = Stiffness_Matrix(access_index,j);
-      }
-    }
-  }
-  
-  // create a Map for the reduced global stiffness matrix that is evenly distributed amongst mpi ranks
-  local_balanced_reduced_dof_map = 
-    Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced,0,comm));
-
-    //debug print
-  /*
-  *fos << "local_reduced_dof_map :" << std::endl;
-  local_reduced_dof_map->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-
-  //debug print
-  *fos << "local_balanced_reduced_dof_map :" << std::endl;
-  local_balanced_reduced_dof_map->describe(*fos,Teuchos::VERB_EXTREME);
-  *fos << std::endl;
-  std::fflush(stdout);
-  */
-
-  //build column map
-  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap;
-  const Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > dommap = local_reduced_dof_map;
-
-  //debug print
-  /*
-  if(myrank==4){
-  std::cout << "Reduced DOF Graph Matrix on Rank " << myrank << std::endl;
-  for(LO i=0; i < local_nrows_reduced; i++){
-    for(LO j=0; j < Reduced_Stiffness_Matrix_Strides(i); j++){
-      std::cout << Reduced_DOF_Graph_Matrix(i,j) <<" ";
-    }
-    std::cout << std::endl;
-  }
-  }
-  */
-
-  Tpetra::Details::makeColMap<LO,GO,node_type>(colmap,dommap,Reduced_DOF_Graph_Matrix.get_kokkos_view(), nullptr);
-
-  /*//debug print of reduced row offsets
-  std::cout << " DEBUG PRINT FOR ROW OFFSETS" << std::endl;
-  for(int debug = 0; debug < local_nrows_reduced+1; debug++)
-  std::cout <<  reduced_row_offsets_pass(debug) << " ";
-  std::cout << std::endl;
-  //end debug print
-  */
-
-  //convert global indices to local indices using column map
-  for(LO i=0; i < local_nrows_reduced; i++)
-    for(LO j=0; j < Reduced_Stiffness_Matrix_Strides(i); j++)
-      Reduced_Local_DOF_Graph_Matrix(i,j) = colmap->getLocalElement(Reduced_DOF_Graph_Matrix(i,j));
-  
-  Teuchos::RCP<MAT> unbalanced_A = Teuchos::rcp(new MAT(local_reduced_dof_map, colmap, reduced_row_offsets_pass,
-                   Reduced_Local_DOF_Graph_Matrix.get_kokkos_view(), Reduced_Stiffness_Matrix.get_kokkos_view()));
-  unbalanced_A->fillComplete();
-  Teuchos::RCP<const_MAT> const_unbalanced_A(new const_MAT(*unbalanced_A));
-  
   //This completes the setup for A matrix of the linear system
 
-  //debug print of A matrix before balancing
-  //*fos << "Reduced Stiffness Matrix :" << std::endl;
-  //const_unbalanced_A->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-
-  //communicate reduced stiffness matrix entries for better load balancing
-  //create import object using the unbalanced map and the balanced map
-  Tpetra::Import<LO, GO> matrix_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
-  Teuchos::RCP<MAT> balanced_A = Tpetra::importAndFillCompleteCrsMatrix(const_unbalanced_A, matrix_importer, local_balanced_reduced_dof_map, local_balanced_reduced_dof_map);
-
-  //debug print of map
-  //if(myrank==0)
-  //*fos << "Reduced DOF Map :" << std::endl;
-  //local_balanced_reduced_dof_map->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
+  //debug print of A matrix
+  /*
+  *fos << "Reduced Stiffness Matrix :" << std::endl;
+  Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  *fos << std::endl;
+  */
 
   //debug print of A matrix after balancing
-  //if(myrank==0)
-  //*fos << "Reduced Stiffness Matrix :" << std::endl;
-  //balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
-  
-  // Create random X vector
-  size_t balanced_local_nrows = local_balanced_reduced_dof_map->getNodeNumElements();
-  //vec_array Xview_pass = vec_array("Xview_pass", balanced_local_nrows, 1);
-  //Xview_pass.assign_data(Xview.pointer());
-  X = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, 1));
-  //return !EXIT_SUCCESS;
-  //X->randomize();
+  /*
+  if(myrank==0)
+  *fos << "Reduced RHS :" << std::endl;
+  Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
+  *fos << std::endl;
+  std::fflush(stdout);
+  */
 
-  // Create Kokkos view of RHS B vector (Force Vector)  
-  vec_array Bview_pass = vec_array("Bview_pass", local_nrows_reduced,1);
+  //dimension of the nullspace for linear elasticity
+  int nulldim = 6;
+  if(num_dim == 2) nulldim = 3;
+  using impl_scalar_type =
+    typename Kokkos::Details::ArithTraits<real_t>::val_type;
+  using mag_type = typename Kokkos::ArithTraits<impl_scalar_type>::mag_type;
 
-  //set bview to force vector data
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    Bview_pass(i,0) = Nodal_RHS(access_index,0);
-  }
-  
-  unbalanced_B = Teuchos::rcp(new MV(local_reduced_dof_map, Bview_pass));
-  
-  //import object to rebalance force vector
-  Tpetra::Import<LO, GO> Bvec_importer(local_reduced_dof_map, local_balanced_reduced_dof_map);
+  xB = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(Global_Nodal_RHS));
+  X = node_displacements_distributed;
+  xX = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(X));
+  //Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > reduced_node_map = 
+  //Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced/num_dim,0,comm));
 
-  balanced_B = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, 1));
-  
-  //comms to rebalance force vector
-  balanced_B->doImport(*unbalanced_B, Bvec_importer, Tpetra::INSERT);
-  
-  //if(myrank==0)
-  //*fos << "RHS :" << std::endl;
-  //balanced_B->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
+  //set coordinates vector
+  Teuchos::RCP<MV> tcoordinates;
+  //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
 
-  //debug print
-  //if(update_count==42){
-    //Tpetra::MatrixMarket::Writer<MAT> market_writer();
-    //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *balanced_A, "A_matrix", "Stores stiffness matrix values");
-  //}
-  //return !EXIT_SUCCESS;
-  // Create solver interface to KLU2 with Amesos2 factory method
-  //std::cout << "Creating solver" << std::endl <<std::flush;
-  if(simparam->direct_solver_flag){
-    // Before we do anything, check that KLU2 is enabled
-    if( !Amesos2::query("SuperLUDist") ){
-      std::cerr << "SuperLUDist not enabled in this run.  Exiting..." << std::endl;
-      return EXIT_SUCCESS;        // Otherwise CTest will pick it up as
-                                  // failure, which it isn't really
-    }
-    Teuchos::RCP<Amesos2::Solver<MAT,MV>> solver = Amesos2::create<MAT,MV>("SuperLUDist", balanced_A, X, balanced_B);
-    //Teuchos::RCP<Amesos2::Solver<MAT,MV>> solver = Amesos2::create<MAT,MV>("SuperLUDist", balanced_A, X, balanced_B);
-    //Teuchos::RCP<Amesos2::Solver<MAT,MV>> solver = Amesos2::create<MAT,MV>("KLU2", balanced_A, X, balanced_B);
-  
-    solver->setParameters( Teuchos::rcpFromRef(*Linear_Solve_Params) );
-    //declare non-contiguous map
-    //Create a Teuchos::ParameterList to hold solver parameters
-    //Teuchos::ParameterList amesos2_params("Amesos2");
-    //amesos2_params.sublist("KLU2").set("IsContiguous", false, "Are GIDs Contiguous");
-    //solver->setParameters( Teuchos::rcpFromRef(amesos2_params) );
-  
-    //Solve the system
-    //std::cout << "BEFORE LINEAR SOLVE" << std::endl << std::flush;
-    solver->symbolicFactorization().numericFactorization().solve();
-    //debug print of displacements
-    //std::ostream &out = std::cout;
-    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(myrank==0)
-    //*fos << "balanced_X: " << update_count << std::endl;
-    //X->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
-    //std::fflush(stdout);
-    //std::cout << "AFTER LINEAR SOLVE" << std::endl<< std::flush;
+  int dim_index;
+  real_t node_x, node_y, node_z;
+  /*
+  //set coordinates components
+  for(LO i=0; i < local_nrows; i++){
+    dim_index = i % num_dim;
+    access_index = i/num_dim;
+    node_x = node_coords(access_index, 0);
+    node_y = node_coords(access_index, 1);
+    node_z = node_coords(access_index, 2);
+
+    coordinates_view(i,0) = node_x;
+    coordinates_view(i,1) = node_y;
+    coordinates_view(i,2) = node_z;
+  }// for
+  */
+  tcoordinates = node_coords_distributed;  
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> coordinates = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tcoordinates));
+    
+  //nullspace vector
+  Teuchos::RCP<MV> tnullspace = Teuchos::rcp(new MV(local_dof_map, nulldim));
+  //set nullspace components
+  //init
+  tnullspace->putScalar(0);
+  //loop through dofs and compute nullspace components for each
+  host_vec_array nullspace_view = tnullspace->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+  //compute center
+  // Calculate center
+	real_t cx = tcoordinates->getVector(0)->meanValue();
+	real_t cy = tcoordinates->getVector(1)->meanValue();
+  //real_t cx = center_of_mass[0];
+  //real_t cy = center_of_mass[1];
+  real_t cz;
+  if(num_dim==3)
+	  cz = tcoordinates->getVector(2)->meanValue();
+    //cz = center_of_mass[2];
+
+  if(num_dim==3){
+    for(LO i=0; i < local_nrows; i++){
+      dim_index = i % num_dim;
+      access_index = i/num_dim;
+      node_x = node_coords(access_index, 0);
+      node_y = node_coords(access_index, 1);
+      node_z = node_coords(access_index, 2);
+      //set translational component
+      nullspace_view(i,dim_index) = 1;
+      //set rotational components
+      if(dim_index==0){
+        nullspace_view(i,3) = -node_y + cy;
+        nullspace_view(i,5) = node_z - cz;
+      }
+      if(dim_index==1){
+        nullspace_view(i,3) = node_x - cx;
+        nullspace_view(i,4) = -node_z + cz;
+      }
+      if(dim_index==2){
+        nullspace_view(i,4) = node_y - cy;
+        nullspace_view(i,5) = -node_x + cx;
+      }
+      /*
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        nullspace_view(i,0) = 0;
+        nullspace_view(i,1) = 0;
+        nullspace_view(i,2) = 0;
+        nullspace_view(i,3) = 0;
+        nullspace_view(i,4) = 0;
+        nullspace_view(i,5) = 0;
+      }
+      */
+    }// for
   }
   else{
-    //dimension of the nullspace for linear elasticity
-    int nulldim = 6;
-    if(num_dim == 2) nulldim = 3;
-    using impl_scalar_type =
-      typename Kokkos::Details::ArithTraits<real_t>::val_type;
-    using mag_type = typename Kokkos::ArithTraits<impl_scalar_type>::mag_type;
-    // Instead of checking each time for rank, create a rank 0 stream
+    for(LO i=0; i < local_nrows; i++){
+      dim_index = i % num_dim;
+      access_index = i/num_dim;
+      node_x = node_coords(access_index, 0);
+      node_y = node_coords(access_index, 1);
+      //set translational component
+      nullspace_view(i,dim_index) = 1;
+      //set rotational components
+      if(dim_index==0){
+        nullspace_view(i,2) = -node_y + cy;
+      }
+      if(dim_index==1){
+        nullspace_view(i,2) = node_x - cx;
+      }
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        nullspace_view(i,0) = 0;
+        nullspace_view(i,1) = 0;
+        nullspace_view(i,2) = 0;
+      }
+    }// for
+  }
 
-    xbalanced_B = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(balanced_B));
-    xX = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(X));
-    //Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > reduced_node_map = 
-    //Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(nrows_reduced/num_dim,0,comm));
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> nullspace = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tnullspace));
 
-    //set coordinates vector
-    Teuchos::RCP<MV> unbalanced_coordinates_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, num_dim));
-    //loop through dofs and set coordinates, duplicated for each dim to imitate MueLu example for now (no idea why this was done that way)
-    
-    host_vec_array unbalanced_coordinates_view = unbalanced_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    int dim_index;
-    real_t node_x, node_y, node_z;
-    //set coordinates components
-      for(LO i=0; i < local_nrows_reduced; i++){
-        global_dof_index = Free_Indices(i);
-        global_index = Free_Indices(i)/num_dim;
-        dim_index = global_dof_index % num_dim;
-        access_index = map->getLocalElement(global_index);
-        node_x = node_coords(access_index, 0);
-        node_y = node_coords(access_index, 1);
-        node_z = node_coords(access_index, 2);
+  //normalize components
+  Kokkos::View<mag_type*, Kokkos::HostSpace> norms2("norms2", nulldim);
+  tnullspace->norm2(norms2);
+  Kokkos::View<impl_scalar_type*, device_type> scaling_values("scaling_values", nulldim);
+  for (int i = 0; i < nulldim; i++)
+      scaling_values(i) = norms2(0) / norms2(i);
+  tnullspace->scale(scaling_values);
 
-        unbalanced_coordinates_view(i,0) = node_x;
-        unbalanced_coordinates_view(i,1) = node_y;
-        unbalanced_coordinates_view(i,2) = node_z;
-      }// for
-    
-    //balanced coordinates vector
-    Teuchos::RCP<MV> tcoordinates = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, num_dim));
-    //rebalance coordinates vector
-    tcoordinates->doImport(*unbalanced_coordinates_distributed, Bvec_importer, Tpetra::INSERT);
-    Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> coordinates = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tcoordinates));
-    
-    //nullspace vector
-    Teuchos::RCP<MV> unbalanced_nullspace_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, nulldim));
-    //set nullspace components
-    //init
-    unbalanced_nullspace_distributed->putScalar(0);
-    //loop through dofs and compute nullspace components for each
-    host_vec_array unbalanced_nullspace_view = unbalanced_nullspace_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-
-    //compute center
-    // Calculate center
-	  real_t cx = tcoordinates->getVector(0)->meanValue();
-	  real_t cy = tcoordinates->getVector(1)->meanValue();
-    //real_t cx = center_of_mass[0];
-    //real_t cy = center_of_mass[1];
-    real_t cz;
-    if(num_dim==3)
-	    cz = tcoordinates->getVector(2)->meanValue();
-      //cz = center_of_mass[2];
-
-    if(num_dim==3){
-      for(LO i=0; i < local_nrows_reduced; i++){
-        global_dof_index = Free_Indices(i);
-        global_index = Free_Indices(i)/num_dim;
-        dim_index = global_dof_index % num_dim;
-        access_index = map->getLocalElement(global_index);
-        node_x = node_coords(access_index, 0);
-        node_y = node_coords(access_index, 1);
-        node_z = node_coords(access_index, 2);
-        //set translational component
-        unbalanced_nullspace_view(i,dim_index) = 1;
-        //set rotational components
-        if(dim_index==0){
-          unbalanced_nullspace_view(i,3) = -node_y + cy;
-          unbalanced_nullspace_view(i,5) = node_z - cz;
-        }
-        if(dim_index==1){
-          unbalanced_nullspace_view(i,3) = node_x - cx;
-          unbalanced_nullspace_view(i,4) = -node_z + cz;
-        }
-        if(dim_index==2){
-          unbalanced_nullspace_view(i,4) = node_y - cy;
-          unbalanced_nullspace_view(i,5) = -node_x + cx;
-        }
-      }// for
-    }
-    else{
-      for(LO i=0; i < local_nrows_reduced; i++){
-        global_dof_index = Free_Indices(i);
-        global_index = Free_Indices(i)/num_dim;
-        dim_index = global_dof_index % num_dim;
-        access_index = map->getLocalElement(global_index);
-        node_x = node_coords(access_index, 0);
-        node_y = node_coords(access_index, 1);
-        //set translational component
-        unbalanced_nullspace_view(i,dim_index) = 1;
-        //set rotational components
-        if(dim_index==0){
-          unbalanced_nullspace_view(i,3) = -node_y + cy;
-        }
-        if(dim_index==1){
-          unbalanced_nullspace_view(i,3) = node_x - cx;
-        }
-      }// for
-    }
-    
-    //balanced nullspace vector
-    Teuchos::RCP<MV> tnullspace = Teuchos::rcp(new MV(local_balanced_reduced_dof_map, nulldim));
-    //rebalance nullspace vector
-    tnullspace->doImport(*unbalanced_nullspace_distributed, Bvec_importer, Tpetra::INSERT);
-    Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> nullspace = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tnullspace));
-
-    //normalize components
-    Kokkos::View<mag_type*, Kokkos::HostSpace> norms2("norms2", nulldim);
-    tnullspace->norm2(norms2);
-    Kokkos::View<impl_scalar_type*, device_type> scaling_values("scaling_values", nulldim);
-    for (int i = 0; i < nulldim; i++)
-        scaling_values(i) = norms2(0) / norms2(i);
-    tnullspace->scale(scaling_values);
-
-    Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> material = Teuchos::null;
-    Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xbalanced_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(balanced_A));
-    xwrap_balanced_A = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xbalanced_A));
-    //xwrap_balanced_A->SetFixedBlockSize(1);
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> material = Teuchos::null;
+  Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xcrs_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(Global_Stiffness_Matrix));
+  xA = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xcrs_A));
+  xA->SetFixedBlockSize(num_dim);
    
-    //randomize initial vector
-    xX->setSeed(100);
-    xX->randomize();
-    
-     if(simparam->equilibrate_matrix_flag){
-      Solver_Pointer_->equilibrateMatrix(xwrap_balanced_A,"diag");
-      Solver_Pointer_->preScaleRightHandSides(*balanced_B,"diag");
-      Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
-     }
+  //randomize initial vector
+  xX->setSeed(100);
+  xX->randomize();
 
-    //debug print
-    //if(myrank==0)
-    //*fos << "Xpetra A matrix :" << std::endl;
-    //xX->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
-    //std::fflush(stdout);
-    
-    int num_iter = 2000;
-    double solve_tol = 1e-06;
-    int cacheSize = 0;
-    std::string solveType         = "belos";
-    std::string belosType         = "cg";
-    // =========================================================================
-    // Preconditioner construction
-    // =========================================================================
-    //bool useML   = Linear_Solve_Params->isParameter("use external multigrid package") && (Linear_Solve_Params->get<std::string>("use external multigrid package") == "ml");
-    //out<<"*********** MueLu ParameterList ***********"<<std::endl;
-    //out<<*Linear_Solve_Params;
-    //out<<"*******************************************"<<std::endl;
-    
-    //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
-    
-    comm->barrier();
-    //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
-    if(Hierarchy_Constructed){
-      ReuseXpetraPreconditioner(xwrap_balanced_A, H);
+  //initialize BC components
+  /*
+  host_vec_array X_view = X->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  for(LO i=0; i < local_nrows; i++){
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      X_view(i,0) = Node_DOF_Displacement_Boundary_Conditions(i);
     }
-    else{
-      PreconditionerSetup(xwrap_balanced_A,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
-      Hierarchy_Constructed = true;
-    }
-    comm->barrier();
+  }//row for
+  */
+  if(simparam->equilibrate_matrix_flag){
+    Solver_Pointer_->equilibrateMatrix(xA,"diag");
+    Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
+    Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
+  }
+
+  //debug print
+  //if(myrank==0)
+  //*fos << "Xpetra A matrix :" << std::endl;
+  //xX->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+  //std::fflush(stdout);
     
-    //H->Write(-1, -1);
-    //H->describe(*fos,Teuchos::VERB_EXTREME);
+  int num_iter = 2000;
+  double solve_tol = 1e-06;
+  int cacheSize = 0;
+  std::string solveType         = "belos";
+  std::string belosType         = "cg";
+  // =========================================================================
+  // Preconditioner construction
+  // =========================================================================
+  //bool useML   = Linear_Solve_Params->isParameter("use external multigrid package") && (Linear_Solve_Params->get<std::string>("use external multigrid package") == "ml");
+  //out<<"*********** MueLu ParameterList ***********"<<std::endl;
+  //out<<*Linear_Solve_Params;
+  //out<<"*******************************************"<<std::endl;
     
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
+  //debug print
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix2.txt", *Global_Stiffness_Matrix, "A_matrix2", "Stores stiffness matrix values");  
+  //Xpetra::IO<real_t,LO,GO,node_type>WriteLocal("A_matrixlocal.txt", *xA);
+  comm->barrier();
+  //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
+  Teuchos::RCP<Tpetra::Vector<real_t,LO,GO,node_type>> tdiagonal = Teuchos::rcp(new Tpetra::Vector<real_t,LO,GO,node_type>(local_dof_map));
+  //Teuchos::RCP<Xpetra::Vector<real_t,LO,GO,node_type>> diagonal = Teuchos::rcp(new Xpetra::Vector<real_t,LO,GO,node_type>(tdiagonal));
+  //Global_Stiffness_Matrix->getLocalDiagCopy(*tdiagonal);
+  //tdiagonal->describe(*fos,Teuchos::VERB_EXTREME);
+  if(Hierarchy_Constructed){
+    ReuseXpetraPreconditioner(xA, H);
+  }
+  else{
+    PreconditionerSetup(xA,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,H,Prec);
+    Hierarchy_Constructed = true;
+  }
+  comm->barrier();
+    
+  //H->Write(-1, -1);
+  //H->describe(*fos,Teuchos::VERB_EXTREME);
+    
+  // =========================================================================
+  // System solution (Ax = b)
+  // =========================================================================
 
-    // =========================================================================
-    // System solution (Ax = b)
-    // =========================================================================
+  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
+  SystemSolve(xA,xX,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  linear_solve_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
+  comm->barrier();
 
-    real_t current_cpu_time = Solver_Pointer_->CPU_Time();
-    SystemSolve(xwrap_balanced_A,xX,xbalanced_B,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
-    linear_solve_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
-    comm->barrier();
+  if(simparam->equilibrate_matrix_flag){
+    Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
+    Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
+  }
 
-    if(simparam->equilibrate_matrix_flag){
-      Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
-    }
-
-    if(simparam->multigrid_timers){
+  if(simparam->multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
-        reportParams->set("How to merge timer sets",   "Union");
-        reportParams->set("alwaysWriteLocal",          false);
-        reportParams->set("writeGlobalStats",          true);
-        reportParams->set("writeZeroTimers",           false);
+    reportParams->set("How to merge timer sets",   "Union");
+    reportParams->set("alwaysWriteLocal",          false);
+    reportParams->set("writeGlobalStats",          true);
+    reportParams->set("writeZeroTimers",           false);
     std::ios_base::fmtflags ff(fos->flags());
     *fos << std::fixed;
     Teuchos::TimeMonitor::report(comm.ptr(), *fos, "", reportParams);
     *fos << std::setiosflags(ff);
-    //xwrap_balanced_A->describe(*fos,Teuchos::VERB_EXTREME);
-    }
+    //xA->describe(*fos,Teuchos::VERB_EXTREME);
   }
   //return !EXIT_SUCCESS;
   //timing statistics for LU solver
@@ -5241,30 +5236,22 @@ int FEA_Module_Elasticity::solve(){
   //X->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   
-
-  //communicate solution on reduced map to the all node map vector for post processing of strain etc.
-  //intermediate storage on the unbalanced reduced system
-  Teuchos::RCP<MV> reduced_node_displacements_distributed = Teuchos::rcp(new MV(local_reduced_dof_map, 1));
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> reduced_displacement_importer(local_balanced_reduced_dof_map, local_reduced_dof_map);
-
-  //comms to get displacements on reduced unbalanced displacement vector
-  reduced_node_displacements_distributed->doImport(*X, reduced_displacement_importer, Tpetra::INSERT);
-
-  //populate node displacement multivector on the local dof map
-  const_host_vec_array reduced_node_displacements_host = reduced_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  host_vec_array node_displacements_host = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-
-  for(LO i=0; i < local_nrows_reduced; i++){
-    access_index = local_dof_map->getLocalElement(Free_Indices(i));
-    node_displacements_host(access_index,0) = reduced_node_displacements_host(i,0);
-  }
-  
   //import for displacement of ghosts
   Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
 
   //comms to get displacements on all node map
   all_node_displacements_distributed->doImport(*node_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
+
+  //reinsert global stiffness values corresponding to BC indices to facilitate strain energy calculation
+  if(matrix_bc_reduced){
+    for(LO i = 0; i < local_nrows; i++){
+      for(LO j = 0; j < Original_Stiffness_Entries_Strides(i); j++){
+        access_index = Original_Stiffness_Entry_Indices(i,j);
+        Stiffness_Matrix(i,access_index) = Original_Stiffness_Entries(i,j);
+      }
+    }//row for
+    matrix_bc_reduced = false;
+  }
 
   //compute nodal force vector (used by other functions such as TO) due to inputs and constraints
   Global_Stiffness_Matrix->apply(*node_displacements_distributed,*Global_Nodal_Forces);
@@ -5335,4 +5322,18 @@ void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp){
       //MPI_Barrier(world);
       //MPI_Abort(world,4);
   //}
+}
+
+/* -------------------------------------------------------------------------------------------
+   enforce constraints on nodes due to BCS
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densities_lower_bound){
+
+  int num_dim = simparam->num_dim;
+  for(int i = 0; i < nlocal_nodes*num_dim; i++){
+    if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
+      node_densities_lower_bound(i/num_dim,0) = 1;
+    }
+  }
 }

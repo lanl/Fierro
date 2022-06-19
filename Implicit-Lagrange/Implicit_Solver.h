@@ -111,6 +111,8 @@ public:
   //setup ghosts and element maps
   void init_maps();
 
+  void repartition_nodes();
+
   void init_design();
 
   void collect_information();

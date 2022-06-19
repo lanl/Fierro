@@ -24,7 +24,7 @@ void Simulation_Parameters::input(){
   //file input flags
   tecplot_input = false;
   restart_file = false;
-  ansys_dat_input = true;
+  ansys_dat_input = false;
 
   //simulation spatial dimension
   num_dim = 3;
