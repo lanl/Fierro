@@ -9,15 +9,15 @@ OPTIONS=(
 -D BUILD_ELEMENTS=OFF
 -D BUILD_EXPLICIT_SOLVER=OFF
 -D BUILD_IMPLICIT_SOLVER=OFF
-#-D CMAKE_BUILD_TYPE=Debug
 #-D BUILD_SGH=ON
 -D KOKKOS=ON
-#-D OPENMP=ON
--D Kokkos_DIR=${KOKKOS_INSTALL_DIR}/lib/cmake/Kokkos
+-D HIP=ON
+-D CMAKE_CXX_COMPILER=hipcc
+-D Kokkos_DIR=${KOKKOS_INSTALL_DIR}/lib64/cmake/Kokkos
 )
 set -x
 cmake "${OPTIONS[@]}" "${SGH_BASE_DIR:-../}"
 set +x
-make #-j16 -l32
+make -j16 -l32
 
 cd $basedir

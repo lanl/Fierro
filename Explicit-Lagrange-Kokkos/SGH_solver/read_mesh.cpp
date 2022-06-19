@@ -3,7 +3,7 @@
 //------------------------------------------------------------------------------
 #include "mesh.h"
 #include "state.h"
-#include "variables.h"
+
 
 
 // -----------------------------------------------------------------------------
@@ -21,6 +21,12 @@ void read_mesh_ensight(char* MESH,
 
 	FILE *in;
     char ch;
+    
+    
+    size_t num_nodes_in_elem = 1;
+    for (int dim=0; dim<num_dims; dim++){
+        num_nodes_in_elem *= 2;
+    }
 
 
     //read the mesh    WARNING: assumes a .geo file
@@ -40,10 +46,10 @@ void read_mesh_ensight(char* MESH,
 
     // --- Read in the nodes in the mesh ---
     
-    int num_nodes = 0;
+    size_t num_nodes = 0;
     
-    fscanf(in,"%d",&num_nodes);
-    printf("Num nodes read in %d\n" , num_nodes);
+    fscanf(in,"%lu",&num_nodes);
+    printf("Num nodes read in %lu\n" , num_nodes);
     
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
@@ -63,8 +69,16 @@ void read_mesh_ensight(char* MESH,
 
     // z-coords
     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-        fscanf(in,"%le",&node.coords(rk_level,node_id, 2));
-    }
+        if(num_dims==3){
+            fscanf(in,"%le",&node.coords(rk_level,node_id, 2));
+        } else
+        {
+            double dummy;
+            fscanf(in,"%le",&dummy);
+            
+            //printf("dummy = %le\n", dummy);
+        }
+    } // end for
 
     
     ch = (char)fgetc(in);
@@ -82,20 +96,20 @@ void read_mesh_ensight(char* MESH,
     
 
     // --- read in the elements in the mesh ---
-    int num_elem = 0;
+    size_t num_elem = 0;
     
-    fscanf(in,"%d",&num_elem);
-    printf("Num elements read in %d\n" , num_elem);
+    fscanf(in,"%lu",&num_elem);
+    printf("Num elements read in %lu\n" , num_elem);
 
     // intialize elem variables
     mesh.initialize_elems(num_elem, num_dims);
-    elem.initialize(rk_num_bins, num_nodes, num_dims);
+    elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
 
     // for each cell read the list of associated nodes
     for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
-        for (int node_lid = 0; node_lid < 8; node_lid++){
+        for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
             
-            fscanf(in,"%d",&mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
+            fscanf(in,"%lu",&mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
 
             // shift to start node index space at 0
             mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
@@ -110,7 +124,17 @@ void read_mesh_ensight(char* MESH,
     mesh.initialize_corners(num_corners);
     corner.initialize(num_corners, num_dims);
 
-
+    
+    // save the node coords to the current RK value
+    for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
+        
+        for(int rk=1; rk<rk_num_bins; rk++){
+            for (int dim = 0; dim < num_dims; dim++){
+                node.coords(rk, node_gid, dim) = node.coords(0, node_gid, dim);
+            } // end for dim
+        } // end for rk
+        
+    } // end parallel for
 
 
 
@@ -118,4 +142,6 @@ void read_mesh_ensight(char* MESH,
     // Close mesh input file
     fclose(in);
 
+    return;
+    
 }
