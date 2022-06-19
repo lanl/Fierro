@@ -121,6 +121,8 @@ public:
 
   virtual void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> global_reduce_map){}
 
+  virtual void node_density_constraints(host_vec_array node_densities_lower_bound){}
+
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   
@@ -211,7 +213,6 @@ public:
   //CArrayKokkos<int, Kokkos::LayoutLeft, Kokkos::HostSpace::device_type> active_ranks;
 
   //Pertains to local mesh information being stored as prescribed by the row map
-  global_size_t local_nrows;
   global_size_t min_gid;
   global_size_t max_gid;
   global_size_t index_base;

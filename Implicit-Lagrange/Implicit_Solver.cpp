@@ -18,6 +18,8 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
+
+#include <Xpetra_MultiVector.hpp>
 #include <Kokkos_View.hpp>
 #include <Kokkos_Parallel.hpp>
 #include <Kokkos_Parallel_Reduce.hpp>
@@ -36,6 +38,11 @@
 #include "FEA_Module_Headers.h"
 #include "Implicit_Solver.h"
 
+//Repartition Package
+#include <Zoltan2_XpetraMultiVectorAdapter.hpp>
+#include <Zoltan2_PartitioningProblem.hpp>
+#include <Zoltan2_PartitioningSolution.hpp>
+#include <Zoltan2_InputTraits.hpp>
 
 //Optimization Package
 #include "ROL_Algorithm.hpp"
@@ -345,22 +352,17 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
   global_size_t index_base = map->getIndexBase();
   //debug print
   //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
-  //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> local_dof_indices(nlocal_nodes*num_dim, "local_dof_indices");
-  for(int i = 0; i < nlocal_nodes; i++){
-    for(int j = 0; j < num_dim; j++)
-    local_dof_indices(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
-  }
-  
-  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.get_kokkos_view(),0,comm) );
 
   //allocate node storage with dual view
-  dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
+  //dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
 
   //local variable for host view in the dual view
-  host_vec_array node_coords = dual_node_coords.view_host();
+  
+  node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
-  dual_node_coords.modify_host();
+  //dual_node_coords.modify_host();
 
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
@@ -567,7 +569,13 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
     read_index_start+=BUFFER_LINES;
   }
   
-  
+  //repartition node distribution
+  repartition_nodes();
+
+  //synchronize device data
+  //dual_node_coords.sync_device();
+  //dual_node_coords.modify_device();
+
   //debug print of nodal data
   
   //debug print nodal positions and indices
@@ -817,9 +825,6 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
     }
   }
   
-  //synchronize device data
-  dual_node_coords.sync_device();
-  dual_node_coords.modify_device();
   //debug print element edof
   /*
   std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
@@ -911,28 +916,26 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   global_size_t index_base = map->getIndexBase();
   //debug print
   //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
-  //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> local_dof_indices(nlocal_nodes*num_dim, "local_dof_indices");
-  for(int i = 0; i < nlocal_nodes; i++){
-    for(int j = 0; j < num_dim; j++)
-    local_dof_indices(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
-  }
-  
-  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.get_kokkos_view(),0,comm) );
 
   //allocate node storage with dual view
-  dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
-  if(restart_file)
-    dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
+  //dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
+  //if(restart_file)
+    //dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
 
   //local variable for host view in the dual view
-  host_vec_array node_coords = dual_node_coords.view_host();
-  if(restart_file)
-    node_densities = dual_node_densities.view_host();
+  node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  if(restart_file){
+    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+    node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  }
+  //host_vec_array node_coords = dual_node_coords.view_host();
+  //if(restart_file)
+    //node_densities = dual_node_densities.view_host();
   //notify that the host view is going to be modified in the file readin
-  dual_node_coords.modify_host();
-  if(restart_file)
-    dual_node_densities.modify_host();
+  //dual_node_coords.modify_host();
+  //if(restart_file)
+    //dual_node_densities.modify_host();
 
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
@@ -1031,7 +1034,17 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
     read_index_start+=BUFFER_LINES;
   }
 
-  
+  //repartition node distribution
+  repartition_nodes();
+
+  //synchronize device data
+  //dual_node_coords.sync_device();
+  //dual_node_coords.modify_device();
+  //if(restart_file){
+    //dual_node_densities.sync_device();
+    //dual_node_densities.modify_device();
+  //}
+
   //debug print of nodal data
   
   //debug print nodal positions and indices
@@ -1260,14 +1273,6 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
     }
   }
 
-  //synchronize device data
-  dual_node_coords.sync_device();
-  dual_node_coords.modify_device();
-  if(restart_file){
-    dual_node_densities.sync_device();
-    dual_node_densities.modify_device();
-  }
-
   //debug print element edof
   
   //std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
@@ -1398,28 +1403,24 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   global_size_t index_base = map->getIndexBase();
   //debug print
   //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
-  //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> local_dof_indices(nlocal_nodes*num_dim, "local_dof_indices");
-  for(int i = 0; i < nlocal_nodes; i++){
-    for(int j = 0; j < num_dim; j++)
-    local_dof_indices(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
-  }
-  
-  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.get_kokkos_view(),0,comm) );
 
   //allocate node storage with dual view
-  dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
-  if(restart_file)
-    dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
+  //dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
+  //if(restart_file)
+    //dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
 
   //local variable for host view in the dual view
-  host_vec_array node_coords = dual_node_coords.view_host();
-  if(restart_file)
-    node_densities = dual_node_densities.view_host();
+  node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //host_vec_array node_coords = dual_node_coords.view_host();
+  if(restart_file){
+    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+    node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  }
   //notify that the host view is going to be modified in the file readin
-  dual_node_coords.modify_host();
-  if(restart_file)
-    dual_node_densities.modify_host();
+  //dual_node_coords.modify_host();
+  //if(restart_file)
+    //dual_node_densities.modify_host();
 
   //old swage method
   //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
@@ -1543,8 +1544,18 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-
   
+  //repartition node distribution
+  repartition_nodes();
+
+  //synchronize device data
+  //dual_node_coords.sync_device();
+  //dual_node_coords.modify_device();
+  //if(restart_file){
+    //dual_node_densities.sync_device();
+    //dual_node_densities.modify_device();
+  //}
+
   //debug print of nodal data
   
   //debug print nodal positions and indices
@@ -1928,14 +1939,6 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
       nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
     }
   }
-
-  //synchronize device data
-  dual_node_coords.sync_device();
-  dual_node_coords.modify_device();
-  if(restart_file){
-    dual_node_densities.sync_device();
-    dual_node_densities.modify_device();
-  }
  
 } // end read_mesh
 
@@ -2100,6 +2103,16 @@ void Implicit_Solver::init_maps(){
   //create nonoverlapping element map
   element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Element_Global_Indices.get_kokkos_view(),0,comm));
 
+  
+  //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> local_dof_indices(nlocal_nodes*num_dim, "local_dof_indices");
+  for(int i = 0; i < nlocal_nodes; i++){
+    for(int j = 0; j < num_dim; j++)
+    local_dof_indices(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
+  }
+  
+  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.get_kokkos_view(),0,comm) );
+
   //construct dof map that follows from the all_node map (used for distributed matrix and vector objects later)
   CArrayKokkos<GO, array_layout, device_type, memory_traits> all_dof_indices(nall_nodes*num_dim, "all_dof_indices");
   for(int i = 0; i < nall_nodes; i++){
@@ -2135,7 +2148,6 @@ void Implicit_Solver::init_maps(){
   }
 
   //create distributed multivector of the local node data and all (local + ghost) node storage
-  node_coords_distributed = Teuchos::rcp(new MV(map, dual_node_coords));
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   
   //debug print
@@ -2196,6 +2208,97 @@ void Implicit_Solver::init_maps(){
   //std::cout << "number of patches = " << mesh->num_patches() << std::endl;
   if(myrank == 0)
   std::cout << "End of map setup " << std::endl;
+}
+
+/* ----------------------------------------------------------------------
+   Initialize Ghost and Non-Overlapping Element Maps
+------------------------------------------------------------------------- */
+
+void Implicit_Solver::repartition_nodes(){
+  char ch;
+  int num_dim = simparam->num_dim;
+  int p_order = simparam->p_order;
+  real_t unit_scaling = simparam->unit_scaling;
+  int local_node_index, current_column_index;
+  size_t strain_count;
+  std::stringstream line_parse;
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
+  int nodes_per_element;
+  GO node_gid;
+  
+  //construct input adapted needed by Zoltan2 problem
+  typedef Xpetra::MultiVector<real_t,LO,GO,node_type> xvector_t;
+  typedef Zoltan2::XpetraMultiVectorAdapter<xvector_t> inputAdapter_t;
+  typedef Zoltan2::EvaluatePartition<inputAdapter_t> quality_t;
+  
+  Teuchos::RCP<xvector_t> xpetra_node_coords = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(node_coords_distributed));
+  Teuchos::RCP<inputAdapter_t> problem_adapter =  Teuchos::rcp(new inputAdapter_t(xpetra_node_coords));
+
+  // Create parameters for an RCB problem
+
+  double tolerance = 1.02;
+
+  Teuchos::ParameterList params("Node Partition Params");
+  params.set("debug_level", "basic_status");
+  params.set("debug_procs", "0");
+  params.set("error_check_level", "debug_mode_assertions");
+
+  //params.set("algorithm", "rcb");
+  params.set("algorithm", "multijagged");
+  params.set("imbalance_tolerance", tolerance );
+  params.set("num_global_parts", nranks);
+  
+  Teuchos::RCP<Zoltan2::PartitioningProblem<inputAdapter_t> > problem =
+           Teuchos::rcp(new Zoltan2::PartitioningProblem<inputAdapter_t>(&(*problem_adapter), &params));
+   
+  // Solve the problem
+
+  problem->solve();
+
+  // create metric object where communicator is Teuchos default
+
+  quality_t *metricObject1 = new quality_t(&(*problem_adapter), &params, //problem1->getComm(),
+					   &problem->getSolution());
+  // Check the solution.
+
+  if (myrank == 0) {
+    metricObject1->printMetrics(std::cout);
+  }
+
+  if (myrank == 0){
+    real_t imb = metricObject1->getObjectCountImbalance();
+    if (imb <= tolerance)
+      std::cout << "pass: " << imb << std::endl;
+    else
+      std::cout << "fail: " << imb << std::endl;
+    std::cout << std::endl;
+  }
+  delete metricObject1;
+
+  //migrate rows of the vector so they correspond to the partition recommended by Zoltan2
+  Teuchos::RCP<MV> partitioned_node_coords_distributed;
+  Teuchos::RCP<xvector_t> xpartitioned_node_coords_distributed =
+                          Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(partitioned_node_coords_distributed));
+
+  problem_adapter->applyPartitioningSolution(*xpetra_node_coords, xpartitioned_node_coords_distributed, problem->getSolution());
+  *node_coords_distributed = Xpetra::toTpetra<real_t,LO,GO,node_type>(*xpartitioned_node_coords_distributed);
+
+  //migrate density vector if this is a restart file read
+  if(simparam->restart_file){
+    Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(node_coords_distributed->getMap(), 1));
+
+    //create import object using local node indices map and all indices map
+    Tpetra::Import<LO, GO> importer(map, node_coords_distributed->getMap());
+
+    //comms to get ghosts
+    partitioned_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
+    design_node_densities_distributed = partitioned_node_densities_distributed;
+  }
+
+  //update nlocal_nodes and node map
+  map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*(node_coords_distributed->getMap())));
+  nlocal_nodes = map->getNodeNumElements();
+  
 }
 
 /* ----------------------------------------------------------------------
@@ -2473,6 +2576,10 @@ void Implicit_Solver::setup_optimization_problem(){
           }// node loop for
         }//boundary patch for
       }//boundary set for
+
+      //set node conditions due to point BCS that might not show up in boundary sets
+      //possible to have overlap in which nodes are set with the previous loop
+      fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
     }//module for
   
     //sync device view
@@ -3698,10 +3805,10 @@ void Implicit_Solver::init_design(){
   //set densities
   if(nodal_density_flag){
     if(!simparam->restart_file){
-      dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes, 1);
-      host_vec_array node_densities = dual_node_densities.view_host();
+      design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+      host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //notify that the host view is going to be modified in the file readin
-      dual_node_densities.modify_host();
+      //dual_node_densities.modify_host();
     
       //debug Tecplot file readin of initial densities (only works on runs with 1 MPI rank this way)
       std::string skip_line, read_line, substring;
@@ -3734,10 +3841,9 @@ void Implicit_Solver::init_design(){
     }
 
     //sync device view
-    dual_node_densities.sync_device();
+    //dual_node_densities.sync_device();
     }
     //allocate global vector information
-    design_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities));
     all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
 
     //communicate ghost information to the all vector

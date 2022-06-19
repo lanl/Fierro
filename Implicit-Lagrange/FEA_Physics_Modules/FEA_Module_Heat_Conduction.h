@@ -31,6 +31,12 @@ public:
 
   //initializes memory for arrays used in the global stiffness matrix assembly
   void init_boundary_sets(int num_boundary_sets);
+
+  void grow_boundary_sets(int num_boundary_sets);
+
+  void grow_temperature_condition_sets(int num_boundary_sets);
+
+  void grow_loading_condition_sets(int num_boundary_sets);
   
   void init_assembly();
 
@@ -78,6 +84,8 @@ public:
 
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
+  void node_density_constraints(host_vec_array node_densities_lower_bound);
+
   class Simulation_Parameters_Thermal *simparam;
   
   //Local FEA data
@@ -89,6 +97,10 @@ public:
   CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Results; //result of linear solve; typically displacements and densities
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Conductivity_Matrix_Strides;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
+  RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Conductivity_Entries;
+  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Conductivity_Entry_Indices;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Conductivity_Entries_Strides;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_RHS_Entries;
 
   //Global FEA data
   Teuchos::RCP<MV> node_temperatures_distributed;
@@ -98,6 +110,10 @@ public:
   Teuchos::RCP<MV> all_cached_node_temperatures_distributed;
   Teuchos::RCP<MV> all_node_temperature_gradients_distributed;
   Teuchos::RCP<MV> all_node_heat_fluxes_distributed;
+  bool adjoints_allocated;
+  Teuchos::RCP<MV> adjoint_temperatures_distributed;
+  Teuchos::RCP<MV> adjoint_equation_RHS_distributed;
+  Teuchos::RCP<MV> all_adjoint_temperatures_distributed;
   Teuchos::RCP<MV> Global_Nodal_Heat;
   Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MAT> Global_Conductivity_Matrix;
@@ -105,6 +121,9 @@ public:
   //Boundary Conditions Data
   
   enum bc_type {NONE,TEMPERATURE_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
+  int max_boundary_sets, max_temp_boundary_sets, max_load_boundary_sets;
+  int num_surface_temp_sets, num_surface_flux_sets;
+  bool matrix_bc_reduced;
   
   //body force parameters
   bool thermal_flag, electric_flag;
@@ -122,19 +141,12 @@ public:
   Teuchos::RCP<Teuchos::ParameterList> Linear_Solve_Params;
 
   //multigrid solver data and functions
-  Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xwrap_balanced_A;
+  Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type>> xA;
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xX;
   Teuchos::RCP<MV> X;
-  Teuchos::RCP<MV> unbalanced_B;
-  Teuchos::RCP<MV> balanced_B;
-  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xbalanced_B;
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xB;
   Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_original_map;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_reduced_dof_original_map;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_reduced_dof_map;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_balanced_reduced_dof_map;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Free_Indices;
   bool Hierarchy_Constructed;
 
   //output dof data
