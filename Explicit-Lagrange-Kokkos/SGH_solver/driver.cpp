@@ -10,7 +10,6 @@
 
 #include "mesh.h"
 #include "state.h"
-#include "variables.h"
 #include "matar.h"
 
 
@@ -29,13 +28,12 @@ size_t num_materials;
 size_t num_state_vars;
 
 size_t num_fills;
-size_t num_boundaries;
-size_t num_bdy_sets;
+size_t num_bcs;
 
 
 // --- Graphics output variables ---
 size_t graphics_id = 0;
-int graphics_cyc_ival = 50;
+size_t graphics_cyc_ival = 50;
 
 CArray <double> graphics_times(2000);
 double graphics_dt_ival = 1.0e8;
@@ -56,7 +54,6 @@ size_t rk_num_bins = 2;
 
 size_t cycle = 0;
 size_t cycle_stop = 1000000000;
-size_t stop_calc = 0;    // a flag to end the calculation when = 1
 
 
 // --- Precision variables ---
@@ -112,9 +109,27 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    read the input file
         // ---------------------------------------------------------------------  
-        input(material, mat_fill, boundary, state_vars,
-              num_materials, num_fills, num_boundaries,
-              num_dims, num_state_vars);
+        input(material,
+              mat_fill,
+              boundary,
+              state_vars,
+              num_materials,
+              num_fills,
+              num_bcs,
+              num_dims,
+              num_state_vars,
+              dt_start,
+              time_final,
+              dt_max,
+              dt_min,
+              dt_cfl,
+              graphics_dt_ival,
+              graphics_cyc_ival,
+              cycle_stop,
+              rk_num_stages
+              );
+        
+
 
 
         // ---------------------------------------------------------------------
@@ -123,7 +138,8 @@ int main(int argc, char *argv[]){
         read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
         mesh.build_corner_connectivity();
         mesh.build_elem_elem_connectivity();
-        //mesh.build_patch_connectivity();
+        mesh.build_patch_connectivity();
+        mesh.build_node_node_connectivity();
         
         
         // ---------------------------------------------------------------------
@@ -177,18 +193,22 @@ int main(int argc, char *argv[]){
         DViewCArrayKokkos <double> elem_stress(&elem.stress(0,0,0,0),
                                                rk_num_bins,
                                                num_elems,
-                                               num_dims,
-                                               num_dims);
+                                               3,
+                                               3); // always 3D even in 2D-RZ
 
         DViewCArrayKokkos <double> elem_sspd(&elem.sspd(0),
                                              num_elems);
 
-        DViewCArrayKokkos <double> elem_sie(&elem.sie(0),
+        DViewCArrayKokkos <double> elem_sie(&elem.sie(0,0),
                                             rk_num_bins,
                                             num_elems);
 
         DViewCArrayKokkos <double> elem_vol(&elem.vol(0),
                                             num_elems);
+        
+        DViewCArrayKokkos <double> elem_div(&elem.div(0),
+                                            num_elems);
+        
 
         DViewCArrayKokkos <double> elem_mass(&elem.mass(0),
                                              num_elems);
@@ -201,48 +221,50 @@ int main(int argc, char *argv[]){
                                                num_state_vars );
         
         // create Dual Views of the corner struct variables
-        DViewCArrayKokkos <double> corner_force(&corner.force(0,0,0), 
+        DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
                                                 num_corners, 
                                                 num_dims);
 
-        DViewCArrayKokkos <double> corner_mass (&corner.mass(0), 
-                                                num_corners);
+        DViewCArrayKokkos <double> corner_mass(&corner.mass(0),
+                                               num_corners);
         
         
         // ---------------------------------------------------------------------
         //   calculate geometry
         // ---------------------------------------------------------------------
         node_coords.update_device();
-        FOR_ALL(elem_gid, 0, mesh.num_elems, {
-            get_vol_hex(elem_vol, elem_gid, node_coords, mesh);
-        });
         Kokkos::fence();
+        
+        
+        get_vol(elem_vol, node_coords, mesh);
 
 
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
         // ---------------------------------------------------------------------
-        setup( material,
-               mat_fill,
-               boundary,
-               mesh,
-               node_coords,
-               node_vel,
-               node_mass,      
-               elem_den,
-               elem_pres,
-               elem_stress,
-               elem_sspd,       
-               elem_sie,
-               elem_vol,
-               elem_mass,
-               elem_mat_id,
-               elem_statev,
-               state_vars,
-               num_fills,
-               rk_num_bins,
-               num_bdy_sets
-           );
+        setup(material,
+              mat_fill,
+              boundary,
+              mesh,
+              node_coords,
+              node_vel,
+              node_mass,
+              elem_den,
+              elem_pres,
+              elem_stress,
+              elem_sspd,
+              elem_sie,
+              elem_vol,
+              elem_mass,
+              elem_mat_id,
+              elem_statev,
+              state_vars,
+              corner_mass,
+              num_fills,
+              rk_num_bins,
+              num_bcs,
+              num_materials,
+              num_state_vars);
         
         // intialize time, time_step, and cycles
         time_value = 0.0;
@@ -250,54 +272,46 @@ int main(int argc, char *argv[]){
         graphics_id = 0;
         graphics_times(0) = 0.0;
         graphics_time = graphics_dt_ival;  // the times for writing graphics dump
-
-        
-        // ---------------------------------------------------------------------
-        //   t=0 ensight and state output
-        // ---------------------------------------------------------------------
-        elem_den.update_device();
-        elem_pres.update_device();
-        elem_stress.update_device();
-        elem_sspd.update_device();
-        elem_sie.update_device();
-        elem_vol.update_device();
-        elem_mass.update_device();
-        elem_mat_id.update_device();
-
-        // write out ensight file
-        ensight( mesh,
-                 node_coords,
-                 node_vel,
-                 node_mass,
-                 elem_den,
-                 elem_pres,
-                 elem_stress,
-                 elem_sspd, 
-                 elem_sie,
-                 elem_vol,
-                 elem_mass,
-                 elem_mat_id,
-                 graphics_times,
-                 graphics_id,
-                 time_value);
-
-        // output files
-        FILE *out_elem_state;  //element average state
-
-        // output files
-        out_elem_state  = fopen("elem_state_t0", "w");
-
-        fclose(out_elem_state);
         
 
-        // Calculate total energy at time=0
-        double ke = 0.0;
-        double ie = 0.0;
-        double te_0 = ke + ie;
+        // ---------------------------------------------------------------------
+        //   Calculate the SGH solution
+        // ---------------------------------------------------------------------
+        sgh_solve(material,
+                  boundary,
+                  mesh,
+                  node_coords,
+                  node_vel,
+                  node_mass,
+                  elem_den,
+                  elem_pres,
+                  elem_stress,
+                  elem_sspd,
+                  elem_sie,
+                  elem_vol,
+                  elem_div,
+                  elem_mass,
+                  elem_mat_id,
+                  elem_statev,
+                  corner_force,
+                  corner_mass,
+                  time_value,
+                  time_final,
+                  dt_max,
+                  dt_min,
+                  dt_cfl,
+                  graphics_time,
+                  graphics_cyc_ival,
+                  graphics_dt_ival,
+                  cycle_stop,
+                  rk_num_stages,
+                  dt,
+                  fuzz,
+                  tiny,
+                  small,
+                  graphics_times,
+                  graphics_id);
 
-        // get_timestep();
-
-        // call hydro here
 
         // calculate total energy at time=t_end
         
