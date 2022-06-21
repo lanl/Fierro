@@ -5199,6 +5199,7 @@ int FEA_Module_Elasticity::solve(){
   //Teuchos::RCP<Xpetra::Vector<real_t,LO,GO,node_type>> diagonal = Teuchos::rcp(new Xpetra::Vector<real_t,LO,GO,node_type>(tdiagonal));
   //Global_Stiffness_Matrix->getLocalDiagCopy(*tdiagonal);
   //tdiagonal->describe(*fos,Teuchos::VERB_EXTREME);
+  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
   if(Hierarchy_Constructed){
     ReuseXpetraPreconditioner(xA, H);
   }
@@ -5215,7 +5216,6 @@ int FEA_Module_Elasticity::solve(){
   // System solution (Ax = b)
   // =========================================================================
 
-  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
   SystemSolve(xA,xX,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   linear_solve_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();

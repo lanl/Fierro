@@ -2236,7 +2236,7 @@ void Implicit_Solver::repartition_nodes(){
 
   // Create parameters for an RCB problem
 
-  double tolerance = 1.02;
+  double tolerance = 1.05;
 
   Teuchos::ParameterList params("Node Partition Params");
   params.set("debug_level", "basic_status");
@@ -2247,6 +2247,7 @@ void Implicit_Solver::repartition_nodes(){
   params.set("algorithm", "multijagged");
   params.set("imbalance_tolerance", tolerance );
   params.set("num_global_parts", nranks);
+  params.set("partitioning_objective", "minimize_cut_edge_count");
   
   Teuchos::RCP<Zoltan2::PartitioningProblem<inputAdapter_t> > problem =
            Teuchos::rcp(new Zoltan2::PartitioningProblem<inputAdapter_t>(&(*problem_adapter), &params));
@@ -2276,19 +2277,28 @@ void Implicit_Solver::repartition_nodes(){
   delete metricObject1;
 
   //migrate rows of the vector so they correspond to the partition recommended by Zoltan2
-  Teuchos::RCP<MV> partitioned_node_coords_distributed;
+  Teuchos::RCP<MV> partitioned_node_coords_distributed = Teuchos::rcp(new MV(map,num_dim));
   Teuchos::RCP<xvector_t> xpartitioned_node_coords_distributed =
                           Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(partitioned_node_coords_distributed));
 
   problem_adapter->applyPartitioningSolution(*xpetra_node_coords, xpartitioned_node_coords_distributed, problem->getSolution());
-  *node_coords_distributed = Xpetra::toTpetra<real_t,LO,GO,node_type>(*xpartitioned_node_coords_distributed);
+  *partitioned_node_coords_distributed = Xpetra::toTpetra<real_t,LO,GO,node_type>(*xpartitioned_node_coords_distributed);
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > partitioned_map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*(partitioned_node_coords_distributed->getMap())));
+  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > partitioned_map_one_to_one;
+  partitioned_map_one_to_one = Tpetra::createOneToOne<LO,GO,node_type>(partitioned_map);
+  Teuchos::RCP<MV> partitioned_node_coords_one_to_one_distributed = Teuchos::rcp(new MV(partitioned_map_one_to_one,num_dim));
+
+  Tpetra::Import<LO, GO> importer_one_to_one(partitioned_map, partitioned_map_one_to_one);
+  partitioned_node_coords_one_to_one_distributed->doImport(*partitioned_node_coords_distributed, importer_one_to_one, Tpetra::INSERT);
+  node_coords_distributed = partitioned_node_coords_one_to_one_distributed;
+  partitioned_map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*partitioned_map_one_to_one));
 
   //migrate density vector if this is a restart file read
   if(simparam->restart_file){
-    Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(node_coords_distributed->getMap(), 1));
+    Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(partitioned_map, 1));
 
     //create import object using local node indices map and all indices map
-    Tpetra::Import<LO, GO> importer(map, node_coords_distributed->getMap());
+    Tpetra::Import<LO, GO> importer(map, partitioned_map);
 
     //comms to get ghosts
     partitioned_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
@@ -2296,7 +2306,7 @@ void Implicit_Solver::repartition_nodes(){
   }
 
   //update nlocal_nodes and node map
-  map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*(node_coords_distributed->getMap())));
+  map = partitioned_map;
   nlocal_nodes = map->getNodeNumElements();
   
 }
