@@ -156,9 +156,11 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 
   //task 0 reads file, it should be open by now due to Implicit Solver mesh read in
 
-  //ANSYS dat file doesn't specify total number of nodes, which is needed for the node map.
+  //ANSYS dat file doesn't always correctly specify total number of nodes, which is needed for the node map.
   //First pass reads in node section to determine the maximum number of nodes, second pass distributes node data
   //The elements section header does specify element count
+
+  //revert file position to before first condition zone
   if(myrank==0){
     in->seekg(before_condition_header);
   }
@@ -185,10 +187,13 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
           line_parse >> substring;
           //std::cout << substring << std::endl;
           if(!substring.compare("Supports")){
+            //std::cout << "FOUND BC ZONE" << std::endl;
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = DISPLACEMENT_CONDITION;
           }
           if(!substring.compare("Pressure")){
+            
+            //std::cout << "FOUND PRESSURE ZONE" << std::endl;
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = SURFACE_LOADING_CONDITION;
           }
@@ -301,6 +306,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       LO boundary_set_npatches = 0;
       bool look_at_end = false;
       CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+      std::streampos last_zone_ending_position;
       //grow structures for loading condition storage
       //debug print
       std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< num_surface_force_sets << std::endl;
@@ -374,6 +380,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       //broadcast number of element surface patches subject to force density
       MPI_Bcast(&num_patches,1,MPI_LONG_LONG_INT,0,world);
       
+      std::cout << "LOAD PATCHES TO READ " << num_patches << std::endl;
       int nodes_per_patch;
       //select nodes per patch based on element type
       if(Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex8){
@@ -400,7 +407,9 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             getline(*in,read_line);
             line_parse.clear();
             line_parse.str(read_line);
-        
+            //debug print
+            //std::cout<< read_line <<std::endl;
+
             for(int iword = 0; iword < words_per_line; iword++){
               //read portions of the line into the substring variable
               line_parse >> substring;
@@ -477,11 +486,13 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       //get surface pressure from the end of the file
       if(myrank==0){
         if(look_at_end){
+          //save file position in case there other conditions to read in afterwards
+          last_zone_ending_position = in->tellg();
           bool found_pressure = false;
           real_t pressure;
           while(in->good()){
             getline(*in, read_line);
-            std::cout << read_line << std::endl;
+            //std::cout << read_line << std::endl;
             line_parse.clear();
             line_parse.str(read_line);
             line_parse >> substring;
@@ -501,6 +512,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             }
           }
           force_density[0] = pressure;
+          //reset file position
+          in->seekg(last_zone_ending_position);
         }
       }
 

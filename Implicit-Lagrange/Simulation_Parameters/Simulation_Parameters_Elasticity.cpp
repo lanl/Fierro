@@ -48,7 +48,7 @@ void Simulation_Parameters_Elasticity::input(){
   p_order = 0;
   
   //Static isotropic parameters to move into a child class later
-  Elastic_Modulus = 10000;
+  Elastic_Modulus = 200000000000;
   Poisson_Ratio = 0.3;
   
   //Gauss-Legendre integration order
