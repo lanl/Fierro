@@ -1,6 +1,6 @@
 
 #include "Solver.h"
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <mpi.h>
 
 Solver::Solver(){

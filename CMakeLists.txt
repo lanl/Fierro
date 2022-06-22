@@ -14,6 +14,10 @@ if(NOT DEFINED BUILD_EXPLICIT_SOLVER)
   set(BUILD_EXPLICIT_SOLVER ON)
 endif()
 
+if(NOT DEFINED BUILD_PARALLEL_EXPLICIT_SOLVER)
+  set(BUILD_PARALLEL_EXPLICIT_SOLVER ON)
+endif()
+
 if(NOT DEFINED BUILD_IMPLICIT_SOLVER)
   set(BUILD_IMPLICIT_SOLVER OFF)
 endif()
@@ -39,7 +43,7 @@ INCLUDE( cmake/Modules/TargetDistclean.cmake OPTIONAL)
 enable_language(CXX)
 enable_language(Fortran)
 
-if(BUILD_IMPLICIT_SOLVER)
+if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   find_package(MPI REQUIRED)
 endif()
 
@@ -49,7 +53,7 @@ set (CMAKE_CXX_STANDARD 17)
 # Disable Kokkos warning about not supporting C++ extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(BUILD_EXPLICIT_SOLVER)
+if(BUILD_EXPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
 find_package(Vector)
 if (CMAKE_VECTOR_NOVEC)
   set(VECTOR_C_FLAGS "${VECTOR_NOVEC_C_FLAGS}")
@@ -67,7 +71,7 @@ endif()
 
 #find_library(GFORTRAN_LIBRARY libgfortran.a)
 
-if(BUILD_IMPLICIT_SOLVER)
+if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
 SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
 #SET(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
 FIND_PACKAGE(Trilinos REQUIRED)
@@ -162,4 +166,8 @@ endif()
 
 if(BUILD_EXPLICIT_SOLVER)
 add_subdirectory(Explicit-Lagrange)
+endif()
+
+if(BUILD_PARALLEL_EXPLICIT_SOLVER)
+add_subdirectory(Parallel-Explicit-Lagrange/SGH_solver)
 endif()

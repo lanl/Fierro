@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 3.1.3)
+
+set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
+set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
+set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
+
+include_directories(${CMAKE_SOURCE_DIR}/Implicit-Lagrange)
+add_executable(FierroSGH_Parallel driver.cpp read_mesh.cpp geometry.cpp boundary.cpp input.cpp eos.cpp setup.cpp outputs.cpp sgh_solve.cpp time_integration.cpp momentum.cpp force_sgh.cpp 
+energy_sgh.cpp properties.cpp user_mat.cpp user_mat_init.cpp)
+
+if (CUDA)
+  add_definitions(-DHAVE_CUDA=1)
+elseif (HIP)
+  add_definitions(-DHAVE_HIP=1)
+elseif (OPENMP)
+  add_definitions(-DHAVE_OPENMP=1)
+elseif (THREADS)
+  add_definitions(-DHAVE_THREADS=1)
+endif()
+
+if(BUILD_ELEMENTS)
+target_link_libraries (FierroSGH_Parallel swage)
+target_link_libraries (FierroSGH_Parallel elements)
+target_link_libraries (FierroSGH_Parallel matar)
+else()
+target_link_libraries (FierroSGH_Parallel ${CMAKE_SOURCE_DIR}/Elements/build/swage/libswage.a)
+target_link_libraries (FierroSGH_Parallel ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
+target_link_libraries (FierroSGH_Parallel ${CMAKE_SOURCE_DIR}/Elements/build/matar/src/libmatar.a)
+endif()
+target_include_directories(FierroSGH_Parallel PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options (FierroSGH_Parallel PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
+target_link_libraries (FierroSGH_Parallel ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
