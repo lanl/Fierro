@@ -28,11 +28,11 @@ void read_mesh_ensight(char* MESH,
     char ch;
     
 
-    implicit_solver_object->nranks = nranks;
-    implicit_solver_object->myrank = myrank;
-    implicit_solver_object->world = world;
+    implicit_solver_object.nranks = nranks;
+    implicit_solver_object.myrank = myrank;
+    implicit_solver_object.world = world;
 
-    implicit_solver_object->read_mesh_ensight(MESH);
+    implicit_solver_object.read_mesh_ensight(MESH);
     
     size_t num_nodes_in_elem = 1;
     for (int dim=0; dim<num_dims; dim++){
@@ -42,7 +42,7 @@ void read_mesh_ensight(char* MESH,
 
     // --- Read in the nodes in the mesh ---
     
-    size_t num_nodes = implicit_solver_object->nlocal_nodes;
+    size_t num_nodes = implicit_solver_object.nlocal_nodes;
     
     printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, num_nodes);
     

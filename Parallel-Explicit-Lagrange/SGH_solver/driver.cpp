@@ -9,9 +9,9 @@
 #include <mpi.h>
 
 
+#include "matar.h"
 #include "mesh.h"
 #include "state.h"
-#include "matar.h"
 #include "Implicit_Solver.h"
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
@@ -81,8 +81,9 @@ int main(int argc, char *argv[]){
     MPI_Comm_rank(world,&myrank);
     MPI_Comm_size(world,&nranks);
 
+
     //initialize Trilinos communicator class
-    implicit_solver_object->comm = Tpetra::getDefaultComm();
+    implicit_solver_object.comm = Tpetra::getDefaultComm();
     
     // check to see of a mesh was supplied when running the code
     if (argc == 1) {
