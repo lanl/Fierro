@@ -105,9 +105,6 @@ void read_mesh_ensight(char* MESH,
         
     } // end parallel for
 
-
-
-
     // Close mesh input file
     fclose(in);
 

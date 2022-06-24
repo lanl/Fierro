@@ -184,18 +184,11 @@ int main(int argc, char *argv[]){
 
         
         // create Dual Views of the individual node struct variables
-        DViewCArrayKokkos <double> node_coords(&node.coords(0,0,0),
-                                               rk_num_bins,
-                                               num_nodes,
-                                               num_dims);
+        DViewCArrayKokkos <double> node_coords = node.node_coords;
 
-        DViewCArrayKokkos <double> node_vel(&node.vel(0,0,0),
-                                            rk_num_bins,
-                                            num_nodes,
-                                            num_dims);
+        DViewCArrayKokkos <double> node_vel = node.node_vel;
 
-        DViewCArrayKokkos <double> node_mass(&node.mass(0),
-                                             num_nodes);
+        DViewCArrayKokkos <double> node_mass = node.node_mass;
         
         
         // create Dual Views of the individual elem struct variables
