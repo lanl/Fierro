@@ -66,14 +66,23 @@ void read_mesh_ensight(char* MESH,
     // --- read in the elements in the mesh ---
     size_t num_elem = 0;
     
-    fscanf(in,"%lu",&num_elem);
-    printf("Num elements read in %lu\n" , num_elem);
+    num_elem = implicit_solver_object.rnum_elem;
+    printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, rnum_elem);
 
     // intialize elem variables
     mesh.initialize_elems(num_elem, num_dims);
     elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
 
     //save data to mesh.nodes_in_elem.host
+    CArrayKokkos<double, DefaultLayout, HostSpace> host_mesh_nodes_in_elem;
+    Implicit_Solver::host_elem_conn_array interface_nodes_in_elem = implicit_solver_object.nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
+    //save node data to node.coords
+    for(int ielem = 0; ielem < num_elem; ielem++){
+        for(int inode = 0; inode < num_nodes_in_elem; inode++){
+            host_mesh_nodes_in_elem(ielem,inode) = interface_nodes_in_elem(ielem,inode);
+        }
+    }
 
     // update device side
     mesh.nodes_in_elem.update_device();
