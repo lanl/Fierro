@@ -33,6 +33,7 @@ void read_mesh_ensight(char* MESH,
     implicit_solver_object.world = world;
 
     implicit_solver_object.read_mesh_ensight(MESH);
+    implicit_solver_object.init_maps();
     
     size_t num_nodes_in_elem = 1;
     for (int dim=0; dim<num_dims; dim++){
@@ -41,7 +42,7 @@ void read_mesh_ensight(char* MESH,
 
 
     // --- Read in the nodes in the mesh ---
-    
+
     size_t num_nodes = implicit_solver_object.nlocal_nodes;
     
     printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, num_nodes);
@@ -49,8 +50,18 @@ void read_mesh_ensight(char* MESH,
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
     node.initialize(rk_num_bins, num_nodes, num_dims);
-  
+    
+    CArrayKokkos<double, DefaultLayout, HostSpace> host_node_coords_state;
+    Implicit_Solver::host_vec_array interface_node_coords = implicit_solver_object.node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_node_coords_state.get_kokkos_view() = node.coords.get_kokkos_dual_view().view_host();
     //save node data to node.coords
+    for(int inode = 0; inode < num_nodes; inode++){
+      host_node_coords_state(0,inode,0) = interface_node_coords(inode,0);
+      host_node_coords_state(0,inode,1) = interface_node_coords(inode,1);
+      host_node_coords_state(0,inode,2) = interface_node_coords(inode,2);
+    }
+    node.coords.update_device();
+
 
     // --- read in the elements in the mesh ---
     size_t num_elem = 0;

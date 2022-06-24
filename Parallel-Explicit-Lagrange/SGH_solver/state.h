@@ -18,6 +18,15 @@ struct node_t {
     // mass at nodes
     DCArrayKokkos <double> mass;
 
+    // Includes Ghost Positions
+    DCArrayKokkos <double> all_coords;
+
+    // Includes Ghost velocities
+    DCArrayKokkos <double> all_vel;
+
+    // Includes Ghost masses
+    DCArrayKokkos <double> all_mass;
+
     
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
@@ -25,6 +34,9 @@ struct node_t {
         this->coords = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
         this->vel    = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
         this->mass   = DCArrayKokkos <double> (num_nodes);
+        this->all_coords = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
+        this->all_vel    = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
+        this->all_mass   = DCArrayKokkos <double> (num_nodes);
     }; // end method
 
 }; // end node_t
