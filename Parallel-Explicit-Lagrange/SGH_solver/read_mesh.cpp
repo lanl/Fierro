@@ -24,8 +24,8 @@ void read_mesh_ensight(char* MESH,
 
     const size_t rk_level = 0;
 
-	FILE *in;
-    char ch;
+	//FILE *in;
+    //char ch;
     
 
     implicit_solver_object.nranks = nranks;
@@ -52,9 +52,11 @@ void read_mesh_ensight(char* MESH,
     node.initialize(rk_num_bins, num_nodes, num_dims);
     std::cout << "Bin counts " << rk_num_bins << " Node counts " << num_nodes << " Num dim " << num_dims << std::endl;
     
-    CArrayKokkos<double, DefaultLayout, HostSpace> host_node_coords_state;
+    CArrayKokkos<double, DefaultLayout, HostSpace> host_node_coords_state(rk_num_bins, num_nodes, num_dims);
     Implicit_Solver::host_vec_array interface_node_coords = implicit_solver_object.node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_node_coords_state.get_kokkos_view() = node.coords.get_kokkos_dual_view().view_host();
+    //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, num_nodes, num_dims);
+    host_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*num_nodes*num_dims);
     //save node data to node.coords
     for(int inode = 0; inode < num_nodes; inode++){
       host_node_coords_state(0,inode,0) = interface_node_coords(inode,0);
@@ -75,7 +77,7 @@ void read_mesh_ensight(char* MESH,
     elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
 
     //save data to mesh.nodes_in_elem.host
-    CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem;
+    CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
     Implicit_Solver::host_elem_conn_array interface_nodes_in_elem = implicit_solver_object.nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
     //save node data to node.coords
@@ -106,13 +108,13 @@ void read_mesh_ensight(char* MESH,
         
     } // end parallel for
     
-    size_t nall_nodes = implicit_solver_object->nall_nodes;
-    node.all_coords = DCArrayKokkos <double> (num_rk, nall_nodes, num_dims);
-    node.all_vel    = DCArrayKokkos <double> (num_rk, nall_nodes, num_dims);
+    size_t nall_nodes = implicit_solver_object.nall_nodes;
+    node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
+    node.all_vel    = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
     node.all_mass   = DCArrayKokkos <double> (nall_nodes);
 
     // Close mesh input file
-    fclose(in);
+    //fclose(in);
 
     return;
     
