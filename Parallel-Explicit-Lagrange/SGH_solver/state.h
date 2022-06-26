@@ -34,9 +34,6 @@ struct node_t {
         this->coords = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
         this->vel    = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
         this->mass   = DCArrayKokkos <double> (num_nodes);
-        this->all_coords = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
-        this->all_vel    = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
-        this->all_mass   = DCArrayKokkos <double> (num_nodes);
     }; // end method
 
 }; // end node_t

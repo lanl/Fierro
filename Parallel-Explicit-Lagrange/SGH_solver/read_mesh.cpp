@@ -50,6 +50,7 @@ void read_mesh_ensight(char* MESH,
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
     node.initialize(rk_num_bins, num_nodes, num_dims);
+    std::cout << "Bin counts " << rk_num_bins << " Node counts " << num_nodes << " Num dim " << num_dims << std::endl;
     
     CArrayKokkos<double, DefaultLayout, HostSpace> host_node_coords_state;
     Implicit_Solver::host_vec_array interface_node_coords = implicit_solver_object.node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
@@ -67,14 +68,14 @@ void read_mesh_ensight(char* MESH,
     size_t num_elem = 0;
     
     num_elem = implicit_solver_object.rnum_elem;
-    printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, rnum_elem);
+    printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, num_elem);
 
     // intialize elem variables
     mesh.initialize_elems(num_elem, num_dims);
     elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
 
     //save data to mesh.nodes_in_elem.host
-    CArrayKokkos<double, DefaultLayout, HostSpace> host_mesh_nodes_in_elem;
+    CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem;
     Implicit_Solver::host_elem_conn_array interface_nodes_in_elem = implicit_solver_object.nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
     //save node data to node.coords
@@ -104,6 +105,11 @@ void read_mesh_ensight(char* MESH,
         } // end for rk
         
     } // end parallel for
+    
+    size_t nall_nodes = implicit_solver_object->nall_nodes;
+    node.all_coords = DCArrayKokkos <double> (num_rk, nall_nodes, num_dims);
+    node.all_vel    = DCArrayKokkos <double> (num_rk, nall_nodes, num_dims);
+    node.all_mass   = DCArrayKokkos <double> (nall_nodes);
 
     // Close mesh input file
     fclose(in);
