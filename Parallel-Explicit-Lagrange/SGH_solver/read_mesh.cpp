@@ -56,12 +56,18 @@ void read_mesh_ensight(char* MESH,
     Implicit_Solver::host_vec_array interface_node_coords = implicit_solver_object.node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_node_coords_state.get_kokkos_view() = node.coords.get_kokkos_dual_view().view_host();
     //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, num_nodes, num_dims);
-    host_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*num_nodes*num_dims);
+    //host_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*num_nodes*num_dims);
     //save node data to node.coords
+    
+    //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
     for(int inode = 0; inode < num_nodes; inode++){
-      host_node_coords_state(0,inode,0) = interface_node_coords(inode,0);
-      host_node_coords_state(0,inode,1) = interface_node_coords(inode,1);
-      host_node_coords_state(0,inode,2) = interface_node_coords(inode,2);
+        //std::cout << "Node index " << inode+1 << " ";
+        host_node_coords_state(0,inode,0) = interface_node_coords(inode,0);
+        //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+        host_node_coords_state(0,inode,1) = interface_node_coords(inode,1);
+        //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+        host_node_coords_state(0,inode,2) = interface_node_coords(inode,2);
+        //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
     }
     node.coords.update_device();
 
@@ -81,10 +87,15 @@ void read_mesh_ensight(char* MESH,
     Implicit_Solver::host_elem_conn_array interface_nodes_in_elem = implicit_solver_object.nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
     //save node data to node.coords
+    //std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
     for(int ielem = 0; ielem < num_elem; ielem++){
+        //std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
-            host_mesh_nodes_in_elem(ielem,inode) = interface_nodes_in_elem(ielem,inode);
+            host_mesh_nodes_in_elem(ielem,inode) = implicit_solver_object.all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            //debug print
+            //std::cout << host_mesh_nodes_in_elem(ielem,inode)+1<< " ";
         }
+        //std::cout << std::endl;
     }
 
     // update device side
@@ -96,7 +107,6 @@ void read_mesh_ensight(char* MESH,
     mesh.initialize_corners(num_corners);
     corner.initialize(num_corners, num_dims);
 
-    
     // save the node coords to the current RK value
     for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
         
@@ -112,6 +122,26 @@ void read_mesh_ensight(char* MESH,
     node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
     node.all_vel    = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
     node.all_mass   = DCArrayKokkos <double> (nall_nodes);
+
+    //save all data (nlocal +nghost)
+    CArrayKokkos<double, DefaultLayout, HostSpace> host_all_node_coords_state(rk_num_bins, nall_nodes, num_dims);
+    Implicit_Solver::host_vec_array interface_all_node_coords = implicit_solver_object.all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_all_node_coords_state.get_kokkos_view() = node.all_coords.get_kokkos_dual_view().view_host();
+    //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, num_nodes, num_dims);
+    //host_all_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*nall_nodes*num_dims);
+    //save node data to node.coords
+    
+    //std::cout << "ALL NODE DATA ON RANK " << myrank << std::endl;
+    for(int inode = 0; inode < nall_nodes; inode++){
+        //std::cout << "Node index " << inode+1 << " ";
+        host_all_node_coords_state(0,inode,0) = interface_all_node_coords(inode,0);
+        //std::cout << host_all_node_coords_state(0,inode,0)+1<< " ";
+        host_all_node_coords_state(0,inode,1) = interface_all_node_coords(inode,1);
+        //std::cout << host_all_node_coords_state(0,inode,1)+1<< " ";
+        host_all_node_coords_state(0,inode,2) = interface_all_node_coords(inode,2);
+        //std::cout << host_all_node_coords_state(0,inode,2)+1<< std::endl;
+    }
+    node.all_coords.update_device();
 
     // Close mesh input file
     //fclose(in);
