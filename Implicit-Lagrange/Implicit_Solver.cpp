@@ -345,24 +345,13 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
 
   //task 0 reads file
   if(myrank==0){
-  in = new std::ifstream();
-  in->open(MESH);  
-    
-  
-  if(simparam->tecplot_input){
-    //skip 2 lines
-    for (int j = 1; j <= 2; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    } //for
-  }
-  else{
+    in = new std::ifstream();
+    in->open(MESH);  
     //skip 8 lines
     for (int j = 1; j <= 8; j++) {
       getline(*in, skip_line);
       std::cout << skip_line << std::endl;
     } //for
-  }
   }
 
   // --- Read the number of nodes in the mesh --- //
@@ -587,8 +576,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
     //broadcast how many nodes were read into this buffer iteration
     MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
 
-    //determine which data to store in the swage mesh members (the local node data)
-    //loop through read buffer
+    //loop through read buffer and store coords in node coords view
     for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
       //set global node id (ensight specific order)
       node_gid = read_index_start + scan_loop;
