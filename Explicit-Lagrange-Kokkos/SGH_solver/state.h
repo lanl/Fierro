@@ -170,7 +170,6 @@ struct material_t {
     model_init::strength_setup_tag strength_setup=model_init::input;
     
     size_t num_state_vars;
-    size_t read_state_vars=0;
     
     double q1;    // acoustic coefficient in Riemann solver for compresion
     double q1ex;  // acoustic coefficient in Riemann solver for expansion

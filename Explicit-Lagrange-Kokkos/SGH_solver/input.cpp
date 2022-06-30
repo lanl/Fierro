@@ -133,7 +133,6 @@ void input(CArrayKokkos <material_t> &material,
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            material(0).read_state_vars = 0; // no, state_vars declared here
             state_vars(0,0) = 5.0/3.0; // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
@@ -225,7 +224,6 @@ void input(CArrayKokkos <material_t> &material,
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            material(0).read_state_vars = 0; // no, state_vars declared here
             state_vars(0,0) = 5.0/3.0; // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
@@ -417,7 +415,6 @@ void input(CArrayKokkos <material_t> &material,
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            material(0).read_state_vars = 0; // no, state_vars declared here
             state_vars(0,0) = 1.4; // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
@@ -506,7 +503,6 @@ void input(CArrayKokkos <material_t> &material,
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            material(0).read_state_vars = 0; // no, state_vars declared here
             state_vars(0,0) = 5.0/3.0; // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
