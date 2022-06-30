@@ -124,6 +124,7 @@ void input(CArrayKokkos <material_t> &material,
             material(0).eos_model = ideal_gas; // EOS model is required
             
             material(0).strength_type = model::none;
+            material(0).strength_setup = model_init::input; // not need, the input is the default
             material(0).strength_model = NULL;  // not needed, but illistrates the syntax
             
             material(0).q1        = 1.0;       // accoustic coefficient
@@ -215,7 +216,7 @@ void input(CArrayKokkos <material_t> &material,
             
             material(0).eos_model = ideal_gas; // EOS model is required
             
-            material(0).strength_type = model::none;
+            material(0).strength_type  = model::none;
             material(0).strength_model = NULL;  // not needed, but illistrates the syntax
             
             material(0).q1        = 1.0;       // accoustic coefficient
