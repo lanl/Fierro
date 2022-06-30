@@ -60,7 +60,7 @@ void setup(const CArrayKokkos <material_t> &material,
     DCArrayKokkos <size_t> read_from_file(num_materials);
     FOR_ALL(mat_id, 0, num_materials, {
         
-        read_from_file(mat_id) = material(0).read_state_vars;
+        read_from_file(mat_id) = material(mat_id).read_state_vars;
         
     }); // end parallel for
     Kokkos::fence();
