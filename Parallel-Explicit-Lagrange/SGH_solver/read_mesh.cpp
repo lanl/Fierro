@@ -62,11 +62,11 @@ void read_mesh_ensight(char* MESH,
     //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
     for(int inode = 0; inode < num_nodes; inode++){
         //std::cout << "Node index " << inode+1 << " ";
-        host_node_coords_state(0,inode,0) = interface_node_coords(inode,0);
+        node.coords.host(0,inode,0) = interface_node_coords(inode,0);
         //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
-        host_node_coords_state(0,inode,1) = interface_node_coords(inode,1);
+        node.coords.host(0,inode,1) = interface_node_coords(inode,1);
         //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
-        host_node_coords_state(0,inode,2) = interface_node_coords(inode,2);
+        node.coords.host(0,inode,2) = interface_node_coords(inode,2);
         //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
     }
 
@@ -83,15 +83,15 @@ void read_mesh_ensight(char* MESH,
     //save data to mesh.nodes_in_elem.host
     CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
     Implicit_Solver::host_elem_conn_array interface_nodes_in_elem = implicit_solver_object.nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
+    host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().h_view;
     //save node data to node.coords
     //std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
     for(int ielem = 0; ielem < num_elem; ielem++){
         //std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
-            host_mesh_nodes_in_elem(ielem,inode) = implicit_solver_object.all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            mesh.nodes_in_elem.host(ielem,inode) = implicit_solver_object.all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
             //debug print
-            //std::cout << host_mesh_nodes_in_elem(ielem,inode)+1<< " ";
+            //std::cout << mesh.nodes_in_elem.get_kokkos_dual_view().h_view(ielem*num_nodes_in_elem + inode)+1<< " ";
         }
         //std::cout << std::endl;
     }
@@ -99,21 +99,25 @@ void read_mesh_ensight(char* MESH,
     // update device side
     mesh.nodes_in_elem.get_kokkos_dual_view().modify_host();
     mesh.nodes_in_elem.get_kokkos_dual_view().sync_device();
+    mesh.nodes_in_elem.update_device();
 
     //debug print
-    CArrayKokkos<size_t> device_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
-    device_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_device();
+    
+    //CArrayKokkos<size_t> device_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
+    //device_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().d_view;
     //host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
+    /*
      std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
     for(int ielem = 0; ielem < num_elem; ielem++){
         std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
             //debug print
             //device_mesh_nodes_in_elem(ielem,inode) = implicit_solver_object.all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
-            std::cout << device_mesh_nodes_in_elem(ielem,inode)+1<< " ";
+            std::cout << mesh.nodes_in_elem(ielem, inode)+1<< " ";
         }
         std::cout << std::endl;
     }
+    */
 
     size_t nall_nodes = implicit_solver_object.nall_nodes;
     node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
@@ -131,11 +135,11 @@ void read_mesh_ensight(char* MESH,
     //std::cout << "ALL NODE DATA ON RANK " << myrank << std::endl;
     for(int inode = 0; inode < nall_nodes; inode++){
         //std::cout << "Node index " << inode+1 << " ";
-        host_all_node_coords_state(0,inode,0) = interface_all_node_coords(inode,0);
+        node.all_coords.host(0,inode,0) = interface_all_node_coords(inode,0);
         //std::cout << host_all_node_coords_state(0,inode,0)+1<< " ";
-        host_all_node_coords_state(0,inode,1) = interface_all_node_coords(inode,1);
+        node.all_coords.host(0,inode,1) = interface_all_node_coords(inode,1);
         //std::cout << host_all_node_coords_state(0,inode,1)+1<< " ";
-        host_all_node_coords_state(0,inode,2) = interface_all_node_coords(inode,2);
+        node.all_coords.host(0,inode,2) = interface_all_node_coords(inode,2);
         //std::cout << host_all_node_coords_state(0,inode,2)+1<< std::endl;
     }
 
@@ -144,7 +148,7 @@ void read_mesh_ensight(char* MESH,
         
         for(int rk=1; rk<rk_num_bins; rk++){
             for (int dim = 0; dim < num_dims; dim++){
-                host_node_coords_state(rk, node_gid, dim) = host_node_coords_state(0, node_gid, dim);
+                node.coords.host(rk, node_gid, dim) = host_node_coords_state(0, node_gid, dim);
             } // end for dim
         } // end for rk
         
@@ -155,7 +159,7 @@ void read_mesh_ensight(char* MESH,
         
         for(int rk=1; rk<rk_num_bins; rk++){
             for (int dim = 0; dim < num_dims; dim++){
-                host_all_node_coords_state(rk, node_gid, dim) = host_all_node_coords_state(0, node_gid, dim);
+                node.all_coords.host(rk, node_gid, dim) = host_all_node_coords_state(0, node_gid, dim);
             } // end for dim
         } // end for rk
         
