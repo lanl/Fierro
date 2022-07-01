@@ -32,7 +32,7 @@ void read_mesh_ensight(char* MESH,
     implicit_solver_object.myrank = myrank;
     implicit_solver_object.world = world;
 
-    implicit_solver_object.read_mesh_ensight(MESH);
+    implicit_solver_object.read_mesh_ensight(MESH, false);
     implicit_solver_object.init_maps();
     
     size_t num_nodes_in_elem = 1;
@@ -69,8 +69,6 @@ void read_mesh_ensight(char* MESH,
         host_node_coords_state(0,inode,2) = interface_node_coords(inode,2);
         //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
     }
-    node.coords.update_device();
-
 
     // --- read in the elements in the mesh ---
     size_t num_elem = 0;
@@ -99,25 +97,24 @@ void read_mesh_ensight(char* MESH,
     }
 
     // update device side
-    mesh.nodes_in_elem.update_device();
-    
-    
-    // intialize corner variables
-    int num_corners = num_elem*mesh.num_nodes_in_elem;
-    mesh.initialize_corners(num_corners);
-    corner.initialize(num_corners, num_dims);
+    mesh.nodes_in_elem.get_kokkos_dual_view().modify_host();
+    mesh.nodes_in_elem.get_kokkos_dual_view().sync_device();
 
-    // save the node coords to the current RK value
-    for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
-        
-        for(int rk=1; rk<rk_num_bins; rk++){
-            for (int dim = 0; dim < num_dims; dim++){
-                node.coords(rk, node_gid, dim) = node.coords(0, node_gid, dim);
-            } // end for dim
-        } // end for rk
-        
-    } // end parallel for
-    
+    //debug print
+    CArrayKokkos<size_t> device_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
+    device_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_device();
+    //host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
+     std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
+    for(int ielem = 0; ielem < num_elem; ielem++){
+        std::cout << "Element index " << ielem+1 << " ";
+        for(int inode = 0; inode < num_nodes_in_elem; inode++){
+            //debug print
+            //device_mesh_nodes_in_elem(ielem,inode) = implicit_solver_object.all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            std::cout << device_mesh_nodes_in_elem(ielem,inode)+1<< " ";
+        }
+        std::cout << std::endl;
+    }
+
     size_t nall_nodes = implicit_solver_object.nall_nodes;
     node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
     node.all_vel    = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
@@ -141,7 +138,38 @@ void read_mesh_ensight(char* MESH,
         host_all_node_coords_state(0,inode,2) = interface_all_node_coords(inode,2);
         //std::cout << host_all_node_coords_state(0,inode,2)+1<< std::endl;
     }
+
+    // save the node coords to the current RK value
+    for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
+        
+        for(int rk=1; rk<rk_num_bins; rk++){
+            for (int dim = 0; dim < num_dims; dim++){
+                host_node_coords_state(rk, node_gid, dim) = host_node_coords_state(0, node_gid, dim);
+            } // end for dim
+        } // end for rk
+        
+    } // end parallel for
+
+    // save the node coords to the current RK value
+    for (size_t node_gid=0; node_gid<nall_nodes; node_gid++){
+        
+        for(int rk=1; rk<rk_num_bins; rk++){
+            for (int dim = 0; dim < num_dims; dim++){
+                host_all_node_coords_state(rk, node_gid, dim) = host_all_node_coords_state(0, node_gid, dim);
+            } // end for dim
+        } // end for rk
+        
+    } // end parallel for
+    
+    
+    node.coords.update_device();
     node.all_coords.update_device();
+
+    
+    // intialize corner variables
+    int num_corners = num_elem*mesh.num_nodes_in_elem;
+    mesh.initialize_corners(num_corners);
+    corner.initialize(num_corners, num_dims);
 
     // Close mesh input file
     //fclose(in);

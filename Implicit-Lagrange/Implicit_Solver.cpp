@@ -191,7 +191,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     else if(simparam->ansys_dat_input)
       read_mesh_ansys_dat(argv[1]);
     else
-      read_mesh_ensight(argv[1]);
+      read_mesh_ensight(argv[1], true);
 
     //debug
     //return;
@@ -321,7 +321,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read Ensight format mesh file
 ------------------------------------------------------------------------- */
-void Implicit_Solver::read_mesh_ensight(char *MESH){
+void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -808,6 +808,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
 
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
+  if(convert_node_order){
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
   convert_ensight_to_ijk(0) = 0;
@@ -848,7 +849,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
       nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
     }
   }
-  
+  }
   //debug print element edof
   /*
   std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;

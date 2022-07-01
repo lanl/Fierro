@@ -139,7 +139,7 @@ public:
 
   void run(int argc, char *argv[]);
 
-  void read_mesh_ensight(char *MESH);
+  void read_mesh_ensight(char *MESH, bool convert_node_order);
 
   void read_mesh_tecplot(char *MESH);
 
