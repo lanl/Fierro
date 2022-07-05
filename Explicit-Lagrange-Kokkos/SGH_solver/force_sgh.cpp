@@ -476,10 +476,19 @@ void get_force_sgh2D(const CArrayKokkos <material_t> &material,
                       elem_gid,
                       node_coords,
                       elem_node_gids);
-        // NOTE: I added a minux in bmatrix2D, it should be outward pointing now?
+        // NOTE: I added a minus in bmatrix2D, it should be outward pointing now?
         
         // facial area of the element
         double elem_area = get_area_quad(elem_gid, node_coords, elem_node_gids);
+        
+        // facial area of the corners
+        double corner_areas_array[4];
+        ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
+        
+        get_area_weights2D(corner_areas,
+                           elem_gid,
+                           node_coords,
+                           elem_node_gids);
         
         
         // --- Calculate the velocity gradient ---
@@ -714,6 +723,7 @@ void get_force_sgh2D(const CArrayKokkos <material_t> &material,
         // curl limiter on Q
         double phi_curl = fmin(1.0, 4.0*fabs(div)/(mag_curl + fuzz));  // disable Q when vorticity is high
         //phi = phi_curl*phi;
+        
 
 
 
@@ -745,12 +755,14 @@ void get_force_sgh2D(const CArrayKokkos <material_t> &material,
             
             double node_radius = node_coords(1,node_gid,1);
             
+            // Wilkins used elem_area*0.25 for the corner area, we will use the corner
+            // areas calculated using Barlow's symmetry and energy preserving area partitioning
             if(node_radius>1e-14){
                 // sigma_RZ / R_p
-                corner_force(corner_gid, 0) += tau(1,0)*elem_area*0.25/node_radius;
+                corner_force(corner_gid, 0) += tau(1,0)*corner_areas(corner_lid)/node_radius;
                 
                 // (sigma_RR - sigma_theta) / R_p
-                corner_force(corner_gid, 1) += (tau(1,1) - tau(2,2))*elem_area*0.25/node_radius;
+                corner_force(corner_gid, 1) += (tau(1,1) - tau(2,2))*corner_areas(corner_lid)/node_radius;
             } // end if radius >0
             
         } // end for loop over nodes in elem
