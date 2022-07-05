@@ -12,17 +12,14 @@
 #include "matar.h"
 #include "mesh.h"
 #include "state.h"
-#include "Implicit_Solver.h"
+#include "Explicit_Solver_SGH.h"
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 
-
 //==============================================================================
 //   Variables, setting default inputs
 //==============================================================================
-
-
 
 // --- num vars ----
 size_t num_dims = 3;
@@ -63,12 +60,6 @@ size_t cycle_stop = 1000000000;
 double fuzz = 1.0e-16;  // machine precision
 double tiny = 1.0e-12;  // very very small (between real_t and single)
 double small= 1.0e-8;   // single precision
-
-//MPI data
-int myrank; //index of this mpi rank in the world communicator
-int nranks; //number of mpi ranks in the world communicator
-MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
-Implicit_Solver implicit_solver_object; //current hack to get parallel file readin and spatial decomposition
 
 //==============================================================================
 //    main
