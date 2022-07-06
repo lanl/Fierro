@@ -3,18 +3,12 @@
 //------------------------------------------------------------------------------
 #include "mesh.h"
 #include "state.h"
-#include "Implicit_Solver.h"
-
-//MPI data
-extern int myrank; //index of this mpi rank in the world communicator
-extern int nranks; //number of mpi ranks in the world communicator
-extern MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
-extern Implicit_Solver implicit_solver_object; //current hack to get parallel file readin and spatial decomposition
+#include "Explicit_Solver_SGH.h"
 
 // -----------------------------------------------------------------------------
 // Reads an ensight .geo mesh file
 //------------------------------------------------------------------------------
-void read_mesh_ensight(char* MESH,
+void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
                        mesh_t &mesh,
                        node_t &node,
                        elem_t &elem,
@@ -23,37 +17,26 @@ void read_mesh_ensight(char* MESH,
                        const size_t rk_num_bins){
 
     const size_t rk_level = 0;
-
-	//FILE *in;
-    //char ch;
-    
-
-    implicit_solver_object.nranks = nranks;
-    implicit_solver_object.myrank = myrank;
-    implicit_solver_object.world = world;
-
-    implicit_solver_object.read_mesh_ensight(MESH, false);
-    implicit_solver_object.init_maps();
     
     size_t num_nodes_in_elem = 1;
     for (int dim=0; dim<num_dims; dim++){
         num_nodes_in_elem *= 2;
     }
 
-
     // --- Read in the nodes in the mesh ---
 
-    size_t num_nodes = implicit_solver_object.nlocal_nodes;
+    size_t num_nodes = explicit_solver_pointer->nlocal_nodes;
     
     printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, num_nodes);
-    
+    int myrank = explicit_solver_pointer->myrank;
+    int nranks = explicit_solver_pointer->nranks;
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
     node.initialize(rk_num_bins, num_nodes, num_dims);
     std::cout << "Bin counts " << rk_num_bins << " Node counts " << num_nodes << " Num dim " << num_dims << std::endl;
     
     CArrayKokkos<double, DefaultLayout, HostSpace> host_node_coords_state(rk_num_bins, num_nodes, num_dims);
-    Implicit_Solver::host_vec_array interface_node_coords = implicit_solver_object.node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    Implicit_Solver::host_vec_array interface_node_coords = explicit_solver_pointer->node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_node_coords_state.get_kokkos_view() = node.coords.get_kokkos_dual_view().view_host();
     //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, num_nodes, num_dims);
     //host_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*num_nodes*num_dims);
@@ -73,7 +56,7 @@ void read_mesh_ensight(char* MESH,
     // --- read in the elements in the mesh ---
     size_t num_elem = 0;
     
-    num_elem = implicit_solver_object.rnum_elem;
+    num_elem = explicit_solver_pointer->rnum_elem;
     printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, num_elem);
 
     // intialize elem variables
@@ -82,14 +65,14 @@ void read_mesh_ensight(char* MESH,
 
     //save data to mesh.nodes_in_elem.host
     CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
-    Implicit_Solver::host_elem_conn_array interface_nodes_in_elem = implicit_solver_object.nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    Implicit_Solver::host_elem_conn_array interface_nodes_in_elem = explicit_solver_pointer->nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().h_view;
     //save node data to node.coords
     //std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
     for(int ielem = 0; ielem < num_elem; ielem++){
         //std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
-            mesh.nodes_in_elem.host(ielem,inode) = implicit_solver_object.all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            mesh.nodes_in_elem.host(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
             //debug print
             //std::cout << mesh.nodes_in_elem.get_kokkos_dual_view().h_view(ielem*num_nodes_in_elem + inode)+1<< " ";
         }
@@ -112,21 +95,21 @@ void read_mesh_ensight(char* MESH,
         std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
             //debug print
-            //device_mesh_nodes_in_elem(ielem,inode) = implicit_solver_object.all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            //device_mesh_nodes_in_elem(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
             std::cout << mesh.nodes_in_elem(ielem, inode)+1<< " ";
         }
         std::cout << std::endl;
     }
     */
 
-    size_t nall_nodes = implicit_solver_object.nall_nodes;
+    size_t nall_nodes = explicit_solver_pointer->nall_nodes;
     node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
     node.all_vel    = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
     node.all_mass   = DCArrayKokkos <double> (nall_nodes);
 
     //save all data (nlocal +nghost)
     CArrayKokkos<double, DefaultLayout, HostSpace> host_all_node_coords_state(rk_num_bins, nall_nodes, num_dims);
-    Implicit_Solver::host_vec_array interface_all_node_coords = implicit_solver_object.all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    Implicit_Solver::host_vec_array interface_all_node_coords = explicit_solver_pointer->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_all_node_coords_state.get_kokkos_view() = node.all_coords.get_kokkos_dual_view().view_host();
     //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, num_nodes, num_dims);
     //host_all_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*nall_nodes*num_dims);

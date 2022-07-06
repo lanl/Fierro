@@ -260,12 +260,13 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     init_design();
 
     //construct list of FEA modules requested
-    simparam->FEA_module_setup();
+    //simparam->FEA_module_setup();
 
     //process process list of requested FEA modules to construct list of objects
-    FEA_module_setup();
+    //FEA_module_setup();
 
     //Have modules read in boundary/loading conditions if file format provides it
+    /*
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       if(fea_module_must_read[imodule]){
         fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
@@ -280,7 +281,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         fea_modules[imodule]->generate_applied_loads();
       }
     }
-
+    
+    
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;
     //call boundary routines on fea modules
 
@@ -313,6 +315,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         return;
       }
     }
+    */
     /*
     //debug print
     
@@ -384,7 +387,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    read in supplied mesh
         // --------------------------------------------------------------------- 
-        read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
+        sgh_interface_setup( mesh, node, elem, corner, num_dims, rk_num_bins);
         mesh.build_corner_connectivity();
         mesh.build_elem_elem_connectivity();
         mesh.build_patch_connectivity();
@@ -565,11 +568,13 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     printf("Finished\n");
     
     //CPU time
+    /*
     double current_cpu = CPU_Time();
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       linear_solve_time += fea_modules[imodule]->linear_solve_time;
       hessvec_linear_time += fea_modules[imodule]->hessvec_linear_time;
     }
+    */
 
     std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " update solve time "
               << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
@@ -577,11 +582,13 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     // Data writers
     tecplot_writer();
     // vtk_writer();
+    /*
     if(myrank==0){
       std::cout << "Total number of solves and assembly " << fea_modules[0]->update_count <<std::endl;
       std::cout << "Total number of hessvec counts " << fea_modules[0]->hessvec_count <<std::endl;
       std::cout << "End of Optimization" << std::endl;
     }
+    */
 }
 
 /* ----------------------------------------------------------------------
