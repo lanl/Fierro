@@ -934,8 +934,10 @@ struct boundary_t {
     
 };
 
+//forward declarations
+class Explicit_Solver_SGH;
 
-void read_mesh_ensight(char* MESH,
+void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
                        mesh_t &mesh,
                        node_t &node,
                        elem_t &elem,

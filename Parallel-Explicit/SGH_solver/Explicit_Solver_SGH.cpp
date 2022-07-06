@@ -97,7 +97,7 @@
 #include <ROL_TpetraMultiVector.hpp>
 
 //Objective Functions and Constraint Functions
-#include "Topology_Optimization_Function_Headers.h"
+//#include "Topology_Optimization_Function_Headers.h"
 
 //debug and performance includes
 #include <sys/time.h>
@@ -123,7 +123,7 @@ each surface to use for hammering metal into to form it.
 
 Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //create parameter objects
-  simparam = new Simulation_Parameters_Topology_Optimization(this);
+  simparam = new Simulation_Parameters_Elasticity();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->Simulation_Parameters::input();
   simparam->input();
@@ -257,7 +257,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     generate_tcs();
 
     //initialize TO design variable storage
-    init_design();
+    //init_design();
 
     //construct list of FEA modules requested
     //simparam->FEA_module_setup();
@@ -387,7 +387,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    read in supplied mesh
         // --------------------------------------------------------------------- 
-        sgh_interface_setup( mesh, node, elem, corner, num_dims, rk_num_bins);
+        sgh_interface_setup(this, mesh, node, elem, corner, num_dims, rk_num_bins);
         mesh.build_corner_connectivity();
         mesh.build_elem_elem_connectivity();
         mesh.build_patch_connectivity();
@@ -2623,6 +2623,7 @@ void Explicit_Solver_SGH::FEA_module_setup(){
   bool module_found = false;
   
   //list should not have repeats since that was checked by simulation parameters setups
+  /*
   for(int imodule = 0; imodule < nfea_modules; imodule++){
     //decides which FEA module objects to setup based on string.
     //automate selection list later; use std::map maybe?
@@ -2655,12 +2656,13 @@ void Explicit_Solver_SGH::FEA_module_setup(){
       exit_solver(0);
     }
   }
+  */
 }
 
 /* ----------------------------------------------------------------------
    Setup Optimization Problem Object, Relevant Objective, and Constraints
 ------------------------------------------------------------------------- */
-
+/*
 void Explicit_Solver_SGH::setup_optimization_problem(){
   int num_dim = simparam->num_dim;
   bool nodal_density_flag = simparam->nodal_density_flag;
@@ -2979,7 +2981,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   //if(myrank==0)
     //std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
 }
-
+*/
 /* ----------------------------------------------------------------------
    Find boundary surface segments that belong to this MPI rank
 ------------------------------------------------------------------------- */
@@ -4105,7 +4107,7 @@ void Explicit_Solver_SGH::ensight_writer(){
 /* -----------------------------------------------------------------------------
    Initialize local views and global vectors needed to describe the design
 -------------------------------------------------------------------------------- */
-
+/*
 void Explicit_Solver_SGH::init_design(){
   int num_dim = simparam->num_dim;
   bool nodal_density_flag = simparam->nodal_density_flag;
@@ -4187,7 +4189,7 @@ void Explicit_Solver_SGH::init_design(){
   }
 
 }
-
+*/
 /* ----------------------------------------------------------------------
    Return the CPU time for the current process in seconds very
    much in the same way as MPI_Wtime() returns the wall time.

@@ -14,6 +14,7 @@ set(Solver_SRC_CXX ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Solver.cpp)
 INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
+include_directories(${CMAKE_SOURCE_DIR}/Parallel-Explicit)
 include_directories(${CMAKE_SOURCE_DIR}/Implicit-Lagrange)
 include_directories(${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Topology_Optimization)
 include_directories(${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters)

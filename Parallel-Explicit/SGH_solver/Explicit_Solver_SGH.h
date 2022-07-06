@@ -134,14 +134,14 @@ public:
 
   void repartition_nodes();
 
-  void init_design();
+  //void init_design();
 
   void collect_information();
 
   //process input to decide TO problem and FEA modules
   void FEA_module_setup();
 
-  void setup_optimization_problem();
+  //void setup_optimization_problem();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
   void init_boundaries();
@@ -187,7 +187,7 @@ public:
   
 
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters_Topology_Optimization *simparam;
+  class Simulation_Parameters_Elasticity *simparam;
 
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;
