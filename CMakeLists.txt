@@ -169,5 +169,5 @@ add_subdirectory(Explicit-Lagrange)
 endif()
 
 if(BUILD_PARALLEL_EXPLICIT_SOLVER)
-add_subdirectory(Parallel-Explicit-Lagrange/SGH_solver)
+add_subdirectory(Parallel-Explicit)
 endif()
