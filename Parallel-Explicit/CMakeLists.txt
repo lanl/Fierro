@@ -8,6 +8,7 @@ INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 include_directories(SGH_solver)
+include_directories(${CMAKE_SOURCE_DIR}/Implicit-Lagrange)
 add_executable(Fierro_Parallel_Explicit main.cpp Explicit_Solver.cpp)
 
 if (CUDA)

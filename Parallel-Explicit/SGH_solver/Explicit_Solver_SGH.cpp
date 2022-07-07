@@ -568,8 +568,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     printf("Finished\n");
     
     //CPU time
-    /*
+    
     double current_cpu = CPU_Time();
+    /*
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       linear_solve_time += fea_modules[imodule]->linear_solve_time;
       hessvec_linear_time += fea_modules[imodule]->hessvec_linear_time;

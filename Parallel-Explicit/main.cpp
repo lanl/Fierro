@@ -78,13 +78,13 @@ void solver_setup(int argc, char *argv[]){
   //solver = new Pseudo_Laplacian();
 
   //checks for optional solver routines
-  if(solver.setup_flag) solver.setup();
+  if(solver.setup_flag) solver.solver_setup();
 
   // invoke solver's run function (should perform most of the computation)//
   solver.run(argc,argv);
   
   //invoke optional finalize function
-  if(solver.finalize_flag) solver.finalize();
+  if(solver.finalize_flag) solver.solver_finalize();
  
   //delete solver;
 }
