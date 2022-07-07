@@ -3383,17 +3383,18 @@ void Explicit_Solver_SGH::collect_information(){
   collected_node_coords_distributed->doImport(*node_coords_distributed, node_collection_importer, Tpetra::INSERT);
 
   //comms to collect FEA module related vector data
+  /*
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->collect_output(global_reduce_map);
     //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
   }
-  
+  */
 
   //collected nodal density information
   Teuchos::RCP<MV> collected_node_densities_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
 
   //comms to collect
-  collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
+  //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
 
   //collect element connectivity data
   if(myrank==0) nreduce_elem = num_elem;
@@ -3413,7 +3414,7 @@ void Explicit_Solver_SGH::collect_information(){
   //set host views of the collected data to print out from
   if(myrank==0){
     collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    //collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 }
@@ -3436,13 +3437,15 @@ void Explicit_Solver_SGH::tecplot_writer(){
   int temp_convert;
   int noutput, nvector;
   bool displace_geometry;
+  const_host_vec_array current_collected_output;
+  /*
   if(displacement_module!=-1)
     displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-  const_host_vec_array current_collected_output;
+  
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->compute_output();
   }
-  
+  */
   collect_information();
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
@@ -3478,6 +3481,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
       //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
       //else
 		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+      /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
           nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
@@ -3486,6 +3490,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
           }
         }
       }
+      */
       myfile << "\n";
 
 		  myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
@@ -3497,6 +3502,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
         myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        /*
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
@@ -3515,6 +3521,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
             }
           }
         }
+        */
         myfile << std::endl;
 		  }
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
@@ -3543,6 +3550,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
 
 		  myfile << "TITLE=\"results for TO code\" \n";
 		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+      /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
           nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
@@ -3551,6 +3559,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
           }
         }
       }
+      */
       myfile << "\n";
 
 		  myfile << "ZONE T=\"load step " << time_step + 1 << "\", NODES= " << num_nodes
