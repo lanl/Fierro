@@ -3501,7 +3501,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
 			  myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
-        myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         /*
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
@@ -3570,7 +3570,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
 			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
-        myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
