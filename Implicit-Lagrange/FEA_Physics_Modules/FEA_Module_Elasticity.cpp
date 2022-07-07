@@ -149,9 +149,9 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   //local variable for host view in the dual view
   host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   host_vec_array node_displacements = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
+  for(int init = 0; init < local_dof_map->getLocalNumElements(); init++)
     node_displacements(init,0) = 0;
-  for(int init = 0; init < all_dof_map->getNodeNumElements(); init++)
+  for(int init = 0; init < all_dof_map->getLocalNumElements(); init++)
     all_node_displacements(init,0) = 0;
   
   //setup output
@@ -3568,7 +3568,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
     hessvec(inode,0) = 0;
   
   //initialize RHS vector
-  for(int i=0; i < local_dof_map->getNodeNumElements(); i++)
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++)
     adjoint_equation_RHS_view(i,0) = 0;
   
   //sum components of direction vector
@@ -3862,7 +3862,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   }//element index loop
 
   //set adjoint equation RHS terms to 0 if they correspond to a boundary constraint DOF index
-  for(int i=0; i < local_dof_map->getNodeNumElements(); i++){
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
     if(Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)
       adjoint_equation_RHS_view(i,0) = 0;
   }
@@ -4521,11 +4521,11 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
 
   //initialize strains to 0
   //local variable for host view in the dual view
-  for(int init = 0; init < map->getNodeNumElements(); init++)
+  for(int init = 0; init < map->getLocalNumElements(); init++)
     for(int istrain = 0; istrain < Brows; istrain++)
       node_strains(init,istrain) = 0;
 
-  for(int init = 0; init < all_node_map->getNodeNumElements(); init++)
+  for(int init = 0; init < all_node_map->getLocalNumElements(); init++)
     for(int istrain = 0; istrain < Brows; istrain++)
       all_node_strains(init,istrain) = 0;
   

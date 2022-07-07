@@ -120,7 +120,7 @@ FEA_Module_Inertial::~FEA_Module_Inertial(){}
 
 void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_densities, bool max_flag){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //initialize memory for volume storage
   host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   if(!nodal_density_flag) compute_element_volumes();
@@ -315,7 +315,7 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
 
 void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -485,7 +485,7 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
 
 void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //initialize memory for volume storage
   host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   host_vec_array Element_Moments;
@@ -692,7 +692,7 @@ void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_de
 
 void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, int moment_component){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -870,7 +870,7 @@ void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_v
 
 void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //initialize memory for volume storage
   host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   host_vec_array Element_Moments_of_Inertia;
@@ -1112,7 +1112,7 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
 
 void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, int inertia_component){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1321,7 +1321,7 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
 
 void FEA_Module_Inertial::compute_element_volumes(){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);

@@ -369,7 +369,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getNodeNumElements();
+  global_size_t local_nrows = map->getLocalNumElements();
   nlocal_nodes = local_nrows;
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
@@ -933,7 +933,7 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getNodeNumElements();
+  global_size_t local_nrows = map->getLocalNumElements();
   nlocal_nodes = local_nrows;
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
@@ -1420,7 +1420,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   }
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getNodeNumElements();
+  global_size_t local_nrows = map->getLocalNumElements();
   nlocal_nodes = local_nrows;
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
@@ -2225,7 +2225,7 @@ void Implicit_Solver::init_maps(){
 
   //debug print of views node indices
   //std::cout << "Local View of All Nodes on Task " << myrank <<std::endl;
-  //for(int inode=0; inode < all_node_map->getNodeNumElements(); inode++){
+  //for(int inode=0; inode < all_node_map->getLocalNumElements(); inode++){
     //std::cout << "node "<<all_node_map->getGlobalElement(inode) << " } " ;
     //std::cout << dual_all_node_coords.view_host()(inode,0) << " " << dual_all_node_coords.view_host()(inode,1) << " " << dual_all_node_coords.view_host()(inode,2) << " " << std::endl;
   //}
@@ -2332,7 +2332,7 @@ void Implicit_Solver::repartition_nodes(){
 
   //update nlocal_nodes and node map
   map = partitioned_map;
-  nlocal_nodes = map->getNodeNumElements();
+  nlocal_nodes = map->getLocalNumElements();
   
 }
 
