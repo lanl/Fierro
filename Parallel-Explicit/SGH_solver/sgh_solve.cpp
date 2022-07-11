@@ -4,10 +4,12 @@
 #include "state.h"
 #include "mesh.h"
 #include <chrono>
+#include "Explicit_Solver_SGH.h"
 
 void sgh_solve(CArrayKokkos <material_t> &material,
                CArrayKokkos <boundary_t> &boundary,
                mesh_t &mesh,
+               Explicit_Solver_SGH *explicit_solver_pointer,
                DViewCArrayKokkos <double> &node_coords,
                DViewCArrayKokkos <double> &node_vel,
                DViewCArrayKokkos <double> &node_mass,
@@ -43,6 +45,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     printf("Writing outputs to file at %f \n", time_value);
     write_outputs(mesh,
+                  explicit_solver_pointer,
                   node_coords,
                   node_vel,
                   node_mass,
@@ -62,7 +65,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     CArrayKokkos <double> node_extensive_mass(mesh.num_nodes);
     
-    // extensive energy tallies over the entire mesh
+    // extensive energy tallies over the mesh elements local to this MPI rank
     double IE_t0 = 0.0;
     double KE_t0 = 0.0;
     double TE_t0 = 0.0;
@@ -72,6 +75,11 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     double IE_loc_sum = 0.0;
     double KE_loc_sum = 0.0;
+
+    // extensive energy tallies over the entire mesh
+    double global_IE_t0 = 0.0;
+    double global_KE_t0 = 0.0;
+    double global_TE_t0 = 0.0;
     
     // extensive IE
     REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
@@ -80,6 +88,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         
     }, IE_sum);
     IE_t0 = IE_sum;
+
+
     
     // extensive KE
     REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
@@ -449,6 +459,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         if (write == 1){
             printf("Writing outputs to file at %f \n", graphics_time);
             write_outputs(mesh,
+                          explicit_solver_pointer,
                           node_coords,
                           node_vel,
                           node_mass,
@@ -485,6 +496,10 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     double IE_tend = 0.0;
     double KE_tend = 0.0;
     double TE_tend = 0.0;
+
+    double global_IE_tend = 0.0;
+    double global_KE_tend = 0.0;
+    double global_TE_tend = 0.0;
     
     IE_loc_sum = 0.0;
     KE_loc_sum = 0.0;
@@ -498,6 +513,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         
     }, IE_sum);
     IE_tend = IE_sum;
+
+    //reduce over MPI ranks
     
     // extensive KE
     REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
@@ -519,9 +536,12 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     Kokkos::fence();
     KE_tend = 0.5*KE_sum;
     
+    //reduce over MPI ranks
     
     // extensive TE
     TE_tend = IE_tend + KE_tend;
+
+    //reduce over MPI ranks
     
     printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
     printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);

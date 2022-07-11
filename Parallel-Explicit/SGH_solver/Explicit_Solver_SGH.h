@@ -198,6 +198,7 @@ public:
   
   //Local FEA data
   size_t nlocal_nodes;
+  size_t nlocal_elem_non_overlapping; //used for reduction calls of per element values
   dual_vec_array dual_node_coords; //coordinates of the nodes
   dual_vec_array dual_node_densities; //topology optimization design variable
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes

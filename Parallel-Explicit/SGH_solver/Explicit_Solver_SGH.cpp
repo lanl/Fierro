@@ -230,7 +230,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     else if(simparam->ansys_dat_input)
       read_mesh_ansys_dat(argv[1]);
     else
-      read_mesh_ensight(argv[1], true);
+      read_mesh_ensight(argv[1], false);
 
     //debug
     //return;
@@ -525,6 +525,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         sgh_solve(material,
                   boundary,
                   mesh,
+                  this,
                   node_coords,
                   node_vel,
                   node_mass,
@@ -2398,9 +2399,12 @@ void Explicit_Solver_SGH::init_maps(){
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Element_Global_Indices(nonoverlapping_count);
   for(int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++)
   Element_Global_Indices(ibuffer) = Initial_Element_Global_Indices(ibuffer);
-
+  nlocal_elem_non_overlapping = nonoverlapping_count;
   //create nonoverlapping element map
   element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Element_Global_Indices.get_kokkos_view(),0,comm));
+
+  //sort element connectivity so nonoverlaps are sequentially found first
+  
 
   
   //construct dof map that follows from the node map (used for distributed matrix and vector objects later)

@@ -3,11 +3,13 @@
 
 #include <cstring>
 #include <sys/stat.h>
+#include "Explicit_Solver_SGH.h"
 
 
 
 
 void write_outputs (const mesh_t &mesh,
+                    Explicit_Solver_SGH *explicit_solver_pointer,
                     DViewCArrayKokkos <double> &node_coords,
                     DViewCArrayKokkos <double> &node_vel,
                     DViewCArrayKokkos <double> &node_mass,
