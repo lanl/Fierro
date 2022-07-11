@@ -341,7 +341,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //}
 
     // The kokkos scope
-    Kokkos::initialize();
     {
      
         // ---------------------------------------------------------------------
@@ -563,8 +562,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         
         
     } // end of kokkos scope
-    Kokkos::finalize();
-
 
     printf("Finished\n");
     

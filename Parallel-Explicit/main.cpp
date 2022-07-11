@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <mpi.h>
+#include <Kokkos_Core.hpp>
 #include "Explicit_Solver.h"
 #include "Explicit_Solver_SGH.h"
 
@@ -53,10 +54,13 @@ int main(int argc, char *argv[]){
   
   //initialize MPI
   MPI_Init(&argc,&argv);
-
+  
+  Kokkos::initialize();
   solver_setup(argc, argv);
-
+  
   MPI_Barrier(MPI_COMM_WORLD);
+  
+  Kokkos::finalize();
   MPI_Finalize();
 
   return 0;

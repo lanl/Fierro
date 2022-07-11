@@ -131,7 +131,7 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
         
         for(int rk=1; rk<rk_num_bins; rk++){
             for (int dim = 0; dim < num_dims; dim++){
-                node.coords.host(rk, node_gid, dim) = host_node_coords_state(0, node_gid, dim);
+                node.coords.host(rk, node_gid, dim) = node.coords.host(0, node_gid, dim);
             } // end for dim
         } // end for rk
         
@@ -142,7 +142,7 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
         
         for(int rk=1; rk<rk_num_bins; rk++){
             for (int dim = 0; dim < num_dims; dim++){
-                node.all_coords.host(rk, node_gid, dim) = host_all_node_coords_state(0, node_gid, dim);
+                node.all_coords.host(rk, node_gid, dim) = node.all_coords.host(0, node_gid, dim);
             } // end for dim
         } // end for rk
         
@@ -157,7 +157,18 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
     int num_corners = num_elem*mesh.num_nodes_in_elem;
     mesh.initialize_corners(num_corners);
     corner.initialize(num_corners, num_dims);
-
+    
+    /*
+    for(int inode = 0; inode < num_nodes; inode++){
+        std::cout << "Node index " << inode+1 << " ";
+        for(int rk=0; rk<rk_num_bins; rk++){
+          std::cout << "rk index " << rk+1 << " ";
+          std::cout << node.coords(rk,inode,0)+1<< " ";
+          std::cout << node.coords(rk,inode,1)+1<< " ";
+          std::cout << node.coords(rk,inode,2)+1<< std::endl;
+        }
+    }
+    */
     // Close mesh input file
     //fclose(in);
 
