@@ -32,6 +32,7 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
 
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
+    mesh.initialize_local_nodes(explicit_solver_pointer->nlocal_nodes);
     node.initialize(rk_num_bins, num_nodes, num_dims);
     std::cout << "Bin counts " << rk_num_bins << " Node counts " << num_nodes << " Num dim " << num_dims << std::endl;
     

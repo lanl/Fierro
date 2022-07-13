@@ -120,7 +120,7 @@ void ensight( const mesh_t &mesh,
     };
     
     // short hand
-    const size_t num_nodes = mesh.num_nodes;
+    const size_t num_nodes = mesh.num_local_nodes;
     const size_t num_elems = mesh.num_elems;
     const size_t num_dims  = mesh.num_dims;
 

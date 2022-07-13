@@ -69,7 +69,7 @@ struct mesh_t {
     
     size_t num_dims;
     
-    size_t num_nodes;
+    size_t num_nodes, num_local_nodes;
     
     size_t num_elems;
     size_t num_nodes_in_elem;
@@ -143,6 +143,15 @@ struct mesh_t {
     void initialize_nodes(const size_t num_nodes_inp)
     {
         num_nodes = num_nodes_inp;
+        
+        return;
+        
+    }; // end method
+
+    // initialization methods
+    void initialize_local_nodes(const size_t num_nodes_inp)
+    {
+        num_local_nodes = num_nodes_inp;
         
         return;
         

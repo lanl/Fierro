@@ -95,7 +95,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     MPI_Allreduce(&IE_t0,&global_IE_t0,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
     
     // extensive KE
-    REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
+    REDUCE_SUM(node_gid, 0, explicit_solver_pointer->nlocal_nodes, KE_loc_sum, {
         
         double ke = 0;
         for (size_t dim=0; dim<mesh.num_dims; dim++){
@@ -530,7 +530,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     MPI_Allreduce(&IE_tend,&global_IE_tend,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
 
     // extensive KE
-    REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
+    REDUCE_SUM(node_gid, 0, explicit_solver_pointer->nlocal_nodes, KE_loc_sum, {
         
         double ke = 0;
         for (size_t dim=0; dim<mesh.num_dims; dim++){
