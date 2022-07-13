@@ -42,8 +42,10 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                CArray <double> &graphics_times,
                size_t &graphics_id){
     
+    int myrank = explicit_solver_pointer->myrank;
+    if(myrank==0)
+      printf("Writing outputs to file at %f \n", time_value);
     
-    printf("Writing outputs to file at %f \n", time_value);
     write_outputs(mesh,
                   explicit_solver_pointer,
                   node_coords,
@@ -80,16 +82,17 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     double global_IE_t0 = 0.0;
     double global_KE_t0 = 0.0;
     double global_TE_t0 = 0.0;
+    int nlocal_elem_non_overlapping = explicit_solver_pointer->nlocal_elem_non_overlapping;
     
     // extensive IE
-    REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
+    REDUCE_SUM(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
         
         IE_loc_sum += elem_mass(elem_gid)*elem_sie(1,elem_gid);
         
     }, IE_sum);
     IE_t0 = IE_sum;
 
-
+    MPI_Allreduce(&IE_t0,&global_IE_t0,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
     
     // extensive KE
     REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
@@ -110,8 +113,13 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     Kokkos::fence();
     KE_t0 = 0.5*KE_sum;
     
+    MPI_Allreduce(&KE_t0,&global_KE_t0,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+
     // extensive TE
-    TE_t0 = IE_t0 + KE_t0;
+    global_TE_t0 = global_IE_t0 + global_KE_t0;
+    TE_t0 = global_TE_t0;
+    KE_t0 = global_KE_t0;
+    IE_t0 = global_IE_t0;
     
     
     // save the nodal mass
@@ -172,11 +180,13 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         
         
         if (cycle==0){
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if(myrank==0)
+              printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
         // print time step every 10 cycles
         else if (cycle%20==0){
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if(myrank==0)
+              printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
         
         
@@ -457,7 +467,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
         // write outputs
         if (write == 1){
-            printf("Writing outputs to file at %f \n", graphics_time);
+            if(myrank==0)
+              printf("Writing outputs to file at %f \n", graphics_time);
             write_outputs(mesh,
                           explicit_solver_pointer,
                           node_coords,
@@ -489,7 +500,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     auto calc_time = std::chrono::duration_cast
                            <std::chrono::nanoseconds>(time_2 - time_1).count();
     
-    printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
+    if(myrank==0)
+      printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
     
     
     // ---- Calculate energy tallies ----
@@ -507,7 +519,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     KE_sum = 0.0;
     
     // extensive IE
-    REDUCE_SUM(elem_gid, 0, mesh.num_elems, IE_loc_sum, {
+    REDUCE_SUM(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
         
         IE_loc_sum += elem_mass(elem_gid)*elem_sie(1,elem_gid);
         
@@ -515,7 +527,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     IE_tend = IE_sum;
 
     //reduce over MPI ranks
-    
+    MPI_Allreduce(&IE_tend,&global_IE_tend,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+
     // extensive KE
     REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
         
@@ -537,15 +550,24 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     KE_tend = 0.5*KE_sum;
     
     //reduce over MPI ranks
+    MPI_Allreduce(&KE_tend,&global_KE_tend,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+
+    // extensive TE
+    TE_tend = IE_tend + KE_tend;
+    KE_tend = global_KE_tend;
+    IE_tend = global_IE_tend;
     
     // extensive TE
     TE_tend = IE_tend + KE_tend;
 
     //reduce over MPI ranks
     
-    printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
-    printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
-    printf("total energy conservation error = %e \n\n", TE_tend - TE_t0);
+    if(myrank==0)
+      printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
+    if(myrank==0)
+      printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
+    if(myrank==0)
+      printf("total energy conservation error = %e \n\n", TE_tend - TE_t0);
     
     return;
     

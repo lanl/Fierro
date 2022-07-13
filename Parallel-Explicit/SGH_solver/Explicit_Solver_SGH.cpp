@@ -2410,10 +2410,10 @@ void Explicit_Solver_SGH::init_maps(){
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Temp_Nodes(max_nodes_per_element);
   GO temp_element_gid, current_element_gid;
   int last_storage_index = rnum_elem - 1;
-  for (int ielem = 0; ielem < last_storage_index + 1; ielem++){
+  for (int ielem = 0; ielem < nlocal_elem_non_overlapping; ielem++){
     current_element_gid = all_element_map->getGlobalElement(ielem);
     //if this element is not part of the non overlap list then send it to the end of the storage and swap the element at the end
-    if(!element_map->isNodeGlobalElement(current_element_gid)&&(ielem!=last_storage_index)&&(last_storage_index>=nlocal_elem_non_overlapping)){
+    if(!element_map->isNodeGlobalElement(current_element_gid)){
       temp_element_gid = current_element_gid;
       for (int lnode = 0; lnode < max_nodes_per_element; lnode++){
         Temp_Nodes(lnode) = nodes_in_elem(ielem,lnode);

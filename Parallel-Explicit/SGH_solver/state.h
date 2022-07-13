@@ -19,13 +19,13 @@ struct node_t {
     DCArrayKokkos <double> mass;
 
     // Includes Ghost Positions
-    DCArrayKokkos <double> all_coords;
+    //DCArrayKokkos <double> all_coords;
 
     // Includes Ghost velocities
-    DCArrayKokkos <double> all_vel;
+    //DCArrayKokkos <double> all_vel;
 
     // Includes Ghost masses
-    DCArrayKokkos <double> all_mass;
+    //DCArrayKokkos <double> all_mass;
 
     
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)

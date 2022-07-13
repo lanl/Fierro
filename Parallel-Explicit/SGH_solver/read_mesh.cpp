@@ -25,7 +25,7 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
 
     // --- Read in the nodes in the mesh ---
 
-    size_t num_nodes = explicit_solver_pointer->nlocal_nodes;
+    size_t num_nodes = explicit_solver_pointer->nall_nodes;
     int myrank = explicit_solver_pointer->myrank;
     int nranks = explicit_solver_pointer->nranks;
     printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, num_nodes);
@@ -36,7 +36,7 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
     std::cout << "Bin counts " << rk_num_bins << " Node counts " << num_nodes << " Num dim " << num_dims << std::endl;
     
     CArrayKokkos<double, DefaultLayout, HostSpace> host_node_coords_state(rk_num_bins, num_nodes, num_dims);
-    Explicit_Solver_SGH::host_vec_array interface_node_coords = explicit_solver_pointer->node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    Explicit_Solver_SGH::host_vec_array interface_node_coords = explicit_solver_pointer->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_node_coords_state.get_kokkos_view() = node.coords.get_kokkos_dual_view().view_host();
     //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, num_nodes, num_dims);
     //host_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*num_nodes*num_dims);
@@ -102,6 +102,7 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
     }
     */
 
+    /*
     size_t nall_nodes = explicit_solver_pointer->nall_nodes;
     node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
     node.all_vel    = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
@@ -125,6 +126,7 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
         node.all_coords.host(0,inode,2) = interface_all_node_coords(inode,2);
         //std::cout << host_all_node_coords_state(0,inode,2)+1<< std::endl;
     }
+    */
 
     // save the node coords to the current RK value
     for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
@@ -136,7 +138,8 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
         } // end for rk
         
     } // end parallel for
-
+    
+    /*
     // save the node coords to the current RK value
     for (size_t node_gid=0; node_gid<nall_nodes; node_gid++){
         
@@ -147,10 +150,10 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
         } // end for rk
         
     } // end parallel for
-    
+    */
     
     node.coords.update_device();
-    node.all_coords.update_device();
+    //node.all_coords.update_device();
 
     
     // intialize corner variables
