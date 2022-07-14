@@ -95,7 +95,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     MPI_Allreduce(&IE_t0,&global_IE_t0,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
     
     // extensive KE
-    REDUCE_SUM(node_gid, 0, explicit_solver_pointer->nlocal_nodes, KE_loc_sum, {
+    REDUCE_SUM(node_gid, 0, mesh.num_local_nodes, KE_loc_sum, {
         
         double ke = 0;
         for (size_t dim=0; dim<mesh.num_dims; dim++){
@@ -281,8 +281,22 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
             // ---- apply force boundary conditions to the boundary patches----
             boundary_velocity(mesh, boundary, node_vel);
+           
+            //current interface has differing velocity arrays; this equates them until we unify memory
+            Explicit_Solver_SGH::vec_array node_velocities_interface = explicit_solver_pointer->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+            FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
+              node_velocities_interface(node_gid,0) = node_vel(node_gid);
+        
+            }); // end parallel for
+            //communicate ghost velocities
+            explicit_solver_pointer->comm_velocities();
+
             
-            
+            Explicit_Solver_SGH::vec_array all_node_velocities_interface = explicit_solver_pointer->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+            FOR_ALL(node_gid, 0, mesh.num_nodes, {
+              node_vel(node_gid) = all_node_velocities_interface(node_gid,0);
+        
+            }); // end parallel for
             
             // ---- Update specific internal energy in the elements ----
             update_energy_sgh(rk_alpha,
@@ -530,7 +544,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     MPI_Allreduce(&IE_tend,&global_IE_tend,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
 
     // extensive KE
-    REDUCE_SUM(node_gid, 0, explicit_solver_pointer->nlocal_nodes, KE_loc_sum, {
+    REDUCE_SUM(node_gid, 0, mesh.num_local_nodes, KE_loc_sum, {
         
         double ke = 0;
         for (size_t dim=0; dim<mesh.num_dims; dim++){

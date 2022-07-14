@@ -134,6 +134,8 @@ public:
 
   void repartition_nodes();
 
+  void comm_velocities();
+
   //void init_design();
 
   void collect_information();

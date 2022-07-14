@@ -657,6 +657,8 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH, bool convert_node_order)
   
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
+  host_vec_array node_velocities = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
   //dual_node_coords.modify_host();
@@ -2480,6 +2482,7 @@ void Explicit_Solver_SGH::init_maps(){
 
   //create distributed multivector of the local node data and all (local + ghost) node storage
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   
   //debug print
   //std::ostream &out = std::cout;
@@ -3449,6 +3452,36 @@ void Explicit_Solver_SGH::collect_information(){
     //collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
+}
+
+/* ----------------------------------------------------------------------
+   Communicate updated nodal velocities to ghost nodes
+------------------------------------------------------------------------- */
+
+void Explicit_Solver_SGH::comm_velocities(){
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  
+  host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //comms to get ghosts
+  all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
+
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
 }
 
 /* ----------------------------------------------------------------------
