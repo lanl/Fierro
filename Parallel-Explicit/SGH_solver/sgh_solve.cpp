@@ -83,6 +83,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     double global_KE_t0 = 0.0;
     double global_TE_t0 = 0.0;
     int nlocal_elem_non_overlapping = explicit_solver_pointer->nlocal_elem_non_overlapping;
+    const int num_dims = mesh.num_dims;
     
     // extensive IE
     REDUCE_SUM(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
@@ -285,16 +286,19 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             //current interface has differing velocity arrays; this equates them until we unify memory
             Explicit_Solver_SGH::vec_array node_velocities_interface = explicit_solver_pointer->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
             FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
-              node_velocities_interface(node_gid,0) = node_vel(node_gid);
-        
+                for (int idim = 0; idim < num_dims; idim++){
+                  node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
+                }
             }); // end parallel for
             //communicate ghost velocities
             explicit_solver_pointer->comm_velocities();
 
             
             Explicit_Solver_SGH::vec_array all_node_velocities_interface = explicit_solver_pointer->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
-            FOR_ALL(node_gid, 0, mesh.num_nodes, {
-              node_vel(node_gid) = all_node_velocities_interface(node_gid,0);
+            FOR_ALL(node_gid, mesh.num_local_nodes, mesh.num_nodes, {
+                for (int idim = 0; idim < num_dims; idim++){
+                  node_vel(1,node_gid,idim) = all_node_velocities_interface(node_gid,idim);
+                }
         
             }); // end parallel for
             

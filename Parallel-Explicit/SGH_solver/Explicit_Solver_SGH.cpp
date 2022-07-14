@@ -3473,6 +3473,7 @@ void Explicit_Solver_SGH::comm_velocities(){
   //create import object using local node indices map and all indices map
   Tpetra::Import<LO, GO> importer(map, all_node_map);
   
+  //node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //comms to get ghosts
   all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
