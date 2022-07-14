@@ -179,7 +179,10 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                          fuzz);
         } // end if 2D
         
-        
+        double global_dt;
+        MPI_Allreduce(&dt,&global_dt,1,MPI_DOUBLE,MPI_MIN,MPI_COMM_WORLD);
+        dt = global_dt;
+
         if (cycle==0){
             if(myrank==0)
               printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
