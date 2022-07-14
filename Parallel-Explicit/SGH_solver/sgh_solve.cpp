@@ -290,6 +290,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                   node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
                 }
             }); // end parallel for
+            
+            Kokkos::fence();
             //communicate ghost velocities
             explicit_solver_pointer->comm_velocities();
 
@@ -302,6 +304,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         
             }); // end parallel for
             
+            Kokkos::fence();
             // ---- Update specific internal energy in the elements ----
             update_energy_sgh(rk_alpha,
                               dt,
