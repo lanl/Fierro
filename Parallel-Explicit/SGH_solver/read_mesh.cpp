@@ -81,8 +81,6 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
     }
 
     // update device side
-    mesh.nodes_in_elem.get_kokkos_dual_view().modify_host();
-    mesh.nodes_in_elem.get_kokkos_dual_view().sync_device();
     mesh.nodes_in_elem.update_device();
 
     //debug print
@@ -91,7 +89,8 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
     //device_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().d_view;
     //host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
     /*
-     std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
+    if(myrank==1){
+    std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in LOCAL INDICES" << myrank << std::endl;
     for(int ielem = 0; ielem < num_elem; ielem++){
         std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
@@ -101,8 +100,25 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
         }
         std::cout << std::endl;
     }
+    }
     */
-
+    /*
+    std::cout.flush();
+    if(myrank==1){
+    std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in GLOBAL INDICES" << myrank << std::endl;
+    std::cout << "local node index of global index 275 on rank 1 " << explicit_solver_pointer->all_node_map->getLocalElement(275) << std::endl;
+    for(int ielem = 0; ielem < num_elem; ielem++){
+        std::cout << ielem << " ";
+        for(int inode = 0; inode < num_nodes_in_elem; inode++){
+            //debug print
+            //device_mesh_nodes_in_elem(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(mesh.nodes_in_elem(ielem, inode))<< " ";
+        }
+        std::cout << std::endl;
+    }
+    }
+    std::cout.flush();
+    */
     /*
     size_t nall_nodes = explicit_solver_pointer->nall_nodes;
     node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);

@@ -388,6 +388,41 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // --------------------------------------------------------------------- 
         sgh_interface_setup(this, mesh, node, elem, corner, num_dims, rk_num_bins);
         mesh.build_corner_connectivity();
+        //debug print of corner ids
+        /*
+        if(myrank==1){
+             for(int i = 0; i < mesh.num_nodes; i++){
+        
+               // loop over all corners around the node and calculate the nodal force
+               for (size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(i); corner_lid++){
+        
+                 // Get corner gid
+                 size_t corner_gid = mesh.corners_in_node(i, corner_lid);
+                 std::cout << all_node_map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
+            
+               } // end for corner_lid
+               //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
+               //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
+             }
+            }
+          */
+          /*
+          if(myrank==1){
+             for(int i = 0; i < mesh.num_elems; i++){
+        
+               // loop over all corners around the node and calculate the nodal force
+               for (size_t corner_lid=0; corner_lid<max_nodes_per_element; corner_lid++){
+        
+                 // Get corner gid
+                 size_t corner_gid = mesh.corners_in_elem(i, corner_lid);
+                 std::cout << i  << " " << mesh.nodes_in_elem(i, corner_lid) << " " << all_node_map->getGlobalElement(mesh.nodes_in_elem(i, corner_lid)) <<" " << corner_gid << " " << std::endl;
+            
+               } // end for corner_lid
+               //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
+               //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
+             }
+            }
+            */
         mesh.build_elem_elem_connectivity();
         mesh.build_patch_connectivity();
         mesh.build_node_node_connectivity();
@@ -2397,17 +2432,20 @@ void Explicit_Solver_SGH::init_maps(){
   //copy over from buffer to compressed storage
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Element_Global_Indices(nonoverlapping_count);
   for(int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++)
-  Element_Global_Indices(ibuffer) = Initial_Element_Global_Indices(ibuffer);
+    Element_Global_Indices(ibuffer) = Initial_Element_Global_Indices(ibuffer);
   nlocal_elem_non_overlapping = nonoverlapping_count;
   //create nonoverlapping element map
   element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Element_Global_Indices.get_kokkos_view(),0,comm));
 
   //sort element connectivity so nonoverlaps are sequentially found first
   //define initial sorting of global indices
+  
+  //map->describe(*fos,Teuchos::VERB_EXTREME);
+
   for (int ielem = 0; ielem < rnum_elem; ielem++){
     Initial_Element_Global_Indices(ielem) = all_element_map->getGlobalElement(ielem);
   }
-  
+
   //re-sort so local elements in the nonoverlapping map are first in storage
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Temp_Nodes(max_nodes_per_element);
   GO temp_element_gid, current_element_gid;
@@ -2437,6 +2475,7 @@ void Explicit_Solver_SGH::init_maps(){
   
   all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Initial_Element_Global_Indices.get_kokkos_view(),0,comm));
 
+  //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
   //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
   CArrayKokkos<GO, array_layout, device_type, memory_traits> local_dof_indices(nlocal_nodes*num_dim, "local_dof_indices");
   for(int i = 0; i < nlocal_nodes; i++){
@@ -3473,11 +3512,13 @@ void Explicit_Solver_SGH::comm_velocities(){
   //create import object using local node indices map and all indices map
   Tpetra::Import<LO, GO> importer(map, all_node_map);
   
-  //node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  
   host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //comms to get ghosts
   all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
-
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  
   //update_count++;
   //if(update_count==1){
       //MPI_Barrier(world);

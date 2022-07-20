@@ -330,7 +330,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
         // curl limiter on Q
         double phi_curl = fmin(1.0, 1.0*fabs(div)/(mag_curl + fuzz));  // disable Q when vorticity is high
         //phi = phi_curl*phi;
-
+        phi = 1;
 
         // ---- Calculate the Riemann force on each node ----
 

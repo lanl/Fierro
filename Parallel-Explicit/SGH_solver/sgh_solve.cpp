@@ -273,7 +273,41 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                               dt,
                               rk_alpha);
             }
+
+            /*
+            debug block
+            if(myrank==1){
+             std::cout << rk_alpha << " " << dt << std::endl;
+             for(int i = 0; i < mesh.num_nodes; i++){
+               double node_force[3];
+               for (size_t dim = 0; dim < num_dims; dim++){
+                 node_force[dim] = 0.0;
+               } // end for dim
+        
+               // loop over all corners around the node and calculate the nodal force
+               for (size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(i); corner_lid++){
+        
+                 // Get corner gid
+                 size_t corner_gid = mesh.corners_in_node(i, corner_lid);
+                 std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << corner_gid << " " << corner_force(corner_gid, 0) << " " << corner_force(corner_gid, 1) << " " << corner_force(corner_gid, 2) << std::endl;
+                 // loop over dimension
+                 for (size_t dim = 0; dim < num_dims; dim++){
+                   node_force[dim] += corner_force(corner_gid, dim);
+                 } // end for dim
             
+               } // end for corner_lid
+               //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
+               //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
+             }
+            }
+            /*
+            //debug print vector values on a rank
+            /*
+            if(myrank==0)
+             for(int i = 0; i < mesh.num_nodes; i++){
+               std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_vel(1,i,0) << " " << node_vel(1,i,1) << " " << node_vel(1,i,2) << std::endl;
+             }
+            */
 
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
@@ -285,7 +319,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
             // ---- apply force boundary conditions to the boundary patches----
             boundary_velocity(mesh, boundary, node_vel);
-           
+
             //current interface has differing velocity arrays; this equates them until we unify memory
             Explicit_Solver_SGH::vec_array node_velocities_interface = explicit_solver_pointer->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
             FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
@@ -308,6 +342,14 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             }); // end parallel for
             
             Kokkos::fence();
+            
+            //debug print vector values on a rank
+            /*
+            if(myrank==0)
+             for(int i = 0; i < mesh.num_nodes; i++){
+               std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_vel(1,i,0) << " " << node_vel(1,i,1) << " " << node_vel(1,i,2) << std::endl;
+             }
+            */ 
             // ---- Update specific internal energy in the elements ----
             update_energy_sgh(rk_alpha,
                               dt,
@@ -464,12 +506,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
             } // end of if 2D-RZ
             
-            
-            
         } // end of RK loop
-	        
-
-	    
 
 	    // increment the time
 	    time_value+=dt;
@@ -526,7 +563,6 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     if(myrank==0)
       printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
-    
     
     // ---- Calculate energy tallies ----
     double IE_tend = 0.0;
@@ -587,11 +623,11 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     //reduce over MPI ranks
     
     if(myrank==0)
-      printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
+      printf("Time=0:   KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_t0, IE_t0, TE_t0);
     if(myrank==0)
-      printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
+      printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
     if(myrank==0)
-      printf("total energy conservation error = %e \n\n", TE_tend - TE_t0);
+      printf("total energy conservation error %= %e \n\n", 100*(TE_tend - TE_t0)/TE_t0);
     
     return;
     
