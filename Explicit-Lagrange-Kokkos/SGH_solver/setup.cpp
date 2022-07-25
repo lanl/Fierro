@@ -60,7 +60,7 @@ void setup(const CArrayKokkos <material_t> &material,
     DCArrayKokkos <size_t> read_from_file(num_materials);
     FOR_ALL(mat_id, 0, num_materials, {
         
-        read_from_file(mat_id) = material(0).read_state_vars;
+        read_from_file(mat_id) = material(mat_id).strength_setup;
         
     }); // end parallel for
     Kokkos::fence();
@@ -69,8 +69,7 @@ void setup(const CArrayKokkos <material_t> &material,
     Kokkos::fence();
     
     // make memory to store state_vars from an external file
-    DCArrayKokkos <double> file_state_vars(num_materials,mesh.num_elems,num_state_vars);
-    DCArrayKokkos <size_t> mat_num_state_vars(num_materials); // actual number of state_vars
+       DCArrayKokkos <size_t> mat_num_state_vars(num_materials); // actual number of state_vars
     FOR_ALL(mat_id, 0, num_materials, {
         
         mat_num_state_vars(mat_id) = material(mat_id).num_state_vars;
@@ -82,9 +81,11 @@ void setup(const CArrayKokkos <material_t> &material,
     mat_num_state_vars.update_host();
     Kokkos::fence();
     
+    // the state_vars from the file
+    DCArrayKokkos <double> file_state_vars(num_materials,mesh.num_elems,num_state_vars);
     for (size_t mat_id=0; mat_id<num_materials; mat_id++){
         
-        if (read_from_file.host(mat_id) == 1){
+        if (read_from_file.host(mat_id) == model_init::user_init){
             
             size_t num_vars = mat_num_state_vars.host(mat_id);
             
@@ -192,9 +193,8 @@ void setup(const CArrayKokkos <material_t> &material,
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
                 
-                
                 // get state_vars from the input file or read them in
-                if (material(mat_id).read_state_vars == 1){
+                if (material(mat_id).strength_setup == model_init::user_init){
                     
                     // use the values read from a file to get elem state vars
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
