@@ -1,3 +1,39 @@
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 
 #include <iostream>
 #include <fstream>
@@ -113,9 +149,9 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   //local variable for host view in the dual view
   host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   host_vec_array node_displacements = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
+  for(int init = 0; init < local_dof_map->getLocalNumElements(); init++)
     node_displacements(init,0) = 0;
-  for(int init = 0; init < all_dof_map->getNodeNumElements(); init++)
+  for(int init = 0; init < all_dof_map->getLocalNumElements(); init++)
     all_node_displacements(init,0) = 0;
   
   //setup output
@@ -156,9 +192,11 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 
   //task 0 reads file, it should be open by now due to Implicit Solver mesh read in
 
-  //ANSYS dat file doesn't specify total number of nodes, which is needed for the node map.
+  //ANSYS dat file doesn't always correctly specify total number of nodes, which is needed for the node map.
   //First pass reads in node section to determine the maximum number of nodes, second pass distributes node data
   //The elements section header does specify element count
+
+  //revert file position to before first condition zone
   if(myrank==0){
     in->seekg(before_condition_header);
   }
@@ -185,10 +223,13 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
           line_parse >> substring;
           //std::cout << substring << std::endl;
           if(!substring.compare("Supports")){
+            //std::cout << "FOUND BC ZONE" << std::endl;
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = DISPLACEMENT_CONDITION;
           }
           if(!substring.compare("Pressure")){
+            
+            //std::cout << "FOUND PRESSURE ZONE" << std::endl;
             searching_for_conditions = found_no_conditions = false;
             zone_condition_type = SURFACE_LOADING_CONDITION;
           }
@@ -301,6 +342,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       LO boundary_set_npatches = 0;
       bool look_at_end = false;
       CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+      std::streampos last_zone_ending_position;
       //grow structures for loading condition storage
       //debug print
       std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< num_surface_force_sets << std::endl;
@@ -374,6 +416,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       //broadcast number of element surface patches subject to force density
       MPI_Bcast(&num_patches,1,MPI_LONG_LONG_INT,0,world);
       
+      std::cout << "LOAD PATCHES TO READ " << num_patches << std::endl;
       int nodes_per_patch;
       //select nodes per patch based on element type
       if(Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex8){
@@ -400,7 +443,9 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             getline(*in,read_line);
             line_parse.clear();
             line_parse.str(read_line);
-        
+            //debug print
+            //std::cout<< read_line <<std::endl;
+
             for(int iword = 0; iword < words_per_line; iword++){
               //read portions of the line into the substring variable
               line_parse >> substring;
@@ -477,11 +522,13 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       //get surface pressure from the end of the file
       if(myrank==0){
         if(look_at_end){
+          //save file position in case there other conditions to read in afterwards
+          last_zone_ending_position = in->tellg();
           bool found_pressure = false;
           real_t pressure;
           while(in->good()){
             getline(*in, read_line);
-            std::cout << read_line << std::endl;
+            //std::cout << read_line << std::endl;
             line_parse.clear();
             line_parse.str(read_line);
             line_parse >> substring;
@@ -501,6 +548,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             }
           }
           force_density[0] = pressure;
+          //reset file position
+          in->seekg(last_zone_ending_position);
         }
       }
 
@@ -3519,7 +3568,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
     hessvec(inode,0) = 0;
   
   //initialize RHS vector
-  for(int i=0; i < local_dof_map->getNodeNumElements(); i++)
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++)
     adjoint_equation_RHS_view(i,0) = 0;
   
   //sum components of direction vector
@@ -3813,7 +3862,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   }//element index loop
 
   //set adjoint equation RHS terms to 0 if they correspond to a boundary constraint DOF index
-  for(int i=0; i < local_dof_map->getNodeNumElements(); i++){
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
     if(Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)
       adjoint_equation_RHS_view(i,0) = 0;
   }
@@ -4472,11 +4521,11 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
 
   //initialize strains to 0
   //local variable for host view in the dual view
-  for(int init = 0; init < map->getNodeNumElements(); init++)
+  for(int init = 0; init < map->getLocalNumElements(); init++)
     for(int istrain = 0; istrain < Brows; istrain++)
       node_strains(init,istrain) = 0;
 
-  for(int init = 0; init < all_node_map->getNodeNumElements(); init++)
+  for(int init = 0; init < all_node_map->getLocalNumElements(); init++)
     for(int istrain = 0; istrain < Brows; istrain++)
       all_node_strains(init,istrain) = 0;
   
@@ -5186,6 +5235,7 @@ int FEA_Module_Elasticity::solve(){
   //Teuchos::RCP<Xpetra::Vector<real_t,LO,GO,node_type>> diagonal = Teuchos::rcp(new Xpetra::Vector<real_t,LO,GO,node_type>(tdiagonal));
   //Global_Stiffness_Matrix->getLocalDiagCopy(*tdiagonal);
   //tdiagonal->describe(*fos,Teuchos::VERB_EXTREME);
+  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
   if(Hierarchy_Constructed){
     ReuseXpetraPreconditioner(xA, H);
   }
@@ -5202,7 +5252,6 @@ int FEA_Module_Elasticity::solve(){
   // System solution (Ax = b)
   // =========================================================================
 
-  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
   SystemSolve(xA,xX,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   linear_solve_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
