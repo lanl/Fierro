@@ -3458,7 +3458,7 @@ void Explicit_Solver_SGH::collect_information(){
 
   //comms to collect
   collected_node_coords_distributed->doImport(*node_coords_distributed, node_collection_importer, Tpetra::INSERT);
-  collected_node_coords_distributed->doImport(*node_velocities_distributed, node_collection_importer, Tpetra::INSERT);
+  collected_node_velocities_distributed->doImport(*node_velocities_distributed, node_collection_importer, Tpetra::INSERT);
 
   //comms to collect FEA module related vector data
   /*
