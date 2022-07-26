@@ -332,8 +332,9 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             //communicate ghost velocities
             explicit_solver_pointer->comm_velocities();
 
-            
+            //this is forcing a copy to the device 
             Explicit_Solver_SGH::vec_array all_node_velocities_interface = explicit_solver_pointer->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+
             FOR_ALL(node_gid, mesh.num_local_nodes, mesh.num_nodes, {
                 for (int idim = 0; idim < num_dims; idim++){
                   node_vel(1,node_gid,idim) = all_node_velocities_interface(node_gid,idim);
@@ -530,6 +531,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         if (write == 1){
             if(myrank==0)
               printf("Writing outputs to file at %f \n", graphics_time);
+              /*
             write_outputs(mesh,
                           explicit_solver_pointer,
                           node_coords,
@@ -546,7 +548,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                           graphics_times,
                           graphics_id,
                           time_value);
-            
+            */
             graphics_time = time_value + graphics_dt_ival;
         } // end if
         

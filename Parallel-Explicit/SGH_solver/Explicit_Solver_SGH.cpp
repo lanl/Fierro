@@ -614,7 +614,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
-    tecplot_writer();
+    tecplot_writer(false);
     // vtk_writer();
     /*
     if(myrank==0){
@@ -2440,18 +2440,18 @@ void Explicit_Solver_SGH::init_maps(){
   //sort element connectivity so nonoverlaps are sequentially found first
   //define initial sorting of global indices
   
-  //map->describe(*fos,Teuchos::VERB_EXTREME);
-
+  //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
+  
   for (int ielem = 0; ielem < rnum_elem; ielem++){
     Initial_Element_Global_Indices(ielem) = all_element_map->getGlobalElement(ielem);
   }
-
+  
   //re-sort so local elements in the nonoverlapping map are first in storage
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Temp_Nodes(max_nodes_per_element);
   GO temp_element_gid, current_element_gid;
   int last_storage_index = rnum_elem - 1;
   for (int ielem = 0; ielem < nlocal_elem_non_overlapping; ielem++){
-    current_element_gid = all_element_map->getGlobalElement(ielem);
+    current_element_gid = Initial_Element_Global_Indices(ielem);
     //if this element is not part of the non overlap list then send it to the end of the storage and swap the element at the end
     if(!element_map->isNodeGlobalElement(current_element_gid)){
       temp_element_gid = current_element_gid;
@@ -2474,6 +2474,8 @@ void Explicit_Solver_SGH::init_maps(){
   //reset all element map to its re-sorted version
   
   all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Initial_Element_Global_Indices.get_kokkos_view(),0,comm));
+  element_map->describe(*fos,Teuchos::VERB_EXTREME);
+  all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
 
   //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
   //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
@@ -3530,7 +3532,7 @@ void Explicit_Solver_SGH::comm_velocities(){
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
-void Explicit_Solver_SGH::tecplot_writer(){
+void Explicit_Solver_SGH::tecplot_writer(bool convert_node_order){
   
   int num_dim = simparam->num_dim;
 	std::string current_file_name;
@@ -3587,7 +3589,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
 		  myfile << "TITLE=\"results for TO code\"" "\n";
       //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
       //else
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -3634,7 +3636,10 @@ void Explicit_Solver_SGH::tecplot_writer(){
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
 			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
-          temp_convert = convert_ijk_to_ensight(ii);
+          if(convert_node_order)
+            temp_convert = convert_ijk_to_ensight(ii);
+          else
+            temp_convert = ii;
 				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
 			  }
 			  myfile << " \n";
@@ -3656,7 +3661,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
 		  //output header of the tecplot file
 
 		  myfile << "TITLE=\"results for TO code\" \n";
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -3701,7 +3706,10 @@ void Explicit_Solver_SGH::tecplot_writer(){
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
 			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
-          temp_convert = convert_ijk_to_ensight(ii);
+          if(convert_node_order)
+            temp_convert = convert_ijk_to_ensight(ii);
+          else
+            temp_convert = ii;
 				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
 			  }
 			  myfile << " \n";

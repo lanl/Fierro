@@ -163,7 +163,7 @@ public:
 
   void init_topology_conditions (int num_sets);
 
-  void tecplot_writer();
+  void tecplot_writer(bool convert_node_order);
 
   //void init_boundary_sets(int num_boundary_sets);
 
