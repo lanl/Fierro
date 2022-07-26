@@ -3454,9 +3454,11 @@ void Explicit_Solver_SGH::collect_information(){
   Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
 
   Teuchos::RCP<MV> collected_node_coords_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+  Teuchos::RCP<MV> collected_node_velocities_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
 
   //comms to collect
   collected_node_coords_distributed->doImport(*node_coords_distributed, node_collection_importer, Tpetra::INSERT);
+  collected_node_coords_distributed->doImport(*node_velocities_distributed, node_collection_importer, Tpetra::INSERT);
 
   //comms to collect FEA module related vector data
   /*
@@ -3490,6 +3492,7 @@ void Explicit_Solver_SGH::collect_information(){
   //set host views of the collected data to print out from
   if(myrank==0){
     collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    collected_node_velocities = collected_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     //collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
@@ -3589,7 +3592,7 @@ void Explicit_Solver_SGH::tecplot_writer(bool convert_node_order){
 		  myfile << "TITLE=\"results for TO code\"" "\n";
       //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
       //else
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\"";
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -3610,6 +3613,13 @@ void Explicit_Solver_SGH::tecplot_writer(bool convert_node_order){
 			  myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
+
+        //velocity print
+        myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
+			  myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
+        if(num_dim==3)
+			  myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
+
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         /*
         for (int imodule = 0; imodule < nfea_modules; imodule++){
@@ -3661,7 +3671,7 @@ void Explicit_Solver_SGH::tecplot_writer(bool convert_node_order){
 		  //output header of the tecplot file
 
 		  myfile << "TITLE=\"results for TO code\" \n";
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\"";
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -3682,6 +3692,13 @@ void Explicit_Solver_SGH::tecplot_writer(bool convert_node_order){
 			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
+
+        //velocity print
+        myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
+			  myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
+        if(num_dim==3)
+			  myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
+        
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;

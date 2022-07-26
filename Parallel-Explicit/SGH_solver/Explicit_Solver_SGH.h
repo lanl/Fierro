@@ -245,6 +245,7 @@ public:
 
   //Global arrays with collected data used to print
   const_host_vec_array collected_node_coords;
+  const_host_vec_array collected_node_velocities;
   const_host_vec_array collected_node_densities;
   const_host_elem_conn_array collected_nodes_in_elem;
   
