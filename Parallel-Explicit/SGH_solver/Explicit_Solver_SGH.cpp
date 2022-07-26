@@ -2474,8 +2474,8 @@ void Explicit_Solver_SGH::init_maps(){
   //reset all element map to its re-sorted version
   
   all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Initial_Element_Global_Indices.get_kokkos_view(),0,comm));
-  element_map->describe(*fos,Teuchos::VERB_EXTREME);
-  all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //element_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
 
   //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
   //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
@@ -3698,7 +3698,7 @@ void Explicit_Solver_SGH::tecplot_writer(bool convert_node_order){
 			  myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
-        
+
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
