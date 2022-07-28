@@ -525,6 +525,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               mat_fill,
               boundary,
               mesh,
+              this,
               node_coords,
               node_vel,
               node_mass,
@@ -3192,6 +3193,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   }
   //upper bound that is not much larger
   Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
+  Local_Index_Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
   nboundary_patches = 0;
   bool my_rank_flag;
   size_t remote_count;
@@ -3225,6 +3227,15 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
         Boundary_Patches(nboundary_patches++) = Patch_Nodes(ipatch);
         boundary_patch_to_index[Patch_Nodes(ipatch)] = nboundary_patches-1;
       }
+    }
+  }
+
+  for(int iboundary = 0; iboundary < nboundary_patches; iboundary++){
+    num_nodes_in_patch = Boundary_Patches(iboundary).node_set.size();
+    Local_Index_Boundary_Patches(iboundary) = Boundary_Patches(iboundary);
+    Local_Index_Boundary_Patches(iboundary).node_set = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
+    for(int inode = 0; inode < num_nodes_in_patch; inode++){
+      Local_Index_Boundary_Patches(iboundary).node_set(inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
     }
   }
 

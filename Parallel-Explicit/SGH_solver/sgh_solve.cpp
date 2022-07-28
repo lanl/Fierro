@@ -317,8 +317,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                                 node_mass,
                                 corner_force);
             
-            // ---- apply force boundary conditions to the boundary patches----
-            boundary_velocity(mesh, boundary, node_vel);
+            
 
             //current interface has differing velocity arrays; this equates them until we unify memory
             Explicit_Solver_SGH::vec_array node_velocities_interface = explicit_solver_pointer->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
@@ -343,7 +342,8 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             }); // end parallel for
             
             Kokkos::fence();
-            
+            // ---- apply force boundary conditions to the boundary patches----
+            boundary_velocity(mesh, boundary, node_vel);
             //debug print vector values on a rank
             /*
             if(myrank==0)

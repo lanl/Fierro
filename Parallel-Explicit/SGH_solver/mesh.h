@@ -1018,6 +1018,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <mat_fill_t> &mat_fill,
            const CArrayKokkos <boundary_t> &boundary,
            mesh_t &mesh,
+           Explicit_Solver_SGH *explicit_solver_pointer,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
            DViewCArrayKokkos <double> &node_mass,
@@ -1091,6 +1092,7 @@ void state_file(const mesh_t &mesh,
 
 void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
               mesh_t &mesh,
+              Explicit_Solver_SGH *explicit_solver_pointer,
               const DViewCArrayKokkos <double> &node_coords);
 
 
@@ -1099,11 +1101,13 @@ size_t check_bdy(const size_t patch_gid,
                  const int this_bc_tag,
                  const double val,
                  const mesh_t &mesh,
+                 Explicit_Solver_SGH *explicit_solver_pointer,
                  const DViewCArrayKokkos <double> &node_coords);
 
 
 void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
-                             mesh_t &mesh);
+                             mesh_t &mesh,
+                             Explicit_Solver_SGH *explicit_solver_pointer);
 
 
 void boundary_velocity(const mesh_t &mesh,
