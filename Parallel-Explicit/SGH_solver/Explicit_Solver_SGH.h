@@ -123,7 +123,7 @@ public:
 
   void run(int argc, char *argv[]);
 
-  void read_mesh_ensight(char *MESH, bool convert_node_order);
+  void read_mesh_ensight(char *MESH);
 
   void read_mesh_tecplot(char *MESH);
 
@@ -163,7 +163,7 @@ public:
 
   void init_topology_conditions (int num_sets);
 
-  void tecplot_writer(bool convert_node_order);
+  void tecplot_writer();
 
   //void init_boundary_sets(int num_boundary_sets);
 
@@ -297,6 +297,8 @@ public:
   std::ifstream *in;
   std::streampos before_condition_header;
   int words_per_line, elem_words_per_line;
+  enum node_ordering_convention {IJK, ENSIGHT};
+  node_ordering_convention active_node_ordering_convention;
 
   //file output variables
   int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps

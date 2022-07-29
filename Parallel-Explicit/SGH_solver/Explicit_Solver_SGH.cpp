@@ -182,6 +182,9 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   fuzz = 1.0e-16;  // machine precision
   tiny = 1.0e-12;  // very very small (between real_t and single)
   small= 1.0e-8;   // single precision
+
+  //file readin parameter
+  active_node_ordering_convention = ENSIGHT;
 }
 
 Explicit_Solver_SGH::~Explicit_Solver_SGH(){
@@ -230,7 +233,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     else if(simparam->ansys_dat_input)
       read_mesh_ansys_dat(argv[1]);
     else
-      read_mesh_ensight(argv[1], false);
+      read_mesh_ensight(argv[1]);
 
     //debug
     //return;
@@ -615,7 +618,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
-    tecplot_writer(false);
+    tecplot_writer();
     // vtk_writer();
     /*
     if(myrank==0){
@@ -629,7 +632,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read Ensight format mesh file
 ------------------------------------------------------------------------- */
-void Explicit_Solver_SGH::read_mesh_ensight(char *MESH, bool convert_node_order){
+void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -1116,9 +1119,9 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH, bool convert_node_order)
   int NE = 1; // number of element types in problem
     
 
-  // Convert ijk index system to the finite element numbering convention
+  // Convert ensight index system to the ijk finite element numbering convention
   // for vertices in cell
-  if(convert_node_order){
+  if(active_node_ordering_convention == IJK){
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
   convert_ensight_to_ijk(0) = 0;
@@ -3076,7 +3079,31 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   //inititializes type for the pair variable (finding the iterator type is annoying)
   std::pair<std::set<Node_Combination>::iterator, bool> current_combination;
   std::set<Node_Combination>::iterator it;
+
   
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_node_order(max_nodes_per_element);
+  if(active_node_ordering_convention == ENSIGHT){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    convert_node_order(4) = 4;
+    convert_node_order(5) = 5;
+    convert_node_order(6) = 7;
+    convert_node_order(7) = 6;
+  }
+  else if(active_node_ordering_convention == IJK){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    convert_node_order(4) = 4;
+    convert_node_order(5) = 5;
+    convert_node_order(6) = 6;
+    convert_node_order(7) = 7;
+  }
+
   //compute the number of patches in this MPI rank with repeats for adjacent cells
   npatches_repeat = 0;
 
@@ -3093,7 +3120,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
     element_npatches = elem->nsurfaces;
     npatches_repeat += element_npatches;
   }
-  std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
+  //std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
   //information for all patches on this rank
   CArrayKokkos<Node_Combination,array_layout, device_type, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
   CArrayKokkos<size_t,array_layout, device_type, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
@@ -3109,6 +3136,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   //boundary patches will not try to add nodal combinations twice
   //loop through elements in this rank to find boundary patches
   npatches_repeat = 0;
+  
   if(num_dim==2)
   for(int ielem = 0; ielem < rnum_elem; ielem++){
     element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
@@ -3119,6 +3147,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem2D->surface_to_dof_lid(isurface,inode);
+        local_node_id = convert_node_order(local_node_id);
         Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);
       }
       Node_Combination temp(Surface_Nodes);
@@ -3140,7 +3169,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
 
     }
   }
-
+  
   if(num_dim==3)
   for(int ielem = 0; ielem < rnum_elem; ielem++){
     element_select->choose_3Delem_type(Element_Types(ielem), elem);
@@ -3149,10 +3178,11 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
     for(int isurface = 0; isurface < element_npatches; isurface++){
       num_nodes_in_patch = elem->surface_to_dof_lid.stride(isurface);
       //debug print
-      //std::cout << "NUMBER OF PATCH NODES FOR ELEMENT " << ielem+1 << " ON LOCAL SURFACE " << isurface+1 << " IS " << elem->surface_to_dof_lid.start_index_[isurface+1] << std::endl;
+      //std::cout << "NUMBER OF PATCH NODES FOR ELEMENT " << ielem+1 << " ON LOCAL SURFACE " << isurface+1 << " IS " << num_nodes_in_patch << std::endl;
       Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem->surface_to_dof_lid(isurface,inode);
+        local_node_id = convert_node_order(local_node_id);
         Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);
       }
       Node_Combination temp(Surface_Nodes);
@@ -3164,6 +3194,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       //test if this patch has already been added; if yes set boundary flags to 0
       current_combination = my_patches.insert(Patch_Nodes(npatches_repeat));
       //if the set determines this is a duplicate access the original element's patch id and set flag to 0
+  
       if(current_combination.second==false){
         //set original element flag to 0
         Patch_Boundary_Flags((*current_combination.first).patch_id) = 0;
@@ -3173,7 +3204,6 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       npatches_repeat++;
     }
   }
-
   //debug print of all patches
   /*
   std::cout << " ALL PATCHES " << npatches_repeat <<std::endl;
@@ -3191,6 +3221,8 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   for(int iflags = 0 ; iflags < npatches_repeat; iflags++){
     if(Patch_Boundary_Flags(iflags)) nboundary_patches++;
   }
+
+  //std::cout << " BOUNDARY PATCHES PRE COUNT ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
   //upper bound that is not much larger
   Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
   Local_Index_Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
@@ -3219,6 +3251,8 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
           //test
         } 
       }
+
+      if(remote_count == num_nodes_in_patch) my_rank_flag = false;
       //all nodes were remote
       //if(remote_count == num_nodes_in_patch) my_rank_flag = false;
 
@@ -3240,15 +3274,17 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   }
 
   //debug print of boundary patches
-  /*std::cout << " BOUNDARY PATCHES ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
+  /*
+  std::cout << " BOUNDARY PATCHES ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
   for(int iprint = 0; iprint < nboundary_patches; iprint++){
     std::cout << "Patch " << iprint + 1 << " ";
     for(int j = 0; j < Boundary_Patches(iprint).node_set.size(); j++)
       std::cout << Boundary_Patches(iprint).node_set(j) << " ";
     std::cout << std::endl;
   }
-  std::fflush(stdout);
   */
+  //std::fflush(stdout);
+  
 }
 
 /* ----------------------------------------------------------------------------
@@ -3546,7 +3582,7 @@ void Explicit_Solver_SGH::comm_velocities(){
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
-void Explicit_Solver_SGH::tecplot_writer(bool convert_node_order){
+void Explicit_Solver_SGH::tecplot_writer(){
   
   int num_dim = simparam->num_dim;
 	std::string current_file_name;
@@ -3657,7 +3693,7 @@ void Explicit_Solver_SGH::tecplot_writer(bool convert_node_order){
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
 			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
-          if(convert_node_order)
+          if(active_node_ordering_convention == IJK)
             temp_convert = convert_ijk_to_ensight(ii);
           else
             temp_convert = ii;
@@ -3734,7 +3770,7 @@ void Explicit_Solver_SGH::tecplot_writer(bool convert_node_order){
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
 			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
-          if(convert_node_order)
+          if(active_node_ordering_convention == IJK)
             temp_convert = convert_ijk_to_ensight(ii);
           else
             temp_convert = ii;

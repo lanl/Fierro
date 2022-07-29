@@ -52,6 +52,10 @@ bool operator< (const Node_Combination &object1, const Node_Combination &object2
 class Node_Combination {
 
 private:
+  
+  int num_dim_;
+
+public:
   //Trilinos type definitions
   typedef Tpetra::Map<>::local_ordinal_type LO;
   typedef Tpetra::Map<>::global_ordinal_type GO;
@@ -62,9 +66,6 @@ private:
   using execution_space = typename traits::execution_space;
   using device_type     = typename traits::device_type;
   using memory_traits   = typename traits::memory_traits;
-  int num_dim_;
-
-public:
     
   CArrayKokkos<GO, array_layout, device_type, memory_traits> node_set;
   GO patch_id, element_id; 
@@ -98,13 +99,20 @@ public:
     if(this_size!=not_this.node_set.size())
       return false;
 
+    CArrayKokkos<GO, array_layout, device_type, memory_traits> sort_set1(this_size);
+    CArrayKokkos<GO, array_layout, device_type, memory_traits> sort_set2(this_size);
+    for(int i = 0; i < this_size; i++){
+      sort_set1(i) = this->node_set(i);
+      sort_set2(i) = not_this.node_set(i);
+    }
+
     //check if the nodes in the set are the same; sort them to simplify
-    std::sort(this->node_set.pointer(),this->node_set.pointer()+this->node_set.size());
-    std::sort(not_this.node_set.pointer(),not_this.node_set.pointer()+not_this.node_set.size());\
+    std::sort(sort_set1.pointer(),sort_set1.pointer()+sort_set1.size());
+    std::sort(sort_set2.pointer(),sort_set2.pointer()+sort_set2.size());\
 
     //loop through the sorted nodes to check for equivalence
     for(int i = 0; i < this_size; i++)
-      if(this->node_set(i)!=not_this.node_set(i)) return false;
+      if(sort_set1(i)!=sort_set2(i)) return false;
 
     return true;
     
