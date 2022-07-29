@@ -596,6 +596,8 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
 	
         // finde the number of patches_in_set
         size_t num_bdy_patches_in_set = mesh.bdy_patches_in_set.stride(bdy_set);
+
+        mesh.num_bdy_nodes_in_set(bdy_set) = 0;
         
         // Loop over boundary patches in boundary set
         for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
