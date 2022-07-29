@@ -169,6 +169,166 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
         
+        // ---------------------------------------------------------------------
+        // build mesh colors for load balancing
+        // ---------------------------------------------------------------------
+        
+        DynamicRaggedRightArrayKokkos <size_t> elems_in_color(2, mesh.num_elems);
+        DCArrayKokkos <size_t> num_elems_in_color(2);
+
+        CArrayKokkos <double> max_eign_val(mesh.num_elems);
+
+        // calculate mesh coloring on cycle 0 and every 1000 cycles
+        if (cycle%1000==1){
+            
+            // strain rate threshold to place elem_gid's in bin 0 or 1
+            double threshold = 0.01;
+            
+            
+            // 2D-RZ or 3D Cartesian coordinates
+            if (mesh.num_dims == 2){
+                // RZ coordinates
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+                    
+                    const size_t num_nodes_in_elem = 4;
+
+                    double area_normal_array[8];
+                    double vel_grad_array[9];
+                    double D_array[9];
+                    
+                    ViewCArrayKokkos<double> area_normal(area_normal_array, num_nodes_in_elem, 2);
+                    ViewCArrayKokkos<double> vel_grad(vel_grad_array,3,3);
+                    ViewCArrayKokkos<double> D(D_array,3,3);
+                    
+                    double vol = elem_vol(elem_gid);
+                    
+                    ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid,0),num_nodes_in_elem);
+                    
+                    get_bmatrix2D(area_normal,
+                                  elem_gid,
+                                  node_coords,
+                                  elem_node_gids);
+                    
+                    // facial area of the element
+                    double elem_area = get_area_quad(elem_gid, node_coords, elem_node_gids);
+                    
+                    // --- Calculate the velocity gradient ---
+                    get_velgrad2D(vel_grad,
+                                  elem_node_gids,
+                                  node_vel,
+                                  area_normal,
+                                  elem_vol(elem_gid),
+                                  elem_area,
+                                  elem_gid);
+                    
+                    for(size_t j = 0 ; j < 3 ; j++){
+                        for(size_t k= 0; k < 3; k++){
+                            D(j,k) = 0.5 * ( vel_grad(j,k) + vel_grad(k,j) );
+                        } // end for
+                    } // end for
+                    
+                    
+                    // largest absolute value
+                    max_eign_val(elem_gid) = max_Eigen3D(D);
+
+                }); // end parallel for
+                
+            }
+            else {
+                // 3D Cartesian coordinates
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+                    
+                    const size_t num_nodes_in_elem = 8;
+
+                    double area_normal_array[24];
+                    double vel_grad_array[9];
+                    double D_array[9];
+                    
+                    ViewCArrayKokkos<double> area_normal(area_normal_array, num_nodes_in_elem, 3);
+                    ViewCArrayKokkos<double> vel_grad(vel_grad_array, 3, 3);
+                    ViewCArrayKokkos<double> D(D_array,3,3);
+                    
+                    double vol = elem_vol(elem_gid);
+                    
+                    ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid,0), num_nodes_in_elem);
+                    
+                    get_bmatrix(area_normal,
+                                elem_gid,
+                                node_coords,
+                                elem_node_gids);
+                    
+                    get_velgrad(vel_grad,
+                                elem_node_gids,
+                                node_vel,
+                                area_normal,
+                                vol,
+                                elem_gid);
+                    
+                  for(size_t j = 0 ; j < 3 ; j++){
+                       for(size_t k= 0; k < 3; k++){
+                            D(j,k) = 0.5 * ( vel_grad(j,k) + vel_grad(k,j) );
+                        } // end for
+                   } // end for
+                    
+                    // largest absolute value
+                    max_eign_val(elem_gid) = max_Eigen3D(D);
+                
+                    
+                }); // end parallel for
+                
+            } //end if on dimensions
+            
+            
+            // build coloring array
+            RUN ({
+                
+                size_t count1 = 0;
+                size_t count2 = 0;
+
+                for( size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++ ){
+                        
+                    if (max_eign_val(elem_gid) <= threshold){
+                        // color(0) has the lower strain rate elements
+                        elems_in_color(0, count1) = elem_gid;
+                        count1 += 1;
+                    }
+                    else {
+                        // color(1) has the high strain rate elements
+                        elems_in_color(1, count2) = elem_gid;
+                        count2 += 1;
+                    } // end if
+                    
+                } // end serial for loop
+                
+                num_elems_in_color(0) = count1;
+                num_elems_in_color(1) = count2;
+                
+            });  // end run serial on device
+            Kokkos::fence();
+            num_elems_in_color.update_host();
+            
+            
+            // Using the mesh coloring as following
+            /*
+             
+            for(size_t color = 0; color < 2; color++ ){
+                
+                // loop over the elems in each coloring
+
+                FOR_ALL(elem_lid, 0, num_elems_in_color.host(color), {
+                    size_t elem_gid = elems_in_color(color, elem_lid);
+                    
+                    // coding goes here
+                    
+                });
+                
+            } // end for over colors
+             
+             */
+            
+        } // end if on cycle for making the mesh coloring
+        
+        
         
         // ---------------------------------------------------------------------
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
@@ -530,3 +690,95 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     return;
     
 } // end of SGH solve
+
+
+
+KOKKOS_FUNCTION
+double max_Eigen3D(const ViewCArrayKokkos<double> tensor) {
+    // Compute largest eigenvalue of a 3x3 tensor
+    // Algorithm only works if tensor is symmetric
+    double pi = 3.141592653589793;
+    size_t dim  = tensor.dims(0);
+    double trace, det;
+    trace = tensor(0,0) + tensor(1,1) + tensor(2,2);
+    det = tensor(0,0) * (tensor(1,1)*tensor(2,2) - tensor(1,2)*tensor(2,1));
+    det -= tensor(0,1) * (tensor(1,0)*tensor(2,2) - tensor(1,2)*tensor(2,0));
+    det += tensor(0,2) * (tensor(1,0)*tensor(2,1) - tensor(1,1)*tensor(2,0));
+    trace /= 3.; // easier for computation
+    double p2 = pow((tensor(0,0) - trace),2) + pow((tensor(1,1) - trace),2) +
+                pow((tensor(2,2) - trace),2);
+    p2 += 2. * (pow(tensor(0,1),2) + pow(tensor(0,2),2) + pow(tensor(1,2), 2));
+    
+    double p = sqrt(p2/6.);
+    
+    // check for nan
+    if( det != det){
+        return 0;
+    }
+    
+    if(det == 0){
+        return 0;
+    }
+    
+    double B_array[9];
+    ViewCArrayKokkos<double> B(B_array,3,3);
+    
+    for(int i = 0; i < 3; i++){
+        for(int j = 0; j < 3; j++){
+            
+            if(i == j){
+                B(i,i) = (1/p) * (tensor(i,i) - trace);
+            }
+            else {
+                B(i,j) = (1/p) * tensor(i,j);
+            } // end if
+            
+        } // end for j
+    } // end for i
+    
+    double r, phi;
+    r =  B(0,0) * (B(1,1)*B(2,2) - B(1,2)*B(2,1));
+    r -= B(0,1) * (B(1,0)*B(2,2) - B(1,2)*B(2,0));
+    r += B(0,2) * (B(1,0)*B(2,1) - B(1,1)*B(2,0));
+    r /= 2;
+    // first two cases are to handle numerical difficulties.
+    // In exact math -1 <= r <= 1
+    if (r <= -1){
+        phi = pi/3;
+    }
+    else if (r >= 1){
+        phi = 0;
+    }
+    else {
+        phi = acos(r) / 3.;
+    } // end if
+    
+    double eig1, eig2, eig3;
+    eig1 = trace + 2 * p * cos(phi);
+    eig2 = trace + 2 * p * cos(phi + (2*pi/3));
+    eig3 = 3*trace - (eig1 + eig2);
+    
+    double abs_max_val = fmax( fmax(fabs(eig1), fabs(eig2)), fabs(eig3));
+
+    return abs_max_val;
+}
+
+
+KOKKOS_FUNCTION
+double max_Eigen2D(const ViewCArrayKokkos<double> tensor) {
+    // Compute largest eigenvalue of a 2x2 tensor
+    // Algorithm only works if tensor is symmetric
+    size_t dim  = tensor.dims(0);
+    double trace, det;
+
+    trace = tensor(0,0) + tensor(1,1);
+    det = tensor(0,0)*tensor(1,1) - tensor(0,1)*tensor(1,0);
+    
+    double eig1, eig2;
+    
+    eig1 = (trace/2.) + sqrt(0.25*trace*trace - det);
+    eig2 = (trace/2.) - sqrt(0.25*trace*trace - det);
+    
+    double abs_max_val = fmax(fabs(eig1), fabs(eig2));
+    return abs_max_val;
+} // end 2D max eignen value
