@@ -680,8 +680,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getLocalNumElements();
-  nlocal_nodes = local_nrows;
+  nlocal_nodes = map->getLocalNumElements();
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
   global_size_t max_gid = map->getMaxGlobalIndex();
@@ -696,8 +695,6 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
-  host_vec_array node_velocities = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
   //dual_node_coords.modify_host();
@@ -1246,8 +1243,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getLocalNumElements();
-  nlocal_nodes = local_nrows;
+  nlocal_nodes = map->getLocalNumElements();
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
   global_size_t max_gid = map->getMaxGlobalIndex();
@@ -1733,8 +1729,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
   }
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getLocalNumElements();
-  nlocal_nodes = local_nrows;
+  nlocal_nodes = map->getLocalNumElements();
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
   global_size_t max_gid = map->getMaxGlobalIndex();
@@ -2687,6 +2682,8 @@ void Explicit_Solver_SGH::repartition_nodes(){
   //update nlocal_nodes and node map
   map = partitioned_map;
   nlocal_nodes = map->getLocalNumElements();
+  //allocate node_velocities
+  node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   
 }
 
@@ -3565,7 +3562,7 @@ void Explicit_Solver_SGH::comm_velocities(){
   Tpetra::Import<LO, GO> importer(map, all_node_map);
   
   
-  host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  const_host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //comms to get ghosts
   all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
