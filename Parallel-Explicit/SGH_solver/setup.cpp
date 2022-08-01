@@ -5,12 +5,14 @@
 #include "matar.h"
 #include "state.h"
 #include "mesh.h"
+#include "Explicit_Solver_SGH.h"
 
 
 void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <mat_fill_t> &mat_fill,
            const CArrayKokkos <boundary_t> &boundary,
            mesh_t &mesh,
+           Explicit_Solver_SGH *explicit_solver_pointer,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
            DViewCArrayKokkos <double> &node_mass,
@@ -38,9 +40,9 @@ void setup(const CArrayKokkos <material_t> &material,
     printf("Num BC's = %lu\n", num_bcs);
     
     // tag boundary patches in the set
-    tag_bdys(boundary, mesh, node_coords);
+    tag_bdys(boundary, mesh, explicit_solver_pointer, node_coords);
 
-    build_boundry_node_sets(boundary, mesh);
+    build_boundry_node_sets(boundary, mesh, explicit_solver_pointer);
     
     // loop over BCs
     for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
@@ -430,6 +432,7 @@ void setup(const CArrayKokkos <material_t> &material,
 // val = plane value, cyl radius, sphere radius
 void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
               mesh_t &mesh,
+              Explicit_Solver_SGH *explicit_solver_pointer,
               const DViewCArrayKokkos <double> &node_coords){
 
     size_t num_dims = mesh.num_dims;
@@ -447,10 +450,10 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
         double val = boundary(bdy_set).value;
         
         // save the boundary patches to this set that are on the plane, spheres, etc.
-        for (size_t bdy_patch_lid=0; bdy_patch_lid<mesh.num_bdy_patches; bdy_patch_lid++){
+        for (size_t bdy_patch_lid=0; bdy_patch_lid < explicit_solver_pointer->nboundary_patches; bdy_patch_lid++){
             
             // save the patch index
-            size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
+            size_t bdy_patch_gid = bdy_patch_lid;
             
             
             // check to see if this patch is on the specified plane
@@ -458,6 +461,7 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
                                          bc_tag_id,
                                          val,
                                          mesh,
+                                         explicit_solver_pointer,
                                          node_coords); // no=0, yes=1
             
             if (is_on_bdy == 1){
@@ -489,6 +493,7 @@ size_t check_bdy(const size_t patch_gid,
                  const int this_bc_tag,
                  const double val,
                  const mesh_t &mesh,
+                 Explicit_Solver_SGH *explicit_solver_pointer,
                  const DViewCArrayKokkos <double> &node_coords){
     
     
@@ -504,8 +509,9 @@ size_t check_bdy(const size_t patch_gid,
     for (size_t patch_node_lid=0; patch_node_lid<mesh.num_nodes_in_patch; patch_node_lid++){
         
         // get the nodal_gid for this node in the patch
-        size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
-        
+        //size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
+        size_t node_gid = explicit_solver_pointer->Local_Index_Boundary_Patches(patch_gid).node_set(patch_node_lid);
+
         for (size_t dim = 0; dim < num_dims; dim++){
             these_patch_coords[dim] = node_coords(1, node_gid, dim);  // (rk, node_gid, dim)
         } // end for dim
@@ -573,7 +579,7 @@ size_t check_bdy(const size_t patch_gid,
 
 
 void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
-                             mesh_t &mesh){
+                             mesh_t &mesh, Explicit_Solver_SGH *explicit_solver_pointer){
     
     
     
@@ -590,6 +596,8 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
 	
         // finde the number of patches_in_set
         size_t num_bdy_patches_in_set = mesh.bdy_patches_in_set.stride(bdy_set);
+
+        mesh.num_bdy_nodes_in_set(bdy_set) = 0;
         
         // Loop over boundary patches in boundary set
         for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
@@ -600,7 +608,7 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
                 // apply boundary condition at nodes on boundary
                 for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
                     
-                    size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                    size_t node_gid = explicit_solver_pointer->Local_Index_Boundary_Patches(patch_gid).node_set(node_lid);
                     
                     temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = -1;
                         
@@ -618,7 +626,7 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
                 // apply boundary condition at nodes on boundary
                 for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
                     
-                    size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                    size_t node_gid = explicit_solver_pointer->Local_Index_Boundary_Patches(patch_gid).node_set(node_lid);
                     
                     if (temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) == -1){
                         

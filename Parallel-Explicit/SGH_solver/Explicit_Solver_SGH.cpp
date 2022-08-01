@@ -182,6 +182,9 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   fuzz = 1.0e-16;  // machine precision
   tiny = 1.0e-12;  // very very small (between real_t and single)
   small= 1.0e-8;   // single precision
+
+  //file readin parameter
+  active_node_ordering_convention = ENSIGHT;
 }
 
 Explicit_Solver_SGH::~Explicit_Solver_SGH(){
@@ -230,7 +233,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     else if(simparam->ansys_dat_input)
       read_mesh_ansys_dat(argv[1]);
     else
-      read_mesh_ensight(argv[1], false);
+      read_mesh_ensight(argv[1]);
 
     //debug
     //return;
@@ -525,6 +528,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               mat_fill,
               boundary,
               mesh,
+              this,
               node_coords,
               node_vel,
               node_mass,
@@ -628,7 +632,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read Ensight format mesh file
 ------------------------------------------------------------------------- */
-void Explicit_Solver_SGH::read_mesh_ensight(char *MESH, bool convert_node_order){
+void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -676,8 +680,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH, bool convert_node_order)
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getLocalNumElements();
-  nlocal_nodes = local_nrows;
+  nlocal_nodes = map->getLocalNumElements();
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
   global_size_t max_gid = map->getMaxGlobalIndex();
@@ -692,8 +695,6 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH, bool convert_node_order)
   
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
-  host_vec_array node_velocities = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
   //dual_node_coords.modify_host();
@@ -1115,9 +1116,9 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH, bool convert_node_order)
   int NE = 1; // number of element types in problem
     
 
-  // Convert ijk index system to the finite element numbering convention
+  // Convert ensight index system to the ijk finite element numbering convention
   // for vertices in cell
-  if(convert_node_order){
+  if(active_node_ordering_convention == IJK){
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
   convert_ensight_to_ijk(0) = 0;
@@ -1242,8 +1243,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getLocalNumElements();
-  nlocal_nodes = local_nrows;
+  nlocal_nodes = map->getLocalNumElements();
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
   global_size_t max_gid = map->getMaxGlobalIndex();
@@ -1729,8 +1729,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
   }
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getLocalNumElements();
-  nlocal_nodes = local_nrows;
+  nlocal_nodes = map->getLocalNumElements();
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
   global_size_t max_gid = map->getMaxGlobalIndex();
@@ -2440,18 +2439,18 @@ void Explicit_Solver_SGH::init_maps(){
   //sort element connectivity so nonoverlaps are sequentially found first
   //define initial sorting of global indices
   
-  //map->describe(*fos,Teuchos::VERB_EXTREME);
-
+  //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
+  
   for (int ielem = 0; ielem < rnum_elem; ielem++){
     Initial_Element_Global_Indices(ielem) = all_element_map->getGlobalElement(ielem);
   }
-
+  
   //re-sort so local elements in the nonoverlapping map are first in storage
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Temp_Nodes(max_nodes_per_element);
   GO temp_element_gid, current_element_gid;
   int last_storage_index = rnum_elem - 1;
   for (int ielem = 0; ielem < nlocal_elem_non_overlapping; ielem++){
-    current_element_gid = all_element_map->getGlobalElement(ielem);
+    current_element_gid = Initial_Element_Global_Indices(ielem);
     //if this element is not part of the non overlap list then send it to the end of the storage and swap the element at the end
     if(!element_map->isNodeGlobalElement(current_element_gid)){
       temp_element_gid = current_element_gid;
@@ -2474,6 +2473,8 @@ void Explicit_Solver_SGH::init_maps(){
   //reset all element map to its re-sorted version
   
   all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Initial_Element_Global_Indices.get_kokkos_view(),0,comm));
+  //element_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
 
   //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
   //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
@@ -2681,6 +2682,8 @@ void Explicit_Solver_SGH::repartition_nodes(){
   //update nlocal_nodes and node map
   map = partitioned_map;
   nlocal_nodes = map->getLocalNumElements();
+  //allocate node_velocities
+  node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   
 }
 
@@ -3073,7 +3076,31 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   //inititializes type for the pair variable (finding the iterator type is annoying)
   std::pair<std::set<Node_Combination>::iterator, bool> current_combination;
   std::set<Node_Combination>::iterator it;
+
   
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_node_order(max_nodes_per_element);
+  if(active_node_ordering_convention == ENSIGHT){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    convert_node_order(4) = 4;
+    convert_node_order(5) = 5;
+    convert_node_order(6) = 7;
+    convert_node_order(7) = 6;
+  }
+  else if(active_node_ordering_convention == IJK){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    convert_node_order(4) = 4;
+    convert_node_order(5) = 5;
+    convert_node_order(6) = 6;
+    convert_node_order(7) = 7;
+  }
+
   //compute the number of patches in this MPI rank with repeats for adjacent cells
   npatches_repeat = 0;
 
@@ -3090,7 +3117,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
     element_npatches = elem->nsurfaces;
     npatches_repeat += element_npatches;
   }
-  std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
+  //std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
   //information for all patches on this rank
   CArrayKokkos<Node_Combination,array_layout, device_type, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
   CArrayKokkos<size_t,array_layout, device_type, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
@@ -3106,6 +3133,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   //boundary patches will not try to add nodal combinations twice
   //loop through elements in this rank to find boundary patches
   npatches_repeat = 0;
+  
   if(num_dim==2)
   for(int ielem = 0; ielem < rnum_elem; ielem++){
     element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
@@ -3116,6 +3144,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem2D->surface_to_dof_lid(isurface,inode);
+        local_node_id = convert_node_order(local_node_id);
         Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);
       }
       Node_Combination temp(Surface_Nodes);
@@ -3137,7 +3166,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
 
     }
   }
-
+  
   if(num_dim==3)
   for(int ielem = 0; ielem < rnum_elem; ielem++){
     element_select->choose_3Delem_type(Element_Types(ielem), elem);
@@ -3146,10 +3175,11 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
     for(int isurface = 0; isurface < element_npatches; isurface++){
       num_nodes_in_patch = elem->surface_to_dof_lid.stride(isurface);
       //debug print
-      //std::cout << "NUMBER OF PATCH NODES FOR ELEMENT " << ielem+1 << " ON LOCAL SURFACE " << isurface+1 << " IS " << elem->surface_to_dof_lid.start_index_[isurface+1] << std::endl;
+      //std::cout << "NUMBER OF PATCH NODES FOR ELEMENT " << ielem+1 << " ON LOCAL SURFACE " << isurface+1 << " IS " << num_nodes_in_patch << std::endl;
       Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem->surface_to_dof_lid(isurface,inode);
+        local_node_id = convert_node_order(local_node_id);
         Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);
       }
       Node_Combination temp(Surface_Nodes);
@@ -3161,6 +3191,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       //test if this patch has already been added; if yes set boundary flags to 0
       current_combination = my_patches.insert(Patch_Nodes(npatches_repeat));
       //if the set determines this is a duplicate access the original element's patch id and set flag to 0
+  
       if(current_combination.second==false){
         //set original element flag to 0
         Patch_Boundary_Flags((*current_combination.first).patch_id) = 0;
@@ -3170,7 +3201,6 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       npatches_repeat++;
     }
   }
-
   //debug print of all patches
   /*
   std::cout << " ALL PATCHES " << npatches_repeat <<std::endl;
@@ -3188,8 +3218,11 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   for(int iflags = 0 ; iflags < npatches_repeat; iflags++){
     if(Patch_Boundary_Flags(iflags)) nboundary_patches++;
   }
+
+  //std::cout << " BOUNDARY PATCHES PRE COUNT ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
   //upper bound that is not much larger
   Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
+  Local_Index_Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
   nboundary_patches = 0;
   bool my_rank_flag;
   size_t remote_count;
@@ -3215,6 +3248,8 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
           //test
         } 
       }
+
+      if(remote_count == num_nodes_in_patch) my_rank_flag = false;
       //all nodes were remote
       //if(remote_count == num_nodes_in_patch) my_rank_flag = false;
 
@@ -3226,16 +3261,27 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
     }
   }
 
+  for(int iboundary = 0; iboundary < nboundary_patches; iboundary++){
+    num_nodes_in_patch = Boundary_Patches(iboundary).node_set.size();
+    Local_Index_Boundary_Patches(iboundary) = Boundary_Patches(iboundary);
+    Local_Index_Boundary_Patches(iboundary).node_set = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
+    for(int inode = 0; inode < num_nodes_in_patch; inode++){
+      Local_Index_Boundary_Patches(iboundary).node_set(inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
+    }
+  }
+
   //debug print of boundary patches
-  /*std::cout << " BOUNDARY PATCHES ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
+  /*
+  std::cout << " BOUNDARY PATCHES ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
   for(int iprint = 0; iprint < nboundary_patches; iprint++){
     std::cout << "Patch " << iprint + 1 << " ";
     for(int j = 0; j < Boundary_Patches(iprint).node_set.size(); j++)
       std::cout << Boundary_Patches(iprint).node_set(j) << " ";
     std::cout << std::endl;
   }
-  std::fflush(stdout);
   */
+  //std::fflush(stdout);
+  
 }
 
 /* ----------------------------------------------------------------------------
@@ -3452,9 +3498,11 @@ void Explicit_Solver_SGH::collect_information(){
   Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
 
   Teuchos::RCP<MV> collected_node_coords_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+  Teuchos::RCP<MV> collected_node_velocities_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
 
   //comms to collect
   collected_node_coords_distributed->doImport(*node_coords_distributed, node_collection_importer, Tpetra::INSERT);
+  collected_node_velocities_distributed->doImport(*node_velocities_distributed, node_collection_importer, Tpetra::INSERT);
 
   //comms to collect FEA module related vector data
   /*
@@ -3488,6 +3536,7 @@ void Explicit_Solver_SGH::collect_information(){
   //set host views of the collected data to print out from
   if(myrank==0){
     collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    collected_node_velocities = collected_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     //collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
@@ -3513,7 +3562,7 @@ void Explicit_Solver_SGH::comm_velocities(){
   Tpetra::Import<LO, GO> importer(map, all_node_map);
   
   
-  host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  const_host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //comms to get ghosts
   all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
@@ -3587,7 +3636,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
 		  myfile << "TITLE=\"results for TO code\"" "\n";
       //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
       //else
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -3608,6 +3657,13 @@ void Explicit_Solver_SGH::tecplot_writer(){
 			  myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
+
+        //velocity print
+        myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
+			  myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
+        if(num_dim==3)
+			  myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
+
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         /*
         for (int imodule = 0; imodule < nfea_modules; imodule++){
@@ -3634,7 +3690,10 @@ void Explicit_Solver_SGH::tecplot_writer(){
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
 			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
-          temp_convert = convert_ijk_to_ensight(ii);
+          if(active_node_ordering_convention == IJK)
+            temp_convert = convert_ijk_to_ensight(ii);
+          else
+            temp_convert = ii;
 				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
 			  }
 			  myfile << " \n";
@@ -3656,7 +3715,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
 		  //output header of the tecplot file
 
 		  myfile << "TITLE=\"results for TO code\" \n";
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -3677,6 +3736,13 @@ void Explicit_Solver_SGH::tecplot_writer(){
 			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
 			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
+
+        //velocity print
+        myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
+			  myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
+        if(num_dim==3)
+			  myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
+
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
@@ -3701,7 +3767,10 @@ void Explicit_Solver_SGH::tecplot_writer(){
 		  for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
 			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
-          temp_convert = convert_ijk_to_ensight(ii);
+          if(active_node_ordering_convention == IJK)
+            temp_convert = convert_ijk_to_ensight(ii);
+          else
+            temp_convert = ii;
 				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
 			  }
 			  myfile << " \n";

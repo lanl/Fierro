@@ -49,17 +49,25 @@ using namespace utils;
     //the set using this is then ordered first according to size of the combinations
     if(size1<object2.node_set.size())
       return true;
+    else if(size1>object2.node_set.size())
+      return false;
     
+    CArrayKokkos<Node_Combination::GO, Node_Combination::array_layout, Node_Combination::device_type, Node_Combination::memory_traits> sort_set1(size1);
+    CArrayKokkos<Node_Combination::GO, Node_Combination::array_layout, Node_Combination::device_type, Node_Combination::memory_traits> sort_set2(size1);
+    for(int i = 0; i < size1; i++){
+      sort_set1(i) = object1.node_set(i);
+      sort_set2(i) = object2.node_set(i);
+    }
     //This part sorts for segments of the set where combinations have the same size
     //define < using the sort of both combinations. If the first nonequal element of the lhs combination, w.r.t to 
     //the corresponding element of the rhs, is less than the respective element of the rhs < evaluates to true
-    std::sort(object1.node_set.get_kokkos_view().data(),object1.node_set.get_kokkos_view().data()+object1.node_set.size());
-    std::sort(object2.node_set.get_kokkos_view().data(),object2.node_set.get_kokkos_view().data()+object2.node_set.size());
+    std::sort(sort_set1.get_kokkos_view().data(),sort_set1.get_kokkos_view().data()+sort_set1.size());
+    std::sort(sort_set2.get_kokkos_view().data(),sort_set2.get_kokkos_view().data()+sort_set2.size());
 
     //loop through the sorted nodes to check for <
     for(int i = 0; i < size1; i++){
-      if(object1.node_set(i)<object2.node_set(i)) return true;
-      else if(object1.node_set(i)==object2.node_set(i)) continue;
+      if(sort_set1(i)<sort_set2(i)) return true;
+      else if(sort_set1(i)==sort_set2(i)) continue;
       else break;
     }
 

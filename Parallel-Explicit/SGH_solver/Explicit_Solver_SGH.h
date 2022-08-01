@@ -123,7 +123,7 @@ public:
 
   void run(int argc, char *argv[]);
 
-  void read_mesh_ensight(char *MESH, bool convert_node_order);
+  void read_mesh_ensight(char *MESH);
 
   void read_mesh_tecplot(char *MESH);
 
@@ -245,6 +245,7 @@ public:
 
   //Global arrays with collected data used to print
   const_host_vec_array collected_node_coords;
+  const_host_vec_array collected_node_velocities;
   const_host_vec_array collected_node_densities;
   const_host_elem_conn_array collected_nodes_in_elem;
   
@@ -254,6 +255,7 @@ public:
   size_t num_boundary_conditions;
   int current_bdy_id;
   CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
+  CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Local_Index_Boundary_Patches;
   std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NTopology_Condition_Patches;
@@ -295,6 +297,8 @@ public:
   std::ifstream *in;
   std::streampos before_condition_header;
   int words_per_line, elem_words_per_line;
+  enum node_ordering_convention {IJK, ENSIGHT};
+  node_ordering_convention active_node_ordering_convention;
 
   //file output variables
   int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
