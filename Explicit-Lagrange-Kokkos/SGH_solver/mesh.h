@@ -1163,6 +1163,15 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t num_elems);
 
 
+KOKKOS_FUNCTION
+double max_Eigen3D(const ViewCArrayKokkos<double> tensor);
+
+
+KOKKOS_FUNCTION
+double max_Eigen2D(const ViewCArrayKokkos<double> tensor);
+
+
+
 void sgh_solve(CArrayKokkos <material_t> &material,
                CArrayKokkos <boundary_t> &boundary,
                mesh_t &mesh,
