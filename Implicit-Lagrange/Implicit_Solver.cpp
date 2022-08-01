@@ -1,3 +1,39 @@
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 
 #include <iostream>
 #include <fstream>
@@ -155,7 +191,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     else if(simparam->ansys_dat_input)
       read_mesh_ansys_dat(argv[1]);
     else
-      read_mesh_ensight(argv[1]);
+      read_mesh_ensight(argv[1], true);
 
     //debug
     //return;
@@ -285,7 +321,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read Ensight format mesh file
 ------------------------------------------------------------------------- */
-void Implicit_Solver::read_mesh_ensight(char *MESH){
+void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -309,24 +345,13 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
 
   //task 0 reads file
   if(myrank==0){
-  in = new std::ifstream();
-  in->open(MESH);  
-    
-  
-  if(simparam->tecplot_input){
-    //skip 2 lines
-    for (int j = 1; j <= 2; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    } //for
-  }
-  else{
+    in = new std::ifstream();
+    in->open(MESH);  
     //skip 8 lines
     for (int j = 1; j <= 8; j++) {
       getline(*in, skip_line);
       std::cout << skip_line << std::endl;
     } //for
-  }
   }
 
   // --- Read the number of nodes in the mesh --- //
@@ -344,7 +369,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getNodeNumElements();
+  global_size_t local_nrows = map->getLocalNumElements();
   nlocal_nodes = local_nrows;
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
@@ -551,8 +576,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
     //broadcast how many nodes were read into this buffer iteration
     MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
 
-    //determine which data to store in the swage mesh members (the local node data)
-    //loop through read buffer
+    //loop through read buffer and store coords in node coords view
     for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
       //set global node id (ensight specific order)
       node_gid = read_index_start + scan_loop;
@@ -784,6 +808,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
 
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
+  if(convert_node_order){
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
   convert_ensight_to_ijk(0) = 0;
@@ -824,7 +849,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH){
       nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
     }
   }
-  
+  }
   //debug print element edof
   /*
   std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
@@ -908,7 +933,7 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getNodeNumElements();
+  global_size_t local_nrows = map->getLocalNumElements();
   nlocal_nodes = local_nrows;
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
@@ -1395,7 +1420,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   }
 
   // set the vertices in the mesh read in
-  global_size_t local_nrows = map->getNodeNumElements();
+  global_size_t local_nrows = map->getLocalNumElements();
   nlocal_nodes = local_nrows;
   //populate local row offset data from global data
   global_size_t min_gid = map->getMinGlobalIndex();
@@ -2200,7 +2225,7 @@ void Implicit_Solver::init_maps(){
 
   //debug print of views node indices
   //std::cout << "Local View of All Nodes on Task " << myrank <<std::endl;
-  //for(int inode=0; inode < all_node_map->getNodeNumElements(); inode++){
+  //for(int inode=0; inode < all_node_map->getLocalNumElements(); inode++){
     //std::cout << "node "<<all_node_map->getGlobalElement(inode) << " } " ;
     //std::cout << dual_all_node_coords.view_host()(inode,0) << " " << dual_all_node_coords.view_host()(inode,1) << " " << dual_all_node_coords.view_host()(inode,2) << " " << std::endl;
   //}
@@ -2307,7 +2332,7 @@ void Implicit_Solver::repartition_nodes(){
 
   //update nlocal_nodes and node map
   map = partitioned_map;
-  nlocal_nodes = map->getNodeNumElements();
+  nlocal_nodes = map->getLocalNumElements();
   
 }
 

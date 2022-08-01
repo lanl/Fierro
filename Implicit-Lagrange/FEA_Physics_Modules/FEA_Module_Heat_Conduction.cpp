@@ -1,3 +1,39 @@
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 
 #include <iostream>
 #include <fstream>
@@ -112,9 +148,9 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
   //local variable for host view in the dual view
   host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   host_vec_array node_temperatures = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  for(int init = 0; init < local_dof_map->getNodeNumElements(); init++)
+  for(int init = 0; init < local_dof_map->getLocalNumElements(); init++)
     node_temperatures(init,0) = 0;
-  for(int init = 0; init < all_dof_map->getNodeNumElements(); init++)
+  for(int init = 0; init < all_dof_map->getLocalNumElements(); init++)
     all_node_temperatures(init,0) = 0;
 
   //construct specific dof map here if needed (more than one dof per node and not the coordinate dof map already provided) from node map
@@ -2140,7 +2176,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   
   //initialize RHS vector
   //initialize RHS vector
-  for(int i=0; i < local_dof_map->getNodeNumElements(); i++)
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++)
     adjoint_equation_RHS_view(i,0) = 0;
   
   //sum components of direction vector
@@ -2347,7 +2383,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   }//element index loop
   
   //set adjoint equation RHS terms to 0 if they correspond to a boundary constraint DOF index
-  for(int i=0; i < local_dof_map->getNodeNumElements(); i++){
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
     if(Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)
       adjoint_equation_RHS_view(i,0) = 0;
   }
@@ -2905,11 +2941,11 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
 
   //initialize fluxes to 0
   //local variable for host view in the dual view
-  for(int init = 0; init < map->getNodeNumElements(); init++)
+  for(int init = 0; init < map->getLocalNumElements(); init++)
     for(int iflux = 0; iflux < Brows; iflux++)
       node_heat_fluxes(init,iflux) = 0;
 
-  for(int init = 0; init < all_node_map->getNodeNumElements(); init++)
+  for(int init = 0; init < all_node_map->getLocalNumElements(); init++)
     for(int iflux = 0; iflux < Brows; iflux++)
       all_node_heat_fluxes(init,iflux) = 0;
   

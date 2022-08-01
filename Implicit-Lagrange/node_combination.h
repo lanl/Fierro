@@ -1,3 +1,40 @@
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
+ 
 #ifndef NODE_COMBINATION_H
 #define NODE_COMBINATION_H  
 
@@ -15,6 +52,10 @@ bool operator< (const Node_Combination &object1, const Node_Combination &object2
 class Node_Combination {
 
 private:
+  
+  int num_dim_;
+
+public:
   //Trilinos type definitions
   typedef Tpetra::Map<>::local_ordinal_type LO;
   typedef Tpetra::Map<>::global_ordinal_type GO;
@@ -25,9 +66,6 @@ private:
   using execution_space = typename traits::execution_space;
   using device_type     = typename traits::device_type;
   using memory_traits   = typename traits::memory_traits;
-  int num_dim_;
-
-public:
     
   CArrayKokkos<GO, array_layout, device_type, memory_traits> node_set;
   GO patch_id, element_id; 
@@ -61,13 +99,20 @@ public:
     if(this_size!=not_this.node_set.size())
       return false;
 
+    CArrayKokkos<GO, array_layout, device_type, memory_traits> sort_set1(this_size);
+    CArrayKokkos<GO, array_layout, device_type, memory_traits> sort_set2(this_size);
+    for(int i = 0; i < this_size; i++){
+      sort_set1(i) = this->node_set(i);
+      sort_set2(i) = not_this.node_set(i);
+    }
+
     //check if the nodes in the set are the same; sort them to simplify
-    std::sort(this->node_set.pointer(),this->node_set.pointer()+this->node_set.size());
-    std::sort(not_this.node_set.pointer(),not_this.node_set.pointer()+not_this.node_set.size());\
+    std::sort(sort_set1.pointer(),sort_set1.pointer()+sort_set1.size());
+    std::sort(sort_set2.pointer(),sort_set2.pointer()+sort_set2.size());\
 
     //loop through the sorted nodes to check for equivalence
     for(int i = 0; i < this_size; i++)
-      if(this->node_set(i)!=not_this.node_set(i)) return false;
+      if(sort_set1(i)!=sort_set2(i)) return false;
 
     return true;
     

@@ -1,6 +1,7 @@
 #!/bin/bash
 cmake -DCMAKE_BUILD_TYPE=RELEASE \
 -DTrilinos_MUST_FIND_ALL_TPL_LIBS=TRUE \
+-DCMAKE_CXX_STANDARD:STRING=17 \
 -DTPL_ENABLE_MPI=ON \
 -DTPL_BLAS_LIBRARIES=/usr/lib/x86_64-linux-gnu/blas/libblas.so.3.7.1 \
 -DTPL_LAPACK_LIBRARIES=/usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.7.1 \

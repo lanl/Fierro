@@ -1,3 +1,39 @@
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 
 #include <iostream>
 #include <string>
@@ -84,7 +120,7 @@ FEA_Module_Inertial::~FEA_Module_Inertial(){}
 
 void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_densities, bool max_flag){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //initialize memory for volume storage
   host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   if(!nodal_density_flag) compute_element_volumes();
@@ -279,7 +315,7 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
 
 void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -449,7 +485,7 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
 
 void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //initialize memory for volume storage
   host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   host_vec_array Element_Moments;
@@ -656,7 +692,7 @@ void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_de
 
 void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, int moment_component){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -834,7 +870,7 @@ void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_v
 
 void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //initialize memory for volume storage
   host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   host_vec_array Element_Moments_of_Inertia;
@@ -1076,7 +1112,7 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
 
 void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, int inertia_component){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1285,7 +1321,7 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
 
 void FEA_Module_Inertial::compute_element_volumes(){
   //local number of uniquely assigned elements
-  size_t nonoverlap_nelements = element_map->getNodeNumElements();
+  size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
