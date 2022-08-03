@@ -3579,6 +3579,94 @@ void Explicit_Solver_SGH::comm_velocities(){
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
+void Explicit_Solver_SGH::parallel_tecplot_writer(){
+  int num_dim = simparam->num_dim;
+	std::string current_file_name;
+	std::string base_file_name= "TecplotTO";
+  std::string base_file_name_undeformed= "TecplotTO_undeformed";
+  std::stringstream current_line_stream;
+  std::string current_line;
+	std::string file_extension= ".dat";
+  std::string file_count;
+	std::stringstream count_temp;
+  int time_step = 0;
+  int temp_convert;
+  int noutput, nvector;
+  bool displace_geometry;
+   /*
+  if(displacement_module!=-1)
+    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+  
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->compute_output();
+  }
+  */
+  // Convert ijk index system to the finite element numbering convention
+  // for vertices in cell
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
+  convert_ijk_to_ensight(0) = 0;
+  convert_ijk_to_ensight(1) = 1;
+  convert_ijk_to_ensight(2) = 3;
+  convert_ijk_to_ensight(3) = 2;
+  convert_ijk_to_ensight(4) = 4;
+  convert_ijk_to_ensight(5) = 5;
+  convert_ijk_to_ensight(6) = 7;
+  convert_ijk_to_ensight(7) = 6;
+
+  MPI_File myfile_parallel;
+  //initial undeformed geometry
+  count_temp.str("");
+  count_temp << file_index;
+  //file_index++;
+	file_count = count_temp.str();
+  if(displace_geometry&&displacement_module>=0)
+    current_file_name = base_file_name_undeformed + file_count + file_extension;
+  else
+    current_file_name = base_file_name + file_count + file_extension;
+  MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), 
+                MPI_MODE_CREATE|MPI_MODE_WRONLY, 
+                MPI_INFO_NULL, &myfile_parallel);
+
+  //output header of the tecplot file
+  if(myrank == 0){
+	  current_line_stream << "TITLE=\"results for FEA simulation\"" "\n";
+    current_line_stream.str(current_line);
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR,&status);
+    //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
+    //else
+    current_line_stream.clear();
+	  current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+    current_line_stream.str(current_line);
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR,&status);
+    /*
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+        for(int ivector = 0; ivector < nvector; ivector++){
+          myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+        }
+      }
+    }
+    */
+    current_line_stream.clear();
+	  current_line_stream << "\n";
+    current_line_stream.str(current_line);
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR,&status);
+
+	  current_line_stream.clear();
+	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+    current_line_stream.str(current_line);
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR,&status);
+  }
+  
+}
+
+/* ----------------------------------------------------------------------
+   Output Model Information in tecplot format
+------------------------------------------------------------------------- */
+
 void Explicit_Solver_SGH::tecplot_writer(){
   
   int num_dim = simparam->num_dim;
