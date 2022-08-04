@@ -3493,11 +3493,11 @@ void Explicit_Solver_SGH::sort_information(){
   Teuchos::RCP<MV> sorted_node_coords_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
   Teuchos::RCP<MV> sorted_node_velocities_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
 
-  //comms to collect
+  //comms to sort
   sorted_node_coords_distributed->doImport(*node_coords_distributed, node_sorting_importer, Tpetra::INSERT);
   sorted_node_velocities_distributed->doImport(*node_velocities_distributed, node_sorting_importer, Tpetra::INSERT);
 
-  //comms to collect FEA module related vector data
+  //comms to sort FEA module related vector data
   /*
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->collect_output(global_reduce_map);
@@ -3505,18 +3505,25 @@ void Explicit_Solver_SGH::sort_information(){
   }
   */
 
-  //collected nodal density information
+  //sorted nodal density information
   Teuchos::RCP<MV> sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
 
-  //comms to collect
+  //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
 
-  //collect element type data
+  //importer from all element map to local distribution
+  Tpetra::Import<LO, GO> element_local_importer(all_element_map, element_map);
+  
+  Teuchos::RCP<MCONN> local_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(element_map, max_nodes_per_element));
 
-  //set host views of the collected data to print out from
+  //comms
+  local_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_local_importer, Tpetra::INSERT);
+
+  //set host views of the communicated data to print out from
   sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  local_nodes_in_elem = local_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
 }
 
@@ -3632,7 +3639,7 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
-  bool displace_geometry;
+  bool displace_geometry = false;
    /*
   if(displacement_module!=-1)
     displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
@@ -3782,8 +3789,47 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   //print buffers at offsets with collective MPI write
   //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+  //MPI_File_close(&myfile_parallel);
   
+  //write element connectivity; reopen to reset offset baseline.
+  //err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_APPEND|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
   
+  MPI_Offset current_stream_position;
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_get_position(myfile_parallel, &current_stream_position);
+
+  //expand print buffer if needed
+  int buffer_size_per_element_line = 11*max_nodes_per_element + 1; //25 width per number plus 6 spaces plus line terminator
+  int nlocal_elements = element_map->getLocalNumElements();
+  GO first_element_global_id = element_map->getGlobalElement(0);
+  if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
+  file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position;
+  /*
+  current_buffer_position = 0;
+  for (int elementline = 0; elementline < nlocal_elements; elementline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		for (int ii = 0; ii < max_nodes_per_element; ii++) {
+      if(active_node_ordering_convention == IJK)
+        temp_convert = convert_ijk_to_ensight(ii);
+      else
+        temp_convert = ii;
+				current_line_stream << std::setw(10) << local_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+		}
+		current_line_stream << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+  */
+  MPI_File_close(&myfile_parallel);
 
 }
 

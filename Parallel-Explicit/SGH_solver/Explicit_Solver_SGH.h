@@ -234,6 +234,7 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
   Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
+  Teuchos::RCP<MCONN> local_nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
@@ -256,6 +257,7 @@ public:
   const_host_vec_array sorted_node_velocities;
   const_host_vec_array sorted_node_densities;
   const_host_elem_conn_array collected_nodes_in_elem;
+  const_host_elem_conn_array local_nodes_in_elem;
   
   //Boundary Conditions Data
   //CArray <Nodal_Combination> Patch_Nodes;
