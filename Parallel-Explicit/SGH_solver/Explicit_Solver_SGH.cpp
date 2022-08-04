@@ -677,7 +677,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
   
   //construct contiguous parallel row map now that we know the number of nodes
-  map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  sorted_map = map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
   nlocal_nodes = map->getLocalNumElements();
@@ -1240,7 +1240,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
   
   //construct contiguous parallel row map now that we know the number of nodes
-  map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  sorted_map = map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
   nlocal_nodes = map->getLocalNumElements();
@@ -1719,7 +1719,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
   MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
   
   //construct contiguous parallel row map now that we know the number of nodes
-  map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  sorted_map = map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
   
   //close and reopen file for second pass now that global node count is known
   if(myrank==0){
@@ -3484,6 +3484,47 @@ int Explicit_Solver_SGH::check_boundary(Node_Combination &Patch_Nodes, int bc_ta
    Collect Nodal Information on Rank 0
 ------------------------------------------------------------------------- */
 
+void Explicit_Solver_SGH::sort_information(){
+  int num_dim = simparam->num_dim;
+  
+  //importer from local node distribution to collected distribution
+  Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
+
+  Teuchos::RCP<MV> sorted_node_coords_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
+  Teuchos::RCP<MV> sorted_node_velocities_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
+
+  //comms to collect
+  sorted_node_coords_distributed->doImport(*node_coords_distributed, node_sorting_importer, Tpetra::INSERT);
+  sorted_node_velocities_distributed->doImport(*node_velocities_distributed, node_sorting_importer, Tpetra::INSERT);
+
+  //comms to collect FEA module related vector data
+  /*
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->collect_output(global_reduce_map);
+    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+  }
+  */
+
+  //collected nodal density information
+  Teuchos::RCP<MV> sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+
+  //comms to collect
+  //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
+
+  //collect element type data
+
+  //set host views of the collected data to print out from
+  sorted_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  sorted_node_velocities = collected_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  sorted_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  
+}
+
+/* ----------------------------------------------------------------------
+   Collect Nodal Information on Rank 0
+------------------------------------------------------------------------- */
+
 void Explicit_Solver_SGH::collect_information(){
   GO nreduce_nodes = 0;
   GO nreduce_elem = 0;
@@ -3603,6 +3644,10 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   */
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
+  
+  //comm to vectors with contigously sorted global indices from unsorted zoltan2 repartition map
+  sort_information();
+
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
   convert_ijk_to_ensight(0) = 0;
@@ -3670,7 +3715,63 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
     current_line = current_line_stream.str();
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
+
+  //output nodal data
+  //compute buffer output size and file stream offset for this MPI rank
+  int buffer_size_per_node_line = 26*6;
+  int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  GO first_node_global_id = sorted_map->getGlobalElement(0);
+  CArrayKokkos<char> print_buffer(buffer_size_per_node_line*nlocal_sorted_nodes);
+  MPI_Offset file_stream_offset = buffer_size_per_node_line*first_node_global_id;
+
+  //populate buffer
+  int current_buffer_position = 0;
+  for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+    current_line_stream.str("");
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+
+    //velocity print
+    current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,0) << " ";
+		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
+    
+        //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        /*
+        for (int imodule = 0; imodule < nfea_modules; imodule++){
+          noutput = fea_modules[imodule]->noutput;
+          for(int ioutput = 0; ioutput < noutput; ioutput++){
+            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
+              }
+            }
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
+              }
+            }
+          }
+        }
+        */
+    current_line_stream << std::endl;
+    
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
   
+  //print buffers at offsets with collective MPI write
+
 }
 
 /* ----------------------------------------------------------------------

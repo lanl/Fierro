@@ -140,6 +140,8 @@ public:
 
   void collect_information();
 
+  void sort_information();
+
   //process input to decide TO problem and FEA modules
   void FEA_module_setup();
 
@@ -224,6 +226,7 @@ public:
   long long int num_nodes, num_elem;
   Teuchos::RCP<const Teuchos::Comm<int> > comm;
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > map; //map of node indices
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map; //contiguous map of node indices used for output formats that must be sorted
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > ghost_node_map; //map of node indices with ghosts on each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_node_map; //map of node indices with ghosts on each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > element_map; //non overlapping map of elements owned by each rank used in reduction ops
@@ -249,6 +252,9 @@ public:
   const_host_vec_array collected_node_coords;
   const_host_vec_array collected_node_velocities;
   const_host_vec_array collected_node_densities;
+  const_host_vec_array sorted_node_coords;
+  const_host_vec_array sorted_node_velocities;
+  const_host_vec_array sorted_node_densities;
   const_host_elem_conn_array collected_nodes_in_elem;
   
   //Boundary Conditions Data
