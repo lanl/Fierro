@@ -618,7 +618,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
-    tecplot_writer();
+    parallel_tecplot_writer();
     // vtk_writer();
     /*
     if(myrank==0){
@@ -3627,18 +3627,28 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), 
                 MPI_MODE_CREATE|MPI_MODE_WRONLY, 
                 MPI_INFO_NULL, &myfile_parallel);
+  
+  int err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+  //allows overwriting the file if it already existed in the directory
+    if (err != MPI_SUCCESS)  {
+      if (myrank == 0){
+        MPI_File_delete(current_file_name.c_str(),MPI_INFO_NULL);
+      }
+      MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+    }
 
   //output header of the tecplot file
   if(myrank == 0){
+    //std::cout << current_file_name << std::endl;
 	  current_line_stream << "TITLE=\"results for FEA simulation\"" "\n";
-    current_line_stream.str(current_line);
-    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR,&status);
+    current_line = current_line_stream.str();
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
     //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
     //else
-    current_line_stream.clear();
+    current_line_stream.str("");
 	  current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
-    current_line_stream.str(current_line);
-    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR,&status);
+    current_line = current_line_stream.str();
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
     /*
     for (int imodule = 0; imodule < nfea_modules; imodule++){
       for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -3649,16 +3659,16 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
       }
     }
     */
-    current_line_stream.clear();
+    current_line_stream.str("");
 	  current_line_stream << "\n";
-    current_line_stream.str(current_line);
-    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR,&status);
+    current_line = current_line_stream.str();
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
 
-	  current_line_stream.clear();
+	  current_line_stream.str("");
 	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
 		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
-    current_line_stream.str(current_line);
-    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR,&status);
+    current_line = current_line_stream.str();
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
   
 }
