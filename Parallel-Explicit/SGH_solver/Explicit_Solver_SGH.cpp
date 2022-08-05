@@ -2439,7 +2439,7 @@ void Explicit_Solver_SGH::init_maps(){
   //sort element connectivity so nonoverlaps are sequentially found first
   //define initial sorting of global indices
   
-  //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //element_map->describe(*fos,Teuchos::VERB_EXTREME);
   
   for (int ielem = 0; ielem < rnum_elem; ielem++){
     Initial_Element_Global_Indices(ielem) = all_element_map->getGlobalElement(ielem);
@@ -3512,18 +3512,20 @@ void Explicit_Solver_SGH::sort_information(){
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
 
   //importer from all element map to local distribution
-  Tpetra::Import<LO, GO> element_local_importer(all_element_map, element_map);
   
-  Teuchos::RCP<MCONN> local_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(element_map, max_nodes_per_element));
+  sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
+  Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
+  
+  Teuchos::RCP<MCONN> sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
 
   //comms
-  local_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_local_importer, Tpetra::INSERT);
+  sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
 
   //set host views of the communicated data to print out from
   sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  local_nodes_in_elem = local_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
 }
 
@@ -3798,15 +3800,19 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   MPI_File_sync(myfile_parallel);
   MPI_File_seek(myfile_parallel, 0, MPI_SEEK_END);
   MPI_File_get_position(myfile_parallel, &current_stream_position);
-
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+  
   //expand print buffer if needed
   int buffer_size_per_element_line = 11*max_nodes_per_element + 1; //25 width per number plus 6 spaces plus line terminator
-  int nlocal_elements = element_map->getLocalNumElements();
-  GO first_element_global_id = element_map->getGlobalElement(0);
+  int nlocal_elements = sorted_element_map->getLocalNumElements();
+  GO first_element_global_id = sorted_element_map->getGlobalElement(0);
   if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
     print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
   file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position;
-  /*
+  
   current_buffer_position = 0;
   for (int elementline = 0; elementline < nlocal_elements; elementline++) {
     current_line_stream.str("");
@@ -3816,7 +3822,7 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
         temp_convert = convert_ijk_to_ensight(ii);
       else
         temp_convert = ii;
-				current_line_stream << std::setw(10) << local_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+				current_line_stream << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
 		}
 		current_line_stream << std::endl;
     current_line = current_line_stream.str();
@@ -3828,7 +3834,7 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
 	}
 
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
-  */
+  
   MPI_File_close(&myfile_parallel);
 
 }
