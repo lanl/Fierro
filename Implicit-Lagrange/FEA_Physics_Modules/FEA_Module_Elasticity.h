@@ -121,6 +121,8 @@ public:
   void init_output();
 
   void compute_output();
+  
+  void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
 
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 

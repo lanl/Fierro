@@ -677,7 +677,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
   
   //construct contiguous parallel row map now that we know the number of nodes
-  sorted_map = map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
   nlocal_nodes = map->getLocalNumElements();
@@ -1240,7 +1240,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
   
   //construct contiguous parallel row map now that we know the number of nodes
-  sorted_map = map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   // set the vertices in the mesh read in
   nlocal_nodes = map->getLocalNumElements();
@@ -1719,7 +1719,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
   MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
   
   //construct contiguous parallel row map now that we know the number of nodes
-  sorted_map = map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
   
   //close and reopen file for second pass now that global node count is known
   if(myrank==0){
@@ -3486,8 +3486,9 @@ int Explicit_Solver_SGH::check_boundary(Node_Combination &Patch_Nodes, int bc_ta
 
 void Explicit_Solver_SGH::sort_information(){
   int num_dim = simparam->num_dim;
-  
-  //importer from local node distribution to collected distribution
+  sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+
+  //importer from local node distribution to sorted distribution
   Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
 
   Teuchos::RCP<MV> sorted_node_coords_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
@@ -3511,8 +3512,7 @@ void Explicit_Solver_SGH::sort_information(){
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
 
-  //importer from all element map to local distribution
-  
+  //sort element connectivity
   sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
   Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
   

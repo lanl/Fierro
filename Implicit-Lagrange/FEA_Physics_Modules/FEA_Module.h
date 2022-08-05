@@ -156,6 +156,8 @@ public:
 
   virtual void compute_output(){}
 
+  virtual void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> sorted_map){}
+
   virtual void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> global_reduce_map){}
 
   virtual void node_density_constraints(host_vec_array node_densities_lower_bound){}
@@ -273,10 +275,11 @@ public:
   int noutput;
   bool displaced_mesh_flag;
   std::vector<std::vector<std::string>> output_dof_names;
-  std::vector<const_host_vec_array> collected_module_output;
+  std::vector<const_host_vec_array> module_outputs;
   std::vector<vector_styles> vector_style;
   std::vector<int> output_vector_sizes;
   const_host_vec_array collected_displacement_output;
+  const_host_vec_array sorted_displacement_output;
   
 };
 

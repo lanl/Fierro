@@ -3143,6 +3143,233 @@ void Implicit_Solver::collect_information(){
 }
 
 /* ----------------------------------------------------------------------
+   Sort Information for parallel file output
+------------------------------------------------------------------------- */
+
+void Implicit_Solver::sort_information(){
+  GO nreduce_nodes = 0;
+  GO nreduce_elem = 0;
+  int num_dim = simparam->num_dim;
+
+  //map with sorted continuous global indices
+  sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  
+  //importer from local node distribution to sorted distribution
+  Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
+
+  Teuchos::RCP<MV> sorted_node_coords_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
+
+  //comms to collect
+  sorted_node_coords_distributed->doImport(*node_coords_distributed, node_sorting_importer, Tpetra::INSERT);
+
+  //comms to collect FEA module related vector data
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->sort_output(sorted_map);
+    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+  }
+  
+
+  //collected nodal density information
+  Teuchos::RCP<MV> sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+
+  //comms to collect
+  sorted_node_densities_distributed->doImport(*design_node_densities_distributed, node_sorting_importer, Tpetra::INSERT);
+
+  //sort element connectivity
+  sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
+  Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
+  
+  Teuchos::RCP<MCONN> sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
+
+  //comms
+  sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
+
+  //set host views of the collected data to print out from
+  if(myrank==0){
+    sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   Output Model Information in tecplot format
+------------------------------------------------------------------------- */
+
+void Implicit_Solver::parallel_tecplot_writer(){
+  
+  int num_dim = simparam->num_dim;
+	std::string current_file_name;
+	std::string base_file_name= "TecplotTO";
+  std::string base_file_name_undeformed= "TecplotTO_undeformed";
+  std::stringstream current_line_stream;
+  std::string current_line;
+	std::string file_extension= ".dat";
+  std::string file_count;
+	std::stringstream count_temp;
+  int time_step = 0;
+  int temp_convert;
+  int noutput, nvector;
+  bool displace_geometry;
+  if(displacement_module!=-1)
+    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+  const_host_vec_array current_collected_output;
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->compute_output();
+  }
+  
+  sort_information();
+  // Convert ijk index system to the finite element numbering convention
+  // for vertices in cell
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
+  convert_ijk_to_ensight(0) = 0;
+  convert_ijk_to_ensight(1) = 1;
+  convert_ijk_to_ensight(2) = 3;
+  convert_ijk_to_ensight(3) = 2;
+  convert_ijk_to_ensight(4) = 4;
+  convert_ijk_to_ensight(5) = 5;
+  convert_ijk_to_ensight(6) = 7;
+  convert_ijk_to_ensight(7) = 6;
+
+  //compared to primitive unit cell, assumes orthogonal primitive unit cell
+    if(myrank==0){
+      //initial undeformed geometry
+      count_temp.str("");
+      count_temp << file_index;
+      //file_index++;
+	    file_count = count_temp.str();
+      if(displace_geometry&&displacement_module>=0)
+        current_file_name = base_file_name_undeformed + file_count + file_extension;
+      else
+        current_file_name = base_file_name + file_count + file_extension;
+      std::ofstream myfile (current_file_name.c_str()); //output filestream object for file output
+	    //read in position data
+	    myfile << std::fixed << std::setprecision(8);
+		
+		  //output header of the tecplot file
+
+		  myfile << "TITLE=\"results for TO code\"" "\n";
+      //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
+      //else
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+      for (int imodule = 0; imodule < nfea_modules; imodule++){
+        for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+          nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+          for(int ivector = 0; ivector < nvector; ivector++){
+            myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+          }
+        }
+      }
+      myfile << "\n";
+
+		  myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+			  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+
+		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
+			  myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
+        if(num_dim==3)
+			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
+        myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        for (int imodule = 0; imodule < nfea_modules; imodule++){
+          noutput = fea_modules[imodule]->noutput;
+          for(int ioutput = 0; ioutput < noutput; ioutput++){
+            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
+              }
+            }
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
+              }
+            }
+          }
+        }
+        myfile << std::endl;
+		  }
+		  for (int elementline = 0; elementline < num_elem; elementline++) {
+        //convert node ordering
+			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
+          temp_convert = convert_ijk_to_ensight(ii);
+				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+			  }
+			  myfile << " \n";
+		  }
+      myfile.close();
+    }
+    if(myrank==0&&(displacement_module>=0&&displace_geometry)){
+      //deformed geometry
+      count_temp.str("");
+      count_temp << file_index;
+      file_index++;
+	    file_count = count_temp.str();
+    
+      current_file_name = base_file_name + file_count + file_extension;
+      std::ofstream myfile (current_file_name.c_str()); //output filestream object for file output
+	    //read in position data
+	    myfile << std::fixed << std::setprecision(8);
+		
+		  //output header of the tecplot file
+
+		  myfile << "TITLE=\"results for TO code\" \n";
+		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+      for (int imodule = 0; imodule < nfea_modules; imodule++){
+        for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+          nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+          for(int ivector = 0; ivector < nvector; ivector++){
+            myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+          }
+        }
+      }
+      myfile << "\n";
+
+		  myfile << "ZONE T=\"load step " << time_step + 1 << "\", NODES= " << num_nodes
+			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+
+		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
+			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
+        if(num_dim==3)
+			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
+        myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        for (int imodule = 0; imodule < nfea_modules; imodule++){
+          noutput = fea_modules[imodule]->noutput;
+          for(int ioutput = 0; ioutput < noutput; ioutput++){
+            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
+              }
+            }
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
+              }
+            }
+          }
+        }
+        myfile << std::endl;
+		  }
+		  for (int elementline = 0; elementline < num_elem; elementline++) {
+        //convert node ordering
+			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
+          temp_convert = convert_ijk_to_ensight(ii);
+				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+			  }
+			  myfile << " \n";
+		  }
+      myfile.close();
+    }
+}
+
+/* ----------------------------------------------------------------------
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
