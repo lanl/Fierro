@@ -193,9 +193,11 @@ public:
 
   //output dof data
   //Global arrays with collected data used to print
-  int collected_displacement_index, collected_strain_index, collected_stress_index;
+  int output_displacement_index, output_strain_index, output_stress_index;
   const_host_vec_array collected_node_strains;
   const_host_vec_array collected_node_stresses;
+  const_host_vec_array sorted_node_strains;
+  const_host_vec_array sorted_node_stresses;
 };
 
 #endif // end HEADER_H
