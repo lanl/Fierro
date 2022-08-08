@@ -2795,7 +2795,7 @@ void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
 
-  Teuchos::RCP<MV> sorted_node_temperatures_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
+  Teuchos::RCP<MV> sorted_node_temperatures_distributed = Teuchos::rcp(new MV(sorted_map, 1));
 
   //comms to collect
   sorted_node_temperatures_distributed->doImport(*(node_temperatures_distributed), node_sorting_importer, Tpetra::INSERT);

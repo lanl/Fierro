@@ -3275,7 +3275,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
@@ -3340,7 +3340,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
@@ -3451,7 +3451,7 @@ void Implicit_Solver::tecplot_writer(){
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
@@ -3516,7 +3516,7 @@ void Implicit_Solver::tecplot_writer(){
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){

@@ -4378,6 +4378,7 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
   int strain_count;
 
   //collect nodal displacement information
+  /*
   if(output_displacement_flag){
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> dof_collection_importer(local_dof_map, global_reduce_dof_map);
@@ -4423,6 +4424,7 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
     if(myrank==0)
       module_outputs[collected_strain_index] = collected_node_strains = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
+  */
 }
 
 /* -------------------------------------------------------------------------------------------
@@ -4437,7 +4439,13 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
   bool output_stress_flag = simparam->output_stress_flag;
   int num_dim = simparam->num_dim;
   int strain_count;
+  GO nreduce_dof = 0;
 
+  //global reduce map
+  if(myrank==0) nreduce_dof = num_nodes*num_dim;
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_dof_map =
+  Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nreduce_dof,0,comm));
+  
   //collect nodal displacement information
   if(output_displacement_flag){
   //importer from local node distribution to collected distribution
