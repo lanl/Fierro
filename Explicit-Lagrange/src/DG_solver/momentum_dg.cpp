@@ -10,11 +10,13 @@
 #include "variables.h"
 #include "slam.h"
 
+
 #define PI 3.14159265
 
 using namespace utils;
 
 void momentum_dg(real_t rk_alpha, int cycle){
+  
 
 	// Build the RHS vector for calculating the new vertex velocity
 
@@ -43,6 +45,7 @@ void momentum_dg(real_t rk_alpha, int cycle){
     }
     
 	// Loop over the elements in the mesh.num_elems()
+
 	for(int elem_gid = 0; elem_gid < mesh.num_elems(); elem_gid++){
 
 		// Left and right parts of the RHS
@@ -111,6 +114,7 @@ void momentum_dg(real_t rk_alpha, int cycle){
                                 * mat_pt.stress(gauss_gid, j, k)
                                 * mesh.gauss_pt_det_j(gauss_gid)
                                 * ref_elem.ref_node_g_weights(gauss_lid);
+
                         } // end loop over i
                     } // end loop over j
 	            } // end loop over k
@@ -170,33 +174,32 @@ void momentum_dg(real_t rk_alpha, int cycle){
 
 	        } // end loop over dim
 	    } // end loop over the basis functions in an element
-		
-	    for(int gauss_lid = 0; gauss_lid < mesh.num_gauss_in_elem(); gauss_lid++){
+	
+        for(int gauss_lid = 0; gauss_lid < mesh.num_gauss_in_elem(); gauss_lid++){
 
-        	int node_gid = mesh.nodes_in_elem(elem_gid, gauss_lid);
+            int node_gid = mesh.nodes_in_elem(elem_gid, gauss_lid);
 
             // get the global id of the gauss point
             int gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_lid);
 
             real_t interp_vel[mesh.num_dim()]; 
             for(int i=0; i<mesh.num_dim(); i++) interp_vel[i] = 0.0;
-
+         
             // Sum over the basis times the velocity defined at the basis vertex position
             for (int dim = 0; dim < mesh.num_dim(); dim++){
-                for(int basis_id = 0; basis_id < elem.num_basis(); basis_id++){
-
+    	        for(int basis_id = 0; basis_id < elem.num_basis(); basis_id++){
+  
                     int node_basis_id = elem.vert_node_map(basis_id);
                     int interp_gid = mesh.gauss_in_elem(elem_gid, node_basis_id);
-
                     interp_vel[dim] += mat_pt.velocity(1, interp_gid, dim) * ref_elem.ref_nodal_basis(gauss_lid, basis_id);
                 }
-            }
+            } 
             
-            // Save interpolated velocity back to gauss point
-            for (int dim = 0; dim < mesh.num_dim(); dim++){   
-                mat_pt.velocity(1, gauss_gid, dim) =  interp_vel[dim];
-            }
-
+                // Save interpolated velocity back to gauss point
+                for (int dim = 0; dim < mesh.num_dim(); dim++){   
+                    mat_pt.velocity(1, gauss_gid, dim) =  interp_vel[dim];
+                }
+		
         } // end loop over gauss_lid
         
     } // end loop over elements
@@ -208,7 +211,6 @@ void momentum_dg(real_t rk_alpha, int cycle){
     //RHS_momentum_check[2] << "   " << std::endl;
     
 } // end of routine
-
 
 
 // this function calculates the conservative average velocity in an element
@@ -472,7 +474,7 @@ void gradvel_dg(){
             int node_gid = mesh.nodes_in_elem(elem_gid, gauss_lid);
             
             
-            auto interp_L = CArray <real_t> (mesh.num_dim(),mesh.num_dim());
+            auto interp_L = CArray <real_t> (mesh.num_dim(), mesh.num_dim());
             
             // initialize to 0
             for (int i = 0; i < mesh.num_dim(); i++){

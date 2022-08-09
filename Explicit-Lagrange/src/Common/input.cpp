@@ -24,9 +24,9 @@ void input(){
 
     // ---- Method Choice ---- //
     CCH = false;
-    SGH = true;
-    DGH = false;
-
+    SGH = false;
+    DGH = true;
+    RDH = false;
 
 
     // With DG, p_order =
@@ -34,7 +34,7 @@ void input(){
     //  = 1 uese 3x3x3 (Simpson's rule) quadrature points
     //  = 2 uses 5x5x5 quadrature points
     //  = N uses (2N+1)(2N+1)(2N+1) quadrature points
-    p_order = 1;  // DG will use = 1,2,3,..,N
+    p_order = 2;  // DG will use = 1,2,3,..,N
     
     // With SGH and CCH, p_order = 0 and it is uses a single quadrature point element
     if(SGH == true) p_order = 0;
@@ -42,7 +42,7 @@ void input(){
 
     // ---- time varaibles and cycle info ---- //
     // time step
-    TFINAL = 1.0;  //1.0;
+    TFINAL = 1.4;  //1.0;
     
     //C1 = 1.0;
     //C2 = 1.333;
@@ -51,11 +51,17 @@ void input(){
     dt_max = 1.e-2;
     dt_start = 1.e-5;
     
-    cycle_stop = 100000000;
-
+    cycle_stop = 1000000;
     rk_num_stages = 2;
 
-    rk_storage = 2;
+    if (RDH == false){
+     rk_storage = 2;
+    }
+    else if(RDH == true){
+      rk_storage = 2; // number of sub-time steps and correction steps
+      int num_correction_steps = rk_storage;
+      int num_prediction_steps = rk_storage-1;
+    }
 
     dt_cfl = 0.4;
 
@@ -93,7 +99,7 @@ void input(){
     // 9 = Shockless Noh (fix boundary conditions)
 
     
-    int test_problem = 1;
+    int test_problem = 2;
 
     // SEDOV on a 30x30x30 mesh
     if (test_problem == 1){
@@ -110,7 +116,7 @@ void input(){
         mat_fill[0].mat_id = 0;                // material id
         mat_fill[0].r = 1.0;                   // intial density
         mat_fill[0].ie = 1.e-10;               // intial specific internal energy
-        // mat_fill[0].ie = 10;               // intial specific internal energy
+       // mat_fill[0].ie = 10;               // intial specific internal energy
         mat_fill[0].u = 0.0;                   // initial x-dir velocity
         mat_fill[0].v = 0.0;
         mat_fill[0].w = 0.0;
@@ -258,10 +264,10 @@ void input(){
         // mat_fill[1].x2 = 8.0;           // 
         
         mat_fill[1].y1 = 0.0;          // 
-        mat_fill[1].y2 = 0.25;          // 
+        mat_fill[1].y2 = 0.5;          // 
         
         mat_fill[1].z1 = 0.0;          // 
-        mat_fill[1].z2 = 0.25;          // 
+        mat_fill[1].z2 = 0.5;          // 
         
         mat_fill[1].r = 0.125;            
         
@@ -302,12 +308,12 @@ void input(){
         
         // Tag Y = 1 plane
         boundary[4].surface = bdy::y_plane;
-        boundary[4].value = 0.1;
+        boundary[4].value = 0.5;
         boundary[4].hydro_bc = bdy::reflected;
         
         // Tag Z = 1 plane
         boundary[5].surface = bdy::z_plane;
-        boundary[5].value = 0.1;
+        boundary[5].value = 0.5;
         boundary[5].hydro_bc = bdy::reflected;
     
     }
@@ -797,7 +803,7 @@ void input(){
         
         // Tag Z = 1 plane
         boundary[5].surface = bdy::z_plane;
-        boundary[5].value = 0.1;
+        boundary[5].value = 0.33;
         boundary[5].hydro_bc = bdy::reflected;
         
 

@@ -330,7 +330,7 @@ Power = F_riemann dot u_riemann
             // Sum over the basis times the velocity defined at the basis vertex position
             for (int dim = 0; dim < mesh.num_dim(); dim++){
                 for(int basis_id = 0; basis_id < elem.num_basis(); basis_id++){
-                    
+             
                     int node_basis_id = elem.vert_node_map(basis_id);
                     int interp_gid = mesh.nodes_in_elem(elem_gid, node_basis_id);
                     

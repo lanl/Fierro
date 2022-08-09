@@ -20,6 +20,9 @@ private:
     // **** Node State **** //
     int num_nodes_;
 
+    // Num cells in node
+    int num_cells_in_node_;
+
     // Position
     real_t *node_coords_ = NULL; 
 
@@ -40,6 +43,9 @@ private:
 
     real_t *corner_norm_sum_ = NULL;
 
+    // lo_res at nodes
+    real_t *node_lo_res_ = NULL;
+
 public:
 
     void init_node_state (int num_dim, swage::mesh_t& mesh, int num_rk)
@@ -58,6 +64,8 @@ public:
         node_force_ = new real_t[num_nodes_*num_dim_]();
         node_mass_ = new real_t[num_nodes_]();
         corner_norm_sum_  = new real_t[num_nodes_*num_dim_]();
+        
+        node_lo_res_ = new real_t[num_nodes_*num_dim_*num_cells_in_node_]();
 
     }
 
@@ -97,7 +105,12 @@ public:
     {
         return node_mass_[node_gid];
     }
-
+    
+    inline real_t& lo_res(int node_gid, int cell_gid, int this_dim) const
+    {
+        //---- CHECK THIS ----//
+        return node_lo_res_[num_nodes_*num_dim_ + num_cells_in_node_*num_dim_ + node_gid*num_dim_ + cell_gid*num_dim_ + this_dim];
+    }
 
 
     // deconstructor
@@ -109,6 +122,7 @@ public:
         delete[] corner_norm_sum_;
         delete[] node_force_;
         delete[] node_mass_;
+        delete[] node_lo_res_;
     }
 
 };
@@ -301,6 +315,9 @@ class cell_state_t {
         int num_cells_;
 
         real_t *mass_ = NULL;
+        
+	// add for RD //
+	real_t *lumped_mass_ = NULL;
 
         real_t *density_ = NULL;
 
@@ -362,6 +379,8 @@ class cell_state_t {
             
             mass_ = new real_t[num_cells_]();
 
+	    lumped_mass_ = new real_t[num_cells_*num_nodes_]();
+
             density_ = new real_t[num_cells_]();
 
             pressure_ = new real_t[num_cells_]();
@@ -406,6 +425,11 @@ class cell_state_t {
         {
             return mass_[cell_gid];
         }
+
+	inline real_t& lumped_mass(int cell_gid, int node_gid) const
+	{
+	    return lumped_mass_[cell_gid+num_nodes_];
+	}
 
         inline real_t& density(int cell_gid) const
         {
@@ -505,6 +529,7 @@ class cell_state_t {
 
             delete[] mat_id_;
             delete[] mass_;
+	    delete[] lumped_mass_;
             delete[] density_;
             delete[] pressure_;
 
@@ -1123,4 +1148,22 @@ void calc_average_density();
 void calc_average_velocity();
 void calc_average_specific_total_energy();
 void calc_average_specific_vol();
+void bernstein_vandermonde(ViewCArray <real_t> &B);
+void BV_inv(ViewCArray <real_t> &B, ViewCArray <real_t> &B_inv);
+bool test();
+
+
+// RD code
+void rd_hydro();
+void get_momentum_rd(int pred_step, int correction_step);
+void get_lo_res(real_t sub_dt, int t_step, real_t sub_time);
+void lumped_mass();
+void get_cell_mass();
+void prediction_step(real_t sub_dt, int pred_step);
+void track_rdh(real_t &x, real_t &y);
+void bernstein_vandermonde(ViewCArray <real_t> &B);
+void BV_inv(ViewCArray <real_t> &B, ViewCArray <real_t> &B_inv);
+void get_state();
+bool Bern_test(ViewCArray <real_t> &B, ViewCArray <real_t> &B_inv);
+
 #endif 

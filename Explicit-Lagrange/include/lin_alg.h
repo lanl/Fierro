@@ -1,5 +1,5 @@
 #ifndef LIN_ALG_H
-#define LIN_ALG_H 
+#define LIN_ALG_H
 
 #include <iostream>  // std::cout etc.
 #include "utilities.h"
@@ -82,7 +82,7 @@ void LU_backsub(
 /* LU  invert function */
 /* ------------------- */
 /* 
-Invertation of matrix, using LU decomposed matrix.
+Inversion of matrix, using LU decomposed matrix.
 Description:
 void LU_invert(
     ViewCArray <real_t> &source_mat,  // input matrix
@@ -266,7 +266,7 @@ void LU_backsub(
         for(i = 0; i < n; i++) {
             
             ip = indx(i);
-            std::cout<<" ip = "<< ip <<std::endl;
+            //std::cout<<" ip = "<< ip <<std::endl;
             sum = b(ip);
             b(ip) = b(i);
             
@@ -329,11 +329,6 @@ double LU_determ(
 
     return(res);
 }
-
-
-
-
-
 
 
 

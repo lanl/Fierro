@@ -110,20 +110,23 @@ void energy_dg(real_t rk_alpha, int cyle){
 	        for(int gauss_lid = 0; gauss_lid < mesh.num_gauss_in_elem(); gauss_lid++){
 
 
-	        	// source term for taylor green
-	        	// int node_gid = mesh.nodes_in_elem(elem_gid, gauss_lid);
+	                /*	
+			//--- source term for taylor green ----
+	        	int node_gid = mesh.nodes_in_elem(elem_gid, gauss_lid);
 
-	        	// real_t x = mesh.node_coords(node_gid, 0);
-	        	// real_t y = mesh.node_coords(node_gid, 1);
+	        	real_t x = mesh.node_coords(node_gid, 0);
+	        	real_t y = mesh.node_coords(node_gid, 1);
 
-	        	// real_t front = 3.14159265/(4.0*((7.0/5.0) - 1.0));
+	        	real_t front = 3.14159265/(4.0*((7.0/5.0) - 1.0));
 
 	        	// // Source term for taylor green problem
-	        	// real_t source = front * (cos(3.0*PI*x)*cos(1.0*PI*y) - cos(3.0*PI*y)*(cos(1.0*PI*x)));
+	                real_t source = front * (cos(3.0*PI*x)*cos(1.0*PI*y) - cos(3.0*PI*y)*(cos(1.0*PI*x)));
+                        //----- source term ends here----
+			*/
 
 	        	int gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_lid);
 	        	int node_rid = gauss_lid; // Leveraging internal structured geometry
-
+		        // vel_pt = series expansion (over verts)  ---> mat-pt.vel
 
 	        	for(int i=0; i<mesh.num_dim(); i++){
 	        		for(int j=0; j<mesh.num_dim(); j++){

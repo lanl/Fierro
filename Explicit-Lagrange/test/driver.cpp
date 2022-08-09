@@ -12,7 +12,6 @@
 using namespace utils;
 
 
-
 //==============================================================================
 //   Mesh Variables
 //==============================================================================
@@ -67,6 +66,7 @@ real_t graphics_time = graphics_dt_ival;  // the times for writing graphics dump
 bool CCH = false;
 bool SGH = false;
 bool DGH = false;
+bool RDH = false;
 
 // --- Time and cycling variables ---
 real_t TIME = 0.0;
@@ -156,18 +156,19 @@ int main(int argc, char *argv[]){
     std::cout << "CCH = "<< CCH << std::endl;
     std::cout << "SGH = "<< SGH << std::endl;
     std::cout << "DGH = "<< DGH << std::endl;
+    std::cout << "RDH = "<< RDH << std::endl;
 
     //---- Read intial mesh and build connectivity ----//
     if(CCH == true) setup_cch(argv[1]);
     if(SGH == true) setup_sgh(argv[1]);
     if(DGH == true) setup_dgh(argv[1]);
-
+    //if(RDH == true) setup_rdh(argv[1]);
 
     // calculate the total energy at the beginning of the calculation 
     if(CCH == true) track_cch(ke, ie);
     if(SGH == true) track_sgh(ke, ie);
     if(DGH == true) track_dgh(ke, ie);
-    
+    //if(RDH == true) track_rdh(ke, ie);
 
     // Save total energy at time=0
     te_0 = ke + ie;
@@ -218,6 +219,7 @@ int main(int argc, char *argv[]){
 
     if(DGH == true) dg_hydro();
 
+    //if(RDH == true) rd_hydro();
 
     // graphics output after end of hydro solve
     ensight();
@@ -388,15 +390,48 @@ int main(int argc, char *argv[]){
     fclose(out_matpt_state);
     fclose(out_elem_state);
 
+    if (RDH==true){
+       // print to file energy diagonostics
+        fprintf(out_energy,
+                "Cycle=%d Time=%e ie=%e ke=%e te_error=%e",
+                cycle,
+                TIME,
+                ie,
+                ke,
+                te_0-(ie+ke));
+
+
+        // state output for plotting
+        fprintf(out_cell_state, "#cell_gid x y z r den pres sie vol\n");
+
+        real_t x, y, z;
+
+        for (int cell_gid = 0; cell_gid < mesh.num_cells(); cell_gid++){
+
+            x = mesh.cell_coords(cell_gid, 0);
+            y = mesh.cell_coords(cell_gid, 1);
+            z = mesh.cell_coords(cell_gid, 2);
 
 
 
+            fprintf(out_cell_state, "%i, %e, %e, %e, %e, %e, %e, %e, %e\n",
+                    cell_gid,
+                    x, y, z,
+                    sqrt(x*x + y*y + z*z),
+                    cell_state.density(cell_gid),
+                    cell_state.pressure(cell_gid),
+                    cell_state.ie(1, cell_gid),
+                    mesh.cell_vol(cell_gid)
+                    );
+        }
+
+    }
 
     // calculate the total energy at the end of the calculation
     if(CCH == true) track_cch(ke, ie);
     if(SGH == true) track_sgh(ke, ie);
     if(DGH == true) track_dgh(ke, ie);
-    
+    if(RDH == true) track_rdh(ke, ie);
 
     std::cout<<"Kinetic Energy at time = " << TIME << " is = " << ke <<std::endl;
     std::cout<<"Internal Energy at time = " << TIME << " is = " << ie <<std::endl;

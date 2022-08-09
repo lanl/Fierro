@@ -1,0 +1,107 @@
+FORMAT
+type: ensight gold
+GEOMETRY
+model: data/Outputs_DGH.*****.geo
+VARIABLE
+scalar per element: den data/Outputs_DGH.*****.den
+scalar per element: pres data/Outputs_DGH.*****.pres
+scalar per element: sie data/Outputs_DGH.*****.sie
+scalar per element: vol data/Outputs_DGH.*****.vol
+scalar per element: num_con data/Outputs_DGH.*****.num_con
+scalar per element: mass data/Outputs_DGH.*****.mass
+scalar per element: div data/Outputs_DGH.*****.div
+scalar per element: cs data/Outputs_DGH.*****.cs
+scalar per element: power data/Outputs_DGH.*****.power
+scalar per element: total_energy data/Outputs_DGH.*****.total_energy
+scalar per element: vel_x data/Outputs_DGH.*****.vel_x
+scalar per element: vel_y data/Outputs_DGH.*****.vel_y
+scalar per element: vel_z data/Outputs_DGH.*****.vel_z
+scalar per element: ke data/Outputs_DGH.*****.ke
+scalar per element: force_x data/Outputs_DGH.*****.force_x
+scalar per element: force_y data/Outputs_DGH.*****.force_y
+scalar per element: force_z data/Outputs_DGH.*****.force_z
+scalar per element: cell_mass data/Outputs_DGH.*****.cell_mass
+scalar per element: limiter_den data/Outputs_DGH.*****.limiter_den
+scalar per element: limiter_vel data/Outputs_DGH.*****.limiter_vel
+scalar per element: limiter_te data/Outputs_DGH.*****.limiter_te
+scalar per element: elem_id data/Outputs_DGH.*****.elem_id
+scalar per element: bad_boi data/Outputs_DGH.*****.bad_boi
+scalar per element:  data/Outputs_DGH.*****.
+scalar per element:  data/Outputs_DGH.*****.
+scalar per element:  data/Outputs_DGH.*****.
+scalar per element:  data/Outputs_DGH.*****.
+scalar per element:  data/Outputs_DGH.*****.
+scalar per element:  data/Outputs_DGH.*****.
+scalar per element:  data/Outputs_DGH.*****.
+scalar per element:  data/Outputs_DGH.*****.
+vector per node: pos data/Outputs_DGH.*****.pos
+vector per node: vel data/Outputs_DGH.*****.vel
+vector per node: force data/Outputs_DGH.*****.force
+vector per node: b_mat data/Outputs_DGH.*****.b_mat
+vector per node: num_corner data/Outputs_DGH.*****.num_corner
+vector per node: norm_sum data/Outputs_DGH.*****.norm_sum
+vector per node: mass data/Outputs_DGH.*****.mass
+TIME
+time set: 1
+number of steps:   58
+filename start number: 0
+filename increment: 1
+time values: 
+ 0.00000e+00
+ 2.50000e-02
+ 5.00000e-02
+ 7.50000e-02
+ 1.00000e-01
+ 1.25000e-01
+ 1.50000e-01
+ 1.75000e-01
+ 2.00000e-01
+ 2.25000e-01
+ 2.50000e-01
+ 2.75000e-01
+ 3.00000e-01
+ 3.25000e-01
+ 3.50000e-01
+ 3.75000e-01
+ 4.00000e-01
+ 4.25000e-01
+ 4.50000e-01
+ 4.75000e-01
+ 5.00000e-01
+ 5.25000e-01
+ 5.50000e-01
+ 5.75000e-01
+ 6.00000e-01
+ 6.25000e-01
+ 6.50000e-01
+ 6.75000e-01
+ 7.00000e-01
+ 7.25000e-01
+ 7.50000e-01
+ 7.75000e-01
+ 8.00000e-01
+ 8.25000e-01
+ 8.50000e-01
+ 8.75000e-01
+ 9.00000e-01
+ 9.25000e-01
+ 9.50000e-01
+ 9.75000e-01
+ 1.00000e+00
+ 1.02500e+00
+ 1.05000e+00
+ 1.07500e+00
+ 1.10000e+00
+ 1.12500e+00
+ 1.15000e+00
+ 1.17500e+00
+ 1.20000e+00
+ 1.22500e+00
+ 1.25000e+00
+ 1.27500e+00
+ 1.30000e+00
+ 1.32500e+00
+ 1.35000e+00
+ 1.37500e+00
+ 1.40000e+00
+ 1.40000e+00

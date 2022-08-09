@@ -1,0 +1,51 @@
+FORMAT
+type: ensight gold
+GEOMETRY
+model: data/Outputs_RDH.*****.geo
+VARIABLE
+scalar per element: den data/Outputs_RDH.*****.den
+scalar per element: pres data/Outputs_RDH.*****.pres
+scalar per element: sie data/Outputs_RDH.*****.sie
+scalar per element: vol data/Outputs_RDH.*****.vol
+scalar per element: num_con data/Outputs_RDH.*****.num_con
+scalar per element: mass data/Outputs_RDH.*****.mass
+scalar per element: div data/Outputs_RDH.*****.div
+scalar per element: cs data/Outputs_RDH.*****.cs
+scalar per element: power data/Outputs_RDH.*****.power
+scalar per element: total_energy data/Outputs_RDH.*****.total_energy
+scalar per element: vel_x data/Outputs_RDH.*****.vel_x
+scalar per element: vel_y data/Outputs_RDH.*****.vel_y
+scalar per element: vel_z data/Outputs_RDH.*****.vel_z
+scalar per element: ke data/Outputs_RDH.*****.ke
+scalar per element: force_x data/Outputs_RDH.*****.force_x
+scalar per element: force_y data/Outputs_RDH.*****.force_y
+scalar per element: force_z data/Outputs_RDH.*****.force_z
+scalar per element: cell_mass data/Outputs_RDH.*****.cell_mass
+scalar per element: limiter_den data/Outputs_RDH.*****.limiter_den
+scalar per element: limiter_vel data/Outputs_RDH.*****.limiter_vel
+scalar per element: limiter_te data/Outputs_RDH.*****.limiter_te
+scalar per element: elem_id data/Outputs_RDH.*****.elem_id
+scalar per element: bad_boi data/Outputs_RDH.*****.bad_boi
+scalar per element:  data/Outputs_RDH.*****.
+scalar per element:  data/Outputs_RDH.*****.
+scalar per element:  data/Outputs_RDH.*****.
+scalar per element:  data/Outputs_RDH.*****.
+scalar per element:  data/Outputs_RDH.*****.
+scalar per element:  data/Outputs_RDH.*****.
+scalar per element:  data/Outputs_RDH.*****.
+scalar per element:  data/Outputs_RDH.*****.
+vector per node: pos data/Outputs_RDH.*****.pos
+vector per node: vel data/Outputs_RDH.*****.vel
+vector per node: force data/Outputs_RDH.*****.force
+vector per node: b_mat data/Outputs_RDH.*****.b_mat
+vector per node: num_corner data/Outputs_RDH.*****.num_corner
+vector per node: norm_sum data/Outputs_RDH.*****.norm_sum
+vector per node: mass data/Outputs_RDH.*****.mass
+TIME
+time set: 1
+number of steps:    2
+filename start number: 0
+filename increment: 1
+time values: 
+ 0.00000e+00
+ 0.00000e+00

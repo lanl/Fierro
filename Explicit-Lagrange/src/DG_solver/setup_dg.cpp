@@ -10,7 +10,7 @@
 #include "state.h"
 #include "geometry.h"
 #include "variables.h"
-
+#include "lin_alg.h"
 
 #define PI 3.14159265
 
@@ -72,7 +72,7 @@ void setup_dgh(char *MESH){
     //rk_stage = 0;
     
  
-    std::cout << "number of patchess = " << mesh.num_patches() << std::endl;
+    std::cout << "number of patches = " << mesh.num_patches() << std::endl;
     
     
     // build boundary mesh patches
@@ -114,7 +114,7 @@ void setup_dgh(char *MESH){
         
         for(int node_gid = 0; node_gid < mesh.num_nodes(); node_gid++){
             
-            for(int this_dim = 0; this_dim< mesh.num_dim(); this_dim++){
+            for(int this_dim = 0; this_dim < mesh.num_dim(); this_dim++){
                 node.coords(rk_step, node_gid, this_dim) = mesh.node_coords(node_gid, this_dim);
             }  
         }  
@@ -160,29 +160,29 @@ void setup_dgh(char *MESH){
                 // get the coordinates of the element center
                 for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem(); node_lid++){
                     
-                    // get the node assosicated with the gauss poit
+                    // get the node assosicated with the gauss point //
                     int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
                     elem_coords_x += mesh.node_coords(node_gid, 0)/mesh.num_nodes_in_elem();
                     elem_coords_y += mesh.node_coords(node_gid, 1)/mesh.num_nodes_in_elem();
                     elem_coords_z += mesh.node_coords(node_gid, 2)/mesh.num_nodes_in_elem();
                     
-                } // end loop over guass points
+                } // end loop over guass points //
                 
-                // spherical radius
+                // spherical radius //
                 real_t radius = sqrt( elem_coords_x*elem_coords_x +
                                       elem_coords_y*elem_coords_y +
                                       elem_coords_z*elem_coords_z );
                 
-                // cylinderical radius
+                // cylindrical radius //
                 real_t radius_cyl = sqrt( elem_coords_x*elem_coords_x +
                                           elem_coords_y*elem_coords_y);
                 
             
-                // default is not to fill the element
+                // default is not to fill the element //
                 int fill_this = 0;
                 
-                // check to see if this element should be filled
+                // check to see if this element should be filled //
                 switch(mat_fill[f_id].volume)
                 {
                     case region::global:
@@ -262,7 +262,10 @@ void setup_dgh(char *MESH){
                                 node.vel(rk_stage, node_gid, 0) = mat_fill[f_id].u;
                                 node.vel(rk_stage, node_gid, 1) = mat_fill[f_id].v;
                                 node.vel(rk_stage, node_gid, 2) = mat_fill[f_id].w;
-                            
+
+                                // mat_pt.vel() --> dof.vel() need to be created //
+				// need separate arrays for node and vertex // 
+
                                 break;
                             }
                             case init_conds::radial:
