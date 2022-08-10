@@ -293,7 +293,7 @@ void setup_rd(char *MESH){
                  case init_conds::tg_vortex:
                  {
                    //
- 
+                    
                    node.vel(sub_tstep, node_gid, 0) = sin(PI * mesh.node_coords(node_gid, 0)) * cos(PI * mesh.node_coords(node_gid, 1)); 
                    node.vel(sub_tstep, node_gid, 1) =  -1.0*cos(PI * mesh.node_coords(node_gid, 0)) * sin(PI * mesh.node_coords(node_gid, 1)); 
                    node.vel(sub_tstep, node_gid, 2) = 0.0; 
