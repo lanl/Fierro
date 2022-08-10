@@ -436,6 +436,7 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
               const DViewCArrayKokkos <double> &node_coords){
 
     size_t num_dims = mesh.num_dims;
+    int nboundary_patches = explicit_solver_pointer->nboundary_patches;
     
     //if (bdy_set == mesh.num_bdy_sets){
     //    printf(" ERROR: number of boundary sets must be increased by %zu",
@@ -450,7 +451,7 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
         double val = boundary(bdy_set).value;
         
         // save the boundary patches to this set that are on the plane, spheres, etc.
-        for (size_t bdy_patch_lid=0; bdy_patch_lid < explicit_solver_pointer->nboundary_patches; bdy_patch_lid++){
+        for (size_t bdy_patch_lid=0; bdy_patch_lid < nboundary_patches; bdy_patch_lid++){
             
             // save the patch index
             size_t bdy_patch_gid = bdy_patch_lid;

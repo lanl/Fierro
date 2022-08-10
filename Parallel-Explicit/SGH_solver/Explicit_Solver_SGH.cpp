@@ -3221,8 +3221,8 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
 
   //std::cout << " BOUNDARY PATCHES PRE COUNT ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
   //upper bound that is not much larger
-  Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
-  Local_Index_Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
+  Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits>(nboundary_patches, "Boundary_Patches");
+  Local_Index_Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits>(nboundary_patches, "Boundary_Patches");
   nboundary_patches = 0;
   bool my_rank_flag;
   size_t remote_count;
@@ -3333,8 +3333,8 @@ void Explicit_Solver_SGH::init_topology_conditions (int num_sets){
     std::cout << " Warning: number of boundary conditions = 0";
     return;
   }
-  NTopology_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
-  Topology_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
+  NTopology_Condition_Patches = CArrayKokkos<size_t, array_layout, HostSpace, memory_traits>(num_sets, "NBoundary_Condition_Patches");
+  Topology_Condition_Patches = CArrayKokkos<size_t, array_layout, HostSpace, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
 
   //initialize data
   for(int iset = 0; iset < num_sets; iset++) NTopology_Condition_Patches(iset) = 0;
