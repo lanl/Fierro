@@ -107,7 +107,8 @@ public:
   typedef Kokkos::View<real_t*, Kokkos::LayoutRight, device_type, memory_traits> values_array;
   typedef Kokkos::View<GO*, array_layout, device_type, memory_traits> global_indices_array;
   typedef Kokkos::View<LO*, array_layout, device_type, memory_traits> indices_array;
-  typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
+  //typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
+  typedef MAT::local_graph_device_type::row_map_type::non_const_type row_pointers;
 
   //typedef Kokkos::DualView<real_t**, Kokkos::LayoutLeft, device_type>::t_dev vec_array;
   typedef MV::dual_view_type::t_dev vec_array;

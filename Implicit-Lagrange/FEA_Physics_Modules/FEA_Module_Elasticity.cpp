@@ -1322,7 +1322,7 @@ void FEA_Module_Elasticity::init_assembly(){
   CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
   
   //row offsets with compatible template arguments
-  row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+  Kokkos::View<size_t *,array_layout, device_type, memory_traits> row_offsets = DOF_Graph_Matrix.start_index_;
   row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
   for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
     row_offsets_pass(ipass) = row_offsets(ipass);
@@ -1517,7 +1517,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
   CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
 
   //row offsets
-  row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+  Kokkos::View<size_t *,array_layout, device_type, memory_traits> row_offsets = DOF_Graph_Matrix.start_index_;
   row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
   for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
     row_offsets_pass(ipass) = row_offsets(ipass);
