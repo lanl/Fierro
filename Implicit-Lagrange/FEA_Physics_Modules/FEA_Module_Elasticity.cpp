@@ -2952,7 +2952,7 @@ void FEA_Module_Elasticity::Displacement_Boundary_Conditions(){
   int DOF_BC_type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> displacement(num_dim);
   CArrayKokkos<int, array_layout, device_type, memory_traits> Displacement_Conditions(num_dim);
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
+  CArrayKokkos<int, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
   Displacement_Conditions(0) = X_DISPLACEMENT_CONDITION;
   Displacement_Conditions(1) = Y_DISPLACEMENT_CONDITION;

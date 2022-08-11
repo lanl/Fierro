@@ -1680,7 +1680,7 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
   int DOF_BC_type;
   real_t temperature;
   CArrayKokkos<int, array_layout, device_type, memory_traits> Temperatures_Conditions(num_dim);
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes);
+  CArrayKokkos<int, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes);
   CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
 
   //host view of local nodal temperatures

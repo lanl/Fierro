@@ -116,7 +116,7 @@ private:
 
 public:
   bool nodal_density_flag_;
-  size_t last_comm_step, current_step, last_solve_step;
+  int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Inertial";
 
   MomentOfInertiaConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int inertia_component, real_t constraint_value = 0, bool inequality_flag=true) 

@@ -103,7 +103,7 @@ private:
 
 public:
   bool nodal_density_flag_;
-  size_t last_comm_step, current_step, last_solve_step;
+  int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Inertial";
 
   MassObjective_TopOpt(FEA_Module *FEM, bool nodal_density_flag){
