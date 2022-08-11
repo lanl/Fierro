@@ -52,8 +52,8 @@ using namespace utils;
     else if(size1>object2.node_set.size())
       return false;
     
-    CArrayKokkos<Node_Combination::GO, Node_Combination::array_layout, Node_Combination::device_type, Node_Combination::memory_traits> sort_set1(size1);
-    CArrayKokkos<Node_Combination::GO, Node_Combination::array_layout, Node_Combination::device_type, Node_Combination::memory_traits> sort_set2(size1);
+    CArray<Node_Combination::GO> sort_set1(size1);
+    CArray<Node_Combination::GO> sort_set2(size1);
     for(int i = 0; i < size1; i++){
       sort_set1(i) = object1.node_set(i);
       sort_set2(i) = object2.node_set(i);
