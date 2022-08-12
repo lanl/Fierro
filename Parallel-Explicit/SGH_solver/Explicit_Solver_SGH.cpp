@@ -2398,7 +2398,7 @@ void Explicit_Solver_SGH::init_maps(){
   //remove elements from the local set so that each rank has a unique set of global ids
   
   //local elements belonging to the non-overlapping element distribution to each rank with buffer
-  CArrayKokkos<GO, array_layout, HostSpace, memory_traits> Initial_Element_Global_Indices(rnum_elem);
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> Initial_Element_Global_Indices("Initial_Element_Global_Indices", rnum_elem);
   size_t nonoverlapping_count = 0;
   int my_element_flag;
   //loop through local element set
@@ -2415,7 +2415,7 @@ void Explicit_Solver_SGH::init_maps(){
       }
     }
     if(my_element_flag){
-      Initial_Element_Global_Indices(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
+      Initial_Element_Global_Indices.h_view(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
     }
   }
 
@@ -2432,14 +2432,14 @@ void Explicit_Solver_SGH::init_maps(){
       }
     }
     if(my_element_flag){
-      Initial_Element_Global_Indices(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
+      Initial_Element_Global_Indices.h_view(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
     }
   }
 
   //copy over from buffer to compressed storage
   Kokkos::DualView <GO*, array_layout, device_type, memory_traits> Element_Global_Indices("Element_Global_Indices",nonoverlapping_count);
   for(int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++){
-    Element_Global_Indices.h_view(ibuffer) = Initial_Element_Global_Indices(ibuffer);
+    Element_Global_Indices.h_view(ibuffer) = Initial_Element_Global_Indices.h_view(ibuffer);
   }
   nlocal_elem_non_overlapping = nonoverlapping_count;
   Element_Global_Indices.modify_host();
@@ -2453,7 +2453,7 @@ void Explicit_Solver_SGH::init_maps(){
   //element_map->describe(*fos,Teuchos::VERB_EXTREME);
   
   for (int ielem = 0; ielem < rnum_elem; ielem++){
-    Initial_Element_Global_Indices(ielem) = all_element_map->getGlobalElement(ielem);
+    Initial_Element_Global_Indices(ielem).h_view = all_element_map->getGlobalElement(ielem);
   }
   
   //re-sort so local elements in the nonoverlapping map are first in storage
@@ -2461,15 +2461,15 @@ void Explicit_Solver_SGH::init_maps(){
   GO temp_element_gid, current_element_gid;
   int last_storage_index = rnum_elem - 1;
   for (int ielem = 0; ielem < nlocal_elem_non_overlapping; ielem++){
-    current_element_gid = Initial_Element_Global_Indices(ielem);
+    current_element_gid = Initial_Element_Global_Indices.h_view(ielem);
     //if this element is not part of the non overlap list then send it to the end of the storage and swap the element at the end
     if(!element_map->isNodeGlobalElement(current_element_gid)){
       temp_element_gid = current_element_gid;
       for (int lnode = 0; lnode < max_nodes_per_element; lnode++){
         Temp_Nodes(lnode) = nodes_in_elem(ielem,lnode);
       }
-      Initial_Element_Global_Indices(ielem) = Initial_Element_Global_Indices(last_storage_index);
-      Initial_Element_Global_Indices(last_storage_index) = temp_element_gid;
+      Initial_Element_Global_Indices.h_view(ielem) = Initial_Element_Global_Indices.h_view(last_storage_index);
+      Initial_Element_Global_Indices.h_view(last_storage_index) = temp_element_gid;
       for (int lnode = 0; lnode < max_nodes_per_element; lnode++){
         nodes_in_elem(ielem, lnode) = nodes_in_elem(last_storage_index,lnode);
         nodes_in_elem(last_storage_index,lnode) = Temp_Nodes(lnode);
@@ -2477,13 +2477,15 @@ void Explicit_Solver_SGH::init_maps(){
       last_storage_index--;
 
       //test if swapped element is also not part of the non overlap map; if so lower loop counter to repeat the above
-      temp_element_gid = Initial_Element_Global_Indices(ielem);
+      temp_element_gid = Initial_Element_Global_Indices.h_view(ielem);
       if(!element_map->isNodeGlobalElement(temp_element_gid)) ielem--;
     }
   }
   //reset all element map to its re-sorted version
+  Initial_Element_Global_Indices.modify_host();
+  Initial_Element_Global_Indices.sync_device();
   
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Initial_Element_Global_Indices.get_kokkos_view(),0,comm));
+  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Initial_Element_Global_Indices.d_view,0,comm));
   //element_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
 
