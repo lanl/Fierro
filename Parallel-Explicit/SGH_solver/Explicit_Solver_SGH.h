@@ -216,8 +216,8 @@ public:
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;
-  CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type> ghost_nodes;
-  CArrayKokkos<int, array_layout, device_type, memory_traits> ghost_node_ranks;
+  Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits> ghost_nodes;
+  Kokkos::DualView <int*, array_layout, device_type, memory_traits> ghost_node_ranks;
 
   //Local FEA data including ghosts
   size_t nall_nodes;

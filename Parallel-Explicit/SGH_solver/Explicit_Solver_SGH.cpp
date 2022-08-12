@@ -1095,18 +1095,32 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
 
   //view storage for all local elements connected to local nodes on this rank
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
-
+  //DCArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    All_Element_Global_Indices(ielem) = global_indices_temp[ielem];
+    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
   std::vector<size_t>().swap(global_indices_temp);
   
   //construct overlapping element map (since different ranks can own the same elements due to the local node map)
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.get_kokkos_view(),0,comm));
+  All_Element_Global_Indices.modify_host();
+  All_Element_Global_Indices.sync_device();
+
+  //debug print
+  /*
+  Kokkos::View <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices_pass("All_Element_Global_Indices_pass",rnum_elem);
+  deep_copy(All_Element_Global_Indices_pass, All_Element_Global_Indices.h_view);
+  std::cout << " ------------ELEMENT GLOBAL INDICES ON TASK " << myrank << " --------------"<<std::endl;
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    std::cout << "elem: " << All_Element_Global_Indices_pass(ielem) + 1;
+    std::cout << std::endl;
+  }
+  */
+
+  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
 
   //element type selection (subject to change)
   // ---- Set Element Type ---- //
@@ -1543,18 +1557,20 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
 
   //view storage for all local elements connected to local nodes on this rank
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
-
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    All_Element_Global_Indices(ielem) = global_indices_temp[ielem];
+    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
   std::vector<size_t>().swap(global_indices_temp);
   
   //construct overlapping element map (since different ranks can own the same elements due to the local node map)
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.get_kokkos_view(),0,comm));
+  All_Element_Global_Indices.modify_host();
+  All_Element_Global_Indices.sync_device();
+
+  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
 
 
   //element type selection (subject to change)
@@ -2195,34 +2211,20 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
       nodes_in_elem(ielem, inode) = element_temp[ielem*nodes_per_element + inode];
 
   //view storage for all local elements connected to local nodes on this rank
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
-
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    All_Element_Global_Indices(ielem) = global_indices_temp[ielem];
-
-  //debug print element edof
-  /*
-  std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
-  
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    std::cout << "elem:  " << All_Element_Global_Indices(ielem)+1 << std::endl;
-    for (int lnode = 0; lnode < 8; lnode++){
-        std::cout << "{ ";
-          std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
-        
-        std::cout << " }"<< std::endl;
-    }
-    std::cout << std::endl;
-  }
-  */
+    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
   std::vector<size_t>().swap(global_indices_temp);
   
   //construct overlapping element map (since different ranks can own the same elements due to the local node map)
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.get_kokkos_view(),0,comm));
+  All_Element_Global_Indices.modify_host();
+  All_Element_Global_Indices.sync_device();
+
+  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
 
 
   //element type selection (subject to change)
@@ -2336,12 +2338,12 @@ void Explicit_Solver_SGH::init_maps(){
     //by now the set contains, with no repeats, all the global node indices that are ghosts for this rank
     //now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
     nghost_nodes = ghost_node_set.size();
-    ghost_nodes = CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type>(nghost_nodes, "ghost_nodes");
-    ghost_node_ranks = CArrayKokkos<int, array_layout, device_type, memory_traits>(nghost_nodes, "ghost_node_ranks");
+    ghost_nodes = Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits>("ghost_nodes", nghost_nodes);
+    ghost_node_ranks = Kokkos::DualView <int*, array_layout, device_type, memory_traits>("ghost_node_ranks", nghost_nodes);
     int ighost = 0;
     auto it = ghost_node_set.begin();
     while(it!=ghost_node_set.end()){
-      ghost_nodes(ighost++) = *it;
+      ghost_nodes.h_view(ighost++) = *it;
       it++;
     }
 
@@ -2352,8 +2354,8 @@ void Explicit_Solver_SGH::init_maps(){
 
     //find which mpi rank each ghost node belongs to and store the information in a CArrayKokkos
     //allocate Teuchos Views since they are the only input available at the moment in the map definitions
-    Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.get_kokkos_view().data(), nghost_nodes);
-    Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.get_kokkos_view().data(), nghost_nodes);
+    Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.h_view.data(), nghost_nodes);
+    Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.h_view.data(), nghost_nodes);
     map->getRemoteIndexList(ghost_nodes_pass, ghost_node_ranks_pass);
     
     //debug print of ghost nodes
@@ -2363,8 +2365,12 @@ void Explicit_Solver_SGH::init_maps(){
 
   }
 
+  ghost_nodes.modify_host();
+  ghost_nodes.sync_device();
+  ghost_node_ranks.modify_host();
+  ghost_node_ranks.sync_device();
   // create a Map for ghost node indices
-  ghost_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),ghost_nodes.get_kokkos_view(),0,comm));
+  ghost_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),ghost_nodes.d_view,0,comm));
     
   // Create reference element
   //ref_elem->init(p_order, num_dim, elem->num_basis());
@@ -2374,23 +2380,25 @@ void Explicit_Solver_SGH::init_maps(){
 
   //construct array for all indices (ghost + local)
   nall_nodes = nlocal_nodes + nghost_nodes;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> all_node_indices(nall_nodes, "all_node_indices");
+  //CArrayKokkos<GO, array_layout, device_type, memory_traits> all_node_indices(nall_nodes, "all_node_indices");
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> all_node_indices("all_node_indices", nall_nodes);
   for(int i = 0; i < nall_nodes; i++){
-    if(i<nlocal_nodes) all_node_indices(i) = map->getGlobalElement(i);
-    else all_node_indices(i) = ghost_nodes(i-nlocal_nodes);
+    if(i<nlocal_nodes) all_node_indices.h_view(i) = map->getGlobalElement(i);
+    else all_node_indices.h_view(i) = ghost_nodes.h_view(i-nlocal_nodes);
   }
-  
+  all_node_indices.modify_host();
+  all_node_indices.sync_device();
   //debug print of node indices
   //for(int inode=0; inode < index_counter; inode++)
   //std::cout << " my_reduced_global_indices " << my_reduced_global_indices(inode) <<std::endl;
   
   // create a Map for all the node indices (ghost + local)
-  all_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_node_indices.get_kokkos_view(),0,comm));
+  all_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_node_indices.d_view,0,comm));
 
   //remove elements from the local set so that each rank has a unique set of global ids
   
   //local elements belonging to the non-overlapping element distribution to each rank with buffer
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Initial_Element_Global_Indices(rnum_elem);
+  CArrayKokkos<GO, array_layout, HostSpace, memory_traits> Initial_Element_Global_Indices(rnum_elem);
   size_t nonoverlapping_count = 0;
   int my_element_flag;
   //loop through local element set
@@ -2403,7 +2411,7 @@ void Explicit_Solver_SGH::init_maps(){
       node_gid = nodes_in_elem(ielem, lnode);
       if(ghost_node_map->isNodeGlobalElement(node_gid)){
         local_node_index = ghost_node_map->getLocalElement(node_gid);
-        if(ghost_node_ranks(local_node_index) < myrank) my_element_flag = 0;
+        if(ghost_node_ranks.h_view(local_node_index) < myrank) my_element_flag = 0;
       }
     }
     if(my_element_flag){
@@ -2420,7 +2428,7 @@ void Explicit_Solver_SGH::init_maps(){
       node_gid = nodes_in_elem(ielem, lnode);
       if(ghost_node_map->isNodeGlobalElement(node_gid)){
         local_node_index = ghost_node_map->getLocalElement(node_gid);
-        if(ghost_node_ranks(local_node_index) < myrank) my_element_flag = 0;
+        if(ghost_node_ranks.h_view(local_node_index) < myrank) my_element_flag = 0;
       }
     }
     if(my_element_flag){
@@ -2429,12 +2437,15 @@ void Explicit_Solver_SGH::init_maps(){
   }
 
   //copy over from buffer to compressed storage
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Element_Global_Indices(nonoverlapping_count);
-  for(int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++)
-    Element_Global_Indices(ibuffer) = Initial_Element_Global_Indices(ibuffer);
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> Element_Global_Indices("Element_Global_Indices",nonoverlapping_count);
+  for(int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++){
+    Element_Global_Indices.h_view(ibuffer) = Initial_Element_Global_Indices(ibuffer);
+  }
   nlocal_elem_non_overlapping = nonoverlapping_count;
+  Element_Global_Indices.modify_host();
+  Element_Global_Indices.sync_device();
   //create nonoverlapping element map
-  element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Element_Global_Indices.get_kokkos_view(),0,comm));
+  element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Element_Global_Indices.d_view,0,comm));
 
   //sort element connectivity so nonoverlaps are sequentially found first
   //define initial sorting of global indices
@@ -2446,7 +2457,7 @@ void Explicit_Solver_SGH::init_maps(){
   }
   
   //re-sort so local elements in the nonoverlapping map are first in storage
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Temp_Nodes(max_nodes_per_element);
+  CArrayKokkos<GO, array_layout, HostSpace, memory_traits> Temp_Nodes(max_nodes_per_element);
   GO temp_element_gid, current_element_gid;
   int last_storage_index = rnum_elem - 1;
   for (int ielem = 0; ielem < nlocal_elem_non_overlapping; ielem++){
@@ -2478,13 +2489,15 @@ void Explicit_Solver_SGH::init_maps(){
 
   //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
   //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> local_dof_indices(nlocal_nodes*num_dim, "local_dof_indices");
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> local_dof_indices("local_dof_indices", nlocal_nodes*num_dim);
   for(int i = 0; i < nlocal_nodes; i++){
     for(int j = 0; j < num_dim; j++)
-    local_dof_indices(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
+    local_dof_indices.h_view(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
   }
   
-  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.get_kokkos_view(),0,comm) );
+  local_dof_indices.modify_host();
+  local_dof_indices.sync_device();
+  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.d_view,0,comm) );
 
   //construct dof map that follows from the all_node map (used for distributed matrix and vector objects later)
   CArrayKokkos<GO, array_layout, device_type, memory_traits> all_dof_indices(nall_nodes*num_dim, "all_dof_indices");
@@ -3242,7 +3255,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         node_gid = Patch_Nodes(ipatch).node_set(inode);
         if(!map->isNodeGlobalElement(node_gid)){
-          //if(ghost_node_ranks(global2local_map.get(node_gid))<myrank)
+          //if(ghost_node_ranks.h_view(global2local_map.get(node_gid))<myrank)
           //my_rank_flag = false;
           remote_count++;
           //test
