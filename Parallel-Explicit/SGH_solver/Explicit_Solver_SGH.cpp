@@ -2502,14 +2502,16 @@ void Explicit_Solver_SGH::init_maps(){
   local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.d_view,0,comm) );
 
   //construct dof map that follows from the all_node map (used for distributed matrix and vector objects later)
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> all_dof_indices(nall_nodes*num_dim, "all_dof_indices");
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> all_dof_indices("all_dof_indices", nall_nodes*num_dim);
   for(int i = 0; i < nall_nodes; i++){
     for(int j = 0; j < num_dim; j++)
-    all_dof_indices(i*num_dim + j) = all_node_map->getGlobalElement(i)*num_dim + j;
+    all_dof_indices.h_view(i*num_dim + j) = all_node_map->getGlobalElement(i)*num_dim + j;
   }
   
+  all_dof_indices.modify_host();
+  all_dof_indices.sync_device();
   //pass invalid global count so the map reduces the global count automatically
-  all_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_dof_indices.get_kokkos_view(),0,comm) );
+  all_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_dof_indices.d_view,0,comm) );
 
   //debug print of map
   //debug print
