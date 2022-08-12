@@ -1101,7 +1101,6 @@ size_t check_bdy(const size_t patch_gid,
                  const int this_bc_tag,
                  const double val,
                  const mesh_t &mesh,
-                 Explicit_Solver_SGH *explicit_solver_pointer,
                  const DViewCArrayKokkos <double> &node_coords);
 
 
