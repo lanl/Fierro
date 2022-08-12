@@ -2453,7 +2453,7 @@ void Explicit_Solver_SGH::init_maps(){
   //element_map->describe(*fos,Teuchos::VERB_EXTREME);
   
   for (int ielem = 0; ielem < rnum_elem; ielem++){
-    Initial_Element_Global_Indices(ielem).h_view = all_element_map->getGlobalElement(ielem);
+    Initial_Element_Global_Indices.h_view(ielem) = all_element_map->getGlobalElement(ielem);
   }
   
   //re-sort so local elements in the nonoverlapping map are first in storage
