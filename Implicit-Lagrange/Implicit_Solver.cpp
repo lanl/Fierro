@@ -2404,7 +2404,7 @@ void Implicit_Solver::setup_optimization_problem(){
 
   std::string constraint_base, constraint_name;
   std::stringstream number_union;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArray<GO> Surface_Nodes;
   GO current_node_index;
   LO local_node_index;
   int num_bdy_patches_in_set;
@@ -2715,7 +2715,7 @@ void Implicit_Solver::Get_Boundary_Patches(){
   size_t npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
   int local_node_id;
   int num_dim = simparam->num_dim;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArray<GO> Surface_Nodes;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //Surface_Nodes = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(4, "Surface_Nodes");
   
@@ -2742,8 +2742,8 @@ void Implicit_Solver::Get_Boundary_Patches(){
   }
   std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
   //information for all patches on this rank
-  CArrayKokkos<Node_Combination,array_layout, device_type, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
-  CArrayKokkos<size_t,array_layout, device_type, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
+  CArrayKokkos<Node_Combination,array_layout, HostSpace, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
+  CArrayKokkos<size_t,array_layout, HostSpace, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
   if(myrank == 0)
     std::cout << "Done with boundary patch allocation" << std::endl <<std::flush;
   //initialize boundary patch flags
@@ -2763,7 +2763,7 @@ void Implicit_Solver::Get_Boundary_Patches(){
     //loop through local surfaces
     for(int isurface = 0; isurface < element_npatches; isurface++){
       num_nodes_in_patch = elem2D->surface_to_dof_lid.stride(isurface);
-      Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
+      Surface_Nodes = CArray<GO>(num_nodes_in_patch);
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem2D->surface_to_dof_lid(isurface,inode);
         Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);
@@ -2797,7 +2797,7 @@ void Implicit_Solver::Get_Boundary_Patches(){
       num_nodes_in_patch = elem->surface_to_dof_lid.stride(isurface);
       //debug print
       //std::cout << "NUMBER OF PATCH NODES FOR ELEMENT " << ielem+1 << " ON LOCAL SURFACE " << isurface+1 << " IS " << elem->surface_to_dof_lid.start_index_[isurface+1] << std::endl;
-      Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
+      Surface_Nodes = CArray<GO>(num_nodes_in_patch);
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem->surface_to_dof_lid(isurface,inode);
         Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);

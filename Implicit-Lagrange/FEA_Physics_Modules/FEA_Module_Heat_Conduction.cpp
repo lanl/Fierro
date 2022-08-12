@@ -860,7 +860,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t heat_flux[3], wedge_product, Jacobian, current_density, weight_multiply, inner_product, surface_normal[3], surface_norm, normal_displacement;
   real_t specific_internal_energy_rate;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArray<GO> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
@@ -1681,7 +1681,7 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
   real_t temperature;
   CArrayKokkos<int, array_layout, device_type, memory_traits> Temperatures_Conditions(num_dim);
   CArrayKokkos<int, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes);
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArray<GO> Surface_Nodes;
 
   //host view of local nodal temperatures
   host_vec_array node_temperatures_host = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);

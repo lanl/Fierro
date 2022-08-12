@@ -3119,8 +3119,8 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   }
   //std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
   //information for all patches on this rank
-  CArrayKokkos<Node_Combination,array_layout, device_type, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
-  CArrayKokkos<size_t,array_layout, device_type, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
+  CArrayKokkos<Node_Combination,array_layout, HostSpace, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
+  CArrayKokkos<size_t,array_layout, HostSpace, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
   if(myrank == 0)
     std::cout << "Done with boundary patch allocation" << std::endl <<std::flush;
   //initialize boundary patch flags
@@ -3264,7 +3264,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   for(int iboundary = 0; iboundary < nboundary_patches; iboundary++){
     num_nodes_in_patch = Boundary_Patches(iboundary).node_set.size();
     Local_Index_Boundary_Patches(iboundary) = Boundary_Patches(iboundary);
-    Local_Index_Boundary_Patches(iboundary).node_set = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
+    Local_Index_Boundary_Patches(iboundary).node_set = CArray<GO>(num_nodes_in_patch);
     for(int inode = 0; inode < num_nodes_in_patch; inode++){
       Local_Index_Boundary_Patches(iboundary).node_set(inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
     }
@@ -3403,7 +3403,7 @@ int Explicit_Solver_SGH::check_boundary(Node_Combination &Patch_Nodes, int bc_ta
   size_t node_rid;
   real_t node_coord[num_dim];
   int dim_other1, dim_other2;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> node_on_flags(nnodes, "node_on_flags");
+  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_on_flags(nnodes, "node_on_flags");
 
   //initialize
   for(int inode = 0; inode < nnodes; inode++) node_on_flags(inode) = 0;

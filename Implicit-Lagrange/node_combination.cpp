@@ -61,8 +61,8 @@ using namespace utils;
     //This part sorts for segments of the set where combinations have the same size
     //define < using the sort of both combinations. If the first nonequal element of the lhs combination, w.r.t to 
     //the corresponding element of the rhs, is less than the respective element of the rhs < evaluates to true
-    std::sort(sort_set1.get_kokkos_view().data(),sort_set1.get_kokkos_view().data()+sort_set1.size());
-    std::sort(sort_set2.get_kokkos_view().data(),sort_set2.get_kokkos_view().data()+sort_set2.size());
+    std::sort(sort_set1.pointer(),sort_set1.pointer()+sort_set1.size());
+    std::sort(sort_set2.pointer(),sort_set2.pointer()+sort_set2.size());
 
     //loop through the sorted nodes to check for <
     for(int i = 0; i < size1; i++){
