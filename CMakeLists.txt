@@ -81,9 +81,9 @@ SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
 FIND_PACKAGE(Trilinos REQUIRED)
 
 # Make sure to use same compilers and flags as Trilinos
-#SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
-#SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
-#SET(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
+SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
+SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
+SET(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
 #SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90.exe)
 #SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90)
 
