@@ -254,10 +254,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     real_t hessvec_linear_time = 0;
     
     // ---- Find Boundaries on mesh ---- //
-    init_boundaries();
+    //init_boundaries();
 
     //set boundary conditions
-    generate_tcs();
+    //generate_tcs();
 
     //initialize TO design variable storage
     //init_design();
@@ -643,7 +643,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -694,6 +694,9 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   //local variable for host view in the dual view
   
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+
+  //scope ensures view is destroyed for now to avoid calling a device view with an active host view later
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
@@ -716,8 +719,8 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //x-coords
@@ -902,7 +905,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-  
+  } //end active view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -1087,7 +1090,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   
   //copy temporary element storage to multivector storage
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -1207,7 +1210,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -1272,6 +1275,8 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
 
   //local variable for host view in the dual view
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //active view scrope
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   if(restart_file){
     design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
@@ -1303,8 +1308,8 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //read coords, also density if restarting
@@ -1381,7 +1386,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-
+  }
   //repartition node distribution
   repartition_nodes();
 
@@ -1549,7 +1554,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   }
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -1656,7 +1661,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
   std::string skip_line, read_line, substring, token;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop, nodes_per_element;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop, nodes_per_element;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -1760,6 +1765,8 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
 
   //local variable for host view in the dual view
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //active view scope
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   if(restart_file){
@@ -1789,8 +1796,8 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //second pass to now read node coords with global node map defines
@@ -1893,7 +1900,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-  
+  } //end view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -2203,7 +2210,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
     Element_Types(ielem) = mesh_element_type;
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -2292,6 +2299,7 @@ void Explicit_Solver_SGH::init_maps(){
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int nodes_per_element;
   GO node_gid;
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   
   if(rnum_elem >= 1) {
 
@@ -2525,18 +2533,20 @@ void Explicit_Solver_SGH::init_maps(){
 
   //Count how many elements connect to each local node
   node_nconn_distributed = Teuchos::rcp(new MCONN(map, 1));
-  host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  for(int inode = 0; inode < nlocal_nodes; inode++)
-    node_nconn(inode,0) = 0;
+  //active view scope
+  {
+    host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    for(int inode = 0; inode < nlocal_nodes; inode++)
+      node_nconn(inode,0) = 0;
 
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    for(int inode = 0; inode < nodes_per_element; inode++){
-      node_gid = nodes_in_elem(ielem, inode);
-      if(map->isNodeGlobalElement(node_gid))
-        node_nconn(map->getLocalElement(node_gid),0)++;
+    for(int ielem = 0; ielem < rnum_elem; ielem++){
+      for(int inode = 0; inode < nodes_per_element; inode++){
+        node_gid = nodes_in_elem(ielem, inode);
+        if(map->isNodeGlobalElement(node_gid))
+          node_nconn(map->getLocalElement(node_gid),0)++;
+      }
     }
   }
-
   //create distributed multivector of the local node data and all (local + ghost) node storage
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
@@ -3627,8 +3637,10 @@ void Explicit_Solver_SGH::comm_velocities(){
   //create import object using local node indices map and all indices map
   Tpetra::Import<LO, GO> importer(map, all_node_map);
   
-  
-  const_host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //active view scope
+  {
+    const_host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
   //comms to get ghosts
   all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);

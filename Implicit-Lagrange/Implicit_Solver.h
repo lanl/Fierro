@@ -221,7 +221,7 @@ public:
   dual_vec_array dual_node_coords; //coordinates of the nodes
   dual_vec_array dual_node_densities; //topology optimization design variable
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
-  host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
+  //host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   //CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Forces;

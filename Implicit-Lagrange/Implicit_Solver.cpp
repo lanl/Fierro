@@ -332,7 +332,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -384,6 +384,8 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   //local variable for host view in the dual view
   
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //view scope that ensures local view is destroyed
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
@@ -406,8 +408,8 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //x-coords
@@ -592,7 +594,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
     }
     read_index_start+=BUFFER_LINES;
   }
-  
+  } //end view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -777,7 +779,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   
   //copy temporary element storage to multivector storage
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -883,7 +885,7 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -949,6 +951,8 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
 
   //local variable for host view in the dual view
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //view scope
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   if(restart_file){
     design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
@@ -980,8 +984,8 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //read coords, also density if restarting
@@ -1058,7 +1062,7 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-
+  } //end view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -1226,7 +1230,7 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   }
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -1331,7 +1335,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   std::string skip_line, read_line, substring, token;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop, nodes_per_element;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop, nodes_per_element;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -1436,6 +1440,8 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
 
   //local variable for host view in the dual view
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //view scope
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   if(restart_file){
@@ -1465,8 +1471,8 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //second pass to now read node coords with global node map defines
@@ -1569,7 +1575,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-  
+  } //end view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -1879,7 +1885,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     Element_Types(ielem) = mesh_element_type;
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -1982,7 +1988,8 @@ void Implicit_Solver::init_maps(){
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int nodes_per_element;
   GO node_gid;
-  
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
+
   if(rnum_elem >= 1) {
 
     //Construct set of ghost nodes; start with a buffer with upper limit
