@@ -3334,8 +3334,8 @@ int FEA_Module_Heat_Conduction::solve(){
   //*fos << "Reduced Conductivity Matrix :" << std::endl;
   //Global_Conductivity_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
-  Tpetra::MatrixMarket::Writer<MAT> market_writer();
-  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Conductivity_Matrix, "A_matrix", "Stores conductivity matrix values");
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Conductivity_Matrix, "A_matrix", "Stores conductivity matrix values");
 
   //first pass counts strides for storage
   if(!matrix_bc_reduced){
@@ -3469,8 +3469,8 @@ int FEA_Module_Heat_Conduction::solve(){
     
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
   //debug print
-  Tpetra::MatrixMarket::Writer<MAT> market_writer();
-  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix_reduced.txt", *Global_Conductivity_Matrix, "A_matrix_reduced", "Stores Conductivity matrix values");  
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix_reduced.txt", *Global_Conductivity_Matrix, "A_matrix_reduced", "Stores Conductivity matrix values");  
   //Xpetra::IO<real_t,LO,GO,node_type>WriteLocal("A_matrixlocal.txt", *xA);
   comm->barrier();
   //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
