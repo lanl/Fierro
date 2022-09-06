@@ -250,16 +250,6 @@ public:
   Teuchos::RCP<MV> Global_Element_Densities_Upper_Bound;
   Teuchos::RCP<MV> Global_Element_Densities_Lower_Bound;
   Teuchos::RCP<MV> Global_Element_Densities;
-
-  //Global arrays with collected data used to print
-  const_host_vec_array collected_node_coords;
-  const_host_vec_array collected_node_velocities;
-  const_host_vec_array collected_node_densities;
-  const_host_vec_array sorted_node_coords;
-  const_host_vec_array sorted_node_velocities;
-  const_host_vec_array sorted_node_densities;
-  const_host_elem_conn_array collected_nodes_in_elem;
-  const_host_elem_conn_array sorted_nodes_in_elem;
   
   //Boundary Conditions Data
   //CArray <Nodal_Combination> Patch_Nodes;

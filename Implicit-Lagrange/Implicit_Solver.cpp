@@ -3141,12 +3141,6 @@ void Implicit_Solver::collect_information(){
 
   //collect element type data
 
-  //set host views of the collected data to print out from
-  if(myrank==0){
-    collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -3191,12 +3185,6 @@ void Implicit_Solver::sort_information(){
   //comms
   sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
 
-  //set host views of the collected data to print out from
-  if(myrank==0){
-    sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -3226,6 +3214,9 @@ void Implicit_Solver::parallel_tecplot_writer(){
   }
   
   sort_information();
+  const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
@@ -3402,6 +3393,11 @@ void Implicit_Solver::tecplot_writer(){
   }
   
   collect_information();
+  if(myrank==0){
+    const_host_vec_array collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_elem_conn_array collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
