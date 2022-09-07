@@ -260,7 +260,14 @@ public:
   Teuchos::RCP<MV> Global_Element_Densities_Lower_Bound;
   Teuchos::RCP<MV> Global_Element_Densities;
 
-  
+  //Distributions of data used to print
+  Teuchos::RCP<MV> collected_node_coords_distributed;
+  Teuchos::RCP<MV> collected_node_densities_distributed;
+  Teuchos::RCP<MCONN> collected_nodes_in_elem_distributed;
+  Teuchos::RCP<MV> sorted_node_coords_distributed;
+  Teuchos::RCP<MV> sorted_node_densities_distributed;
+  Teuchos::RCP<MCONN> sorted_nodes_in_elem_distributed;
+
   //Boundary Conditions Data
   //CArray <Nodal_Combination> Patch_Nodes;
   size_t nboundary_patches;

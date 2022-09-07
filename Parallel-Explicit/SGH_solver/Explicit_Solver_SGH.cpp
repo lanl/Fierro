@@ -3567,8 +3567,8 @@ void Explicit_Solver_SGH::collect_information(){
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
 
-  Teuchos::RCP<MV> collected_node_coords_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
-  Teuchos::RCP<MV> collected_node_velocities_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+  collected_node_coords_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+  collected_node_velocities_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
 
   //comms to collect
   collected_node_coords_distributed->doImport(*node_coords_distributed, node_collection_importer, Tpetra::INSERT);
@@ -3583,7 +3583,7 @@ void Explicit_Solver_SGH::collect_information(){
   */
 
   //collected nodal density information
-  Teuchos::RCP<MV> collected_node_densities_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
+  collected_node_densities_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
 
   //comms to collect
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
@@ -3596,7 +3596,7 @@ void Explicit_Solver_SGH::collect_information(){
   //importer from all element map to collected distribution
   Tpetra::Import<LO, GO> element_collection_importer(all_element_map, global_reduce_element_map);
   
-  Teuchos::RCP<MCONN> collected_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(global_reduce_element_map, max_nodes_per_element));
+  collected_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(global_reduce_element_map, max_nodes_per_element));
 
   //comms to collect
   collected_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_collection_importer, Tpetra::INSERT);
@@ -3889,12 +3889,11 @@ void Explicit_Solver_SGH::tecplot_writer(){
   */
   collect_information();
   //set host views of the collected data to print out from
-  if(myrank==0){
-    const_host_vec_array collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    const_host_vec_array collected_node_velocities = collected_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    //const_host_vec_array collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    const_host_elem_conn_array collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
+  const_host_vec_array collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array collected_node_velocities = collected_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //const_host_vec_array collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);

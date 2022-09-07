@@ -533,6 +533,17 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
         // write outputs
         if (write == 1){
+            //interface nodal coordinate data
+            //view scope
+            {
+              Explicit_Solver_SGH::vec_array node_coords_interface = explicit_solver_pointer->node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+              FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
+                for (int idim = 0; idim < num_dims; idim++){
+                  node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
+                }
+              }); // end parallel for
+            } //end view scope
+
             if(myrank==0)
               printf("Writing outputs to file at %f \n", graphics_time);
               /*
