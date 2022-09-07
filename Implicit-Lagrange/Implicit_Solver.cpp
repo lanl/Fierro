@@ -3208,7 +3208,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
   bool displace_geometry;
   if(displacement_module!=-1)
     displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-  const_host_vec_array current_collected_output;
+  const_host_vec_array current_sorted_output;
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->compute_output();
   }
@@ -3265,25 +3265,25 @@ void Implicit_Solver::parallel_tecplot_writer(){
 			  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
+			  myfile << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+			  myfile << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
-        myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+			  myfile << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+        myfile << std::setw(25) << sorted_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
+            current_sorted_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
-                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
+                myfile << std::setw(25) << current_sorted_output(nodeline*nvector + ivector,0) << " ";
               }
             }
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
-                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
+                myfile << std::setw(25) << current_sorted_output(nodeline,ivector) << " ";
               }
             }
           }
@@ -3294,7 +3294,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
         //convert node ordering
 			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
           temp_convert = convert_ijk_to_ensight(ii);
-				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+				  myfile << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
 			  }
 			  myfile << " \n";
 		  }
@@ -3330,25 +3330,25 @@ void Implicit_Solver::parallel_tecplot_writer(){
 			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
+			  myfile << std::setw(25) << sorted_node_coords(nodeline,0) + fea_modules[displacement_module]->sorted_displacement_output(nodeline*num_dim,0) << " ";
+			  myfile << std::setw(25) << sorted_node_coords(nodeline,1) + fea_modules[displacement_module]->sorted_displacement_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
-        myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+			  myfile << std::setw(25) << sorted_node_coords(nodeline,2) + fea_modules[displacement_module]->sorted_displacement_output(nodeline*num_dim + 2,0) << " ";
+        myfile << std::setw(25) << sorted_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
+            current_sorted_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
-                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
+                myfile << std::setw(25) << current_sorted_output(nodeline*nvector + ivector,0) << " ";
               }
             }
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
-                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
+                myfile << std::setw(25) << current_sorted_output(nodeline,ivector) << " ";
               }
             }
           }
@@ -3359,7 +3359,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
         //convert node ordering
 			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
           temp_convert = convert_ijk_to_ensight(ii);
-				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+				  myfile << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
 			  }
 			  myfile << " \n";
 		  }

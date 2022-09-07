@@ -3518,8 +3518,8 @@ void Explicit_Solver_SGH::sort_information(){
   //importer from local node distribution to sorted distribution
   Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
 
-  Teuchos::RCP<MV> sorted_node_coords_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
-  Teuchos::RCP<MV> sorted_node_velocities_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
+  sorted_node_coords_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
+  sorted_node_velocities_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
 
   //comms to sort
   sorted_node_coords_distributed->doImport(*node_coords_distributed, node_sorting_importer, Tpetra::INSERT);
@@ -3534,7 +3534,7 @@ void Explicit_Solver_SGH::sort_information(){
   */
 
   //sorted nodal density information
-  Teuchos::RCP<MV> sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+  sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
 
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
@@ -3543,7 +3543,7 @@ void Explicit_Solver_SGH::sort_information(){
   sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
   Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
   
-  Teuchos::RCP<MCONN> sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
+  sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
 
   //comms
   sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
