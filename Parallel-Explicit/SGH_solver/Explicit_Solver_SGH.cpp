@@ -3819,8 +3819,8 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   
   MPI_Offset current_stream_position;
   MPI_File_sync(myfile_parallel);
-  MPI_File_seek(myfile_parallel, 0, MPI_SEEK_END);
-  MPI_File_get_position(myfile_parallel, &current_stream_position);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
   
   //debug check 
   //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
