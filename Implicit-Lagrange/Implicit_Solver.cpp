@@ -3235,7 +3235,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
       //initial undeformed geometry
       count_temp.str("");
       count_temp << file_index;
-      //file_index++;
+      file_index++;
 	    file_count = count_temp.str();
       if(displace_geometry&&displacement_module>=0)
         current_file_name = base_file_name_undeformed + file_count + file_extension;
@@ -3415,7 +3415,7 @@ void Implicit_Solver::tecplot_writer(){
       //initial undeformed geometry
       count_temp.str("");
       count_temp << file_index;
-      //file_index++;
+      file_index++;
 	    file_count = count_temp.str();
       if(displace_geometry&&displacement_module>=0)
         current_file_name = base_file_name_undeformed + file_count + file_extension;
