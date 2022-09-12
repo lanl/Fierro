@@ -11,7 +11,9 @@ void boundary_velocity(const mesh_t &mesh,
                        const CArrayKokkos <boundary_t> &boundary,
                        DViewCArrayKokkos <double> &node_vel){
 
-    
+    //error and debug flag
+    //DCArrayKokkos<bool> print_flag(1, "print_flag");
+
     // Loop over boundary sets
     for (size_t bdy_set=0; bdy_set<mesh.num_bdy_sets; bdy_set++){
         
@@ -35,9 +37,11 @@ void boundary_velocity(const mesh_t &mesh,
             }
             else if (boundary(bdy_set).hydro_bc == bdy::fixed){
                 
-                
                 size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
                 
+                //debug clause
+                //if(bdy_node_gid==549412) print_flag(0) = true;
+
                 for(size_t dim=0; dim<mesh.num_dims; dim++){
                     // Set velocity to zero
                     node_vel(1, bdy_node_gid, dim) = 0.0;
@@ -51,5 +55,8 @@ void boundary_velocity(const mesh_t &mesh,
 	    
     } // end for bdy_set
     
+    //debug check
+    //print_flag.update_host();
+    //if(print_flag.host(0)) std::cout << "found boundary node with id 549412" << std::endl;
     return;
 } // end boundary_velocity function
