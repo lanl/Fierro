@@ -3878,7 +3878,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
-  bool displace_geometry;
+  bool displace_geometry = false;
   const_host_vec_array current_collected_output;
   /*
   if(displacement_module!=-1)

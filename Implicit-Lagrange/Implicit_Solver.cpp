@@ -3205,7 +3205,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
-  bool displace_geometry;
+  bool displace_geometry = false;
   if(displacement_module!=-1)
     displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
   const_host_vec_array current_sorted_output;
@@ -3384,7 +3384,7 @@ void Implicit_Solver::tecplot_writer(){
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
-  bool displace_geometry;
+  bool displace_geometry = false;
   if(displacement_module!=-1)
     displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
   const_host_vec_array current_collected_output;
