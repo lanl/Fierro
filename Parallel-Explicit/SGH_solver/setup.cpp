@@ -444,6 +444,11 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
     //              bdy_set-mesh.num_bdy_sets+1);
     //    exit(0);
     //} // end if
+
+    //error and debug flag
+    //DCArrayKokkos<bool> print_flag(1, "print_flag");
+    //print_flag.host(0) = false;
+    //print_flag.update_device();
     
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
         
@@ -465,6 +470,14 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
                                          mesh,
                                          node_coords); // no=0, yes=1
             
+            //debug check
+            /*
+            for (size_t patch_node_lid=0; patch_node_lid<mesh.num_nodes_in_patch; patch_node_lid++){
+              size_t node_gid = mesh.nodes_in_patch(bdy_patch_gid, patch_node_lid);
+              //if(bdy_node_gid==549412) print_flag(0) = true;
+            }
+            */
+
             if (is_on_bdy == 1){
                 
                 size_t index = mesh.bdy_patches_in_set.stride(bdy_set);
@@ -480,7 +493,11 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
         } // end for bdy_patch
         
     });  // end FOR_ALL bdy_sets
-   
+    
+    //debug check
+    //print_flag.update_host();
+    //if(print_flag.host(0)) std::cout << "found boundary node with id 549412" << std::endl;
+
     return;
 } // end tag
 

@@ -3763,7 +3763,7 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   MPI_Offset file_stream_offset = buffer_size_per_node_line*first_node_global_id;
 
   //populate buffer
-  long current_buffer_position = 0;
+  long long current_buffer_position = 0;
   current_line_stream << std::fixed << std::setprecision(8);
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");

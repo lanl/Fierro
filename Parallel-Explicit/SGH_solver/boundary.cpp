@@ -13,6 +13,8 @@ void boundary_velocity(const mesh_t &mesh,
 
     //error and debug flag
     //DCArrayKokkos<bool> print_flag(1, "print_flag");
+    //print_flag.host(0) = false;
+    //print_flag.update_device();
 
     // Loop over boundary sets
     for (size_t bdy_set=0; bdy_set<mesh.num_bdy_sets; bdy_set++){
