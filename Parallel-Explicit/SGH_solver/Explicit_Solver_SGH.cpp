@@ -3249,7 +3249,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   //std::cout << " BOUNDARY PATCHES PRE COUNT ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
   //upper bound that is not much larger
   Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits>(nboundary_patches, "Boundary_Patches");
-  Local_Index_Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits>(nboundary_patches, "Boundary_Patches");
+  Local_Index_Boundary_Patches = DCArrayKokkos<size_t>(nboundary_patches, num_nodes_in_patch, "Local_Index_Boundary_Patches");
   nboundary_patches = 0;
   bool my_rank_flag;
   size_t remote_count;
@@ -3290,13 +3290,12 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
 
   for(int iboundary = 0; iboundary < nboundary_patches; iboundary++){
     num_nodes_in_patch = Boundary_Patches(iboundary).node_set.size();
-    Local_Index_Boundary_Patches(iboundary) = Boundary_Patches(iboundary);
-    Local_Index_Boundary_Patches(iboundary).node_set = CArray<GO>(num_nodes_in_patch);
     for(int inode = 0; inode < num_nodes_in_patch; inode++){
-      Local_Index_Boundary_Patches(iboundary).node_set(inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
+      Local_Index_Boundary_Patches(iboundary).host(iboundary,inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
     }
   }
-
+  Local_Index_Boundary_Patches.update_device();
+  mesh->Local_Index_Boundary_Patches = Local_Index_Boundary_Patches;
   //debug print of boundary patches
   /*
   std::cout << " BOUNDARY PATCHES ON TASK " << myrank << " = " << nboundary_patches <<std::endl;

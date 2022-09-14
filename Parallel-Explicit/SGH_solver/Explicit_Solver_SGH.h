@@ -266,7 +266,7 @@ public:
   size_t num_boundary_conditions;
   int current_bdy_id;
   CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
-  CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Local_Index_Boundary_Patches;
+  DCArrayKokkos<size_t> Local_Index_Boundary_Patches;
   std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> NTopology_Condition_Patches;
