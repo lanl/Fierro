@@ -393,7 +393,7 @@ struct mesh_t {
 
         } // end if on dims
         
-        node_ordering_in_elem = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem[0],num_patches_in_elem,num_nodes_in_patch, "node_ordering_in_elem");
+        node_ordering_in_elem = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem[0],num_patches_in_elem,num_nodes_in_patch);
         
         
         // for saviong the hash keys of the patches and then the nighboring elem_gid
@@ -681,7 +681,7 @@ struct mesh_t {
         
         // each elem corner will contribute 3 edges to the node. Those edges will likely be the same
         // ones from an adjacent element so it is a safe estimate to multiply by 3
-        DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_nodes(num_nodes, max_num_elems_in_node*3, temp_nodes_in_nodes);
+        DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_nodes(num_nodes, max_num_elems_in_node*3, "temp_nodes_in_nodes");
         
         num_nodes_in_node = CArrayKokkos <size_t> (num_nodes, "num_nodes_in_node");
         
