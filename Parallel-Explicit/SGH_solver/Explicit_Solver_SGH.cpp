@@ -131,7 +131,7 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   ref_elem = new elements::ref_element();
   //create mesh objects
   //init_mesh = new swage::mesh_t(simparam);
-  //mesh = new swage::mesh_t(simparam);
+  mesh = new mesh_t;
 
   element_select = new elements::element_selector();
   num_nodes = 0;
@@ -358,7 +358,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    mesh data type declarations
         // ---------------------------------------------------------------------
-        mesh_t mesh;
+        //mesh_t mesh;
         CArrayKokkos <mat_fill_t> mat_fill;
         CArrayKokkos <boundary_t> boundary;
 
@@ -389,8 +389,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    read in supplied mesh
         // --------------------------------------------------------------------- 
-        sgh_interface_setup(this, mesh, node, elem, corner, num_dims, rk_num_bins);
-        mesh.build_corner_connectivity();
+        sgh_interface_setup(this, *mesh, node, elem, corner, num_dims, rk_num_bins);
+        mesh->build_corner_connectivity();
         //debug print of corner ids
         /*
         if(myrank==1){
@@ -426,9 +426,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
              }
             }
             */
-        mesh.build_elem_elem_connectivity();
-        mesh.build_patch_connectivity();
-        mesh.build_node_node_connectivity();
+        mesh->build_elem_elem_connectivity();
+        mesh->build_patch_connectivity();
+        mesh->build_node_node_connectivity();
         
         
         // ---------------------------------------------------------------------
@@ -436,9 +436,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
 
         // shorthand names
-        const size_t num_nodes = mesh.num_nodes;
-        const size_t num_elems = mesh.num_elems;
-        const size_t num_corners = mesh.num_corners;
+        const size_t num_nodes = mesh->num_nodes;
+        const size_t num_elems = mesh->num_elems;
+        const size_t num_corners = mesh->num_corners;
 
         
         // allocate elem_statev
@@ -518,7 +518,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         Kokkos::fence();
         
         
-        get_vol(elem_vol, node_coords, mesh);
+        get_vol(elem_vol, node_coords, *mesh);
 
 
         // ---------------------------------------------------------------------
@@ -527,7 +527,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         setup(material,
               mat_fill,
               boundary,
-              mesh,
+              *mesh,
               this,
               node_coords,
               node_vel,
@@ -562,7 +562,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         sgh_solve(material,
                   boundary,
-                  mesh,
+                  *mesh,
                   this,
                   node_coords,
                   node_vel,
@@ -3291,7 +3291,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   for(int iboundary = 0; iboundary < nboundary_patches; iboundary++){
     num_nodes_in_patch = Boundary_Patches(iboundary).node_set.size();
     for(int inode = 0; inode < num_nodes_in_patch; inode++){
-      Local_Index_Boundary_Patches(iboundary).host(iboundary,inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
+      Local_Index_Boundary_Patches.host(iboundary,inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
     }
   }
   Local_Index_Boundary_Patches.update_device();

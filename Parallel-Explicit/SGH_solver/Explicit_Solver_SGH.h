@@ -66,9 +66,12 @@
 //#include <MueLu.hpp>
 
 //forward declarations
+/*
 namespace swage{
   class mesh_t;
 }
+*/
+class mesh_t;
 
 namespace elements{
   class element_selector;
@@ -184,8 +187,8 @@ public:
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   
-  swage::mesh_t *init_mesh;
-  swage::mesh_t *mesh;
+  mesh_t *init_mesh;
+  mesh_t *mesh;
   
   elements::element_selector *element_select;
   elements::Element3D *elem;
