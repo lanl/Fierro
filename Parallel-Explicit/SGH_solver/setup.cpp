@@ -437,7 +437,7 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
 
     size_t num_dims = mesh.num_dims;
     //int nboundary_patches = explicit_solver_pointer->nboundary_patches;
-    int nboundary_patches = mesh.num_bdy_patches;
+    int nboundary_patches = explicit_solver_pointer->nboundary_patches;
     
     //if (bdy_set == mesh.num_bdy_sets){
     //    printf(" ERROR: number of boundary sets must be increased by %zu",
@@ -460,7 +460,7 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
         for (size_t bdy_patch_lid=0; bdy_patch_lid < nboundary_patches; bdy_patch_lid++){
             
             // save the patch index
-            size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
+            size_t bdy_patch_gid = bdy_patch_lid;
             
             
             // check to see if this patch is on the specified plane
@@ -527,7 +527,7 @@ size_t check_bdy(const size_t patch_gid,
         
         // get the nodal_gid for this node in the patch
         //size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
-        size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
+        size_t node_gid = mesh.Local_Index_Boundary_Patches(patch_gid, patch_node_lid);
 
         for (size_t dim = 0; dim < num_dims; dim++){
             these_patch_coords[dim] = node_coords(1, node_gid, dim);  // (rk, node_gid, dim)
@@ -625,7 +625,7 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
                 // apply boundary condition at nodes on boundary
                 for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
                     
-                    size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                    size_t node_gid = mesh.Local_Index_Boundary_Patches(patch_gid, node_lid);
                     
                     temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = -1;
                         
@@ -643,7 +643,7 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
                 // apply boundary condition at nodes on boundary
                 for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
                     
-                    size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                    size_t node_gid = mesh.Local_Index_Boundary_Patches(patch_gid, node_lid);
                     
                     if (temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) == -1){
                         

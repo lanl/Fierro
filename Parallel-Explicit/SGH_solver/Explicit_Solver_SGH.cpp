@@ -254,7 +254,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     real_t hessvec_linear_time = 0;
     
     // ---- Find Boundaries on mesh ---- //
-    //init_boundaries();
+    init_boundaries();
 
     //set boundary conditions
     //generate_tcs();
@@ -427,8 +427,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
             }
             */
         mesh->build_elem_elem_connectivity();
-        mesh->build_patch_connectivity();
-        mesh->build_node_node_connectivity();
+        //mesh->build_patch_connectivity();
+        //mesh->build_node_node_connectivity();
         
         
         // ---------------------------------------------------------------------
