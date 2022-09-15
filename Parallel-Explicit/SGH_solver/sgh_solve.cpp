@@ -45,7 +45,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     int myrank = explicit_solver_pointer->myrank;
     if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
-    
+    /*
     write_outputs(mesh,
                   explicit_solver_pointer,
                   node_coords,
@@ -62,7 +62,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                   graphics_times,
                   graphics_id,
                   time_value);
-    
+      */
     
     
     CArrayKokkos <double> node_extensive_mass(mesh.num_nodes, "node_extensive_mass");
