@@ -86,6 +86,7 @@ public:
   //overload = operator
   Node_Combination& operator= (const Node_Combination &not_this){
     node_set = not_this.node_set;
+    sort_set = not_this.sort_set;
     patch_id = not_this.patch_id;
     element_id = not_this.element_id;
     local_patch_id = not_this.local_patch_id;
