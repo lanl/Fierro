@@ -36,6 +36,8 @@ void setup(const CArrayKokkos <material_t> &material,
 
     
     //--- calculate bdy sets ---//
+    mesh.num_nodes_in_patch = 2*(mesh.num_dims-1);  // 2 (2D) or 4 (3D)
+    mesh.num_patches_in_elem = 2*mesh.num_dims; // 4 (2D) or 6 (3D)
     mesh.init_bdy_sets(num_bcs);
     printf("Num BC's = %lu\n", num_bcs);
     
