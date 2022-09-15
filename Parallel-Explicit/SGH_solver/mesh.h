@@ -170,8 +170,8 @@ struct mesh_t {
             num_nodes_in_elem *= 2;
         }
         num_elems = num_elems_inp;
-        nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
-        corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
+        nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem, "nodes_in_elem");
+        corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem, "corners_in_elem");
         
         return;
         
@@ -213,9 +213,9 @@ struct mesh_t {
         
         
         // the stride sizes are the num_corners_in_node at the node
-        corners_in_node = RaggedRightArrayKokkos <size_t> (num_corners_in_node);
+        corners_in_node = RaggedRightArrayKokkos <size_t> (num_corners_in_node, "corners_in_node");
 
-        CArrayKokkos <size_t> count_saved_corners_in_node(num_nodes);
+        CArrayKokkos <size_t> count_saved_corners_in_node(num_nodes, "count_saved_corners_in_node");
 
         // reset num_corners to zero
         FOR_ALL_CLASS(node_gid, 0, num_nodes, {
@@ -224,7 +224,7 @@ struct mesh_t {
         
         
         // he elems_in_elem data type
-        elems_in_node = RaggedRightArrayKokkos <size_t> (num_corners_in_node);
+        elems_in_node = RaggedRightArrayKokkos <size_t> (num_corners_in_node, "elems_in_node");
         
         // populate the elems connected to a node list and corners in a node
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++){
@@ -274,9 +274,9 @@ struct mesh_t {
         Kokkos::fence();
         
         // a temporary ragged array to save the elems around an elem
-        DynamicRaggedRightArrayKokkos <size_t> temp_elems_in_elem(num_nodes, num_nodes_in_elem*max_num_elems_in_node);
+        DynamicRaggedRightArrayKokkos <size_t> temp_elems_in_elem(num_nodes, num_nodes_in_elem*max_num_elems_in_node, "temp_elems_in_elem");
         
-        num_elems_in_elem = CArrayKokkos <size_t> (num_elems);
+        num_elems_in_elem = CArrayKokkos <size_t> (num_elems, "num_elems_in_elem");
         FOR_ALL_CLASS(elem_gid, 0, num_elems, {
             num_elems_in_elem(elem_gid) = 0;
         });
@@ -336,7 +336,7 @@ struct mesh_t {
         
         
         // compress out the extra space in the temp_elems_in_elem
-        elems_in_elem = RaggedRightArrayKokkos <size_t> (num_elems_in_elem);
+        elems_in_elem = RaggedRightArrayKokkos <size_t> (num_elems_in_elem, "elems_in_elem");
         
         FOR_ALL_CLASS(elem_gid, 0, num_elems, {
             for (size_t i=0; i<num_elems_in_elem(elem_gid); i++){
@@ -393,20 +393,20 @@ struct mesh_t {
 
         } // end if on dims
         
-        node_ordering_in_elem = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem[0],num_patches_in_elem,num_nodes_in_patch);
+        node_ordering_in_elem = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem[0],num_patches_in_elem,num_nodes_in_patch, "node_ordering_in_elem");
         
         
         // for saviong the hash keys of the patches and then the nighboring elem_gid
-        CArrayKokkos <long long int> hash_keys_in_elem (num_elems, num_patches_in_elem);
+        CArrayKokkos <long long int> hash_keys_in_elem (num_elems, num_patches_in_elem, "hash_keys_in_elem");
         
         // for saving the adjacient patch_lid, which is the slide_lid
         //CArrayKokkos <size_t> neighboring_side_lids (num_elems, num_patches_in_elem);
         
         // allocate memory for the patches in the elem
-        patches_in_elem = CArrayKokkos <size_t> (num_elems, num_patches_in_elem);
+        patches_in_elem = CArrayKokkos <size_t> (num_elems, num_patches_in_elem, "patches_in_elem");
         
         // a temporary storaage for the patch_gids that are on the mesh boundary
-        CArrayKokkos <size_t> temp_bdy_patches(num_elems*num_patches_in_elem);
+        CArrayKokkos <size_t> temp_bdy_patches(num_elems*num_patches_in_elem, "temp_bdy_patches");
         
         // step 1) calculate the hash values for each patch in the element
         FOR_ALL_CLASS(elem_gid, 0, num_elems, {
@@ -445,7 +445,7 @@ struct mesh_t {
             
         }); // end FOR_ALL elem_gid
         
-        DCArrayKokkos <size_t> num_values(2);
+        DCArrayKokkos <size_t> num_values(2, "num_values");
 	
         // step 2: walk around the elements and save the elem pairs that have the same hash_key
         RUN_CLASS({
@@ -554,11 +554,11 @@ struct mesh_t {
         printf("Num patches = %lu \n", num_patches);
         printf("Num boundary patches = %lu \n", num_bdy_patches);
         
-        elems_in_patch = CArrayKokkos <size_t> (num_patches, 2);
-        nodes_in_patch = CArrayKokkos <size_t> (num_patches, num_nodes_in_patch);
+        elems_in_patch = CArrayKokkos <size_t> (num_patches, 2, "elems_in_patch");
+        nodes_in_patch = CArrayKokkos <size_t> (num_patches, num_nodes_in_patch, "nodes_in_patch");
     
         // a temporary variable to help populate patch structures
-        CArrayKokkos <size_t> num_elems_in_patch_saved (num_patches);
+        CArrayKokkos <size_t> num_elems_in_patch_saved (num_patches, "num_elems_in_patch_saved");
         
         // initialize the number of elems in a patch saved to zero
         FOR_ALL_CLASS(patch_gid, 0, num_patches, {
@@ -594,7 +594,7 @@ struct mesh_t {
         
         
         // allocate memory for boundary patches
-        bdy_patches = CArrayKokkos <size_t> (num_bdy_patches);
+        bdy_patches = CArrayKokkos <size_t> (num_bdy_patches, "bdy_patches");
         
         FOR_ALL_CLASS(bdy_patch_gid, 0, num_bdy_patches, {
             bdy_patches(bdy_patch_gid) = temp_bdy_patches(bdy_patch_gid);
@@ -604,8 +604,8 @@ struct mesh_t {
         
         
         // find and store the boundary nodes
-        CArrayKokkos <size_t> temp_bdy_nodes(num_nodes);
-        CArrayKokkos <long long int> hash_bdy_nodes(num_nodes);
+        CArrayKokkos <size_t> temp_bdy_nodes(num_nodes, "temp_bdy_nodes");
+        CArrayKokkos <long long int> hash_bdy_nodes(num_nodes, "hash_bdy_nodes");
         
         FOR_ALL_CLASS (node_gid, 0, num_nodes, {
             hash_bdy_nodes(node_gid) = -1;
@@ -648,7 +648,7 @@ struct mesh_t {
         // save the number of bdy_nodes to mesh_t
         num_bdy_nodes = num_bdy_nodes_saved.host(0);
         
-        bdy_nodes = CArrayKokkos <size_t> (num_bdy_nodes);
+        bdy_nodes = CArrayKokkos <size_t> (num_bdy_nodes, "bdy_nodes");
         
         FOR_ALL_CLASS (node_gid, 0, num_bdy_nodes, {
             bdy_nodes(node_gid) = temp_bdy_nodes(node_gid);
@@ -681,9 +681,9 @@ struct mesh_t {
         
         // each elem corner will contribute 3 edges to the node. Those edges will likely be the same
         // ones from an adjacent element so it is a safe estimate to multiply by 3
-        DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_nodes(num_nodes, max_num_elems_in_node*3);
+        DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_nodes(num_nodes, max_num_elems_in_node*3, temp_nodes_in_nodes);
         
-        num_nodes_in_node = CArrayKokkos <size_t> (num_nodes);
+        num_nodes_in_node = CArrayKokkos <size_t> (num_nodes, "num_nodes_in_node");
         
         // walk over the patches and save the node node connectivity
         RUN_CLASS({
@@ -787,7 +787,7 @@ struct mesh_t {
         });  // end RUN
         Kokkos::fence();
         
-        nodes_in_node = RaggedRightArrayKokkos <size_t> (num_nodes_in_node);
+        nodes_in_node = RaggedRightArrayKokkos <size_t> (num_nodes_in_node, "nodes_in_node");
         
         // save the connectivity
         FOR_ALL_CLASS(node_gid, 0, num_nodes, {
@@ -818,7 +818,7 @@ struct mesh_t {
             num_bcs = 1;
         }
         num_bdy_sets = num_bcs;
-        bdy_patches_in_set = DynamicRaggedRightArrayKokkos <size_t> (num_bcs, num_bdy_patches);
+        bdy_patches_in_set = DynamicRaggedRightArrayKokkos <size_t> (num_bcs, num_bdy_patches, "bdy_patches_in_set");
         
         return;
         

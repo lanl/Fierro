@@ -61,7 +61,7 @@ void setup(const CArrayKokkos <material_t> &material,
     
     // ---- Read model values from a file ----
     // check to see if state_vars come from an external file
-    DCArrayKokkos <size_t> read_from_file(num_materials);
+    DCArrayKokkos <size_t> read_from_file(num_materials, "read_from_file");
     FOR_ALL(mat_id, 0, num_materials, {
         
         read_from_file(mat_id) = material(0).read_state_vars;
@@ -603,11 +603,11 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
     
     
     // build boundary nodes in each boundary set
+    int nboundary_patches = explicit_solver_pointer->nboundary_patches;
+    mesh.num_bdy_nodes_in_set = DCArrayKokkos <size_t> (mesh.num_bdy_sets, "num_bdy_nodes_in_set");
+    CArrayKokkos <long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes, "temp_count_num_bdy_nodes_in_set");
     
-    mesh.num_bdy_nodes_in_set = DCArrayKokkos <size_t> (mesh.num_bdy_sets);
-    CArrayKokkos <long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes);
-    
-    DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_set (mesh.num_bdy_sets, mesh.num_bdy_patches*mesh.num_nodes_in_patch);
+    DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_set (mesh.num_bdy_sets, nboundary_patches*mesh.num_nodes_in_patch, "temp_nodes_in_set");
     
     
     // Parallel loop over boundary sets on device
@@ -671,7 +671,7 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
     
    
     // allocate the RaggedRight bdy_nodes_in_set array
-    mesh.bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (mesh.num_bdy_nodes_in_set);
+    mesh.bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (mesh.num_bdy_nodes_in_set, "bdy_nodes_in_set");
 
     FOR_ALL (bdy_set, 0, mesh.num_bdy_sets, {
 	

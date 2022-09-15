@@ -65,7 +65,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     
     
     
-    CArrayKokkos <double> node_extensive_mass(mesh.num_nodes);
+    CArrayKokkos <double> node_extensive_mass(mesh.num_nodes, "node_extensive_mass");
     
     // extensive energy tallies over the mesh elements local to this MPI rank
     double IE_t0 = 0.0;
