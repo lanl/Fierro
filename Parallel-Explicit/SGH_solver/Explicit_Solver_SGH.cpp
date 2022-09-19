@@ -3821,6 +3821,7 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   MPI_Barrier(world);
   MPI_File_sync(myfile_parallel);
   MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
   MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
   
   //debug check 
