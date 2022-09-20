@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+#check if Trilinos directory exists, git clone Trilinos if it doesn't
+[ -d "Trilinos" ] && echo "Directory Trilinos exists, skipping Trilinos download"
+
+if [ ! -d "Trilinos" ]
+then
+  echo "Directory Trilinos does not exist, downloading Trilinos...."
+  git clone https://github.com/trilinos/Trilinos.git
+fi
+
+#check if Trilinos build directory exists, create Trilinos/build if it doesn't
+[ -d "Trilinos/build" ] && echo "Directory Trilinos/build exists, moving on"
+
+if [ ! -d "Trilinos/build" ]
+then
+  echo "Directory Trilinos/build does not exist, creating it...."
+  mkdir Trilinos/build
+fi
