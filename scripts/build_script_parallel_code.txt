@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+#update submodules
+git submodule update --init --recursive
+
 #check if Trilinos directory exists, git clone Trilinos if it doesn't
 [ -d "Trilinos" ] && echo "Directory Trilinos exists, skipping Trilinos download"
 
@@ -26,14 +29,12 @@ then
   echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
   #make text files for scripts executable
   chmod +x Trilinos_Build_Scripts/cmake_configure_muelu.txt
-  chmod +x Trilinos_Build_Scripts/make_script.txt
   cd Trilinos/build
   ./../../Trilinos_Build_Scripts/cmake_configure_muelu.txt
-  ./../../Trilinos_Build_Scripts/make_script.txt
+  make -j"&1" install all
   cd ../..
 fi
 
 #build Fierro, start by initializing submodules
-git submodule update --init --recursive
 cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON .
-make
+make -j"&1"
