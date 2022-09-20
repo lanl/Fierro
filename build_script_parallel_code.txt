@@ -17,3 +17,23 @@ then
   echo "Directory Trilinos/build does not exist, creating it...."
   mkdir Trilinos/build
 fi
+
+#check if Trilinos library files were installed, install them otherwise.
+[ -d "Trilinos/build/lib" ] && echo "Directory Trilinos/build/lib exists, assuming successful installation; delete build folder and run build script again if there was an environment error that has been corrected."
+
+if [ ! -d "Trilinos/build/lib" ]
+then
+  echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
+  #make text files for scripts executable
+  chmod +x Trilinos_Build_Scripts/cmake_configure_muelu.txt
+  chmod +x Trilinos_Build_Scripts/make_script.txt
+  cd Trilinos/build
+  ./../../Trilinos_Build_Scripts/cmake_configure_muelu.txt
+  ./../../Trilinos_Build_Scripts/make_script.txt
+  cd ../..
+fi
+
+#build Fierro, start by initializing submodules
+git submodule update --init --recursive
+cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON .
+make
