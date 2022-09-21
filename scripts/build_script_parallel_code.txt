@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 
-#update submodules
+#inititialize submodules if they aren't downloaded
+[ -d "Elements/elements" ] && echo "Elements submodule exists"
+[ -d "Elements/matar/src" ] && echo "matar submodule exists"
+
+
 git submodule update --init --recursive
 
 #check if Trilinos directory exists, git clone Trilinos if it doesn't
 [ -d "Trilinos" ] && echo "Directory Trilinos exists, skipping Trilinos download"
+
+
+if { [ ! -d "Elements/elements" ] || [ ! -d "Elements/matar/src" ] ;}
+then
+  echo "Missing submodules, downloading them...."
+  git submodule update --init --recursive
+fi
 
 if [ ! -d "Trilinos" ]
 then
@@ -31,10 +42,11 @@ then
   chmod +x Trilinos_Build_Scripts/cmake_configure_muelu.txt
   cd Trilinos/build
   ./../../Trilinos_Build_Scripts/cmake_configure_muelu.txt
-  make -j"&1" install all
+  make $1 install all
   cd ../..
 fi
 
-#build Fierro, start by initializing submodules
+#build Fierro
+echo "Building Fierro"
 cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON .
-make -j"&1"
+make $1
