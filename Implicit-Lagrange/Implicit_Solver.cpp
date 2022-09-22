@@ -2412,14 +2412,15 @@ void Implicit_Solver::setup_optimization_problem(){
   std::string constraint_base, constraint_name;
   std::stringstream number_union;
   CArray<GO> Surface_Nodes;
-  GO current_node_index;
-  LO local_node_index;
+  GO current_node_index, current_element_index;
+  LO local_node_index, local_element_id;
   int num_bdy_patches_in_set;
   size_t node_id, patch_id, module_id;
   int num_boundary_sets;
-  int current_element_index, local_surface_id;
+  int local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
@@ -2603,19 +2604,36 @@ void Implicit_Solver::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          Surface_Nodes = Boundary_Patches(patch_id).node_set;
-          local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-          //debug print of local surface ids
-          //std::cout << " LOCAL SURFACE IDS " << std::endl;
-          //std::cout << local_surface_id << std::endl;
-          //acquire set of nodes for this face
-          for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
-            current_node_index = Surface_Nodes(node_loop);
-            if(map->isNodeGlobalElement(current_node_index)){
-              local_node_index = map->getLocalElement(current_node_index);
-              node_densities_lower_bound(local_node_index,0) = 1;
-            }
-          }// node loop for
+          if(simparam->thick_condition_boundary){
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            current_element_index = Boundary_Patches(patch_id).element_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+              current_node_index = nodes_in_elem(current_element_index,node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
+          else{
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+              current_node_index = Surface_Nodes(node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
         }//boundary patch for
       }//boundary set for
 

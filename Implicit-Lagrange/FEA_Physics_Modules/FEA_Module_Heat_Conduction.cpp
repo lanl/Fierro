@@ -3614,7 +3614,8 @@ void FEA_Module_Heat_Conduction::update_linear_solve(Teuchos::RCP<const MV> zp){
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::node_density_constraints(host_vec_array node_densities_lower_bound){
-
+  
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   for(int i = 0; i < nlocal_nodes; i++){
     if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){

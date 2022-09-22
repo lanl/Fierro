@@ -50,6 +50,7 @@ Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Opti
   solver_pointer_ = solver_pointer;
   report_runtime_flag = false;
   nodal_density_flag = true;
+  thick_condition_boundary = true;
   penalty_power = 3;
   nTO_modules = 0;
 }
