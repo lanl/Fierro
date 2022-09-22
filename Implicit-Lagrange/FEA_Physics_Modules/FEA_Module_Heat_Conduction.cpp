@@ -3625,8 +3625,10 @@ void FEA_Module_Heat_Conduction::node_density_constraints(host_vec_array node_de
     for(int i = 0; i < nlocal_nodes; i++){
       if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
         for(int j = 0; j < Graph_Matrix_Strides(i); j++){
-          local_node_index = all_node_map->getLocalElement(Graph_Matrix(i,j));
-          node_densities_lower_bound(local_node_index,0) = 1;
+          if(map->isNodeGlobalElement(Graph_Matrix(i,j))){
+            local_node_index = map->getLocalElement(Graph_Matrix(i,j));
+            node_densities_lower_bound(local_node_index,0) = 1;
+          }
         }
       }
     }

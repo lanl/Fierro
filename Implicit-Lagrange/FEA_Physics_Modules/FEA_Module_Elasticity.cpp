@@ -5458,8 +5458,10 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
     for(int i = 0; i < nlocal_nodes*num_dim; i++){
       if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
         for(int j = 0; j < Graph_Matrix_Strides(i/num_dim); j++){
-          local_node_index = all_node_map->getLocalElement(Graph_Matrix(i/num_dim,j));
-          node_densities_lower_bound(local_node_index,0) = 1;
+          if(map->isNodeGlobalElement(Graph_Matrix(i/num_dim,j))){
+            local_node_index = map->getLocalElement(Graph_Matrix(i/num_dim,j));
+            node_densities_lower_bound(local_node_index,0) = 1;
+          }
         }
       }
     }
