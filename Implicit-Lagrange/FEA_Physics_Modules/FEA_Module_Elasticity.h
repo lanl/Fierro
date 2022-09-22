@@ -129,7 +129,8 @@ public:
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
   class Simulation_Parameters_Elasticity *simparam;
-
+  class Simulation_Parameters_Topology_Optimization *simparam_TO;
+  
   //Local FEA data
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices

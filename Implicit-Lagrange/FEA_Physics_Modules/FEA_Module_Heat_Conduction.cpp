@@ -74,6 +74,7 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters_Thermal.h"
+#include "Simulation_Parameters_Topology_Optimization.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Heat_Conduction.h"
@@ -107,9 +108,12 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
   simparam = new Simulation_Parameters_Thermal();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
-
+  
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
+  
+  //TO parameters
+  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
 
   //create ref element object
   ref_elem = new elements::ref_element();
@@ -3614,12 +3618,24 @@ void FEA_Module_Heat_Conduction::update_linear_solve(Teuchos::RCP<const MV> zp){
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::node_density_constraints(host_vec_array node_densities_lower_bound){
-  
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  LO local_node_index;
   int num_dim = simparam->num_dim;
-  for(int i = 0; i < nlocal_nodes; i++){
-    if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
-      node_densities_lower_bound(i,0) = 1;
+
+  if(simparam_TO->thick_condition_boundary){
+    for(int i = 0; i < nlocal_nodes; i++){
+      if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
+        for(int j = 0; j < Graph_Matrix_Strides(i); j++){
+          local_node_index = all_node_map->getLocalElement(Graph_Matrix(i,j));
+          node_densities_lower_bound(local_node_index,0) = 1;
+        }
+      }
+    }
+  }
+  else{
+    for(int i = 0; i < nlocal_nodes; i++){
+      if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
+        node_densities_lower_bound(i,0) = 1;
+      }
     }
   }
 }

@@ -126,6 +126,7 @@ public:
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
   class Simulation_Parameters_Thermal *simparam;
+  class Simulation_Parameters_Topology_Optimization *simparam_TO;
   
   //Local FEA data
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Conductivity_Matrix_Assembly_Map;

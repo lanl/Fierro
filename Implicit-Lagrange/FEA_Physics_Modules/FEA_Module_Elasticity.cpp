@@ -74,6 +74,7 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters_Elasticity.h"
+#include "Simulation_Parameters_Topology_Optimization.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Elasticity.h"
@@ -111,6 +112,9 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
+  
+  //TO parameters
+  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
 
   //create ref element object
   ref_elem = new elements::ref_element();
@@ -5447,11 +5451,24 @@ void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp){
 
 void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densities_lower_bound){
   
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
-  for(int i = 0; i < nlocal_nodes*num_dim; i++){
-    if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
-      node_densities_lower_bound(i/num_dim,0) = 1;
+  LO local_node_index;
+  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
+  if(simparam_TO->thick_condition_boundary){
+    for(int i = 0; i < nlocal_nodes*num_dim; i++){
+      if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
+        for(int j = 0; j < Graph_Matrix_Strides(i/num_dim); j++){
+          local_node_index = all_node_map->getLocalElement(Graph_Matrix(i/num_dim,j));
+          node_densities_lower_bound(local_node_index,0) = 1;
+        }
+      }
+    }
+  }
+  else{
+    for(int i = 0; i < nlocal_nodes*num_dim; i++){
+      if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
+        node_densities_lower_bound(i/num_dim,0) = 1;
+      }
     }
   }
 }
