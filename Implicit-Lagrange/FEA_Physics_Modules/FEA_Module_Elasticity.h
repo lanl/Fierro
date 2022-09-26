@@ -195,10 +195,12 @@ public:
   //output dof data
   //Global arrays with collected data used to print
   int output_displacement_index, output_strain_index, output_stress_index;
-  const_host_vec_array collected_node_strains;
-  const_host_vec_array collected_node_stresses;
-  const_host_vec_array sorted_node_strains;
-  const_host_vec_array sorted_node_stresses;
+  Teuchos::RCP<MV> sorted_node_strains_distributed;
+  Teuchos::RCP<MV> sorted_node_stresses_distributed;
+  Teuchos::RCP<MV> sorted_node_displacements_distributed;
+  Teuchos::RCP<MV> collected_node_displacements_distributed;
+  Teuchos::RCP<MV> collected_node_strains_distributed;
+  Teuchos::RCP<MV> collected_node_stresses_distributed;
 };
 
 #endif // end HEADER_H

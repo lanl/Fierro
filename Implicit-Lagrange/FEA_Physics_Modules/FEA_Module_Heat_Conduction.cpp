@@ -2731,7 +2731,7 @@ void FEA_Module_Heat_Conduction::init_output(){
   bool output_temperature_gradient_flag = simparam->output_temperature_gradient_flag;
   bool output_heat_flux_flag = simparam->output_heat_flux_flag;
   int num_dim = simparam->num_dim;
-
+  
   if(output_temperature_flag){
     output_temperature_index = noutput;
     noutput += 1;
@@ -2793,20 +2793,26 @@ void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node
   bool output_temperature_gradient_flag = simparam->output_temperature_gradient_flag;
   bool output_heat_flux_flag = simparam->output_heat_flux_flag;
   int num_dim = simparam->num_dim;
-
+  
+  //reset modules so that host view falls out of scope
+  for(int init = 0; init < noutput; init++){
+    const_host_vec_array dummy = host_vec_array("null,",1);
+    module_outputs[init] = dummy;
+  }
+  
   //collect nodal temperature information
   if(output_temperature_flag){
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
 
-  Teuchos::RCP<MV> sorted_node_temperatures_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+  sorted_node_temperatures_distributed = Teuchos::rcp(new MV(sorted_map, 1));
 
   //comms to collect
   sorted_node_temperatures_distributed->doImport(*(node_temperatures_distributed), node_sorting_importer, Tpetra::INSERT);
 
   //set host views of the collected data to print out from
   if(myrank==0){
-   module_outputs[output_temperature_index] = sorted_node_temperatures = sorted_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+   module_outputs[output_temperature_index] = sorted_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   }
 
@@ -2836,7 +2842,7 @@ void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node
 
     //host view to print from
     if(myrank==0)
-      module_outputs[output_heat_flux_index] = sorted_node_heat_fluxes = sorted_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      module_outputs[output_heat_flux_index] = sorted_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 }
 
@@ -2850,20 +2856,26 @@ void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
   bool output_temperature_gradient_flag = simparam->output_temperature_gradient_flag;
   bool output_heat_flux_flag = simparam->output_heat_flux_flag;
   int num_dim = simparam->num_dim;
+  
+  //reset modules so that host view falls out of scope
+  for(int init = 0; init < noutput; init++){
+    const_host_vec_array dummy = host_vec_array("null,",1);
+    module_outputs[init] = dummy;
+  }
 
   //collect nodal temperature information
   if(output_temperature_flag){
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
 
-  Teuchos::RCP<MV> collected_node_temperatures_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
+  collected_node_temperatures_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
 
   //comms to collect
   collected_node_temperatures_distributed->doImport(*(node_temperatures_distributed), node_collection_importer, Tpetra::INSERT);
 
   //set host views of the collected data to print out from
   if(myrank==0){
-   module_outputs[output_temperature_index] = collected_node_temperatures = collected_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+   module_outputs[output_temperature_index] = collected_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   }
 
@@ -2874,7 +2886,7 @@ void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
     //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
 
     //collected nodal density information
-    Teuchos::RCP<MV> collected_node_heat_fluxes_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+    collected_node_heat_fluxes_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
 
     //importer from local node distribution to collected distribution
     Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
@@ -2893,7 +2905,7 @@ void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
 
     //host view to print from
     if(myrank==0)
-      module_outputs[output_heat_flux_index] = collected_node_heat_fluxes = collected_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      module_outputs[output_heat_flux_index] = collected_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 }
 

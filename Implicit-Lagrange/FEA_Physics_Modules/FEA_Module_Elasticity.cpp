@@ -4381,6 +4381,13 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
   int num_dim = simparam->num_dim;
   int strain_count;
   int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+
+  //reset modules so that host view falls out of scope
+  for(int init = 0; init < noutput; init++){
+    const_host_vec_array dummy = host_vec_array("null,",1);
+    module_outputs[init] = dummy;
+  }
+
   //construct dof map that follows from the node map (used for displacement vector)
   CArrayKokkos<GO, array_layout, device_type, memory_traits> sorted_dof_indices(nlocal_sorted_nodes*num_dim, "sorted_dof_indices");
   for(int i = 0; i < nlocal_sorted_nodes; i++){
@@ -4395,13 +4402,13 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
   //importer from local node distribution to sorted distribution
   Tpetra::Import<LO, GO> dof_sorting_importer(local_dof_map, sorted_dof_map);
 
-  Teuchos::RCP<MV> sorted_node_displacements_distributed = Teuchos::rcp(new MV(sorted_dof_map, 1));
+  sorted_node_displacements_distributed = Teuchos::rcp(new MV(sorted_dof_map, 1));
 
   //comms to collect
   sorted_node_displacements_distributed->doImport(*(node_displacements_distributed), dof_sorting_importer, Tpetra::INSERT);
 
   //set host views of the collected data to print out from
-  module_outputs[output_displacement_index] = sorted_displacement_output = sorted_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  module_outputs[output_displacement_index] = sorted_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 
   //collect strain data
@@ -4413,7 +4420,7 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
     //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
 
     //collected nodal density information
-    Teuchos::RCP<MV> sorted_node_strains_distributed = Teuchos::rcp(new MV(sorted_map, strain_count));
+    sorted_node_strains_distributed = Teuchos::rcp(new MV(sorted_map, strain_count));
     
     //importer from local node distribution to collected distribution
     Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
@@ -4431,7 +4438,7 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
     //std::fflush(stdout);
 
     //host view to print from
-    module_outputs[output_strain_index] = sorted_node_strains = sorted_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    module_outputs[output_strain_index] = sorted_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   
 }
@@ -4449,6 +4456,12 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
   int num_dim = simparam->num_dim;
   int strain_count;
   GO nreduce_dof = 0;
+  
+  //reset modules so that host view falls out of scope
+  for(int init = 0; init < noutput; init++){
+    const_host_vec_array dummy = host_vec_array("null,",1);
+    module_outputs[init] = dummy;
+  }
 
   //global reduce map
   if(myrank==0) nreduce_dof = num_nodes*num_dim;
@@ -4460,14 +4473,14 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> dof_collection_importer(local_dof_map, global_reduce_dof_map);
 
-  Teuchos::RCP<MV> collected_node_displacements_distributed = Teuchos::rcp(new MV(global_reduce_dof_map, 1));
+  collected_node_displacements_distributed = Teuchos::rcp(new MV(global_reduce_dof_map, 1));
 
   //comms to collect
   collected_node_displacements_distributed->doImport(*(node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
 
   //set host views of the collected data to print out from
   if(myrank==0){
-   module_outputs[output_displacement_index] = collected_displacement_output = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+   module_outputs[output_displacement_index] = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   }
 
@@ -4480,7 +4493,7 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
     //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
 
     //collected nodal density information
-    Teuchos::RCP<MV> collected_node_strains_distributed = Teuchos::rcp(new MV(global_reduce_map, strain_count));
+    collected_node_strains_distributed = Teuchos::rcp(new MV(global_reduce_map, strain_count));
     
     //importer from local node distribution to collected distribution
     Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
@@ -4499,7 +4512,7 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
 
     //host view to print from
     if(myrank==0)
-      module_outputs[output_strain_index] = collected_node_strains = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      module_outputs[output_strain_index] = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 }
 

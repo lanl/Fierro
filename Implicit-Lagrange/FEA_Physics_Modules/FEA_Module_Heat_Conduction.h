@@ -192,10 +192,10 @@ public:
   //output dof data
   //Global arrays with collected data used to print
   int output_temperature_index, output_temperature_gradient_index, output_heat_flux_index;
-  const_host_vec_array collected_node_heat_fluxes;
-  const_host_vec_array collected_node_temperatures;
-  const_host_vec_array sorted_node_heat_fluxes;
-  const_host_vec_array sorted_node_temperatures;
+  Teuchos::RCP<MV> sorted_node_heat_fluxes_distributed;
+  Teuchos::RCP<MV> sorted_node_temperatures_distributed;
+  Teuchos::RCP<MV> collected_node_heat_fluxes_distributed;
+  Teuchos::RCP<MV> collected_node_temperatures_distributed;
   
 };
 
