@@ -274,12 +274,11 @@ public:
   enum vector_styles {NODAL, DOF}; //multivector can store as ndof by 1 or nnode by vector_size
   int noutput;
   bool displaced_mesh_flag;
+  int displacement_index;
   std::vector<std::vector<std::string>> output_dof_names;
   std::vector<const_host_vec_array> module_outputs;
   std::vector<vector_styles> vector_style;
   std::vector<int> output_vector_sizes;
-  const_host_vec_array collected_displacement_output;
-  const_host_vec_array sorted_displacement_output;
   
 };
 

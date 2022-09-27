@@ -4310,7 +4310,8 @@ void FEA_Module_Elasticity::init_output(){
   else Brows = 3;
 
   if(output_displacement_flag){
-    output_displacement_index = noutput;
+    //displacement_index is accessed by writers at the solver level for deformed output
+    displacement_index = output_displacement_index = noutput;
     noutput += 1;
     module_outputs.resize(noutput);
 

@@ -3348,10 +3348,11 @@ void Implicit_Solver::parallel_tecplot_writer(){
 			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << sorted_node_coords(nodeline,0) + fea_modules[displacement_module]->sorted_displacement_output(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << sorted_node_coords(nodeline,1) + fea_modules[displacement_module]->sorted_displacement_output(nodeline*num_dim + 1,0) << " ";
+        current_sorted_output = fea_modules[displacement_module]->module_outputs[displacement_index];
+			  myfile << std::setw(25) << sorted_node_coords(nodeline,0) + current_sorted_output(nodeline*num_dim,0) << " ";
+			  myfile << std::setw(25) << sorted_node_coords(nodeline,1) + current_sorted_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << sorted_node_coords(nodeline,2) + fea_modules[displacement_module]->sorted_displacement_output(nodeline*num_dim + 2,0) << " ";
+			  myfile << std::setw(25) << sorted_node_coords(nodeline,2) + current_sorted_output(nodeline*num_dim + 2,0) << " ";
         myfile << std::setw(25) << sorted_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
@@ -3528,10 +3529,11 @@ void Implicit_Solver::tecplot_writer(){
 			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
+        current_collected_output = fea_modules[displacement_module]->module_outputs[displacement_index];
+			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + current_collected_output(nodeline*num_dim,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + current_collected_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + current_collected_output(nodeline*num_dim + 2,0) << " ";
         myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
