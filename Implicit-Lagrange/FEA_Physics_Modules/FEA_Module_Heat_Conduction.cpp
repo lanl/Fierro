@@ -2796,7 +2796,7 @@ void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node
   
   //reset modules so that host view falls out of scope
   for(int init = 0; init < noutput; init++){
-    const_host_vec_array dummy = host_vec_array("null,",1);
+    const_host_vec_array dummy;
     module_outputs[init] = dummy;
   }
   
@@ -2859,7 +2859,7 @@ void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
   
   //reset modules so that host view falls out of scope
   for(int init = 0; init < noutput; init++){
-    const_host_vec_array dummy = host_vec_array("null,",1);
+    const_host_vec_array dummy;
     module_outputs[init] = dummy;
   }
 

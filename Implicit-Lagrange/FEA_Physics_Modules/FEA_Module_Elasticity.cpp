@@ -4385,7 +4385,7 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
 
   //reset modules so that host view falls out of scope
   for(int init = 0; init < noutput; init++){
-    const_host_vec_array dummy = host_vec_array("null,",1);
+    const_host_vec_array dummy;
     module_outputs[init] = dummy;
   }
 
@@ -4460,7 +4460,7 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
   
   //reset modules so that host view falls out of scope
   for(int init = 0; init < noutput; init++){
-    const_host_vec_array dummy = host_vec_array("null,",1);
+    const_host_vec_array dummy;
     module_outputs[init] = dummy;
   }
 

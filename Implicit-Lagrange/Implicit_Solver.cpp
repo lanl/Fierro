@@ -3325,7 +3325,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
       //deformed geometry
       count_temp.str("");
       count_temp << file_index;
-      file_index++;
+      //file_index++;
 	    file_count = count_temp.str();
     
       current_file_name = base_file_name + file_count + file_extension;

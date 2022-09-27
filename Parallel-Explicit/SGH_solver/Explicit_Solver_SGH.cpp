@@ -3659,8 +3659,11 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   int noutput, nvector;
   bool displace_geometry = false;
    /*
-  if(displacement_module!=-1)
+  int displacement_index;
+  if(displacement_module!=-1){
     displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displacement_index = fea_modules[displacement_module]->displacement_index;
+  }
   
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->compute_output();
@@ -3881,9 +3884,12 @@ void Explicit_Solver_SGH::tecplot_writer(){
   int noutput, nvector;
   bool displace_geometry = false;
   const_host_vec_array current_collected_output;
+  int displacement_index;
   /*
-  if(displacement_module!=-1)
+  if(displacement_module!=-1){
     displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displacement_index = fea_modules[displacement_module]->displacement_index;
+  }
   
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->compute_output();
@@ -4025,10 +4031,11 @@ void Explicit_Solver_SGH::tecplot_writer(){
 			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
+        current_collected_output = fea_modules[displacement_module]->module_outputs[displacement_index];
+			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + current_collected_output(nodeline*num_dim,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + current_collected_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + current_collected_output(nodeline*num_dim + 2,0) << " ";
 
         //velocity print
         myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
