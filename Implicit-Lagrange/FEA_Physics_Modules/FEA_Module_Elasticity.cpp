@@ -5018,9 +5018,6 @@ void FEA_Module_Elasticity::linear_solver_parameters(){
 
 int FEA_Module_Elasticity::solve(){
   //local variable for host view in the dual view
-  const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  //local variable for host view in the dual view
-  host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
@@ -5052,14 +5049,16 @@ int FEA_Module_Elasticity::solve(){
   //alter rows of RHS to be the boundary condition value on that node
   //first pass counts strides for storage
   row_counter = 0;
-  for(LO i=0; i < local_nrows; i++){
-    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
-      Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
-      row_counter++;
-      Nodal_RHS(i,0) = Node_DOF_Displacement_Boundary_Conditions(i)*diagonal_bc_scaling;
-    }
-  }//row for
-  
+  {//dual view access scope
+    host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    for(LO i=0; i < local_nrows; i++){
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
+        row_counter++;
+        Nodal_RHS(i,0) = Node_DOF_Displacement_Boundary_Conditions(i)*diagonal_bc_scaling;
+      }
+    }//row for
+  }//end view scope
   //change entries of Stiffness matrix corresponding to BCs to 0s (off diagonal elements) and 1 (diagonal elements)
   //storage for original stiffness matrix values
   Original_Stiffness_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(local_nrows);
@@ -5184,8 +5183,6 @@ int FEA_Module_Elasticity::solve(){
   //set nullspace components
   //init
   tnullspace->putScalar(0);
-  //loop through dofs and compute nullspace components for each
-  host_vec_array nullspace_view = tnullspace->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
   //compute center
   // Calculate center
@@ -5197,64 +5194,69 @@ int FEA_Module_Elasticity::solve(){
   if(num_dim==3)
 	  cz = tcoordinates->getVector(2)->meanValue();
     //cz = center_of_mass[2];
-
-  if(num_dim==3){
-    for(LO i=0; i < local_nrows; i++){
-      dim_index = i % num_dim;
-      access_index = i/num_dim;
-      node_x = node_coords(access_index, 0);
-      node_y = node_coords(access_index, 1);
-      node_z = node_coords(access_index, 2);
-      //set translational component
-      nullspace_view(i,dim_index) = 1;
-      //set rotational components
-      if(dim_index==0){
-        nullspace_view(i,3) = -node_y + cy;
-        nullspace_view(i,5) = node_z - cz;
-      }
-      if(dim_index==1){
-        nullspace_view(i,3) = node_x - cx;
-        nullspace_view(i,4) = -node_z + cz;
-      }
-      if(dim_index==2){
-        nullspace_view(i,4) = node_y - cy;
-        nullspace_view(i,5) = -node_x + cx;
-      }
-      /*
-      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
-        nullspace_view(i,0) = 0;
-        nullspace_view(i,1) = 0;
-        nullspace_view(i,2) = 0;
-        nullspace_view(i,3) = 0;
-        nullspace_view(i,4) = 0;
-        nullspace_view(i,5) = 0;
-      }
-      */
-    }// for
-  }
-  else{
-    for(LO i=0; i < local_nrows; i++){
-      dim_index = i % num_dim;
-      access_index = i/num_dim;
-      node_x = node_coords(access_index, 0);
-      node_y = node_coords(access_index, 1);
-      //set translational component
-      nullspace_view(i,dim_index) = 1;
-      //set rotational components
-      if(dim_index==0){
-        nullspace_view(i,2) = -node_y + cy;
-      }
-      if(dim_index==1){
-        nullspace_view(i,2) = node_x - cx;
-      }
-      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
-        nullspace_view(i,0) = 0;
-        nullspace_view(i,1) = 0;
-        nullspace_view(i,2) = 0;
-      }
-    }// for
-  }
-
+  
+  { //dual view access scope
+    //local variable for host view in the dual view
+    const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    //loop through dofs and compute nullspace components for each
+    host_vec_array nullspace_view = tnullspace->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    if(num_dim==3){
+      for(LO i=0; i < local_nrows; i++){
+        dim_index = i % num_dim;
+        access_index = i/num_dim;
+        node_x = node_coords(access_index, 0);
+        node_y = node_coords(access_index, 1);
+        node_z = node_coords(access_index, 2);
+        //set translational component
+        nullspace_view(i,dim_index) = 1;
+        //set rotational components
+        if(dim_index==0){
+          nullspace_view(i,3) = -node_y + cy;
+          nullspace_view(i,5) = node_z - cz;
+        }
+        if(dim_index==1){
+          nullspace_view(i,3) = node_x - cx;
+          nullspace_view(i,4) = -node_z + cz;
+        }
+        if(dim_index==2){
+          nullspace_view(i,4) = node_y - cy;
+          nullspace_view(i,5) = -node_x + cx;
+        }
+        /*
+        if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+          nullspace_view(i,0) = 0;
+          nullspace_view(i,1) = 0;
+          nullspace_view(i,2) = 0;
+          nullspace_view(i,3) = 0;
+          nullspace_view(i,4) = 0;
+          nullspace_view(i,5) = 0;
+        }
+        */
+      }// for
+    }
+    else{
+      for(LO i=0; i < local_nrows; i++){
+        dim_index = i % num_dim;
+        access_index = i/num_dim;
+        node_x = node_coords(access_index, 0);
+        node_y = node_coords(access_index, 1);
+        //set translational component
+        nullspace_view(i,dim_index) = 1;
+        //set rotational components
+        if(dim_index==0){
+          nullspace_view(i,2) = -node_y + cy;
+        }
+        if(dim_index==1){
+          nullspace_view(i,2) = node_x - cx;
+        }
+        if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+          nullspace_view(i,0) = 0;
+          nullspace_view(i,1) = 0;
+          nullspace_view(i,2) = 0;
+        }
+      }// for
+    }
+  } //end view scope
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> nullspace = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tnullspace));
 
   //normalize components

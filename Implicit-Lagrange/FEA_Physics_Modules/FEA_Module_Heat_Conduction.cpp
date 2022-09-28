@@ -3302,7 +3302,6 @@ int FEA_Module_Heat_Conduction::solve(){
   //local variable for host view in the dual view
   const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
@@ -3334,14 +3333,16 @@ int FEA_Module_Heat_Conduction::solve(){
   //alter rows of RHS to be the boundary condition value on that node
   //first pass counts strides for storage
   row_counter = 0;
-  for(LO i=0; i < nlocal_nodes; i++){
-    if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)){
-      Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
-      row_counter++;
-      Nodal_RHS(i,0) = Node_Temperature_Boundary_Conditions(i)*diagonal_bc_scaling;
-    }
-  }//row for
-  
+  {//view scope
+    host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    for(LO i=0; i < nlocal_nodes; i++){
+      if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)){
+        Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
+        row_counter++;
+        Nodal_RHS(i,0) = Node_Temperature_Boundary_Conditions(i)*diagonal_bc_scaling;
+      }
+    }//row for
+  }//end view scope
   //change entries of Conductivity matrix corresponding to BCs to 0s (off diagonal elements) and 1 (diagonal elements)
   //storage for original Conductivity matrix values
   Original_Conductivity_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes);
