@@ -3223,7 +3223,6 @@ void Implicit_Solver::parallel_tecplot_writer(){
 	std::string file_extension= ".dat";
   std::string file_count;
 	std::stringstream count_temp;
-  int time_step = 0;
   int temp_convert;
   int noutput, nvector;
   bool displace_geometry = false;
@@ -3254,12 +3253,14 @@ void Implicit_Solver::parallel_tecplot_writer(){
   convert_ijk_to_ensight(6) = 7;
   convert_ijk_to_ensight(7) = 6;
   
-  MPI_File myfile_parallel;
+  MPI_File myfile_parallel, myfile_parallel_deformed;
   MPI_Offset header_stream_offset = 0;
   //initial undeformed geometry
   count_temp.str("");
   count_temp << file_index;
-  file_index++;
+  if(!displace_geometry) {
+    file_index++;
+  }
 	file_count = count_temp.str();
   if(displace_geometry&&displacement_module>=0)
     current_file_name = base_file_name_undeformed + file_count + file_extension;
@@ -3321,7 +3322,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
   header_stream_offset += current_line.length();
 
 	current_line_stream.str("");
-	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+	current_line_stream << "ZONE T=\"design frame " << file_index << "\", NODES= " << num_nodes
 		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
@@ -3430,35 +3431,37 @@ void Implicit_Solver::parallel_tecplot_writer(){
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
   
   MPI_File_close(&myfile_parallel);
-  
+  MPI_Barrier(world);
 
   //Displaced Geometry File option
   if(displacement_module>=0&&displace_geometry){
+    current_line_stream.str("");
+    header_stream_offset = 0;
     //deformed geometry
     count_temp.str("");
     count_temp << file_index;
-    //file_index++;
+    file_index++;
 	  file_count = count_temp.str();
     
     current_file_name = base_file_name + file_count + file_extension;
     MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), 
               MPI_MODE_CREATE|MPI_MODE_WRONLY, 
-              MPI_INFO_NULL, &myfile_parallel);
+              MPI_INFO_NULL, &myfile_parallel_deformed);
   
-    int err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+    int err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel_deformed);
     //allows overwriting the file if it already existed in the directory
     if (err != MPI_SUCCESS)  {
       if (myrank == 0){
         MPI_File_delete(current_file_name.c_str(),MPI_INFO_NULL);
       }
-      MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+      MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel_deformed);
     }
 		
 	  //output header of the tecplot file
 	  current_line_stream << "TITLE=\"results for TO simulation\"" "\n";
     current_line = current_line_stream.str();
     if(myrank == 0)
-      MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+      MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
     header_stream_offset += current_line.length();
     //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
     //else
@@ -3474,7 +3477,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
     }
     current_line = current_line_stream.str();
     if(myrank == 0)
-      MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+      MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
     header_stream_offset += current_line.length();
     /*
     for (int imodule = 0; imodule < nfea_modules; imodule++){
@@ -3490,15 +3493,15 @@ void Implicit_Solver::parallel_tecplot_writer(){
 	  current_line_stream << "\n";
     current_line = current_line_stream.str();
     if(myrank == 0)
-      MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+      MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
     header_stream_offset += current_line.length();
 
 	  current_line_stream.str("");
-	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+	  current_line_stream << "ZONE T=\"design frame " << file_index << "\", NODES= " << num_nodes
 		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
     current_line = current_line_stream.str();
     if(myrank == 0)
-      MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+      MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
     header_stream_offset += current_line.length();
 
 		//output nodal data
@@ -3557,15 +3560,15 @@ void Implicit_Solver::parallel_tecplot_writer(){
 	  }
 		//print buffers at offsets with collective MPI write
     //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
-    MPI_File_write_at_all(myfile_parallel, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+    MPI_File_write_at_all(myfile_parallel_deformed, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
     //MPI_File_close(&myfile_parallel);
   
     MPI_Offset current_stream_position;
     MPI_Barrier(world);
-    MPI_File_sync(myfile_parallel);
-    MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
-    MPI_File_sync(myfile_parallel);
-    MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+    MPI_File_sync(myfile_parallel_deformed);
+    MPI_File_seek_shared(myfile_parallel_deformed, 0, MPI_SEEK_END);
+    MPI_File_sync(myfile_parallel_deformed);
+    MPI_File_get_position_shared(myfile_parallel_deformed, &current_stream_position);
   
     //debug check 
     //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
@@ -3599,9 +3602,9 @@ void Implicit_Solver::parallel_tecplot_writer(){
       current_buffer_position += current_line.length();
 	  }
 
-    MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+    MPI_File_write_at_all(myfile_parallel_deformed, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
   
-    MPI_File_close(&myfile_parallel);
+    MPI_File_close(&myfile_parallel_deformed);
   }
 }
 
