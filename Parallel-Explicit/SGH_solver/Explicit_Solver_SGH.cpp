@@ -3756,7 +3756,6 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   header_stream_offset += current_line.length();
   
-
   //output nodal data
   //compute buffer output size and file stream offset for this MPI rank
   int buffer_size_per_node_line = 26*6 + 1; //25 width per number plus 6 spaces plus line terminator

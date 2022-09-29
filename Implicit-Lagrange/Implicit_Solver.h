@@ -315,6 +315,8 @@ public:
   std::ifstream *in;
   std::streampos before_condition_header;
   int words_per_line, elem_words_per_line;
+  enum node_ordering_convention {IJK, ENSIGHT};
+  node_ordering_convention active_node_ordering_convention;
 
   //file output variables
   int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
