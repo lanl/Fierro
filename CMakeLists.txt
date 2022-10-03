@@ -18,6 +18,10 @@ if(NOT DEFINED BUILD_PARALLEL_EXPLICIT_SOLVER)
   set(BUILD_PARALLEL_EXPLICIT_SOLVER OFF)
 endif()
 
+if(BUILD_PARALLEL_EXPLICIT_SOLVER)
+  set(BUILD_EXPLICIT_SOLVER OFF)
+endif()
+
 if(NOT DEFINED BUILD_IMPLICIT_SOLVER)
   set(BUILD_IMPLICIT_SOLVER OFF)
 endif()
@@ -77,9 +81,9 @@ SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
 FIND_PACKAGE(Trilinos REQUIRED)
 
 # Make sure to use same compilers and flags as Trilinos
-#SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
-#SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
-#SET(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
+SET(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER} )
+SET(CMAKE_C_COMPILER ${Trilinos_C_COMPILER} )
+SET(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER} )
 #SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90.exe)
 #SET(CMAKE_Fortran_COMPILER /usr/bin/mpif90)
 
@@ -139,7 +143,7 @@ add_subdirectory(Elements/common)
 add_subdirectory(Elements/matar/src)
 add_subdirectory(Elements/geometry)
 add_subdirectory(Elements/slam)
-add_subdirectory(Elements/tests)
+#add_subdirectory(Elements/tests)
 add_subdirectory(Elements/mesh_tools)
 endif()
 

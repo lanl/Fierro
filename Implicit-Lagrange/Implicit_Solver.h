@@ -123,8 +123,8 @@ public:
   typedef Kokkos::View<real_t*, Kokkos::LayoutRight, device_type, memory_traits> values_array;
   typedef Kokkos::View<GO*, array_layout, device_type, memory_traits> global_indices_array;
   typedef Kokkos::View<LO*, array_layout, device_type, memory_traits> indices_array;
-  typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
-
+  //typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
+  typedef MAT::local_graph_device_type::row_map_type::non_const_type row_pointers;
   //typedef Kokkos::DualView<real_t**, Kokkos::LayoutLeft, device_type>::t_dev vec_array;
   typedef MV::dual_view_type::t_dev vec_array;
   typedef MV::dual_view_type::t_host host_vec_array;
@@ -154,6 +154,8 @@ public:
 
   void collect_information();
 
+  void sort_information();
+
   //process input to decide TO problem and FEA modules
   void FEA_module_setup();
 
@@ -178,6 +180,8 @@ public:
   void init_topology_conditions (int num_sets);
 
   void tecplot_writer();
+
+  void parallel_tecplot_writer();
 
   //void init_boundary_sets(int num_boundary_sets);
 
@@ -217,7 +221,7 @@ public:
   dual_vec_array dual_node_coords; //coordinates of the nodes
   dual_vec_array dual_node_densities; //topology optimization design variable
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
-  host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
+  //host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   //CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Forces;
@@ -235,10 +239,12 @@ public:
   long long int num_nodes, num_elem;
   Teuchos::RCP<const Teuchos::Comm<int> > comm;
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > map; //map of node indices
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map; //sorted contiguous map of node indices
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > ghost_node_map; //map of node indices with ghosts on each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_node_map; //map of node indices with ghosts on each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > element_map; //non overlapping map of elements owned by each rank used in reduction ops
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_element_map; //overlapping map of elements connected to the local nodes in each rank
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_element_map; //sorted contiguous map of element indices owned by each rank used in parallel IO
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
   Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
@@ -254,11 +260,14 @@ public:
   Teuchos::RCP<MV> Global_Element_Densities_Lower_Bound;
   Teuchos::RCP<MV> Global_Element_Densities;
 
-  //Global arrays with collected data used to print
-  const_host_vec_array collected_node_coords;
-  const_host_vec_array collected_node_densities;
-  const_host_elem_conn_array collected_nodes_in_elem;
-  
+  //Distributions of data used to print
+  Teuchos::RCP<MV> collected_node_coords_distributed;
+  Teuchos::RCP<MV> collected_node_densities_distributed;
+  Teuchos::RCP<MCONN> collected_nodes_in_elem_distributed;
+  Teuchos::RCP<MV> sorted_node_coords_distributed;
+  Teuchos::RCP<MV> sorted_node_densities_distributed;
+  Teuchos::RCP<MCONN> sorted_nodes_in_elem_distributed;
+
   //Boundary Conditions Data
   //CArray <Nodal_Combination> Patch_Nodes;
   size_t nboundary_patches;
@@ -306,6 +315,8 @@ public:
   std::ifstream *in;
   std::streampos before_condition_header;
   int words_per_line, elem_words_per_line;
+  enum node_ordering_convention {IJK, ENSIGHT};
+  node_ordering_convention active_node_ordering_convention;
 
   //file output variables
   int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps

@@ -74,6 +74,7 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters_Elasticity.h"
+#include "Simulation_Parameters_Topology_Optimization.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Elasticity.h"
@@ -111,6 +112,9 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
+  
+  //TO parameters
+  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
 
   //create ref element object
   ref_elem = new elements::ref_element();
@@ -341,7 +345,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       LO local_patch_index;
       LO boundary_set_npatches = 0;
       bool look_at_end = false;
-      CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+      CArray<GO> Surface_Nodes;
       std::streampos last_zone_ending_position;
       //grow structures for loading condition storage
       //debug print
@@ -498,7 +502,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
           }
           if(belong_count == nodes_per_patch){
             //construct patch object and look for patch index; the assign patch index to the new loading condition set
-            Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(nodes_per_patch, "Surface_Nodes");
+            Surface_Nodes = CArray<GO>(nodes_per_patch);
             for(int inode = 0; inode < nodes_per_patch; inode++){
               Surface_Nodes(inode) = read_buffer_indices(scan_loop, inode);
             }
@@ -1322,7 +1326,7 @@ void FEA_Module_Elasticity::init_assembly(){
   CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
   
   //row offsets with compatible template arguments
-  row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+  Kokkos::View<size_t *,array_layout, device_type, memory_traits> row_offsets = DOF_Graph_Matrix.start_index_;
   row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
   for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
     row_offsets_pass(ipass) = row_offsets(ipass);
@@ -1517,7 +1521,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
   CArrayKokkos<LO, array_layout, device_type, memory_traits> stiffness_local_indices(nnz, "stiffness_local_indices");
 
   //row offsets
-  row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+  Kokkos::View<size_t *,array_layout, device_type, memory_traits> row_offsets = DOF_Graph_Matrix.start_index_;
   row_pointers row_offsets_pass("row_offsets", nlocal_nodes*num_dim+1);
   for(int ipass = 0; ipass < nlocal_nodes*num_dim + 1; ipass++){
     row_offsets_pass(ipass) = row_offsets(ipass);
@@ -1610,7 +1614,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply, surface_normal[3], pressure, normal_displacement;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArray<GO> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
@@ -2952,8 +2956,8 @@ void FEA_Module_Elasticity::Displacement_Boundary_Conditions(){
   int DOF_BC_type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> displacement(num_dim);
   CArrayKokkos<int, array_layout, device_type, memory_traits> Displacement_Conditions(num_dim);
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<int, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
+  CArray<GO> Surface_Nodes;
   Displacement_Conditions(0) = X_DISPLACEMENT_CONDITION;
   Displacement_Conditions(1) = Y_DISPLACEMENT_CONDITION;
   Displacement_Conditions(2) = Z_DISPLACEMENT_CONDITION;
@@ -4306,9 +4310,10 @@ void FEA_Module_Elasticity::init_output(){
   else Brows = 3;
 
   if(output_displacement_flag){
-    collected_displacement_index = noutput;
+    //displacement_index is accessed by writers at the solver level for deformed output
+    displacement_index = output_displacement_index = noutput;
     noutput += 1;
-    collected_module_output.resize(noutput);
+    module_outputs.resize(noutput);
 
     vector_style.resize(noutput);
     vector_style[noutput-1] = DOF;
@@ -4323,9 +4328,9 @@ void FEA_Module_Elasticity::init_output(){
     output_dof_names[noutput-1][2] = "uz";
   }
   if(output_strain_flag){
-    collected_strain_index = noutput;
+    output_strain_index = noutput;
     noutput += 1;
-    collected_module_output.resize(noutput);
+    module_outputs.resize(noutput);
 
     vector_style.resize(noutput);
     vector_style[noutput-1] = NODAL;
@@ -4343,9 +4348,9 @@ void FEA_Module_Elasticity::init_output(){
     output_dof_names[noutput-1][5] = "strain_yz";
   }
   if(output_stress_flag){
-    collected_stress_index = noutput;
+    output_stress_index = noutput;
     noutput += 1;
-    collected_module_output.resize(noutput);
+    module_outputs.resize(noutput);
 
     vector_style.resize(noutput);
     vector_style[noutput-1] = NODAL;
@@ -4365,6 +4370,81 @@ void FEA_Module_Elasticity::init_output(){
 }
 
 /* -------------------------------------------------------------------------------------------
+   Prompts sorting for elastic response output data. For now, nodal strains.
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
+  
+  bool output_displacement_flag = simparam->output_displacement_flag;
+  displaced_mesh_flag = simparam->displaced_mesh_flag;
+  bool output_strain_flag = simparam->output_strain_flag;
+  bool output_stress_flag = simparam->output_stress_flag;
+  int num_dim = simparam->num_dim;
+  int strain_count;
+  int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+
+  //reset modules so that host view falls out of scope
+  for(int init = 0; init < noutput; init++){
+    const_host_vec_array dummy;
+    module_outputs[init] = dummy;
+  }
+
+  //construct dof map that follows from the node map (used for displacement vector)
+  CArrayKokkos<GO, array_layout, device_type, memory_traits> sorted_dof_indices(nlocal_sorted_nodes*num_dim, "sorted_dof_indices");
+  for(int i = 0; i < nlocal_sorted_nodes; i++){
+    for(int j = 0; j < num_dim; j++)
+      sorted_dof_indices(i*num_dim + j) = sorted_map->getGlobalElement(i)*num_dim + j;
+  }
+  
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,sorted_dof_indices.get_kokkos_view(),0,comm) );
+
+  //collect nodal displacement information
+  if(output_displacement_flag){
+  //importer from local node distribution to sorted distribution
+  Tpetra::Import<LO, GO> dof_sorting_importer(local_dof_map, sorted_dof_map);
+
+  sorted_node_displacements_distributed = Teuchos::rcp(new MV(sorted_dof_map, 1));
+
+  //comms to collect
+  sorted_node_displacements_distributed->doImport(*(node_displacements_distributed), dof_sorting_importer, Tpetra::INSERT);
+
+  //set host views of the collected data to print out from
+  module_outputs[output_displacement_index] = sorted_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+
+  //collect strain data
+  if(output_strain_flag){
+    if(num_dim==3) strain_count = 6;
+    else strain_count = 3;
+
+    //importer for strains, all nodes to global node set on rank 0
+    //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
+
+    //collected nodal density information
+    sorted_node_strains_distributed = Teuchos::rcp(new MV(sorted_map, strain_count));
+    
+    //importer from local node distribution to collected distribution
+    Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
+
+    //comms to collect
+    sorted_node_strains_distributed->doImport(*(node_strains_distributed), node_sorting_importer, Tpetra::INSERT);
+
+    //debug print
+    //std::ostream &out = std::cout;
+    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    //if(myrank==0)
+    //*fos << "Collected nodal displacements :" << std::endl;
+    //collected_node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+    //*fos << std::endl;
+    //std::fflush(stdout);
+
+    //host view to print from
+    module_outputs[output_strain_index] = sorted_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+  
+}
+
+/* -------------------------------------------------------------------------------------------
    Prompts computation of elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
@@ -4377,25 +4457,31 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
   int num_dim = simparam->num_dim;
   int strain_count;
   GO nreduce_dof = 0;
+  
+  //reset modules so that host view falls out of scope
+  for(int init = 0; init < noutput; init++){
+    const_host_vec_array dummy;
+    module_outputs[init] = dummy;
+  }
 
   //global reduce map
   if(myrank==0) nreduce_dof = num_nodes*num_dim;
-    Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_dof_map =
-      Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nreduce_dof,0,comm));
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_dof_map =
+  Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nreduce_dof,0,comm));
 
   //collect nodal displacement information
   if(output_displacement_flag){
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> dof_collection_importer(local_dof_map, global_reduce_dof_map);
 
-  Teuchos::RCP<MV> collected_node_displacements_distributed = Teuchos::rcp(new MV(global_reduce_dof_map, 1));
+  collected_node_displacements_distributed = Teuchos::rcp(new MV(global_reduce_dof_map, 1));
 
   //comms to collect
   collected_node_displacements_distributed->doImport(*(node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
 
   //set host views of the collected data to print out from
   if(myrank==0){
-   collected_module_output[collected_displacement_index] = collected_displacement_output = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+   module_outputs[output_displacement_index] = collected_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   }
 
@@ -4408,7 +4494,7 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
     //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
 
     //collected nodal density information
-    Teuchos::RCP<MV> collected_node_strains_distributed = Teuchos::rcp(new MV(global_reduce_map, strain_count));
+    collected_node_strains_distributed = Teuchos::rcp(new MV(global_reduce_map, strain_count));
     
     //importer from local node distribution to collected distribution
     Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
@@ -4427,7 +4513,7 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
 
     //host view to print from
     if(myrank==0)
-      collected_module_output[collected_strain_index] = collected_node_strains = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      module_outputs[output_strain_index] = collected_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 }
 
@@ -4932,9 +5018,6 @@ void FEA_Module_Elasticity::linear_solver_parameters(){
 
 int FEA_Module_Elasticity::solve(){
   //local variable for host view in the dual view
-  const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  //local variable for host view in the dual view
-  host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
@@ -4966,14 +5049,16 @@ int FEA_Module_Elasticity::solve(){
   //alter rows of RHS to be the boundary condition value on that node
   //first pass counts strides for storage
   row_counter = 0;
-  for(LO i=0; i < local_nrows; i++){
-    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
-      Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
-      row_counter++;
-      Nodal_RHS(i,0) = Node_DOF_Displacement_Boundary_Conditions(i)*diagonal_bc_scaling;
-    }
-  }//row for
-  
+  {//dual view access scope
+    host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    for(LO i=0; i < local_nrows; i++){
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
+        row_counter++;
+        Nodal_RHS(i,0) = Node_DOF_Displacement_Boundary_Conditions(i)*diagonal_bc_scaling;
+      }
+    }//row for
+  }//end view scope
   //change entries of Stiffness matrix corresponding to BCs to 0s (off diagonal elements) and 1 (diagonal elements)
   //storage for original stiffness matrix values
   Original_Stiffness_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(local_nrows);
@@ -5098,8 +5183,6 @@ int FEA_Module_Elasticity::solve(){
   //set nullspace components
   //init
   tnullspace->putScalar(0);
-  //loop through dofs and compute nullspace components for each
-  host_vec_array nullspace_view = tnullspace->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
   //compute center
   // Calculate center
@@ -5111,64 +5194,69 @@ int FEA_Module_Elasticity::solve(){
   if(num_dim==3)
 	  cz = tcoordinates->getVector(2)->meanValue();
     //cz = center_of_mass[2];
-
-  if(num_dim==3){
-    for(LO i=0; i < local_nrows; i++){
-      dim_index = i % num_dim;
-      access_index = i/num_dim;
-      node_x = node_coords(access_index, 0);
-      node_y = node_coords(access_index, 1);
-      node_z = node_coords(access_index, 2);
-      //set translational component
-      nullspace_view(i,dim_index) = 1;
-      //set rotational components
-      if(dim_index==0){
-        nullspace_view(i,3) = -node_y + cy;
-        nullspace_view(i,5) = node_z - cz;
-      }
-      if(dim_index==1){
-        nullspace_view(i,3) = node_x - cx;
-        nullspace_view(i,4) = -node_z + cz;
-      }
-      if(dim_index==2){
-        nullspace_view(i,4) = node_y - cy;
-        nullspace_view(i,5) = -node_x + cx;
-      }
-      /*
-      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
-        nullspace_view(i,0) = 0;
-        nullspace_view(i,1) = 0;
-        nullspace_view(i,2) = 0;
-        nullspace_view(i,3) = 0;
-        nullspace_view(i,4) = 0;
-        nullspace_view(i,5) = 0;
-      }
-      */
-    }// for
-  }
-  else{
-    for(LO i=0; i < local_nrows; i++){
-      dim_index = i % num_dim;
-      access_index = i/num_dim;
-      node_x = node_coords(access_index, 0);
-      node_y = node_coords(access_index, 1);
-      //set translational component
-      nullspace_view(i,dim_index) = 1;
-      //set rotational components
-      if(dim_index==0){
-        nullspace_view(i,2) = -node_y + cy;
-      }
-      if(dim_index==1){
-        nullspace_view(i,2) = node_x - cx;
-      }
-      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
-        nullspace_view(i,0) = 0;
-        nullspace_view(i,1) = 0;
-        nullspace_view(i,2) = 0;
-      }
-    }// for
-  }
-
+  
+  { //dual view access scope
+    //local variable for host view in the dual view
+    const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    //loop through dofs and compute nullspace components for each
+    host_vec_array nullspace_view = tnullspace->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    if(num_dim==3){
+      for(LO i=0; i < local_nrows; i++){
+        dim_index = i % num_dim;
+        access_index = i/num_dim;
+        node_x = node_coords(access_index, 0);
+        node_y = node_coords(access_index, 1);
+        node_z = node_coords(access_index, 2);
+        //set translational component
+        nullspace_view(i,dim_index) = 1;
+        //set rotational components
+        if(dim_index==0){
+          nullspace_view(i,3) = -node_y + cy;
+          nullspace_view(i,5) = node_z - cz;
+        }
+        if(dim_index==1){
+          nullspace_view(i,3) = node_x - cx;
+          nullspace_view(i,4) = -node_z + cz;
+        }
+        if(dim_index==2){
+          nullspace_view(i,4) = node_y - cy;
+          nullspace_view(i,5) = -node_x + cx;
+        }
+        /*
+        if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+          nullspace_view(i,0) = 0;
+          nullspace_view(i,1) = 0;
+          nullspace_view(i,2) = 0;
+          nullspace_view(i,3) = 0;
+          nullspace_view(i,4) = 0;
+          nullspace_view(i,5) = 0;
+        }
+        */
+      }// for
+    }
+    else{
+      for(LO i=0; i < local_nrows; i++){
+        dim_index = i % num_dim;
+        access_index = i/num_dim;
+        node_x = node_coords(access_index, 0);
+        node_y = node_coords(access_index, 1);
+        //set translational component
+        nullspace_view(i,dim_index) = 1;
+        //set rotational components
+        if(dim_index==0){
+          nullspace_view(i,2) = -node_y + cy;
+        }
+        if(dim_index==1){
+          nullspace_view(i,2) = node_x - cx;
+        }
+        if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+          nullspace_view(i,0) = 0;
+          nullspace_view(i,1) = 0;
+          nullspace_view(i,2) = 0;
+        }
+      }// for
+    }
+  } //end view scope
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> nullspace = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tnullspace));
 
   //normalize components
@@ -5378,11 +5466,27 @@ void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp){
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densities_lower_bound){
-
+  
   int num_dim = simparam->num_dim;
-  for(int i = 0; i < nlocal_nodes*num_dim; i++){
-    if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
-      node_densities_lower_bound(i/num_dim,0) = 1;
+  LO local_node_index;
+  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
+  if(simparam_TO->thick_condition_boundary){
+    for(int i = 0; i < nlocal_nodes*num_dim; i++){
+      if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
+        for(int j = 0; j < Graph_Matrix_Strides(i/num_dim); j++){
+          if(map->isNodeGlobalElement(Graph_Matrix(i/num_dim,j))){
+            local_node_index = map->getLocalElement(Graph_Matrix(i/num_dim,j));
+            node_densities_lower_bound(local_node_index,0) = 1;
+          }
+        }
+      }
+    }
+  }
+  else{
+    for(int i = 0; i < nlocal_nodes*num_dim; i++){
+      if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
+        node_densities_lower_bound(i/num_dim,0) = 1;
+      }
     }
   }
 }

@@ -121,13 +121,16 @@ public:
   void init_output();
 
   void compute_output();
+  
+  void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
 
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
   class Simulation_Parameters_Elasticity *simparam;
-
+  class Simulation_Parameters_Topology_Optimization *simparam_TO;
+  
   //Local FEA data
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
@@ -191,9 +194,13 @@ public:
 
   //output dof data
   //Global arrays with collected data used to print
-  int collected_displacement_index, collected_strain_index, collected_stress_index;
-  const_host_vec_array collected_node_strains;
-  const_host_vec_array collected_node_stresses;
+  int output_displacement_index, output_strain_index, output_stress_index;
+  Teuchos::RCP<MV> sorted_node_strains_distributed;
+  Teuchos::RCP<MV> sorted_node_stresses_distributed;
+  Teuchos::RCP<MV> sorted_node_displacements_distributed;
+  Teuchos::RCP<MV> collected_node_displacements_distributed;
+  Teuchos::RCP<MV> collected_node_strains_distributed;
+  Teuchos::RCP<MV> collected_node_stresses_distributed;
 };
 
 #endif // end HEADER_H

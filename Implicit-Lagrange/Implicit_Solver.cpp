@@ -146,6 +146,9 @@ Implicit_Solver::Implicit_Solver() : Solver(){
   //FEA module data init
   nfea_modules = 0;
   displacement_module = -1;
+
+  //file readin parameter
+  active_node_ordering_convention = IJK;
 }
 
 Implicit_Solver::~Implicit_Solver(){
@@ -332,7 +335,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -384,6 +387,8 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   //local variable for host view in the dual view
   
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //view scope that ensures local view is destroyed
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
@@ -406,8 +411,8 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //x-coords
@@ -592,7 +597,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
     }
     read_index_start+=BUFFER_LINES;
   }
-  
+  } //end view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -777,7 +782,7 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   
   //copy temporary element storage to multivector storage
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -883,7 +888,7 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -949,6 +954,8 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
 
   //local variable for host view in the dual view
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //view scope
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   if(restart_file){
     design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
@@ -980,8 +987,8 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //read coords, also density if restarting
@@ -1058,7 +1065,7 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-
+  } //end view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -1226,7 +1233,7 @@ void Implicit_Solver::read_mesh_tecplot(char *MESH){
   }
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -1331,7 +1338,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   std::string skip_line, read_line, substring, token;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop, nodes_per_element;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop, nodes_per_element;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -1436,6 +1443,8 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
 
   //local variable for host view in the dual view
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //view scope
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   if(restart_file){
@@ -1465,8 +1474,8 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //second pass to now read node coords with global node map defines
@@ -1569,7 +1578,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-  
+  } //end view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -1879,7 +1888,7 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
     Element_Types(ielem) = mesh_element_type;
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -1982,7 +1991,8 @@ void Implicit_Solver::init_maps(){
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int nodes_per_element;
   GO node_gid;
-  
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
+
   if(rnum_elem >= 1) {
 
     //Construct set of ghost nodes; start with a buffer with upper limit
@@ -2404,15 +2414,16 @@ void Implicit_Solver::setup_optimization_problem(){
 
   std::string constraint_base, constraint_name;
   std::stringstream number_union;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
-  GO current_node_index;
-  LO local_node_index;
+  CArray<GO> Surface_Nodes;
+  GO current_node_index, current_element_index;
+  LO local_node_index, local_element_id;
   int num_bdy_patches_in_set;
   size_t node_id, patch_id, module_id;
   int num_boundary_sets;
-  int current_element_index, local_surface_id;
+  int local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
@@ -2596,19 +2607,36 @@ void Implicit_Solver::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          Surface_Nodes = Boundary_Patches(patch_id).node_set;
-          local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-          //debug print of local surface ids
-          //std::cout << " LOCAL SURFACE IDS " << std::endl;
-          //std::cout << local_surface_id << std::endl;
-          //acquire set of nodes for this face
-          for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
-            current_node_index = Surface_Nodes(node_loop);
-            if(map->isNodeGlobalElement(current_node_index)){
-              local_node_index = map->getLocalElement(current_node_index);
-              node_densities_lower_bound(local_node_index,0) = 1;
-            }
-          }// node loop for
+          if(simparam->thick_condition_boundary){
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            current_element_index = Boundary_Patches(patch_id).element_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+              current_node_index = nodes_in_elem(current_element_index,node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
+          else{
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+              current_node_index = Surface_Nodes(node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
         }//boundary patch for
       }//boundary set for
 
@@ -2715,7 +2743,7 @@ void Implicit_Solver::Get_Boundary_Patches(){
   size_t npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
   int local_node_id;
   int num_dim = simparam->num_dim;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArray<GO> Surface_Nodes;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //Surface_Nodes = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(4, "Surface_Nodes");
   
@@ -2742,8 +2770,8 @@ void Implicit_Solver::Get_Boundary_Patches(){
   }
   std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
   //information for all patches on this rank
-  CArrayKokkos<Node_Combination,array_layout, device_type, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
-  CArrayKokkos<size_t,array_layout, device_type, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
+  CArrayKokkos<Node_Combination,array_layout, HostSpace, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
+  CArrayKokkos<size_t,array_layout, HostSpace, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
   if(myrank == 0)
     std::cout << "Done with boundary patch allocation" << std::endl <<std::flush;
   //initialize boundary patch flags
@@ -2763,7 +2791,7 @@ void Implicit_Solver::Get_Boundary_Patches(){
     //loop through local surfaces
     for(int isurface = 0; isurface < element_npatches; isurface++){
       num_nodes_in_patch = elem2D->surface_to_dof_lid.stride(isurface);
-      Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
+      Surface_Nodes = CArray<GO>(num_nodes_in_patch);
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem2D->surface_to_dof_lid(isurface,inode);
         Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);
@@ -2797,7 +2825,7 @@ void Implicit_Solver::Get_Boundary_Patches(){
       num_nodes_in_patch = elem->surface_to_dof_lid.stride(isurface);
       //debug print
       //std::cout << "NUMBER OF PATCH NODES FOR ELEMENT " << ielem+1 << " ON LOCAL SURFACE " << isurface+1 << " IS " << elem->surface_to_dof_lid.start_index_[isurface+1] << std::endl;
-      Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
+      Surface_Nodes = CArray<GO>(num_nodes_in_patch);
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem->surface_to_dof_lid(isurface,inode);
         Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);
@@ -3101,7 +3129,7 @@ void Implicit_Solver::collect_information(){
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
 
-  Teuchos::RCP<MV> collected_node_coords_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+  collected_node_coords_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
 
   //comms to collect
   collected_node_coords_distributed->doImport(*node_coords_distributed, node_collection_importer, Tpetra::INSERT);
@@ -3114,7 +3142,7 @@ void Implicit_Solver::collect_information(){
   
 
   //collected nodal density information
-  Teuchos::RCP<MV> collected_node_densities_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
+  collected_node_densities_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
 
   //comms to collect
   collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
@@ -3127,18 +3155,456 @@ void Implicit_Solver::collect_information(){
   //importer from all element map to collected distribution
   Tpetra::Import<LO, GO> element_collection_importer(all_element_map, global_reduce_element_map);
   
-  Teuchos::RCP<MCONN> collected_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(global_reduce_element_map, max_nodes_per_element));
+  collected_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(global_reduce_element_map, max_nodes_per_element));
 
   //comms to collect
   collected_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_collection_importer, Tpetra::INSERT);
 
   //collect element type data
 
-  //set host views of the collected data to print out from
-  if(myrank==0){
-    collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+}
+
+/* ----------------------------------------------------------------------
+   Sort Information for parallel file output
+------------------------------------------------------------------------- */
+
+void Implicit_Solver::sort_information(){
+  GO nreduce_nodes = 0;
+  GO nreduce_elem = 0;
+  int num_dim = simparam->num_dim;
+
+  //map with sorted continuous global indices
+  sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  
+  //importer from local node distribution to sorted distribution
+  Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
+
+  sorted_node_coords_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
+
+  //comms to collect
+  sorted_node_coords_distributed->doImport(*node_coords_distributed, node_sorting_importer, Tpetra::INSERT);
+
+  //comms to collect FEA module related vector data
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->sort_output(sorted_map);
+    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+  }
+  
+
+  //collected nodal density information
+  sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+
+  //comms to collect
+  sorted_node_densities_distributed->doImport(*design_node_densities_distributed, node_sorting_importer, Tpetra::INSERT);
+
+  //sort element connectivity
+  sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
+  Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
+  
+  sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
+
+  //comms
+  sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
+
+}
+
+/* ----------------------------------------------------------------------
+   Output Model Information in tecplot format
+------------------------------------------------------------------------- */
+
+void Implicit_Solver::parallel_tecplot_writer(){
+  
+  int num_dim = simparam->num_dim;
+	std::string current_file_name;
+	std::string base_file_name= "TecplotTO";
+  std::string base_file_name_undeformed= "TecplotTO_undeformed";
+  std::stringstream current_line_stream;
+  std::string current_line;
+	std::string file_extension= ".dat";
+  std::string file_count;
+	std::stringstream count_temp;
+  int temp_convert;
+  int noutput, nvector;
+  bool displace_geometry = false;
+  int displacement_index;
+  if(displacement_module!=-1){
+    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displacement_index = fea_modules[displacement_module]->displacement_index;
+  }
+  const_host_vec_array current_sorted_output;
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->compute_output();
+  }
+  
+  sort_information();
+  const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  // Convert ijk index system to the finite element numbering convention
+  // for vertices in cell
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
+  convert_ijk_to_ensight(0) = 0;
+  convert_ijk_to_ensight(1) = 1;
+  convert_ijk_to_ensight(2) = 3;
+  convert_ijk_to_ensight(3) = 2;
+  convert_ijk_to_ensight(4) = 4;
+  convert_ijk_to_ensight(5) = 5;
+  convert_ijk_to_ensight(6) = 7;
+  convert_ijk_to_ensight(7) = 6;
+  
+  MPI_File myfile_parallel, myfile_parallel_deformed;
+  MPI_Offset header_stream_offset = 0;
+  //initial undeformed geometry
+  count_temp.str("");
+  count_temp << file_index;
+  if(!displace_geometry) {
+    file_index++;
+  }
+	file_count = count_temp.str();
+  if(displace_geometry&&displacement_module>=0)
+    current_file_name = base_file_name_undeformed + file_count + file_extension;
+  else
+    current_file_name = base_file_name + file_count + file_extension;
+
+  MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), 
+                MPI_MODE_CREATE|MPI_MODE_WRONLY, 
+                MPI_INFO_NULL, &myfile_parallel);
+  
+  int err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+  //allows overwriting the file if it already existed in the directory
+  if (err != MPI_SUCCESS)  {
+    if (myrank == 0){
+      MPI_File_delete(current_file_name.c_str(),MPI_INFO_NULL);
+    }
+    MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+  }
+		
+	//output header of the tecplot file
+
+  //std::cout << current_file_name << std::endl;
+	current_line_stream << "TITLE=\"results for TO simulation\"" "\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
+  //else
+  current_line_stream.str("");
+	current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+      nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+      for(int ivector = 0; ivector < nvector; ivector++){
+        current_line_stream << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+      }
+    }
+  }
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+    /*
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+        for(int ivector = 0; ivector < nvector; ivector++){
+          myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+        }
+      }
+    }
+    */
+  current_line_stream.str("");
+	current_line_stream << "\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+
+	current_line_stream.str("");
+	current_line_stream << "ZONE T=\"design frame " << file_index << "\", NODES= " << num_nodes
+		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+
+  //output nodal data
+  //compute buffer output size and file stream offset for this MPI rank
+  int buffer_size_per_node_line = 26*4 + 1; //25 width per number plus 6 spaces plus line terminator
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    noutput = fea_modules[imodule]->noutput;
+    for(int ioutput = 0; ioutput < noutput; ioutput++){
+      nvector = fea_modules[imodule]->output_vector_sizes[ioutput];  
+      buffer_size_per_node_line += 26*nvector;
+    }
+  }
+  int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  GO first_node_global_id = sorted_map->getGlobalElement(0);
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> print_buffer(buffer_size_per_node_line*nlocal_sorted_nodes);
+  MPI_Offset file_stream_offset = buffer_size_per_node_line*first_node_global_id;
+
+  //populate buffer
+  long long current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
+  for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+    current_line_stream.str("");
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+
+    //velocity print
+    current_line_stream << std::setw(25) << sorted_node_densities(nodeline,0) << " ";
+    
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      noutput = fea_modules[imodule]->noutput;
+      for(int ioutput = 0; ioutput < noutput; ioutput++){
+        current_sorted_output = fea_modules[imodule]->module_outputs[ioutput];
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+        if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
+          for(int ivector = 0; ivector < nvector; ivector++){
+           current_line_stream << std::setw(25) << current_sorted_output(nodeline*nvector + ivector,0) << " ";
+          }
+        }
+        if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
+          for(int ivector = 0; ivector < nvector; ivector++){
+            current_line_stream << std::setw(25) << current_sorted_output(nodeline,ivector) << " ";
+          }
+        }
+      }
+    }
+    current_line_stream << std::endl;
+    
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+	//print buffers at offsets with collective MPI write
+  //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+  //MPI_File_close(&myfile_parallel);
+  
+  MPI_Offset current_stream_position;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+  
+  //expand print buffer if needed
+  int buffer_size_per_element_line = 11*max_nodes_per_element + 1; //25 width per number plus 6 spaces plus line terminator
+  int nlocal_elements = sorted_element_map->getLocalNumElements();
+  GO first_element_global_id = sorted_element_map->getGlobalElement(0);
+  if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
+  file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position;
+  
+  current_buffer_position = 0;
+  for (int elementline = 0; elementline < nlocal_elements; elementline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		for (int ii = 0; ii < max_nodes_per_element; ii++) {
+      if(active_node_ordering_convention == IJK)
+        temp_convert = convert_ijk_to_ensight(ii);
+      else
+        temp_convert = ii;
+				current_line_stream << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+		}
+		current_line_stream << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+  
+  MPI_File_close(&myfile_parallel);
+  MPI_Barrier(world);
+
+  //Displaced Geometry File option
+  if(displacement_module>=0&&displace_geometry){
+    current_line_stream.str("");
+    header_stream_offset = 0;
+    //deformed geometry
+    count_temp.str("");
+    count_temp << file_index;
+    file_index++;
+	  file_count = count_temp.str();
+    
+    current_file_name = base_file_name + file_count + file_extension;
+    MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), 
+              MPI_MODE_CREATE|MPI_MODE_WRONLY, 
+              MPI_INFO_NULL, &myfile_parallel_deformed);
+  
+    int err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel_deformed);
+    //allows overwriting the file if it already existed in the directory
+    if (err != MPI_SUCCESS)  {
+      if (myrank == 0){
+        MPI_File_delete(current_file_name.c_str(),MPI_INFO_NULL);
+      }
+      MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel_deformed);
+    }
+		
+	  //output header of the tecplot file
+	  current_line_stream << "TITLE=\"results for TO simulation\"" "\n";
+    current_line = current_line_stream.str();
+    if(myrank == 0)
+      MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+    header_stream_offset += current_line.length();
+    //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
+    //else
+    current_line_stream.str("");
+	  current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+        for(int ivector = 0; ivector < nvector; ivector++){
+          current_line_stream << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+        }
+      }
+    }
+    current_line = current_line_stream.str();
+    if(myrank == 0)
+      MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+    header_stream_offset += current_line.length();
+    /*
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+        for(int ivector = 0; ivector < nvector; ivector++){
+          myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+        }
+      }
+    }
+    */
+    current_line_stream.str("");
+	  current_line_stream << "\n";
+    current_line = current_line_stream.str();
+    if(myrank == 0)
+      MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+    header_stream_offset += current_line.length();
+
+	  current_line_stream.str("");
+	  current_line_stream << "ZONE T=\"design frame " << file_index << "\", NODES= " << num_nodes
+		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+    current_line = current_line_stream.str();
+    if(myrank == 0)
+      MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+    header_stream_offset += current_line.length();
+
+		//output nodal data
+    //compute buffer output size and file stream offset for this MPI rank
+    int buffer_size_per_node_line = 26*4 + 1; //25 width per number plus 6 spaces plus line terminator
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      noutput = fea_modules[imodule]->noutput;
+      for(int ioutput = 0; ioutput < noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];  
+        buffer_size_per_node_line += 26*nvector;
+      }
+    }
+    int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+    GO first_node_global_id = sorted_map->getGlobalElement(0);
+    CArrayKokkos<char, array_layout, HostSpace, memory_traits> print_buffer(buffer_size_per_node_line*nlocal_sorted_nodes);
+    MPI_Offset file_stream_offset = buffer_size_per_node_line*first_node_global_id;
+    //populate buffer
+    long long current_buffer_position = 0;
+    current_line_stream << std::fixed << std::setprecision(8);
+    for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+      current_sorted_output = fea_modules[displacement_module]->module_outputs[displacement_index];
+      current_line_stream.str("");
+		  current_line_stream << std::setw(25) << sorted_node_coords(nodeline,0) + current_sorted_output(nodeline*num_dim,0) << " ";
+		  current_line_stream << std::setw(25) << sorted_node_coords(nodeline,1) + current_sorted_output(nodeline*num_dim + 1,0) << " ";
+      if(num_dim==3)
+		  current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) + current_sorted_output(nodeline*num_dim + 2,0) << " ";
+
+      //velocity print
+      current_line_stream << std::setw(25) << sorted_node_densities(nodeline,0) << " ";
+    
+      for (int imodule = 0; imodule < nfea_modules; imodule++){
+        noutput = fea_modules[imodule]->noutput;
+        for(int ioutput = 0; ioutput < noutput; ioutput++){
+          current_sorted_output = fea_modules[imodule]->module_outputs[ioutput];
+          nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+          if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
+            for(int ivector = 0; ivector < nvector; ivector++){
+             current_line_stream << std::setw(25) << current_sorted_output(nodeline*nvector + ivector,0) << " ";
+            }
+          }
+          if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
+            for(int ivector = 0; ivector < nvector; ivector++){
+              current_line_stream << std::setw(25) << current_sorted_output(nodeline,ivector) << " ";
+            }
+          }
+        }
+      }
+      current_line_stream << std::endl;
+    
+      current_line = current_line_stream.str();
+
+      //copy current line over to C style string buffer (wrapped by matar)
+      strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+      current_buffer_position += current_line.length();
+	  }
+		//print buffers at offsets with collective MPI write
+    //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
+    MPI_File_write_at_all(myfile_parallel_deformed, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+    //MPI_File_close(&myfile_parallel);
+  
+    MPI_Offset current_stream_position;
+    MPI_Barrier(world);
+    MPI_File_sync(myfile_parallel_deformed);
+    MPI_File_seek_shared(myfile_parallel_deformed, 0, MPI_SEEK_END);
+    MPI_File_sync(myfile_parallel_deformed);
+    MPI_File_get_position_shared(myfile_parallel_deformed, &current_stream_position);
+  
+    //debug check 
+    //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+    //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+  
+    //expand print buffer if needed
+    int buffer_size_per_element_line = 11*max_nodes_per_element + 1; //25 width per number plus 6 spaces plus line terminator
+    int nlocal_elements = sorted_element_map->getLocalNumElements();
+    GO first_element_global_id = sorted_element_map->getGlobalElement(0);
+    if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
+      print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
+    file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position;
+  
+    current_buffer_position = 0;
+    for (int elementline = 0; elementline < nlocal_elements; elementline++) {
+      current_line_stream.str("");
+      //convert node ordering
+		  for (int ii = 0; ii < max_nodes_per_element; ii++) {
+        if(active_node_ordering_convention == IJK)
+          temp_convert = convert_ijk_to_ensight(ii);
+        else
+          temp_convert = ii;
+				  current_line_stream << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+		  }
+		  current_line_stream << std::endl;
+      current_line = current_line_stream.str();
+
+      //copy current line over to C style string buffer (wrapped by matar)
+      strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+      current_buffer_position += current_line.length();
+	  }
+
+    MPI_File_write_at_all(myfile_parallel_deformed, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+  
+    MPI_File_close(&myfile_parallel_deformed);
   }
 }
 
@@ -3159,15 +3625,22 @@ void Implicit_Solver::tecplot_writer(){
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
-  bool displace_geometry;
-  if(displacement_module!=-1)
+  bool displace_geometry = false;
+  int displacement_index;
+  if(displacement_module!=-1){
     displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displacement_index = fea_modules[displacement_module]->displacement_index;
+  }
   const_host_vec_array current_collected_output;
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->compute_output();
   }
   
   collect_information();
+  const_host_vec_array collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
@@ -3186,7 +3659,7 @@ void Implicit_Solver::tecplot_writer(){
       //initial undeformed geometry
       count_temp.str("");
       count_temp << file_index;
-      //file_index++;
+      file_index++;
 	    file_count = count_temp.str();
       if(displace_geometry&&displacement_module>=0)
         current_file_name = base_file_name_undeformed + file_count + file_extension;
@@ -3224,7 +3697,7 @@ void Implicit_Solver::tecplot_writer(){
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
@@ -3281,15 +3754,16 @@ void Implicit_Solver::tecplot_writer(){
 			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
+        current_collected_output = fea_modules[displacement_module]->module_outputs[displacement_index];
+			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + current_collected_output(nodeline*num_dim,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + current_collected_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + current_collected_output(nodeline*num_dim + 2,0) << " ";
         myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){

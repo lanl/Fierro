@@ -131,7 +131,7 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   ref_elem = new elements::ref_element();
   //create mesh objects
   //init_mesh = new swage::mesh_t(simparam);
-  //mesh = new swage::mesh_t(simparam);
+  mesh = new mesh_t;
 
   element_select = new elements::element_selector();
   num_nodes = 0;
@@ -257,7 +257,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     init_boundaries();
 
     //set boundary conditions
-    generate_tcs();
+    //generate_tcs();
 
     //initialize TO design variable storage
     //init_design();
@@ -358,7 +358,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    mesh data type declarations
         // ---------------------------------------------------------------------
-        mesh_t mesh;
+        //mesh_t mesh;
         CArrayKokkos <mat_fill_t> mat_fill;
         CArrayKokkos <boundary_t> boundary;
 
@@ -389,8 +389,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    read in supplied mesh
         // --------------------------------------------------------------------- 
-        sgh_interface_setup(this, mesh, node, elem, corner, num_dims, rk_num_bins);
-        mesh.build_corner_connectivity();
+        sgh_interface_setup(this, *mesh, node, elem, corner, num_dims, rk_num_bins);
+        mesh->build_corner_connectivity();
         //debug print of corner ids
         /*
         if(myrank==1){
@@ -426,9 +426,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
              }
             }
             */
-        mesh.build_elem_elem_connectivity();
-        mesh.build_patch_connectivity();
-        mesh.build_node_node_connectivity();
+        mesh->build_elem_elem_connectivity();
+        mesh->num_bdy_patches = nboundary_patches;
+        //mesh->build_patch_connectivity();
+        //mesh->build_node_node_connectivity();
         
         
         // ---------------------------------------------------------------------
@@ -436,9 +437,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
 
         // shorthand names
-        const size_t num_nodes = mesh.num_nodes;
-        const size_t num_elems = mesh.num_elems;
-        const size_t num_corners = mesh.num_corners;
+        const size_t num_nodes = mesh->num_nodes;
+        const size_t num_elems = mesh->num_elems;
+        const size_t num_corners = mesh->num_corners;
 
         
         // allocate elem_statev
@@ -518,7 +519,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         Kokkos::fence();
         
         
-        get_vol(elem_vol, node_coords, mesh);
+        get_vol(elem_vol, node_coords, *mesh);
 
 
         // ---------------------------------------------------------------------
@@ -527,7 +528,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         setup(material,
               mat_fill,
               boundary,
-              mesh,
+              *mesh,
               this,
               node_coords,
               node_vel,
@@ -562,7 +563,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         sgh_solve(material,
                   boundary,
-                  mesh,
+                  *mesh,
                   this,
                   node_coords,
                   node_vel,
@@ -618,7 +619,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
-    tecplot_writer();
+    parallel_tecplot_writer();
     // vtk_writer();
     /*
     if(myrank==0){
@@ -643,7 +644,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -694,6 +695,9 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   //local variable for host view in the dual view
   
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+
+  //scope ensures view is destroyed for now to avoid calling a device view with an active host view later
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   //notify that the host view is going to be modified in the file readin
@@ -716,8 +720,8 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //x-coords
@@ -902,7 +906,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-  
+  } //end active view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -1087,7 +1091,7 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   
   //copy temporary element storage to multivector storage
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -1095,18 +1099,32 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
 
   //view storage for all local elements connected to local nodes on this rank
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
-
+  //DCArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    All_Element_Global_Indices(ielem) = global_indices_temp[ielem];
+    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
   std::vector<size_t>().swap(global_indices_temp);
   
   //construct overlapping element map (since different ranks can own the same elements due to the local node map)
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.get_kokkos_view(),0,comm));
+  All_Element_Global_Indices.modify_host();
+  All_Element_Global_Indices.sync_device();
+
+  //debug print
+  /*
+  Kokkos::View <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices_pass("All_Element_Global_Indices_pass",rnum_elem);
+  deep_copy(All_Element_Global_Indices_pass, All_Element_Global_Indices.h_view);
+  std::cout << " ------------ELEMENT GLOBAL INDICES ON TASK " << myrank << " --------------"<<std::endl;
+  for (int ielem = 0; ielem < rnum_elem; ielem++){
+    std::cout << "elem: " << All_Element_Global_Indices_pass(ielem) + 1;
+    std::cout << std::endl;
+  }
+  */
+
+  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
 
   //element type selection (subject to change)
   // ---- Set Element Type ---- //
@@ -1193,7 +1211,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   std::string skip_line, read_line, substring;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -1258,6 +1276,8 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
 
   //local variable for host view in the dual view
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //active view scrope
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   if(restart_file){
     design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
@@ -1289,8 +1309,8 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //read coords, also density if restarting
@@ -1367,7 +1387,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-
+  }
   //repartition node distribution
   repartition_nodes();
 
@@ -1535,7 +1555,7 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   }
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -1543,18 +1563,20 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
 
   //view storage for all local elements connected to local nodes on this rank
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
-
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    All_Element_Global_Indices(ielem) = global_indices_temp[ielem];
+    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
   std::vector<size_t>().swap(global_indices_temp);
   
   //construct overlapping element map (since different ranks can own the same elements due to the local node map)
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.get_kokkos_view(),0,comm));
+  All_Element_Global_Indices.modify_host();
+  All_Element_Global_Indices.sync_device();
+
+  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
 
 
   //element type selection (subject to change)
@@ -1640,7 +1662,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
   std::string skip_line, read_line, substring, token;
   std::stringstream line_parse;
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, scan_loop, nodes_per_element;
+  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop, nodes_per_element;
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
@@ -1744,6 +1766,8 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
 
   //local variable for host view in the dual view
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //active view scope
+  {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //host_vec_array node_coords = dual_node_coords.view_host();
   if(restart_file){
@@ -1773,8 +1797,8 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
 
-  int dof_limit = num_nodes;
-  int buffer_iterations = dof_limit/BUFFER_LINES;
+  dof_limit = num_nodes;
+  buffer_iterations = dof_limit/BUFFER_LINES;
   if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
   
   //second pass to now read node coords with global node map defines
@@ -1877,7 +1901,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
     }
     read_index_start+=BUFFER_LINES;
   }
-  
+  } //end view scope
   //repartition node distribution
   repartition_nodes();
 
@@ -2187,7 +2211,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
     Element_Types(ielem) = mesh_element_type;
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  nodes_in_elem = dual_nodes_in_elem.view_host();
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
@@ -2195,34 +2219,20 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
       nodes_in_elem(ielem, inode) = element_temp[ielem*nodes_per_element + inode];
 
   //view storage for all local elements connected to local nodes on this rank
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
-
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    All_Element_Global_Indices(ielem) = global_indices_temp[ielem];
-
-  //debug print element edof
-  /*
-  std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
-  
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    std::cout << "elem:  " << All_Element_Global_Indices(ielem)+1 << std::endl;
-    for (int lnode = 0; lnode < 8; lnode++){
-        std::cout << "{ ";
-          std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
-        
-        std::cout << " }"<< std::endl;
-    }
-    std::cout << std::endl;
-  }
-  */
+    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
   std::vector<size_t>().swap(global_indices_temp);
   
   //construct overlapping element map (since different ranks can own the same elements due to the local node map)
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.get_kokkos_view(),0,comm));
+  All_Element_Global_Indices.modify_host();
+  All_Element_Global_Indices.sync_device();
+
+  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
 
 
   //element type selection (subject to change)
@@ -2290,6 +2300,7 @@ void Explicit_Solver_SGH::init_maps(){
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int nodes_per_element;
   GO node_gid;
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   
   if(rnum_elem >= 1) {
 
@@ -2336,12 +2347,12 @@ void Explicit_Solver_SGH::init_maps(){
     //by now the set contains, with no repeats, all the global node indices that are ghosts for this rank
     //now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
     nghost_nodes = ghost_node_set.size();
-    ghost_nodes = CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type>(nghost_nodes, "ghost_nodes");
-    ghost_node_ranks = CArrayKokkos<int, array_layout, device_type, memory_traits>(nghost_nodes, "ghost_node_ranks");
+    ghost_nodes = Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits>("ghost_nodes", nghost_nodes);
+    ghost_node_ranks = Kokkos::DualView <int*, array_layout, device_type, memory_traits>("ghost_node_ranks", nghost_nodes);
     int ighost = 0;
     auto it = ghost_node_set.begin();
     while(it!=ghost_node_set.end()){
-      ghost_nodes(ighost++) = *it;
+      ghost_nodes.h_view(ighost++) = *it;
       it++;
     }
 
@@ -2352,8 +2363,8 @@ void Explicit_Solver_SGH::init_maps(){
 
     //find which mpi rank each ghost node belongs to and store the information in a CArrayKokkos
     //allocate Teuchos Views since they are the only input available at the moment in the map definitions
-    Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.get_kokkos_view().data(), nghost_nodes);
-    Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.get_kokkos_view().data(), nghost_nodes);
+    Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.h_view.data(), nghost_nodes);
+    Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.h_view.data(), nghost_nodes);
     map->getRemoteIndexList(ghost_nodes_pass, ghost_node_ranks_pass);
     
     //debug print of ghost nodes
@@ -2363,8 +2374,12 @@ void Explicit_Solver_SGH::init_maps(){
 
   }
 
+  ghost_nodes.modify_host();
+  ghost_nodes.sync_device();
+  ghost_node_ranks.modify_host();
+  ghost_node_ranks.sync_device();
   // create a Map for ghost node indices
-  ghost_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),ghost_nodes.get_kokkos_view(),0,comm));
+  ghost_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),ghost_nodes.d_view,0,comm));
     
   // Create reference element
   //ref_elem->init(p_order, num_dim, elem->num_basis());
@@ -2374,23 +2389,25 @@ void Explicit_Solver_SGH::init_maps(){
 
   //construct array for all indices (ghost + local)
   nall_nodes = nlocal_nodes + nghost_nodes;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> all_node_indices(nall_nodes, "all_node_indices");
+  //CArrayKokkos<GO, array_layout, device_type, memory_traits> all_node_indices(nall_nodes, "all_node_indices");
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> all_node_indices("all_node_indices", nall_nodes);
   for(int i = 0; i < nall_nodes; i++){
-    if(i<nlocal_nodes) all_node_indices(i) = map->getGlobalElement(i);
-    else all_node_indices(i) = ghost_nodes(i-nlocal_nodes);
+    if(i<nlocal_nodes) all_node_indices.h_view(i) = map->getGlobalElement(i);
+    else all_node_indices.h_view(i) = ghost_nodes.h_view(i-nlocal_nodes);
   }
-  
+  all_node_indices.modify_host();
+  all_node_indices.sync_device();
   //debug print of node indices
   //for(int inode=0; inode < index_counter; inode++)
   //std::cout << " my_reduced_global_indices " << my_reduced_global_indices(inode) <<std::endl;
   
   // create a Map for all the node indices (ghost + local)
-  all_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_node_indices.get_kokkos_view(),0,comm));
+  all_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_node_indices.d_view,0,comm));
 
   //remove elements from the local set so that each rank has a unique set of global ids
   
   //local elements belonging to the non-overlapping element distribution to each rank with buffer
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Initial_Element_Global_Indices(rnum_elem);
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> Initial_Element_Global_Indices("Initial_Element_Global_Indices", rnum_elem);
   size_t nonoverlapping_count = 0;
   int my_element_flag;
   //loop through local element set
@@ -2403,11 +2420,11 @@ void Explicit_Solver_SGH::init_maps(){
       node_gid = nodes_in_elem(ielem, lnode);
       if(ghost_node_map->isNodeGlobalElement(node_gid)){
         local_node_index = ghost_node_map->getLocalElement(node_gid);
-        if(ghost_node_ranks(local_node_index) < myrank) my_element_flag = 0;
+        if(ghost_node_ranks.h_view(local_node_index) < myrank) my_element_flag = 0;
       }
     }
     if(my_element_flag){
-      Initial_Element_Global_Indices(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
+      Initial_Element_Global_Indices.h_view(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
     }
   }
 
@@ -2420,45 +2437,48 @@ void Explicit_Solver_SGH::init_maps(){
       node_gid = nodes_in_elem(ielem, lnode);
       if(ghost_node_map->isNodeGlobalElement(node_gid)){
         local_node_index = ghost_node_map->getLocalElement(node_gid);
-        if(ghost_node_ranks(local_node_index) < myrank) my_element_flag = 0;
+        if(ghost_node_ranks.h_view(local_node_index) < myrank) my_element_flag = 0;
       }
     }
     if(my_element_flag){
-      Initial_Element_Global_Indices(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
+      Initial_Element_Global_Indices.h_view(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
     }
   }
 
   //copy over from buffer to compressed storage
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Element_Global_Indices(nonoverlapping_count);
-  for(int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++)
-    Element_Global_Indices(ibuffer) = Initial_Element_Global_Indices(ibuffer);
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> Element_Global_Indices("Element_Global_Indices",nonoverlapping_count);
+  for(int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++){
+    Element_Global_Indices.h_view(ibuffer) = Initial_Element_Global_Indices.h_view(ibuffer);
+  }
   nlocal_elem_non_overlapping = nonoverlapping_count;
+  Element_Global_Indices.modify_host();
+  Element_Global_Indices.sync_device();
   //create nonoverlapping element map
-  element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Element_Global_Indices.get_kokkos_view(),0,comm));
+  element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Element_Global_Indices.d_view,0,comm));
 
   //sort element connectivity so nonoverlaps are sequentially found first
   //define initial sorting of global indices
   
-  //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //element_map->describe(*fos,Teuchos::VERB_EXTREME);
   
   for (int ielem = 0; ielem < rnum_elem; ielem++){
-    Initial_Element_Global_Indices(ielem) = all_element_map->getGlobalElement(ielem);
+    Initial_Element_Global_Indices.h_view(ielem) = all_element_map->getGlobalElement(ielem);
   }
   
   //re-sort so local elements in the nonoverlapping map are first in storage
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Temp_Nodes(max_nodes_per_element);
+  CArrayKokkos<GO, array_layout, HostSpace, memory_traits> Temp_Nodes(max_nodes_per_element);
   GO temp_element_gid, current_element_gid;
   int last_storage_index = rnum_elem - 1;
   for (int ielem = 0; ielem < nlocal_elem_non_overlapping; ielem++){
-    current_element_gid = Initial_Element_Global_Indices(ielem);
+    current_element_gid = Initial_Element_Global_Indices.h_view(ielem);
     //if this element is not part of the non overlap list then send it to the end of the storage and swap the element at the end
     if(!element_map->isNodeGlobalElement(current_element_gid)){
       temp_element_gid = current_element_gid;
       for (int lnode = 0; lnode < max_nodes_per_element; lnode++){
         Temp_Nodes(lnode) = nodes_in_elem(ielem,lnode);
       }
-      Initial_Element_Global_Indices(ielem) = Initial_Element_Global_Indices(last_storage_index);
-      Initial_Element_Global_Indices(last_storage_index) = temp_element_gid;
+      Initial_Element_Global_Indices.h_view(ielem) = Initial_Element_Global_Indices.h_view(last_storage_index);
+      Initial_Element_Global_Indices.h_view(last_storage_index) = temp_element_gid;
       for (int lnode = 0; lnode < max_nodes_per_element; lnode++){
         nodes_in_elem(ielem, lnode) = nodes_in_elem(last_storage_index,lnode);
         nodes_in_elem(last_storage_index,lnode) = Temp_Nodes(lnode);
@@ -2466,35 +2486,41 @@ void Explicit_Solver_SGH::init_maps(){
       last_storage_index--;
 
       //test if swapped element is also not part of the non overlap map; if so lower loop counter to repeat the above
-      temp_element_gid = Initial_Element_Global_Indices(ielem);
+      temp_element_gid = Initial_Element_Global_Indices.h_view(ielem);
       if(!element_map->isNodeGlobalElement(temp_element_gid)) ielem--;
     }
   }
   //reset all element map to its re-sorted version
+  Initial_Element_Global_Indices.modify_host();
+  Initial_Element_Global_Indices.sync_device();
   
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Initial_Element_Global_Indices.get_kokkos_view(),0,comm));
+  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Initial_Element_Global_Indices.d_view,0,comm));
   //element_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
 
   //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
   //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> local_dof_indices(nlocal_nodes*num_dim, "local_dof_indices");
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> local_dof_indices("local_dof_indices", nlocal_nodes*num_dim);
   for(int i = 0; i < nlocal_nodes; i++){
     for(int j = 0; j < num_dim; j++)
-    local_dof_indices(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
+    local_dof_indices.h_view(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
   }
   
-  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.get_kokkos_view(),0,comm) );
+  local_dof_indices.modify_host();
+  local_dof_indices.sync_device();
+  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.d_view,0,comm) );
 
   //construct dof map that follows from the all_node map (used for distributed matrix and vector objects later)
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> all_dof_indices(nall_nodes*num_dim, "all_dof_indices");
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> all_dof_indices("all_dof_indices", nall_nodes*num_dim);
   for(int i = 0; i < nall_nodes; i++){
     for(int j = 0; j < num_dim; j++)
-    all_dof_indices(i*num_dim + j) = all_node_map->getGlobalElement(i)*num_dim + j;
+    all_dof_indices.h_view(i*num_dim + j) = all_node_map->getGlobalElement(i)*num_dim + j;
   }
   
+  all_dof_indices.modify_host();
+  all_dof_indices.sync_device();
   //pass invalid global count so the map reduces the global count automatically
-  all_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_dof_indices.get_kokkos_view(),0,comm) );
+  all_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_dof_indices.d_view,0,comm) );
 
   //debug print of map
   //debug print
@@ -2508,18 +2534,20 @@ void Explicit_Solver_SGH::init_maps(){
 
   //Count how many elements connect to each local node
   node_nconn_distributed = Teuchos::rcp(new MCONN(map, 1));
-  host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  for(int inode = 0; inode < nlocal_nodes; inode++)
-    node_nconn(inode,0) = 0;
+  //active view scope
+  {
+    host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    for(int inode = 0; inode < nlocal_nodes; inode++)
+      node_nconn(inode,0) = 0;
 
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    for(int inode = 0; inode < nodes_per_element; inode++){
-      node_gid = nodes_in_elem(ielem, inode);
-      if(map->isNodeGlobalElement(node_gid))
-        node_nconn(map->getLocalElement(node_gid),0)++;
+    for(int ielem = 0; ielem < rnum_elem; ielem++){
+      for(int inode = 0; inode < nodes_per_element; inode++){
+        node_gid = nodes_in_elem(ielem, inode);
+        if(map->isNodeGlobalElement(node_gid))
+          node_nconn(map->getLocalElement(node_gid),0)++;
+      }
     }
   }
-
   //create distributed multivector of the local node data and all (local + ghost) node storage
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
@@ -3068,7 +3096,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   size_t npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
   int local_node_id;
   int num_dim = simparam->num_dim;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArray<GO> Surface_Nodes;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //Surface_Nodes = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(4, "Surface_Nodes");
   
@@ -3119,8 +3147,8 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   }
   //std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
   //information for all patches on this rank
-  CArrayKokkos<Node_Combination,array_layout, device_type, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
-  CArrayKokkos<size_t,array_layout, device_type, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
+  CArrayKokkos<Node_Combination,array_layout, HostSpace, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
+  CArrayKokkos<size_t,array_layout, HostSpace, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
   if(myrank == 0)
     std::cout << "Done with boundary patch allocation" << std::endl <<std::flush;
   //initialize boundary patch flags
@@ -3141,7 +3169,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
     //loop through local surfaces
     for(int isurface = 0; isurface < element_npatches; isurface++){
       num_nodes_in_patch = elem2D->surface_to_dof_lid.stride(isurface);
-      Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
+      Surface_Nodes = CArray<GO>(num_nodes_in_patch);
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem2D->surface_to_dof_lid(isurface,inode);
         local_node_id = convert_node_order(local_node_id);
@@ -3176,7 +3204,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       num_nodes_in_patch = elem->surface_to_dof_lid.stride(isurface);
       //debug print
       //std::cout << "NUMBER OF PATCH NODES FOR ELEMENT " << ielem+1 << " ON LOCAL SURFACE " << isurface+1 << " IS " << num_nodes_in_patch << std::endl;
-      Surface_Nodes = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
+      Surface_Nodes = CArray<GO>(num_nodes_in_patch);
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         local_node_id = elem->surface_to_dof_lid(isurface,inode);
         local_node_id = convert_node_order(local_node_id);
@@ -3221,8 +3249,8 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
 
   //std::cout << " BOUNDARY PATCHES PRE COUNT ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
   //upper bound that is not much larger
-  Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
-  Local_Index_Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
+  Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits>(nboundary_patches, "Boundary_Patches");
+  Local_Index_Boundary_Patches = DCArrayKokkos<size_t>(nboundary_patches, num_nodes_in_patch, "Local_Index_Boundary_Patches");
   nboundary_patches = 0;
   bool my_rank_flag;
   size_t remote_count;
@@ -3242,7 +3270,7 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       for(int inode = 0; inode < num_nodes_in_patch; inode++){
         node_gid = Patch_Nodes(ipatch).node_set(inode);
         if(!map->isNodeGlobalElement(node_gid)){
-          //if(ghost_node_ranks(global2local_map.get(node_gid))<myrank)
+          //if(ghost_node_ranks.h_view(global2local_map.get(node_gid))<myrank)
           //my_rank_flag = false;
           remote_count++;
           //test
@@ -3263,13 +3291,12 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
 
   for(int iboundary = 0; iboundary < nboundary_patches; iboundary++){
     num_nodes_in_patch = Boundary_Patches(iboundary).node_set.size();
-    Local_Index_Boundary_Patches(iboundary) = Boundary_Patches(iboundary);
-    Local_Index_Boundary_Patches(iboundary).node_set = CArrayKokkos<GO, array_layout, device_type, memory_traits>(num_nodes_in_patch, "Surface_Nodes");
     for(int inode = 0; inode < num_nodes_in_patch; inode++){
-      Local_Index_Boundary_Patches(iboundary).node_set(inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
+      Local_Index_Boundary_Patches.host(iboundary,inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
     }
   }
-
+  Local_Index_Boundary_Patches.update_device();
+  mesh->Local_Index_Boundary_Patches = Local_Index_Boundary_Patches;
   //debug print of boundary patches
   /*
   std::cout << " BOUNDARY PATCHES ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
@@ -3333,8 +3360,8 @@ void Explicit_Solver_SGH::init_topology_conditions (int num_sets){
     std::cout << " Warning: number of boundary conditions = 0";
     return;
   }
-  NTopology_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, "NBoundary_Condition_Patches");
-  Topology_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
+  NTopology_Condition_Patches = CArrayKokkos<size_t, array_layout, HostSpace, memory_traits>(num_sets, "NBoundary_Condition_Patches");
+  Topology_Condition_Patches = CArrayKokkos<size_t, array_layout, HostSpace, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
 
   //initialize data
   for(int iset = 0; iset < num_sets; iset++) NTopology_Condition_Patches(iset) = 0;
@@ -3403,7 +3430,7 @@ int Explicit_Solver_SGH::check_boundary(Node_Combination &Patch_Nodes, int bc_ta
   size_t node_rid;
   real_t node_coord[num_dim];
   int dim_other1, dim_other2;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> node_on_flags(nnodes, "node_on_flags");
+  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_on_flags(nnodes, "node_on_flags");
 
   //initialize
   for(int inode = 0; inode < nnodes; inode++) node_on_flags(inode) = 0;
@@ -3484,6 +3511,49 @@ int Explicit_Solver_SGH::check_boundary(Node_Combination &Patch_Nodes, int bc_ta
    Collect Nodal Information on Rank 0
 ------------------------------------------------------------------------- */
 
+void Explicit_Solver_SGH::sort_information(){
+  int num_dim = simparam->num_dim;
+  sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+
+  //importer from local node distribution to sorted distribution
+  Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
+
+  sorted_node_coords_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
+  sorted_node_velocities_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
+
+  //comms to sort
+  sorted_node_coords_distributed->doImport(*node_coords_distributed, node_sorting_importer, Tpetra::INSERT);
+  sorted_node_velocities_distributed->doImport(*node_velocities_distributed, node_sorting_importer, Tpetra::INSERT);
+
+  //comms to sort FEA module related vector data
+  /*
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->collect_output(global_reduce_map);
+    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+  }
+  */
+
+  //sorted nodal density information
+  sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+
+  //comms to sort
+  //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
+
+  //sort element connectivity
+  sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
+  Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
+  
+  sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
+
+  //comms
+  sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
+  
+}
+
+/* ----------------------------------------------------------------------
+   Collect Nodal Information on Rank 0
+------------------------------------------------------------------------- */
+
 void Explicit_Solver_SGH::collect_information(){
   GO nreduce_nodes = 0;
   GO nreduce_elem = 0;
@@ -3497,8 +3567,8 @@ void Explicit_Solver_SGH::collect_information(){
   //importer from local node distribution to collected distribution
   Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
 
-  Teuchos::RCP<MV> collected_node_coords_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
-  Teuchos::RCP<MV> collected_node_velocities_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+  collected_node_coords_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+  collected_node_velocities_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
 
   //comms to collect
   collected_node_coords_distributed->doImport(*node_coords_distributed, node_collection_importer, Tpetra::INSERT);
@@ -3513,7 +3583,7 @@ void Explicit_Solver_SGH::collect_information(){
   */
 
   //collected nodal density information
-  Teuchos::RCP<MV> collected_node_densities_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
+  collected_node_densities_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
 
   //comms to collect
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
@@ -3526,20 +3596,13 @@ void Explicit_Solver_SGH::collect_information(){
   //importer from all element map to collected distribution
   Tpetra::Import<LO, GO> element_collection_importer(all_element_map, global_reduce_element_map);
   
-  Teuchos::RCP<MCONN> collected_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(global_reduce_element_map, max_nodes_per_element));
+  collected_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(global_reduce_element_map, max_nodes_per_element));
 
   //comms to collect
   collected_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_collection_importer, Tpetra::INSERT);
 
   //collect element type data
 
-  //set host views of the collected data to print out from
-  if(myrank==0){
-    collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    collected_node_velocities = collected_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    //collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -3561,8 +3624,10 @@ void Explicit_Solver_SGH::comm_velocities(){
   //create import object using local node indices map and all indices map
   Tpetra::Import<LO, GO> importer(map, all_node_map);
   
-  
-  const_host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //active view scope
+  {
+    const_host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
   //comms to get ghosts
   all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
@@ -3573,6 +3638,230 @@ void Explicit_Solver_SGH::comm_velocities(){
       //MPI_Barrier(world);
       //MPI_Abort(world,4);
   //}
+}
+
+/* ----------------------------------------------------------------------
+   Output Model Information in tecplot format
+------------------------------------------------------------------------- */
+
+void Explicit_Solver_SGH::parallel_tecplot_writer(){
+  int num_dim = simparam->num_dim;
+	std::string current_file_name;
+	std::string base_file_name= "TecplotTO";
+  std::string base_file_name_undeformed= "TecplotTO_undeformed";
+  std::stringstream current_line_stream;
+  std::string current_line;
+	std::string file_extension= ".dat";
+  std::string file_count;
+	std::stringstream count_temp;
+  int time_step = 0;
+  int temp_convert;
+  int noutput, nvector;
+  bool displace_geometry = false;
+   /*
+  int displacement_index;
+  if(displacement_module!=-1){
+    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displacement_index = fea_modules[displacement_module]->displacement_index;
+  }
+  
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->compute_output();
+  }
+  */
+  // Convert ijk index system to the finite element numbering convention
+  // for vertices in cell
+  
+  //comm to vectors with contigously sorted global indices from unsorted zoltan2 repartition map
+  sort_information();
+  //set host views of the communicated data to print out from
+  const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
+  convert_ijk_to_ensight(0) = 0;
+  convert_ijk_to_ensight(1) = 1;
+  convert_ijk_to_ensight(2) = 3;
+  convert_ijk_to_ensight(3) = 2;
+  convert_ijk_to_ensight(4) = 4;
+  convert_ijk_to_ensight(5) = 5;
+  convert_ijk_to_ensight(6) = 7;
+  convert_ijk_to_ensight(7) = 6;
+
+  MPI_File myfile_parallel;
+  MPI_Offset header_stream_offset = 0;
+  //initial undeformed geometry
+  count_temp.str("");
+  count_temp << file_index;
+  file_index++;
+	file_count = count_temp.str();
+  if(displace_geometry&&displacement_module>=0)
+    current_file_name = base_file_name_undeformed + file_count + file_extension;
+  else
+    current_file_name = base_file_name + file_count + file_extension;
+  MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), 
+                MPI_MODE_CREATE|MPI_MODE_WRONLY, 
+                MPI_INFO_NULL, &myfile_parallel);
+  
+  int err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+  //allows overwriting the file if it already existed in the directory
+    if (err != MPI_SUCCESS)  {
+      if (myrank == 0){
+        MPI_File_delete(current_file_name.c_str(),MPI_INFO_NULL);
+      }
+      MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+    }
+
+  //output header of the tecplot file
+  
+  //std::cout << current_file_name << std::endl;
+	current_line_stream << "TITLE=\"results for FEA simulation\"" "\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
+  //else
+  current_line_stream.str("");
+	current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+    /*
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+        for(int ivector = 0; ivector < nvector; ivector++){
+          myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+        }
+      }
+    }
+    */
+  current_line_stream.str("");
+	current_line_stream << "\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+
+	current_line_stream.str("");
+	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //output nodal data
+  //compute buffer output size and file stream offset for this MPI rank
+  int buffer_size_per_node_line = 26*6 + 1; //25 width per number plus 6 spaces plus line terminator
+  int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  GO first_node_global_id = sorted_map->getGlobalElement(0);
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> print_buffer(buffer_size_per_node_line*nlocal_sorted_nodes);
+  MPI_Offset file_stream_offset = buffer_size_per_node_line*first_node_global_id;
+
+  //populate buffer
+  long long current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
+  for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+    current_line_stream.str("");
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+
+    //velocity print
+    current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,0) << " ";
+		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
+    
+        //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        /*
+        for (int imodule = 0; imodule < nfea_modules; imodule++){
+          noutput = fea_modules[imodule]->noutput;
+          for(int ioutput = 0; ioutput < noutput; ioutput++){
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
+              }
+            }
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
+              }
+            }
+          }
+        }
+        */
+    current_line_stream << std::endl;
+    
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+  //print buffers at offsets with collective MPI write
+  //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+  //MPI_File_close(&myfile_parallel);
+  
+  //write element connectivity; reopen to reset offset baseline.
+  //err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_APPEND|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+  
+  MPI_Offset current_stream_position;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+  
+  //expand print buffer if needed
+  int buffer_size_per_element_line = 11*max_nodes_per_element + 1; //25 width per number plus 6 spaces plus line terminator
+  int nlocal_elements = sorted_element_map->getLocalNumElements();
+  GO first_element_global_id = sorted_element_map->getGlobalElement(0);
+  if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
+  file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position;
+  
+  current_buffer_position = 0;
+  for (int elementline = 0; elementline < nlocal_elements; elementline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		for (int ii = 0; ii < max_nodes_per_element; ii++) {
+      if(active_node_ordering_convention == IJK)
+        temp_convert = convert_ijk_to_ensight(ii);
+      else
+        temp_convert = ii;
+				current_line_stream << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+		}
+		current_line_stream << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+  
+  MPI_File_close(&myfile_parallel);
+
 }
 
 /* ----------------------------------------------------------------------
@@ -3592,17 +3881,26 @@ void Explicit_Solver_SGH::tecplot_writer(){
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
-  bool displace_geometry;
+  bool displace_geometry = false;
   const_host_vec_array current_collected_output;
+  int displacement_index;
   /*
-  if(displacement_module!=-1)
+  if(displacement_module!=-1){
     displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displacement_index = fea_modules[displacement_module]->displacement_index;
+  }
   
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     fea_modules[imodule]->compute_output();
   }
   */
   collect_information();
+  //set host views of the collected data to print out from
+  const_host_vec_array collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array collected_node_velocities = collected_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //const_host_vec_array collected_node_densities = collected_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array collected_nodes_in_elem = collected_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
@@ -3621,7 +3919,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
       //initial undeformed geometry
       count_temp.str("");
       count_temp << file_index;
-      //file_index++;
+      file_index++;
 	    file_count = count_temp.str();
       if(displace_geometry&&displacement_module>=0)
         current_file_name = base_file_name_undeformed + file_count + file_extension;
@@ -3669,7 +3967,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){
@@ -3732,10 +4030,11 @@ void Explicit_Solver_SGH::tecplot_writer(){
 			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 1,0) << " ";
+        current_collected_output = fea_modules[displacement_module]->module_outputs[displacement_index];
+			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + current_collected_output(nodeline*num_dim,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + current_collected_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + fea_modules[displacement_module]->collected_displacement_output(nodeline*num_dim + 2,0) << " ";
+			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + current_collected_output(nodeline*num_dim + 2,0) << " ";
 
         //velocity print
         myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
@@ -3747,7 +4046,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
         for (int imodule = 0; imodule < nfea_modules; imodule++){
           noutput = fea_modules[imodule]->noutput;
           for(int ioutput = 0; ioutput < noutput; ioutput++){
-            current_collected_output = fea_modules[imodule]->collected_module_output[ioutput];
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
             if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
               nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
               for(int ivector = 0; ivector < nvector; ivector++){

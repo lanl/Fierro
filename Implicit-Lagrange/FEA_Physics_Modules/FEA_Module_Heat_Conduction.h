@@ -119,11 +119,14 @@ public:
 
   void compute_output();
 
+  void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
+
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
   class Simulation_Parameters_Thermal *simparam;
+  class Simulation_Parameters_Topology_Optimization *simparam_TO;
   
   //Local FEA data
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Conductivity_Matrix_Assembly_Map;
@@ -188,9 +191,11 @@ public:
 
   //output dof data
   //Global arrays with collected data used to print
-  int collected_temperature_index, collected_temperature_gradient_index, collected_heat_flux_index;
-  const_host_vec_array collected_node_heat_fluxes;
-  const_host_vec_array collected_node_temperatures;
+  int output_temperature_index, output_temperature_gradient_index, output_heat_flux_index;
+  Teuchos::RCP<MV> sorted_node_heat_fluxes_distributed;
+  Teuchos::RCP<MV> sorted_node_temperatures_distributed;
+  Teuchos::RCP<MV> collected_node_heat_fluxes_distributed;
+  Teuchos::RCP<MV> collected_node_temperatures_distributed;
   
 };
 
