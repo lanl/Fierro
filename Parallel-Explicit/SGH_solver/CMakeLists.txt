@@ -7,7 +7,7 @@ set(SRC_Files Explicit_Solver_SGH.cpp read_mesh.cpp geometry.cpp boundary.cpp in
 energy_sgh.cpp properties.cpp user_mat.cpp user_mat_init.cpp)
 set(Class_SRC ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/node_combination.cpp)
 set(Simulation_Param_SRC ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters_Thermal.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters_Elasticity.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters_Topology_Optimization.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters_Inertial.cpp
-${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters_SGH.cpp)
+Simulation_Parameters_SGH.cpp)
 set(Implicit_Solver_SRC ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Implicit_Solver.cpp)
 set(FEA_Module_SRC ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/FEA_Physics_Modules/FEA_Module.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/FEA_Physics_Modules/FEA_Module_Inertial.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/FEA_Physics_Modules/FEA_Module_Elasticity.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/FEA_Physics_Modules/FEA_Module_Heat_Conduction.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/FEA_Physics_Modules/Matrix_Equilibration.cpp
 FEA_Module_SGH.cpp )

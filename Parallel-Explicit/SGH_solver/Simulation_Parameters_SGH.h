@@ -39,6 +39,9 @@
 #define SIMULATION_PARAMETERS_SGH_H
 
 #include "utilities.h"
+#include "state.h"
+#include "matar.h"
+#include "mesh.h"
 #include "Simulation_Parameters.h"
 using namespace utils;
 
@@ -48,6 +51,32 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   Simulation_Parameters_SGH();
   virtual ~Simulation_Parameters_SGH();
   virtual void input();
+
+
+    
+    // applying initial conditions
+  enum setup
+  {
+      none = 0,
+      Sedov3D = 1,
+      SedovRZ = 2,
+        
+      Noh3D = 3,
+      NohRZ = 4,
+        
+      SodZ = 5,
+      Sod3DX = 6,
+      Sod3DY = 7,
+      Sod3DZ = 8,
+        
+      TriplePoint = 9,
+      TaylorAnvil = 10,
+  };
+    
+  // end of initial conditions enum
+
+  setup test_problem;
+
   //==============================================================================
   //   Mesh Variables
   //==============================================================================
@@ -61,8 +90,49 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   // --- Graphics output variables ---
   bool output_velocity_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
 
-  // --- Isotropic Elastic Parameters
-  real_t Elastic_Modulus, Poisson_Ratio;
+  CArrayKokkos <material_t> material;
+  CArrayKokkos <double> state_vars; // array to hold init model variables
+
+  CArrayKokkos <mat_fill_t> mat_fill;
+  CArrayKokkos <boundary_t> boundary;
+
+  // --- num vars ----
+  size_t num_dims;
+
+  size_t num_materials;
+  size_t max_num_state_vars;
+
+  size_t num_fills;
+  size_t num_bcs;
+
+  // --- Graphics output variables ---
+  size_t graphics_id;
+  size_t graphics_cyc_ival;
+
+  CArray <double> graphics_times;
+  double graphics_dt_ival;
+  double graphics_time;  // the times for writing graphics dump
+
+
+  // --- Time and cycling variables ---
+  double time_value;
+  double time_final;
+  double dt;
+  double dt_max;
+  double dt_min;
+  double dt_cfl;
+  double dt_start;
+
+  size_t rk_num_stages;
+  size_t rk_num_bins;
+
+  size_t cycle;
+  size_t cycle_stop;
+
+  // --- Precision variables ---
+  double fuzz;  // machine precision
+  double tiny;  // very very small (between real_t and single)
+  double small;   // single precision
 
   // -- Integration rule
   int num_gauss_points;

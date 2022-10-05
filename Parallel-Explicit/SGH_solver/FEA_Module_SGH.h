@@ -115,7 +115,7 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  class Simulation_Parameters_Elasticity *simparam;
+  class Simulation_Parameters_SGH *simparam;
   class Simulation_Parameters_Topology_Optimization *simparam_TO;
   
   //output stream
@@ -236,7 +236,7 @@ public:
 
   //output dof data
   //Global arrays with collected data used to print
-  int output_displacement_index, output_strain_index, output_stress_index;
+  int output_velocity_index, output_strain_index, output_stress_index;
 };
 
 #endif // end HEADER_H

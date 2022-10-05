@@ -197,7 +197,8 @@ public:
   
 
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters_Elasticity *simparam;
+  class Simulation_Parameters_SGH *simparam;
+  class Simulation_Parameters_Topology_Optimization *simparam_TO;
 
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;
@@ -319,10 +320,6 @@ public:
 
   //debug flags
   int gradient_print_sync;
-
-  //   Variables, setting default inputs
-
-
 
   // --- num vars ----
   size_t num_dims;

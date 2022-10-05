@@ -70,6 +70,7 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameter_Headers.h"
+#include "Simulation_Parameters_SGH.h"
 #include "FEA_Module_Headers.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
@@ -124,7 +125,8 @@ each surface to use for hammering metal into to form it.
 
 Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //create parameter objects
-  simparam = new Simulation_Parameters_Elasticity();
+  simparam = new Simulation_Parameters_SGH();
+  //simparam_TO = new Simulation_Parameters_Topology_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->Simulation_Parameters::input();
   simparam->input();
@@ -367,25 +369,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    read the input file
         // ---------------------------------------------------------------------  
-        input(material,
-              mat_fill,
-              boundary,
-              state_vars,
-              num_materials,
-              num_fills,
-              num_bcs,
-              num_dims,
-              num_state_vars,
-              dt_start,
-              time_final,
-              dt_max,
-              dt_min,
-              dt_cfl,
-              graphics_dt_ival,
-              graphics_cyc_ival,
-              cycle_stop,
-              rk_num_stages
-              );
+        simparam->input();
         
 
         // ---------------------------------------------------------------------

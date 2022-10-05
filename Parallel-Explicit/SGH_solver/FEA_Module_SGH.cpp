@@ -73,7 +73,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_Elasticity.h"
+#include "Simulation_Parameters_SGH.h"
 #include "Simulation_Parameters_Topology_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
@@ -88,14 +88,14 @@ using namespace utils;
 
 FEA_Module_SGH::FEA_Module_SGH(Explicit_Solver_SGH *Solver_Pointer){
   //create parameter object
-  simparam = new Simulation_Parameters_Elasticity();
+  simparam = dynamic_cast<Simulation_Parameters_SGH*>(Solver_Pointer_->simparam);
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
   
   Solver_Pointer_ = Solver_Pointer;
   
   //TO parameters
-  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
+  //simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
 
   //create ref element object
   ref_elem = new elements::ref_element();
@@ -259,7 +259,7 @@ void FEA_Module_SGH::Displacement_Boundary_Conditions(){
 
 void FEA_Module_SGH::init_output(){
   //check user parameters for output
-  bool output_displacement_flag = simparam->output_displacement_flag;
+  bool output_velocity_flag = simparam->output_velocity_flag;
   displaced_mesh_flag = simparam->displaced_mesh_flag;
   bool output_strain_flag = simparam->output_strain_flag;
   bool output_stress_flag = simparam->output_stress_flag;
@@ -268,9 +268,9 @@ void FEA_Module_SGH::init_output(){
   if(num_dim==3) Brows = 6;
   else Brows = 3;
 
-  if(output_displacement_flag){
+  if(output_velocity_flag){
     //displacement_index is accessed by writers at the solver level for deformed output
-    displacement_index = output_displacement_index = noutput;
+    output_velocity_index = noutput;
     noutput += 1;
     module_outputs.resize(noutput);
 
