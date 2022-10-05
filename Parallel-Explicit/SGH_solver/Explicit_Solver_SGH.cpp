@@ -71,6 +71,7 @@
 #include "node_combination.h"
 #include "Simulation_Parameter_Headers.h"
 #include "FEA_Module_Headers.h"
+#include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 #include "mesh.h"
 #include "state.h"
@@ -285,7 +286,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       }
     }
     
-    
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;
     //call boundary routines on fea modules
 
@@ -342,7 +342,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       //std::cout << "Linear Explicit_Solver Error" << std::endl <<std::flush;
       //return;
     //}
-
+    
+    //hack allocation of module
+    FEA_Module_SGH* sgh_module = new FEA_Module_SGH(this);
     // The kokkos scope
     {
      
