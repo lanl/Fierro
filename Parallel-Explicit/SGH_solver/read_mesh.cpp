@@ -6,7 +6,7 @@
 #include "Explicit_Solver_SGH.h"
 
 // -----------------------------------------------------------------------------
-// Reads an ensight .geo mesh file
+// Interfaces read in data with the SGH solver data; currently a hack to streamline
 //------------------------------------------------------------------------------
 void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
                        mesh_t &mesh,

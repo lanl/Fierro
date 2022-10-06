@@ -151,41 +151,6 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   nfea_modules = 0;
   displacement_module = -1;
 
-  //   Variables, setting default inputs
-
-  // --- num vars ----
-  num_dims = 3;
-
-   // --- Graphics output variables ---
-  graphics_id = 0;
-  graphics_cyc_ival = 50;
-
-  graphics_times = CArray<double>(2000);
-  graphics_dt_ival = 1.0e8;
-  graphics_time = graphics_dt_ival;  // the times for writing graphics dump
-
-
-  // --- Time and cycling variables ---
-  time_value = 0.0;
-  time_final = 1.e16;
-  dt = 1.e-8;
-  dt_max = 1.0e-2;
-  dt_min = 1.0e-8;
-  dt_cfl = 0.4;
-  dt_start = 1.0e-8;
-
-  rk_num_stages = 2;
-  rk_num_bins = 2;
-
-  cycle = 0;
-  cycle_stop = 1000000000;
-
-
-  // --- Precision variables ---
-  fuzz = 1.0e-16;  // machine precision
-  tiny = 1.0e-12;  // very very small (between real_t and single)
-  small= 1.0e-8;   // single precision
-
   //file readin parameter
   active_node_ordering_convention = ENSIGHT;
 }
@@ -209,6 +174,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
     MPI_Comm_rank(world,&myrank);
     MPI_Comm_size(world,&nranks);
+    int num_dim = simparam->num_dim;
     
     if(myrank == 0){
       std::cout << "Running TO Explicit_Solver" << std::endl;
@@ -375,7 +341,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    read in supplied mesh
         // --------------------------------------------------------------------- 
-        sgh_interface_setup(this, *mesh, node, elem, corner, num_dims, rk_num_bins);
+        sgh_module->sgh_interface_setup(*mesh, node, elem, corner);
         mesh->build_corner_connectivity();
         //debug print of corner ids
         /*
@@ -426,10 +392,12 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         const size_t num_nodes = mesh->num_nodes;
         const size_t num_elems = mesh->num_elems;
         const size_t num_corners = mesh->num_corners;
+        const size_t max_num_state_vars = simparam->max_num_state_vars;
+        const size_t rk_num_bins = simparam->rk_num_bins;
 
         
         // allocate elem_statev
-        elem.statev = CArray <double> (num_elems, num_state_vars);
+        elem.statev = CArray <double> (num_elems, max_num_state_vars);
 
         // --- make dual views of data on CPU and GPU ---
         //  Notes:
@@ -445,9 +413,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
         
         // create Dual Views of the individual node struct variables
-        DViewCArrayKokkos <double> node_coords(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dims);
+        DViewCArrayKokkos <double> node_coords(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        DViewCArrayKokkos <double> node_vel(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dims);
+        DViewCArrayKokkos <double> node_vel(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
         DViewCArrayKokkos <double> node_mass(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
         
@@ -487,12 +455,12 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
         DViewCArrayKokkos <double> elem_statev(&elem.statev(0,0),
                                                num_elems,
-                                               num_state_vars );
+                                               max_num_state_vars );
         
         // create Dual Views of the corner struct variables
         DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
                                                 num_corners, 
-                                                num_dims);
+                                                num_dim);
 
         DViewCArrayKokkos <double> corner_mass(&corner.mass(0),
                                                num_corners);
@@ -505,7 +473,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         Kokkos::fence();
         
         
-        get_vol(elem_vol, node_coords, *mesh);
+        sgh_module->get_vol(elem_vol, node_coords, *mesh);
 
 
         // ---------------------------------------------------------------------
@@ -534,7 +502,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               rk_num_bins,
               num_bcs,
               num_materials,
-              num_state_vars);
+              max_num_state_vars);
         
         // intialize time, time_step, and cycles
         time_value = 0.0;

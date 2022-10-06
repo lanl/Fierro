@@ -38,6 +38,9 @@
 #ifndef FEA_MODULE_SGH_H
 #define FEA_MODULE_SGH_H
 
+#include "mesh.h"
+#include "state.h"
+
 class Explicit_Solver_SGH;
 
 class FEA_Module_SGH{
@@ -84,6 +87,24 @@ public:
   typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
+  void sgh_interface_setup(mesh_t &mesh, node_t &node, elem_t &elem, corner_t &corner);
+
+  void get_vol(const DViewCArrayKokkos <double> &elem_vol,
+             const DViewCArrayKokkos <double> &node_coords,
+             const mesh_t &mesh);
+  
+  void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
+              mesh_t &mesh,
+              const DViewCArrayKokkos <double> &node_coords);
+  
+  KOKKOS_INLINE_FUNCTION size_t check_bdy(const size_t patch_gid,
+                 const int this_bc_tag,
+                 const double val,
+                 const mesh_t &mesh,
+                 const DViewCArrayKokkos <double> &node_coords);
+  
+  void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
+  
   void init_boundaries();
 
   //initializes memory for arrays used in the global stiffness matrix assembly
@@ -126,7 +147,7 @@ public:
   elements::Element2D *elem2D;
   elements::ref_element  *ref_elem;
   
-  Explicit_Solver_SGH *Solver_Pointer_;
+  Explicit_Solver_SGH *explicit_solver_pointer;
   
   //Local FEA data
   size_t nlocal_nodes;

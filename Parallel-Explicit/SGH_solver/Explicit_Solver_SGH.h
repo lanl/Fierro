@@ -321,43 +321,6 @@ public:
   //debug flags
   int gradient_print_sync;
 
-  // --- num vars ----
-  size_t num_dims;
-
-  size_t num_materials;
-  size_t num_state_vars;
-
-  size_t num_fills;
-  size_t num_bcs;
-
-  // --- Graphics output variables ---
-  size_t graphics_id;
-  size_t graphics_cyc_ival;
-
-  CArray <double> graphics_times;
-  double graphics_dt_ival;
-  double graphics_time;  // the times for writing graphics dump
-
-
-  // --- Time and cycling variables ---
-  double time_value;
-  double time_final;
-  double dt;
-  double dt_max;
-  double dt_min;
-  double dt_cfl;
-  double dt_start;
-
-  size_t rk_num_stages;
-  size_t rk_num_bins;
-
-  size_t cycle;
-  size_t cycle_stop;
-
-  // --- Precision variables ---
-  double fuzz;  // machine precision
-  double tiny;  // very very small (between real_t and single)
-  double small;   // single precision
 };
 
 #endif // end HEADER_H

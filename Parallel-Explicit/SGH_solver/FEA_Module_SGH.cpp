@@ -88,14 +88,13 @@ using namespace utils;
 
 FEA_Module_SGH::FEA_Module_SGH(Explicit_Solver_SGH *Solver_Pointer){
   //create parameter object
-  simparam = dynamic_cast<Simulation_Parameters_SGH*>(Solver_Pointer_->simparam);
+  explicit_solver_pointer = Solver_Pointer;
+  simparam = dynamic_cast<Simulation_Parameters_SGH*>(explicit_solver_pointer->simparam);
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
   
-  Solver_Pointer_ = Solver_Pointer;
-  
   //TO parameters
-  //simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
+  //simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(explicit_solver_pointer->simparam);
 
   //create ref element object
   ref_elem = new elements::ref_element();
@@ -108,6 +107,7 @@ FEA_Module_SGH::FEA_Module_SGH(Explicit_Solver_SGH *Solver_Pointer){
   
   //setup output
   init_output();
+
 }
 
 FEA_Module_SGH::~FEA_Module_SGH(){
@@ -139,6 +139,229 @@ void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream *in, std::streampos
   host_vec_array node_densities;
  
 } // end read_conditions_ansys_dat
+
+// -----------------------------------------------------------------------------
+// Interfaces read in data with the SGH solver data; currently a hack to streamline
+//------------------------------------------------------------------------------
+void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
+                       node_t &node,
+                       elem_t &elem,
+                       corner_t &corner){
+
+    const size_t rk_level = 0;
+    const size_t num_dims = simparam->num_dim;
+    const size_t rk_num_bins = simparam->rk_num_bins;
+
+    size_t num_nodes_in_elem = 1;
+    for (int dim=0; dim<num_dims; dim++){
+        num_nodes_in_elem *= 2;
+    }
+
+    // --- Read in the nodes in the mesh ---
+
+    size_t num_nodes = explicit_solver_pointer->nall_nodes;
+    int myrank = explicit_solver_pointer->myrank;
+    int nranks = explicit_solver_pointer->nranks;
+    //printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, num_nodes);
+
+    // intialize node variables
+    mesh.initialize_nodes(num_nodes);
+    mesh.initialize_local_nodes(explicit_solver_pointer->nlocal_nodes);
+    node.initialize(rk_num_bins, num_nodes, num_dims);
+    //std::cout << "Bin counts " << rk_num_bins << " Node counts " << num_nodes << " Num dim " << num_dims << std::endl;
+
+    //view scope
+    {
+      Explicit_Solver_SGH::host_vec_array interface_node_coords = explicit_solver_pointer->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      //save node data to node.coords
+      //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
+      for(int inode = 0; inode < num_nodes; inode++){
+        //std::cout << "Node index " << inode+1 << " ";
+        node.coords.host(0,inode,0) = interface_node_coords(inode,0);
+        //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+        node.coords.host(0,inode,1) = interface_node_coords(inode,1);
+        //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+        node.coords.host(0,inode,2) = interface_node_coords(inode,2);
+        //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
+      }
+    } //end view scope
+    // --- read in the elements in the mesh ---
+    size_t num_elem = 0;
+    
+    num_elem = explicit_solver_pointer->rnum_elem;
+    //printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, num_elem);
+
+    // intialize elem variables
+    mesh.initialize_elems(num_elem, num_dims);
+    elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
+
+    //save data to mesh.nodes_in_elem.host
+    //CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
+    //view scope
+    {
+      Explicit_Solver_SGH::host_elem_conn_array interface_nodes_in_elem = explicit_solver_pointer->nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      //save node data to node.coords
+      //std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
+      for(int ielem = 0; ielem < num_elem; ielem++){
+        //std::cout << "Element index " << ielem+1 << " ";
+        for(int inode = 0; inode < num_nodes_in_elem; inode++){
+            mesh.nodes_in_elem.host(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            //debug print
+            //std::cout << mesh.nodes_in_elem.get_kokkos_dual_view().h_view(ielem*num_nodes_in_elem + inode)+1<< " ";
+        }
+        //std::cout << std::endl;
+      }
+    }
+    // update device side
+    mesh.nodes_in_elem.update_device();
+
+    //debug print
+    
+    //CArrayKokkos<size_t> device_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
+    //device_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().d_view;
+    //host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
+    /*
+    if(myrank==1){
+    std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in LOCAL INDICES" << myrank << std::endl;
+    for(int ielem = 0; ielem < num_elem; ielem++){
+        std::cout << "Element index " << ielem+1 << " ";
+        for(int inode = 0; inode < num_nodes_in_elem; inode++){
+            //debug print
+            //device_mesh_nodes_in_elem(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            std::cout << mesh.nodes_in_elem(ielem, inode)+1<< " ";
+        }
+        std::cout << std::endl;
+    }
+    }
+    */
+    /*
+    std::cout.flush();
+    if(myrank==1){
+    std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in GLOBAL INDICES" << myrank << std::endl;
+    std::cout << "local node index of global index 275 on rank 1 " << explicit_solver_pointer->all_node_map->getLocalElement(275) << std::endl;
+    for(int ielem = 0; ielem < num_elem; ielem++){
+        std::cout << ielem << " ";
+        for(int inode = 0; inode < num_nodes_in_elem; inode++){
+            //debug print
+            //device_mesh_nodes_in_elem(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(mesh.nodes_in_elem(ielem, inode))<< " ";
+        }
+        std::cout << std::endl;
+    }
+    }
+    std::cout.flush();
+    */
+    /*
+    size_t nall_nodes = explicit_solver_pointer->nall_nodes;
+    node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
+    node.all_vel    = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
+    node.all_mass   = DCArrayKokkos <double> (nall_nodes);
+
+    //save all data (nlocal +nghost)
+    CArrayKokkos<double, DefaultLayout, HostSpace> host_all_node_coords_state(rk_num_bins, nall_nodes, num_dims);
+    Explicit_Solver_SGH::host_vec_array interface_all_node_coords = explicit_solver_pointer->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_all_node_coords_state.get_kokkos_view() = node.all_coords.get_kokkos_dual_view().view_host();
+    //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, num_nodes, num_dims);
+    //host_all_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*nall_nodes*num_dims);
+    //save node data to node.coords
+    
+    //std::cout << "ALL NODE DATA ON RANK " << myrank << std::endl;
+    for(int inode = 0; inode < nall_nodes; inode++){
+        //std::cout << "Node index " << inode+1 << " ";
+        node.all_coords.host(0,inode,0) = interface_all_node_coords(inode,0);
+        //std::cout << host_all_node_coords_state(0,inode,0)+1<< " ";
+        node.all_coords.host(0,inode,1) = interface_all_node_coords(inode,1);
+        //std::cout << host_all_node_coords_state(0,inode,1)+1<< " ";
+        node.all_coords.host(0,inode,2) = interface_all_node_coords(inode,2);
+        //std::cout << host_all_node_coords_state(0,inode,2)+1<< std::endl;
+    }
+    */
+
+    // save the node coords to the current RK value
+    for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
+        
+        for(int rk=1; rk<rk_num_bins; rk++){
+            for (int dim = 0; dim < num_dims; dim++){
+                node.coords.host(rk, node_gid, dim) = node.coords.host(0, node_gid, dim);
+            } // end for dim
+        } // end for rk
+        
+    } // end parallel for
+    
+    /*
+    // save the node coords to the current RK value
+    for (size_t node_gid=0; node_gid<nall_nodes; node_gid++){
+        
+        for(int rk=1; rk<rk_num_bins; rk++){
+            for (int dim = 0; dim < num_dims; dim++){
+                node.all_coords.host(rk, node_gid, dim) = node.all_coords.host(0, node_gid, dim);
+            } // end for dim
+        } // end for rk
+        
+    } // end parallel for
+    */
+    
+    node.coords.update_device();
+    //node.all_coords.update_device();
+
+    
+    // intialize corner variables
+    int num_corners = num_elem*mesh.num_nodes_in_elem;
+    mesh.initialize_corners(num_corners);
+    corner.initialize(num_corners, num_dims);
+    
+    /*
+    for(int inode = 0; inode < num_nodes; inode++){
+        std::cout << "Node index " << inode+1 << " ";
+        for(int rk=0; rk<rk_num_bins; rk++){
+          std::cout << "rk index " << rk+1 << " ";
+          std::cout << node.coords(rk,inode,0)+1<< " ";
+          std::cout << node.coords(rk,inode,1)+1<< " ";
+          std::cout << node.coords(rk,inode,2)+1<< std::endl;
+        }
+    }
+    */
+    // Close mesh input file
+    //fclose(in);
+
+    return;
+    
+}
+
+/* ----------------------------------------------------------------------------
+   Compute Volume of each finite element
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::get_vol(const DViewCArrayKokkos <double> &elem_vol,
+             const DViewCArrayKokkos <double> &node_coords,
+             const mesh_t &mesh){
+    
+    const size_t num_dims = mesh.num_dims;
+    
+    if (num_dims == 2){
+        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+            
+            // cut out the node_gids for this element
+            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+            get_vol_quad(elem_vol, elem_gid, node_coords, elem_node_gids);
+            
+        });
+        Kokkos::fence();
+    }
+    else {
+        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+            
+            // cut out the node_gids for this element
+            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+            get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);
+            
+        });
+        Kokkos::fence();
+    } // end if
+    
+    return;
+    
+} // end subroutine
 
 /* ----------------------------------------------------------------------------
    Initialize sets of element boundary surfaces and arrays for input conditions
@@ -388,3 +611,690 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
 void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lower_bound){
 
 }
+
+/* ----------------------------------------------------------------------------
+   Setup SGH solver data
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::setup(const CArrayKokkos <material_t> &material,
+           const CArrayKokkos <mat_fill_t> &mat_fill,
+           const CArrayKokkos <boundary_t> &boundary,
+           mesh_t &mesh,
+           const DViewCArrayKokkos <double> &node_coords,
+           DViewCArrayKokkos <double> &node_vel,
+           DViewCArrayKokkos <double> &node_mass,
+           const DViewCArrayKokkos <double> &elem_den,
+           const DViewCArrayKokkos <double> &elem_pres,
+           const DViewCArrayKokkos <double> &elem_stress,
+           const DViewCArrayKokkos <double> &elem_sspd,
+           const DViewCArrayKokkos <double> &elem_sie,
+           const DViewCArrayKokkos <double> &elem_vol,
+           const DViewCArrayKokkos <double> &elem_mass,
+           const DViewCArrayKokkos <size_t> &elem_mat_id,
+           const DViewCArrayKokkos <double> &elem_statev,
+           const CArrayKokkos <double> &state_vars,
+           const DViewCArrayKokkos <double> &corner_mass,
+           const size_t num_fills,
+           const size_t rk_num_bins,
+           const size_t num_bcs,
+           const size_t num_materials,
+           const size_t num_state_vars
+           ){
+
+    
+    //--- calculate bdy sets ---//
+    mesh.num_nodes_in_patch = 2*(mesh.num_dims-1);  // 2 (2D) or 4 (3D)
+    mesh.num_patches_in_elem = 2*mesh.num_dims; // 4 (2D) or 6 (3D)
+    mesh.init_bdy_sets(num_bcs);
+    printf("Num BC's = %lu\n", num_bcs);
+    
+    // tag boundary patches in the set
+    tag_bdys(boundary, mesh, explicit_solver_pointer, node_coords);
+
+    build_boundry_node_sets(boundary, mesh, explicit_solver_pointer);
+    
+    // loop over BCs
+    for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
+        
+        RUN_CLASS({
+            printf("Boundary Condition number %lu \n", this_bdy);
+            printf("  Num bdy patches in this set = %lu \n", mesh.bdy_patches_in_set.stride(this_bdy));
+            printf("  Num bdy nodes in this set = %lu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
+        });
+        Kokkos::fence();
+
+    }// end for
+    
+    
+    // ---- Read model values from a file ----
+    // check to see if state_vars come from an external file
+    DCArrayKokkos <size_t> read_from_file(num_materials, "read_from_file");
+    FOR_ALL_CLASS(mat_id, 0, num_materials, {
+        
+        read_from_file(mat_id) = material(0).read_state_vars;
+        
+    }); // end parallel for
+    Kokkos::fence();
+    
+    read_from_file.update_host(); // copy to CPU if code is to read from a file
+    Kokkos::fence();
+    
+    // make memory to store state_vars from an external file
+    DCArrayKokkos <double> file_state_vars(num_materials,mesh.num_elems,num_state_vars);
+    DCArrayKokkos <size_t> mat_num_state_vars(num_materials); // actual number of state_vars
+    FOR_ALL_CLASS(mat_id, 0, num_materials, {
+        
+        mat_num_state_vars(mat_id) = material(mat_id).num_state_vars;
+        
+    }); // end parallel for
+    Kokkos::fence();
+    
+    // copy actual number of state_vars to host
+    mat_num_state_vars.update_host();
+    Kokkos::fence();
+    
+    for (size_t mat_id=0; mat_id<num_materials; mat_id++){
+        
+        if (read_from_file.host(mat_id) == 1){
+            
+            size_t num_vars = mat_num_state_vars.host(mat_id);
+            
+            user_model_init(file_state_vars,
+                            num_vars,
+                            mat_id,
+                            mesh.num_elems);
+            
+            // copy the values to the device
+            file_state_vars.update_device();
+            Kokkos::fence();
+            
+        } // end if
+        
+    } // end for
+    
+    
+    //--- apply the fill instructions over the Elements---//
+    
+    // loop over the fill instructures
+    for (int f_id = 0; f_id < num_fills; f_id++){
+            
+        // parallel loop over elements in mesh
+        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+
+            const size_t rk_level = 1;
+
+            // calculate the coordinates and radius of the element
+            double elem_coords[3]; // note:initialization with a list won't work
+            elem_coords[0] = 0.0;
+            elem_coords[1] = 0.0;
+            elem_coords[2] = 0.0;
+
+            // get the coordinates of the element center
+            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+                elem_coords[0] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords[1] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+                if (mesh.num_dims == 3){
+                    elem_coords[2] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                } else
+                {
+                    elem_coords[2] = 0.0;
+                }
+            } // end loop over nodes in element
+            elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
+            elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
+            elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
+                
+            
+            // spherical radius
+            double radius = sqrt( elem_coords[0]*elem_coords[0] +
+                                  elem_coords[1]*elem_coords[1] +
+                                  elem_coords[2]*elem_coords[2] );
+                
+            // cylinderical radius
+            double radius_cyl = sqrt( elem_coords[0]*elem_coords[0] +
+                                      elem_coords[1]*elem_coords[1] );   
+            
+            // default is not to fill the element
+            size_t fill_this = 0;
+           
+            // check to see if this element should be filled
+            switch(mat_fill(f_id).volume)
+            {
+                case region::global:
+                {
+                    fill_this = 1;
+                    break;
+                }
+                case region::box:
+                {
+                    if ( elem_coords[0] >= mat_fill(f_id).x1 && elem_coords[0] <= mat_fill(f_id).x2
+                      && elem_coords[1] >= mat_fill(f_id).y1 && elem_coords[1] <= mat_fill(f_id).y2
+                      && elem_coords[2] >= mat_fill(f_id).z1 && elem_coords[2] <= mat_fill(f_id).z2 )
+                        fill_this = 1;
+                    break;
+                }
+                case region::cylinder:
+                {
+                    if ( radius_cyl >= mat_fill(f_id).radius1
+                      && radius_cyl <= mat_fill(f_id).radius2 ) fill_this = 1;
+                    break;
+                }
+                case region::sphere:
+                {
+                    if ( radius >= mat_fill(f_id).radius1
+                      && radius <= mat_fill(f_id).radius2 ) fill_this = 1;
+                    break;
+                }
+            } // end of switch
+
+                 
+            // paint the material state on the element
+            if (fill_this == 1){
+                    
+                // density
+                elem_den(elem_gid) = mat_fill(f_id).den;
+                
+                // mass
+                elem_mass(elem_gid) = elem_den(elem_gid)*elem_vol(elem_gid);
+                
+                // specific internal energy
+                elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
+		
+                elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
+                size_t mat_id = elem_mat_id(elem_gid); // short name
+                
+                
+                // get state_vars from the input file or read them in
+                if (material(mat_id).read_state_vars == 1){
+                    
+                    // use the values read from a file to get elem state vars
+                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
+                        elem_statev(elem_gid,var) = file_state_vars(mat_id,elem_gid,var);
+                    } // end for
+                    
+                }
+                else{
+                    // use the values in the input file
+                    // set state vars for the region where mat_id resides
+                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
+                        elem_statev(elem_gid,var) = state_vars(mat_id,var);
+                    } // end for
+                    
+                } // end logical on type
+                
+                // --- stress tensor ---
+                // always 3D even for 2D-RZ
+                for (size_t i=0; i<3; i++){
+                    for (size_t j=0; j<3; j++){
+                        elem_stress(rk_level,elem_gid,i,j) = 0.0;
+                    }        
+                }  // end for
+                
+                
+                
+                // --- Pressure and stress ---
+                material(mat_id).eos_model(elem_pres,
+                                           elem_stress,
+                                           elem_gid,
+                                           elem_mat_id(elem_gid),
+                                           elem_statev,
+                                           elem_sspd,
+                                           elem_den(elem_gid),
+                                           elem_sie(1,elem_gid));
+					    
+                
+                // loop over the nodes of this element and apply velocity
+                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+
+                    // get the mesh node index
+                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+
+                
+                    // --- Velocity ---
+                    switch(mat_fill(f_id).velocity)
+                    {
+                        case init_conds::cartesian:
+                        {
+                        
+                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).u;
+                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).v;
+                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).w;
+                            
+                        
+                            break;
+                        }
+                        case init_conds::radial:
+                        {
+                            // Setting up cylindrical
+                            double dir[2]; 
+                            dir[0] = 0.0;
+                            dir[1] = 0.0;
+                            double radius_val = 0.0;
+                        
+                            for(int dim=0; dim<2; dim++){
+                                dir[dim] = node_coords(rk_level, node_gid, dim);
+                                radius_val += node_coords(rk_level, node_gid, dim)*node_coords(rk_level, node_gid, dim);
+                            } // end for
+                            radius_val = sqrt(radius_val);
+                        
+                            for(int dim=0; dim<2; dim++){
+                                if (radius_val > 1.0e-14){
+                                    dir[dim] /= (radius_val);
+                                }
+                                else{
+                                    dir[dim] = 0.0;
+                                }
+                            } // end for
+                        
+                        
+                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = 0.0;
+                            
+                            break;
+                        }
+                        case init_conds::spherical:
+                        {
+                            
+                            // Setting up spherical
+                            double dir[3];
+                            dir[0] = 0.0;
+                            dir[1] = 0.0;
+                            dir[2] = 0.0;
+                            double radius_val = 0.0;
+                        
+                            for(int dim=0; dim<3; dim++){
+                                dir[dim] = node_coords(rk_level, node_gid, dim);
+                                radius_val += node_coords(rk_level, node_gid, dim)*node_coords(rk_level, node_gid, dim);
+                            } // end for
+                            radius_val = sqrt(radius_val);
+                        
+                            for(int dim=0; dim<3; dim++){
+                                if (radius_val > 1.0e-14){
+                                    dir[dim] /= (radius_val);
+                                }
+                                else{
+                                    dir[dim] = 0.0;
+                                }
+                            } // end for
+                        
+                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).speed*dir[2];
+
+                            break;
+                        }
+                        case init_conds::radial_linear:
+                        {
+                        
+                            break;
+                        }
+                        case init_conds::spherical_linear:
+                        {
+                        
+                            break;
+                        }
+                        case init_conds::tg_vortex:
+                        {
+                        
+                            node_vel(rk_level, node_gid, 0) = sin(PI * node_coords(rk_level,node_gid, 0)) * cos(PI * node_coords(rk_level,node_gid, 1)); 
+                            node_vel(rk_level, node_gid, 1) =  -1.0*cos(PI * node_coords(rk_level,node_gid, 0)) * sin(PI * node_coords(rk_level,node_gid, 1)); 
+                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = 0.0;
+
+                            break;
+                        }
+                    } // end of switch
+
+                }// end loop over nodes of element
+                
+                
+                if(mat_fill(f_id).velocity == init_conds::tg_vortex)
+                {
+                    elem_pres(elem_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;
+                
+                    // p = rho*ie*(gamma - 1)
+                    size_t mat_id = f_id;
+                    double gamma = elem_statev(elem_gid,4); // gamma value
+                    elem_sie(rk_level, elem_gid) =
+                                    elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
+                } // end if
+
+            } // end if fill
+          
+        }); // end FOR_ALL_CLASS element loop
+        Kokkos::fence();
+        
+  
+    } // end for loop over fills
+    
+   
+    
+    // apply BC's to velocity
+    FEA_Module_SGH::boundary_velocity(mesh, boundary, node_vel);
+    
+    
+    // calculate the corner massess if 2D
+    if(mesh.num_dims==2){
+        
+        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+            
+            // facial area of the corners
+            double corner_areas_array[4];
+            
+            ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
+            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+            
+            get_area_weights2D(corner_areas,
+                               elem_gid,
+                               node_coords,
+                               elem_node_gids);
+            
+            // loop over the corners of the element and calculate the mass
+            for (size_t corner_lid=0; corner_lid<4; corner_lid++){
+                
+                size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+                corner_mass(corner_gid) = corner_areas(corner_lid)*elem_den(elem_gid); // node radius is added later
+                
+            } // end for over corners
+        });
+    
+    } // end of
+    
+    
+    // calculate the nodal mass
+    FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
+        
+        node_mass(node_gid) = 0.0;
+        
+        if(mesh.num_dims==3){
+            
+            for(size_t elem_lid=0; elem_lid<mesh.num_corners_in_node(node_gid); elem_lid++){
+                size_t elem_gid = mesh.elems_in_node(node_gid,elem_lid);
+                node_mass(node_gid) += 1.0/8.0*elem_mass(elem_gid);
+            } // end for elem_lid
+            
+        }// end if dims=3
+        else {
+            
+            // 2D-RZ
+            for(size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(node_gid); corner_lid++){
+                
+                size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
+                node_mass(node_gid) += corner_mass(corner_gid);  // sans the radius so it is areal node mass
+                
+                corner_mass(corner_gid) *= node_coords(1,node_gid,1); // true corner mass now
+            } // end for elem_lid
+            
+        } // end else
+        
+    }); // end FOR_ALL_CLASS
+    Kokkos::fence();
+    
+    return;
+    
+} // end of setup
+
+
+/* ----------------------------------------------------------------------------
+    set planes for tagging sub sets of boundary patches
+    bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    val = plane value, cyl radius, sphere radius
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::tag_bdys(const CArrayKokkos <boundary_t> &boundary,
+              mesh_t &mesh,
+              const DViewCArrayKokkos <double> &node_coords){
+
+    size_t num_dims = mesh.num_dims;
+    //int nboundary_patches = explicit_solver_pointer->nboundary_patches;
+    int nboundary_patches = explicit_solver_pointer->nboundary_patches;
+    
+    //if (bdy_set == mesh.num_bdy_sets){
+    //    printf(" ERROR: number of boundary sets must be increased by %zu",
+    //              bdy_set-mesh.num_bdy_sets+1);
+    //    exit(0);
+    //} // end if
+
+    //error and debug flag
+    //DCArrayKokkos<bool> print_flag(1, "print_flag");
+    //print_flag.host(0) = false;
+    //print_flag.update_device();
+    
+    FOR_ALL_CLASS(bdy_set, 0, mesh.num_bdy_sets, {
+        
+        // tag boundaries
+        int bc_tag_id = boundary(bdy_set).surface;
+        double val = boundary(bdy_set).value;
+        
+        // save the boundary patches to this set that are on the plane, spheres, etc.
+        for (size_t bdy_patch_lid=0; bdy_patch_lid < nboundary_patches; bdy_patch_lid++){
+            
+            // save the patch index
+            size_t bdy_patch_gid = bdy_patch_lid;
+            
+            
+            // check to see if this patch is on the specified plane
+            size_t is_on_bdy = check_bdy(bdy_patch_gid,
+                                         bc_tag_id,
+                                         val,
+                                         mesh,
+                                         node_coords); // no=0, yes=1
+            
+            //debug check
+            /*
+            for (size_t patch_node_lid=0; patch_node_lid<mesh.num_nodes_in_patch; patch_node_lid++){
+              size_t node_gid = mesh.nodes_in_patch(bdy_patch_gid, patch_node_lid);
+              //if(bdy_node_gid==549412) print_flag(0) = true;
+            }
+            */
+
+            if (is_on_bdy == 1){
+                
+                size_t index = mesh.bdy_patches_in_set.stride(bdy_set);
+                
+                // increment the number of boundary patches saved
+                mesh.bdy_patches_in_set.stride(bdy_set) ++;
+                
+                
+                mesh.bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
+            } // end if
+            
+            
+        } // end for bdy_patch
+        
+    });  // end FOR_ALL_CLASS bdy_sets
+    
+    //debug check
+    //print_flag.update_host();
+    //if(print_flag.host(0)) std::cout << "found boundary node with id 549412" << std::endl;
+
+    return;
+} // end tag
+
+
+/* ----------------------------------------------------------------------------
+    routine for checking to see if a vertex is on a boundary
+    bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    val = plane value, radius, radius
+------------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
+                 const int this_bc_tag,
+                 const double val,
+                 const mesh_t &mesh,
+                 const DViewCArrayKokkos <double> &node_coords){
+    
+    
+    size_t num_dims = mesh.num_dims;
+    
+    // default bool is not on the boundary
+    size_t is_on_bdy = 0;
+    
+    // the patch coordinates
+    double these_patch_coords[3];  // Note: cannot allocated array with num_dims
+    
+    // loop over the nodes on the patch
+    for (size_t patch_node_lid=0; patch_node_lid<mesh.num_nodes_in_patch; patch_node_lid++){
+        
+        // get the nodal_gid for this node in the patch
+        //size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
+        size_t node_gid = mesh.Local_Index_Boundary_Patches(patch_gid, patch_node_lid);
+
+        for (size_t dim = 0; dim < num_dims; dim++){
+            these_patch_coords[dim] = node_coords(1, node_gid, dim);  // (rk, node_gid, dim)
+        } // end for dim
+        
+        
+        // a x-plane
+        if (this_bc_tag == 0){
+            
+            if ( fabs(these_patch_coords[0] - val) <= 1.0e-7 ) is_on_bdy += 1;
+            
+        }// end if on type
+        
+        // a y-plane
+        else if (this_bc_tag == 1){
+            
+            if ( fabs(these_patch_coords[1] - val) <= 1.0e-7 ) is_on_bdy += 1;
+            
+        }// end if on type
+        
+        // a z-plane
+        else if (this_bc_tag == 2){
+            
+            if ( fabs(these_patch_coords[2] - val) <= 1.0e-7 ) is_on_bdy += 1;
+            
+        }// end if on type
+        
+        
+        // cylinderical shell where radius = sqrt(x^2 + y^2)
+        else if (this_bc_tag == 3){
+            
+            real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
+                            these_patch_coords[1]*these_patch_coords[1]);
+            
+            if ( fabs(R - val) <= 1.0e-7 ) is_on_bdy += 1;
+            
+            
+        }// end if on type
+        
+        // spherical shell where radius = sqrt(x^2 + y^2 + z^2)
+        else if (this_bc_tag == 4){
+            
+            real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
+                            these_patch_coords[1]*these_patch_coords[1] +
+                            these_patch_coords[2]*these_patch_coords[2]);
+            
+            if ( fabs(R - val) <= 1.0e-7 ) is_on_bdy += 1;
+            
+        } // end if on type
+        
+    } // end for nodes in the patch
+    
+    // if all nodes in the patch are on the surface
+    if (is_on_bdy == mesh.num_nodes_in_patch){
+        is_on_bdy = 1;
+    }
+    else {
+        is_on_bdy = 0;
+    }
+    
+    
+    return is_on_bdy;
+    
+} // end method to check bdy
+
+/* ----------------------------------------------------------------------------
+   Build set of nodes assigned to each boundary condition
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary, mesh_t &mesh){
+    
+    // build boundary nodes in each boundary set
+    int nboundary_patches = explicit_solver_pointer->nboundary_patches;
+    mesh.num_bdy_nodes_in_set = DCArrayKokkos <size_t> (mesh.num_bdy_sets, "num_bdy_nodes_in_set");
+    CArrayKokkos <long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes, "temp_count_num_bdy_nodes_in_set");
+    
+    DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_set (mesh.num_bdy_sets, nboundary_patches*mesh.num_nodes_in_patch, "temp_nodes_in_set");
+    
+    // Parallel loop over boundary sets on device
+    FOR_ALL_CLASS(bdy_set, 0, mesh.num_bdy_sets, {
+	
+        // finde the number of patches_in_set
+        size_t num_bdy_patches_in_set = mesh.bdy_patches_in_set.stride(bdy_set);
+
+        mesh.num_bdy_nodes_in_set(bdy_set) = 0;
+        
+        // Loop over boundary patches in boundary set
+        for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
+            
+                // get the global id for this boundary patch
+                size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+                
+                // apply boundary condition at nodes on boundary
+                for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+                    
+                    size_t node_gid = mesh.Local_Index_Boundary_Patches(patch_gid, node_lid);
+                    
+                    temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = -1;
+                        
+                } // end for node_lid
+            
+        } // end for bdy_patch_gid
+        
+        
+        // Loop over boundary patches in boundary set
+        for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
+            
+                // get the global id for this boundary patch
+                size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+                
+                // apply boundary condition at nodes on boundary
+                for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+                    
+                    size_t node_gid = mesh.Local_Index_Boundary_Patches(patch_gid, node_lid);
+                    
+                    if (temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) == -1){
+                        
+                        size_t num_saved = mesh.num_bdy_nodes_in_set(bdy_set);
+                        
+                        mesh.num_bdy_nodes_in_set(bdy_set)++;
+                        
+                        // replace -1 with node_gid to denote the node was already saved
+                        temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = node_gid;
+                        
+                        // increment the number of saved nodes, create memory
+                        temp_nodes_in_set.stride(bdy_set)++;
+                        temp_nodes_in_set(bdy_set, num_saved) = node_gid;
+                        
+                    } // end if
+                    
+                } // end for node_lid
+            
+        } // end for bdy_patch_gid
+        
+    }); // end FOR_ALL_CLASS bdy_set
+    Kokkos::fence();
+    
+   
+    // allocate the RaggedRight bdy_nodes_in_set array
+    mesh.bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (mesh.num_bdy_nodes_in_set, "bdy_nodes_in_set");
+
+    FOR_ALL_CLASS (bdy_set, 0, mesh.num_bdy_sets, {
+	
+        // Loop over boundary patches in boundary set
+        for (size_t bdy_node_lid=0; bdy_node_lid<mesh.num_bdy_nodes_in_set(bdy_set); bdy_node_lid++){
+
+            // save the bdy_node_gid
+            mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_nodes_in_set(bdy_set, bdy_node_lid);
+            
+        } // end for
+        
+    }); // end FOR_ALL_CLASS bdy_set
+    
+    // update the host side for the number nodes in a bdy_set
+    mesh.num_bdy_nodes_in_set.update_host();
+    
+    return;
+} // end method to build boundary nodes

@@ -55,6 +55,36 @@ Simulation_Parameters_SGH::Simulation_Parameters_SGH() : Simulation_Parameters()
   NB = 0; 
   NBSF = 0; 
   NBV = 0;
+
+  // --- Graphics output variables ---
+  graphics_id = 0;
+  graphics_cyc_ival = 50;
+
+  graphics_times = CArray<double>(2000);
+  graphics_dt_ival = 1.0e8;
+  graphics_time = graphics_dt_ival;  // the times for writing graphics dump
+
+
+  // --- Time and cycling variables ---
+  time_value = 0.0;
+  time_final = 1.e16;
+  dt = 1.e-8;
+  dt_max = 1.0e-2;
+  dt_min = 1.0e-8;
+  dt_cfl = 0.4;
+  dt_start = 1.0e-8;
+
+  rk_num_stages = 2;
+  rk_num_bins = 2;
+
+  cycle = 0;
+  cycle_stop = 1000000000;
+
+
+  // --- Precision variables ---
+  fuzz = 1.0e-16;  // machine precision
+  tiny = 1.0e-12;  // very very small (between real_t and single)
+  small= 1.0e-8;   // single precision
 }
 
 Simulation_Parameters_SGH::~Simulation_Parameters_SGH(){
