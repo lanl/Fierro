@@ -5,9 +5,9 @@
 
 #include "mesh.h"
 #include "state.h"
+#include "FEA_Module_SGH.h"
 
-
-void boundary_velocity(const mesh_t &mesh,
+void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
                        const CArrayKokkos <boundary_t> &boundary,
                        DViewCArrayKokkos <double> &node_vel){
 
@@ -20,7 +20,7 @@ void boundary_velocity(const mesh_t &mesh,
     for (size_t bdy_set=0; bdy_set<mesh.num_bdy_sets; bdy_set++){
         
         // Loop over boundary nodes in a boundary set
-        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+        FOR_ALL_CLASS(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
                 
             // reflected (boundary array is on the device)
             if (boundary(bdy_set).hydro_bc == bdy::reflected){

@@ -126,46 +126,45 @@ void Simulation_Parameters_SGH::input(){
   gravity_vector[2] = 0;
 
   // Dimensions
-    num_dims = 3;
+  num_dims = 3;
     
-    // ---- time varaibles and cycle info ----
-    time_final = 1.0;  // 1.0 for Sedov
-    dt_min = 1.e-8;
-    dt_max = 1.e-2;
-    dt_start = 1.e-5;
-    cycle_stop = 100000;
+  // ---- time varaibles and cycle info ----
+  time_final = 1.0;  // 1.0 for Sedov
+  dt_min = 1.e-8;
+  dt_max = 1.e-2;
+  dt_start = 1.e-5;
+  cycle_stop = 100000;
 
+  // ---- graphics information ----
+  graphics_cyc_ival = 1000000;
+  graphics_dt_ival  = 0.25;
 
-    // ---- graphics information ----
-    graphics_cyc_ival = 1000000;
-    graphics_dt_ival  = 0.25;
-
+  // --- number of material regions ---
+  num_materials = 1;
+  material = CArrayKokkos <material_t> (num_materials); // create material
     
-    // --- number of material regions ---
-    num_materials = 1;
-    material = CArrayKokkos <material_t> (num_materials); // create material
+  // --- declare model state variable array size ---
+  max_num_state_vars = 6;  // it is a memory block
+  state_vars = CArrayKokkos <double> (num_materials, max_num_state_vars); // init values
     
+  // --- number of fill regions ---
+  num_fills = 2;  // =2 for Sedov
+  mat_fill = CArrayKokkos <mat_fill_t> (num_fills); // create fills
     
-    // --- declare model state variable array size ---
-    max_num_state_vars = 6;  // it is a memory block
-    state_vars = CArrayKokkos <double> (num_materials, max_num_state_vars); // init values
+  // --- number of boundary conditions ---
+  num_bcs=6;  // =6 for Sedov
+  boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
+  // --- test problems ---
+  test_problem = Sedov3D;
     
-    // --- number of fill regions ---
-    num_fills = 2;  // =2 for Sedov
-    mat_fill = CArrayKokkos <mat_fill_t> (num_fills); // create fills
+  // ---- fill instructions and intial conditions ---- //
     
-    
-    // --- number of boundary conditions ---
-    num_bcs=6;  // =6 for Sedov
-    boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
-    
-    // --- test problems ---
-    test_problem = Sedov3D;
-    
-    
-    // ---- fill instructions and intial conditions ---- //
-
+  time_value = 0.0;
+  dt = dt_start;
+  graphics_id = 0;
+  graphics_times(0) = 0.0;
+  graphics_time = graphics_dt_ival;  // the times for writing graphics dump
     
     // Sedov blast wave test case
     if (test_problem == Sedov3D){

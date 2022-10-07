@@ -479,11 +479,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
         // ---------------------------------------------------------------------
-        setup(material,
+        sgh_module->setup(material,
               mat_fill,
               boundary,
               *mesh,
-              this,
               node_coords,
               node_vel,
               node_mass,
@@ -497,28 +496,23 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               elem_mat_id,
               elem_statev,
               state_vars,
-              corner_mass,
-              num_fills,
-              rk_num_bins,
-              num_bcs,
-              num_materials,
-              max_num_state_vars);
+              corner_mass);
         
         // intialize time, time_step, and cycles
-        time_value = 0.0;
-        dt = dt_start;
-        graphics_id = 0;
-        graphics_times(0) = 0.0;
-        graphics_time = graphics_dt_ival;  // the times for writing graphics dump
+        //time_value = 0.0;
+        //dt = dt_start;
+        //graphics_id = 0;
+        //graphics_times(0) = 0.0;
+        //graphics_time = graphics_dt_ival;  // the times for writing graphics dump
         
 
         // ---------------------------------------------------------------------
         //   Calculate the SGH solution
         // ---------------------------------------------------------------------
-        sgh_solve(material,
+        
+        sgh_module->sgh_solve(material,
                   boundary,
                   *mesh,
-                  this,
                   node_coords,
                   node_vel,
                   node_mass,
@@ -533,24 +527,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
                   elem_mat_id,
                   elem_statev,
                   corner_force,
-                  corner_mass,
-                  time_value,
-                  time_final,
-                  dt_max,
-                  dt_min,
-                  dt_cfl,
-                  graphics_time,
-                  graphics_cyc_ival,
-                  graphics_dt_ival,
-                  cycle_stop,
-                  rk_num_stages,
-                  dt,
-                  fuzz,
-                  tiny,
-                  small,
-                  graphics_times,
-                  graphics_id);
-
+                  corner_mass);
+        
 
         // calculate total energy at time=t_end
         

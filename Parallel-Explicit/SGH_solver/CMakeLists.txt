@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.1.3)
 set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
 set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
-set(SRC_Files Explicit_Solver_SGH.cpp read_mesh.cpp geometry.cpp boundary.cpp input.cpp eos.cpp setup.cpp outputs.cpp sgh_solve.cpp time_integration.cpp momentum.cpp force_sgh.cpp 
+set(SRC_Files Explicit_Solver_SGH.cpp read_mesh.cpp geometry.cpp boundary.cpp input.cpp eos.cpp  outputs.cpp time_integration.cpp momentum.cpp force_sgh.cpp
 energy_sgh.cpp properties.cpp user_mat.cpp user_mat_init.cpp)
 set(Class_SRC ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/node_combination.cpp)
 set(Simulation_Param_SRC ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters_Thermal.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters_Elasticity.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters_Topology_Optimization.cpp ${CMAKE_SOURCE_DIR}/Implicit-Lagrange/Simulation_Parameters/Simulation_Parameters_Inertial.cpp
