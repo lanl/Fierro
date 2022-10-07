@@ -116,7 +116,7 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
   simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
 
   //create ref element object
-  ref_elem = new elements::ref_element();
+  //ref_elem = new elements::ref_element();
   //create mesh objects
   //init_mesh = new swage::mesh_t(simparam);
   //mesh = new swage::mesh_t(simparam);

@@ -92,13 +92,13 @@ FEA_Module_SGH::FEA_Module_SGH(Explicit_Solver_SGH *Solver_Pointer){
   explicit_solver_pointer = Solver_Pointer;
   simparam = dynamic_cast<Simulation_Parameters_SGH*>(explicit_solver_pointer->simparam);
   // ---- Read input file, define state and boundary conditions ---- //
-  simparam->input();
+  //simparam->input();
   
   //TO parameters
   //simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(explicit_solver_pointer->simparam);
 
   //create ref element object
-  ref_elem = new elements::ref_element();
+  //ref_elem = new elements::ref_element();
   //create mesh objects
   //init_mesh = new swage::mesh_t(simparam);
   //mesh = new swage::mesh_t(simparam);
@@ -107,12 +107,13 @@ FEA_Module_SGH::FEA_Module_SGH(Explicit_Solver_SGH *Solver_Pointer){
   max_boundary_sets = 0;
   
   //setup output
+  noutput = 0;
   init_output();
 
 }
 
 FEA_Module_SGH::~FEA_Module_SGH(){
-   delete simparam;
+   //delete simparam;
 }
 
 /* ----------------------------------------------------------------------
