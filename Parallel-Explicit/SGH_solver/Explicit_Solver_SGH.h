@@ -66,9 +66,12 @@
 //#include <MueLu.hpp>
 
 //forward declarations
+/*
 namespace swage{
   class mesh_t;
 }
+*/
+class mesh_t;
 
 namespace elements{
   class element_selector;
@@ -107,7 +110,8 @@ public:
   typedef Kokkos::View<real_t*, Kokkos::LayoutRight, device_type, memory_traits> values_array;
   typedef Kokkos::View<GO*, array_layout, device_type, memory_traits> global_indices_array;
   typedef Kokkos::View<LO*, array_layout, device_type, memory_traits> indices_array;
-  typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
+  //typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
+  typedef MAT::local_graph_device_type::row_map_type::non_const_type row_pointers;
 
   //typedef Kokkos::DualView<real_t**, Kokkos::LayoutLeft, device_type>::t_dev vec_array;
   typedef MV::dual_view_type::t_dev vec_array;
@@ -140,6 +144,8 @@ public:
 
   void collect_information();
 
+  void sort_information();
+
   //process input to decide TO problem and FEA modules
   void FEA_module_setup();
 
@@ -165,6 +171,8 @@ public:
 
   void tecplot_writer();
 
+  void parallel_tecplot_writer();
+
   //void init_boundary_sets(int num_boundary_sets);
 
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
@@ -179,8 +187,8 @@ public:
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   
-  swage::mesh_t *init_mesh;
-  swage::mesh_t *mesh;
+  mesh_t *init_mesh;
+  mesh_t *mesh;
   
   elements::element_selector *element_select;
   elements::Element3D *elem;
@@ -204,15 +212,15 @@ public:
   dual_vec_array dual_node_coords; //coordinates of the nodes
   dual_vec_array dual_node_densities; //topology optimization design variable
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
-  host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
+  //host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   //CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Forces;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;
-  CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type> ghost_nodes;
-  CArrayKokkos<int, array_layout, device_type, memory_traits> ghost_node_ranks;
+  Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits> ghost_nodes;
+  Kokkos::DualView <int*, array_layout, device_type, memory_traits> ghost_node_ranks;
 
   //Local FEA data including ghosts
   size_t nall_nodes;
@@ -222,9 +230,11 @@ public:
   long long int num_nodes, num_elem;
   Teuchos::RCP<const Teuchos::Comm<int> > comm;
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > map; //map of node indices
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map; //contiguous map of node indices used for output formats that must be sorted
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > ghost_node_map; //map of node indices with ghosts on each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_node_map; //map of node indices with ghosts on each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > element_map; //non overlapping map of elements owned by each rank used in reduction ops
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_element_map; //sorted contiguous map of element indices owned by each rank used in parallel IO
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_element_map; //overlapping map of elements connected to the local nodes in each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
@@ -243,22 +253,26 @@ public:
   Teuchos::RCP<MV> Global_Element_Densities_Lower_Bound;
   Teuchos::RCP<MV> Global_Element_Densities;
 
-  //Global arrays with collected data used to print
-  const_host_vec_array collected_node_coords;
-  const_host_vec_array collected_node_velocities;
-  const_host_vec_array collected_node_densities;
-  const_host_elem_conn_array collected_nodes_in_elem;
+  //Distributions of data used to print
+  Teuchos::RCP<MV> collected_node_coords_distributed;
+  Teuchos::RCP<MV> collected_node_densities_distributed;
+  Teuchos::RCP<MV> collected_node_velocities_distributed;
+  Teuchos::RCP<MCONN> collected_nodes_in_elem_distributed;
+  Teuchos::RCP<MV> sorted_node_coords_distributed;
+  Teuchos::RCP<MV> sorted_node_densities_distributed;
+  Teuchos::RCP<MV> sorted_node_velocities_distributed;
+  Teuchos::RCP<MCONN> sorted_nodes_in_elem_distributed;
   
   //Boundary Conditions Data
   //CArray <Nodal_Combination> Patch_Nodes;
   size_t nboundary_patches;
   size_t num_boundary_conditions;
   int current_bdy_id;
-  CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
-  CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Local_Index_Boundary_Patches;
+  CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
+  DCArrayKokkos<size_t> Local_Index_Boundary_Patches;
   std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> NTopology_Condition_Patches;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> NTopology_Condition_Patches;
 
   //element selection parameters and data
   size_t max_nodes_per_element;

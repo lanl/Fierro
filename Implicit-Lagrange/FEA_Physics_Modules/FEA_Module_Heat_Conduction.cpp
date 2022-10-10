@@ -74,6 +74,7 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters_Thermal.h"
+#include "Simulation_Parameters_Topology_Optimization.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Heat_Conduction.h"
@@ -107,9 +108,12 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_P
   simparam = new Simulation_Parameters_Thermal();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
-
+  
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
+  
+  //TO parameters
+  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
 
   //create ref element object
   ref_elem = new elements::ref_element();
@@ -643,7 +647,7 @@ void FEA_Module_Heat_Conduction::init_assembly(){
   CArrayKokkos<LO, array_layout, device_type, memory_traits> conductivity_local_indices(nnz, "conductivity_local_indices");
   
   //row offsets with compatible template arguments
-    row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+    Kokkos::View<size_t *,array_layout, device_type, memory_traits> row_offsets = DOF_Graph_Matrix.start_index_;
     row_pointers row_offsets_pass("row_offsets", nlocal_nodes + 1);
     for(int ipass = 0; ipass < nlocal_nodes + 1; ipass++){
       row_offsets_pass(ipass) = row_offsets(ipass);
@@ -761,7 +765,7 @@ void FEA_Module_Heat_Conduction::assemble_matrix(){
   CArrayKokkos<LO, array_layout, device_type, memory_traits> conductivity_local_indices(nnz, "conductivity_local_indices");
 
   //row offsets
-  row_pointers row_offsets = DOF_Graph_Matrix.start_index_;
+  Kokkos::View<size_t *,array_layout, device_type, memory_traits> row_offsets = DOF_Graph_Matrix.start_index_;
   row_pointers row_offsets_pass("row_offsets", nlocal_nodes+1);
   for(int ipass = 0; ipass < nlocal_nodes + 1; ipass++){
     row_offsets_pass(ipass) = row_offsets(ipass);
@@ -860,7 +864,7 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
   real_t heat_flux[3], wedge_product, Jacobian, current_density, weight_multiply, inner_product, surface_normal[3], surface_norm, normal_displacement;
   real_t specific_internal_energy_rate;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArray<GO> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row2(num_dim);
@@ -1680,8 +1684,8 @@ void FEA_Module_Heat_Conduction::Temperature_Boundary_Conditions(){
   int DOF_BC_type;
   real_t temperature;
   CArrayKokkos<int, array_layout, device_type, memory_traits> Temperatures_Conditions(num_dim);
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes);
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
+  CArrayKokkos<int, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes);
+  CArray<GO> Surface_Nodes;
 
   //host view of local nodal temperatures
   host_vec_array node_temperatures_host = node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
@@ -2727,11 +2731,11 @@ void FEA_Module_Heat_Conduction::init_output(){
   bool output_temperature_gradient_flag = simparam->output_temperature_gradient_flag;
   bool output_heat_flux_flag = simparam->output_heat_flux_flag;
   int num_dim = simparam->num_dim;
-
+  
   if(output_temperature_flag){
-    collected_temperature_index = noutput;
+    output_temperature_index = noutput;
     noutput += 1;
-    collected_module_output.resize(noutput);
+    module_outputs.resize(noutput);
 
     vector_style.resize(noutput);
     vector_style[noutput-1] = NODAL;
@@ -2744,9 +2748,9 @@ void FEA_Module_Heat_Conduction::init_output(){
     output_dof_names[noutput-1][0] = "Temperature";
   }
   if(output_temperature_gradient_flag){
-    collected_temperature_gradient_index = noutput;
+    output_temperature_gradient_index = noutput;
     noutput += 1;
-    collected_module_output.resize(noutput);
+    module_outputs.resize(noutput);
 
     vector_style.resize(noutput);
     vector_style[noutput-1] = NODAL;
@@ -2761,9 +2765,9 @@ void FEA_Module_Heat_Conduction::init_output(){
     output_dof_names[noutput-1][2] = "temperature_gradient_z";
   }
   if(output_heat_flux_flag){
-    collected_heat_flux_index = noutput;
+    output_heat_flux_index = noutput;
     noutput += 1;
-    collected_module_output.resize(noutput);
+    module_outputs.resize(noutput);
 
     vector_style.resize(noutput);
     vector_style[noutput-1] = NODAL;
@@ -2780,35 +2784,35 @@ void FEA_Module_Heat_Conduction::init_output(){
 }
 
 /* -------------------------------------------------------------------------------------------
-   Prompts computation of elastic response output data. For now, nodal strains.
+   Prompts sorting of thermal response output data. For now, nodal temperatures and heat fluxes.
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
+void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
   
   bool output_temperature_flag = simparam->output_temperature_flag;
   bool output_temperature_gradient_flag = simparam->output_temperature_gradient_flag;
   bool output_heat_flux_flag = simparam->output_heat_flux_flag;
   int num_dim = simparam->num_dim;
-
-  //global reduce map
-  /*
-  if(myrank==0) nreduce_dof = num_nodes*num_dim;
-    Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_dof_map =
-      Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nreduce_dof,0,comm));
-  */
-  //collect nodal displacement information
+  
+  //reset modules so that host view falls out of scope
+  for(int init = 0; init < noutput; init++){
+    const_host_vec_array dummy;
+    module_outputs[init] = dummy;
+  }
+  
+  //collect nodal temperature information
   if(output_temperature_flag){
   //importer from local node distribution to collected distribution
-  Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
+  Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
 
-  Teuchos::RCP<MV> collected_node_temperatures_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
+  sorted_node_temperatures_distributed = Teuchos::rcp(new MV(sorted_map, 1));
 
   //comms to collect
-  collected_node_temperatures_distributed->doImport(*(node_temperatures_distributed), node_collection_importer, Tpetra::INSERT);
+  sorted_node_temperatures_distributed->doImport(*(node_temperatures_distributed), node_sorting_importer, Tpetra::INSERT);
 
   //set host views of the collected data to print out from
   if(myrank==0){
-   collected_module_output[collected_temperature_index] = collected_node_temperatures = collected_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+   module_outputs[output_temperature_index] = sorted_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   }
 
@@ -2819,7 +2823,70 @@ void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
     //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
 
     //collected nodal density information
-    Teuchos::RCP<MV> collected_node_heat_fluxes_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
+    Teuchos::RCP<MV> sorted_node_heat_fluxes_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
+
+    //importer from local node distribution to collected distribution
+    Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
+
+    //comms to collect
+    sorted_node_heat_fluxes_distributed->doImport(*(node_heat_fluxes_distributed), node_sorting_importer, Tpetra::INSERT);
+
+    //debug print
+    //std::ostream &out = std::cout;
+    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    //if(myrank==0)
+    //*fos << "Collected nodal temperatures :" << std::endl;
+    //collected_node_strains_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+    //*fos << std::endl;
+    //std::fflush(stdout);
+
+    //host view to print from
+    if(myrank==0)
+      module_outputs[output_heat_flux_index] = sorted_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+}
+
+/* ------------------------------------------------------------------------------------------------
+   Prompts computation of elastic response output data. For now, nodal temperatures and heat fluxes.
+--------------------------------------------------------------------------------------------------- */
+
+void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
+  
+  bool output_temperature_flag = simparam->output_temperature_flag;
+  bool output_temperature_gradient_flag = simparam->output_temperature_gradient_flag;
+  bool output_heat_flux_flag = simparam->output_heat_flux_flag;
+  int num_dim = simparam->num_dim;
+  
+  //reset modules so that host view falls out of scope
+  for(int init = 0; init < noutput; init++){
+    const_host_vec_array dummy;
+    module_outputs[init] = dummy;
+  }
+
+  //collect nodal temperature information
+  if(output_temperature_flag){
+  //importer from local node distribution to collected distribution
+  Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
+
+  collected_node_temperatures_distributed = Teuchos::rcp(new MV(global_reduce_map, 1));
+
+  //comms to collect
+  collected_node_temperatures_distributed->doImport(*(node_temperatures_distributed), node_collection_importer, Tpetra::INSERT);
+
+  //set host views of the collected data to print out from
+  if(myrank==0){
+   module_outputs[output_temperature_index] = collected_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+  }
+
+  //collect strain data
+  if(output_heat_flux_flag){
+
+    //importer for strains, all nodes to global node set on rank 0
+    //Tpetra::Import<LO, GO> strain_collection_importer(all_node_map, global_reduce_map);
+
+    //collected nodal density information
+    collected_node_heat_fluxes_distributed = Teuchos::rcp(new MV(global_reduce_map, num_dim));
 
     //importer from local node distribution to collected distribution
     Tpetra::Import<LO, GO> node_collection_importer(map, global_reduce_map);
@@ -2838,7 +2905,7 @@ void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
 
     //host view to print from
     if(myrank==0)
-      collected_module_output[collected_heat_flux_index] = collected_node_heat_fluxes = collected_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      module_outputs[output_heat_flux_index] = collected_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 }
 
@@ -3235,7 +3302,6 @@ int FEA_Module_Heat_Conduction::solve(){
   //local variable for host view in the dual view
   const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
@@ -3267,14 +3333,16 @@ int FEA_Module_Heat_Conduction::solve(){
   //alter rows of RHS to be the boundary condition value on that node
   //first pass counts strides for storage
   row_counter = 0;
-  for(LO i=0; i < nlocal_nodes; i++){
-    if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)){
-      Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
-      row_counter++;
-      Nodal_RHS(i,0) = Node_Temperature_Boundary_Conditions(i)*diagonal_bc_scaling;
-    }
-  }//row for
-  
+  {//view scope
+    host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    for(LO i=0; i < nlocal_nodes; i++){
+      if((Node_DOF_Boundary_Condition_Type(i)==TEMPERATURE_CONDITION)){
+        Original_RHS_Entries(row_counter) = Nodal_RHS(i,0);
+        row_counter++;
+        Nodal_RHS(i,0) = Node_Temperature_Boundary_Conditions(i)*diagonal_bc_scaling;
+      }
+    }//row for
+  }//end view scope
   //change entries of Conductivity matrix corresponding to BCs to 0s (off diagonal elements) and 1 (diagonal elements)
   //storage for original Conductivity matrix values
   Original_Conductivity_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes);
@@ -3283,8 +3351,8 @@ int FEA_Module_Heat_Conduction::solve(){
   //*fos << "Reduced Conductivity Matrix :" << std::endl;
   //Global_Conductivity_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
-  Tpetra::MatrixMarket::Writer<MAT> market_writer();
-  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Conductivity_Matrix, "A_matrix", "Stores conductivity matrix values");
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Conductivity_Matrix, "A_matrix", "Stores conductivity matrix values");
 
   //first pass counts strides for storage
   if(!matrix_bc_reduced){
@@ -3418,8 +3486,8 @@ int FEA_Module_Heat_Conduction::solve(){
     
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
   //debug print
-  Tpetra::MatrixMarket::Writer<MAT> market_writer();
-  Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix_reduced.txt", *Global_Conductivity_Matrix, "A_matrix_reduced", "Stores Conductivity matrix values");  
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix_reduced.txt", *Global_Conductivity_Matrix, "A_matrix_reduced", "Stores Conductivity matrix values");  
   //Xpetra::IO<real_t,LO,GO,node_type>WriteLocal("A_matrixlocal.txt", *xA);
   comm->barrier();
   //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
@@ -3563,11 +3631,26 @@ void FEA_Module_Heat_Conduction::update_linear_solve(Teuchos::RCP<const MV> zp){
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::node_density_constraints(host_vec_array node_densities_lower_bound){
-
+  LO local_node_index;
   int num_dim = simparam->num_dim;
-  for(int i = 0; i < nlocal_nodes; i++){
-    if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
-      node_densities_lower_bound(i,0) = 1;
+
+  if(simparam_TO->thick_condition_boundary){
+    for(int i = 0; i < nlocal_nodes; i++){
+      if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
+        for(int j = 0; j < Graph_Matrix_Strides(i); j++){
+          if(map->isNodeGlobalElement(Graph_Matrix(i,j))){
+            local_node_index = map->getLocalElement(Graph_Matrix(i,j));
+            node_densities_lower_bound(local_node_index,0) = 1;
+          }
+        }
+      }
+    }
+  }
+  else{
+    for(int i = 0; i < nlocal_nodes; i++){
+      if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
+        node_densities_lower_bound(i,0) = 1;
+      }
     }
   }
 }

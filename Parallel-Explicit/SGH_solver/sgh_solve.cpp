@@ -45,7 +45,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
     int myrank = explicit_solver_pointer->myrank;
     if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
-    
+    /*
     write_outputs(mesh,
                   explicit_solver_pointer,
                   node_coords,
@@ -62,10 +62,10 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                   graphics_times,
                   graphics_id,
                   time_value);
+      */
     
     
-    
-    CArrayKokkos <double> node_extensive_mass(mesh.num_nodes);
+    CArrayKokkos <double> node_extensive_mass(mesh.num_nodes, "node_extensive_mass");
     
     // extensive energy tallies over the mesh elements local to this MPI rank
     double IE_t0 = 0.0;
@@ -321,27 +321,31 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             boundary_velocity(mesh, boundary, node_vel);
 
             //current interface has differing velocity arrays; this equates them until we unify memory
-            Explicit_Solver_SGH::vec_array node_velocities_interface = explicit_solver_pointer->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
-            FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
+            //view scope
+            {
+              Explicit_Solver_SGH::vec_array node_velocities_interface = explicit_solver_pointer->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+              FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
                 for (int idim = 0; idim < num_dims; idim++){
                   node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
                 }
-            }); // end parallel for
-            
+              }); // end parallel for
+            } //end view scope
             Kokkos::fence();
             //communicate ghost velocities
             explicit_solver_pointer->comm_velocities();
 
-            //this is forcing a copy to the device 
-            Explicit_Solver_SGH::vec_array all_node_velocities_interface = explicit_solver_pointer->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+            //this is forcing a copy to the device
+            //view scope
+            {
+              Explicit_Solver_SGH::vec_array all_node_velocities_interface = explicit_solver_pointer->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
 
-            FOR_ALL(node_gid, mesh.num_local_nodes, mesh.num_nodes, {
+              FOR_ALL(node_gid, mesh.num_local_nodes, mesh.num_nodes, {
                 for (int idim = 0; idim < num_dims; idim++){
                   node_vel(1,node_gid,idim) = all_node_velocities_interface(node_gid,idim);
                 }
         
-            }); // end parallel for
-            
+              }); // end parallel for
+            } //end view scope
             Kokkos::fence();
             
             //debug print vector values on a rank
@@ -529,6 +533,17 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
         // write outputs
         if (write == 1){
+            //interface nodal coordinate data
+            //view scope
+            {
+              Explicit_Solver_SGH::vec_array node_coords_interface = explicit_solver_pointer->node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+              FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
+                for (int idim = 0; idim < num_dims; idim++){
+                  node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
+                }
+              }); // end parallel for
+            } //end view scope
+
             if(myrank==0)
               printf("Writing outputs to file at %f \n", graphics_time);
               /*

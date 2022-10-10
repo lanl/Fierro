@@ -67,7 +67,7 @@ public:
   using device_type     = typename traits::device_type;
   using memory_traits   = typename traits::memory_traits;
     
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> node_set;
+  CArray<GO> node_set, sort_set;
   GO patch_id, element_id; 
   LO local_patch_id;
 
@@ -75,8 +75,9 @@ public:
   Node_Combination(){}
 
   //Constructor with initialization
-  Node_Combination(CArrayKokkos<GO, array_layout, device_type, memory_traits> &nodes_init) {
+  Node_Combination(CArray<GO> &nodes_init) {
     node_set = nodes_init;
+    sort_set = CArray<GO>(node_set.size());
   }
 
   //Destructor
@@ -85,6 +86,7 @@ public:
   //overload = operator
   Node_Combination& operator= (const Node_Combination &not_this){
     node_set = not_this.node_set;
+    sort_set = not_this.sort_set;
     patch_id = not_this.patch_id;
     element_id = not_this.element_id;
     local_patch_id = not_this.local_patch_id;
@@ -99,8 +101,8 @@ public:
     if(this_size!=not_this.node_set.size())
       return false;
 
-    CArrayKokkos<GO, array_layout, device_type, memory_traits> sort_set1(this_size);
-    CArrayKokkos<GO, array_layout, device_type, memory_traits> sort_set2(this_size);
+    CArray<GO> sort_set1 = this->sort_set;
+    CArray<GO> sort_set2 = not_this.sort_set;
     for(int i = 0; i < this_size; i++){
       sort_set1(i) = this->node_set(i);
       sort_set2(i) = not_this.node_set(i);

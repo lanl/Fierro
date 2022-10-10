@@ -93,8 +93,8 @@ public:
   typedef Kokkos::View<real_t*, Kokkos::LayoutRight, device_type, memory_traits> values_array;
   typedef Kokkos::View<GO*, array_layout, device_type, memory_traits> global_indices_array;
   typedef Kokkos::View<LO*, array_layout, device_type, memory_traits> indices_array;
-  typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
-
+  //typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
+  typedef MAT::local_graph_device_type::row_map_type::non_const_type row_pointers;
   //typedef Kokkos::DualView<real_t**, Kokkos::LayoutLeft, device_type>::t_dev vec_array;
   typedef MV::dual_view_type::t_dev vec_array;
   typedef MV::dual_view_type::t_host host_vec_array;
@@ -155,6 +155,8 @@ public:
   virtual int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
 
   virtual void compute_output(){}
+
+  virtual void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> sorted_map){}
 
   virtual void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> global_reduce_map){}
 
@@ -272,11 +274,11 @@ public:
   enum vector_styles {NODAL, DOF}; //multivector can store as ndof by 1 or nnode by vector_size
   int noutput;
   bool displaced_mesh_flag;
+  int displacement_index;
   std::vector<std::vector<std::string>> output_dof_names;
-  std::vector<const_host_vec_array> collected_module_output;
+  std::vector<const_host_vec_array> module_outputs;
   std::vector<vector_styles> vector_style;
   std::vector<int> output_vector_sizes;
-  const_host_vec_array collected_displacement_output;
   
 };
 

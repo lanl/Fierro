@@ -69,6 +69,9 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
 
   //Topology Optimization flags
   bool nodal_density_flag;
+  
+  //When on, all element nodes connected to a boundary condition patch will have their density constrained
+  bool thick_condition_boundary;
 
   //Topology Optimization parameters
   real_t penalty_power;

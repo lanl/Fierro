@@ -28,23 +28,20 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
     size_t num_nodes = explicit_solver_pointer->nall_nodes;
     int myrank = explicit_solver_pointer->myrank;
     int nranks = explicit_solver_pointer->nranks;
-    printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, num_nodes);
+    //printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, num_nodes);
 
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
     mesh.initialize_local_nodes(explicit_solver_pointer->nlocal_nodes);
     node.initialize(rk_num_bins, num_nodes, num_dims);
-    std::cout << "Bin counts " << rk_num_bins << " Node counts " << num_nodes << " Num dim " << num_dims << std::endl;
-    
-    CArrayKokkos<double, DefaultLayout, HostSpace> host_node_coords_state(rk_num_bins, num_nodes, num_dims);
-    Explicit_Solver_SGH::host_vec_array interface_node_coords = explicit_solver_pointer->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    host_node_coords_state.get_kokkos_view() = node.coords.get_kokkos_dual_view().view_host();
-    //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, num_nodes, num_dims);
-    //host_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*num_nodes*num_dims);
-    //save node data to node.coords
-    
-    //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
-    for(int inode = 0; inode < num_nodes; inode++){
+    //std::cout << "Bin counts " << rk_num_bins << " Node counts " << num_nodes << " Num dim " << num_dims << std::endl;
+
+    //view scope
+    {
+      Explicit_Solver_SGH::host_vec_array interface_node_coords = explicit_solver_pointer->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      //save node data to node.coords
+      //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
+      for(int inode = 0; inode < num_nodes; inode++){
         //std::cout << "Node index " << inode+1 << " ";
         node.coords.host(0,inode,0) = interface_node_coords(inode,0);
         //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
@@ -52,25 +49,26 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
         //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
         node.coords.host(0,inode,2) = interface_node_coords(inode,2);
         //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
-    }
-
+      }
+    } //end view scope
     // --- read in the elements in the mesh ---
     size_t num_elem = 0;
     
     num_elem = explicit_solver_pointer->rnum_elem;
-    printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, num_elem);
+    //printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, num_elem);
 
     // intialize elem variables
     mesh.initialize_elems(num_elem, num_dims);
     elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
 
     //save data to mesh.nodes_in_elem.host
-    CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
-    Explicit_Solver_SGH::host_elem_conn_array interface_nodes_in_elem = explicit_solver_pointer->nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().h_view;
-    //save node data to node.coords
-    //std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
-    for(int ielem = 0; ielem < num_elem; ielem++){
+    //CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
+    //view scope
+    {
+      Explicit_Solver_SGH::host_elem_conn_array interface_nodes_in_elem = explicit_solver_pointer->nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      //save node data to node.coords
+      //std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
+      for(int ielem = 0; ielem < num_elem; ielem++){
         //std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
             mesh.nodes_in_elem.host(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
@@ -78,8 +76,8 @@ void sgh_interface_setup(Explicit_Solver_SGH *explicit_solver_pointer,
             //std::cout << mesh.nodes_in_elem.get_kokkos_dual_view().h_view(ielem*num_nodes_in_elem + inode)+1<< " ";
         }
         //std::cout << std::endl;
+      }
     }
-
     // update device side
     mesh.nodes_in_elem.update_device();
 
