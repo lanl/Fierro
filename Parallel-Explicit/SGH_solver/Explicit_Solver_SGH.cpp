@@ -322,15 +322,15 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         node_t  node;
         elem_t  elem;
         corner_t  corner;
-        CArrayKokkos <material_t> material;
-        CArrayKokkos <double> state_vars; // array to hold init model variables
+        CArrayKokkos <material_t> material = simparam->material;
+        CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
         
         // ---------------------------------------------------------------------
         //    mesh data type declarations
         // ---------------------------------------------------------------------
         //mesh_t mesh;
-        CArrayKokkos <mat_fill_t> mat_fill;
-        CArrayKokkos <boundary_t> boundary;
+        CArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
+        CArrayKokkos <boundary_t> boundary = simparam->boundary;
 
         // ---------------------------------------------------------------------
         //    read the input file
