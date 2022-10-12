@@ -210,7 +210,7 @@ void Simulation_Parameters_SGH::input(){
             mat_fill(1).volume = region::sphere; // fill a sphere
             mat_fill(1).mat_id = 0;              // material id
             mat_fill(1).radius1 = 0.0;           // inner radius of fill region
-            mat_fill(1).radius2 = 1.2/60.0;       // outer radius of fill region
+            mat_fill(1).radius2 = 1.2/32.0;       // outer radius of fill region
             mat_fill(1).den = 1.0;               // initial density
             mat_fill(1).sie = (963.652344*
                                pow((1.2/30.0),3))/pow((mat_fill(1).radius2),3);

@@ -331,41 +331,6 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
 }
 
 /* ----------------------------------------------------------------------------
-   Compute Volume of each finite element
-------------------------------------------------------------------------------- */
-
-void FEA_Module_SGH::get_vol(const DViewCArrayKokkos <double> &elem_vol,
-             const DViewCArrayKokkos <double> &node_coords,
-             const mesh_t &mesh){
-    
-    const size_t num_dims = mesh.num_dims;
-    
-    if (num_dims == 2){
-        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
-            
-            // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
-            get_vol_quad(elem_vol, elem_gid, node_coords, elem_node_gids);
-            
-        });
-        Kokkos::fence();
-    }
-    else {
-        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
-            
-            // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
-            get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);
-            
-        });
-        Kokkos::fence();
-    } // end if
-    
-    return;
-    
-} // end subroutine
-
-/* ----------------------------------------------------------------------------
    Initialize sets of element boundary surfaces and arrays for input conditions
 ------------------------------------------------------------------------------- */
 
@@ -618,10 +583,7 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
    Setup SGH solver data
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::setup(const CArrayKokkos <material_t> &material,
-           const CArrayKokkos <mat_fill_t> &mat_fill,
-           const CArrayKokkos <boundary_t> &boundary,
-           mesh_t &mesh,
+void FEA_Module_SGH::setup(mesh_t &mesh,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
            DViewCArrayKokkos <double> &node_mass,
@@ -634,7 +596,6 @@ void FEA_Module_SGH::setup(const CArrayKokkos <material_t> &material,
            const DViewCArrayKokkos <double> &elem_mass,
            const DViewCArrayKokkos <size_t> &elem_mat_id,
            const DViewCArrayKokkos <double> &elem_statev,
-           const CArrayKokkos <double> &state_vars,
            const DViewCArrayKokkos <double> &corner_mass
            ){
     
@@ -643,6 +604,11 @@ void FEA_Module_SGH::setup(const CArrayKokkos <material_t> &material,
     const size_t num_bcs = simparam->num_bcs;
     const size_t num_materials = simparam->num_materials;
     const size_t num_state_vars = simparam->max_num_state_vars;
+
+    const CArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
+    const CArrayKokkos <boundary_t> boundary = simparam->boundary;
+    const CArrayKokkos <material_t> material = simparam->material;
+    const CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
     
     //--- calculate bdy sets ---//
     mesh.num_nodes_in_patch = 2*(mesh.num_dims-1);  // 2 (2D) or 4 (3D)
@@ -1305,9 +1271,7 @@ void FEA_Module_SGH::build_boundry_node_sets(const CArrayKokkos <boundary_t> &bo
    SGH solver loop
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::sgh_solve(CArrayKokkos <material_t> &material,
-               CArrayKokkos <boundary_t> &boundary,
-               mesh_t &mesh,
+void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
                DViewCArrayKokkos <double> &node_coords,
                DViewCArrayKokkos <double> &node_vel,
                DViewCArrayKokkos <double> &node_mass,
@@ -1341,6 +1305,8 @@ void FEA_Module_SGH::sgh_solve(CArrayKokkos <material_t> &material,
     const double small = simparam->small;
     CArray <double> graphics_times = simparam->graphics_times;
     size_t graphics_id = simparam->graphics_id;
+    const CArrayKokkos <boundary_t> boundary = simparam->boundary;
+    const CArrayKokkos <material_t> material = simparam->material;
 
     int myrank = explicit_solver_pointer->myrank;
     if(myrank==0)
@@ -1387,7 +1353,6 @@ void FEA_Module_SGH::sgh_solve(CArrayKokkos <material_t> &material,
     
     // extensive IE
     REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
-        
         IE_loc_sum += elem_mass(elem_gid)*elem_sie(1,elem_gid);
         
     }, IE_sum);

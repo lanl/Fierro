@@ -322,15 +322,12 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         node_t  node;
         elem_t  elem;
         corner_t  corner;
-        CArrayKokkos <material_t> material = simparam->material;
-        CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
         
         // ---------------------------------------------------------------------
         //    mesh data type declarations
         // ---------------------------------------------------------------------
         //mesh_t mesh;
-        CArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-        CArrayKokkos <boundary_t> boundary = simparam->boundary;
+        
 
         // ---------------------------------------------------------------------
         //    read the input file
@@ -479,10 +476,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
         // ---------------------------------------------------------------------
-        sgh_module->setup(material,
-              mat_fill,
-              boundary,
-              *mesh,
+        sgh_module->setup(*mesh,
               node_coords,
               node_vel,
               node_mass,
@@ -495,7 +489,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               elem_mass,
               elem_mat_id,
               elem_statev,
-              state_vars,
               corner_mass);
         
         // intialize time, time_step, and cycles
@@ -510,9 +503,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         //   Calculate the SGH solution
         // ---------------------------------------------------------------------
         
-        sgh_module->sgh_solve(material,
-                  boundary,
-                  *mesh,
+        sgh_module->sgh_solve(*mesh,
                   node_coords,
                   node_vel,
                   node_mass,

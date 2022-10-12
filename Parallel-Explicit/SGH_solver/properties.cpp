@@ -4,9 +4,9 @@
 //------------------------------------------------------------------------------
 #include "state.h"
 #include "mesh.h"
+#include "FEA_Module_SGH.h"
 
-
-void update_state(const CArrayKokkos <material_t> &material,
+void FEA_Module_SGH::update_state(const CArrayKokkos <material_t> &material,
                   const mesh_t &mesh,
                   const DViewCArrayKokkos <double> &node_coords,
                   const DViewCArrayKokkos <double> &node_vel,
@@ -27,7 +27,7 @@ void update_state(const CArrayKokkos <material_t> &material,
     
     
     // loop over all the elements in the mesh
-    FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
         
         const size_t num_dims = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
@@ -115,7 +115,7 @@ void update_state(const CArrayKokkos <material_t> &material,
 
 
 
-void update_state2D(const CArrayKokkos <material_t> &material,
+void FEA_Module_SGH::update_state2D(const CArrayKokkos <material_t> &material,
                     const mesh_t &mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
@@ -134,7 +134,7 @@ void update_state2D(const CArrayKokkos <material_t> &material,
     
     
     // loop over all the elements in the mesh
-    FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
         
         const size_t num_dims = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
