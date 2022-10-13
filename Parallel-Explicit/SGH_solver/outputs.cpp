@@ -3,13 +3,9 @@
 
 #include <cstring>
 #include <sys/stat.h>
-#include "Explicit_Solver_SGH.h"
+#include "FEA_Module_SGH.h"
 
-
-
-
-void write_outputs (const mesh_t &mesh,
-                    Explicit_Solver_SGH *explicit_solver_pointer,
+void FEA_Module_SGH::write_outputs (const mesh_t &mesh,
                     DViewCArrayKokkos <double> &node_coords,
                     DViewCArrayKokkos <double> &node_vel,
                     DViewCArrayKokkos <double> &node_mass,
@@ -84,7 +80,7 @@ void write_outputs (const mesh_t &mesh,
 // This function write outs the data to an ensight case file
 //------------------------------------------------------------------------------
 
-void ensight( const mesh_t &mesh,
+void FEA_Module_SGH::ensight( const mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords,
               const DViewCArrayKokkos <double> &node_vel,
               const DViewCArrayKokkos <double> &node_mass,
@@ -130,7 +126,7 @@ void ensight( const mesh_t &mesh,
 
 
     DCArrayKokkos <double> speed(num_elems);
-    FOR_ALL(elem_gid, 0, num_elems, {
+    FOR_ALL_CLASS(elem_gid, 0, num_elems, {
             
         double elem_vel[3]; // note:initialization with a list won't work
         elem_vel[0] = 0.0;
@@ -412,7 +408,7 @@ void ensight( const mesh_t &mesh,
 
 
 
-void state_file( const mesh_t &mesh,
+void FEA_Module_SGH::state_file( const mesh_t &mesh,
                  const DViewCArrayKokkos <double> &node_coords,
                  const DViewCArrayKokkos <double> &node_vel,
                  const DViewCArrayKokkos <double> &node_mass,

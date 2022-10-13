@@ -298,6 +298,53 @@ public:
                    const double val,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords) const;
+
+  void rk_init(DViewCArrayKokkos <double> &node_coords,
+               DViewCArrayKokkos <double> &node_vel,
+               DViewCArrayKokkos <double> &elem_sie,
+               DViewCArrayKokkos <double> &elem_stress,
+               const size_t num_dims,
+               const size_t num_elems,
+               const size_t num_nodes);
+
+
+  void get_timestep(mesh_t &mesh,
+                    DViewCArrayKokkos <double> &node_coords,
+                    DViewCArrayKokkos <double> &node_vel,
+                    DViewCArrayKokkos <double> &elem_sspd,
+                    DViewCArrayKokkos <double> &elem_vol,
+                    double time_value,
+                    const double graphics_time,
+                    const double time_final,
+                    const double dt_max,
+                    const double dt_min,
+                    const double dt_cfl,
+                    double &dt,
+                    const double fuzz);
+
+
+  void get_timestep2D(mesh_t &mesh,
+                      DViewCArrayKokkos <double> &node_coords,
+                      DViewCArrayKokkos <double> &node_vel,
+                      DViewCArrayKokkos <double> &elem_sspd,
+                      DViewCArrayKokkos <double> &elem_vol,
+                      double time_value,
+                      const double graphics_time,
+                      const double time_final,
+                      const double dt_max,
+                      const double dt_min,
+                      const double dt_cfl,
+                      double &dt,
+                      const double fuzz);
+  
+  void update_energy_sgh(double rk_alpha,
+                         double dt,
+                         const mesh_t &mesh,
+                         const DViewCArrayKokkos <double> &node_vel,
+                         const DViewCArrayKokkos <double> &node_coords,
+                         DViewCArrayKokkos <double> &elem_sie,
+                         const DViewCArrayKokkos <double> &elem_mass,
+                         const DViewCArrayKokkos <double> &corner_force);
                    
   void update_state(const CArrayKokkos <material_t> &material,
                     const mesh_t &mesh,
@@ -383,7 +430,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t num_state_vars,
                      const size_t mat_id,
                      const size_t num_elems);
-  
+
   void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
   
   void init_boundaries();
@@ -414,6 +461,55 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
 
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
+
+  
+  void write_outputs (const mesh_t &mesh,
+                      DViewCArrayKokkos <double> &node_coords,
+                      DViewCArrayKokkos <double> &node_vel,
+                      DViewCArrayKokkos <double> &node_mass,
+                      DViewCArrayKokkos <double> &elem_den,
+                      DViewCArrayKokkos <double> &elem_pres,
+                      DViewCArrayKokkos <double> &elem_stress,
+                      DViewCArrayKokkos <double> &elem_sspd,
+                      DViewCArrayKokkos <double> &elem_sie,
+                      DViewCArrayKokkos <double> &elem_vol,
+                      DViewCArrayKokkos <double> &elem_mass,
+                      DViewCArrayKokkos <size_t> &elem_mat_id,
+                      CArray <double> &graphics_times,
+                      size_t &graphics_id,
+                      const double time_value);
+
+
+  void ensight(const mesh_t &mesh,
+               const DViewCArrayKokkos <double> &node_coords,
+               const DViewCArrayKokkos <double> &node_vel,
+               const DViewCArrayKokkos <double> &node_mass,
+               const DViewCArrayKokkos <double> &elem_den,
+               const DViewCArrayKokkos <double> &elem_pres,
+               const DViewCArrayKokkos <double> &elem_stress,
+               const DViewCArrayKokkos <double> &elem_sspd,
+               const DViewCArrayKokkos <double> &elem_sie,
+               const DViewCArrayKokkos <double> &elem_vol,
+               const DViewCArrayKokkos <double> &elem_mass,
+               const DViewCArrayKokkos <size_t> &elem_mat_id,
+               CArray <double> &graphics_times,
+               size_t &graphics_id,
+               const double time_value);
+
+
+  void state_file(const mesh_t &mesh,
+                  const DViewCArrayKokkos <double> &node_coords,
+                  const DViewCArrayKokkos <double> &node_vel,
+                  const DViewCArrayKokkos <double> &node_mass,
+                  const DViewCArrayKokkos <double> &elem_den,
+                  const DViewCArrayKokkos <double> &elem_pres,
+                  const DViewCArrayKokkos <double> &elem_stress,
+                  const DViewCArrayKokkos <double> &elem_sspd,
+                  const DViewCArrayKokkos <double> &elem_sie,
+                  const DViewCArrayKokkos <double> &elem_vol,
+                  const DViewCArrayKokkos <double> &elem_mass,
+                  const DViewCArrayKokkos <size_t> &elem_mat_id,
+                  const double time_value );
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
