@@ -2,13 +2,12 @@
 
 #include "mesh.h"
 #include "state.h"
-
-
+#include "FEA_Module_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function evolves the velocity at the nodes of the mesh
 //------------------------------------------------------------------------------
-void update_velocity_sgh(double rk_alpha,
+void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
                          double dt,
                          const mesh_t &mesh,
                          DViewCArrayKokkos <double> &node_vel,
@@ -20,7 +19,7 @@ void update_velocity_sgh(double rk_alpha,
     const size_t num_dims = mesh.num_dims;
     
     // walk over the nodes to update the velocity
-    FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
+    FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {
 
         double node_force[3];
         for (size_t dim = 0; dim < num_dims; dim++){
@@ -57,13 +56,13 @@ void update_velocity_sgh(double rk_alpha,
 // This function calculates the velocity gradient
 //------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
+void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos <double> &vel_grad,
                  const ViewCArrayKokkos <size_t>  &elem_node_gids,
                  const DViewCArrayKokkos <double> &node_vel,
                  const ViewCArrayKokkos <double> &b_matrix,
                  const double elem_vol,
                  const size_t elem_gid
-                 ){
+                 ) const {
     
 
     const size_t num_nodes_in_elem = 8;
@@ -148,14 +147,14 @@ void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
 // This function calculates the velocity gradient
 //------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
+void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
                    const DViewCArrayKokkos <double> &node_vel,
                    const ViewCArrayKokkos <double> &b_matrix,
                    const double elem_vol,
                    const double elem_area,
                    const size_t elem_gid
-                   ){
+                   ) const {
     
 
     const size_t num_nodes_in_elem = 4;
@@ -218,7 +217,7 @@ void get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
 // -----------------------------------------------------------------------------
 // This subroutine to calculate the velocity divergence in all elements
 //------------------------------------------------------------------------------
-void get_divergence(DViewCArrayKokkos <double> &elem_div,
+void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
                     const mesh_t mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
@@ -226,7 +225,7 @@ void get_divergence(DViewCArrayKokkos <double> &elem_div,
                     ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
     
         const size_t num_nodes_in_elem = 8;
         const size_t num_dims = 3;
@@ -295,7 +294,7 @@ void get_divergence(DViewCArrayKokkos <double> &elem_div,
 // -----------------------------------------------------------------------------
 // This subroutine to calculate the velocity divergence in all elements
 //------------------------------------------------------------------------------
-void get_divergence2D(DViewCArrayKokkos <double> &elem_div,
+void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos <double> &elem_div,
                       const mesh_t mesh,
                       const DViewCArrayKokkos <double> &node_coords,
                       const DViewCArrayKokkos <double> &node_vel,
@@ -303,7 +302,7 @@ void get_divergence2D(DViewCArrayKokkos <double> &elem_div,
                       ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
     
         const size_t num_nodes_in_elem = 4;
         const size_t num_dims = 2;
@@ -382,8 +381,8 @@ void get_divergence2D(DViewCArrayKokkos <double> &elem_div,
 // L = vel_grad
 // D = sym(L)
 // W = antisym(L)
-KOKKOS_FUNCTION
-void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
+KOKKOS_INLINE_FUNCTION
+void FEA_Module_SGH::decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
                         ViewCArrayKokkos <double> &W_tensor,
                         const ViewCArrayKokkos <double> &vel_grad,
                         const ViewCArrayKokkos <size_t>  &elem_node_gids,
@@ -391,7 +390,7 @@ void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
                         const DViewCArrayKokkos <double> &node_coords,
                         const DViewCArrayKokkos <double> &node_vel,
                         const double vol
-                        ){
+                        ) const {
     
     
     // --- Calculate the velocity gradient ---

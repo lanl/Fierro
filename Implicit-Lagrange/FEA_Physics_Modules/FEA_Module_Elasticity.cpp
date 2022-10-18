@@ -117,7 +117,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :F
   simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
 
   //create ref element object
-  ref_elem = new elements::ref_element();
+  //ref_elem = new elements::ref_element();
   //create mesh objects
   //init_mesh = new swage::mesh_t(simparam);
   //mesh = new swage::mesh_t(simparam);

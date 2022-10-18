@@ -1,12 +1,12 @@
 
 #include "mesh.h"
 #include "state.h"
-
+#include "FEA_Module_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function saves the variables at rk_stage = 0, which is t_n
 //------------------------------------------------------------------------------
-void rk_init(DViewCArrayKokkos <double> &node_coords,
+void FEA_Module_SGH::rk_init(DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &node_vel,
              DViewCArrayKokkos <double> &elem_sie,
              DViewCArrayKokkos <double> &elem_stress,
@@ -15,7 +15,7 @@ void rk_init(DViewCArrayKokkos <double> &node_coords,
              const size_t num_nodes){
 
     // save elem quantities
-    FOR_ALL(elem_gid, 0, num_elems, {
+    FOR_ALL_CLASS(elem_gid, 0, num_elems, {
 
         // stress is always 3D even with 2D-RZ
         for(size_t i=0; i<3; i++){
@@ -30,7 +30,7 @@ void rk_init(DViewCArrayKokkos <double> &node_coords,
     
     
     // save nodal quantities
-    FOR_ALL(node_gid, 0, num_nodes, {
+    FOR_ALL_CLASS(node_gid, 0, num_nodes, {
         
         for(size_t i=0; i<num_dims; i++){
             node_coords(0,node_gid,i) = node_coords(1,node_gid,i);
@@ -51,7 +51,7 @@ void rk_init(DViewCArrayKokkos <double> &node_coords,
 // between any two nodes in the mesh
 //------------------------------------------------------------------------------
 // WARNING WARNING :  Only works for 3D, 8 node elements
-void get_timestep(mesh_t &mesh,
+void FEA_Module_SGH::get_timestep(mesh_t &mesh,
                   DViewCArrayKokkos <double> &node_coords,
                   DViewCArrayKokkos <double> &node_vel,
                   DViewCArrayKokkos <double> &elem_sspd,
@@ -71,7 +71,7 @@ void get_timestep(mesh_t &mesh,
 
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN(elem_gid, 0, mesh.num_elems, dt_lcl, {
+    REDUCE_MIN_CLASS(elem_gid, 0, mesh.num_elems, dt_lcl, {
         
         double coords0[24];  // element coords
         ViewCArrayKokkos <double> coords(coords0, 8, 3);
@@ -158,7 +158,7 @@ void get_timestep(mesh_t &mesh,
 // between any two nodes in the mesh
 //------------------------------------------------------------------------------
 // WARNING WARNING :  Only works for 3D, 8 node elements
-void get_timestep2D(mesh_t &mesh,
+void FEA_Module_SGH::get_timestep2D(mesh_t &mesh,
                     DViewCArrayKokkos <double> &node_coords,
                     DViewCArrayKokkos <double> &node_vel,
                     DViewCArrayKokkos <double> &elem_sspd,
@@ -178,7 +178,7 @@ void get_timestep2D(mesh_t &mesh,
 
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN(elem_gid, 0, mesh.num_elems, dt_lcl, {
+    REDUCE_MIN_CLASS(elem_gid, 0, mesh.num_elems, dt_lcl, {
         
         double coords0[8];  // element coords
         ViewCArrayKokkos <double> coords(coords0, 4, 2);

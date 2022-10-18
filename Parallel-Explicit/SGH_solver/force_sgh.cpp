@@ -1,15 +1,12 @@
 
 #include "mesh.h"
 #include "state.h"
-
-
-
-
+#include "FEA_Module_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void get_force_sgh(const CArrayKokkos <material_t> &material,
+void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
@@ -29,10 +26,8 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                    const double rk_alpha
                    ){
     
-
-    
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
         
         const size_t num_dims = 3;
         const size_t num_nodes_in_elem = 8;
@@ -404,7 +399,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void get_force_sgh2D(const CArrayKokkos <material_t> &material,
+void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -424,10 +419,8 @@ void get_force_sgh2D(const CArrayKokkos <material_t> &material,
                      const double rk_alpha
                      ){
     
-
-    
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
         
         const size_t num_dims = 2;
         const size_t num_nodes_in_elem = 4;
