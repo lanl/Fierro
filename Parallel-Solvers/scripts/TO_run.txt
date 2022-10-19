@@ -1,0 +1,6 @@
+export OMP_PROC_BIND=spread
+export OMP_NUM_THREADS=1
+export OMP_PLACES=threads
+mpirun -np 8 --bind-to core main Mesh_Examples/ANSYS_Beam.dat
+
+
