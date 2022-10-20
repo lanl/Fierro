@@ -35,8 +35,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
  
-#ifndef ELEMENTS_SOLVER_H
-#define ELEMENTS_SOLVER_H  
+#ifndef FIERRO_SOLVER_H
+#define FIERRO_SOLVER_H  
 
 class Solver{
 

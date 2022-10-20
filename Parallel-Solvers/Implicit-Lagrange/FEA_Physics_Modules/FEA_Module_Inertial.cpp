@@ -77,7 +77,7 @@
 using namespace utils;
 
 
-FEA_Module_Inertial::FEA_Module_Inertial(Implicit_Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
   
   //create parameter object
   simparam = new Simulation_Parameters_Inertial();

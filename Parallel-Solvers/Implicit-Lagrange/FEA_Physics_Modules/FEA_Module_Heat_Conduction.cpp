@@ -103,7 +103,7 @@
 using namespace utils;
 
 
-FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Implicit_Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
   //create parameter object
   simparam = new Simulation_Parameters_Thermal();
   // ---- Read input file, define state and boundary conditions ---- //

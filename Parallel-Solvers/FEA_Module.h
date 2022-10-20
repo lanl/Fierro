@@ -63,12 +63,12 @@
 #include "node_combination.h"
 
 //forward declare
-class Implicit_Solver;
+class Solver;
 
 class FEA_Module{
 
 public:
-  FEA_Module(Implicit_Solver *Solver_Pointer);
+  FEA_Module(Solver *Solver_Pointer);
   ~FEA_Module();
 
   //Trilinos type definitions
@@ -172,7 +172,7 @@ public:
   
 
   class Simulation_Parameters *simparam;
-  Implicit_Solver *Solver_Pointer_;
+  Solver *Solver_Pointer_;
   
   //Local FEA data
   size_t nlocal_nodes;

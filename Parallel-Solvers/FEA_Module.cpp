@@ -37,14 +37,14 @@
 
 #include <math.h>  // fmin, fmax, abs note: fminl is long
 #include "FEA_Module.h"
-#include "Implicit_Solver.h"
+#include "Solver.h"
 #include "Simulation_Parameters.h"
 #include "Simulation_Parameters_Topology_Optimization.h"
 
 #define BC_EPSILON 1.0e-8
 using namespace utils;
 
-FEA_Module::FEA_Module(Implicit_Solver *Solver_Pointer){
+FEA_Module::FEA_Module(Solver *Solver_Pointer){
 
   Solver_Pointer_ = Solver_Pointer;
 

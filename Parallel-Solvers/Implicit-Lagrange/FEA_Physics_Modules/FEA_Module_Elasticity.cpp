@@ -104,7 +104,7 @@
 using namespace utils;
 
 
-FEA_Module_Elasticity::FEA_Module_Elasticity(Implicit_Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
   //create parameter object
   simparam = new Simulation_Parameters_Elasticity();
   // ---- Read input file, define state and boundary conditions ---- //

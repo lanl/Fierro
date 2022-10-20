@@ -71,7 +71,7 @@
 #include "node_combination.h"
 #include "Simulation_Parameter_Headers.h"
 #include "Simulation_Parameters_SGH.h"
-#include "FEA_Module_Headers.h"
+#include "FEA_Module.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 #include "mesh.h"
