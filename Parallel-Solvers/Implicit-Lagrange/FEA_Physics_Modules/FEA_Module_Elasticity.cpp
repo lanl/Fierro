@@ -105,6 +105,10 @@ using namespace utils;
 
 
 FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+
+  //recast solver pointer for non-base class access
+  Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
+
   //create parameter object
   simparam = new Simulation_Parameters_Elasticity();
   // ---- Read input file, define state and boundary conditions ---- //
@@ -114,7 +118,9 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer) :FEA_Module
   FEA_Module::simparam = simparam;
   
   //TO parameters
-  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
+  simparam_TO = Implicit_Solver_Pointer_->simparam;
+  penalty_power = simparam_TO->penalty_power;
+  nodal_density_flag = simparam_TO->nodal_density_flag;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -423,10 +429,10 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
       std::cout << "LOAD PATCHES TO READ " << num_patches << std::endl;
       int nodes_per_patch;
       //select nodes per patch based on element type
-      if(Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex8){
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex8){
         nodes_per_patch = 4;
       }
-      if(Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex20){
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex20){
         nodes_per_patch = 8;
       }
 
@@ -510,7 +516,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
             //debug print
             //std::cout << "PATCH NODES " << boundary_set_npatches +1 << " " << Surface_Nodes(0) << " " << Surface_Nodes(1) << " " << Surface_Nodes(2) << " " << Surface_Nodes(3) << " ASSIGNED ON RANK " << myrank << std::endl;
             //construct Node Combination object for this surface
-            local_patch_index = Solver_Pointer_->boundary_patch_to_index[temp];
+            local_patch_index = Implicit_Solver_Pointer_->boundary_patch_to_index[temp];
             //debug print
             //std::cout << "MAPPED PATCH NODES " << boundary_set_npatches +1 << " " << Boundary_Patches(local_patch_index).node_set(0) << " " << Boundary_Patches(local_patch_index).node_set(1) << " " << Boundary_Patches(local_patch_index).node_set(2) << " " << Boundary_Patches(local_patch_index).node_set(3) << " ASSIGNED ON RANK " << myrank << std::endl;
             Boundary_Condition_Patches(num_boundary_conditions-1,boundary_set_npatches++) = local_patch_index;
@@ -3477,7 +3483,7 @@ void FEA_Module_Elasticity::compute_adjoint_gradients(const_host_vec_array desig
 
 void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
   //local variable for host view in the dual view
-  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
+  real_t current_cpu_time = Implicit_Solver_Pointer_->CPU_Time();
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3936,17 +3942,17 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
-    Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
+    Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
+    Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
-  real_t current_cpu_time2 = Solver_Pointer_->CPU_Time();
+  real_t current_cpu_time2 = Implicit_Solver_Pointer_->CPU_Time();
   comm->barrier();
   SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
-  hessvec_linear_time += Solver_Pointer_->CPU_Time() - current_cpu_time2;
+  hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
+    Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
   }
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
@@ -4291,7 +4297,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
       }
     }
   }//end element loop for hessian vector product
-  hessvec_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
+  hessvec_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
 }
 
 /* ----------------------------------------------------------------------------
@@ -5286,9 +5292,9 @@ int FEA_Module_Elasticity::solve(){
   }//row for
   */
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->equilibrateMatrix(xA,"diag");
-    Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
-    Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
+    Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
+    Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
+    Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
   }
 
   //debug print
@@ -5323,7 +5329,7 @@ int FEA_Module_Elasticity::solve(){
   //Teuchos::RCP<Xpetra::Vector<real_t,LO,GO,node_type>> diagonal = Teuchos::rcp(new Xpetra::Vector<real_t,LO,GO,node_type>(tdiagonal));
   //Global_Stiffness_Matrix->getLocalDiagCopy(*tdiagonal);
   //tdiagonal->describe(*fos,Teuchos::VERB_EXTREME);
-  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
+  real_t current_cpu_time = Implicit_Solver_Pointer_->CPU_Time();
   if(Hierarchy_Constructed){
     ReuseXpetraPreconditioner(xA, H);
   }
@@ -5341,12 +5347,12 @@ int FEA_Module_Elasticity::solve(){
   // =========================================================================
 
   SystemSolve(xA,xX,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
-  linear_solve_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
+  linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
 
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
-    Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
+    Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
+    Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
   }
 
   if(simparam->multigrid_timers){
@@ -5469,7 +5475,7 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
   
   int num_dim = simparam->num_dim;
   LO local_node_index;
-  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
+  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Implicit_Solver_Pointer_->simparam);
   if(simparam_TO->thick_condition_boundary){
     for(int i = 0; i < nlocal_nodes*num_dim; i++){
       if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){

@@ -168,7 +168,6 @@ public:
   elements::element_selector *element_select;
   elements::Element3D *elem;
   elements::Element2D *elem2D;
-  elements::ref_element  *ref_elem;
   
 
   class Simulation_Parameters *simparam;

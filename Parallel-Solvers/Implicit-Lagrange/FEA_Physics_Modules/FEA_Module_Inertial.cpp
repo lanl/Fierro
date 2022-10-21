@@ -69,6 +69,7 @@
 #include "utilities.h"
 #include "FEA_Module_Inertial.h"
 #include "Simulation_Parameters_Inertial.h"
+#include "Simulation_Parameters_Topology_Optimization.h"
 #include "Implicit_Solver.h"
 
 #define MAX_ELEM_NODES 8
@@ -79,6 +80,9 @@ using namespace utils;
 
 FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
   
+  //recast solver pointer for non-base class access
+  Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
+
   //create parameter object
   simparam = new Simulation_Parameters_Inertial();
   // ---- Read input file, define state and boundary conditions ---- //
@@ -86,6 +90,11 @@ FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer) :FEA_Module(Sol
   
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
+
+  //TO parameters
+  simparam_TO = Implicit_Solver_Pointer_->simparam;
+  penalty_power = simparam_TO->penalty_power;
+  nodal_density_flag = simparam_TO->nodal_density_flag;
 
   //property initialization flags
   mass_init = false;

@@ -95,7 +95,7 @@ add_subdirectory(../Elements/slam ../Elements/slam)
 add_subdirectory(../Elements/mesh_tools ../Elements/mesh_tools)
 endif()
 
-set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp Solver.cpp)
+set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp Solver.cpp Simulation_Parameters.cpp)
 add_library(parallel_base_src OBJECT ${Parallel_Base_SRC})
 
 target_include_directories(parallel_base_src PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})

@@ -75,7 +75,6 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters_SGH.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 

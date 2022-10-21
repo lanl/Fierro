@@ -69,7 +69,6 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameter_Headers.h"
 #include "Simulation_Parameters_SGH.h"
 #include "FEA_Module.h"
 #include "FEA_Module_SGH.h"

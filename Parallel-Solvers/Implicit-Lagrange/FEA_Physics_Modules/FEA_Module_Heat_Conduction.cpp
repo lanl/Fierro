@@ -104,6 +104,10 @@ using namespace utils;
 
 
 FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+
+  //recast solver pointer for non-base class access
+  Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
+
   //create parameter object
   simparam = new Simulation_Parameters_Thermal();
   // ---- Read input file, define state and boundary conditions ---- //
@@ -113,7 +117,9 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Solver *Solver_Pointer) :
   FEA_Module::simparam = simparam;
   
   //TO parameters
-  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Solver_Pointer_->simparam);
+  simparam_TO = Implicit_Solver_Pointer_->simparam;
+  penalty_power = simparam_TO->penalty_power;
+  nodal_density_flag = simparam_TO->nodal_density_flag;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -2086,7 +2092,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_gradients(const_host_vec_array 
 
 void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
   //local variable for host view in the dual view
-  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
+  real_t current_cpu_time = Implicit_Solver_Pointer_->CPU_Time();
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2452,17 +2458,17 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
-    Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
+    Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
+    Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
-  real_t current_cpu_time2 = Solver_Pointer_->CPU_Time();
+  real_t current_cpu_time2 = Implicit_Solver_Pointer_->CPU_Time();
   comm->barrier();
   SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
-  hessvec_linear_time += Solver_Pointer_->CPU_Time() - current_cpu_time2;
+  hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
+    Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
   }
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
@@ -2718,7 +2724,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
       }
     }
   }//end element loop for hessian vector product
-  hessvec_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
+  hessvec_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
 }
 
 /* ----------------------------------------------------------------------------
@@ -3459,9 +3465,9 @@ int FEA_Module_Heat_Conduction::solve(){
   }//row for
   */
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->equilibrateMatrix(xA,"diag");
-    Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
-    Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
+    Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
+    Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
+    Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
   }
 
   //debug print
@@ -3512,14 +3518,14 @@ int FEA_Module_Heat_Conduction::solve(){
   // System solution (Ax = b)
   // =========================================================================
 
-  real_t current_cpu_time = Solver_Pointer_->CPU_Time();
+  real_t current_cpu_time = Implicit_Solver_Pointer_->CPU_Time();
   SystemSolve(xA,xX,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
-  linear_solve_time += Solver_Pointer_->CPU_Time() - current_cpu_time;
+  linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
 
   if(simparam->equilibrate_matrix_flag){
-    Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
-    Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
+    Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
+    Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
   }
 
   if(simparam->multigrid_timers){

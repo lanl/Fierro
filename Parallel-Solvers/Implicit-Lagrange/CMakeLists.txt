@@ -1,7 +1,6 @@
 set(Simulation_Param_SRC Simulation_Parameters/Simulation_Parameters_Thermal.cpp Simulation_Parameters/Simulation_Parameters_Elasticity.cpp Simulation_Parameters/Simulation_Parameters_Topology_Optimization.cpp Simulation_Parameters/Simulation_Parameters_Inertial.cpp)
 set(Implicit_Solver_SRC Implicit_Solver.cpp)
 set(FEA_Module_SRC FEA_Physics_Modules/FEA_Module_Inertial.cpp FEA_Physics_Modules/FEA_Module_Elasticity.cpp FEA_Physics_Modules/FEA_Module_Heat_Conduction.cpp FEA_Physics_Modules/Matrix_Equilibration.cpp )
-set(Solver_SRC_CXX main.cpp Solver.cpp)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -31,7 +30,7 @@ INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 add_library(fea_modules OBJECT ${FEA_Module_SRC})
-add_executable(main ${Solver_SRC_CXX} ${Solver_SRC_H} ${Implicit_Solver_SRC} ${Simulation_Param_SRC})
+add_executable(main main.cpp ${Implicit_Solver_SRC} ${Simulation_Param_SRC})
 if(BUILD_ELEMENTS)
 target_link_libraries (main swage)
 target_link_libraries (main elements)

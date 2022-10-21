@@ -39,7 +39,6 @@
 #include "FEA_Module.h"
 #include "Solver.h"
 #include "Simulation_Parameters.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
 
 #define BC_EPSILON 1.0e-8
 using namespace utils;
@@ -99,7 +98,6 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   //element select data
   element_select = Solver_Pointer->element_select;
   element_select->choose_3Delem_type(Element_Types(0), elem);
-  ref_elem = Solver_Pointer->ref_elem;
 
   //obtain boundary condition and loading data
   nboundary_patches = Solver_Pointer->nboundary_patches;
@@ -109,10 +107,6 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
 
   //flag init
   body_term_flag = nonzero_bc_flag = false;
-
-  //TO parameters
-  penalty_power = Solver_Pointer->simparam->penalty_power;
-  nodal_density_flag = Solver_Pointer->simparam->nodal_density_flag;
 
   //output data
   noutput = 0;

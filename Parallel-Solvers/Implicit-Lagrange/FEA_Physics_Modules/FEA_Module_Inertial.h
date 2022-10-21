@@ -40,10 +40,15 @@
 
 #include "FEA_Module.h"
 
+//forward declare
+class Implicit_Solver;
+class Simulation_Parameters_Inertial;
+class Simulation_Parameters_Topology_Optimization;
+
 class FEA_Module_Inertial: public FEA_Module{
 
 public:
-  FEA_Module_Inertial(Implicit_Solver *Solver_Pointer);
+  FEA_Module_Inertial(Solver *Solver_Pointer);
   ~FEA_Module_Inertial();
 
   void comm_variables(Teuchos::RCP<const MV> zp);
@@ -63,7 +68,9 @@ public:
   void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component);
   
   //forward declare
-  class Simulation_Parameters_Inertial *simparam;
+  Simulation_Parameters_Inertial *simparam;
+  Simulation_Parameters_Topology_Optimization *simparam_TO;
+  Implicit_Solver *Implicit_Solver_Pointer_;
 
   //Global FEA data
   Teuchos::RCP<MV> mass_gradients_distributed;
