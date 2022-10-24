@@ -58,7 +58,7 @@ namespace Xpetra{
 }
 
 class Implicit_Solver;
-class Simulation_Parameters_Inertial;
+class Simulation_Parameters_Elasticity;
 class Simulation_Parameters_Topology_Optimization;
 
 class FEA_Module_Elasticity: public FEA_Module{
@@ -133,8 +133,8 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  class Simulation_Parameters_Elasticity *simparam;
-  class Simulation_Parameters_Topology_Optimization *simparam_TO;
+  Simulation_Parameters_Elasticity *simparam;
+  Simulation_Parameters_Topology_Optimization *simparam_TO;
   Implicit_Solver *Implicit_Solver_Pointer_;
   
   //Local FEA data

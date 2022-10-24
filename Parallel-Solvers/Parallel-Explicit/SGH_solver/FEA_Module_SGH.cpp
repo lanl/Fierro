@@ -86,15 +86,16 @@
 using namespace utils;
 
 
-FEA_Module_SGH::FEA_Module_SGH(Explicit_Solver_SGH *Solver_Pointer){
+FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
   //create parameter object
-  explicit_solver_pointer = Solver_Pointer;
-  simparam = dynamic_cast<Simulation_Parameters_SGH*>(explicit_solver_pointer->simparam);
+  //recast solver pointer for non-base class access
+  Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver_SGH*>(Solver_Pointer);
+  simparam = dynamic_cast<Simulation_Parameters_SGH*>(Explicit_Solver_Pointer_->simparam);
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->input();
   
   //TO parameters
-  //simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(explicit_solver_pointer->simparam);
+  //simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Explicit_Solver_Pointer_->simparam);
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -160,20 +161,20 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
 
     // --- Read in the nodes in the mesh ---
 
-    size_t num_nodes = explicit_solver_pointer->nall_nodes;
-    int myrank = explicit_solver_pointer->myrank;
-    int nranks = explicit_solver_pointer->nranks;
+    size_t num_nodes = Explicit_Solver_Pointer_->nall_nodes;
+    int myrank = Explicit_Solver_Pointer_->myrank;
+    int nranks = Explicit_Solver_Pointer_->nranks;
     //printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, num_nodes);
 
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
-    mesh.initialize_local_nodes(explicit_solver_pointer->nlocal_nodes);
+    mesh.initialize_local_nodes(Explicit_Solver_Pointer_->nlocal_nodes);
     node.initialize(rk_num_bins, num_nodes, num_dims);
     //std::cout << "Bin counts " << rk_num_bins << " Node counts " << num_nodes << " Num dim " << num_dims << std::endl;
 
     //view scope
     {
-      Explicit_Solver_SGH::host_vec_array interface_node_coords = explicit_solver_pointer->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      Explicit_Solver_SGH::host_vec_array interface_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //save node data to node.coords
       //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
       for(int inode = 0; inode < num_nodes; inode++){
@@ -189,7 +190,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     // --- read in the elements in the mesh ---
     size_t num_elem = 0;
     
-    num_elem = explicit_solver_pointer->rnum_elem;
+    num_elem = Explicit_Solver_Pointer_->rnum_elem;
     //printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, num_elem);
 
     // intialize elem variables
@@ -200,13 +201,13 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     //CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
     //view scope
     {
-      Explicit_Solver_SGH::host_elem_conn_array interface_nodes_in_elem = explicit_solver_pointer->nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      Explicit_Solver_SGH::host_elem_conn_array interface_nodes_in_elem = Explicit_Solver_Pointer_->nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //save node data to node.coords
       //std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
       for(int ielem = 0; ielem < num_elem; ielem++){
         //std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
-            mesh.nodes_in_elem.host(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            mesh.nodes_in_elem.host(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
             //debug print
             //std::cout << mesh.nodes_in_elem.get_kokkos_dual_view().h_view(ielem*num_nodes_in_elem + inode)+1<< " ";
         }
@@ -228,7 +229,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
         std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
             //debug print
-            //device_mesh_nodes_in_elem(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            //device_mesh_nodes_in_elem(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
             std::cout << mesh.nodes_in_elem(ielem, inode)+1<< " ";
         }
         std::cout << std::endl;
@@ -239,13 +240,13 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     std::cout.flush();
     if(myrank==1){
     std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in GLOBAL INDICES" << myrank << std::endl;
-    std::cout << "local node index of global index 275 on rank 1 " << explicit_solver_pointer->all_node_map->getLocalElement(275) << std::endl;
+    std::cout << "local node index of global index 275 on rank 1 " << Explicit_Solver_Pointer_->all_node_map->getLocalElement(275) << std::endl;
     for(int ielem = 0; ielem < num_elem; ielem++){
         std::cout << ielem << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
             //debug print
-            //device_mesh_nodes_in_elem(ielem,inode) = explicit_solver_pointer->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
-            std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(mesh.nodes_in_elem(ielem, inode))<< " ";
+            //device_mesh_nodes_in_elem(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(mesh.nodes_in_elem(ielem, inode))<< " ";
         }
         std::cout << std::endl;
     }
@@ -253,14 +254,14 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     std::cout.flush();
     */
     /*
-    size_t nall_nodes = explicit_solver_pointer->nall_nodes;
+    size_t nall_nodes = Explicit_Solver_Pointer_->nall_nodes;
     node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
     node.all_vel    = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dims);
     node.all_mass   = DCArrayKokkos <double> (nall_nodes);
 
     //save all data (nlocal +nghost)
     CArrayKokkos<double, DefaultLayout, HostSpace> host_all_node_coords_state(rk_num_bins, nall_nodes, num_dims);
-    Explicit_Solver_SGH::host_vec_array interface_all_node_coords = explicit_solver_pointer->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    Explicit_Solver_SGH::host_vec_array interface_all_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_all_node_coords_state.get_kokkos_view() = node.all_coords.get_kokkos_dual_view().view_host();
     //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, num_nodes, num_dims);
     //host_all_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*nall_nodes*num_dims);
@@ -1013,8 +1014,8 @@ void FEA_Module_SGH::tag_bdys(const CArrayKokkos <boundary_t> &boundary,
               const DViewCArrayKokkos <double> &node_coords){
 
     size_t num_dims = mesh.num_dims;
-    //int nboundary_patches = explicit_solver_pointer->nboundary_patches;
-    int nboundary_patches = explicit_solver_pointer->nboundary_patches;
+    //int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
+    int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
     
     //if (bdy_set == mesh.num_bdy_sets){
     //    printf(" ERROR: number of boundary sets must be increased by %zu",
@@ -1179,7 +1180,7 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
 void FEA_Module_SGH::build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary, mesh_t &mesh){
     
     // build boundary nodes in each boundary set
-    int nboundary_patches = explicit_solver_pointer->nboundary_patches;
+    int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
     mesh.num_bdy_nodes_in_set = DCArrayKokkos <size_t> (mesh.num_bdy_sets, "num_bdy_nodes_in_set");
     CArrayKokkos <long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes, "temp_count_num_bdy_nodes_in_set");
     
@@ -1307,12 +1308,12 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
     const CArrayKokkos <boundary_t> boundary = simparam->boundary;
     const CArrayKokkos <material_t> material = simparam->material;
 
-    int myrank = explicit_solver_pointer->myrank;
+    int myrank = Explicit_Solver_Pointer_->myrank;
     if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
     /*
     write_outputs(mesh,
-                  explicit_solver_pointer,
+                  Explicit_Solver_Pointer_,
                   node_coords,
                   node_vel,
                   node_mass,
@@ -1347,7 +1348,7 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
     double global_IE_t0 = 0.0;
     double global_KE_t0 = 0.0;
     double global_TE_t0 = 0.0;
-    int nlocal_elem_non_overlapping = explicit_solver_pointer->nlocal_elem_non_overlapping;
+    int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
     const int num_dims = mesh.num_dims;
     
     // extensive IE
@@ -1553,15 +1554,15 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
         
                  // Get corner gid
                  size_t corner_gid = mesh.corners_in_node(i, corner_lid);
-                 std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << corner_gid << " " << corner_force(corner_gid, 0) << " " << corner_force(corner_gid, 1) << " " << corner_force(corner_gid, 2) << std::endl;
+                 std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << corner_gid << " " << corner_force(corner_gid, 0) << " " << corner_force(corner_gid, 1) << " " << corner_force(corner_gid, 2) << std::endl;
                  // loop over dimension
                  for (size_t dim = 0; dim < num_dims; dim++){
                    node_force[dim] += corner_force(corner_gid, dim);
                  } // end for dim
             
                } // end for corner_lid
-               //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
-               //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
+               //std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
+               //std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
              }
             }
             /*
@@ -1569,7 +1570,7 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
             /*
             if(myrank==0)
              for(int i = 0; i < mesh.num_nodes; i++){
-               std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_vel(1,i,0) << " " << node_vel(1,i,1) << " " << node_vel(1,i,2) << std::endl;
+               std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(1,i,0) << " " << node_vel(1,i,1) << " " << node_vel(1,i,2) << std::endl;
              }
             */
 
@@ -1587,7 +1588,7 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
             //current interface has differing velocity arrays; this equates them until we unify memory
             //view scope
             {
-              Explicit_Solver_SGH::vec_array node_velocities_interface = explicit_solver_pointer->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+              Explicit_Solver_SGH::vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
               FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {
                 for (int idim = 0; idim < num_dims; idim++){
                   node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
@@ -1596,12 +1597,12 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
             } //end view scope
             Kokkos::fence();
             //communicate ghost velocities
-            explicit_solver_pointer->comm_velocities();
+            Explicit_Solver_Pointer_->comm_velocities();
 
             //this is forcing a copy to the device
             //view scope
             {
-              Explicit_Solver_SGH::vec_array all_node_velocities_interface = explicit_solver_pointer->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+              Explicit_Solver_SGH::vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
 
               FOR_ALL_CLASS(node_gid, mesh.num_local_nodes, mesh.num_nodes, {
                 for (int idim = 0; idim < num_dims; idim++){
@@ -1616,7 +1617,7 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
             /*
             if(myrank==0)
              for(int i = 0; i < mesh.num_nodes; i++){
-               std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_vel(1,i,0) << " " << node_vel(1,i,1) << " " << node_vel(1,i,2) << std::endl;
+               std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(1,i,0) << " " << node_vel(1,i,1) << " " << node_vel(1,i,2) << std::endl;
              }
             */ 
             // ---- Update specific internal energy in the elements ----
@@ -1800,7 +1801,7 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
             //interface nodal coordinate data
             //view scope
             {
-              Explicit_Solver_SGH::vec_array node_coords_interface = explicit_solver_pointer->node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+              Explicit_Solver_SGH::vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
               FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {
                 for (int idim = 0; idim < num_dims; idim++){
                   node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
@@ -1812,7 +1813,7 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
               printf("Writing outputs to file at %f \n", graphics_time);
               /*
             write_outputs(mesh,
-                          explicit_solver_pointer,
+                          Explicit_Solver_Pointer_,
                           node_coords,
                           node_vel,
                           node_mass,

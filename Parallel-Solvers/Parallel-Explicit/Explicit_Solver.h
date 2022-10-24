@@ -38,7 +38,10 @@
 #ifndef ELEMENTS_EXPLICIT_SOLVER_H
 #define ELEMENTS_EXPLICIT_SOLVER_H  
 
-class Explicit_Solver{
+
+#include "Solver.h"
+
+class Explicit_Solver: public Solver{
 
 public:
   Explicit_Solver();
@@ -49,10 +52,6 @@ public:
   virtual void run(int argc, char *argv[]) = 0;
 
   virtual void solver_finalize() {}
-
-  virtual void exit_solver(int status);
-
-  int setup_flag, finalize_flag;
 
 };
 

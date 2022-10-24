@@ -39,15 +39,8 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-Explicit_Solver::Explicit_Solver(){
-  //default flags assume optional routines are off
-  setup_flag = finalize_flag = 0;
+Explicit_Solver::Explicit_Solver() : Solver(){
 }
 
-void Explicit_Solver::exit_solver(int status){
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Finalize();
-  exit(status);
-}
 
 Explicit_Solver::~Explicit_Solver(){}

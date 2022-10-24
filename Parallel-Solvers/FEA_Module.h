@@ -38,9 +38,6 @@
 #ifndef FEA_MODULE_H
 #define FEA_MODULE_H
 
-#include "utilities.h"
-#include "matar.h"
-#include "elements.h"
 #include <string>
 #include <vector>
 #include <Teuchos_ScalarTraits.hpp>
@@ -60,6 +57,9 @@
 //#include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
+#include "utilities.h"
+#include "matar.h"
+#include "elements.h"
 #include "node_combination.h"
 
 //forward declare

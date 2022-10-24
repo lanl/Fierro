@@ -43,64 +43,19 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include <Teuchos_ScalarTraits.hpp>
-#include <Teuchos_RCP.hpp>
-#include <Teuchos_oblackholestream.hpp>
-#include <Teuchos_Tuple.hpp>
-#include <Teuchos_VerboseObject.hpp>
-
-#include <Tpetra_Core.hpp>
-#include <Tpetra_Map.hpp>
-#include <Tpetra_MultiVector.hpp>
-#include <Tpetra_CrsMatrix.hpp>
-#include <Kokkos_View.hpp>
-#include "Tpetra_Details_EquilibrationInfo.hpp"
-#include "Tpetra_Details_DefaultTypes.hpp"
+#include "Solver.h"
+#include "FEA_Module.h"
 
 class Explicit_Solver_SGH;
+class Simulation_Parameters_SGH;
+class Simulation_Parameters_Topology_Optimization;
 
-class FEA_Module_SGH{
+class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Explicit_Solver_SGH *Solver_Pointer);
+  FEA_Module_SGH(Solver *Solver_Pointer);
   ~FEA_Module_SGH();
-
-  //Trilinos type definitions
-  typedef Tpetra::Map<>::local_ordinal_type LO;
-  typedef Tpetra::Map<>::global_ordinal_type GO;
-
-  typedef Tpetra::CrsMatrix<real_t,LO,GO> MAT;
-  typedef const Tpetra::CrsMatrix<real_t,LO,GO> const_MAT;
-  typedef Tpetra::MultiVector<real_t,LO,GO> MV;
-  typedef Tpetra::MultiVector<GO,LO,GO> MCONN;
-
-  typedef Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>::size_type SizeType;
-  typedef Tpetra::Details::DefaultTypes::node_type node_type;
-  using traits = Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>;
-  
-  using array_layout    = typename traits::array_layout;
-  using execution_space = typename traits::execution_space;
-  using device_type     = typename traits::device_type;
-  using memory_traits   = typename traits::memory_traits;
-  using global_size_t = Tpetra::global_size_t;
-  
-  typedef Kokkos::View<real_t*, Kokkos::LayoutRight, device_type, memory_traits> values_array;
-  typedef Kokkos::View<GO*, array_layout, device_type, memory_traits> global_indices_array;
-  typedef Kokkos::View<LO*, array_layout, device_type, memory_traits> indices_array;
-  //typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
-  typedef MAT::local_graph_device_type::row_map_type::non_const_type row_pointers;
-  //typedef Kokkos::DualView<real_t**, Kokkos::LayoutLeft, device_type>::t_dev vec_array;
-  typedef MV::dual_view_type::t_dev vec_array;
-  typedef MV::dual_view_type::t_host host_vec_array;
-  typedef Kokkos::View<const real_t**, array_layout, HostSpace, memory_traits> const_host_vec_array;
-  typedef Kokkos::View<const real_t**, array_layout, device_type, memory_traits> const_vec_array;
-  typedef MV::dual_view_type dual_vec_array;
-  typedef MCONN::dual_view_type dual_elem_conn_array;
-  typedef MCONN::dual_view_type::t_host host_elem_conn_array;
-  typedef MCONN::dual_view_type::t_dev elem_conn_array;
-  typedef Kokkos::View<const GO**, array_layout, HostSpace, memory_traits> const_host_elem_conn_array;
-  typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
   void sgh_interface_setup(mesh_t &mesh, node_t &node, elem_t &elem, corner_t &corner);
@@ -448,9 +403,6 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
 
   //interfaces between user input and creating data structures for bcs
   void generate_bcs();
-  
-  //interfaces between user input and creating data structures for applied loads
-  void generate_applied_loads();
 
   void Displacement_Boundary_Conditions();
 
@@ -513,8 +465,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  class Simulation_Parameters_SGH *simparam;
-  class Simulation_Parameters_Topology_Optimization *simparam_TO;
+  Simulation_Parameters_SGH *simparam;
+  Simulation_Parameters_Topology_Optimization *simparam_TO;
+  Explicit_Solver_SGH *Explicit_Solver_Pointer_;
   
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
