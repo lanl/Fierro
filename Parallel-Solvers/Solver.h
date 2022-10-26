@@ -54,11 +54,7 @@
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 #include <Kokkos_View.hpp>
-#include <Kokkos_Parallel.hpp>
-#include <Kokkos_Parallel_Reduce.hpp>
-#include "Tpetra_Details_EquilibrationInfo.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
-#include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
 #include <map>
 
 //forward declarations
@@ -133,6 +129,7 @@ public:
 
   //Local FEA data
   size_t nlocal_nodes;
+  size_t nlocal_elem_non_overlapping; //used for reduction calls of per element values
   dual_vec_array dual_node_coords; //coordinates of the nodes
   dual_vec_array dual_node_densities; //topology optimization design variable
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
@@ -147,8 +144,8 @@ public:
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;
-  CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type> ghost_nodes;
-  CArrayKokkos<int, array_layout, device_type, memory_traits> ghost_node_ranks;
+  Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits> ghost_nodes;
+  Kokkos::DualView <int*, array_layout, device_type, memory_traits> ghost_node_ranks;
 
   //Local FEA data including ghosts
   size_t nall_nodes;
@@ -192,7 +189,7 @@ public:
   size_t nboundary_patches;
   size_t num_boundary_conditions;
   int current_bdy_id;
-  CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
+  CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
   std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
   
   

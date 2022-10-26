@@ -39,6 +39,8 @@
 #define IMPLICIT_SOLVER_H
 
 #include "Solver.h"
+#include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
+#include "Tpetra_Details_EquilibrationInfo.hpp"
 
 //#include <Xpetra_Operator.hpp>
 //#include <MueLu.hpp>
@@ -67,42 +69,6 @@ class Implicit_Solver: public Solver{
 public:
   Implicit_Solver();
   ~Implicit_Solver();
-
-  //Trilinos type definitions
-  typedef Tpetra::Map<>::local_ordinal_type LO;
-  typedef Tpetra::Map<>::global_ordinal_type GO;
-
-  typedef Tpetra::CrsMatrix<real_t,LO,GO> MAT;
-  typedef const Tpetra::CrsMatrix<real_t,LO,GO> const_MAT;
-  typedef Tpetra::MultiVector<real_t,LO,GO> MV;
-  typedef Tpetra::MultiVector<GO,LO,GO> MCONN;
-
-  typedef Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>::size_type SizeType;
-  typedef Tpetra::Details::DefaultTypes::node_type node_type;
-  using traits = Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>;
-  
-  using array_layout    = typename traits::array_layout;
-  using execution_space = typename traits::execution_space;
-  using device_type     = typename traits::device_type;
-  using memory_traits   = typename traits::memory_traits;
-  using global_size_t = Tpetra::global_size_t;
-  
-  typedef Kokkos::View<real_t*, Kokkos::LayoutRight, device_type, memory_traits> values_array;
-  typedef Kokkos::View<GO*, array_layout, device_type, memory_traits> global_indices_array;
-  typedef Kokkos::View<LO*, array_layout, device_type, memory_traits> indices_array;
-  //typedef Kokkos::View<SizeType*, array_layout, device_type, memory_traits> row_pointers;
-  typedef MAT::local_graph_device_type::row_map_type::non_const_type row_pointers;
-  //typedef Kokkos::DualView<real_t**, Kokkos::LayoutLeft, device_type>::t_dev vec_array;
-  typedef MV::dual_view_type::t_dev vec_array;
-  typedef MV::dual_view_type::t_host host_vec_array;
-  typedef Kokkos::View<const real_t**, array_layout, HostSpace, memory_traits> const_host_vec_array;
-  typedef Kokkos::View<const real_t**, array_layout, device_type, memory_traits> const_vec_array;
-  typedef MV::dual_view_type dual_vec_array;
-  typedef MCONN::dual_view_type dual_elem_conn_array;
-  typedef MCONN::dual_view_type::t_host host_elem_conn_array;
-  typedef MCONN::dual_view_type::t_dev elem_conn_array;
-  typedef Kokkos::View<const GO**, array_layout, HostSpace, memory_traits> const_host_elem_conn_array;
-  typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
 
   void run(int argc, char *argv[]);
 

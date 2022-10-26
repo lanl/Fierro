@@ -2038,12 +2038,12 @@ void Implicit_Solver::init_maps(){
     //by now the set contains, with no repeats, all the global node indices that are ghosts for this rank
     //now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
     nghost_nodes = ghost_node_set.size();
-    ghost_nodes = CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type>(nghost_nodes, "ghost_nodes");
-    ghost_node_ranks = CArrayKokkos<int, array_layout, device_type, memory_traits>(nghost_nodes, "ghost_node_ranks");
+    ghost_nodes = Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits>("ghost_nodes", nghost_nodes);
+    ghost_node_ranks = Kokkos::DualView <int*, array_layout, device_type, memory_traits>("ghost_node_ranks", nghost_nodes);
     int ighost = 0;
     auto it = ghost_node_set.begin();
     while(it!=ghost_node_set.end()){
-      ghost_nodes(ighost++) = *it;
+      ghost_nodes.h_view(ighost++) = *it;
       it++;
     }
 
@@ -2054,8 +2054,8 @@ void Implicit_Solver::init_maps(){
 
     //find which mpi rank each ghost node belongs to and store the information in a CArrayKokkos
     //allocate Teuchos Views since they are the only input available at the moment in the map definitions
-    Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.get_kokkos_view().data(), nghost_nodes);
-    Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.get_kokkos_view().data(), nghost_nodes);
+    Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.h_view.data(), nghost_nodes);
+    Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.h_view.data(), nghost_nodes);
     map->getRemoteIndexList(ghost_nodes_pass, ghost_node_ranks_pass);
     
     //debug print of ghost nodes
@@ -2065,8 +2065,12 @@ void Implicit_Solver::init_maps(){
 
   }
 
+  ghost_nodes.modify_host();
+  ghost_nodes.sync_device();
+  ghost_node_ranks.modify_host();
+  ghost_node_ranks.sync_device();
   // create a Map for ghost node indices
-  ghost_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),ghost_nodes.get_kokkos_view(),0,comm));
+  ghost_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),ghost_nodes.d_view,0,comm));
     
   // Create reference element
   //ref_elem->init(p_order, num_dim, elem->num_basis());
@@ -2076,18 +2080,19 @@ void Implicit_Solver::init_maps(){
 
   //construct array for all indices (ghost + local)
   nall_nodes = nlocal_nodes + nghost_nodes;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> all_node_indices(nall_nodes, "all_node_indices");
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> all_node_indices("all_node_indices", nall_nodes);
   for(int i = 0; i < nall_nodes; i++){
-    if(i<nlocal_nodes) all_node_indices(i) = map->getGlobalElement(i);
-    else all_node_indices(i) = ghost_nodes(i-nlocal_nodes);
+    if(i<nlocal_nodes) all_node_indices.h_view(i) = map->getGlobalElement(i);
+    else all_node_indices.h_view(i) = ghost_nodes.h_view(i-nlocal_nodes);
   }
-  
+  all_node_indices.modify_host();
+  all_node_indices.sync_device();
   //debug print of node indices
   //for(int inode=0; inode < index_counter; inode++)
   //std::cout << " my_reduced_global_indices " << my_reduced_global_indices(inode) <<std::endl;
   
   // create a Map for all the node indices (ghost + local)
-  all_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_node_indices.get_kokkos_view(),0,comm));
+  all_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_node_indices.d_view,0,comm));
 
   //remove elements from the local set so that each rank has a unique set of global ids
   
@@ -2105,7 +2110,7 @@ void Implicit_Solver::init_maps(){
       node_gid = nodes_in_elem(ielem, lnode);
       if(ghost_node_map->isNodeGlobalElement(node_gid)){
         local_node_index = ghost_node_map->getLocalElement(node_gid);
-        if(ghost_node_ranks(local_node_index) < myrank) my_element_flag = 0;
+        if(ghost_node_ranks.h_view(local_node_index) < myrank) my_element_flag = 0;
       }
     }
     if(my_element_flag){
@@ -2122,7 +2127,7 @@ void Implicit_Solver::init_maps(){
       node_gid = nodes_in_elem(ielem, lnode);
       if(ghost_node_map->isNodeGlobalElement(node_gid)){
         local_node_index = ghost_node_map->getLocalElement(node_gid);
-        if(ghost_node_ranks(local_node_index) < myrank) my_element_flag = 0;
+        if(ghost_node_ranks.h_view(local_node_index) < myrank) my_element_flag = 0;
       }
     }
     if(my_element_flag){
@@ -2867,7 +2872,7 @@ void Implicit_Solver::Get_Boundary_Patches(){
     if(Patch_Boundary_Flags(iflags)) nboundary_patches++;
   }
   //upper bound that is not much larger
-  Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits>(nboundary_patches, "Boundary_Patches");
+  Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits>(nboundary_patches, "Boundary_Patches");
   nboundary_patches = 0;
   bool my_rank_flag;
   size_t remote_count;

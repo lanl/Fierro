@@ -43,20 +43,14 @@
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_oblackholestream.hpp>
-#include <Teuchos_Tuple.hpp>
-#include <Teuchos_VerboseObject.hpp>
 
-#include <fstream>
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
 #include <Kokkos_View.hpp>
-#include <Kokkos_Parallel.hpp>
-#include <Kokkos_Parallel_Reduce.hpp>
 //#include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
-#include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
 #include "utilities.h"
 #include "matar.h"
 #include "elements.h"
@@ -215,7 +209,7 @@ public:
   size_t nboundary_patches;
   size_t num_boundary_conditions;
   int current_bdy_id;
-  CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
+  CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NBoundary_Condition_Patches;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches_strides;
