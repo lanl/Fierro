@@ -3,15 +3,11 @@
 #command line default
 NUM_TASKS=${1:-'-j1'}
 
+cd ..
+
 #inititialize submodules if they aren't downloaded
 [ -d "Elements/elements" ] && echo "Elements submodule exists"
 [ -d "Elements/matar/src" ] && echo "matar submodule exists"
-
-
-git submodule update --init --recursive
-
-#check if Trilinos directory exists, git clone Trilinos if it doesn't
-[ -d "Trilinos" ] && echo "Directory Trilinos exists, skipping Trilinos download"
 
 
 if { [ ! -d "Elements/elements" ] || [ ! -d "Elements/matar/src" ] ;}
@@ -19,6 +15,9 @@ then
   echo "Missing submodules, downloading them...."
   git submodule update --init --recursive
 fi
+
+#check if Trilinos directory exists, git clone Trilinos if it doesn't
+[ -d "Trilinos" ] && echo "Directory Trilinos exists, skipping Trilinos download"
 
 if [ ! -d "Trilinos" ]
 then

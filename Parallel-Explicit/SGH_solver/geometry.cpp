@@ -4,9 +4,9 @@
 #include "matar.h"
 #include "mesh.h"
 #include "state.h"
+#include "FEA_Module_SGH.h"
 
-
-void update_position_sgh(double rk_alpha,
+void FEA_Module_SGH::update_position_sgh(double rk_alpha,
                          double dt,
                          const size_t num_dims,
                          const size_t num_nodes,
@@ -14,7 +14,7 @@ void update_position_sgh(double rk_alpha,
                          const DViewCArrayKokkos <double> &node_vel){
     
     // loop over all the nodes in the mesh
-    FOR_ALL(node_gid, 0, num_nodes, {
+    FOR_ALL_CLASS(node_gid, 0, num_nodes, {
 
         for (int dim = 0; dim < num_dims; dim++){
             double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
@@ -38,10 +38,10 @@ void update_position_sgh(double rk_alpha,
 //   B_p is the OUTWARD corner area normal at node p
 //------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
+void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
-                 const ViewCArrayKokkos <size_t>  &elem_node_gids){
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
     const size_t num_nodes = 8;
 
@@ -234,15 +234,18 @@ void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 } // end subroutine
 
 
+/* ----------------------------------------------------------------------------
+   Compute Volume of each finite element
+------------------------------------------------------------------------------- */
 
-void get_vol(const DViewCArrayKokkos <double> &elem_vol,
+void FEA_Module_SGH::get_vol(const DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
              const mesh_t &mesh){
     
     const size_t num_dims = mesh.num_dims;
     
     if (num_dims == 2){
-        FOR_ALL(elem_gid, 0, mesh.num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
             
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
@@ -252,7 +255,7 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
         Kokkos::fence();
     }
     else {
-        FOR_ALL(elem_gid, 0, mesh.num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
             
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
@@ -268,11 +271,11 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
 
 
 // Exact volume for a hex element
-KOKKOS_FUNCTION
-void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
+KOKKOS_INLINE_FUNCTION
+void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
-                 const ViewCArrayKokkos <size_t>  &elem_node_gids){
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
     const size_t num_nodes = 8;
 
@@ -312,10 +315,10 @@ void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
 
 
 KOKKOS_FUNCTION
-void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
+void FEA_Module_SGH::get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
-                   const ViewCArrayKokkos <size_t>  &elem_node_gids){
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
     const size_t num_nodes = 4;
 
@@ -379,11 +382,11 @@ void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
 
 
 // true volume of a quad in RZ coords
-KOKKOS_FUNCTION
-void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
+KOKKOS_INLINE_FUNCTION
+void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                   const size_t elem_gid,
                   const DViewCArrayKokkos <double> &node_coords,
-                  const ViewCArrayKokkos <size_t>  &elem_node_gids){
+                  const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
     
     // --- testing here ---
@@ -440,9 +443,9 @@ void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
 
 // element facial area
 KOKKOS_FUNCTION
-double get_area_quad(const size_t elem_gid,
+double FEA_Module_SGH::get_area_quad(const size_t elem_gid,
                      const DViewCArrayKokkos <double> &node_coords,
-                     const ViewCArrayKokkos <size_t>  &elem_node_gids){
+                     const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
     double elem_area=0.0;
     
@@ -473,13 +476,13 @@ double get_area_quad(const size_t elem_gid,
 } // end subroutine
 
 
-KOKKOS_FUNCTION
-double heron(const double x1,
+KOKKOS_INLINE_FUNCTION
+double FEA_Module_SGH::heron(const double x1,
              const double y1,
              const double x2,
              const double y2,
              const double x3,
-             const double y3)
+             const double y3) const
 {
   double S,a,b,c,area;
 
@@ -500,10 +503,10 @@ double heron(const double x1,
   
 
 KOKKOS_FUNCTION
-void get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
+void FEA_Module_SGH::get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
                         const size_t elem_gid,
                         const DViewCArrayKokkos <double> &node_coords,
-                        const ViewCArrayKokkos <size_t>  &elem_node_gids){
+                        const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
     const size_t num_nodes = 4;
 

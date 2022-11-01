@@ -1,9 +1,10 @@
 
 #include "mesh.h"
 #include "state.h"
+#include "FEA_Module_SGH.h"
 
 
-void update_energy_sgh(double rk_alpha,
+void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
                        double dt,
                        const mesh_t &mesh,
                        const DViewCArrayKokkos <double> &node_vel,
@@ -13,7 +14,7 @@ void update_energy_sgh(double rk_alpha,
                        const DViewCArrayKokkos <double> &corner_force){
 
     // loop over all the elements in the mesh
-    FOR_ALL (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
 
         double elem_power = 0.0;
 
