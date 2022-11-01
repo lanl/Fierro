@@ -1,6 +1,0 @@
-export OMP_PROC_BIND=spread
-export OMP_NUM_THREADS=1
-export OMP_PLACES=threads
-mpirun -np 8 --bind-to core valgrind ./Fierro_Parallel_Explicit mesh_Sedov_32.geo
-
-
