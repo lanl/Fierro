@@ -177,14 +177,26 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
       Explicit_Solver_SGH::host_vec_array interface_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //save node data to node.coords
       //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
-      for(int inode = 0; inode < num_nodes; inode++){
-        //std::cout << "Node index " << inode+1 << " ";
-        node.coords.host(0,inode,0) = interface_node_coords(inode,0);
-        //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
-        node.coords.host(0,inode,1) = interface_node_coords(inode,1);
-        //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
-        node.coords.host(0,inode,2) = interface_node_coords(inode,2);
-        //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
+      if(num_dims==2){
+        for(int inode = 0; inode < num_nodes; inode++){
+          //std::cout << "Node index " << inode+1 << " ";
+          node.coords.host(0,inode,0) = interface_node_coords(inode,0);
+          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+          node.coords.host(0,inode,1) = interface_node_coords(inode,1);
+          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+        }
+      }
+      else if(num_dims==3){
+        for(int inode = 0; inode < num_nodes; inode++){
+          //std::cout << "Node index " << inode+1 << " ";
+          node.coords.host(0,inode,0) = interface_node_coords(inode,0);
+          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+          node.coords.host(0,inode,1) = interface_node_coords(inode,1);
+          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+        
+          node.coords.host(0,inode,2) = interface_node_coords(inode,2);
+          //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
+        }
       }
     } //end view scope
     // --- read in the elements in the mesh ---
@@ -474,7 +486,8 @@ void FEA_Module_SGH::init_output(){
     output_dof_names[noutput-1].resize(num_dim);
     output_dof_names[noutput-1][0] = "vx";
     output_dof_names[noutput-1][1] = "vy";
-    output_dof_names[noutput-1][2] = "vz";
+    if(num_dim==3)
+      output_dof_names[noutput-1][2] = "vz";
   }
   if(output_strain_flag){
     output_strain_index = noutput;
@@ -489,12 +502,19 @@ void FEA_Module_SGH::init_output(){
 
     output_dof_names.resize(noutput);
     output_dof_names[noutput-1].resize(Brows);
-    output_dof_names[noutput-1][0] = "strain_xx";
-    output_dof_names[noutput-1][1] = "strain_yy";
-    output_dof_names[noutput-1][2] = "strain_zz";
-    output_dof_names[noutput-1][3] = "strain_xy";
-    output_dof_names[noutput-1][4] = "strain_xz";
-    output_dof_names[noutput-1][5] = "strain_yz";
+    if(num_dim==2){
+      output_dof_names[noutput-1][0] = "strain_xx";
+      output_dof_names[noutput-1][1] = "strain_yy";
+      output_dof_names[noutput-1][2] = "strain_xy";
+    }
+    if(num_dim==3){
+      output_dof_names[noutput-1][0] = "strain_xx";
+      output_dof_names[noutput-1][1] = "strain_yy";
+      output_dof_names[noutput-1][2] = "strain_zz";
+      output_dof_names[noutput-1][3] = "strain_xy";
+      output_dof_names[noutput-1][4] = "strain_xz";
+      output_dof_names[noutput-1][5] = "strain_yz";
+    }
   }
   if(output_stress_flag){
     output_stress_index = noutput;
@@ -509,12 +529,19 @@ void FEA_Module_SGH::init_output(){
 
     output_dof_names.resize(noutput);
     output_dof_names[noutput-1].resize(Brows);
-    output_dof_names[noutput-1][0] = "stress_xx";
-    output_dof_names[noutput-1][1] = "stress_yy";
-    output_dof_names[noutput-1][2] = "stress_zz";
-    output_dof_names[noutput-1][3] = "stress_xy";
-    output_dof_names[noutput-1][4] = "stress_xz";
-    output_dof_names[noutput-1][5] = "stress_yz";
+    if(num_dim==2){
+      output_dof_names[noutput-1][0] = "stress_xx";
+      output_dof_names[noutput-1][1] = "stress_yy";
+      output_dof_names[noutput-1][3] = "stress_xy";
+    }
+    if(num_dim==3){
+      output_dof_names[noutput-1][0] = "stress_xx";
+      output_dof_names[noutput-1][1] = "stress_yy";
+      output_dof_names[noutput-1][2] = "stress_zz";
+      output_dof_names[noutput-1][3] = "stress_xy";
+      output_dof_names[noutput-1][4] = "stress_xz";
+      output_dof_names[noutput-1][5] = "stress_yz";
+    }
   }
 }
 
