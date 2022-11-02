@@ -47,7 +47,6 @@ Simulation_Parameters::Simulation_Parameters(){
   //initialize data and flags to defaults
   report_runtime_flag = 0;
   unit_scaling = 1;
-  optimization_output_freq = 100;
   restart_file = false;
   tecplot_input = ansys_dat_input = false;
   nfea_modules = 0;

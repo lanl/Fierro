@@ -3525,7 +3525,9 @@ void Implicit_Solver::parallel_tecplot_writer(){
 
 		//output nodal data
     //compute buffer output size and file stream offset for this MPI rank
-    int buffer_size_per_node_line = 26*4 + 1; //25 width per number plus 6 spaces plus line terminator
+    int default_dof_count = num_dim;
+    default_dof_count++;
+    int buffer_size_per_node_line = 26*default_dof_count + 1; //25 width + 1 space per number plus line terminator
     for (int imodule = 0; imodule < nfea_modules; imodule++){
       noutput = fea_modules[imodule]->noutput;
       for(int ioutput = 0; ioutput < noutput; ioutput++){
