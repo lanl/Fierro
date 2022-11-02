@@ -987,24 +987,33 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
   
   elements::elem_types::elem_type mesh_element_type;
-  if(simparam->element_type == "Hex8"){
-    mesh_element_type = elements::elem_types::Hex8;
-  }
-  else if(simparam->element_type == "Hex20"){
-    mesh_element_type = elements::elem_types::Hex20;
-  }
-  else if(simparam->element_type == "Hex32"){
-    mesh_element_type = elements::elem_types::Hex32;
+
+  if(simparam->num_dim==2){
+    if(simparam->element_type == "Quad4"){
+      mesh_element_type = elements::elem_types::Quad4;
+    }
+    else if(simparam->element_type == "Quad8"){
+      mesh_element_type = elements::elem_types::Quad8;
+    }
+    else if(simparam->element_type == "Quad12"){
+      mesh_element_type = elements::elem_types::Quad12;
+    }
+    element_select->choose_2Delem_type(mesh_element_type, elem2D);
+    max_nodes_per_element = elem2D->num_nodes();
   }
 
-  //set element object pointer
-  if(simparam->num_dim==2){
-    element_select->choose_2Delem_type(mesh_element_type, elem2D);
-     max_nodes_per_element = elem2D->num_nodes();
-  }
-  else if(simparam->num_dim==3){
+  if(simparam->num_dim==3){
+    if(simparam->element_type == "Hex8"){
+      mesh_element_type = elements::elem_types::Hex8;
+    }
+    else if(simparam->element_type == "Hex20"){
+      mesh_element_type = elements::elem_types::Hex20;
+    }
+    else if(simparam->element_type == "Hex32"){
+      mesh_element_type = elements::elem_types::Hex32;
+    }
     element_select->choose_3Delem_type(mesh_element_type, elem);
-     max_nodes_per_element = elem->num_nodes();
+    max_nodes_per_element = elem->num_nodes();
   }
 
   //1 type per mesh for now
@@ -3648,7 +3657,10 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
   //else
   current_line_stream.str("");
-	current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+  if(num_dim==3)
+	  current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+  else if(num_dim==2)
+    current_line_stream << "VARIABLES = \"x\", \"y\", \"vx\", \"vy\"";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -3680,7 +3692,8 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   
   //output nodal data
   //compute buffer output size and file stream offset for this MPI rank
-  int buffer_size_per_node_line = 26*6 + 1; //25 width per number plus 6 spaces plus line terminator
+  int default_vector_count = 2;
+  int buffer_size_per_node_line = 26*default_vector_count*num_dim + 1; //25 width per number + 1 space times 6 entries plus line terminator
   int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
   GO first_node_global_id = sorted_map->getGlobalElement(0);
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> print_buffer(buffer_size_per_node_line*nlocal_sorted_nodes);

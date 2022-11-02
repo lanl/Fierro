@@ -51,6 +51,7 @@ Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Opti
   report_runtime_flag = false;
   nodal_density_flag = true;
   thick_condition_boundary = true;
+  optimization_output_freq = 20;
   penalty_power = 3;
   nTO_modules = 0;
 }

@@ -181,8 +181,8 @@ public:
     }
 
     //decide to output current optimization state
-    if(current_step%FEM_->simparam->optimization_output_freq==0)
-      FEM_->Implicit_Solver_Pointer_->tecplot_writer();
+    if(current_step%FEM_->simparam_TO->optimization_output_freq==0)
+      FEM_->Implicit_Solver_Pointer_->parallel_tecplot_writer();
   }
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
