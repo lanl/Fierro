@@ -73,6 +73,9 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   //When on, all element nodes connected to a boundary condition patch will have their density constrained
   bool thick_condition_boundary;
 
+  //file output parameters
+  int optimization_output_freq;
+
   //Topology Optimization parameters
   real_t penalty_power;
 

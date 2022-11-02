@@ -72,9 +72,6 @@ class Simulation_Parameters
   bool tecplot_input, ansys_dat_input;
   std::string element_type;
 
-  //file output parameters
-  int optimization_output_freq;
-
   //debug and performance reporting flags
   int report_runtime_flag;
  

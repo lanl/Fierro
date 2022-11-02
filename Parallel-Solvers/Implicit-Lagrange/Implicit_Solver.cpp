@@ -312,7 +312,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
               << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
-    tecplot_writer();
+    parallel_tecplot_writer();
     // vtk_writer();
     if(myrank==0){
       std::cout << "Total number of solves and assembly " << fea_modules[0]->update_count <<std::endl;
@@ -3678,7 +3678,9 @@ void Implicit_Solver::tecplot_writer(){
       //initial undeformed geometry
       count_temp.str("");
       count_temp << file_index;
-      file_index++;
+      if(!displace_geometry) {
+        file_index++;
+      }
 	    file_count = count_temp.str();
       if(displace_geometry&&displacement_module>=0)
         current_file_name = base_file_name_undeformed + file_count + file_extension;
