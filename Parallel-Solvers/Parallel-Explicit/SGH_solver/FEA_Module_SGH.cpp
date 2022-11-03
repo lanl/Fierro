@@ -1720,7 +1720,7 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
                 //current interface has differing density arrays; this equates them until we unify memory
                 //view scope
                 {
-                  Explicit_Solver_SGH::vec_array node_densities_interface = Explicit_Solver_Pointer_->node_densities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+                  Explicit_Solver_SGH::vec_array node_densities_interface = Explicit_Solver_Pointer_->design_node_densities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
                   FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {
                     node_densities_interface(node_gid,0) = node_extensive_mass(node_gid);
                   }); // end parallel for
