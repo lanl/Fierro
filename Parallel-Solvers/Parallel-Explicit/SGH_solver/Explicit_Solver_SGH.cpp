@@ -2489,9 +2489,13 @@ void Explicit_Solver_SGH::init_maps(){
       }
     }
   }
+
   //create distributed multivector of the local node data and all (local + ghost) node storage
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  if(!simparam->restart_file)
+    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+  all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   
   //debug print
   //std::ostream &out = std::cout;
@@ -3575,6 +3579,41 @@ void Explicit_Solver_SGH::comm_velocities(){
   }
   //comms to get ghosts
   all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
+}
+
+/* ----------------------------------------------------------------------
+   Communicate nodal masses/densities to ghost nodes
+------------------------------------------------------------------------- */
+
+void Explicit_Solver_SGH::comm_densities(){
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  
+  //active view scope
+  {
+    const_host_vec_array node_densities_host = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+  //comms to get ghosts
+  all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   

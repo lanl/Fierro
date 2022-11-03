@@ -1717,6 +1717,29 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
             // calculate the new corner masses if 2D
             if(mesh.num_dims==2){
                 
+                //current interface has differing density arrays; this equates them until we unify memory
+                //view scope
+                {
+                  Explicit_Solver_SGH::vec_array node_densities_interface = Explicit_Solver_Pointer_->node_densities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+                  FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {
+                    node_densities_interface(node_gid,0) = node_extensive_mass(node_gid);
+                  }); // end parallel for
+                } //end view scope
+                Kokkos::fence();
+                //communicate ghost densities
+                Explicit_Solver_Pointer_->comm_densities();
+
+                //this is forcing a copy to the device
+                //view scope
+                {
+                  Explicit_Solver_SGH::vec_array all_node_densities_interface = Explicit_Solver_Pointer_->all_node_densities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+
+                  FOR_ALL_CLASS(node_gid, mesh.num_local_nodes, mesh.num_nodes, {
+                    node_extensive_mass(node_gid) = all_node_densities_interface(node_gid,0);
+                  }); // end parallel for
+                } //end view scope
+                Kokkos::fence();
+
                 // calculate the nodal areal mass
                 FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
                     

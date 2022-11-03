@@ -97,6 +97,8 @@ public:
 
   void comm_velocities();
 
+  void comm_densities();
+
   //void init_design();
 
   void collect_information();
