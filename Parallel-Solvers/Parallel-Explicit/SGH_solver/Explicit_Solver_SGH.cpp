@@ -773,7 +773,6 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
 
   // z-coords
   read_index_start = 0;
-  if(num_dim==3)
   for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
     
     //pack buffer on rank 0
@@ -823,7 +822,8 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
         //extract nodal position from the read buffer
         //for ensight format this is just one coordinate per line
         dof_value = atof(&read_buffer(scan_loop,0,0));
-        node_coords(node_rid, 2) = dof_value * unit_scaling;
+        if(num_dim==3)
+          node_coords(node_rid, 2) = dof_value * unit_scaling;
       }
     }
     read_index_start+=BUFFER_LINES;
