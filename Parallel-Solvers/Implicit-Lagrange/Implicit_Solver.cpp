@@ -3340,11 +3340,11 @@ void Implicit_Solver::parallel_tecplot_writer(){
 
 	current_line_stream.str("");
 	if(num_dim==2){
-	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+	  current_line_stream << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
 		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
   }
   else if(num_dim==3){
-   	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+   	current_line_stream << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
 		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
   }
   current_line = current_line_stream.str();
@@ -3523,11 +3523,11 @@ void Implicit_Solver::parallel_tecplot_writer(){
 
 	  current_line_stream.str("");
 	  if(num_dim==2){
-	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+	  current_line_stream << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
 		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
   }
   else if(num_dim==3){
-   	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+   	current_line_stream << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
 		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
   }
     current_line = current_line_stream.str();
@@ -3721,11 +3721,11 @@ void Implicit_Solver::tecplot_writer(){
       myfile << "\n";
 
 		  if(num_dim==2){
-		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		    myfile << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
 			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
       }
       else if(num_dim==3){
-		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		    myfile << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
 			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
       }
 
@@ -3792,11 +3792,11 @@ void Implicit_Solver::tecplot_writer(){
       myfile << "\n";
 
 		  if(num_dim==2){
-		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		    myfile << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
 			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
       }
       else if(num_dim==3){
-		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		    myfile << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
 			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
       }
 
