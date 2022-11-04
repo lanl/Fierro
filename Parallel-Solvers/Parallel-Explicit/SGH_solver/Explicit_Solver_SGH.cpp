@@ -3058,20 +3058,24 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
     convert_node_order(1) = 1;
     convert_node_order(2) = 3;
     convert_node_order(3) = 2;
-    convert_node_order(4) = 4;
-    convert_node_order(5) = 5;
-    convert_node_order(6) = 7;
-    convert_node_order(7) = 6;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
   }
   else if(active_node_ordering_convention == IJK){
     convert_node_order(0) = 0;
     convert_node_order(1) = 1;
     convert_node_order(2) = 2;
     convert_node_order(3) = 3;
-    convert_node_order(4) = 4;
-    convert_node_order(5) = 5;
-    convert_node_order(6) = 6;
-    convert_node_order(7) = 7;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
   }
 
   //compute the number of patches in this MPI rank with repeats for adjacent cells
