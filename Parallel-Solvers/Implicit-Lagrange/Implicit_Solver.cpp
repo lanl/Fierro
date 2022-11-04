@@ -3339,8 +3339,14 @@ void Implicit_Solver::parallel_tecplot_writer(){
   header_stream_offset += current_line.length();
 
 	current_line_stream.str("");
-	current_line_stream << "ZONE T=\"design frame " << file_index << "\", NODES= " << num_nodes
-		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+	if(num_dim==2){
+	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+  }
+  else if(num_dim==3){
+   	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
+  }
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -3516,8 +3522,14 @@ void Implicit_Solver::parallel_tecplot_writer(){
     header_stream_offset += current_line.length();
 
 	  current_line_stream.str("");
-	  current_line_stream << "ZONE T=\"design frame " << file_index << "\", NODES= " << num_nodes
-		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+	  if(num_dim==2){
+	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+  }
+  else if(num_dim==3){
+   	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
+  }
     current_line = current_line_stream.str();
     if(myrank == 0)
       MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -3708,8 +3720,14 @@ void Implicit_Solver::tecplot_writer(){
       }
       myfile << "\n";
 
-		  myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-			  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+		  if(num_dim==2){
+		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+      }
+      else if(num_dim==3){
+		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+      }
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
 			  myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";
@@ -3773,8 +3791,14 @@ void Implicit_Solver::tecplot_writer(){
       }
       myfile << "\n";
 
-		  myfile << "ZONE T=\"load step " << time_step + 1 << "\", NODES= " << num_nodes
-			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+		  if(num_dim==2){
+		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+      }
+      else if(num_dim==3){
+		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+      }
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
         current_collected_output = fea_modules[displacement_module]->module_outputs[displacement_index];

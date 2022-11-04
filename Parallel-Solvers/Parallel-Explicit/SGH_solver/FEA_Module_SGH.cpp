@@ -1801,9 +1801,9 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
                 Kokkos::fence();
                  */
                 
-                //FOR_ALL_CLASS(node_bdy_gid, 0, mesh.num_bdy_nodes, {
-                FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {    
-                    //size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
+                FOR_ALL_CLASS(node_bdy_gid, 0, mesh.num_bdy_nodes, {
+                //FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {    
+                    size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
                     
                     if (node_coords(1,node_gid,1) < tiny){
                         // node is on the axis
