@@ -376,9 +376,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
             */
         mesh->build_elem_elem_connectivity();
         mesh->num_bdy_patches = nboundary_patches;
-        //mesh->build_patch_connectivity();
-        //mesh->build_node_node_connectivity();
-        
+        if(num_dim==2){
+        mesh->build_patch_connectivity();
+        mesh->build_node_node_connectivity();
+        }
         
         // ---------------------------------------------------------------------
         //    allocate memory
@@ -3674,10 +3675,12 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   convert_ijk_to_ensight(1) = 1;
   convert_ijk_to_ensight(2) = 3;
   convert_ijk_to_ensight(3) = 2;
-  convert_ijk_to_ensight(4) = 4;
-  convert_ijk_to_ensight(5) = 5;
-  convert_ijk_to_ensight(6) = 7;
-  convert_ijk_to_ensight(7) = 6;
+  if(num_dim==3){
+    convert_ijk_to_ensight(4) = 4;
+    convert_ijk_to_ensight(5) = 5;
+    convert_ijk_to_ensight(6) = 7;
+    convert_ijk_to_ensight(7) = 6;
+  }
 
   MPI_File myfile_parallel;
   MPI_Offset header_stream_offset = 0;
@@ -3901,10 +3904,12 @@ void Explicit_Solver_SGH::tecplot_writer(){
   convert_ijk_to_ensight(1) = 1;
   convert_ijk_to_ensight(2) = 3;
   convert_ijk_to_ensight(3) = 2;
-  convert_ijk_to_ensight(4) = 4;
-  convert_ijk_to_ensight(5) = 5;
-  convert_ijk_to_ensight(6) = 7;
-  convert_ijk_to_ensight(7) = 6;
+  if(num_dim==3){
+    convert_ijk_to_ensight(4) = 4;
+    convert_ijk_to_ensight(5) = 5;
+    convert_ijk_to_ensight(6) = 7;
+    convert_ijk_to_ensight(7) = 6;
+  }
 
   //compared to primitive unit cell, assumes orthogonal primitive unit cell
     if(myrank==0){
