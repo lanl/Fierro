@@ -1717,12 +1717,34 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
             // calculate the new corner masses if 2D
             if(mesh.num_dims==2){
                 
+                // calculate the nodal areal mass
+                FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
+                    
+                    node_mass(node_gid) = 0.0;
+                    
+                    if (node_coords(1,node_gid,1) > tiny){
+                        node_mass(node_gid) = node_extensive_mass(node_gid)/node_coords(1,node_gid,1);
+                    }
+                    //if(cycle==0&&node_gid==1&&myrank==0)
+                      //std::cout << "index " << node_gid << " on rank " << myrank << " node vel " << node_vel(1,node_gid,0) << "  " << node_mass(node_gid) << std::endl << std::flush;
+
+                }); // end parallel for over node_gid
+                Kokkos::fence();
+
+                // calculate the nodal areal mass
+                FOR_ALL_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, {
+                    //if(cycle==0&&rk_stage==1)
+                      //std::cout << " elem mass " << elem_mass(elem_gid) << std::endl << std::flush;
+
+                }); // end parallel for over node_gid
+                Kokkos::fence();
+
                 //current interface has differing density arrays; this equates them until we unify memory
                 //view scope
                 {
                   Explicit_Solver_SGH::vec_array node_densities_interface = Explicit_Solver_Pointer_->design_node_densities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
                   FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {
-                    node_densities_interface(node_gid,0) = node_extensive_mass(node_gid);
+                    node_densities_interface(node_gid,0) = node_mass(node_gid);
                   }); // end parallel for
                 } //end view scope
                 Kokkos::fence();
@@ -1735,21 +1757,9 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
                   Explicit_Solver_SGH::vec_array all_node_densities_interface = Explicit_Solver_Pointer_->all_node_densities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
 
                   FOR_ALL_CLASS(node_gid, mesh.num_local_nodes, mesh.num_nodes, {
-                    node_extensive_mass(node_gid) = all_node_densities_interface(node_gid,0);
+                    node_mass(node_gid) = all_node_densities_interface(node_gid,0);
                   }); // end parallel for
                 } //end view scope
-                Kokkos::fence();
-
-                // calculate the nodal areal mass
-                FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
-                    
-                    node_mass(node_gid) = 0.0;
-                    
-                    if (node_coords(1,node_gid,1) > tiny){
-                        node_mass(node_gid) = node_extensive_mass(node_gid)/node_coords(1,node_gid,1);
-                    }
-
-                }); // end parallel for over node_gid
                 Kokkos::fence();
                 
                 
@@ -1816,16 +1826,15 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
                             if (node_coords(1,node_neighbor_gid,1) > tiny){
                                 node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid)/2.0);
                             }
+
                         } // end for over neighboring nodes
                         
                     } // end if
                     
                 }); // end parallel for over elem_gid
                 
-                
-            
             } // end of if 2D-RZ
-            
+
         } // end of RK loop
 
 	    // increment the time
