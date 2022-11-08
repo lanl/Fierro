@@ -1731,14 +1731,6 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
                 }); // end parallel for over node_gid
                 Kokkos::fence();
 
-                // calculate the nodal areal mass
-                FOR_ALL_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, {
-                    //if(cycle==0&&rk_stage==1)
-                      //std::cout << " elem mass " << elem_mass(elem_gid) << std::endl << std::flush;
-
-                }); // end parallel for over node_gid
-                Kokkos::fence();
-
                 //current interface has differing density arrays; this equates them until we unify memory
                 //view scope
                 {
