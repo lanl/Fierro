@@ -3139,9 +3139,9 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       Patch_Boundary_Flags((*current_combination.first).patch_id) = 0;
       //set this current flag to 0 for the duplicate as well
       Patch_Boundary_Flags(npatches_repeat) = 0;
-      npatches_repeat++;
+      
       }
-
+      npatches_repeat++;
     }
   }
   
