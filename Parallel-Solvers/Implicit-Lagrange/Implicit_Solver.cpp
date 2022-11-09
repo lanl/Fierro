@@ -312,7 +312,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
               << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
-    tecplot_writer();
+    parallel_tecplot_writer();
     // vtk_writer();
     if(myrank==0){
       std::cout << "Total number of solves and assembly " << fea_modules[0]->update_count <<std::endl;
@@ -756,24 +756,33 @@ void Implicit_Solver::read_mesh_ensight(char *MESH, bool convert_node_order){
   Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
   
   elements::elem_types::elem_type mesh_element_type;
-  if(simparam->element_type == "Hex8"){
-    mesh_element_type = elements::elem_types::Hex8;
-  }
-  else if(simparam->element_type == "Hex20"){
-    mesh_element_type = elements::elem_types::Hex20;
-  }
-  else if(simparam->element_type == "Hex32"){
-    mesh_element_type = elements::elem_types::Hex32;
+
+  if(simparam->num_dim==2){
+    if(simparam->element_type == "Quad4"){
+      mesh_element_type = elements::elem_types::Quad4;
+    }
+    else if(simparam->element_type == "Quad8"){
+      mesh_element_type = elements::elem_types::Quad8;
+    }
+    else if(simparam->element_type == "Quad12"){
+      mesh_element_type = elements::elem_types::Quad12;
+    }
+    element_select->choose_2Delem_type(mesh_element_type, elem2D);
+    max_nodes_per_element = elem2D->num_nodes();
   }
 
-  //set element object pointer
-  if(simparam->num_dim==2){
-    element_select->choose_2Delem_type(mesh_element_type, elem2D);
-     max_nodes_per_element = elem2D->num_nodes();
-  }
-  else if(simparam->num_dim==3){
+  if(simparam->num_dim==3){
+    if(simparam->element_type == "Hex8"){
+      mesh_element_type = elements::elem_types::Hex8;
+    }
+    else if(simparam->element_type == "Hex20"){
+      mesh_element_type = elements::elem_types::Hex20;
+    }
+    else if(simparam->element_type == "Hex32"){
+      mesh_element_type = elements::elem_types::Hex32;
+    }
     element_select->choose_3Delem_type(mesh_element_type, elem);
-     max_nodes_per_element = elem->num_nodes();
+    max_nodes_per_element = elem->num_nodes();
   }
 
   //1 type per mesh for now
@@ -3296,7 +3305,10 @@ void Implicit_Solver::parallel_tecplot_writer(){
   //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
   //else
   current_line_stream.str("");
-	current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+  if(num_dim == 2)
+	  current_line_stream << "VARIABLES = \"x\", \"y\", \"density\"";
+  else if(num_dim == 3)
+	  current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
       nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
@@ -3327,8 +3339,14 @@ void Implicit_Solver::parallel_tecplot_writer(){
   header_stream_offset += current_line.length();
 
 	current_line_stream.str("");
-	current_line_stream << "ZONE T=\"design frame " << file_index << "\", NODES= " << num_nodes
-		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+	if(num_dim==2){
+	  current_line_stream << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
+		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+  }
+  else if(num_dim==3){
+   	current_line_stream << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
+		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
+  }
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -3336,7 +3354,9 @@ void Implicit_Solver::parallel_tecplot_writer(){
 
   //output nodal data
   //compute buffer output size and file stream offset for this MPI rank
-  int buffer_size_per_node_line = 26*4 + 1; //25 width per number plus 6 spaces plus line terminator
+  int default_dof_count = num_dim;
+  default_dof_count++;
+  int buffer_size_per_node_line = 26*default_dof_count + 1; //25 width + 1 space per number plus line terminator
   for (int imodule = 0; imodule < nfea_modules; imodule++){
     noutput = fea_modules[imodule]->noutput;
     for(int ioutput = 0; ioutput < noutput; ioutput++){
@@ -3502,8 +3522,14 @@ void Implicit_Solver::parallel_tecplot_writer(){
     header_stream_offset += current_line.length();
 
 	  current_line_stream.str("");
-	  current_line_stream << "ZONE T=\"design frame " << file_index << "\", NODES= " << num_nodes
-		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+	  if(num_dim==2){
+	  current_line_stream << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
+		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+  }
+  else if(num_dim==3){
+   	current_line_stream << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
+		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
+  }
     current_line = current_line_stream.str();
     if(myrank == 0)
       MPI_File_write(myfile_parallel_deformed,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -3511,7 +3537,9 @@ void Implicit_Solver::parallel_tecplot_writer(){
 
 		//output nodal data
     //compute buffer output size and file stream offset for this MPI rank
-    int buffer_size_per_node_line = 26*4 + 1; //25 width per number plus 6 spaces plus line terminator
+    int default_dof_count = num_dim;
+    default_dof_count++;
+    int buffer_size_per_node_line = 26*default_dof_count + 1; //25 width + 1 space per number plus line terminator
     for (int imodule = 0; imodule < nfea_modules; imodule++){
       noutput = fea_modules[imodule]->noutput;
       for(int ioutput = 0; ioutput < noutput; ioutput++){
@@ -3664,7 +3692,9 @@ void Implicit_Solver::tecplot_writer(){
       //initial undeformed geometry
       count_temp.str("");
       count_temp << file_index;
-      file_index++;
+      if(!displace_geometry) {
+        file_index++;
+      }
 	    file_count = count_temp.str();
       if(displace_geometry&&displacement_module>=0)
         current_file_name = base_file_name_undeformed + file_count + file_extension;
@@ -3690,8 +3720,14 @@ void Implicit_Solver::tecplot_writer(){
       }
       myfile << "\n";
 
-		  myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-			  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+		  if(num_dim==2){
+		    myfile << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+      }
+      else if(num_dim==3){
+		    myfile << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+      }
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
 			  myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";
@@ -3755,8 +3791,14 @@ void Implicit_Solver::tecplot_writer(){
       }
       myfile << "\n";
 
-		  myfile << "ZONE T=\"load step " << time_step + 1 << "\", NODES= " << num_nodes
-			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+		  if(num_dim==2){
+		    myfile << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+      }
+      else if(num_dim==3){
+		    myfile << "ZONE T=\"load step " << file_index << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+      }
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
         current_collected_output = fea_modules[displacement_module]->module_outputs[displacement_index];

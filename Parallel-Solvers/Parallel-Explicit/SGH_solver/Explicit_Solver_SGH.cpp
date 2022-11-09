@@ -376,9 +376,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
             */
         mesh->build_elem_elem_connectivity();
         mesh->num_bdy_patches = nboundary_patches;
-        //mesh->build_patch_connectivity();
-        //mesh->build_node_node_connectivity();
-        
+        if(num_dim==2){
+        mesh->build_patch_connectivity();
+        mesh->build_node_node_connectivity();
+        }
         
         // ---------------------------------------------------------------------
         //    allocate memory
@@ -773,7 +774,6 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
 
   // z-coords
   read_index_start = 0;
-  if(num_dim==3)
   for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
     
     //pack buffer on rank 0
@@ -823,7 +823,8 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
         //extract nodal position from the read buffer
         //for ensight format this is just one coordinate per line
         dof_value = atof(&read_buffer(scan_loop,0,0));
-        node_coords(node_rid, 2) = dof_value * unit_scaling;
+        if(num_dim==3)
+          node_coords(node_rid, 2) = dof_value * unit_scaling;
       }
     }
     read_index_start+=BUFFER_LINES;
@@ -987,24 +988,33 @@ void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
   Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
   
   elements::elem_types::elem_type mesh_element_type;
-  if(simparam->element_type == "Hex8"){
-    mesh_element_type = elements::elem_types::Hex8;
-  }
-  else if(simparam->element_type == "Hex20"){
-    mesh_element_type = elements::elem_types::Hex20;
-  }
-  else if(simparam->element_type == "Hex32"){
-    mesh_element_type = elements::elem_types::Hex32;
+
+  if(simparam->num_dim==2){
+    if(simparam->element_type == "Quad4"){
+      mesh_element_type = elements::elem_types::Quad4;
+    }
+    else if(simparam->element_type == "Quad8"){
+      mesh_element_type = elements::elem_types::Quad8;
+    }
+    else if(simparam->element_type == "Quad12"){
+      mesh_element_type = elements::elem_types::Quad12;
+    }
+    element_select->choose_2Delem_type(mesh_element_type, elem2D);
+    max_nodes_per_element = elem2D->num_nodes();
   }
 
-  //set element object pointer
-  if(simparam->num_dim==2){
-    element_select->choose_2Delem_type(mesh_element_type, elem2D);
-     max_nodes_per_element = elem2D->num_nodes();
-  }
-  else if(simparam->num_dim==3){
+  if(simparam->num_dim==3){
+    if(simparam->element_type == "Hex8"){
+      mesh_element_type = elements::elem_types::Hex8;
+    }
+    else if(simparam->element_type == "Hex20"){
+      mesh_element_type = elements::elem_types::Hex20;
+    }
+    else if(simparam->element_type == "Hex32"){
+      mesh_element_type = elements::elem_types::Hex32;
+    }
     element_select->choose_3Delem_type(mesh_element_type, elem);
-     max_nodes_per_element = elem->num_nodes();
+    max_nodes_per_element = elem->num_nodes();
   }
 
   //1 type per mesh for now
@@ -1298,10 +1308,12 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
         node_coords(node_rid, 0) = dof_value * unit_scaling;
         dof_value = atof(&read_buffer(scan_loop,1,0));
         node_coords(node_rid, 1) = dof_value * unit_scaling;
-        dof_value = atof(&read_buffer(scan_loop,2,0));
-        node_coords(node_rid, 2) = dof_value * unit_scaling;
+        if(num_dim==3){
+          dof_value = atof(&read_buffer(scan_loop,2,0));
+          node_coords(node_rid, 2) = dof_value * unit_scaling;
+        }
         if(restart_file){
-          dof_value = atof(&read_buffer(scan_loop,3,0));
+          dof_value = atof(&read_buffer(scan_loop,num_dim,0));
           node_densities(node_rid, 0) = dof_value;
         }
         //extract density if restarting
@@ -1452,28 +1464,33 @@ void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
   Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
   
   elements::elem_types::elem_type mesh_element_type;
-  if(simparam->element_type == "Hex8"){
-    mesh_element_type = elements::elem_types::Hex8;
-  }
-  else if(simparam->element_type == "Hex20"){
-    mesh_element_type = elements::elem_types::Hex20;
-  }
-  else if(simparam->element_type == "Hex32"){
-    mesh_element_type = elements::elem_types::Hex32;
-  }
 
-  //1 type per mesh for now
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    Element_Types(ielem) = mesh_element_type;
-
-  //set element object pointer
   if(simparam->num_dim==2){
+    if(simparam->element_type == "Quad4"){
+      mesh_element_type = elements::elem_types::Quad4;
+    }
+    else if(simparam->element_type == "Quad8"){
+      mesh_element_type = elements::elem_types::Quad8;
+    }
+    else if(simparam->element_type == "Quad12"){
+      mesh_element_type = elements::elem_types::Quad12;
+    }
     element_select->choose_2Delem_type(mesh_element_type, elem2D);
-     max_nodes_per_element = elem2D->num_nodes();
+    max_nodes_per_element = elem2D->num_nodes();
   }
-  else if(simparam->num_dim==3){
+
+  if(simparam->num_dim==3){
+    if(simparam->element_type == "Hex8"){
+      mesh_element_type = elements::elem_types::Hex8;
+    }
+    else if(simparam->element_type == "Hex20"){
+      mesh_element_type = elements::elem_types::Hex20;
+    }
+    else if(simparam->element_type == "Hex32"){
+      mesh_element_type = elements::elem_types::Hex32;
+    }
     element_select->choose_3Delem_type(mesh_element_type, elem);
-     max_nodes_per_element = elem->num_nodes();
+    max_nodes_per_element = elem->num_nodes();
   }
 
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
@@ -1816,8 +1833,10 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
         node_coords(node_rid, 0) = dof_value * unit_scaling;
         dof_value = atof(&read_buffer(scan_loop,2,0));
         node_coords(node_rid, 1) = dof_value * unit_scaling;
-        dof_value = atof(&read_buffer(scan_loop,3,0));
-        node_coords(node_rid, 2) = dof_value * unit_scaling;
+        if(num_dim==3){
+          dof_value = atof(&read_buffer(scan_loop,3,0));
+          node_coords(node_rid, 2) = dof_value * unit_scaling;
+        }
         //extract density if restarting
       }
     }
@@ -1928,6 +1947,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
 
   elements::elem_types::elem_type mesh_element_type;
   int elem_words_per_line_no_nodes = elem_words_per_line;
+  
   if(etype_index==1){
     mesh_element_type = elements::elem_types::Hex8;
     nodes_per_element = 8;
@@ -2470,9 +2490,13 @@ void Explicit_Solver_SGH::init_maps(){
       }
     }
   }
+
   //create distributed multivector of the local node data and all (local + ghost) node storage
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  if(!simparam->restart_file)
+    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+  all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   
   //debug print
   //std::ostream &out = std::cout;
@@ -3030,25 +3054,29 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
   
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_node_order(max_nodes_per_element);
-  if(active_node_ordering_convention == ENSIGHT){
+  if((active_node_ordering_convention == ENSIGHT && num_dim==3)||(active_node_ordering_convention == IJK && num_dim==2)){
     convert_node_order(0) = 0;
     convert_node_order(1) = 1;
     convert_node_order(2) = 3;
     convert_node_order(3) = 2;
-    convert_node_order(4) = 4;
-    convert_node_order(5) = 5;
-    convert_node_order(6) = 7;
-    convert_node_order(7) = 6;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
   }
-  else if(active_node_ordering_convention == IJK){
+  else if((active_node_ordering_convention == IJK && num_dim==3)||(active_node_ordering_convention == ENSIGHT && num_dim==2)){
     convert_node_order(0) = 0;
     convert_node_order(1) = 1;
     convert_node_order(2) = 2;
     convert_node_order(3) = 3;
-    convert_node_order(4) = 4;
-    convert_node_order(5) = 5;
-    convert_node_order(6) = 6;
-    convert_node_order(7) = 7;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
   }
 
   //compute the number of patches in this MPI rank with repeats for adjacent cells
@@ -3111,9 +3139,9 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
       Patch_Boundary_Flags((*current_combination.first).patch_id) = 0;
       //set this current flag to 0 for the duplicate as well
       Patch_Boundary_Flags(npatches_repeat) = 0;
-      npatches_repeat++;
+      
       }
-
+      npatches_repeat++;
     }
   }
   
@@ -3298,6 +3326,7 @@ void Explicit_Solver_SGH::init_topology_conditions (int num_sets){
 void Explicit_Solver_SGH::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits){
   
   int num_boundary_sets = simparam->NB;
+  int num_dim = simparam->num_dim;
   int is_on_set;
   /*
   if (bdy_set == num_bdy_sets_){
@@ -3311,7 +3340,8 @@ void Explicit_Solver_SGH::tag_boundaries(int bc_tag, real_t val, int bdy_set, re
   if(patch_limits != NULL){
     //test for upper bounds being greater than lower bounds
     if(patch_limits[1] <= patch_limits[0]) std::cout << " Warning: patch limits for boundary condition are infeasible";
-    if(patch_limits[2] <= patch_limits[3]) std::cout << " Warning: patch limits for boundary condition are infeasible";
+    if(num_dim==3)
+      if(patch_limits[2] <= patch_limits[3]) std::cout << " Warning: patch limits for boundary condition are infeasible";
   }
     
   // save the boundary vertices to this set that are on the plane
@@ -3385,8 +3415,10 @@ int Explicit_Solver_SGH::check_boundary(Node_Combination &Patch_Nodes, int bc_ta
       if(patch_limits!=NULL){
         if (node_coord[dim_other1] - patch_limits[0] <= -BC_EPSILON) node_on_flags(inode) = 0;
         if (node_coord[dim_other1] - patch_limits[1] >= BC_EPSILON) node_on_flags(inode) = 0;
-        if (node_coord[dim_other2] - patch_limits[2] <= -BC_EPSILON) node_on_flags(inode) = 0;
-        if (node_coord[dim_other2] - patch_limits[3] >= BC_EPSILON) node_on_flags(inode) = 0;
+        if(num_dim==3){
+          if (node_coord[dim_other2] - patch_limits[2] <= -BC_EPSILON) node_on_flags(inode) = 0;
+          if (node_coord[dim_other2] - patch_limits[3] >= BC_EPSILON) node_on_flags(inode) = 0;
+        }
       }
     }
     //debug print of node id and node coord
@@ -3563,6 +3595,41 @@ void Explicit_Solver_SGH::comm_velocities(){
 }
 
 /* ----------------------------------------------------------------------
+   Communicate nodal masses/densities to ghost nodes
+------------------------------------------------------------------------- */
+
+void Explicit_Solver_SGH::comm_densities(){
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  
+  //active view scope
+  {
+    const_host_vec_array node_densities_host = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+  //comms to get ghosts
+  all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
+}
+
+/* ----------------------------------------------------------------------
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
@@ -3608,10 +3675,12 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   convert_ijk_to_ensight(1) = 1;
   convert_ijk_to_ensight(2) = 3;
   convert_ijk_to_ensight(3) = 2;
-  convert_ijk_to_ensight(4) = 4;
-  convert_ijk_to_ensight(5) = 5;
-  convert_ijk_to_ensight(6) = 7;
-  convert_ijk_to_ensight(7) = 6;
+  if(num_dim==3){
+    convert_ijk_to_ensight(4) = 4;
+    convert_ijk_to_ensight(5) = 5;
+    convert_ijk_to_ensight(6) = 7;
+    convert_ijk_to_ensight(7) = 6;
+  }
 
   MPI_File myfile_parallel;
   MPI_Offset header_stream_offset = 0;
@@ -3648,7 +3717,10 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
   //else
   current_line_stream.str("");
-	current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+  if(num_dim==3)
+	  current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+  else if(num_dim==2)
+    current_line_stream << "VARIABLES = \"x\", \"y\", \"vx\", \"vy\"";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -3671,8 +3743,14 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   header_stream_offset += current_line.length();
 
 	current_line_stream.str("");
-	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+  if(num_dim==2){
+	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+  }
+  else if(num_dim==3){
+   	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
+  }
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -3680,7 +3758,8 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   
   //output nodal data
   //compute buffer output size and file stream offset for this MPI rank
-  int buffer_size_per_node_line = 26*6 + 1; //25 width per number plus 6 spaces plus line terminator
+  int default_vector_count = 2;
+  int buffer_size_per_node_line = 26*default_vector_count*num_dim + 1; //25 width per number + 1 space times 6 entries plus line terminator
   int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
   GO first_node_global_id = sorted_map->getGlobalElement(0);
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> print_buffer(buffer_size_per_node_line*nlocal_sorted_nodes);
@@ -3831,10 +3910,12 @@ void Explicit_Solver_SGH::tecplot_writer(){
   convert_ijk_to_ensight(1) = 1;
   convert_ijk_to_ensight(2) = 3;
   convert_ijk_to_ensight(3) = 2;
-  convert_ijk_to_ensight(4) = 4;
-  convert_ijk_to_ensight(5) = 5;
-  convert_ijk_to_ensight(6) = 7;
-  convert_ijk_to_ensight(7) = 6;
+  if(num_dim==3){
+    convert_ijk_to_ensight(4) = 4;
+    convert_ijk_to_ensight(5) = 5;
+    convert_ijk_to_ensight(6) = 7;
+    convert_ijk_to_ensight(7) = 6;
+  }
 
   //compared to primitive unit cell, assumes orthogonal primitive unit cell
     if(myrank==0){
@@ -3868,9 +3949,15 @@ void Explicit_Solver_SGH::tecplot_writer(){
       }
       */
       myfile << "\n";
-
-		  myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-			  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+      
+      if(num_dim==2){
+		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+      }
+      else if(num_dim==3){
+		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+      }
 
 		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
 			  myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";

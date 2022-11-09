@@ -47,7 +47,6 @@ Simulation_Parameters::Simulation_Parameters(){
   //initialize data and flags to defaults
   report_runtime_flag = 0;
   unit_scaling = 1;
-  optimization_output_freq = 100;
   restart_file = false;
   tecplot_input = ansys_dat_input = false;
   nfea_modules = 0;
@@ -61,7 +60,7 @@ void Simulation_Parameters::input(){
   //file input flags
   tecplot_input = false;
   restart_file = false;
-  ansys_dat_input = false;
+  ansys_dat_input = true;
 
   //simulation spatial dimension
   num_dim = 3;

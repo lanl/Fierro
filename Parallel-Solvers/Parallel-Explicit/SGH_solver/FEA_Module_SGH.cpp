@@ -177,14 +177,26 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
       Explicit_Solver_SGH::host_vec_array interface_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //save node data to node.coords
       //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
-      for(int inode = 0; inode < num_nodes; inode++){
-        //std::cout << "Node index " << inode+1 << " ";
-        node.coords.host(0,inode,0) = interface_node_coords(inode,0);
-        //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
-        node.coords.host(0,inode,1) = interface_node_coords(inode,1);
-        //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
-        node.coords.host(0,inode,2) = interface_node_coords(inode,2);
-        //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
+      if(num_dims==2){
+        for(int inode = 0; inode < num_nodes; inode++){
+          //std::cout << "Node index " << inode+1 << " ";
+          node.coords.host(0,inode,0) = interface_node_coords(inode,0);
+          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+          node.coords.host(0,inode,1) = interface_node_coords(inode,1);
+          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+        }
+      }
+      else if(num_dims==3){
+        for(int inode = 0; inode < num_nodes; inode++){
+          //std::cout << "Node index " << inode+1 << " ";
+          node.coords.host(0,inode,0) = interface_node_coords(inode,0);
+          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+          node.coords.host(0,inode,1) = interface_node_coords(inode,1);
+          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+        
+          node.coords.host(0,inode,2) = interface_node_coords(inode,2);
+          //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
+        }
       }
     } //end view scope
     // --- read in the elements in the mesh ---
@@ -474,7 +486,8 @@ void FEA_Module_SGH::init_output(){
     output_dof_names[noutput-1].resize(num_dim);
     output_dof_names[noutput-1][0] = "vx";
     output_dof_names[noutput-1][1] = "vy";
-    output_dof_names[noutput-1][2] = "vz";
+    if(num_dim==3)
+      output_dof_names[noutput-1][2] = "vz";
   }
   if(output_strain_flag){
     output_strain_index = noutput;
@@ -489,12 +502,19 @@ void FEA_Module_SGH::init_output(){
 
     output_dof_names.resize(noutput);
     output_dof_names[noutput-1].resize(Brows);
-    output_dof_names[noutput-1][0] = "strain_xx";
-    output_dof_names[noutput-1][1] = "strain_yy";
-    output_dof_names[noutput-1][2] = "strain_zz";
-    output_dof_names[noutput-1][3] = "strain_xy";
-    output_dof_names[noutput-1][4] = "strain_xz";
-    output_dof_names[noutput-1][5] = "strain_yz";
+    if(num_dim==2){
+      output_dof_names[noutput-1][0] = "strain_xx";
+      output_dof_names[noutput-1][1] = "strain_yy";
+      output_dof_names[noutput-1][2] = "strain_xy";
+    }
+    if(num_dim==3){
+      output_dof_names[noutput-1][0] = "strain_xx";
+      output_dof_names[noutput-1][1] = "strain_yy";
+      output_dof_names[noutput-1][2] = "strain_zz";
+      output_dof_names[noutput-1][3] = "strain_xy";
+      output_dof_names[noutput-1][4] = "strain_xz";
+      output_dof_names[noutput-1][5] = "strain_yz";
+    }
   }
   if(output_stress_flag){
     output_stress_index = noutput;
@@ -509,12 +529,19 @@ void FEA_Module_SGH::init_output(){
 
     output_dof_names.resize(noutput);
     output_dof_names[noutput-1].resize(Brows);
-    output_dof_names[noutput-1][0] = "stress_xx";
-    output_dof_names[noutput-1][1] = "stress_yy";
-    output_dof_names[noutput-1][2] = "stress_zz";
-    output_dof_names[noutput-1][3] = "stress_xy";
-    output_dof_names[noutput-1][4] = "stress_xz";
-    output_dof_names[noutput-1][5] = "stress_yz";
+    if(num_dim==2){
+      output_dof_names[noutput-1][0] = "stress_xx";
+      output_dof_names[noutput-1][1] = "stress_yy";
+      output_dof_names[noutput-1][3] = "stress_xy";
+    }
+    if(num_dim==3){
+      output_dof_names[noutput-1][0] = "stress_xx";
+      output_dof_names[noutput-1][1] = "stress_yy";
+      output_dof_names[noutput-1][2] = "stress_zz";
+      output_dof_names[noutput-1][3] = "stress_xy";
+      output_dof_names[noutput-1][4] = "stress_xz";
+      output_dof_names[noutput-1][5] = "stress_yz";
+    }
   }
 }
 
@@ -1698,8 +1725,33 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
                     if (node_coords(1,node_gid,1) > tiny){
                         node_mass(node_gid) = node_extensive_mass(node_gid)/node_coords(1,node_gid,1);
                     }
+                    //if(cycle==0&&node_gid==1&&myrank==0)
+                      //std::cout << "index " << node_gid << " on rank " << myrank << " node vel " << node_vel(1,node_gid,0) << "  " << node_mass(node_gid) << std::endl << std::flush;
 
                 }); // end parallel for over node_gid
+                Kokkos::fence();
+
+                //current interface has differing density arrays; this equates them until we unify memory
+                //view scope
+                {
+                  Explicit_Solver_SGH::vec_array node_densities_interface = Explicit_Solver_Pointer_->design_node_densities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+                  FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {
+                    node_densities_interface(node_gid,0) = node_mass(node_gid);
+                  }); // end parallel for
+                } //end view scope
+                Kokkos::fence();
+                //communicate ghost densities
+                Explicit_Solver_Pointer_->comm_densities();
+
+                //this is forcing a copy to the device
+                //view scope
+                {
+                  Explicit_Solver_SGH::vec_array all_node_densities_interface = Explicit_Solver_Pointer_->all_node_densities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+
+                  FOR_ALL_CLASS(node_gid, mesh.num_local_nodes, mesh.num_nodes, {
+                    node_mass(node_gid) = all_node_densities_interface(node_gid,0);
+                  }); // end parallel for
+                } //end view scope
                 Kokkos::fence();
                 
                 
@@ -1752,7 +1804,7 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
                  */
                 
                 FOR_ALL_CLASS(node_bdy_gid, 0, mesh.num_bdy_nodes, {
-                    
+                //FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {    
                     size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
                     
                     if (node_coords(1,node_gid,1) < tiny){
@@ -1766,16 +1818,15 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
                             if (node_coords(1,node_neighbor_gid,1) > tiny){
                                 node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid)/2.0);
                             }
+
                         } // end for over neighboring nodes
                         
                     } // end if
                     
                 }); // end parallel for over elem_gid
                 
-                
-            
             } // end of if 2D-RZ
-            
+
         } // end of RK loop
 
 	    // increment the time
