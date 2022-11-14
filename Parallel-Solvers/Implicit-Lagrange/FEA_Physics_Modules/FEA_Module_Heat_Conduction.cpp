@@ -117,7 +117,7 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Solver *Solver_Pointer) :
   FEA_Module::simparam = simparam;
   
   //TO parameters
-  simparam_TO = Implicit_Solver_Pointer_->simparam;
+  simparam_TO = Implicit_Solver_Pointer_->simparam_TO;
   penalty_power = simparam_TO->penalty_power;
   nodal_density_flag = simparam_TO->nodal_density_flag;
 

@@ -11,6 +11,7 @@ set(FEA_Module_SRC FEA_Module_SGH.cpp )
 INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
+include_directories(..)
 include_directories(../..)
 include_directories(${CMAKE_SOURCE_DIR}/Parallel-Explicit)
 add_library(parallel_sgh_solver OBJECT ${SRC_Files} ${Simulation_Param_SRC} ${FEA_Module_SRC})

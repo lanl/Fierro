@@ -135,7 +135,8 @@ public:
   
 
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters_Topology_Optimization *simparam;
+  class Simulation_Parameters *simparam;
+  class Simulation_Parameters_Topology_Optimization *simparam_TO;
 
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;

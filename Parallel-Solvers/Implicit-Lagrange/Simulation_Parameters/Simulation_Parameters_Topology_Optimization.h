@@ -62,7 +62,6 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   
   // --- Dimensional and mesh constants ---
   int num_dim;
-  int p_order;
 
   //debug and performance reporting flags
   bool report_runtime_flag;

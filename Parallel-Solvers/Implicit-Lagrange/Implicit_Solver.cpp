@@ -122,10 +122,11 @@ each surface to use for hammering metal into to form it.
 
 Implicit_Solver::Implicit_Solver() : Solver(){
   //create parameter objects
-  simparam = new Simulation_Parameters_Topology_Optimization(this);
+  simparam = new Simulation_Parameters();
+  simparam_TO = new Simulation_Parameters_Topology_Optimization(this);
   // ---- Read input file, define state and boundary conditions ---- //
-  simparam->Simulation_Parameters::input();
   simparam->input();
+  simparam_TO->input();
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
@@ -153,6 +154,7 @@ Implicit_Solver::Implicit_Solver() : Solver(){
 
 Implicit_Solver::~Implicit_Solver(){
    delete simparam;
+   delete simparam_TO;
    delete ref_elem;
    delete element_select;
    if(myrank==0)
@@ -224,7 +226,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     init_design();
 
     //construct list of FEA modules requested
-    simparam->FEA_module_setup();
+    simparam_TO->FEA_module_setup();
 
     //process process list of requested FEA modules to construct list of objects
     FEA_module_setup();
@@ -1846,27 +1848,27 @@ void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
   //flag elasticity fea module for boundary/loading conditions readin that remains
   if(!No_Conditions){
     //look for elasticity module in Simulation Parameters data; if not declared add the module
-    int nfea_modules = simparam->nfea_modules;
+    int nfea_modules = simparam_TO->nfea_modules;
     bool elasticity_found = false;
-    std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
+    std::vector<std::string> FEA_Module_List = simparam_TO->FEA_Module_List;
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       if(FEA_Module_List[imodule]=="Elasticity"){ 
         elasticity_found = true;
-        simparam->fea_module_must_read[imodule] = true;
+        simparam_TO->fea_module_must_read[imodule] = true;
       }
     }
     
     //add Elasticity module to requested modules in the Simulation Parameters data
     if(!elasticity_found){
-      if(nfea_modules==simparam->FEA_Module_List.capacity()){
-        simparam->FEA_Module_List.push_back("Elasticity");
-        simparam->fea_module_must_read.push_back(true);
-        simparam->nfea_modules++;
+      if(nfea_modules==simparam_TO->FEA_Module_List.capacity()){
+        simparam_TO->FEA_Module_List.push_back("Elasticity");
+        simparam_TO->fea_module_must_read.push_back(true);
+        simparam_TO->nfea_modules++;
       }
       else{
-        simparam->FEA_Module_List[nfea_modules] = "Elasticity";
-        simparam->fea_module_must_read[nfea_modules]= true;
-        simparam->nfea_modules++;
+        simparam_TO->FEA_Module_List[nfea_modules] = "Elasticity";
+        simparam_TO->fea_module_must_read[nfea_modules]= true;
+        simparam_TO->nfea_modules++;
       }
     }
 
@@ -2365,9 +2367,9 @@ void Implicit_Solver::repartition_nodes(){
 ------------------------------------------------------------------------- */
 
 void Implicit_Solver::FEA_module_setup(){
-  nfea_modules = simparam->nfea_modules;
-  std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
-  fea_module_must_read = simparam->fea_module_must_read;
+  nfea_modules = simparam_TO->nfea_modules;
+  std::vector<std::string> FEA_Module_List = simparam_TO->FEA_Module_List;
+  fea_module_must_read = simparam_TO->fea_module_must_read;
   //allocate lists to size
   fea_module_types = std::vector<std::string>(nfea_modules);
   fea_modules = std::vector<FEA_Module*>(nfea_modules);
@@ -2414,16 +2416,16 @@ void Implicit_Solver::FEA_module_setup(){
 
 void Implicit_Solver::setup_optimization_problem(){
   int num_dim = simparam->num_dim;
-  bool nodal_density_flag = simparam->nodal_density_flag;
-  int nTO_modules = simparam->nTO_modules;
-  int nmulti_objective_modules = simparam->nmulti_objective_modules;
-  std::vector<std::string> TO_Module_List = simparam->TO_Module_List;
-  std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
-  std::vector<int> TO_Module_My_FEA_Module = simparam->TO_Module_My_FEA_Module;
-  std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
-  std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
-  std::vector<std::vector<real_t>> Function_Arguments = simparam->Function_Arguments;
-  std::vector<Simulation_Parameters_Topology_Optimization::function_type> TO_Function_Type = simparam->TO_Function_Type;
+  bool nodal_density_flag = simparam_TO->nodal_density_flag;
+  int nTO_modules = simparam_TO->nTO_modules;
+  int nmulti_objective_modules = simparam_TO->nmulti_objective_modules;
+  std::vector<std::string> TO_Module_List = simparam_TO->TO_Module_List;
+  std::vector<std::string> FEA_Module_List = simparam_TO->FEA_Module_List;
+  std::vector<int> TO_Module_My_FEA_Module = simparam_TO->TO_Module_My_FEA_Module;
+  std::vector<int> Multi_Objective_Modules = simparam_TO->Multi_Objective_Modules;
+  std::vector<real_t> Multi_Objective_Weights = simparam_TO->Multi_Objective_Weights;
+  std::vector<std::vector<real_t>> Function_Arguments = simparam_TO->Function_Arguments;
+  std::vector<Simulation_Parameters_Topology_Optimization::function_type> TO_Function_Type = simparam_TO->TO_Function_Type;
   std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
 
   std::string constraint_base, constraint_name;
@@ -2621,7 +2623,7 @@ void Implicit_Solver::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          if(simparam->thick_condition_boundary){
+          if(simparam_TO->thick_condition_boundary){
             Surface_Nodes = Boundary_Patches(patch_id).node_set;
             current_element_index = Boundary_Patches(patch_id).element_id;
             //debug print of local surface ids
@@ -4356,7 +4358,7 @@ void Implicit_Solver::ensight_writer(){
 
 void Implicit_Solver::init_design(){
   int num_dim = simparam->num_dim;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  bool nodal_density_flag = simparam_TO->nodal_density_flag;
 
   //set densities
   if(nodal_density_flag){

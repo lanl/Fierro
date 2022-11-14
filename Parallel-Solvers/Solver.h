@@ -120,6 +120,8 @@ public:
 
   virtual void exit_solver(int status);
 
+  virtual void read_mesh_ensight(char *MESH);
+
   int setup_flag, finalize_flag;
 
   //MPI data

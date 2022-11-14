@@ -118,7 +118,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer) :FEA_Module
   FEA_Module::simparam = simparam;
   
   //TO parameters
-  simparam_TO = Implicit_Solver_Pointer_->simparam;
+  simparam_TO = Implicit_Solver_Pointer_->simparam_TO;
   penalty_power = simparam_TO->penalty_power;
   nodal_density_flag = simparam_TO->nodal_density_flag;
 

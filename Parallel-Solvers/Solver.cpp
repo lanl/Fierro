@@ -51,3 +51,11 @@ void Solver::exit_solver(int status){
 }
 
 Solver::~Solver(){}
+
+/* ----------------------------------------------------------------------
+   Read Ensight format mesh file
+------------------------------------------------------------------------- */
+void Solver::read_mesh_ensight(char *MESH){
+  
+ 
+} // end read_mesh

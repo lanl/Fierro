@@ -63,7 +63,8 @@ class Simulation_Parameters
 
   // --- Dimensional and mesh constants ---
   int num_dim;
-
+  int p_order;
+  
   //file input parameters 
   int words_per_line, elem_words_per_line, tecplot_words_per_line, ansys_dat_node_words_per_line, ansys_dat_elem_words_per_line;
   char *format_specification;  //per line file format when reading dofs
