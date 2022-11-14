@@ -122,12 +122,17 @@ public:
 
   virtual void read_mesh_ensight(char *MESH);
 
+  virtual void repartition_nodes() {}
+
   int setup_flag, finalize_flag;
 
   //MPI data
   int myrank; //index of this mpi rank in the world communicator
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
+
+  //class Simulation_Parameters *simparam;
+  class Simulation_Parameters *simparam;
 
   //Local FEA data
   size_t nlocal_nodes;
