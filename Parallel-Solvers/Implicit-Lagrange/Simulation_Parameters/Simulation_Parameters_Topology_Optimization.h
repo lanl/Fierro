@@ -59,12 +59,6 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   // --- Mesh regions and material fills ---
   int NB; // number of boundary patch sets to tag
   int NBD; //number of density boundary conditions
-  
-  // --- Dimensional and mesh constants ---
-  int num_dim;
-
-  //debug and performance reporting flags
-  bool report_runtime_flag;
 
   //Topology Optimization flags
   bool nodal_density_flag;

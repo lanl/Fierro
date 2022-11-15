@@ -66,13 +66,8 @@ class Simulation_Parameters_Thermal: public Simulation_Parameters
   // --- Integration Scheme
   int num_gauss_points;
 
-  // --- Dimensional and mesh constants ---
-  int num_dim;
-  int p_order;
-  real_t unit_scaling;
-
   //debug and performance reporting flags
-  bool report_runtime_flag, multigrid_timers, direct_solver_flag;
+  bool multigrid_timers, direct_solver_flag;
 
   //Body force parameters
   bool thermal_flag, electric_flag;

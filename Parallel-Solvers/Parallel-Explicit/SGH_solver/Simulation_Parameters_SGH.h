@@ -137,14 +137,6 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   // -- Integration rule
   int num_gauss_points;
 
-  // --- Dimensional and mesh constants ---
-  int num_dim;
-  int p_order;
-  real_t unit_scaling;
-
-  //debug and performance reporting flags
-  bool report_runtime_flag;
-
   //Body force parameters
   bool gravity_flag;
   real_t gravity_vector[3];

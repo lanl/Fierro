@@ -122,7 +122,7 @@ public:
 
   virtual void read_mesh_ensight(char *MESH);
 
-  virtual void repartition_nodes() {}
+  virtual void repartition_nodes();
 
   int setup_flag, finalize_flag;
 
@@ -199,7 +199,15 @@ public:
   CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
   std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
   
-  
+  //file readin variables
+  std::ifstream *in;
+  std::streampos before_condition_header;
+  int words_per_line, elem_words_per_line;
+  enum node_ordering_convention {IJK, ENSIGHT};
+  node_ordering_convention active_node_ordering_convention;
+
+  //file output variables
+  int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
 
 };
 
