@@ -122,7 +122,12 @@ public:
 
   virtual void read_mesh_ensight(char *MESH);
 
+  virtual void read_mesh_tecplot(char *MESH);
+
   virtual void repartition_nodes();
+
+  //finds the boundary element surfaces in this model
+  void Get_Boundary_Patches();
 
   int setup_flag, finalize_flag;
 
@@ -208,6 +213,11 @@ public:
 
   //file output variables
   int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
+
+  //debug and system functions/variables
+  double CPU_Time();
+  void init_clock();
+  double initial_CPU_time;
 
 };
 

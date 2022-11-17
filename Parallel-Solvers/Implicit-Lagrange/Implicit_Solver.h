@@ -72,16 +72,16 @@ public:
 
   void run(int argc, char *argv[]);
 
-  void read_mesh_ensight(char *MESH, bool convert_node_order);
+  //void read_mesh_ensight(char *MESH, bool convert_node_order);
 
-  void read_mesh_tecplot(char *MESH);
+  //void read_mesh_tecplot(char *MESH);
 
   void read_mesh_ansys_dat(char *MESH);
   
   //setup ghosts and element maps
   void init_maps();
 
-  void repartition_nodes();
+  //void repartition_nodes();
 
   void init_design();
 
@@ -99,9 +99,6 @@ public:
   
   //interfaces between user input and creating data structures for bcs
   void topology_conditions();
-  
-  //finds the boundary element surfaces in this model
-  void Get_Boundary_Patches();
 
   //void vtk_writer();
 
@@ -121,11 +118,6 @@ public:
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
 
   int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
-
-  //debug and system functions/variables
-  double CPU_Time();
-  void init_clock();
-  double initial_CPU_time;
 
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
