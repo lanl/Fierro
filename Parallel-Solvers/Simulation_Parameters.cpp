@@ -60,7 +60,7 @@ void Simulation_Parameters::input(){
   //file input flags
   tecplot_input = false;
   restart_file = false;
-  ansys_dat_input = false;
+  ansys_dat_input = true;
 
   //simulation spatial dimension
   num_dim = 3; //simulation spatial dimension
@@ -71,9 +71,12 @@ void Simulation_Parameters::input(){
   words_per_line = 1;
   tecplot_words_per_line = 3;
   ansys_dat_node_words_per_line = 4;
-  elem_words_per_line = 4;
   ansys_dat_elem_words_per_line = 11;
-  element_type = "Quad4";
+  element_type = "Hex8";
+  if(element_type == "Hex8") 
+    elem_words_per_line = 8;
+  else if(element_type == "Quad4") 
+    elem_words_per_line = 4;
 
   //debug and performance report flags
   report_runtime_flag = 1;

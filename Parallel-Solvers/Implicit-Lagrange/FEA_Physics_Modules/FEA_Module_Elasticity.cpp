@@ -170,6 +170,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer) :FEA_Module
 
 FEA_Module_Elasticity::~FEA_Module_Elasticity(){
    delete simparam;
+   delete simparam_TO;
 }
 
 /* ----------------------------------------------------------------------
@@ -1018,7 +1019,7 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   //find boundary patches this BC corresponds to
   tag_boundaries(bc_tag, value, num_boundary_conditions);
   Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 0.5/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 500/simparam->unit_scaling/simparam->unit_scaling;
   Boundary_Surface_Force_Densities(num_surface_force_sets,1) = 0;
   Boundary_Surface_Force_Densities(num_surface_force_sets,2) = 0;
   *fos << "tagged a set " << std::endl;
@@ -5475,7 +5476,7 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
   
   int num_dim = simparam->num_dim;
   LO local_node_index;
-  simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Implicit_Solver_Pointer_->simparam);
+  //simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Implicit_Solver_Pointer_->simparam);
   if(simparam_TO->thick_condition_boundary){
     for(int i = 0; i < nlocal_nodes*num_dim; i++){
       if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
