@@ -77,9 +77,6 @@ public:
   //void read_mesh_tecplot(char *MESH);
 
   void read_mesh_ansys_dat(char *MESH);
-  
-  //setup ghosts and element maps
-  void init_maps();
 
   //void repartition_nodes();
 

@@ -126,8 +126,11 @@ public:
 
   virtual void repartition_nodes();
 
+  //setup ghosts and element maps
+  virtual void init_maps();
+
   //finds the boundary element surfaces in this model
-  void Get_Boundary_Patches();
+  virtual void Get_Boundary_Patches();
 
   int setup_flag, finalize_flag;
 
@@ -148,7 +151,7 @@ public:
   //host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
-  size_t max_nodes_per_element;
+  size_t max_nodes_per_element, max_nodes_per_patch;
   elements::element_selector *element_select;
   elements::Element3D *elem;
   elements::Element2D *elem2D;
