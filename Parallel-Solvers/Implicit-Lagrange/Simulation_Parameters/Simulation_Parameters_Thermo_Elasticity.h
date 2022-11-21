@@ -35,67 +35,58 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#include "utilities.h"
-#include "Simulation_Parameters_Thermal.h"
+#ifndef SIMULATION_PARAMETERS_THERMO_ELASTICITY_H
+#define SIMULATION_PARAMETERS_THERMO_ELASTICITY_H
 
+#include "utilities.h"
+#include "Simulation_Parameters.h"
 using namespace utils;
 
-Simulation_Parameters_Thermal::Simulation_Parameters_Thermal() : Simulation_Parameters(){
+class Simulation_Parameters_Thermo_Elasticity : public Simulation_Parameters
+{
+ public:
+  Simulation_Parameters_Thermo_Elasticity();
+  virtual ~Simulation_Parameters_Thermo_Elasticity();
+  virtual void input();
+  //==============================================================================
+  //   Mesh Variables
+  //==============================================================================
 
-  //initialize data and flags to defaults
-  output_temperature_flag = false;
-  output_temperature_gradient_flag = false;
-  output_heat_flux_flag = false;
-  report_runtime_flag = false;
-  unit_scaling = 1;
-  flux_max_flag = false;
-  direct_solver_flag = false;
-  thermal_flag = false;
-  multigrid_timers = false;
-  equilibrate_matrix_flag = false;
-  num_gauss_points = 2;
-  // ---- boundary conditions ---- //
-  NB = 0;
-  NBSF = 0;
-  NBT = 0;
-}
+  // --- Mesh regions and material fills ---
+  int NB; // number of boundary patch sets to tag
+  int NBSF; //number of surface force density boundary conditions
+  int NBD; //number of displacement boundary conditions
+  int NBSH; //number of surface heat flux boundary conditions
+  int NBT; //number of temperature boundary conditions
 
-Simulation_Parameters_Thermal::~Simulation_Parameters_Thermal(){
-}
+  // --- Graphics output variables ---
+  bool output_displacement_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
 
-void Simulation_Parameters_Thermal::input(){
-  
-  Simulation_Parameters::input();
-  //multigrid_timers = true;
-  equilibrate_matrix_flag = false;
+  // --- Isotropic Elastic Parameters
+  real_t Elastic_Modulus, Poisson_Ratio, Thermal_Conductivity, Expansion_Coefficients[3], Initial_Temperature;
 
-  //simulation spatial dimension
-  num_dim = 3;
-  unit_scaling = 1;
+  // -- Integration rule
+  int num_gauss_points;
 
-  //polynomial interpolation order
-  p_order = 0;
+  //debug and performance reporting flags
+  bool report_runtime_flag;
 
-  // ---- graphics information ---- //
-  output_temperature_flag = true;
-  output_heat_flux_flag = true;
-  
-  //Isotropic Conductivity parameters to move into a child class later
-  Thermal_Conductivity = 10;
+  //Body force parameters
+  bool gravity_flag;
+  real_t gravity_vector[3];
 
-  //Gauss-Legendre parameters
-  num_gauss_points = 2;
+  //Linear Solver Flags
+  bool direct_solver_flag, multigrid_timers, equilibrate_matrix_flag;
 
-  //debug and performance report flags
-  report_runtime_flag = true;
+  // --- Graphics output variables ---
+  bool output_temperature_flag, output_temperature_gradient_flag, output_heat_flux_flag, flux_max_flag;
 
-  // ---- boundary conditions ---- //
-  NB = 6; // number of boundary conditions for this module
-  NBSF = 4; //number of surface heat flux conditions
-  NBT = 2; //number of surface sets used to specify a fixed temperature on nodes belonging to respective surfaces
+  //Body flux parameters
+  bool thermal_flag, electric_flag;
+  real_t specific_internal_energy_rate;
 
-  //apply body forces
-  thermal_flag = false;
-  specific_internal_energy_rate = 1;
+  //Topology Optimization parameters
+  real_t maximum_strain, maximum_strain_energy;
+};
 
-}
+#endif // end HEADER_H

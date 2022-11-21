@@ -69,7 +69,7 @@ class Simulation_Parameters_Thermal: public Simulation_Parameters
   //debug and performance reporting flags
   bool multigrid_timers, direct_solver_flag;
 
-  //Body force parameters
+  //Body flux parameters
   bool thermal_flag, electric_flag;
   real_t specific_internal_energy_rate;
 
