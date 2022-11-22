@@ -24,17 +24,7 @@ endif()
 
 add_subdirectory(SGH_solver)
 
-if(BUILD_ELEMENTS)
-target_link_libraries (Fierro_Parallel_Explicit swage)
-target_link_libraries (Fierro_Parallel_Explicit elements)
-target_link_libraries (Fierro_Parallel_Explicit matar)
-else()
-target_link_libraries (Fierro_Parallel_Explicit ${CMAKE_SOURCE_DIR}/Elements/build/swage/libswage.a)
-target_link_libraries (Fierro_Parallel_Explicit ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
-target_link_libraries (Fierro_Parallel_Explicit ${CMAKE_SOURCE_DIR}/Elements/build/matar/src/libmatar.a)
-endif()
 
 target_include_directories(Fierro_Parallel_Explicit PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options (Fierro_Parallel_Explicit PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
-target_link_libraries (Fierro_Parallel_Explicit parallel_base_src ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
-target_link_libraries (Fierro_Parallel_Explicit parallel_sgh_solver)
+target_link_libraries (Fierro_Parallel_Explicit parallel_base_src parallel_sgh_solver)
