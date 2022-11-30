@@ -126,6 +126,10 @@ public:
 
   virtual void repartition_nodes();
 
+  virtual void tecplot_writer() {}
+
+  virtual void parallel_tecplot_writer() {}
+
   //setup ghosts and element maps
   virtual void init_maps();
 
