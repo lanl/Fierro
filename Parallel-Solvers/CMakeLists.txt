@@ -1,5 +1,5 @@
 
-set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp Solver.cpp Simulation_Parameters.cpp)
+set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp Solver.cpp Simulation_Parameters.cpp Yaml.cpp)
 add_library(parallel_base_src OBJECT ${Parallel_Base_SRC})
 
 target_include_directories(parallel_base_src PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})

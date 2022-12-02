@@ -39,6 +39,7 @@
 #define IMPLICIT_SIMULATION_PARAMETERS_H
 
 #include "utilities.h"
+#include "Yaml.hpp"
 #include <stdio.h>
 #include <vector>
 #include <string>
