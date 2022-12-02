@@ -194,6 +194,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     // ---- Read intial mesh, refine, and build connectivity ---- //
     if(simparam->tecplot_input)
       read_mesh_tecplot(argv[1]);
+    else if(simparam->vtk_input)
+      read_mesh_vtk(argv[1]);
     else if(simparam->ansys_dat_input)
       read_mesh_ansys_dat(argv[1]);
     else

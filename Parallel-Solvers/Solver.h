@@ -123,6 +123,8 @@ public:
   virtual void read_mesh_ensight(char *MESH);
 
   virtual void read_mesh_tecplot(char *MESH);
+  
+  virtual void read_mesh_vtk(char *MESH);
 
   virtual void repartition_nodes();
 

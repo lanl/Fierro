@@ -49,6 +49,7 @@ Simulation_Parameters::Simulation_Parameters(){
   unit_scaling = 1;
   restart_file = false;
   tecplot_input = ansys_dat_input = false;
+  zero_index_base = false;
   nfea_modules = 0;
   element_type = "Hex8";
 }
@@ -61,6 +62,8 @@ void Simulation_Parameters::input(){
   tecplot_input = false;
   restart_file = false;
   ansys_dat_input = false;
+  vtk_input = true;
+  zero_index_base = true;
 
   //simulation spatial dimension
   num_dim = 3; //simulation spatial dimension
@@ -69,7 +72,7 @@ void Simulation_Parameters::input(){
   
   //file readin parameters
   words_per_line = 1;
-  tecplot_words_per_line = 3;
+  vtk_words_per_line = tecplot_words_per_line = 3;
   ansys_dat_node_words_per_line = 4;
   ansys_dat_elem_words_per_line = 11;
   element_type = "Hex8";
