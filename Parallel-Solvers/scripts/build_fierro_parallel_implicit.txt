@@ -50,6 +50,5 @@ fi
 
 #build Fierro
 echo "Building Fierro"
-cd Parallel-Solvers
 cmake -DBUILD_IMPLICIT_SOLVER=ON .
 make $NUM_TASKS
