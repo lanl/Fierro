@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 
+export scriptdir=`pwd`
+
 #command line default
 NUM_TASKS=${1:-'-j1'}
 
 cd ../..
+
+cd Trilinos
+
+export trilinosdir=`pwd`
+export OMPI_CXX=${trilinosdir}/packages/kokkos/bin/nvcc_wrapper
+
+cd ..
 
 #inititialize submodules if they aren't downloaded
 [ -d "Elements/elements" ] && echo "Elements submodule exists"
