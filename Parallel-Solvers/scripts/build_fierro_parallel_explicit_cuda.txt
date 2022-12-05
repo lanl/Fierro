@@ -13,13 +13,6 @@ NUM_TASKS=${1:-'-j1'}
 
 cd ../..
 
-cd Trilinos
-
-export trilinosdir=`pwd`
-export OMPI_CXX=${trilinosdir}/packages/kokkos/bin/nvcc_wrapper
-
-cd ..
-
 #inititialize submodules if they aren't downloaded
 [ -d "Elements/elements" ] && echo "Elements submodule exists"
 [ -d "Elements/matar/src" ] && echo "matar submodule exists"
@@ -39,6 +32,13 @@ then
   echo "Directory Trilinos does not exist, downloading Trilinos...."
   git clone https://github.com/trilinos/Trilinos.git
 fi
+
+cd Trilinos
+
+export trilinosdir=`pwd`
+export OMPI_CXX=${trilinosdir}/packages/kokkos/bin/nvcc_wrapper
+
+cd ..
 
 #check if Trilinos build directory exists, create Trilinos/build if it doesn't
 [ -d "Trilinos/build" ] && echo "Directory Trilinos/build exists, moving on"
