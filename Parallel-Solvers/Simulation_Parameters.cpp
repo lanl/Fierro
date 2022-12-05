@@ -75,7 +75,13 @@ void Simulation_Parameters::input(){
   vtk_words_per_line = tecplot_words_per_line = 3;
   ansys_dat_node_words_per_line = 4;
   ansys_dat_elem_words_per_line = 11;
-  element_type = "Hex8";
+
+  //default element types
+  if(num_dim==3)
+    element_type = "Hex8";
+  else if(num_dim==2)
+    element_type = "Quad4";
+
   if(element_type == "Hex8") 
     elem_words_per_line = 8;
   else if(element_type == "Quad4") 

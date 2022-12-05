@@ -554,6 +554,12 @@ void Solver::read_mesh_ensight(char *MESH){
       mesh_element_type = elements::elem_types::Quad12;
       max_nodes_per_patch = 4;
     }
+    else{
+      if(myrank==0){
+        std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
+      }
+      exit_solver(0);
+    }
     element_select->choose_2Delem_type(mesh_element_type, elem2D);
     max_nodes_per_element = elem2D->num_nodes();
   }
@@ -570,6 +576,12 @@ void Solver::read_mesh_ensight(char *MESH){
     else if(simparam->element_type == "Hex32"){
       mesh_element_type = elements::elem_types::Hex32;
       max_nodes_per_patch = 12;
+    }
+    else{
+      if(myrank==0){
+        std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
+      }
+      exit_solver(0);
     }
     element_select->choose_3Delem_type(mesh_element_type, elem);
     max_nodes_per_element = elem->num_nodes();
@@ -1044,6 +1056,12 @@ void Solver::read_mesh_vtk(char *MESH){
       mesh_element_type = elements::elem_types::Quad12;
       max_nodes_per_patch = 4;
     }
+    else{
+      if(myrank==0){
+        std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
+      }
+      exit_solver(0);
+    }
     element_select->choose_2Delem_type(mesh_element_type, elem2D);
     max_nodes_per_element = elem2D->num_nodes();
   }
@@ -1060,6 +1078,12 @@ void Solver::read_mesh_vtk(char *MESH){
     else if(simparam->element_type == "Hex32"){
       mesh_element_type = elements::elem_types::Hex32;
       max_nodes_per_patch = 12;
+    }
+    else{
+      if(myrank==0){
+        std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
+      }
+      exit_solver(0);
     }
     element_select->choose_3Delem_type(mesh_element_type, elem);
     max_nodes_per_element = elem->num_nodes();
@@ -1526,6 +1550,12 @@ void Solver::read_mesh_tecplot(char *MESH){
       mesh_element_type = elements::elem_types::Quad12;
       max_nodes_per_patch = 4;
     }
+    else{
+      if(myrank==0){
+        std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
+      }
+      exit_solver(0);
+    }
     element_select->choose_2Delem_type(mesh_element_type, elem2D);
     max_nodes_per_element = elem2D->num_nodes();
   }
@@ -1542,6 +1572,12 @@ void Solver::read_mesh_tecplot(char *MESH){
     else if(simparam->element_type == "Hex32"){
       mesh_element_type = elements::elem_types::Hex32;
       max_nodes_per_patch = 12;
+    }
+    else{
+      if(myrank==0){
+        std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
+      }
+      exit_solver(0);
     }
     element_select->choose_3Delem_type(mesh_element_type, elem);
     max_nodes_per_element = elem->num_nodes();
