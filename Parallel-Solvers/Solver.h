@@ -225,6 +225,9 @@ public:
   //file output variables
   int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
 
+  //output stream
+  Teuchos::RCP<Teuchos::FancyOStream> fos;
+
   //debug and system functions/variables
   double CPU_Time();
   void init_clock();

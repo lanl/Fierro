@@ -43,12 +43,12 @@
 using namespace utils;
 
 //forward declare
-class Implicit_Solver;
+class Solver;
 
 class Simulation_Parameters_Dynamic_Topology_Optimization : public Simulation_Parameters
 {
  public:
-  Simulation_Parameters_Dynamic_Topology_Optimization(Implicit_Solver *solver_pointer);
+  Simulation_Parameters_Dynamic_Topology_Optimization(Solver *solver_pointer);
   virtual ~Simulation_Parameters_Dynamic_Topology_Optimization();
   virtual void input();
   virtual void FEA_module_setup();
@@ -73,7 +73,7 @@ class Simulation_Parameters_Dynamic_Topology_Optimization : public Simulation_Pa
   real_t penalty_power;
 
   //pointer to Solver object (just used to consolidate error handling for now)
-  Implicit_Solver *solver_pointer_;
+  Solver *solver_pointer_;
 
   //volumes to hold density constant
   

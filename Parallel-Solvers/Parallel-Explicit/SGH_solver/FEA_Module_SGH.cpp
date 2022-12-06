@@ -327,7 +327,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     //set Tpetra vector pointers
     node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
     all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
-    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dims));
     
     /*
     for(int inode = 0; inode < num_nodes; inode++){
