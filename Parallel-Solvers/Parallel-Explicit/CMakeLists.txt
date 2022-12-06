@@ -8,9 +8,10 @@ INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 include_directories(SGH_solver)
+include_directories(Topology_Optimization)
 include_directories(..)
 include_directories(${CMAKE_SOURCE_DIR}/Implicit-Lagrange)
-add_executable(Fierro_Parallel_Explicit main.cpp Explicit_Solver.cpp)
+add_executable(Fierro_Parallel_Explicit main.cpp Explicit_Solver.cpp Simulation_Parameters_Dynamic_Topology_Optimization.cpp)
 
 if (CUDA)
   add_definitions(-DHAVE_CUDA=1)
@@ -23,7 +24,6 @@ elseif (THREADS)
 endif()
 
 add_subdirectory(SGH_solver)
-
 
 target_include_directories(Fierro_Parallel_Explicit PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options (Fierro_Parallel_Explicit PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})

@@ -152,6 +152,7 @@ public:
   //Global FEA data
   Teuchos::RCP<MV> node_velocities_distributed;
   Teuchos::RCP<MV> all_node_velocities_distributed;
+  Teuchos::RCP<MV> all_cached_node_velocities_distributed;
 
   //Distributions of data used to print
   Teuchos::RCP<MV> collected_node_velocities_distributed;

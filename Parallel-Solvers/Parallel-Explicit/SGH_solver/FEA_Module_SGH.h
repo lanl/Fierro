@@ -48,7 +48,7 @@
 
 class Explicit_Solver_SGH;
 class Simulation_Parameters_SGH;
-class Simulation_Parameters_Topology_Optimization;
+class Simulation_Parameters_Dynamic_Topology_Optimization;
 
 class FEA_Module_SGH: public FEA_Module{
 
@@ -466,7 +466,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
   Simulation_Parameters_SGH *simparam;
-  Simulation_Parameters_Topology_Optimization *simparam_TO;
+  Simulation_Parameters_Dynamic_Topology_Optimization *simparam_TO;
   Explicit_Solver_SGH *Explicit_Solver_Pointer_;
   
   //output stream
@@ -515,6 +515,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<const MV> test_node_densities_distributed;
   Teuchos::RCP<MV> all_node_densities_distributed;
   Teuchos::RCP<MV> Global_Element_Densities;
+  Teuchos::RCP<MV> node_velocities_distributed;
+  Teuchos::RCP<MV> all_node_velocities_distributed;
+  Teuchos::RCP<MV> all_cached_node_velocities_distributed;
   
   //Boundary Conditions Data
   //CArray <Nodal_Combination> Patch_Nodes;

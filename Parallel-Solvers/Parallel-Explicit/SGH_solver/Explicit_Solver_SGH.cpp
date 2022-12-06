@@ -75,6 +75,7 @@
 #include "Explicit_Solver_SGH.h"
 #include "mesh.h"
 #include "state.h"
+#include "Kinetic_Energy_Minimize.h"
 
 //Repartition Package
 #include <Zoltan2_XpetraMultiVectorAdapter.hpp>

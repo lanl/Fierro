@@ -59,6 +59,7 @@
 #include "ROL_Objective.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters_Dynamic_Topology_Optimization.h"
 
 class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
   
@@ -124,7 +125,7 @@ public:
       FEM_->all_cached_node_velocities_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_velocities_distributed), Teuchos::Copy));
       all_node_velocities_distributed_temp = FEM_->all_node_velocities_distributed;
 
-      ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
+      //ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
       ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_->node_velocities_distributed);
 
       //real_t current_kinetic_energy = ROL_Velocities->dot(*ROL_Force)/2;
@@ -170,7 +171,7 @@ public:
       //communicate density variables for ghosts
       FEM_->comm_variables(zp);
       //update deformation variables
-      FEM_->update_forward_solve(zp);
+      FEM_->Explicit_Solver_Pointer_->update_forward_solve(zp);
       if(FEM_->myrank==0)
       *fos << "called Trial" << std::endl;
     }
@@ -181,12 +182,12 @@ public:
       *fos << "called Temp" << std::endl;
       FEM_->all_node_velocities_distributed = all_node_velocities_distributed_temp;
       FEM_->comm_variables(zp);
-      FEM_->update_forward_solve(zp);
+      FEM_->Explicit_Solver_Pointer_->update_forward_solve(zp);
     }
 
     //decide to output current optimization state
     if(current_step%FEM_->simparam_TO->optimization_output_freq==0)
-      FEM_->Solver_Pointer_->parallel_tecplot_writer();
+      FEM_->Explicit_Solver_Pointer_->parallel_tecplot_writer();
   }
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
@@ -226,8 +227,8 @@ public:
     //*fos << std::endl;
     //std::fflush(stdout);
     
-    ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
-    ROL_velocities = ROL::makePtr<ROL_MV>(FEM_->node_velocities_distributed);
+    //ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
+    ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_->node_velocities_distributed);
 
     std::cout.precision(10);
     if(FEM_->myrank==0)

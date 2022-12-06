@@ -116,6 +116,8 @@ public:
 
   virtual void run(int argc, char *argv[]) = 0;
 
+  virtual void update_forward_solve(Teuchos::RCP<const MV> zp) {}
+
   virtual void finalize() {}
 
   virtual void exit_solver(int status);
