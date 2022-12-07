@@ -86,7 +86,7 @@
 using namespace utils;
 
 
-FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module(Solver_Pointer), mesh(mesh){
   //create parameter object
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver_SGH*>(Solver_Pointer);
@@ -579,7 +579,7 @@ void FEA_Module_SGH::compute_output(){
    Solve the FEA linear system
 ------------------------------------------------------------------------- */
 
-int FEA_Module_SGH::solve(){
+void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   //local variable for host view in the dual view
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
@@ -588,10 +588,6 @@ int FEA_Module_SGH::solve(){
   size_t access_index, row_access_index, row_counter;
   GO global_index, global_dof_index;
   LO local_dof_index;
-
- 
-  
-  return EXIT_SUCCESS;
 }
 
 /* -------------------------------------------------------------------------------------------
@@ -615,21 +611,7 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
    Setup SGH solver data
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::setup(mesh_t &mesh,
-           const DViewCArrayKokkos <double> &node_coords,
-           DViewCArrayKokkos <double> &node_vel,
-           DViewCArrayKokkos <double> &node_mass,
-           const DViewCArrayKokkos <double> &elem_den,
-           const DViewCArrayKokkos <double> &elem_pres,
-           const DViewCArrayKokkos <double> &elem_stress,
-           const DViewCArrayKokkos <double> &elem_sspd,
-           const DViewCArrayKokkos <double> &elem_sie,
-           const DViewCArrayKokkos <double> &elem_vol,
-           const DViewCArrayKokkos <double> &elem_mass,
-           const DViewCArrayKokkos <size_t> &elem_mat_id,
-           const DViewCArrayKokkos <double> &elem_statev,
-           const DViewCArrayKokkos <double> &corner_mass
-           ){
+void FEA_Module_SGH::setup(){
     
     const size_t num_fills = simparam->num_fills;
     const size_t rk_num_bins = simparam->rk_num_bins;
@@ -1303,24 +1285,8 @@ void FEA_Module_SGH::build_boundry_node_sets(const CArrayKokkos <boundary_t> &bo
    SGH solver loop
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
-               DViewCArrayKokkos <double> &node_coords,
-               DViewCArrayKokkos <double> &node_vel,
-               DViewCArrayKokkos <double> &node_mass,
-               DViewCArrayKokkos <double> &elem_den,
-               DViewCArrayKokkos <double> &elem_pres,
-               DViewCArrayKokkos <double> &elem_stress,
-               DViewCArrayKokkos <double> &elem_sspd,
-               DViewCArrayKokkos <double> &elem_sie,
-               DViewCArrayKokkos <double> &elem_vol,
-               DViewCArrayKokkos <double> &elem_div,
-               DViewCArrayKokkos <double> &elem_mass,
-               DViewCArrayKokkos <size_t> &elem_mat_id,
-               DViewCArrayKokkos <double> &elem_statev,
-               DViewCArrayKokkos <double> &corner_force,
-               DViewCArrayKokkos <double> &corner_mass){
-    
-    
+void FEA_Module_SGH::sgh_solve(){
+
     double time_value = simparam->time_value;
     const double time_final = simparam->time_final;
     const double dt_max = simparam->dt_max;
@@ -1673,7 +1639,7 @@ void FEA_Module_SGH::sgh_solve(mesh_t &mesh,
             
             
             // ---- Calculate cell volume for next time step ----
-            get_vol(elem_vol, node_coords, mesh);
+            get_vol();
             
             
             

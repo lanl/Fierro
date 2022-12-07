@@ -171,7 +171,7 @@ public:
       //communicate density variables for ghosts
       FEM_->comm_variables(zp);
       //update deformation variables
-      FEM_->Explicit_Solver_Pointer_->update_forward_solve(zp);
+      FEM_->update_forward_solve(zp);
       if(FEM_->myrank==0)
       *fos << "called Trial" << std::endl;
     }
@@ -182,7 +182,7 @@ public:
       *fos << "called Temp" << std::endl;
       FEM_->all_node_velocities_distributed = all_node_velocities_distributed_temp;
       FEM_->comm_variables(zp);
-      FEM_->Explicit_Solver_Pointer_->update_forward_solve(zp);
+      FEM_->update_forward_solve(zp);
     }
 
     //decide to output current optimization state

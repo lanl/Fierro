@@ -62,8 +62,8 @@ void Simulation_Parameters::input(){
   tecplot_input = false;
   restart_file = false;
   ansys_dat_input = false;
-  vtk_input = true;
-  zero_index_base = true;
+  vtk_input = false;
+  zero_index_base = false;
 
   //simulation spatial dimension
   num_dim = 3; //simulation spatial dimension

@@ -312,7 +312,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //}
     
     //hack allocation of module
-    FEA_Module_SGH* sgh_module = new FEA_Module_SGH(this);
+    FEA_Module_SGH* sgh_module = new FEA_Module_SGH(this, *mesh);
     // The kokkos scope
     {
      
@@ -411,86 +411,73 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
         
         // create Dual Views of the individual node struct variables
-        DViewCArrayKokkos <double> node_coords(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+        sgh_module->node_coords = DViewCArrayKokkos<double>(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        DViewCArrayKokkos <double> node_vel(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+        sgh_module->node_vel = DViewCArrayKokkos<double>(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        DViewCArrayKokkos <double> node_mass(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
+        sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
         
         
         // create Dual Views of the individual elem struct variables
-        DViewCArrayKokkos <double> elem_den(&elem.den(0),
+        sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
                                             num_elems);
 
-        DViewCArrayKokkos <double> elem_pres(&elem.pres(0),
+        sgh_module->elem_pres = DViewCArrayKokkos<double>(&elem.pres(0),
                                              num_elems);
 
-        DViewCArrayKokkos <double> elem_stress(&elem.stress(0,0,0,0),
+        sgh_module->elem_stress = DViewCArrayKokkos<double>(&elem.stress(0,0,0,0),
                                                rk_num_bins,
                                                num_elems,
                                                3,
                                                3); // always 3D even in 2D-RZ
 
-        DViewCArrayKokkos <double> elem_sspd(&elem.sspd(0),
+        sgh_module->elem_sspd = DViewCArrayKokkos<double>(&elem.sspd(0),
                                              num_elems);
 
-        DViewCArrayKokkos <double> elem_sie(&elem.sie(0,0),
+        sgh_module->elem_sie = DViewCArrayKokkos<double>(&elem.sie(0,0),
                                             rk_num_bins,
                                             num_elems);
 
-        DViewCArrayKokkos <double> elem_vol(&elem.vol(0),
+        sgh_module->elem_vol = DViewCArrayKokkos<double>(&elem.vol(0),
                                             num_elems);
         
-        DViewCArrayKokkos <double> elem_div(&elem.div(0),
+        sgh_module->elem_div = DViewCArrayKokkos<double>(&elem.div(0),
                                             num_elems);
         
 
-        DViewCArrayKokkos <double> elem_mass(&elem.mass(0),
+        sgh_module->elem_mass = DViewCArrayKokkos<double>(&elem.mass(0),
                                              num_elems);
 
-        DViewCArrayKokkos <size_t> elem_mat_id(&elem.mat_id(0),
+        sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
                                                num_elems);
 
-        DViewCArrayKokkos <double> elem_statev(&elem.statev(0,0),
+        sgh_module->elem_statev = DViewCArrayKokkos<double>(&elem.statev(0,0),
                                                num_elems,
                                                max_num_state_vars );
         
         // create Dual Views of the corner struct variables
-        DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
+        sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
                                                 num_corners, 
                                                 num_dim);
 
-        DViewCArrayKokkos <double> corner_mass(&corner.mass(0),
+        sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
                                                num_corners);
         
         
         // ---------------------------------------------------------------------
         //   calculate geometry
         // ---------------------------------------------------------------------
-        node_coords.update_device();
+        sgh_module->node_coords.update_device();
         Kokkos::fence();
         
         
-        sgh_module->get_vol(elem_vol, node_coords, *mesh);
+        sgh_module->get_vol();
 
 
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
         // ---------------------------------------------------------------------
-        sgh_module->setup(*mesh,
-              node_coords,
-              node_vel,
-              node_mass,
-              elem_den,
-              elem_pres,
-              elem_stress,
-              elem_sspd,
-              elem_sie,
-              elem_vol,
-              elem_mass,
-              elem_mat_id,
-              elem_statev,
-              corner_mass);
+        sgh_module->setup();
         
         // intialize time, time_step, and cycles
         //time_value = 0.0;
@@ -504,22 +491,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         //   Calculate the SGH solution
         // ---------------------------------------------------------------------
         
-        sgh_module->sgh_solve(*mesh,
-                  node_coords,
-                  node_vel,
-                  node_mass,
-                  elem_den,
-                  elem_pres,
-                  elem_stress,
-                  elem_sspd,
-                  elem_sie,
-                  elem_vol,
-                  elem_div,
-                  elem_mass,
-                  elem_mat_id,
-                  elem_statev,
-                  corner_force,
-                  corner_mass);
+        sgh_module->sgh_solve();
         
 
         // calculate total energy at time=t_end

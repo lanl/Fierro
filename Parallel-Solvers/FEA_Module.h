@@ -130,6 +130,8 @@ public:
 
   virtual void update_linear_solve(Teuchos::RCP<const MV> zp) {}
 
+  virtual void update_forward_solve(Teuchos::RCP<const MV> zp) {}
+
   virtual void local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix) {}
 
   virtual void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix) {}

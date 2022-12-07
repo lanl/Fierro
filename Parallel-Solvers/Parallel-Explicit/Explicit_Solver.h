@@ -53,6 +53,8 @@ public:
 
   virtual void solver_finalize() {}
 
+  Teuchos::RCP<MV> initial_node_coords_distributed;
+
 };
 
 #endif // end Header Guard
