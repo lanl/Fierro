@@ -511,8 +511,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     }
     */
 
-    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " update solve time "
-              << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
+    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
+              << communication_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
     parallel_tecplot_writer();
@@ -1176,6 +1176,7 @@ void Explicit_Solver_SGH::init_state_vectors(){
   //allocate node_velocities
   node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
   if(!simparam->restart_file)
     design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
@@ -1884,14 +1885,14 @@ void Explicit_Solver_SGH::comm_velocities(){
 
   //communicate design densities
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  Tpetra::Import<LO, GO> importer(map, ghost_node_map);
   
   //active view scope
   {
     const_host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   //comms to get ghosts
-  all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
+  ghost_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   

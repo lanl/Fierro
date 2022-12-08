@@ -39,6 +39,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <chrono>
 #include <stdio.h>
 #include <stdlib.h> 
 #include <math.h>  // fmin, fmax, abs note: fminl is long
@@ -93,6 +94,7 @@
 Solver::Solver(){
   //default flags assume optional routines are off
   setup_flag = finalize_flag = 0;
+  communication_time = 0;
 }
 
 void Solver::exit_solver(int status){
@@ -2328,27 +2330,15 @@ void Solver::Get_Boundary_Patches(){
 
 double Solver::CPU_Time()
 {
-  double rv = 0.0;
-/*
-#ifdef _WIN32
+  std::chrono::system_clock::time_point zero_time;
+  auto zero_time_duration = zero_time.time_since_epoch();
+  auto time = std::chrono::system_clock::now();
+  auto time_duration = time.time_since_epoch();
+  //double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
+  double calc_time = std::chrono::duration_cast< std::chrono::nanoseconds>(time_duration-zero_time_duration).count();
+  calc_time *= 1e-09;
 
-  // from MSD docs.
-  FILETIME ct,et,kt,ut;
-  union { FILETIME ft; uint64_t ui; } cpu;
-  if (GetProcessTimes(GetCurrentProcess(),&ct,&et,&kt,&ut)) {
-    cpu.ft = ut;
-    rv = cpu.ui * 0.0000001;
-  }
-*/
-
-  struct rusage ru;
-  if (getrusage(RUSAGE_SELF, &ru) == 0) {
-    rv = (double) ru.ru_utime.tv_sec;
-    rv += (double) ru.ru_utime.tv_usec * 0.000001;
-  }
-
-
-  return rv;
+  return calc_time;
 }
 
 /* ----------------------------------------------------------------------

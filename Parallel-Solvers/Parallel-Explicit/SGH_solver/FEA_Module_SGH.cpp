@@ -1584,6 +1584,8 @@ void FEA_Module_SGH::sgh_solve(){
             boundary_velocity(mesh, boundary, node_vel);
 
             //current interface has differing velocity arrays; this equates them until we unify memory
+            //first comm time interval point
+            double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
             //view scope
             {
               Explicit_Solver_SGH::vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
@@ -1600,17 +1602,19 @@ void FEA_Module_SGH::sgh_solve(){
             //this is forcing a copy to the device
             //view scope
             {
-              Explicit_Solver_SGH::vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+              Explicit_Solver_SGH::vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
 
               FOR_ALL_CLASS(node_gid, mesh.num_local_nodes, mesh.num_nodes, {
                 for (int idim = 0; idim < num_dims; idim++){
-                  node_vel(1,node_gid,idim) = all_node_velocities_interface(node_gid,idim);
+                  node_vel(1,node_gid,idim) = ghost_node_velocities_interface(node_gid-mesh.num_local_nodes,idim);
                 }
         
               }); // end parallel for
             } //end view scope
             Kokkos::fence();
             
+            double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+            Explicit_Solver_Pointer_->communication_time += comm_time2-comm_time1;
             //debug print vector values on a rank
             /*
             if(myrank==0)
@@ -1861,12 +1865,12 @@ void FEA_Module_SGH::sgh_solve(){
     } // end for cycle loop
     
     
-    auto time_2 = std::chrono::high_resolution_clock::now();
-    auto calc_time = std::chrono::duration_cast
-                           <std::chrono::nanoseconds>(time_2 - time_1).count();
-    
+    auto time_2 = std::chrono::system_clock::now();
+    auto time_difference = time_2 - time_1;
+    //double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
+    double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
     if(myrank==0)
-      printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
+      printf("\nCalculation time in seconds: %f \n", calc_time*1e-09);
     
     // ---- Calculate energy tallies ----
     double IE_tend = 0.0;

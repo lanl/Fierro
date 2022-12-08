@@ -448,7 +448,6 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   elements::ref_element  *ref_elem;
   
   mesh_t& mesh;
-  Explicit_Solver_SGH *explicit_solver_pointer;
   
   //Local FEA data
   size_t nlocal_nodes;
