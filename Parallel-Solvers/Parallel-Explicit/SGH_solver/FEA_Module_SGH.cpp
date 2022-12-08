@@ -325,6 +325,8 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     corner.initialize(num_corners, num_dims);
 
     //set Tpetra vector pointers
+    initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
+    initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
     node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
     all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
     all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dims));
@@ -588,6 +590,14 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   size_t access_index, row_access_index, row_counter;
   GO global_index, global_dof_index;
   LO local_dof_index;
+
+  //reset nodal coordinates to initial values
+  node_coords_distributed->assign(*initial_node_coords_distributed);
+
+  //reset velocities to initial conditions
+  node_velocities_distributed->assign(*initial_node_velocities_distributed);
+
+  //setup that needs repeating
 }
 
 /* -------------------------------------------------------------------------------------------

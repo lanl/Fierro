@@ -486,6 +486,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> all_node_densities_distributed;
   Teuchos::RCP<MV> Global_Element_Densities;
   Teuchos::RCP<MV> node_velocities_distributed;
+  Teuchos::RCP<MV> initial_node_coords_distributed;
+  Teuchos::RCP<MV> initial_node_velocities_distributed;
   Teuchos::RCP<MV> all_node_velocities_distributed;
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
 

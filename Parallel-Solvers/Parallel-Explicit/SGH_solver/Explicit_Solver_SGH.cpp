@@ -485,6 +485,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         //graphics_id = 0;
         //graphics_times(0) = 0.0;
         //graphics_time = graphics_dt_ival;  // the times for writing graphics dump
+
+        //set initial saved coordinates and velocities
+        initial_node_coords_distributed->assign(*node_coords_distributed);
+        initial_node_velocities_distributed->assign(*node_velocities_distributed);
         
 
         // ---------------------------------------------------------------------
@@ -1175,6 +1179,8 @@ void Explicit_Solver_SGH::init_state_vectors(){
   int num_dim = simparam->num_dim;
   //allocate node_velocities
   node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
+  initial_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
   if(!simparam->restart_file)
