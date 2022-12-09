@@ -1606,9 +1606,17 @@ void FEA_Module_SGH::sgh_solve(){
               }); // end parallel for
             } //end view scope
             Kokkos::fence();
+            
+            //active view scope
+            {
+              const_host_vec_array node_velocities_host = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+            }
+            double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+            Explicit_Solver_Pointer_->dev2host_time += comm_time2-comm_time1;
             //communicate ghost velocities
             Explicit_Solver_Pointer_->comm_velocities();
-
+            
+            double comm_time3 = Explicit_Solver_Pointer_->CPU_Time();
             //this is forcing a copy to the device
             //view scope
             {
@@ -1623,8 +1631,9 @@ void FEA_Module_SGH::sgh_solve(){
             } //end view scope
             Kokkos::fence();
             
-            double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
-            Explicit_Solver_Pointer_->communication_time += comm_time2-comm_time1;
+            double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
+            Explicit_Solver_Pointer_->host2dev_time += comm_time4-comm_time3;
+            Explicit_Solver_Pointer_->communication_time += comm_time4-comm_time1;
             //debug print vector values on a rank
             /*
             if(myrank==0)

@@ -94,10 +94,11 @@
 Solver::Solver(){
   //default flags assume optional routines are off
   setup_flag = finalize_flag = 0;
-  communication_time = 0;
+  communication_time = dev2host_time = host2dev_time = 0;
 }
 
 void Solver::exit_solver(int status){
+  Kokkos::finalize();
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
   exit(status);
