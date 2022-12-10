@@ -585,6 +585,11 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   //output dof data
   //Global arrays with collected data used to print
   int output_velocity_index, output_strain_index, output_stress_index;
+  
+  //file parameters
+  DCArrayKokkos <size_t>read_from_file;
+  DCArrayKokkos <double>file_state_vars;
+  DCArrayKokkos <size_t>mat_num_state_vars; // actual number of state_vars
 };
 
 #endif // end HEADER_H
