@@ -516,7 +516,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     */
 
     std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
-              << communication_time << " host to dev time " << host2dev_time << " host to dev time " << dev2host_time << std::endl;
+              << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
 
     // Data writers
     parallel_tecplot_writer();
