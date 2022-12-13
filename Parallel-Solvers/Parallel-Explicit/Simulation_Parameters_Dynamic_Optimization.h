@@ -35,8 +35,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#ifndef SIMULATION_PARAMETERS_DYNAMIC_TOPOLOGY_OPTIMIZATION_H
-#define SIMULATION_PARAMETERS_DYNAMIC_TOPOLOGY_OPTIMIZATION_H
+#ifndef SIMULATION_PARAMETERS_DYNAMIC_OPTIMIZATION_H
+#define SIMULATION_PARAMETERS_DYNAMIC_OPTIMIZATION_H
 
 #include "utilities.h"
 #include "Simulation_Parameters.h"
@@ -45,11 +45,11 @@ using namespace utils;
 //forward declare
 class Solver;
 
-class Simulation_Parameters_Dynamic_Topology_Optimization : public Simulation_Parameters
+class Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
 {
  public:
-  Simulation_Parameters_Dynamic_Topology_Optimization(Solver *solver_pointer);
-  virtual ~Simulation_Parameters_Dynamic_Topology_Optimization();
+  Simulation_Parameters_Dynamic_Optimization(Solver *solver_pointer);
+  virtual ~Simulation_Parameters_Dynamic_Optimization();
   virtual void input();
   virtual void FEA_module_setup();
   //==============================================================================
@@ -61,7 +61,7 @@ class Simulation_Parameters_Dynamic_Topology_Optimization : public Simulation_Pa
   int NBD; //number of density boundary conditions
 
   //Topology Optimization flags
-  bool nodal_density_flag;
+  bool topology_optimization_on, shape_optimization_on, nodal_density_flag;
   
   //When on, all element nodes connected to a boundary condition patch will have their density constrained
   bool thick_condition_boundary;

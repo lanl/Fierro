@@ -70,6 +70,7 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
@@ -121,6 +122,7 @@ each surface to use for hammering metal into to form it.
 Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //create parameter objects
   simparam = new Simulation_Parameters_SGH();
+  simparam_TO = new Simulation_Parameters_Dynamic_Optimization(this);
   Solver::simparam = simparam;
   //simparam_TO = new Simulation_Parameters_Topology_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
@@ -498,7 +500,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         sgh_module->sgh_solve();
         
 
-        // calculate total energy at time=t_end
+        //test forward solve call
+        sgh_module->update_forward_solve(test_node_densities_distributed);
         
         
     } // end of kokkos scope

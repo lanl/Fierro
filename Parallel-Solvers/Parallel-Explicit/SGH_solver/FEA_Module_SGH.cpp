@@ -595,6 +595,18 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t num_bcs = simparam->num_bcs;
   const size_t num_materials = simparam->num_materials;
   const size_t num_state_vars = simparam->max_num_state_vars;
+  const size_t rk_level = 0;
+  const size_t num_dims = simparam->num_dim;
+  size_t num_nodes_in_elem = 1;
+  for (int dim=0; dim<num_dims; dim++){
+        num_nodes_in_elem *= 2;
+  }
+
+    // --- Read in the nodes in the mesh ---
+
+    size_t num_nodes = Explicit_Solver_Pointer_->nall_nodes;
+    int myrank = Explicit_Solver_Pointer_->myrank;
+    int nranks = Explicit_Solver_Pointer_->nranks;
 
   const CArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
   const CArrayKokkos <boundary_t> boundary = simparam->boundary;
@@ -604,10 +616,54 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   //reset nodal coordinates to initial values
   node_coords_distributed->assign(*initial_node_coords_distributed);
 
+  //comms for ghosts
+
   //reset velocities to initial conditions
   node_velocities_distributed->assign(*initial_node_velocities_distributed);
 
   //interface trial density vector
+
+  //interfacing of vectors(should be removed later once made compatible)
+  //view scope
+    {
+      Explicit_Solver_SGH::host_vec_array interface_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      //save node data to node.coords
+      //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
+      if(num_dims==2){
+        for(int inode = 0; inode < num_nodes; inode++){
+          //std::cout << "Node index " << inode+1 << " ";
+          node_coords.host(0,inode,0) = interface_node_coords(inode,0);
+          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+          node_coords.host(0,inode,1) = interface_node_coords(inode,1);
+          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+        }
+      }
+      else if(num_dims==3){
+        for(int inode = 0; inode < num_nodes; inode++){
+          //std::cout << "Node index " << inode+1 << " ";
+          node_coords.host(0,inode,0) = interface_node_coords(inode,0);
+          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+          node_coords.host(0,inode,1) = interface_node_coords(inode,1);
+          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+        
+          node_coords.host(0,inode,2) = interface_node_coords(inode,2);
+          //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
+        }
+      }
+    } //end view scope
+
+    // save the node coords to the current RK value
+    for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
+        
+        for(int rk=1; rk<rk_num_bins; rk++){
+            for (int dim = 0; dim < num_dims; dim++){
+                node_coords.host(rk, node_gid, dim) = node_coords.host(0, node_gid, dim);
+            } // end for dim
+        } // end for rk
+        
+    } // end parallel for
+    
+    node_coords.update_device();
 
   //setup that needs repeating
   //--- apply the fill instructions over the Elements---//

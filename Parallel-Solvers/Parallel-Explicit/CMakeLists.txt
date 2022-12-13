@@ -11,7 +11,7 @@ include_directories(SGH_solver)
 include_directories(Topology_Optimization)
 include_directories(..)
 include_directories(${CMAKE_SOURCE_DIR}/Implicit-Lagrange)
-add_executable(Fierro_Parallel_Explicit main.cpp Explicit_Solver.cpp Simulation_Parameters_Dynamic_Topology_Optimization.cpp)
+add_executable(Fierro_Parallel_Explicit main.cpp Explicit_Solver.cpp Simulation_Parameters_Dynamic_Optimization.cpp)
 
 if (CUDA)
   add_definitions(-DHAVE_CUDA=1)

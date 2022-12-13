@@ -36,29 +36,31 @@
  **********************************************************************************************/
 
 #include "utilities.h"
-#include "Simulation_Parameters_Dynamic_Topology_Optimization.h"
+#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include <iostream>
 #include "Solver.h"
 
 using namespace utils;
 
-Simulation_Parameters_Dynamic_Topology_Optimization::Simulation_Parameters_Dynamic_Topology_Optimization(Solver *solver_pointer){
+Simulation_Parameters_Dynamic_Optimization::Simulation_Parameters_Dynamic_Optimization(Solver *solver_pointer){
 
   //initialize data and flags to defaults
   solver_pointer_ = solver_pointer;
   report_runtime_flag = false;
   nodal_density_flag = true;
   thick_condition_boundary = true;
+  topology_optimization_on = shape_optimization_on = false;
   optimization_output_freq = 20;
   penalty_power = 3;
   nTO_modules = 0;
 }
 
-Simulation_Parameters_Dynamic_Topology_Optimization::~Simulation_Parameters_Dynamic_Topology_Optimization(){
+Simulation_Parameters_Dynamic_Optimization::~Simulation_Parameters_Dynamic_Optimization(){
 }
 
-void Simulation_Parameters_Dynamic_Topology_Optimization::input(){
+void Simulation_Parameters_Dynamic_Optimization::input(){
   Simulation_Parameters::input();
+  topology_optimization_on = true;
   //Simulation_Parameters::input();
   //initial buffer size for TO module list storage
   int buffer_size = 10;
@@ -154,7 +156,7 @@ void Simulation_Parameters_Dynamic_Topology_Optimization::input(){
 }
 
 
-void Simulation_Parameters_Dynamic_Topology_Optimization::FEA_module_setup(){
+void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
   
   //initial buffer size for FEA module list storage
   bool module_found;

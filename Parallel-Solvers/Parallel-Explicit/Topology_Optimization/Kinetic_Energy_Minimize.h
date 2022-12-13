@@ -59,7 +59,7 @@
 #include "ROL_Objective.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
 #include "FEA_Module_SGH.h"
-#include "Simulation_Parameters_Dynamic_Topology_Optimization.h"
+#include "Simulation_Parameters_Dynamic_Optimization.h"
 
 class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
   
