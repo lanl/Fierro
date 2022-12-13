@@ -472,7 +472,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         sgh_module->node_coords.update_device();
         Kokkos::fence();
         
-        
+        //set initial saved coordinates
+        initial_node_coords_distributed->assign(*node_coords_distributed);
+
         sgh_module->get_vol();
 
 
@@ -487,9 +489,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         //graphics_id = 0;
         //graphics_times(0) = 0.0;
         //graphics_time = graphics_dt_ival;  // the times for writing graphics dump
-
-        //set initial saved coordinates and velocities
-        initial_node_coords_distributed->assign(*node_coords_distributed);
+        
+        //set initial saved velocities
         initial_node_velocities_distributed->assign(*node_velocities_distributed);
         
 

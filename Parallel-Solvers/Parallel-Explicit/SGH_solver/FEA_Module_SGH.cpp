@@ -327,6 +327,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     //set Tpetra vector pointers
     initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
     initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
+    node_coords_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
     node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
     all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
     all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dims));
@@ -666,6 +667,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
     node_coords.update_device();
 
   //setup that needs repeating
+  get_vol();
   //--- apply the fill instructions over the Elements---//
     
     // loop over the fill instructures
