@@ -159,6 +159,9 @@ public:
                const double x3,
                const double y3) const;
 
+  KOKKOS_INLINE_FUNCTION
+  double average_element_density(const size_t elem_gid, const int nodes_per_elem) const;
+
   void get_divergence(DViewCArrayKokkos <double> &elem_div,
                       const mesh_t mesh,
                       const DViewCArrayKokkos <double> &node_coords,

@@ -603,16 +603,19 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
         num_nodes_in_elem *= 2;
   }
 
-    // --- Read in the nodes in the mesh ---
+  // --- Read in the nodes in the mesh ---
 
-    size_t num_nodes = Explicit_Solver_Pointer_->nall_nodes;
-    int myrank = Explicit_Solver_Pointer_->myrank;
-    int nranks = Explicit_Solver_Pointer_->nranks;
+  size_t num_nodes = Explicit_Solver_Pointer_->nall_nodes;
+  int myrank = Explicit_Solver_Pointer_->myrank;
+  int nranks = Explicit_Solver_Pointer_->nranks;
 
   const CArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
   const CArrayKokkos <boundary_t> boundary = simparam->boundary;
   const CArrayKokkos <material_t> material = simparam->material;
   const CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
+
+  //set density vector to the current value chosen by the optimizer
+  test_node_densities_distributed = zp;
 
   //reset nodal coordinates to initial values
   node_coords_distributed->assign(*initial_node_coords_distributed);
@@ -626,41 +629,41 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
 
   //interfacing of vectors(should be removed later once made compatible)
   //view scope
-    {
-      Explicit_Solver_SGH::host_vec_array interface_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-      //save node data to node.coords
-      //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
-      if(num_dims==2){
-        for(int inode = 0; inode < num_nodes; inode++){
-          //std::cout << "Node index " << inode+1 << " ";
-          node_coords.host(0,inode,0) = interface_node_coords(inode,0);
-          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
-          node_coords.host(0,inode,1) = interface_node_coords(inode,1);
-          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
-        }
+  {
+    Explicit_Solver_SGH::host_vec_array interface_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    //save node data to node.coords
+    //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
+    if(num_dims==2){
+      for(int inode = 0; inode < num_nodes; inode++){
+        //std::cout << "Node index " << inode+1 << " ";
+        node_coords.host(0,inode,0) = interface_node_coords(inode,0);
+        //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+        node_coords.host(0,inode,1) = interface_node_coords(inode,1);
+        //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
       }
-      else if(num_dims==3){
-        for(int inode = 0; inode < num_nodes; inode++){
-          //std::cout << "Node index " << inode+1 << " ";
-          node_coords.host(0,inode,0) = interface_node_coords(inode,0);
-          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
-          node_coords.host(0,inode,1) = interface_node_coords(inode,1);
-          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+    }
+    else if(num_dims==3){
+      for(int inode = 0; inode < num_nodes; inode++){
+        //std::cout << "Node index " << inode+1 << " ";
+        node_coords.host(0,inode,0) = interface_node_coords(inode,0);
+        //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+        node_coords.host(0,inode,1) = interface_node_coords(inode,1);
+        //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
         
-          node_coords.host(0,inode,2) = interface_node_coords(inode,2);
-          //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
-        }
+        node_coords.host(0,inode,2) = interface_node_coords(inode,2);
+        //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
       }
-    } //end view scope
+    }
+  } //end view scope
 
     // save the node coords to the current RK value
     for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
         
-        for(int rk=1; rk<rk_num_bins; rk++){
-            for (int dim = 0; dim < num_dims; dim++){
-                node_coords.host(rk, node_gid, dim) = node_coords.host(0, node_gid, dim);
-            } // end for dim
-        } // end for rk
+      for(int rk=1; rk<rk_num_bins; rk++){
+        for (int dim = 0; dim < num_dims; dim++){
+          node_coords.host(rk, node_gid, dim) = node_coords.host(0, node_gid, dim);
+        } // end for dim
+      } // end for rk
         
     } // end parallel for
     
@@ -748,6 +751,9 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                     
                 // density
                 elem_den(elem_gid) = mat_fill(f_id).den;
+
+                //compute element average density from initial nodal density variables used as TO design variables
+                elem_den(elem_gid) = elem_den(elem_gid)*average_element_density(elem_gid);
                 
                 // mass
                 elem_mass(elem_gid) = elem_den(elem_gid)*elem_vol(elem_gid);
@@ -756,7 +762,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 		
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
-                size_t mat_id = elem_mat_id(elem_gid); // short name
+                size_t mat_id = elem_mat_id(elem_gid, nodes_per_elem); // short name
                 
                 
                 // get state_vars from the input file or read them in
@@ -991,11 +997,49 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
 }
 
 /* -------------------------------------------------------------------------------------------
+   Compute average density of an element from nodal densities
+---------------------------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double FEA_Module_SGH::average_element_density(const size_t elem_id, const int nodes_per_elem) const
+{
+  double result = 0;
+  for(int i=0; i < nodes_per_elem; i++){
+    result += all_node_densities(ielem)/nodes_per_elem;
+  }
+
+  return result;
+}
+
+/* -------------------------------------------------------------------------------------------
    Communicate ghosts using the current optimization design data
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
+  
+  if(simparam_TO->topology_optimization_on){
+  //set density vector to the current value chosen by the optimizer
+  test_node_densities_distributed = zp;
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
 
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  Tpetra::Import<LO, GO> importer(map, all_node_map);
+
+  //comms to get ghosts
+  all_node_densities_distributed->doImport(*test_node_densities_distributed, importer, Tpetra::INSERT);
+  }
+  else if(simparam_TO->shape_optimization_on){
+    //clause to communicate boundary node data if the boundary nodes are ghosts on this rank
+  }
 }
 
 
