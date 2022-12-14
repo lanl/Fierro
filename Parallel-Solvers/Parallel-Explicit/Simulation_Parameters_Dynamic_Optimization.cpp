@@ -74,7 +74,7 @@ void Simulation_Parameters_Dynamic_Optimization::input(){
   
   //TO objectives and constraints
   
-  TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+  TO_Module_List[nTO_modules] = "Kinetic_Energy_Minimize";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
   /*
@@ -109,7 +109,7 @@ void Simulation_Parameters_Dynamic_Optimization::input(){
   TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
   Function_Arguments[nTO_modules].push_back(0.15);
   nTO_modules++;
-  
+  /*
   TO_Module_List[nTO_modules] = "Moment_of_Inertia_Constraint";
   TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
   Function_Arguments[nTO_modules].push_back(0.20);
@@ -121,7 +121,7 @@ void Simulation_Parameters_Dynamic_Optimization::input(){
   Function_Arguments[nTO_modules].push_back(0);
   Function_Arguments[nTO_modules].push_back(3);
   nTO_modules++;
-
+  */
 
   //example for later
   if(nTO_modules==buffer_size){
@@ -172,14 +172,14 @@ void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
     if(TO_Module_List[imodule] == "Kinetic_Energy_Minimize"){
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == "Elasticity"){
+        if(FEA_Module_List[ifea] == "SGH"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Elasticity";
+        FEA_Module_List[nfea_modules++] = "SGH";
         module_found = true;
       }
     }
@@ -222,20 +222,6 @@ void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
         FEA_Module_List[nfea_modules++] = "Inertial";
-        module_found = true;
-      }
-    }
-    else if(TO_Module_List[imodule] == "Strain_Energy_Constraint"){
-      //check if module type was already allocated
-      for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == "Elasticity"){
-          module_found = true;
-          TO_Module_My_FEA_Module[imodule] = ifea;
-        }
-      }
-      if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Elasticity";
         module_found = true;
       }
     }

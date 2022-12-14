@@ -96,7 +96,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module
   //simparam->input();
   
   //TO parameters
-  //simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Explicit_Solver_Pointer_->simparam);
+  simparam_dynamic_opt = Explicit_Solver_Pointer_->simparam_dynamic_opt;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -1033,7 +1033,7 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
 
 void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
   
-  if(simparam_TO->topology_optimization_on){
+  if(simparam_dynamic_opt->topology_optimization_on){
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
   
@@ -1053,7 +1053,7 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
   //comms to get ghosts
   all_node_densities_distributed->doImport(*test_node_densities_distributed, importer, Tpetra::INSERT);
   }
-  else if(simparam_TO->shape_optimization_on){
+  else if(simparam_dynamic_opt->shape_optimization_on){
     //clause to communicate boundary node data if the boundary nodes are ghosts on this rank
   }
 }

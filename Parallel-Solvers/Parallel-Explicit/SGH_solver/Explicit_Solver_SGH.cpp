@@ -122,12 +122,13 @@ each surface to use for hammering metal into to form it.
 Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //create parameter objects
   simparam = new Simulation_Parameters_SGH();
-  simparam_TO = new Simulation_Parameters_Dynamic_Optimization(this);
+  simparam_dynamic_opt = new Simulation_Parameters_Dynamic_Optimization(this);
   Solver::simparam = simparam;
   //simparam_TO = new Simulation_Parameters_Topology_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->Simulation_Parameters::input();
   simparam->input();
+  simparam_dynamic_opt->input();
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects

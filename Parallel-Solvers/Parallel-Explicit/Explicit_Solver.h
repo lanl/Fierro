@@ -54,7 +54,8 @@ public:
   virtual void solver_finalize() {}
 
   Teuchos::RCP<MV> initial_node_coords_distributed;
-
+  
+  class Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
 };
 
 #endif // end Header Guard
