@@ -75,6 +75,7 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 
@@ -86,7 +87,7 @@
 using namespace utils;
 
 
-FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module(Solver_Pointer), mesh(mesh){
+FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module(Solver_Pointer), mesh(mesh), nodes_in_elem(mesh.nodes_in_elem){
   //create parameter object
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver_SGH*>(Solver_Pointer);
@@ -208,7 +209,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     // intialize elem variables
     mesh.initialize_elems(num_elem, num_dims);
     elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
-
+    nodes_in_elem = mesh.nodes_in_elem;
     //save data to mesh.nodes_in_elem.host
     //CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
     //view scope
@@ -219,7 +220,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
       for(int ielem = 0; ielem < num_elem; ielem++){
         //std::cout << "Element index " << ielem+1 << " ";
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
-            mesh.nodes_in_elem.host(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
+            nodes_in_elem.host(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
             //debug print
             //std::cout << mesh.nodes_in_elem.get_kokkos_dual_view().h_view(ielem*num_nodes_in_elem + inode)+1<< " ";
         }
@@ -227,7 +228,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
       }
     }
     // update device side
-    mesh.nodes_in_elem.update_device();
+    nodes_in_elem.update_device();
 
     //debug print
     
@@ -613,6 +614,18 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const CArrayKokkos <boundary_t> boundary = simparam->boundary;
   const CArrayKokkos <material_t> material = simparam->material;
   const CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
+  CArrayKokkos<double> relative_element_densities = CArrayKokkos<double>(num_elem, "relative_element_densities");
+  CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
+  //compute element averaged density ratios corresponding to nodal density design variables
+  {//view scope
+    const_host_vec_array all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    for(int elem_id = 0; elem_id < num_elem; elem_id){
+      for(int inode = 0; inode < num_nodes_in_elem; inode++){
+        current_element_nodal_densities(inode) = all_node_densities(nodes_in_elem(elem_id,inode),0);
+      }
+      relative_element_densities(elem_id) = average_element_density(num_nodes_in_elem, current_element_nodal_densities);
+    }//for
+  } //view scope
 
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
@@ -674,6 +687,9 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   //--- apply the fill instructions over the Elements---//
     
     // loop over the fill instructures
+    //view scope
+    {
+    
     for (int f_id = 0; f_id < num_fills; f_id++){
             
         // parallel loop over elements in mesh
@@ -753,7 +769,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 elem_den(elem_gid) = mat_fill(f_id).den;
 
                 //compute element average density from initial nodal density variables used as TO design variables
-                elem_den(elem_gid) = elem_den(elem_gid)*average_element_density(elem_gid);
+                elem_den(elem_gid) = elem_den(elem_gid)*relative_element_densities(elem_gid);
                 
                 // mass
                 elem_mass(elem_gid) = elem_den(elem_gid)*elem_vol(elem_gid);
@@ -927,6 +943,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
         
   
     } // end for loop over fills
+    }//end view scope
     
    
     
@@ -1000,12 +1017,11 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
    Compute average density of an element from nodal densities
 ---------------------------------------------------------------------------------------------- */
 
-KOKKOS_INLINE_FUNCTION
-double FEA_Module_SGH::average_element_density(const size_t elem_id, const int nodes_per_elem) const
+double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const CArray<double> current_element_densities) const
 {
   double result = 0;
   for(int i=0; i < nodes_per_elem; i++){
-    result += all_node_densities(ielem)/nodes_per_elem;
+    result += current_element_densities(i)/nodes_per_elem;
   }
 
   return result;

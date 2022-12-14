@@ -159,8 +159,7 @@ public:
                const double x3,
                const double y3) const;
 
-  KOKKOS_INLINE_FUNCTION
-  double average_element_density(const size_t elem_gid, const int nodes_per_elem) const;
+  double average_element_density(const int nodes_per_elem, const CArray<double> current_element_densities) const;
 
   void get_divergence(DViewCArrayKokkos <double> &elem_div,
                       const mesh_t mesh,
@@ -451,13 +450,15 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   elements::ref_element  *ref_elem;
   
   mesh_t& mesh;
+  // mesh class interface
+  DCArrayKokkos<size_t>& nodes_in_elem;
   
   //Local FEA data
   size_t nlocal_nodes;
   dual_vec_array dual_node_coords; //coordinates of the nodes
   dual_vec_array dual_node_densities; //topology optimization design variable
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
-  host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
+  host_elem_conn_array interface_nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
 
