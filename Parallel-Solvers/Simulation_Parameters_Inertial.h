@@ -54,7 +54,7 @@ class Simulation_Parameters_Inertial : public Simulation_Parameters
   //==============================================================================
 
   // --- Graphics output variables ---
-  bool output_flag;
+  bool output_flag, nodal_density_flag;
 
   // -- Integration rule
   int num_gauss_points;

@@ -1765,6 +1765,9 @@ void FEA_Module_SGH::sgh_solve(){
     size_t graphics_id = simparam->graphics_id;
     const CArrayKokkos <boundary_t> boundary = simparam->boundary;
     const CArrayKokkos <material_t> material = simparam->material;
+    int nTO_modules;
+    if(simparam_dynamic_opt->topology_optimization_on)
+      nTO_modules = simparam_dynamic_opt->nTO_modules;
 
     int myrank = Explicit_Solver_Pointer_->myrank;
     if(myrank==0)

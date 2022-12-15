@@ -35,36 +35,65 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#include "utilities.h"
-#include "Simulation_Parameters_Inertial.h"
+#ifndef FEA_MODULE_INERTIAL_H
+#define FEA_MODULE_INERTIAL_H
 
-using namespace utils;
+#include "FEA_Module.h"
 
-Simulation_Parameters_Inertial::Simulation_Parameters_Inertial() : Simulation_Parameters(){
+//forward declare
+class Simulation_Parameters_Inertial;
 
-  //initialize data and flags to defaults
-  report_runtime_flag = false;
-  unit_scaling = 1;
-}
+class FEA_Module_Inertial: public FEA_Module{
 
-Simulation_Parameters_Inertial::~Simulation_Parameters_Inertial(){
-}
+public:
+  FEA_Module_Inertial(Solver *Solver_Pointer);
+  ~FEA_Module_Inertial();
 
-void Simulation_Parameters_Inertial::input(){
+  void comm_variables(Teuchos::RCP<const MV> zp);
+
+  void compute_element_volumes();
+
+  void compute_element_masses(const_host_vec_array design_densities, bool max_flag);
+
+  void compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component);
+
+  void compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component);
+
+  void compute_nodal_gradients(const_host_vec_array design_densities, host_vec_array gradients);
+
+  void compute_moment_gradients(const_host_vec_array design_densities, host_vec_array gradients, int moment_component);
+
+  void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component);
   
-  Simulation_Parameters::input();
+  //forward declare
+  Simulation_Parameters_Inertial *simparam;
+  Solver *Solver_Pointer_;
 
-  //simulation spatial dimension
-  num_dim = 3;
-  unit_scaling = 1;
+  //Global FEA data
+  Teuchos::RCP<MV> mass_gradients_distributed;
+  Teuchos::RCP<MV> center_of_mass_gradients_distributed;
+  Teuchos::RCP<MV> Global_Element_Volumes;
+  Teuchos::RCP<MV> Global_Element_Masses;
+  Teuchos::RCP<MV> Global_Element_Moments_x;
+  Teuchos::RCP<MV> Global_Element_Moments_y;
+  Teuchos::RCP<MV> Global_Element_Moments_z;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xx;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yy;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_zz;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xy;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_xz;
+  Teuchos::RCP<MV> Global_Element_Moments_of_Inertia_yz;
 
-  //polynomial interpolation order
-  p_order = 0;
-  
-  //Gauss-Legendre integration order
-  num_gauss_points = 2;
+  //inertial properties
+  real_t mass, center_of_mass[3], moments_of_inertia[6];
 
-  //debug and performance report flags
-  report_runtime_flag = true;
+  //runtime flags
+  bool mass_init, com_init[3];
 
-}
+  //update counters (first attempt at reducing redundant calls through ROL for Moments of Inertia and Center of Mass)
+  int mass_update, com_update[3];
+  int mass_gradient_update, com_gradient_update[3];
+
+};
+
+#endif // end HEADER_H

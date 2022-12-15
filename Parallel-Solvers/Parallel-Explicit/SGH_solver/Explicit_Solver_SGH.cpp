@@ -101,6 +101,8 @@
 
 //Objective Functions and Constraint Functions
 //#include "Topology_Optimization_Function_Headers.h"
+#include "Mass_Constraint.h"
+#include "Moment_of_Inertia_Constraint.h"
 
 #define BUFFER_LINES 20000
 #define MAX_WORD 30
@@ -124,7 +126,7 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   simparam = new Simulation_Parameters_SGH();
   simparam_dynamic_opt = new Simulation_Parameters_Dynamic_Optimization(this);
   Solver::simparam = simparam;
-  //simparam_TO = new Simulation_Parameters_Topology_Optimization();
+  //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->Simulation_Parameters::input();
   simparam->input();
@@ -306,7 +308,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    //setup_optimization_problem();
+    setup_optimization_problem();
+    //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -1246,32 +1249,33 @@ void Explicit_Solver_SGH::FEA_module_setup(){
 /* ----------------------------------------------------------------------
    Setup Optimization Problem Object, Relevant Objective, and Constraints
 ------------------------------------------------------------------------- */
-/*
+
 void Explicit_Solver_SGH::setup_optimization_problem(){
   int num_dim = simparam->num_dim;
-  bool nodal_density_flag = simparam->nodal_density_flag;
-  int nTO_modules = simparam->nTO_modules;
-  int nmulti_objective_modules = simparam->nmulti_objective_modules;
-  std::vector<std::string> TO_Module_List = simparam->TO_Module_List;
-  std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
-  std::vector<int> TO_Module_My_FEA_Module = simparam->TO_Module_My_FEA_Module;
-  std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
-  std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
-  std::vector<std::vector<real_t>> Function_Arguments = simparam->Function_Arguments;
-  std::vector<Simulation_Parameters_Topology_Optimization::function_type> TO_Function_Type = simparam->TO_Function_Type;
+  bool nodal_density_flag = simparam_dynamic_opt->nodal_density_flag;
+  int nTO_modules = simparam_dynamic_opt->nTO_modules;
+  int nmulti_objective_modules = simparam_dynamic_opt->nmulti_objective_modules;
+  std::vector<std::string> TO_Module_List = simparam_dynamic_opt->TO_Module_List;
+  std::vector<std::string> FEA_Module_List = simparam_dynamic_opt->FEA_Module_List;
+  std::vector<int> TO_Module_My_FEA_Module = simparam_dynamic_opt->TO_Module_My_FEA_Module;
+  std::vector<int> Multi_Objective_Modules = simparam_dynamic_opt->Multi_Objective_Modules;
+  std::vector<real_t> Multi_Objective_Weights = simparam_dynamic_opt->Multi_Objective_Weights;
+  std::vector<std::vector<real_t>> Function_Arguments = simparam_dynamic_opt->Function_Arguments;
+  std::vector<Simulation_Parameters_Dynamic_Optimization::function_type> TO_Function_Type = simparam_dynamic_opt->TO_Function_Type;
   std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
 
   std::string constraint_base, constraint_name;
   std::stringstream number_union;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
-  GO current_node_index;
-  LO local_node_index;
+  CArray<GO> Surface_Nodes;
+  GO current_node_index, current_element_index;
+  LO local_node_index, local_element_id;
   int num_bdy_patches_in_set;
   size_t node_id, patch_id, module_id;
   int num_boundary_sets;
-  int current_element_index, local_surface_id;
+  int local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
@@ -1290,23 +1294,26 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   ROL::Ptr<ROL::Objective<real_t>> obj;
   bool objective_declared = false;
   for(int imodule = 0; imodule < nTO_modules; imodule++){
-    if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::OBJECTIVE){
+    if(TO_Function_Type[imodule] == Simulation_Parameters_Dynamic_Optimization::OBJECTIVE){
       //check if previous module already defined an objective, there must be one objective module
       if(objective_declared){
         *fos << "PROGRAM IS ENDING DUE TO ERROR; ANOTHER OBJECTIVE FUNCTION WITH NAME \"" <<TO_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
           exit_solver(0);
       }
-      if(TO_Module_List[imodule] == "Strain_Energy_Minimize"){
+      if(TO_Module_List[imodule] == "Kinetic_Energy_Minimize"){
         //debug print
-        *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
+      /*
       else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
         //debug print
         *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
+      */
       //Multi-Objective case
+      /*
       else if(TO_Module_List[imodule] == "Multi_Objective"){
         //allocate vector of Objective Functions to pass
         Multi_Objective_Terms = std::vector<ROL::Ptr<ROL::Objective<real_t>>>(nmulti_objective_modules);
@@ -1327,6 +1334,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
         //allocate multi objective function
         obj = ROL::makePtr<MultiObjective_TopOpt>(Multi_Objective_Terms, Multi_Objective_Weights);
       }
+      */
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
@@ -1336,7 +1344,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   }
   
   //optimization problem interface that can have constraints added to it before passing to solver object
-   ROL::Ptr<ROL::Problem<real_t>> problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+  problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
   
   //ROL::Ptr<ROL::Constraint<double>>     lin_icon = ROL::makePtr<MyLinearInequalityConstraint<double>>();
   //ROL::Ptr<ROL::Vector<double>>         lin_imul = ROL::makePtr<MyLinearInequalityConstraintMultiplier<double>>();
@@ -1365,7 +1373,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     constraint_name = number_union.str();
     ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
     ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
-    if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::EQUALITY_CONSTRAINT){
+    if(TO_Function_Type[imodule] == Simulation_Parameters_Dynamic_Optimization::EQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
       if(TO_Module_List[imodule]=="Mass_Constraint"){
@@ -1377,14 +1385,6 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false);
       }
-      else if(TO_Module_List[imodule]=="Strain_Energy_Constraint"){    
-        *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<StrainEnergyConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false);
-      }
-      else if(TO_Module_List[imodule]=="Heat_Capacity_Potential_Constraint"){
-        *fos << " HEAT CAPACITY POTENTIAL CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<HeatCapacityPotentialConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false);
-      }
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
@@ -1393,7 +1393,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       problem->addConstraint(constraint_name, eq_constraint, constraint_mul);
     }
 
-    if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::INEQUALITY_CONSTRAINT){
+    if(TO_Function_Type[imodule] == Simulation_Parameters_Dynamic_Optimization::INEQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
       ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][0]);
@@ -1408,14 +1408,6 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       else if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
-      }
-      else if(TO_Module_List[imodule]=="Strain_Energy_Constraint"){
-        *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<StrainEnergyConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
-      }
-      else if(TO_Module_List[imodule]=="Heat_Capacity_Potential_Constraint"){
-        *fos << " HEAT CAPACITY POTENTIAL CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<HeatCapacityPotentialConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
       }
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED INEQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
@@ -1455,19 +1447,36 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          Surface_Nodes = Boundary_Patches(patch_id).node_set;
-          local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-          //debug print of local surface ids
-          //std::cout << " LOCAL SURFACE IDS " << std::endl;
-          //std::cout << local_surface_id << std::endl;
-          //acquire set of nodes for this face
-          for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
-            current_node_index = Surface_Nodes(node_loop);
-            if(map->isNodeGlobalElement(current_node_index)){
-              local_node_index = map->getLocalElement(current_node_index);
-              node_densities_lower_bound(local_node_index,0) = 1;
-            }
-          }// node loop for
+          if(simparam_TO->thick_condition_boundary){
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            current_element_index = Boundary_Patches(patch_id).element_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+              current_node_index = nodes_in_elem(current_element_index,node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
+          else{
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+              current_node_index = Surface_Nodes(node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
         }//boundary patch for
       }//boundary set for
 
@@ -1565,7 +1574,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   //if(myrank==0)
     //std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
 }
-*/
+
 
 /* ----------------------------------------------------------------------------
    Initialize sets of element boundary surfaces and arrays for input conditions
