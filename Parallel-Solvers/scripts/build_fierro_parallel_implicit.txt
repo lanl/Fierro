@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+#command line default
+NUM_TASKS=${1:-'-j1'}
+
+cd ../..
+
+#inititialize submodules if they aren't downloaded
+[ -d "Elements/elements" ] && echo "Elements submodule exists"
+[ -d "Elements/matar/src" ] && echo "matar submodule exists"
+
+
+if { [ ! -d "Elements/elements" ] || [ ! -d "Elements/matar/src" ] ;}
+then
+  echo "Missing submodules, downloading them...."
+  git submodule update --init --recursive
+fi
+
+#check if Trilinos directory exists, git clone Trilinos if it doesn't
+[ -d "Trilinos" ] && echo "Directory Trilinos exists, skipping Trilinos download"
+
+if [ ! -d "Trilinos" ]
+then
+  echo "Directory Trilinos does not exist, downloading Trilinos...."
+  git clone https://github.com/trilinos/Trilinos.git
+fi
+
+#check if Trilinos build directory exists, create Trilinos/build if it doesn't
+[ -d "Trilinos/build" ] && echo "Directory Trilinos/build exists, moving on"
+
+if [ ! -d "Trilinos/build" ]
+then
+  echo "Directory Trilinos/build does not exist, creating it...."
+  mkdir Trilinos/build
+fi
+
+#check if Trilinos library files were installed, install them otherwise.
+[ -d "Trilinos/build/lib" ] && echo "Directory Trilinos/build/lib exists, assuming successful installation; delete build folder and run build script again if there was an environment error that has been corrected."
+
+if [ ! -d "Trilinos/build/lib" ]
+then
+  echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
+  #make text files for scripts executable
+  chmod +x Trilinos-Build-Scripts/cmake_configure_muelu.txt
+  cd Trilinos/build
+  ./../../Trilinos-Build-Scripts/cmake_configure_muelu.txt
+  make $NUM_TASKS install all
+  cd ../..
+fi
+
+#build Fierro
+echo "Building Fierro"
+cd Parallel-Solvers
+cmake -DBUILD_IMPLICIT_SOLVER=ON .
+make $NUM_TASKS

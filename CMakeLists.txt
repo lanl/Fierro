@@ -164,14 +164,11 @@ add_subdirectory(Explicit-Lagrange-Kokkos/SGH_solver)
 endif()
 
 
-if(BUILD_IMPLICIT_SOLVER)
-add_subdirectory(Implicit-Lagrange)
+if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
+add_subdirectory(Parallel-Solvers)
 endif()
 
 if(BUILD_EXPLICIT_SOLVER)
 add_subdirectory(Explicit-Lagrange)
 endif()
 
-if(BUILD_PARALLEL_EXPLICIT_SOLVER)
-add_subdirectory(Parallel-Explicit)
-endif()

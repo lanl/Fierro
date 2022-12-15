@@ -1,0 +1,5 @@
+#!/bin/bash
+export scriptdir=`pwd`
+export trilinosdir=${scriptdir}/Trilinos
+export OMPI_CXX=${trilinosdir}/packages/kokkos/bin/nvcc_wrapper
+cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON .

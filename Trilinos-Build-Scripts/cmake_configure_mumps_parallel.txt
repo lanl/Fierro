@@ -1,0 +1,21 @@
+#!/bin/bash
+cmake -DCMAKE_BUILD_TYPE=RELEASE \
+-DTrilinos_ENABLE_Fortran=ON \
+-DCMAKE_Fortran_COMPILER=/usr/bin/mpif90 \
+-DTrilinos_MUST_FIND_ALL_TPL_LIBS=TRUE \
+-DTPL_ENABLE_MPI=ON \
+-DTrilinos_ENABLE_Kokkos=ON \
+-DTrilinos_ENABLE_OpenMP=ON \
+-DTPL_ENABLE_ParMETIS=ON \
+-DTPL_ParMETIS_INCLUDE_DIRS="/mnt/c/ParMETIS/include;/mnt/c/ParMETIS/metis/include" \
+-DTPL_ParMETIS_LIBRARIES="/mnt/c/ParMETIS/build/Linux-x86_64/libparmetis/libparmetis.a;/mnt/c/ParMETIS/build/Linux-x86_64/libmetis/libmetis.a" \
+-DTpetra_INST_INT_INT=ON \
+-DTPL_ENABLE_SCALAPACK=ON \
+-DTPL_SCALAPACK_LIBRARIES="/mnt/c/Scalapack/scalapack/build/libscalapack.a;/mnt/c/Scalapack/scalapack/build/libblacs.a" \
+-DTPL_ENABLE_MUMPS=ON -DTPL_MUMPS_INCLUDE_DIRS="/mnt/c/MUMPS/mumps/include/;/mnt/c/MUMPS/mumps/build/_deps/mumps-build/src/include/;/mnt/c/MUMPS/mumps/build/_deps/mumps-src/include/" \
+-DTPL_MUMPS_LIBRARIES="/mnt/c/MUMPS/mumps/build/libsmumps.a;/mnt/c/MUMPS/mumps/build/libdmumps.a;/mnt/c/MUMPS/mumps/build/libmumps_common.a;/mnt/c/MUMPS/mumps/build/libpord.a" \
+-DTrilinos_ENABLE_Amesos2=ON \
+-DTrilinos_ENABLE_ROL=ON \
+-DTrilinos_ENABLE_ALL_PACKAGES=OFF -DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF -DTrilinos_ENABLE_TESTS=OFF \
+-DCMAKE_INSTALL_PREFIX=. \
+..
