@@ -438,7 +438,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
   Simulation_Parameters_SGH *simparam;
-  Simulation_Parameters_Dynamic_Optimization *simparam_TO;
+  Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
   Explicit_Solver_SGH *Explicit_Solver_Pointer_;
   
   //output stream
