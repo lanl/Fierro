@@ -57,6 +57,8 @@
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include <map>
 
+using namespace mtr;
+
 //forward declarations
 namespace swage{
   class mesh_t;

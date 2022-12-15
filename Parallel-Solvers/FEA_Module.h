@@ -56,6 +56,8 @@
 #include "elements.h"
 #include "node_combination.h"
 
+using namespace mtr;
+
 //forward declare
 class Solver;
 

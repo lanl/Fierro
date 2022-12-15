@@ -4,7 +4,7 @@
 
 #include "matar.h"
 
-
+using namespace mtr;
 
 // node_state
 struct node_t {
