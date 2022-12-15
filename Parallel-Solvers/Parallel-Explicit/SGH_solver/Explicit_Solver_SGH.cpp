@@ -308,7 +308,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    setup_optimization_problem();
+    //setup_optimization_problem();
     //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
     
     //solver_exit = solve();
@@ -506,7 +506,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         
 
         //test forward solve call
-        sgh_module->update_forward_solve(test_node_densities_distributed);
+        //sgh_module->update_forward_solve(test_node_densities_distributed);
         
         
     } // end of kokkos scope
