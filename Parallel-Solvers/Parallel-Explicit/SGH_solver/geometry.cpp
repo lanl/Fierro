@@ -238,10 +238,8 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
    Compute Volume of each finite element
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::get_vol(const DViewCArrayKokkos <double> &elem_vol,
-             const DViewCArrayKokkos <double> &node_coords,
-             const mesh_t &mesh){
-    
+void FEA_Module_SGH::get_vol(){
+    const mesh_t& mesh = FEA_Module_SGH::mesh;
     const size_t num_dims = mesh.num_dims;
     
     if (num_dims == 2){

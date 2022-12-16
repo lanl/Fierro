@@ -84,16 +84,13 @@ public:
 
   void run(int argc, char *argv[]);
 
-  void read_mesh_ensight(char *MESH);
-
-  void read_mesh_tecplot(char *MESH);
+  //void read_mesh_ensight(char *MESH);
 
   void read_mesh_ansys_dat(char *MESH);
-  
-  //setup ghosts and element maps
-  void init_maps();
 
-  void repartition_nodes();
+  void init_state_vectors();
+
+  //void repartition_nodes();
 
   void comm_velocities();
 
@@ -108,16 +105,13 @@ public:
   //process input to decide TO problem and FEA modules
   void FEA_module_setup();
 
-  //void setup_optimization_problem();
+  void setup_optimization_problem();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
   void init_boundaries();
   
   //interfaces between user input and creating data structures for bcs
   void topology_conditions();
-  
-  //finds the boundary element surfaces in this model
-  void Get_Boundary_Patches();
 
   //void vtk_writer();
 
@@ -137,21 +131,13 @@ public:
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
 
   int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
-
-  //debug and system functions/variables
-  double CPU_Time();
-  void init_clock();
-  double initial_CPU_time;
-
-  //output stream
-  Teuchos::RCP<Teuchos::FancyOStream> fos;
   
   mesh_t *init_mesh;
   mesh_t *mesh;
   
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters_SGH *simparam;
-  class Simulation_Parameters_Topology_Optimization *simparam_TO;
+  class Simulation_Parameters_Dynamic_Optimization *simparam_TO;
 
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;
@@ -160,13 +146,12 @@ public:
   int nfea_modules;
   int displacement_module;
 
-  //Local FEA data including ghosts
-  size_t nall_nodes;
-  size_t rnum_elem;
-
   //Global FEA data
   Teuchos::RCP<MV> node_velocities_distributed;
+  Teuchos::RCP<MV> initial_node_velocities_distributed;
   Teuchos::RCP<MV> all_node_velocities_distributed;
+  Teuchos::RCP<MV> ghost_node_velocities_distributed;
+  Teuchos::RCP<MV> all_cached_node_velocities_distributed;
 
   //Distributions of data used to print
   Teuchos::RCP<MV> collected_node_velocities_distributed;
@@ -176,9 +161,6 @@ public:
   DCArrayKokkos<size_t> Local_Index_Boundary_Patches;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> NTopology_Condition_Patches;
-
-  //element selection parameters and data
-  size_t max_nodes_per_element;
 
   //types of boundary conditions
   enum tc_type {NONE, TO_SURFACE_CONSTRAINT, TO_BODY_CONSTRAINT};
@@ -196,24 +178,8 @@ public:
   //global_to_local_table_host_type global2local_map;
   //CArrayKokkos<int, Kokkos::LayoutLeft, Kokkos::HostSpace::device_type> active_ranks;
 
-  //Pertains to local mesh information being stored as prescribed by the row map
-  global_size_t local_nrows;
-  global_size_t min_gid;
-  global_size_t max_gid;
-  global_size_t index_base;
-
   //allocation flags to avoid repeat MV and global matrix construction
   int Matrix_alloc;
-
-  //file readin variables
-  std::ifstream *in;
-  std::streampos before_condition_header;
-  int words_per_line, elem_words_per_line;
-  enum node_ordering_convention {IJK, ENSIGHT};
-  node_ordering_convention active_node_ordering_convention;
-
-  //file output variables
-  int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
 
   //debug flags
   int gradient_print_sync;

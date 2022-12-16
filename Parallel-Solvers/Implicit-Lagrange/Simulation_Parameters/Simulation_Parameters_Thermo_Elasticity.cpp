@@ -36,36 +36,49 @@
  **********************************************************************************************/
 
 #include "utilities.h"
-#include "Simulation_Parameters_Thermal.h"
+#include "Simulation_Parameters_Thermo_Elasticity.h"
 
 using namespace utils;
 
-Simulation_Parameters_Thermal::Simulation_Parameters_Thermal() : Simulation_Parameters(){
+Simulation_Parameters_Thermo_Elasticity::Simulation_Parameters_Thermo_Elasticity() : Simulation_Parameters(){
 
   //initialize data and flags to defaults
-  output_temperature_flag = false;
-  output_temperature_gradient_flag = false;
-  output_heat_flux_flag = false;
+  output_displacement_flag = false;
+  output_strain_flag = false;
+  output_stress_flag = false;
+  displaced_mesh_flag = false;
   report_runtime_flag = false;
   unit_scaling = 1;
-  flux_max_flag = false;
+  strain_max_flag = false;
   direct_solver_flag = false;
-  thermal_flag = false;
+  gravity_flag = false;
   multigrid_timers = false;
   equilibrate_matrix_flag = false;
-  num_gauss_points = 2;
   // ---- boundary conditions ---- //
-  NB = 0;
+  NB = 0; 
   NBSF = 0;
+  NBSH = 0;
+  NBD = 0;
   NBT = 0;
 }
 
-Simulation_Parameters_Thermal::~Simulation_Parameters_Thermal(){
+Simulation_Parameters_Thermo_Elasticity::~Simulation_Parameters_Thermo_Elasticity(){
 }
 
-void Simulation_Parameters_Thermal::input(){
+void Simulation_Parameters_Thermo_Elasticity::input(){
   
   Simulation_Parameters::input();
+
+  //output settings
+  output_displacement_flag = true;
+  //requires displacement flag to be true
+  displaced_mesh_flag = true;
+
+  output_strain_flag = true;
+  output_stress_flag = false;
+  output_temperature_flag = true;
+  output_heat_flux_flag = true;
+
   //multigrid_timers = true;
   equilibrate_matrix_flag = false;
 
@@ -75,27 +88,37 @@ void Simulation_Parameters_Thermal::input(){
 
   //polynomial interpolation order
   p_order = 0;
-
-  // ---- graphics information ---- //
-  output_temperature_flag = true;
-  output_heat_flux_flag = true;
+  
+  //Static isotropic parameters to move into a child class later
+  Elastic_Modulus = 200000000000;
+  Poisson_Ratio = 0.3;
   
   //Isotropic Conductivity parameters to move into a child class later
   Thermal_Conductivity = 10;
+  Initial_Temperature = 293;
+  Expansion_Coefficients[0] = Expansion_Coefficients[1] = Expansion_Coefficients[2] = 12e-06;
 
   //Gauss-Legendre parameters
   num_gauss_points = 2;
-
-  //debug and performance report flags
-  report_runtime_flag = true;
 
   // ---- boundary conditions ---- //
   NB = 6; // number of boundary conditions for this module
   NBSF = 4; //number of surface heat flux conditions
   NBT = 2; //number of surface sets used to specify a fixed temperature on nodes belonging to respective surfaces
+  NBSF = 4; //number of surface density force conditions
+  NBD = 2; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
 
   //apply body forces
   thermal_flag = false;
   specific_internal_energy_rate = 1;
+
+  //debug and performance report flags
+  report_runtime_flag = true;
+
+  //apply body forces
+  gravity_flag = false;
+  gravity_vector[0] = 9.81;
+  gravity_vector[1] = 0;
+  gravity_vector[2] = 0;
 
 }

@@ -72,16 +72,13 @@ public:
 
   void run(int argc, char *argv[]);
 
-  void read_mesh_ensight(char *MESH, bool convert_node_order);
+  //void read_mesh_ensight(char *MESH, bool convert_node_order);
 
-  void read_mesh_tecplot(char *MESH);
+  //void read_mesh_tecplot(char *MESH);
 
   void read_mesh_ansys_dat(char *MESH);
-  
-  //setup ghosts and element maps
-  void init_maps();
 
-  void repartition_nodes();
+  //void repartition_nodes();
 
   void init_design();
 
@@ -99,9 +96,6 @@ public:
   
   //interfaces between user input and creating data structures for bcs
   void topology_conditions();
-  
-  //finds the boundary element surfaces in this model
-  void Get_Boundary_Patches();
 
   //void vtk_writer();
 
@@ -121,21 +115,13 @@ public:
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
 
   int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
-
-  //debug and system functions/variables
-  double CPU_Time();
-  void init_clock();
-  double initial_CPU_time;
-
-  //output stream
-  Teuchos::RCP<Teuchos::FancyOStream> fos;
   
   swage::mesh_t *init_mesh;
   swage::mesh_t *mesh;
   
 
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters_Topology_Optimization *simparam;
+  class Simulation_Parameters_Topology_Optimization *simparam_TO;
 
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;
@@ -171,16 +157,6 @@ public:
 
   //allocation flags to avoid repeat MV and global matrix construction
   int Matrix_alloc;
-
-  //file readin variables
-  std::ifstream *in;
-  std::streampos before_condition_header;
-  int words_per_line, elem_words_per_line;
-  enum node_ordering_convention {IJK, ENSIGHT};
-  node_ordering_convention active_node_ordering_convention;
-
-  //file output variables
-  int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
 
   //debug flags
   int gradient_print_sync;

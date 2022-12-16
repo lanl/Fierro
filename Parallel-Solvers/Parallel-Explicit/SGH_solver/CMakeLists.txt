@@ -11,6 +11,7 @@ set(FEA_Module_SRC FEA_Module_SGH.cpp )
 INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
+include_directories(..)
 include_directories(../..)
 include_directories(${CMAKE_SOURCE_DIR}/Parallel-Explicit)
 add_library(parallel_sgh_solver OBJECT ${SRC_Files} ${Simulation_Param_SRC} ${FEA_Module_SRC})
@@ -37,4 +38,4 @@ target_link_libraries (parallel_sgh_solver ${CMAKE_SOURCE_DIR}/Elements/build/ma
 endif()
 target_include_directories(parallel_sgh_solver PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options (parallel_sgh_solver PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
-target_link_libraries (parallel_sgh_solver parallel_base_src ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
+target_link_libraries (parallel_sgh_solver parallel_base_src)

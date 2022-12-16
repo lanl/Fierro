@@ -41,9 +41,7 @@
 #include "FEA_Module.h"
 
 //forward declare
-class Implicit_Solver;
 class Simulation_Parameters_Inertial;
-class Simulation_Parameters_Topology_Optimization;
 
 class FEA_Module_Inertial: public FEA_Module{
 
@@ -69,8 +67,7 @@ public:
   
   //forward declare
   Simulation_Parameters_Inertial *simparam;
-  Simulation_Parameters_Topology_Optimization *simparam_TO;
-  Implicit_Solver *Implicit_Solver_Pointer_;
+  Solver *Solver_Pointer_;
 
   //Global FEA data
   Teuchos::RCP<MV> mass_gradients_distributed;

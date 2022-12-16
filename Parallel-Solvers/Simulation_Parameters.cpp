@@ -49,6 +49,7 @@ Simulation_Parameters::Simulation_Parameters(){
   unit_scaling = 1;
   restart_file = false;
   tecplot_input = ansys_dat_input = false;
+  zero_index_base = false;
   nfea_modules = 0;
   element_type = "Hex8";
 }
@@ -60,19 +61,31 @@ void Simulation_Parameters::input(){
   //file input flags
   tecplot_input = false;
   restart_file = false;
-  ansys_dat_input = true;
+  ansys_dat_input = false;
+  vtk_input = false;
+  zero_index_base = false;
 
   //simulation spatial dimension
-  num_dim = 3;
+  num_dim = 3; //simulation spatial dimension
+  p_order = 0; //polynomial interpolation order
   unit_scaling = 1;
   
   //file readin parameters
   words_per_line = 1;
-  tecplot_words_per_line = 3;
+  vtk_words_per_line = tecplot_words_per_line = 3;
   ansys_dat_node_words_per_line = 4;
-  elem_words_per_line = 8;
   ansys_dat_elem_words_per_line = 11;
-  element_type = "Hex8";
+
+  //default element types
+  if(num_dim==3)
+    element_type = "Hex8";
+  else if(num_dim==2)
+    element_type = "Quad4";
+
+  if(element_type == "Hex8") 
+    elem_words_per_line = 8;
+  else if(element_type == "Quad4") 
+    elem_words_per_line = 4;
 
   //debug and performance report flags
   report_runtime_flag = 1;

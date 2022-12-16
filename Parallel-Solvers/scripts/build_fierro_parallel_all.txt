@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+echo "Script executed from: ${PWD}"
+
+BASEDIR=$(dirname $0)
+echo "Script location: ${BASEDIR}"
+cd ${BASEDIR}
+
 #command line default
 NUM_TASKS=${1:-'-j1'}
 
@@ -50,6 +56,5 @@ fi
 
 #build Fierro
 echo "Building Fierro"
-cd Parallel-Solvers
 cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON .
 make $NUM_TASKS

@@ -124,16 +124,13 @@ void Simulation_Parameters_SGH::input(){
   gravity_vector[0] = 9.81;
   gravity_vector[1] = 0;
   gravity_vector[2] = 0;
-
-  // Dimensions
-  num_dims = 3;
     
   // ---- time varaibles and cycle info ----
   time_final = 1.0;  // 1.0 for Sedov
   dt_min = 1.e-8;
   dt_max = 1.e-2;
   dt_start = 1.e-5;
-  cycle_stop = 100000;
+  cycle_stop = 2000000;
 
   // ---- graphics information ----
   graphics_cyc_ival = 1000000;

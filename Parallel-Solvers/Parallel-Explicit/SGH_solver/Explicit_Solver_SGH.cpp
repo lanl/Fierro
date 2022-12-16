@@ -70,11 +70,13 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 #include "mesh.h"
 #include "state.h"
+#include "Kinetic_Energy_Minimize.h"
 
 //Repartition Package
 #include <Zoltan2_XpetraMultiVectorAdapter.hpp>
@@ -99,11 +101,8 @@
 
 //Objective Functions and Constraint Functions
 //#include "Topology_Optimization_Function_Headers.h"
-
-//debug and performance includes
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <ctime>
+#include "Mass_Constraint.h"
+#include "Moment_of_Inertia_Constraint.h"
 
 #define BUFFER_LINES 20000
 #define MAX_WORD 30
@@ -125,10 +124,13 @@ each surface to use for hammering metal into to form it.
 Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //create parameter objects
   simparam = new Simulation_Parameters_SGH();
-  //simparam_TO = new Simulation_Parameters_Topology_Optimization();
+  simparam_dynamic_opt = new Simulation_Parameters_Dynamic_Optimization(this);
+  Solver::simparam = simparam;
+  //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
-  simparam->Simulation_Parameters::input();
+  //simparam->Simulation_Parameters::input();
   simparam->input();
+  simparam_dynamic_opt->input();
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
@@ -198,6 +200,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     // ---- Read intial mesh, refine, and build connectivity ---- //
     if(simparam->tecplot_input)
       read_mesh_tecplot(argv[1]);
+    else if(simparam->vtk_input)
+      read_mesh_vtk(argv[1]);
     else if(simparam->ansys_dat_input)
       read_mesh_ansys_dat(argv[1]);
     else
@@ -206,6 +210,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //debug
     //return;
     init_maps();
+
+    init_state_vectors();
     
     std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
     
@@ -303,6 +309,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     */
     //return;
     //setup_optimization_problem();
+    //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -311,7 +318,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //}
     
     //hack allocation of module
-    FEA_Module_SGH* sgh_module = new FEA_Module_SGH(this);
+    FEA_Module_SGH* sgh_module = new FEA_Module_SGH(this, *mesh);
     // The kokkos scope
     {
      
@@ -410,86 +417,75 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
         
         // create Dual Views of the individual node struct variables
-        DViewCArrayKokkos <double> node_coords(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+        sgh_module->node_coords = DViewCArrayKokkos<double>(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        DViewCArrayKokkos <double> node_vel(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+        sgh_module->node_vel = DViewCArrayKokkos<double>(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        DViewCArrayKokkos <double> node_mass(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
+        sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
         
         
         // create Dual Views of the individual elem struct variables
-        DViewCArrayKokkos <double> elem_den(&elem.den(0),
+        sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
                                             num_elems);
 
-        DViewCArrayKokkos <double> elem_pres(&elem.pres(0),
+        sgh_module->elem_pres = DViewCArrayKokkos<double>(&elem.pres(0),
                                              num_elems);
 
-        DViewCArrayKokkos <double> elem_stress(&elem.stress(0,0,0,0),
+        sgh_module->elem_stress = DViewCArrayKokkos<double>(&elem.stress(0,0,0,0),
                                                rk_num_bins,
                                                num_elems,
                                                3,
                                                3); // always 3D even in 2D-RZ
 
-        DViewCArrayKokkos <double> elem_sspd(&elem.sspd(0),
+        sgh_module->elem_sspd = DViewCArrayKokkos<double>(&elem.sspd(0),
                                              num_elems);
 
-        DViewCArrayKokkos <double> elem_sie(&elem.sie(0,0),
+        sgh_module->elem_sie = DViewCArrayKokkos<double>(&elem.sie(0,0),
                                             rk_num_bins,
                                             num_elems);
 
-        DViewCArrayKokkos <double> elem_vol(&elem.vol(0),
+        sgh_module->elem_vol = DViewCArrayKokkos<double>(&elem.vol(0),
                                             num_elems);
         
-        DViewCArrayKokkos <double> elem_div(&elem.div(0),
+        sgh_module->elem_div = DViewCArrayKokkos<double>(&elem.div(0),
                                             num_elems);
         
 
-        DViewCArrayKokkos <double> elem_mass(&elem.mass(0),
+        sgh_module->elem_mass = DViewCArrayKokkos<double>(&elem.mass(0),
                                              num_elems);
 
-        DViewCArrayKokkos <size_t> elem_mat_id(&elem.mat_id(0),
+        sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
                                                num_elems);
 
-        DViewCArrayKokkos <double> elem_statev(&elem.statev(0,0),
+        sgh_module->elem_statev = DViewCArrayKokkos<double>(&elem.statev(0,0),
                                                num_elems,
                                                max_num_state_vars );
         
         // create Dual Views of the corner struct variables
-        DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
+        sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
                                                 num_corners, 
                                                 num_dim);
 
-        DViewCArrayKokkos <double> corner_mass(&corner.mass(0),
+        sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
                                                num_corners);
         
         
         // ---------------------------------------------------------------------
         //   calculate geometry
         // ---------------------------------------------------------------------
-        node_coords.update_device();
+        sgh_module->node_coords.update_device();
         Kokkos::fence();
         
-        
-        sgh_module->get_vol(elem_vol, node_coords, *mesh);
+        //set initial saved coordinates
+        initial_node_coords_distributed->assign(*node_coords_distributed);
+
+        sgh_module->get_vol();
 
 
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
         // ---------------------------------------------------------------------
-        sgh_module->setup(*mesh,
-              node_coords,
-              node_vel,
-              node_mass,
-              elem_den,
-              elem_pres,
-              elem_stress,
-              elem_sspd,
-              elem_sie,
-              elem_vol,
-              elem_mass,
-              elem_mat_id,
-              elem_statev,
-              corner_mass);
+        sgh_module->setup();
         
         // intialize time, time_step, and cycles
         //time_value = 0.0;
@@ -498,30 +494,19 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         //graphics_times(0) = 0.0;
         //graphics_time = graphics_dt_ival;  // the times for writing graphics dump
         
+        //set initial saved velocities
+        initial_node_velocities_distributed->assign(*node_velocities_distributed);
+        
 
         // ---------------------------------------------------------------------
         //   Calculate the SGH solution
         // ---------------------------------------------------------------------
         
-        sgh_module->sgh_solve(*mesh,
-                  node_coords,
-                  node_vel,
-                  node_mass,
-                  elem_den,
-                  elem_pres,
-                  elem_stress,
-                  elem_sspd,
-                  elem_sie,
-                  elem_vol,
-                  elem_div,
-                  elem_mass,
-                  elem_mat_id,
-                  elem_statev,
-                  corner_force,
-                  corner_mass);
+        sgh_module->sgh_solve();
         
 
-        // calculate total energy at time=t_end
+        //test forward solve call
+        //sgh_module->update_forward_solve(test_node_densities_distributed);
         
         
     } // end of kokkos scope
@@ -538,8 +523,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     }
     */
 
-    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " update solve time "
-              << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
+    std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
+              << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
 
     // Data writers
     parallel_tecplot_writer();
@@ -552,1039 +537,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     }
     */
 }
-
-/* ----------------------------------------------------------------------
-   Read Ensight format mesh file
-------------------------------------------------------------------------- */
-void Explicit_Solver_SGH::read_mesh_ensight(char *MESH){
-
-  char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
-  int local_node_index, current_column_index;
-  size_t strain_count;
-  std::string skip_line, read_line, substring;
-  std::stringstream line_parse;
-  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
-  size_t read_index_start, node_rid, elem_gid;
-  GO node_gid;
-  real_t dof_value;
-  //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
-
-  //read the mesh
-  //PLACEHOLDER: ensight_format(MESH);
-  // abaqus_format(MESH);
-  // vtk_format(MESH)
-
-  //task 0 reads file
-  if(myrank==0){
-    in = new std::ifstream();
-    in->open(MESH);  
-    //skip 8 lines
-    for (int j = 1; j <= 8; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    } //for
-  }
-
-  // --- Read the number of nodes in the mesh --- //
-  if(myrank==0){
-    getline(*in, read_line);
-    line_parse.str(read_line);
-    line_parse >> num_nodes;
-    std::cout << "declared node count: " << num_nodes << std::endl;
-  }
-  
-  //broadcast number of nodes
-  MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
-  
-  //construct contiguous parallel row map now that we know the number of nodes
-  map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
-
-  // set the vertices in the mesh read in
-  nlocal_nodes = map->getLocalNumElements();
-  //populate local row offset data from global data
-  global_size_t min_gid = map->getMinGlobalIndex();
-  global_size_t max_gid = map->getMaxGlobalIndex();
-  global_size_t index_base = map->getIndexBase();
-  //debug print
-  //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
-
-  //allocate node storage with dual view
-  //dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
-
-  //local variable for host view in the dual view
-  
-  node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
-
-  //scope ensures view is destroyed for now to avoid calling a device view with an active host view later
-  {
-  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  //host_vec_array node_coords = dual_node_coords.view_host();
-  //notify that the host view is going to be modified in the file readin
-  //dual_node_coords.modify_host();
-
-  //old swage method
-  //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
-    
-  std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
-
-  // read the initial mesh coordinates
-  // x-coords
-  /*only task 0 reads in nodes and elements from the input file
-  stores node data in a buffer and communicates once the buffer cap is reached
-  or the data ends*/
-
-  words_per_line = simparam->words_per_line;
-  elem_words_per_line = simparam->elem_words_per_line;
-
-  //allocate read buffer
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
-
-  dof_limit = num_nodes;
-  buffer_iterations = dof_limit/BUFFER_LINES;
-  if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
-  
-  //x-coords
-  read_index_start = 0;
-  for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
-    //pack buffer on rank 0
-    if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        
-        for(int iword = 0; iword < words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //debug print
-        //std::cout<<" "<< substring <<std::endl;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-      }
-    }
-    else if(myrank==0){
-      buffer_loop=0;
-      while(buffer_iteration*BUFFER_LINES+buffer_loop < num_nodes) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-        buffer_loop++;
-      }
-      
-    }
-
-    //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*words_per_line*MAX_WORD,MPI_CHAR,0,world);
-    //broadcast how many nodes were read into this buffer iteration
-    MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
-
-    //debug_print
-    //std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
-    //for(int iprint=0; iprint < buffer_loop; iprint++)
-      //std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
-    //return;
-
-    //determine which data to store in the swage mesh members (the local node data)
-    //loop through read buffer
-    for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-      //set global node id (ensight specific order)
-      node_gid = read_index_start + scan_loop;
-      //let map decide if this node id belongs locally; if yes store data
-      if(map->isNodeGlobalElement(node_gid)){
-        //set local node index in this mpi rank
-        node_rid = map->getLocalElement(node_gid);
-        //extract nodal position from the read buffer
-        //for ensight format this is just one coordinate per line
-        dof_value = atof(&read_buffer(scan_loop,0,0));
-        node_coords(node_rid, 0) = dof_value * unit_scaling;
-      }
-    }
-    read_index_start+=BUFFER_LINES;
-  }
-
-  
-  // y-coords
-  read_index_start = 0;
-  for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
-    
-    //pack buffer on rank 0
-    if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-      }
-    }
-    else if(myrank==0){
-      buffer_loop=0;
-      while(buffer_iteration*BUFFER_LINES+buffer_loop < num_nodes) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-        buffer_loop++;
-        //std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
-      }
-    }
-
-    //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*words_per_line*MAX_WORD,MPI_CHAR,0,world);
-    //broadcast how many nodes were read into this buffer iteration
-    MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
-
-    //determine which data to store in the swage mesh members (the local node data)
-    //loop through read buffer
-    for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-      //set global node id (ensight specific order)
-      node_gid = read_index_start + scan_loop;
-      //let map decide if this node id belongs locally; if yes store data
-      if(map->isNodeGlobalElement(node_gid)){
-        //set local node index in this mpi rank
-        node_rid = map->getLocalElement(node_gid);
-        //extract nodal position from the read buffer
-        //for ensight format this is just one coordinate per line
-        dof_value = atof(&read_buffer(scan_loop,0,0));
-        node_coords(node_rid, 1) = dof_value * unit_scaling;
-      }
-    }
-    read_index_start+=BUFFER_LINES;
-  }
-
-  // z-coords
-  read_index_start = 0;
-  for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
-    
-    //pack buffer on rank 0
-    if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-      }
-    }
-    else if(myrank==0){
-      buffer_loop=0;
-      while(buffer_iteration*BUFFER_LINES+buffer_loop < num_nodes) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-        buffer_loop++;
-        //std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
-      }
-    }
-
-    //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*words_per_line*MAX_WORD,MPI_CHAR,0,world);
-    //broadcast how many nodes were read into this buffer iteration
-    MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
-
-    //loop through read buffer and store coords in node coords view
-    for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-      //set global node id (ensight specific order)
-      node_gid = read_index_start + scan_loop;
-      //let map decide if this node id belongs locally; if yes store data
-      if(map->isNodeGlobalElement(node_gid)){
-        //set local node index in this mpi rank
-        node_rid = map->getLocalElement(node_gid);
-        //extract nodal position from the read buffer
-        //for ensight format this is just one coordinate per line
-        dof_value = atof(&read_buffer(scan_loop,0,0));
-        if(num_dim==3)
-          node_coords(node_rid, 2) = dof_value * unit_scaling;
-      }
-    }
-    read_index_start+=BUFFER_LINES;
-  }
-  } //end active view scope
-  //repartition node distribution
-  repartition_nodes();
-
-  //synchronize device data
-  //dual_node_coords.sync_device();
-  //dual_node_coords.modify_device();
-
-  //debug print of nodal data
-  
-  //debug print nodal positions and indices
-  /*
-  std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
-  for (int inode = 0; inode < local_nrows; inode++){
-      std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
-    for (int istride = 0; istride < num_dim; istride++){
-        std::cout << node_coords(inode,istride) << " , ";
-    }
-    std::cout << " }"<< std::endl;
-  }
-  */
-
-  //check that local assignments match global total
-
-  
-  //read in element info (ensight file format is organized in element type sections)
-  //loop over this later for several element type sections
-
-  num_elem = 0;
-  rnum_elem = 0;
-  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(elem_words_per_line);
-
-  if(myrank==0){
-  //skip element type name line
-    getline(*in, skip_line);
-    std::cout << skip_line << std::endl;
-  }
-    
-  // --- read the number of cells in the mesh ---
-  // --- Read the number of vertices in the mesh --- //
-  if(myrank==0){
-    getline(*in, read_line);
-    line_parse.clear();
-    line_parse.str(read_line);
-    line_parse >> num_elem;
-    std::cout << "declared element count: " << num_elem << std::endl;
-    if(num_elem <= 0) std::cout << "ERROR, NO ELEMENTS IN MESH" << std::endl;
-  }
-  
-  //broadcast number of elements
-  MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
-  
-  if(myrank == 0)
-  std::cout<<"before mesh initialization"<<std::endl;
-  
-  //read in element connectivity
-  //we're gonna reallocate for the words per line expected for the element connectivity
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,elem_words_per_line,MAX_WORD);
-
-  //calculate buffer iterations to read number of lines
-  buffer_iterations = num_elem/BUFFER_LINES;
-  int assign_flag;
-
-  //dynamic buffer used to store elements before we know how many this rank needs
-  std::vector<size_t> element_temp(BUFFER_LINES*elem_words_per_line);
-  std::vector<size_t> global_indices_temp(BUFFER_LINES);
-  size_t buffer_max = BUFFER_LINES*elem_words_per_line;
-  size_t indices_buffer_max = BUFFER_LINES;
-
-  if(num_elem%BUFFER_LINES!=0) buffer_iterations++;
-  read_index_start = 0;
-  //std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
-  rnum_elem = 0;
-  for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
-    //pack buffer on rank 0
-    if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < elem_words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-      }
-    }
-    else if(myrank==0){
-      buffer_loop=0;
-      while(buffer_iteration*BUFFER_LINES+buffer_loop < num_elem) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < elem_words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-        buffer_loop++;
-        //std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
-      }
-    }
-
-    //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*elem_words_per_line*MAX_WORD,MPI_CHAR,0,world);
-    //broadcast how many nodes were read into this buffer iteration
-    MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
-    
-    //store element connectivity that belongs to this rank
-    //loop through read buffer
-    for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-      //set global node id (ensight specific order)
-      elem_gid = read_index_start + scan_loop;
-      //add this element to the local list if any of its nodes belong to this rank according to the map
-      //get list of nodes for each element line and check if they belong to the map
-      assign_flag = 0;
-      for(int inode = 0; inode < elem_words_per_line; inode++){
-        //as we loop through the nodes belonging to this element we store them
-        //if any of these nodes belongs to this rank this list is used to store the element locally
-        node_gid = atoi(&read_buffer(scan_loop,inode,0));
-        node_store(inode) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
-        //first we add the elements to a dynamically allocated list
-        if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
-          assign_flag = 1;
-          rnum_elem++;
-        }
-      }
-
-      if(assign_flag){
-        for(int inode = 0; inode < elem_words_per_line; inode++){
-          if((rnum_elem-1)*elem_words_per_line + inode>=buffer_max){ 
-            element_temp.resize((rnum_elem-1)*elem_words_per_line + inode + BUFFER_LINES*elem_words_per_line);
-            buffer_max = (rnum_elem-1)*elem_words_per_line + inode + BUFFER_LINES*elem_words_per_line;
-          }
-          element_temp[(rnum_elem-1)*elem_words_per_line + inode] = node_store(inode); 
-          //std::cout << "VECTOR STORAGE FOR ELEM " << rnum_elem << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
-        }
-        //assign global element id to temporary list
-        if(rnum_elem-1>=indices_buffer_max){ 
-          global_indices_temp.resize(rnum_elem-1 + BUFFER_LINES);
-          indices_buffer_max = rnum_elem-1 + BUFFER_LINES;
-        }
-        global_indices_temp[rnum_elem-1] = elem_gid;
-      }
-    }
-    read_index_start+=BUFFER_LINES;
-  }
-
-  // Close mesh input file
-  if(myrank==0)
-  in->close();
-  
-  //std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
-  
-  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
-  
-  elements::elem_types::elem_type mesh_element_type;
-
-  if(simparam->num_dim==2){
-    if(simparam->element_type == "Quad4"){
-      mesh_element_type = elements::elem_types::Quad4;
-    }
-    else if(simparam->element_type == "Quad8"){
-      mesh_element_type = elements::elem_types::Quad8;
-    }
-    else if(simparam->element_type == "Quad12"){
-      mesh_element_type = elements::elem_types::Quad12;
-    }
-    element_select->choose_2Delem_type(mesh_element_type, elem2D);
-    max_nodes_per_element = elem2D->num_nodes();
-  }
-
-  if(simparam->num_dim==3){
-    if(simparam->element_type == "Hex8"){
-      mesh_element_type = elements::elem_types::Hex8;
-    }
-    else if(simparam->element_type == "Hex20"){
-      mesh_element_type = elements::elem_types::Hex20;
-    }
-    else if(simparam->element_type == "Hex32"){
-      mesh_element_type = elements::elem_types::Hex32;
-    }
-    element_select->choose_3Delem_type(mesh_element_type, elem);
-    max_nodes_per_element = elem->num_nodes();
-  }
-
-  //1 type per mesh for now
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    Element_Types(ielem) = mesh_element_type;
-  
-  //copy temporary element storage to multivector storage
-  dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
-  dual_nodes_in_elem.modify_host();
-
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    for(int inode = 0; inode < elem_words_per_line; inode++)
-      nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
-
-  //view storage for all local elements connected to local nodes on this rank
-  //DCArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
-  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
-  //copy temporary global indices storage to view storage
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
-
-  //delete temporary element connectivity and index storage
-  std::vector<size_t>().swap(element_temp);
-  std::vector<size_t>().swap(global_indices_temp);
-  
-  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
-  All_Element_Global_Indices.modify_host();
-  All_Element_Global_Indices.sync_device();
-
-  //debug print
-  /*
-  Kokkos::View <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices_pass("All_Element_Global_Indices_pass",rnum_elem);
-  deep_copy(All_Element_Global_Indices_pass, All_Element_Global_Indices.h_view);
-  std::cout << " ------------ELEMENT GLOBAL INDICES ON TASK " << myrank << " --------------"<<std::endl;
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    std::cout << "elem: " << All_Element_Global_Indices_pass(ielem) + 1;
-    std::cout << std::endl;
-  }
-  */
-
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
-
-  //element type selection (subject to change)
-  // ---- Set Element Type ---- //
-  // allocate element type memory
-  //elements::elem_type_t* elem_choice;
-
-  int NE = 1; // number of element types in problem
-    
-
-  // Convert ensight index system to the ijk finite element numbering convention
-  // for vertices in cell
-  if(active_node_ordering_convention == IJK){
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
-  convert_ensight_to_ijk(0) = 0;
-  convert_ensight_to_ijk(1) = 1;
-  convert_ensight_to_ijk(2) = 3;
-  convert_ensight_to_ijk(3) = 2;
-  convert_ensight_to_ijk(4) = 4;
-  convert_ensight_to_ijk(5) = 5;
-  convert_ensight_to_ijk(6) = 7;
-  convert_ensight_to_ijk(7) = 6;
-    
-  int nodes_per_element;
-  
-  if(num_dim==2)
-  for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
-    //set nodes per element
-    element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
-    nodes_per_element = elem2D->num_nodes();
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-    }   
-        
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
-    }
-  }
-
-  if(num_dim==3)
-  for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
-    //set nodes per element
-    element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
-    nodes_per_element = elem->num_nodes();
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-    }   
-        
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
-    }
-  }
-  }
-  //debug print element edof
-  /*
-  std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
-
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    std::cout << "elem:  " << ielem+1 << std::endl;
-    for (int lnode = 0; lnode < 8; lnode++){
-        std::cout << "{ ";
-          std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
-        
-        std::cout << " }"<< std::endl;
-    }
-    std::cout << std::endl;
-  }
-  */
- 
-} // end read_mesh
-
-/* ----------------------------------------------------------------------
-   Read Tecplot format mesh file
-------------------------------------------------------------------------- */
-void Explicit_Solver_SGH::read_mesh_tecplot(char *MESH){
-
-  char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
-  bool restart_file = simparam->restart_file;
-  int local_node_index, current_column_index;
-  size_t strain_count;
-  std::string skip_line, read_line, substring;
-  std::stringstream line_parse;
-  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
-  size_t read_index_start, node_rid, elem_gid;
-  GO node_gid;
-  real_t dof_value;
-  host_vec_array node_densities;
-  //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
-
-  //read the mesh
-  //PLACEHOLDER: ensight_format(MESH);
-  // abaqus_format(MESH);
-  // vtk_format(MESH)
-
-  //task 0 reads file
-  if(myrank==0){
-  in = new std::ifstream();
-  in->open(MESH);  
-    //skip 2 lines
-    for (int j = 1; j <= 2; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    } //for
-  }
-  
-
-  // --- Read the number of nodes in the mesh --- //
-  if(myrank==0){
-    getline(*in, read_line);
-    line_parse.str(read_line);
-    //stop when the NODES= string is reached
-    while (!line_parse.eof()){
-      line_parse >> substring;
-      if(!substring.compare("NODES=")){
-        line_parse >> num_nodes;
-      }
-      if(!substring.compare("ELEMENTS=")){
-        line_parse >> num_elem;
-      }
-    } //while
-    std::cout << "declared node count: " << num_nodes << std::endl;
-    std::cout << "declared element count: " << num_elem << std::endl;
-    if(num_elem <= 0) std::cout << "ERROR, NO ELEMENTS IN MESH!!!!" << std::endl;
-  }
-  
-  //broadcast number of nodes
-  MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
-  
-  //construct contiguous parallel row map now that we know the number of nodes
-  map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
-
-  // set the vertices in the mesh read in
-  nlocal_nodes = map->getLocalNumElements();
-  //populate local row offset data from global data
-  global_size_t min_gid = map->getMinGlobalIndex();
-  global_size_t max_gid = map->getMaxGlobalIndex();
-  global_size_t index_base = map->getIndexBase();
-  //debug print
-  //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
-
-  //allocate node storage with dual view
-  //dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
-  //if(restart_file)
-    //dual_node_densities = dual_vec_array("dual_node_densities", nlocal_nodes,1);
-
-  //local variable for host view in the dual view
-  node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
-  //active view scrope
-  {
-  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  if(restart_file){
-    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-    node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  }
-  //host_vec_array node_coords = dual_node_coords.view_host();
-  //if(restart_file)
-    //node_densities = dual_node_densities.view_host();
-  //notify that the host view is going to be modified in the file readin
-  //dual_node_coords.modify_host();
-  //if(restart_file)
-    //dual_node_densities.modify_host();
-
-  //old swage method
-  //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
-    
-  std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
-
-  // read the initial mesh coordinates
-  // x-coords
-  /*only task 0 reads in nodes and elements from the input file
-  stores node data in a buffer and communicates once the buffer cap is reached
-  or the data ends*/
-
-  words_per_line = simparam->tecplot_words_per_line;
-  if(restart_file) words_per_line++;
-  elem_words_per_line = simparam->elem_words_per_line;
-
-  //allocate read buffer
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
-
-  dof_limit = num_nodes;
-  buffer_iterations = dof_limit/BUFFER_LINES;
-  if(dof_limit%BUFFER_LINES!=0) buffer_iterations++;
-  
-  //read coords, also density if restarting
-  read_index_start = 0;
-  for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
-    //pack buffer on rank 0
-    if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        
-        for(int iword = 0; iword < words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //debug print
-        //std::cout<<" "<< substring <<std::endl;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-      }
-    }
-    else if(myrank==0){
-      buffer_loop=0;
-      while(buffer_iteration*BUFFER_LINES+buffer_loop < num_nodes) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-        buffer_loop++;
-      }
-      
-    }
-
-    //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*words_per_line*MAX_WORD,MPI_CHAR,0,world);
-    //broadcast how many nodes were read into this buffer iteration
-    MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
-
-    //debug_print
-    //std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
-    //for(int iprint=0; iprint < buffer_loop; iprint++)
-      //std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
-    //return;
-
-    //determine which data to store in the swage mesh members (the local node data)
-    //loop through read buffer
-    for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-      //set global node id (ensight specific order)
-      node_gid = read_index_start + scan_loop;
-      //let map decide if this node id belongs locally; if yes store data
-      if(map->isNodeGlobalElement(node_gid)){
-        //set local node index in this mpi rank
-        node_rid = map->getLocalElement(node_gid);
-        //extract nodal position from the read buffer
-        //for tecplot format this is the three coords in the same line
-        dof_value = atof(&read_buffer(scan_loop,0,0));
-        node_coords(node_rid, 0) = dof_value * unit_scaling;
-        dof_value = atof(&read_buffer(scan_loop,1,0));
-        node_coords(node_rid, 1) = dof_value * unit_scaling;
-        if(num_dim==3){
-          dof_value = atof(&read_buffer(scan_loop,2,0));
-          node_coords(node_rid, 2) = dof_value * unit_scaling;
-        }
-        if(restart_file){
-          dof_value = atof(&read_buffer(scan_loop,num_dim,0));
-          node_densities(node_rid, 0) = dof_value;
-        }
-        //extract density if restarting
-      }
-    }
-    read_index_start+=BUFFER_LINES;
-  }
-  }
-  //repartition node distribution
-  repartition_nodes();
-
-  //synchronize device data
-  //dual_node_coords.sync_device();
-  //dual_node_coords.modify_device();
-  //if(restart_file){
-    //dual_node_densities.sync_device();
-    //dual_node_densities.modify_device();
-  //}
-
-  //debug print of nodal data
-  
-  //debug print nodal positions and indices
-  
-  //std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
-  //for (int inode = 0; inode < local_nrows; inode++){
-      //std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
-    //for (int istride = 0; istride < num_dim; istride++){
-       //std::cout << node_coords(inode,istride) << " , ";
-    //}
-    //std::cout << node_densities(inode,0);
-    //std::cout << " }"<< std::endl;
-  //}
-  
-
-  //check that local assignments match global total
-
-  
-  //read in element info (supported tecplot format currently assumes one type)
-
-  CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(elem_words_per_line);
-  
-  //broadcast number of elements
-  MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
-  //std::cout<<"before initial mesh initialization"<<std::endl;
-  
-  //read in element connectivity
-  //we're gonna reallocate for the words per line expected for the element connectivity
-  read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,elem_words_per_line,MAX_WORD);
-
-  //calculate buffer iterations to read number of lines
-  buffer_iterations = num_elem/BUFFER_LINES;
-  int assign_flag;
-
-  //dynamic buffer used to store elements before we know how many this rank needs
-  std::vector<size_t> element_temp(BUFFER_LINES*elem_words_per_line);
-  std::vector<size_t> global_indices_temp(BUFFER_LINES);
-  size_t buffer_max = BUFFER_LINES*elem_words_per_line;
-  size_t indices_buffer_max = BUFFER_LINES;
-
-  if(num_elem%BUFFER_LINES!=0) buffer_iterations++;
-  read_index_start = 0;
-  //std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
-  rnum_elem = 0;
-  //std::cout << "BUFFER ITERATIONS IS: " << buffer_iterations << std::endl;
-  for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
-    //pack buffer on rank 0
-    if(myrank==0&&buffer_iteration<buffer_iterations-1){
-      for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < elem_words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-      }
-    }
-    else if(myrank==0){
-      buffer_loop=0;
-      while(buffer_iteration*BUFFER_LINES+buffer_loop < num_elem) {
-        getline(*in,read_line);
-        line_parse.clear();
-        line_parse.str(read_line);
-        for(int iword = 0; iword < elem_words_per_line; iword++){
-        //read portions of the line into the substring variable
-        line_parse >> substring;
-        //assign the substring variable as a word of the read buffer
-        strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        }
-        buffer_loop++;
-        //std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
-      }
-    }
-
-    //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-    MPI_Bcast(read_buffer.pointer(),BUFFER_LINES*elem_words_per_line*MAX_WORD,MPI_CHAR,0,world);
-    //broadcast how many nodes were read into this buffer iteration
-    MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
-    
-    //store element connectivity that belongs to this rank
-    //loop through read buffer
-    for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
-      //set global node id (ensight specific order)
-      elem_gid = read_index_start + scan_loop;
-      //add this element to the local list if any of its nodes belong to this rank according to the map
-      //get list of nodes for each element line and check if they belong to the map
-      assign_flag = 0;
-      for(int inode = 0; inode < elem_words_per_line; inode++){
-        //as we loop through the nodes belonging to this element we store them
-        //if any of these nodes belongs to this rank this list is used to store the element locally
-        node_gid = atoi(&read_buffer(scan_loop,inode,0));
-        node_store(inode) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
-        //first we add the elements to a dynamically allocated list
-        if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
-          assign_flag = 1;
-          rnum_elem++;
-        }
-      }
-
-      if(assign_flag){
-        for(int inode = 0; inode < elem_words_per_line; inode++){
-          if((rnum_elem-1)*elem_words_per_line + inode>=buffer_max){ 
-            element_temp.resize((rnum_elem-1)*elem_words_per_line + inode + BUFFER_LINES*elem_words_per_line);
-            buffer_max = (rnum_elem-1)*elem_words_per_line + inode + BUFFER_LINES*elem_words_per_line;
-          }
-          element_temp[(rnum_elem-1)*elem_words_per_line + inode] = node_store(inode); 
-          //std::cout << "VECTOR STORAGE FOR ELEM " << rnum_elem << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
-        }
-        //assign global element id to temporary list
-        if(rnum_elem-1>=indices_buffer_max){ 
-          global_indices_temp.resize(rnum_elem-1 + BUFFER_LINES);
-          indices_buffer_max = rnum_elem-1 + BUFFER_LINES;
-        }
-        global_indices_temp[rnum_elem-1] = elem_gid;
-      }
-    }
-    read_index_start+=BUFFER_LINES;
-  }
-
-  // Close mesh input file
-  if(myrank==0)
-  in->close();
-  
-  std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
-  //copy temporary element storage to multivector storage
-  Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
-  
-  elements::elem_types::elem_type mesh_element_type;
-
-  if(simparam->num_dim==2){
-    if(simparam->element_type == "Quad4"){
-      mesh_element_type = elements::elem_types::Quad4;
-    }
-    else if(simparam->element_type == "Quad8"){
-      mesh_element_type = elements::elem_types::Quad8;
-    }
-    else if(simparam->element_type == "Quad12"){
-      mesh_element_type = elements::elem_types::Quad12;
-    }
-    element_select->choose_2Delem_type(mesh_element_type, elem2D);
-    max_nodes_per_element = elem2D->num_nodes();
-  }
-
-  if(simparam->num_dim==3){
-    if(simparam->element_type == "Hex8"){
-      mesh_element_type = elements::elem_types::Hex8;
-    }
-    else if(simparam->element_type == "Hex20"){
-      mesh_element_type = elements::elem_types::Hex20;
-    }
-    else if(simparam->element_type == "Hex32"){
-      mesh_element_type = elements::elem_types::Hex32;
-    }
-    element_select->choose_3Delem_type(mesh_element_type, elem);
-    max_nodes_per_element = elem->num_nodes();
-  }
-
-  dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
-  dual_nodes_in_elem.modify_host();
-
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    for(int inode = 0; inode < elem_words_per_line; inode++)
-      nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
-
-  //view storage for all local elements connected to local nodes on this rank
-  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
-  //copy temporary global indices storage to view storage
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
-
-  //delete temporary element connectivity and index storage
-  std::vector<size_t>().swap(element_temp);
-  std::vector<size_t>().swap(global_indices_temp);
-  
-  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
-  All_Element_Global_Indices.modify_host();
-  All_Element_Global_Indices.sync_device();
-
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
-
-
-  //element type selection (subject to change)
-  // ---- Set Element Type ---- //
-  // allocate element type memory
-  //elements::elem_type_t* elem_choice;
-
-  int NE = 1; // number of element types in problem
-
-  // Convert ijk index system to the finite element numbering convention
-  // for vertices in cell
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
-  convert_ensight_to_ijk(0) = 0;
-  convert_ensight_to_ijk(1) = 1;
-  convert_ensight_to_ijk(2) = 3;
-  convert_ensight_to_ijk(3) = 2;
-  convert_ensight_to_ijk(4) = 4;
-  convert_ensight_to_ijk(5) = 5;
-  convert_ensight_to_ijk(6) = 7;
-  convert_ensight_to_ijk(7) = 6;
-    
-  int nodes_per_element;
-  
-  if(num_dim==2)
-  for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
-    //set nodes per element
-    element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
-    nodes_per_element = elem2D->num_nodes();
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-    }   
-        
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
-    }
-  }
-
-  if(num_dim==3)
-  for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
-    //set nodes per element
-    element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
-    nodes_per_element = elem->num_nodes();
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-    }   
-        
-    for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-      nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
-    }
-  }
-
-  //debug print element edof
-  
-  //std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
-
-  //for (int ielem = 0; ielem < rnum_elem; ielem++){
-    //std::cout << "elem:  " << ielem+1 << std::endl;
-    //for (int lnode = 0; lnode < 8; lnode++){
-        //std::cout << "{ ";
-          //std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
-        
-        //std::cout << " }"<< std::endl;
-    //}
-    //std::cout << std::endl;
-  //}
-  
- 
-} // end read_mesh
 
 /* ----------------------------------------------------------------------
    Read ANSYS dat format mesh file
@@ -2228,437 +1180,20 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
 } // end read_mesh
 
 /* ----------------------------------------------------------------------
-   Initialize Ghost and Non-Overlapping Element Maps
+   Initialize Distributed State Vectors Pertinent to this Solver
 ------------------------------------------------------------------------- */
 
-void Explicit_Solver_SGH::init_maps(){
-  char ch;
+void Explicit_Solver_SGH::init_state_vectors(){
   int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
-  int local_node_index, current_column_index;
-  size_t strain_count;
-  std::stringstream line_parse;
-  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int nodes_per_element;
-  GO node_gid;
-  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
-  
-  if(rnum_elem >= 1) {
-
-    //Construct set of ghost nodes; start with a buffer with upper limit
-    size_t buffer_limit = 0;
-    if(num_dim==2)
-    for(int ielem = 0; ielem < rnum_elem; ielem++){
-      element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
-      buffer_limit += elem2D->num_nodes();
-    }
-
-    if(num_dim==3)
-    for(int ielem = 0; ielem < rnum_elem; ielem++){
-      element_select->choose_3Delem_type(Element_Types(ielem), elem);
-      buffer_limit += elem->num_nodes();
-    }
-
-    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> ghost_node_buffer(buffer_limit);
-    std::set<GO> ghost_node_set;
-
-    //search through local elements for global node indices not owned by this MPI rank
-    if(num_dim==2)
-    for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
-      //set nodes per element
-      element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
-      nodes_per_element = elem2D->num_nodes();  
-      for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-        node_gid = nodes_in_elem(cell_rid, node_lid);
-        if(!map->isNodeGlobalElement(node_gid)) ghost_node_set.insert(node_gid);
-      }
-    }
-
-    if(num_dim==3)
-    for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
-      //set nodes per element
-      element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
-      nodes_per_element = elem->num_nodes();  
-      for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
-        node_gid = nodes_in_elem(cell_rid, node_lid);
-        if(!map->isNodeGlobalElement(node_gid)) ghost_node_set.insert(node_gid);
-      }
-    }
-
-    //by now the set contains, with no repeats, all the global node indices that are ghosts for this rank
-    //now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
-    nghost_nodes = ghost_node_set.size();
-    ghost_nodes = Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits>("ghost_nodes", nghost_nodes);
-    ghost_node_ranks = Kokkos::DualView <int*, array_layout, device_type, memory_traits>("ghost_node_ranks", nghost_nodes);
-    int ighost = 0;
-    auto it = ghost_node_set.begin();
-    while(it!=ghost_node_set.end()){
-      ghost_nodes.h_view(ighost++) = *it;
-      it++;
-    }
-
-    //debug print of ghost nodes
-    //std::cout << " GHOST NODE SET ON TASK " << myrank << std::endl;
-    //for(int i = 0; i < nghost_nodes; i++)
-      //std::cout << "{" << i + 1 << "," << ghost_nodes(i) + 1 << "}" << std::endl;
-
-    //find which mpi rank each ghost node belongs to and store the information in a CArrayKokkos
-    //allocate Teuchos Views since they are the only input available at the moment in the map definitions
-    Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.h_view.data(), nghost_nodes);
-    Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.h_view.data(), nghost_nodes);
-    map->getRemoteIndexList(ghost_nodes_pass, ghost_node_ranks_pass);
-    
-    //debug print of ghost nodes
-    //std::cout << " GHOST NODE MAP ON TASK " << myrank << std::endl;
-    //for(int i = 0; i < nghost_nodes; i++)
-      //std::cout << "{" << i + 1 << "," << global2local_map.get(ghost_nodes(i)) + 1 << "}" << std::endl;
-
-  }
-
-  ghost_nodes.modify_host();
-  ghost_nodes.sync_device();
-  ghost_node_ranks.modify_host();
-  ghost_node_ranks.sync_device();
-  // create a Map for ghost node indices
-  ghost_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),ghost_nodes.d_view,0,comm));
-    
-  // Create reference element
-  //ref_elem->init(p_order, num_dim, elem->num_basis());
-  //std::cout<<"done with ref elem"<<std::endl;
-
-  //communicate ghost node positions; construct multivector distributed object using local node data
-
-  //construct array for all indices (ghost + local)
-  nall_nodes = nlocal_nodes + nghost_nodes;
-  //CArrayKokkos<GO, array_layout, device_type, memory_traits> all_node_indices(nall_nodes, "all_node_indices");
-  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> all_node_indices("all_node_indices", nall_nodes);
-  for(int i = 0; i < nall_nodes; i++){
-    if(i<nlocal_nodes) all_node_indices.h_view(i) = map->getGlobalElement(i);
-    else all_node_indices.h_view(i) = ghost_nodes.h_view(i-nlocal_nodes);
-  }
-  all_node_indices.modify_host();
-  all_node_indices.sync_device();
-  //debug print of node indices
-  //for(int inode=0; inode < index_counter; inode++)
-  //std::cout << " my_reduced_global_indices " << my_reduced_global_indices(inode) <<std::endl;
-  
-  // create a Map for all the node indices (ghost + local)
-  all_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_node_indices.d_view,0,comm));
-
-  //remove elements from the local set so that each rank has a unique set of global ids
-  
-  //local elements belonging to the non-overlapping element distribution to each rank with buffer
-  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> Initial_Element_Global_Indices("Initial_Element_Global_Indices", rnum_elem);
-  size_t nonoverlapping_count = 0;
-  int my_element_flag;
-  //loop through local element set
-  if(num_dim == 2)
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
-    nodes_per_element = elem2D->num_nodes();
-    my_element_flag = 1;
-    for (int lnode = 0; lnode < nodes_per_element; lnode++){
-      node_gid = nodes_in_elem(ielem, lnode);
-      if(ghost_node_map->isNodeGlobalElement(node_gid)){
-        local_node_index = ghost_node_map->getLocalElement(node_gid);
-        if(ghost_node_ranks.h_view(local_node_index) < myrank) my_element_flag = 0;
-      }
-    }
-    if(my_element_flag){
-      Initial_Element_Global_Indices.h_view(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
-    }
-  }
-
-  if(num_dim == 3)
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_3Delem_type(Element_Types(ielem), elem);
-    nodes_per_element = elem->num_nodes();
-    my_element_flag = 1;
-    for (int lnode = 0; lnode < nodes_per_element; lnode++){
-      node_gid = nodes_in_elem(ielem, lnode);
-      if(ghost_node_map->isNodeGlobalElement(node_gid)){
-        local_node_index = ghost_node_map->getLocalElement(node_gid);
-        if(ghost_node_ranks.h_view(local_node_index) < myrank) my_element_flag = 0;
-      }
-    }
-    if(my_element_flag){
-      Initial_Element_Global_Indices.h_view(nonoverlapping_count++) = all_element_map->getGlobalElement(ielem);
-    }
-  }
-
-  //copy over from buffer to compressed storage
-  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> Element_Global_Indices("Element_Global_Indices",nonoverlapping_count);
-  for(int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++){
-    Element_Global_Indices.h_view(ibuffer) = Initial_Element_Global_Indices.h_view(ibuffer);
-  }
-  nlocal_elem_non_overlapping = nonoverlapping_count;
-  Element_Global_Indices.modify_host();
-  Element_Global_Indices.sync_device();
-  //create nonoverlapping element map
-  element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Element_Global_Indices.d_view,0,comm));
-
-  //sort element connectivity so nonoverlaps are sequentially found first
-  //define initial sorting of global indices
-  
-  //element_map->describe(*fos,Teuchos::VERB_EXTREME);
-  
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    Initial_Element_Global_Indices.h_view(ielem) = all_element_map->getGlobalElement(ielem);
-  }
-  
-  //re-sort so local elements in the nonoverlapping map are first in storage
-  CArrayKokkos<GO, array_layout, HostSpace, memory_traits> Temp_Nodes(max_nodes_per_element);
-  GO temp_element_gid, current_element_gid;
-  int last_storage_index = rnum_elem - 1;
-  for (int ielem = 0; ielem < nlocal_elem_non_overlapping; ielem++){
-    current_element_gid = Initial_Element_Global_Indices.h_view(ielem);
-    //if this element is not part of the non overlap list then send it to the end of the storage and swap the element at the end
-    if(!element_map->isNodeGlobalElement(current_element_gid)){
-      temp_element_gid = current_element_gid;
-      for (int lnode = 0; lnode < max_nodes_per_element; lnode++){
-        Temp_Nodes(lnode) = nodes_in_elem(ielem,lnode);
-      }
-      Initial_Element_Global_Indices.h_view(ielem) = Initial_Element_Global_Indices.h_view(last_storage_index);
-      Initial_Element_Global_Indices.h_view(last_storage_index) = temp_element_gid;
-      for (int lnode = 0; lnode < max_nodes_per_element; lnode++){
-        nodes_in_elem(ielem, lnode) = nodes_in_elem(last_storage_index,lnode);
-        nodes_in_elem(last_storage_index,lnode) = Temp_Nodes(lnode);
-      }
-      last_storage_index--;
-
-      //test if swapped element is also not part of the non overlap map; if so lower loop counter to repeat the above
-      temp_element_gid = Initial_Element_Global_Indices.h_view(ielem);
-      if(!element_map->isNodeGlobalElement(temp_element_gid)) ielem--;
-    }
-  }
-  //reset all element map to its re-sorted version
-  Initial_Element_Global_Indices.modify_host();
-  Initial_Element_Global_Indices.sync_device();
-  
-  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),Initial_Element_Global_Indices.d_view,0,comm));
-  //element_map->describe(*fos,Teuchos::VERB_EXTREME);
-  //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
-
-  //all_element_map->describe(*fos,Teuchos::VERB_EXTREME);
-  //construct dof map that follows from the node map (used for distributed matrix and vector objects later)
-  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> local_dof_indices("local_dof_indices", nlocal_nodes*num_dim);
-  for(int i = 0; i < nlocal_nodes; i++){
-    for(int j = 0; j < num_dim; j++)
-    local_dof_indices.h_view(i*num_dim + j) = map->getGlobalElement(i)*num_dim + j;
-  }
-  
-  local_dof_indices.modify_host();
-  local_dof_indices.sync_device();
-  local_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes*num_dim,local_dof_indices.d_view,0,comm) );
-
-  //construct dof map that follows from the all_node map (used for distributed matrix and vector objects later)
-  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> all_dof_indices("all_dof_indices", nall_nodes*num_dim);
-  for(int i = 0; i < nall_nodes; i++){
-    for(int j = 0; j < num_dim; j++)
-    all_dof_indices.h_view(i*num_dim + j) = all_node_map->getGlobalElement(i)*num_dim + j;
-  }
-  
-  all_dof_indices.modify_host();
-  all_dof_indices.sync_device();
-  //pass invalid global count so the map reduces the global count automatically
-  all_dof_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),all_dof_indices.d_view,0,comm) );
-
-  //debug print of map
-  //debug print
-  std::ostream &out = std::cout;
-  Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Ghost Node Map :" << std::endl;
-  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
-
-  //Count how many elements connect to each local node
-  node_nconn_distributed = Teuchos::rcp(new MCONN(map, 1));
-  //active view scope
-  {
-    host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    for(int inode = 0; inode < nlocal_nodes; inode++)
-      node_nconn(inode,0) = 0;
-
-    for(int ielem = 0; ielem < rnum_elem; ielem++){
-      for(int inode = 0; inode < nodes_per_element; inode++){
-        node_gid = nodes_in_elem(ielem, inode);
-        if(map->isNodeGlobalElement(node_gid))
-          node_nconn(map->getLocalElement(node_gid),0)++;
-      }
-    }
-  }
-
-  //create distributed multivector of the local node data and all (local + ghost) node storage
-  all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  //allocate node_velocities
+  node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
+  initial_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
   if(!simparam->restart_file)
     design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
-  
-  //debug print
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Node Data :" << std::endl;
-  //node_coords_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
-
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
-
-  //comms to get ghosts
-  all_node_coords_distributed->doImport(*node_coords_distributed, importer, Tpetra::INSERT);
-  //all_node_nconn_distributed->doImport(*node_nconn_distributed, importer, Tpetra::INSERT);
-  
-  dual_nodes_in_elem.sync_device();
-  dual_nodes_in_elem.modify_device();
-  //construct distributed element connectivity multivector
-  nodes_in_elem_distributed = Teuchos::rcp(new MCONN(all_element_map, dual_nodes_in_elem));
-
-  //debug print
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Element Connectivity :" << std::endl;
-  //nodes_in_elem_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
-
-  //debug print
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Number of Elements Connected to Each Node :" << std::endl;
-  //all_node_nconn_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
-
-  //debug print
-  //std::ostream &out = std::cout;
-  //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-  //if(myrank==0)
-  //*fos << "Node Data with Ghosts :" << std::endl;
-  //all_node_coords_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  //*fos << std::endl;
-  //std::fflush(stdout);
-
-  //debug print of views node indices
-  //std::cout << "Local View of All Nodes on Task " << myrank <<std::endl;
-  //for(int inode=0; inode < all_node_map->getLocalNumElements(); inode++){
-    //std::cout << "node "<<all_node_map->getGlobalElement(inode) << " } " ;
-    //std::cout << dual_all_node_coords.view_host()(inode,0) << " " << dual_all_node_coords.view_host()(inode,1) << " " << dual_all_node_coords.view_host()(inode,2) << " " << std::endl;
-  //}
-     
-  //std::cout << "number of patches = " << mesh->num_patches() << std::endl;
-  if(myrank == 0)
-  std::cout << "End of map setup " << std::endl;
-}
-
-/* ----------------------------------------------------------------------
-   Initialize Ghost and Non-Overlapping Element Maps
-------------------------------------------------------------------------- */
-
-void Explicit_Solver_SGH::repartition_nodes(){
-  char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
-  int local_node_index, current_column_index;
-  size_t strain_count;
-  std::stringstream line_parse;
-  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int nodes_per_element;
-  GO node_gid;
-  
-  //construct input adapted needed by Zoltan2 problem
-  typedef Xpetra::MultiVector<real_t,LO,GO,node_type> xvector_t;
-  typedef Zoltan2::XpetraMultiVectorAdapter<xvector_t> inputAdapter_t;
-  typedef Zoltan2::EvaluatePartition<inputAdapter_t> quality_t;
-  
-  Teuchos::RCP<xvector_t> xpetra_node_coords = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(node_coords_distributed));
-  Teuchos::RCP<inputAdapter_t> problem_adapter =  Teuchos::rcp(new inputAdapter_t(xpetra_node_coords));
-
-  // Create parameters for an RCB problem
-
-  double tolerance = 1.05;
-
-  Teuchos::ParameterList params("Node Partition Params");
-  params.set("debug_level", "basic_status");
-  params.set("debug_procs", "0");
-  params.set("error_check_level", "debug_mode_assertions");
-
-  //params.set("algorithm", "rcb");
-  params.set("algorithm", "multijagged");
-  params.set("imbalance_tolerance", tolerance );
-  params.set("num_global_parts", nranks);
-  params.set("partitioning_objective", "minimize_cut_edge_count");
-  
-  Teuchos::RCP<Zoltan2::PartitioningProblem<inputAdapter_t> > problem =
-           Teuchos::rcp(new Zoltan2::PartitioningProblem<inputAdapter_t>(&(*problem_adapter), &params));
-   
-  // Solve the problem
-
-  problem->solve();
-
-  // create metric object where communicator is Teuchos default
-
-  quality_t *metricObject1 = new quality_t(&(*problem_adapter), &params, //problem1->getComm(),
-					   &problem->getSolution());
-  // Check the solution.
-
-  if (myrank == 0) {
-    metricObject1->printMetrics(std::cout);
-  }
-
-  if (myrank == 0){
-    real_t imb = metricObject1->getObjectCountImbalance();
-    if (imb <= tolerance)
-      std::cout << "pass: " << imb << std::endl;
-    else
-      std::cout << "fail: " << imb << std::endl;
-    std::cout << std::endl;
-  }
-  delete metricObject1;
-
-  //migrate rows of the vector so they correspond to the partition recommended by Zoltan2
-  Teuchos::RCP<MV> partitioned_node_coords_distributed = Teuchos::rcp(new MV(map,num_dim));
-  Teuchos::RCP<xvector_t> xpartitioned_node_coords_distributed =
-                          Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(partitioned_node_coords_distributed));
-
-  problem_adapter->applyPartitioningSolution(*xpetra_node_coords, xpartitioned_node_coords_distributed, problem->getSolution());
-  *partitioned_node_coords_distributed = Xpetra::toTpetra<real_t,LO,GO,node_type>(*xpartitioned_node_coords_distributed);
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > partitioned_map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*(partitioned_node_coords_distributed->getMap())));
-  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > partitioned_map_one_to_one;
-  partitioned_map_one_to_one = Tpetra::createOneToOne<LO,GO,node_type>(partitioned_map);
-  Teuchos::RCP<MV> partitioned_node_coords_one_to_one_distributed = Teuchos::rcp(new MV(partitioned_map_one_to_one,num_dim));
-
-  Tpetra::Import<LO, GO> importer_one_to_one(partitioned_map, partitioned_map_one_to_one);
-  partitioned_node_coords_one_to_one_distributed->doImport(*partitioned_node_coords_distributed, importer_one_to_one, Tpetra::INSERT);
-  node_coords_distributed = partitioned_node_coords_one_to_one_distributed;
-  partitioned_map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*partitioned_map_one_to_one));
-
-  //migrate density vector if this is a restart file read
-  if(simparam->restart_file){
-    Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(partitioned_map, 1));
-
-    //create import object using local node indices map and all indices map
-    Tpetra::Import<LO, GO> importer(map, partitioned_map);
-
-    //comms to get ghosts
-    partitioned_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
-    design_node_densities_distributed = partitioned_node_densities_distributed;
-  }
-
-  //update nlocal_nodes and node map
-  map = partitioned_map;
-  nlocal_nodes = map->getLocalNumElements();
-  //allocate node_velocities
-  node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
-  
 }
 
 /* ----------------------------------------------------------------------
@@ -2714,32 +1249,33 @@ void Explicit_Solver_SGH::FEA_module_setup(){
 /* ----------------------------------------------------------------------
    Setup Optimization Problem Object, Relevant Objective, and Constraints
 ------------------------------------------------------------------------- */
-/*
+
 void Explicit_Solver_SGH::setup_optimization_problem(){
   int num_dim = simparam->num_dim;
-  bool nodal_density_flag = simparam->nodal_density_flag;
-  int nTO_modules = simparam->nTO_modules;
-  int nmulti_objective_modules = simparam->nmulti_objective_modules;
-  std::vector<std::string> TO_Module_List = simparam->TO_Module_List;
-  std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
-  std::vector<int> TO_Module_My_FEA_Module = simparam->TO_Module_My_FEA_Module;
-  std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
-  std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
-  std::vector<std::vector<real_t>> Function_Arguments = simparam->Function_Arguments;
-  std::vector<Simulation_Parameters_Topology_Optimization::function_type> TO_Function_Type = simparam->TO_Function_Type;
+  bool nodal_density_flag = simparam_dynamic_opt->nodal_density_flag;
+  int nTO_modules = simparam_dynamic_opt->nTO_modules;
+  int nmulti_objective_modules = simparam_dynamic_opt->nmulti_objective_modules;
+  std::vector<std::string> TO_Module_List = simparam_dynamic_opt->TO_Module_List;
+  std::vector<std::string> FEA_Module_List = simparam_dynamic_opt->FEA_Module_List;
+  std::vector<int> TO_Module_My_FEA_Module = simparam_dynamic_opt->TO_Module_My_FEA_Module;
+  std::vector<int> Multi_Objective_Modules = simparam_dynamic_opt->Multi_Objective_Modules;
+  std::vector<real_t> Multi_Objective_Weights = simparam_dynamic_opt->Multi_Objective_Weights;
+  std::vector<std::vector<real_t>> Function_Arguments = simparam_dynamic_opt->Function_Arguments;
+  std::vector<Simulation_Parameters_Dynamic_Optimization::function_type> TO_Function_Type = simparam_dynamic_opt->TO_Function_Type;
   std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
 
   std::string constraint_base, constraint_name;
   std::stringstream number_union;
-  CArrayKokkos<GO, array_layout, device_type, memory_traits> Surface_Nodes;
-  GO current_node_index;
-  LO local_node_index;
+  CArray<GO> Surface_Nodes;
+  GO current_node_index, current_element_index;
+  LO local_node_index, local_element_id;
   int num_bdy_patches_in_set;
   size_t node_id, patch_id, module_id;
   int num_boundary_sets;
-  int current_element_index, local_surface_id;
+  int local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
+  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
@@ -2758,23 +1294,26 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   ROL::Ptr<ROL::Objective<real_t>> obj;
   bool objective_declared = false;
   for(int imodule = 0; imodule < nTO_modules; imodule++){
-    if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::OBJECTIVE){
+    if(TO_Function_Type[imodule] == Simulation_Parameters_Dynamic_Optimization::OBJECTIVE){
       //check if previous module already defined an objective, there must be one objective module
       if(objective_declared){
         *fos << "PROGRAM IS ENDING DUE TO ERROR; ANOTHER OBJECTIVE FUNCTION WITH NAME \"" <<TO_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
           exit_solver(0);
       }
-      if(TO_Module_List[imodule] == "Strain_Energy_Minimize"){
+      if(TO_Module_List[imodule] == "Kinetic_Energy_Minimize"){
         //debug print
-        *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
+      /*
       else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
         //debug print
         *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
+      */
       //Multi-Objective case
+      /*
       else if(TO_Module_List[imodule] == "Multi_Objective"){
         //allocate vector of Objective Functions to pass
         Multi_Objective_Terms = std::vector<ROL::Ptr<ROL::Objective<real_t>>>(nmulti_objective_modules);
@@ -2795,6 +1334,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
         //allocate multi objective function
         obj = ROL::makePtr<MultiObjective_TopOpt>(Multi_Objective_Terms, Multi_Objective_Weights);
       }
+      */
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
@@ -2804,7 +1344,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   }
   
   //optimization problem interface that can have constraints added to it before passing to solver object
-   ROL::Ptr<ROL::Problem<real_t>> problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+  problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
   
   //ROL::Ptr<ROL::Constraint<double>>     lin_icon = ROL::makePtr<MyLinearInequalityConstraint<double>>();
   //ROL::Ptr<ROL::Vector<double>>         lin_imul = ROL::makePtr<MyLinearInequalityConstraintMultiplier<double>>();
@@ -2833,7 +1373,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     constraint_name = number_union.str();
     ROL::Ptr<std::vector<real_t> > li_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
     ROL::Ptr<ROL::Vector<real_t> > constraint_mul = ROL::makePtr<ROL::StdVector<real_t>>(li_ptr);
-    if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::EQUALITY_CONSTRAINT){
+    if(TO_Function_Type[imodule] == Simulation_Parameters_Dynamic_Optimization::EQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> eq_constraint;
       if(TO_Module_List[imodule]=="Mass_Constraint"){
@@ -2845,14 +1385,6 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false);
       }
-      else if(TO_Module_List[imodule]=="Strain_Energy_Constraint"){    
-        *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<StrainEnergyConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false);
-      }
-      else if(TO_Module_List[imodule]=="Heat_Capacity_Potential_Constraint"){
-        *fos << " HEAT CAPACITY POTENTIAL CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<HeatCapacityPotentialConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false);
-      }
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
@@ -2861,7 +1393,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       problem->addConstraint(constraint_name, eq_constraint, constraint_mul);
     }
 
-    if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::INEQUALITY_CONSTRAINT){
+    if(TO_Function_Type[imodule] == Simulation_Parameters_Dynamic_Optimization::INEQUALITY_CONSTRAINT){
       //pointers are reference counting
       ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint;
       ROL::Ptr<std::vector<real_t> > ll_ptr = ROL::makePtr<std::vector<real_t>>(1,Function_Arguments[imodule][0]);
@@ -2876,14 +1408,6 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       else if(TO_Module_List[imodule]=="Moment_of_Inertia_Constraint"){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
-      }
-      else if(TO_Module_List[imodule]=="Strain_Energy_Constraint"){
-        *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<StrainEnergyConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
-      }
-      else if(TO_Module_List[imodule]=="Heat_Capacity_Potential_Constraint"){
-        *fos << " HEAT CAPACITY POTENTIAL CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<HeatCapacityPotentialConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
       }
       else{
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED INEQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" <<TO_Module_List[imodule] <<"\"" << std::endl;
@@ -2923,19 +1447,36 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          Surface_Nodes = Boundary_Patches(patch_id).node_set;
-          local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-          //debug print of local surface ids
-          //std::cout << " LOCAL SURFACE IDS " << std::endl;
-          //std::cout << local_surface_id << std::endl;
-          //acquire set of nodes for this face
-          for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
-            current_node_index = Surface_Nodes(node_loop);
-            if(map->isNodeGlobalElement(current_node_index)){
-              local_node_index = map->getLocalElement(current_node_index);
-              node_densities_lower_bound(local_node_index,0) = 1;
-            }
-          }// node loop for
+          if(simparam_TO->thick_condition_boundary){
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            current_element_index = Boundary_Patches(patch_id).element_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+              current_node_index = nodes_in_elem(current_element_index,node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
+          else{
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+              current_node_index = Surface_Nodes(node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
         }//boundary patch for
       }//boundary set for
 
@@ -3033,233 +1574,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   //if(myrank==0)
     //std::cout << "Final Mass Constraint is " << final_mass/initial_mass << std::endl;
 }
-*/
-/* ----------------------------------------------------------------------
-   Find boundary surface segments that belong to this MPI rank
-------------------------------------------------------------------------- */
 
-void Explicit_Solver_SGH::Get_Boundary_Patches(){
-  size_t npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
-  int local_node_id;
-  int num_dim = simparam->num_dim;
-  CArray<GO> Surface_Nodes;
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  //Surface_Nodes = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(4, "Surface_Nodes");
-  
-  std::set<Node_Combination> my_patches;
-  //inititializes type for the pair variable (finding the iterator type is annoying)
-  std::pair<std::set<Node_Combination>::iterator, bool> current_combination;
-  std::set<Node_Combination>::iterator it;
-
-  
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_node_order(max_nodes_per_element);
-  if((active_node_ordering_convention == ENSIGHT && num_dim==3)||(active_node_ordering_convention == IJK && num_dim==2)){
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 3;
-    convert_node_order(3) = 2;
-    if(num_dim == 3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 7;
-      convert_node_order(7) = 6;
-    }
-  }
-  else if((active_node_ordering_convention == IJK && num_dim==3)||(active_node_ordering_convention == ENSIGHT && num_dim==2)){
-    convert_node_order(0) = 0;
-    convert_node_order(1) = 1;
-    convert_node_order(2) = 2;
-    convert_node_order(3) = 3;
-    if(num_dim==3){
-      convert_node_order(4) = 4;
-      convert_node_order(5) = 5;
-      convert_node_order(6) = 6;
-      convert_node_order(7) = 7;
-    }
-  }
-
-  //compute the number of patches in this MPI rank with repeats for adjacent cells
-  npatches_repeat = 0;
-
-  if(num_dim==2)
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
-    element_npatches = elem2D->nsurfaces;
-    npatches_repeat += element_npatches;
-  }
-  
-  else if(num_dim==3)
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_3Delem_type(Element_Types(ielem), elem);
-    element_npatches = elem->nsurfaces;
-    npatches_repeat += element_npatches;
-  }
-  //std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
-  //information for all patches on this rank
-  CArrayKokkos<Node_Combination,array_layout, HostSpace, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
-  CArrayKokkos<size_t,array_layout, HostSpace, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
-  if(myrank == 0)
-    std::cout << "Done with boundary patch allocation" << std::endl <<std::flush;
-  //initialize boundary patch flags
-  for(int init = 0; init < npatches_repeat; init++)
-    Patch_Boundary_Flags(init) = 1;
-  
-  if(myrank == 0)
-    std::cout << "Done with boundary patch flags init" << std::endl <<std::flush;
-  //use set of nodal combinations to find boundary set
-  //boundary patches will not try to add nodal combinations twice
-  //loop through elements in this rank to find boundary patches
-  npatches_repeat = 0;
-  
-  if(num_dim==2)
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
-    element_npatches = elem2D->nsurfaces;
-    //loop through local surfaces
-    for(int isurface = 0; isurface < element_npatches; isurface++){
-      num_nodes_in_patch = elem2D->surface_to_dof_lid.stride(isurface);
-      Surface_Nodes = CArray<GO>(num_nodes_in_patch);
-      for(int inode = 0; inode < num_nodes_in_patch; inode++){
-        local_node_id = elem2D->surface_to_dof_lid(isurface,inode);
-        local_node_id = convert_node_order(local_node_id);
-        Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);
-      }
-      Node_Combination temp(Surface_Nodes);
-      //construct Node Combination object for this surface
-      Patch_Nodes(npatches_repeat) = temp;
-      Patch_Nodes(npatches_repeat).patch_id = npatches_repeat;
-      Patch_Nodes(npatches_repeat).element_id = ielem;
-      Patch_Nodes(npatches_repeat).local_patch_id = isurface;
-      //test if this patch has already been added; if yes set boundary flags to 0
-      current_combination = my_patches.insert(Patch_Nodes(npatches_repeat));
-      //if the set determines this is a duplicate, access the original element's patch id and set flag to 0
-      if(current_combination.second==false){
-      //set original element flag to 0
-      Patch_Boundary_Flags((*current_combination.first).patch_id) = 0;
-      //set this current flag to 0 for the duplicate as well
-      Patch_Boundary_Flags(npatches_repeat) = 0;
-      
-      }
-      npatches_repeat++;
-    }
-  }
-  
-  if(num_dim==3)
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_3Delem_type(Element_Types(ielem), elem);
-    element_npatches = elem->nsurfaces;
-    //loop through local surfaces
-    for(int isurface = 0; isurface < element_npatches; isurface++){
-      num_nodes_in_patch = elem->surface_to_dof_lid.stride(isurface);
-      //debug print
-      //std::cout << "NUMBER OF PATCH NODES FOR ELEMENT " << ielem+1 << " ON LOCAL SURFACE " << isurface+1 << " IS " << num_nodes_in_patch << std::endl;
-      Surface_Nodes = CArray<GO>(num_nodes_in_patch);
-      for(int inode = 0; inode < num_nodes_in_patch; inode++){
-        local_node_id = elem->surface_to_dof_lid(isurface,inode);
-        local_node_id = convert_node_order(local_node_id);
-        Surface_Nodes(inode) = nodes_in_elem(ielem, local_node_id);
-      }
-      Node_Combination temp(Surface_Nodes);
-      //construct Node Combination object for this surface
-      Patch_Nodes(npatches_repeat) = temp;
-      Patch_Nodes(npatches_repeat).patch_id = npatches_repeat;
-      Patch_Nodes(npatches_repeat).element_id = ielem;
-      Patch_Nodes(npatches_repeat).local_patch_id = isurface;
-      //test if this patch has already been added; if yes set boundary flags to 0
-      current_combination = my_patches.insert(Patch_Nodes(npatches_repeat));
-      //if the set determines this is a duplicate access the original element's patch id and set flag to 0
-  
-      if(current_combination.second==false){
-        //set original element flag to 0
-        Patch_Boundary_Flags((*current_combination.first).patch_id) = 0;
-        //set this current flag to 0 for the duplicate as well
-        Patch_Boundary_Flags(npatches_repeat) = 0;
-      }
-      npatches_repeat++;
-    }
-  }
-  //debug print of all patches
-  /*
-  std::cout << " ALL PATCHES " << npatches_repeat <<std::endl;
-  for(int iprint = 0; iprint < npatches_repeat; iprint++){
-    std::cout << "Patch " << iprint + 1 << " ";
-    for(int j = 0; j < Patch_Nodes(iprint).node_set.size(); j++)
-      std::cout << Patch_Nodes(iprint).node_set(j) << " ";
-    std::cout << std::endl;
-  }
-  */
-  if(myrank == 0)
-  std::cout << "Done with boundary patch loop" << std::endl <<std::flush;
-  //loop through patch boundary flags to isolate boundary patches
-  nboundary_patches = 0;
-  for(int iflags = 0 ; iflags < npatches_repeat; iflags++){
-    if(Patch_Boundary_Flags(iflags)) nboundary_patches++;
-  }
-
-  //std::cout << " BOUNDARY PATCHES PRE COUNT ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
-  //upper bound that is not much larger
-  Boundary_Patches = CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits>(nboundary_patches, "Boundary_Patches");
-  Local_Index_Boundary_Patches = DCArrayKokkos<size_t>(nboundary_patches, num_nodes_in_patch, "Local_Index_Boundary_Patches");
-  nboundary_patches = 0;
-  bool my_rank_flag;
-  size_t remote_count;
-  for(int ipatch = 0 ; ipatch < npatches_repeat; ipatch++){
-    if(Patch_Boundary_Flags(ipatch)){
-      /*check if Nodes in the combination for this patch belong to this MPI rank.
-        If all are local then this is a boundary patch belonging to this rank.
-        If all nodes are remote then another rank must decide if that patch is a boundary.
-        If only a subset of the nodes are local it must be a boundary patch; this
-        case assigns the patch to the lowest mpi rank index the nodes in this patch belong to */
-      num_nodes_in_patch = Patch_Nodes(ipatch).node_set.size();
-      my_rank_flag = true;
-      remote_count = 0;
-
-      //assign as a local boundary patch if any of the nodes on the patch are local
-      //only the local nodes on the patch will contribute to the equation assembly on this rank
-      for(int inode = 0; inode < num_nodes_in_patch; inode++){
-        node_gid = Patch_Nodes(ipatch).node_set(inode);
-        if(!map->isNodeGlobalElement(node_gid)){
-          //if(ghost_node_ranks.h_view(global2local_map.get(node_gid))<myrank)
-          //my_rank_flag = false;
-          remote_count++;
-          //test
-        } 
-      }
-
-      if(remote_count == num_nodes_in_patch) my_rank_flag = false;
-      //all nodes were remote
-      //if(remote_count == num_nodes_in_patch) my_rank_flag = false;
-
-      //if all nodes were not local
-      if(my_rank_flag){
-        Boundary_Patches(nboundary_patches++) = Patch_Nodes(ipatch);
-        boundary_patch_to_index[Patch_Nodes(ipatch)] = nboundary_patches-1;
-      }
-    }
-  }
-
-  for(int iboundary = 0; iboundary < nboundary_patches; iboundary++){
-    num_nodes_in_patch = Boundary_Patches(iboundary).node_set.size();
-    for(int inode = 0; inode < num_nodes_in_patch; inode++){
-      Local_Index_Boundary_Patches.host(iboundary,inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
-    }
-  }
-  Local_Index_Boundary_Patches.update_device();
-  mesh->Local_Index_Boundary_Patches = Local_Index_Boundary_Patches;
-  //debug print of boundary patches
-  /*
-  std::cout << " BOUNDARY PATCHES ON TASK " << myrank << " = " << nboundary_patches <<std::endl;
-  for(int iprint = 0; iprint < nboundary_patches; iprint++){
-    std::cout << "Patch " << iprint + 1 << " ";
-    for(int j = 0; j < Boundary_Patches(iprint).node_set.size(); j++)
-      std::cout << Boundary_Patches(iprint).node_set(j) << " ";
-    std::cout << std::endl;
-  }
-  */
-  //std::fflush(stdout);
-  
-}
 
 /* ----------------------------------------------------------------------------
    Initialize sets of element boundary surfaces and arrays for input conditions
@@ -3268,11 +1583,25 @@ void Explicit_Solver_SGH::Get_Boundary_Patches(){
 void Explicit_Solver_SGH::init_boundaries(){
   int num_boundary_sets = simparam->NB;
   int num_dim = simparam->num_dim;
-
+  size_t num_nodes_in_patch;
   // build boundary mesh patches
   if(myrank == 0)
     std::cout << "Starting boundary patch setup" << std::endl <<std::flush;
+  
+  
   Get_Boundary_Patches();
+  
+  num_nodes_in_patch = max_nodes_per_patch;
+  Local_Index_Boundary_Patches = DCArrayKokkos<size_t>(nboundary_patches, num_nodes_in_patch, "Local_Index_Boundary_Patches");
+  for(int iboundary = 0; iboundary < nboundary_patches; iboundary++){
+    num_nodes_in_patch = Boundary_Patches(iboundary).node_set.size();
+    for(int inode = 0; inode < num_nodes_in_patch; inode++){
+      Local_Index_Boundary_Patches.host(iboundary,inode) = all_node_map->getLocalElement(Boundary_Patches(iboundary).node_set(inode));
+    }
+  }
+  Local_Index_Boundary_Patches.update_device();
+  mesh->Local_Index_Boundary_Patches = Local_Index_Boundary_Patches;
+  
   //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
   std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
   
@@ -3576,14 +1905,10 @@ void Explicit_Solver_SGH::comm_velocities(){
 
   //communicate design densities
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  Tpetra::Import<LO, GO> importer(map, ghost_node_map);
   
-  //active view scope
-  {
-    const_host_vec_array node_velocities_host = node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
   //comms to get ghosts
-  all_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
+  ghost_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   
@@ -4684,41 +3009,3 @@ void Explicit_Solver_SGH::init_design(){
 
 }
 */
-/* ----------------------------------------------------------------------
-   Return the CPU time for the current process in seconds very
-   much in the same way as MPI_Wtime() returns the wall time.
-------------------------------------------------------------------------- */
-
-double Explicit_Solver_SGH::CPU_Time()
-{
-  double rv = 0.0;
-/*
-#ifdef _WIN32
-
-  // from MSD docs.
-  FILETIME ct,et,kt,ut;
-  union { FILETIME ft; uint64_t ui; } cpu;
-  if (GetProcessTimes(GetCurrentProcess(),&ct,&et,&kt,&ut)) {
-    cpu.ft = ut;
-    rv = cpu.ui * 0.0000001;
-  }
-*/
-
-  struct rusage ru;
-  if (getrusage(RUSAGE_SELF, &ru) == 0) {
-    rv = (double) ru.ru_utime.tv_sec;
-    rv += (double) ru.ru_utime.tv_usec * 0.000001;
-  }
-
-
-  return rv;
-}
-
-/* ----------------------------------------------------------------------
-   Clock variable initialization
-------------------------------------------------------------------------- */
-
-void Explicit_Solver_SGH::init_clock(){
-  double current_cpu = 0;
-  initial_CPU_time = CPU_Time();
-}

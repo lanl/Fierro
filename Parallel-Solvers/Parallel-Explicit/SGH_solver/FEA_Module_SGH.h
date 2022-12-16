@@ -48,49 +48,21 @@
 
 class Explicit_Solver_SGH;
 class Simulation_Parameters_SGH;
-class Simulation_Parameters_Topology_Optimization;
+class Simulation_Parameters_Dynamic_Optimization;
 
 class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer);
+  FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh);
   ~FEA_Module_SGH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
   void sgh_interface_setup(mesh_t &mesh, node_t &node, elem_t &elem, corner_t &corner);
 
-  void setup(mesh_t &mesh,
-             const DViewCArrayKokkos <double> &node_coords,
-             DViewCArrayKokkos <double> &node_vel,
-             DViewCArrayKokkos <double> &node_mass,
-             const DViewCArrayKokkos <double> &elem_den,
-             const DViewCArrayKokkos <double> &elem_pres,
-             const DViewCArrayKokkos <double> &elem_stress,
-             const DViewCArrayKokkos <double> &elem_sspd,
-             const DViewCArrayKokkos <double> &elem_sie,
-             const DViewCArrayKokkos <double> &elem_vol,
-             const DViewCArrayKokkos <double> &elem_mass,
-             const DViewCArrayKokkos <size_t> &elem_mat_id,
-             const DViewCArrayKokkos <double> &elem_statev,
-             const DViewCArrayKokkos <double> &corner_mass);
+  void setup();
 
-  void sgh_solve(mesh_t &mesh,
-                 DViewCArrayKokkos <double> &node_coords,
-                 DViewCArrayKokkos <double> &node_vel,
-                 DViewCArrayKokkos <double> &node_mass,
-                 DViewCArrayKokkos <double> &elem_den,
-                 DViewCArrayKokkos <double> &elem_pres,
-                 DViewCArrayKokkos <double> &elem_stress,
-                 DViewCArrayKokkos <double> &elem_sspd,
-                 DViewCArrayKokkos <double> &elem_sie,
-                 DViewCArrayKokkos <double> &elem_vol,
-                 DViewCArrayKokkos <double> &elem_div,
-                 DViewCArrayKokkos <double> &elem_mass,
-                 DViewCArrayKokkos <size_t> &elem_mat_id,
-                 DViewCArrayKokkos <double> &elem_statev,
-                 DViewCArrayKokkos <double> &corner_force,
-                 DViewCArrayKokkos <double> &corner_mass);
+  void sgh_solve();
 
   void get_force_sgh(const CArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
@@ -137,9 +109,7 @@ public:
                            DViewCArrayKokkos <double> &node_coords,
                            const DViewCArrayKokkos <double> &node_vel);
 
-  void get_vol(const DViewCArrayKokkos <double> &elem_vol,
-               const DViewCArrayKokkos <double> &node_coords,
-               const mesh_t &mesh);
+  void get_vol();
 
   KOKKOS_INLINE_FUNCTION
   void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
@@ -188,6 +158,8 @@ public:
                const double y2,
                const double x3,
                const double y3) const;
+
+  double average_element_density(const int nodes_per_elem, const CArray<double> current_element_densities) const;
 
   void get_divergence(DViewCArrayKokkos <double> &elem_div,
                       const mesh_t mesh,
@@ -395,7 +367,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
 
   void grow_boundary_sets(int num_boundary_sets);
 
-  int solve();
+  virtual void update_forward_solve(Teuchos::RCP<const MV> zp);
 
   void comm_variables(Teuchos::RCP<const MV> zp);
 
@@ -466,7 +438,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
   Simulation_Parameters_SGH *simparam;
-  Simulation_Parameters_Topology_Optimization *simparam_TO;
+  Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
   Explicit_Solver_SGH *Explicit_Solver_Pointer_;
   
   //output stream
@@ -477,14 +449,16 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   elements::Element2D *elem2D;
   elements::ref_element  *ref_elem;
   
-  Explicit_Solver_SGH *explicit_solver_pointer;
+  mesh_t& mesh;
+  // mesh class interface
+  DCArrayKokkos<size_t>& nodes_in_elem;
   
   //Local FEA data
   size_t nlocal_nodes;
   dual_vec_array dual_node_coords; //coordinates of the nodes
   dual_vec_array dual_node_densities; //topology optimization design variable
   dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
-  host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
+  host_elem_conn_array interface_nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
 
@@ -515,6 +489,33 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<const MV> test_node_densities_distributed;
   Teuchos::RCP<MV> all_node_densities_distributed;
   Teuchos::RCP<MV> Global_Element_Densities;
+  Teuchos::RCP<MV> node_velocities_distributed;
+  Teuchos::RCP<MV> initial_node_coords_distributed;
+  Teuchos::RCP<MV> initial_node_velocities_distributed;
+  Teuchos::RCP<MV> all_node_velocities_distributed;
+  Teuchos::RCP<MV> all_cached_node_velocities_distributed;
+
+  //Dual View wrappers
+  // Dual Views of the individual node struct variables
+  DViewCArrayKokkos <double> node_coords;
+  DViewCArrayKokkos <double> node_vel;
+  DViewCArrayKokkos <double> node_mass;
+             
+  // Dual Views of the individual elem struct variables
+  DViewCArrayKokkos <double> elem_den;
+  DViewCArrayKokkos <double> elem_pres;
+  DViewCArrayKokkos <double> elem_stress; // always 3D even in 2D-RZ
+  DViewCArrayKokkos <double> elem_sspd;
+  DViewCArrayKokkos <double> elem_sie;
+  DViewCArrayKokkos <double> elem_vol;
+  DViewCArrayKokkos <double> elem_div;    
+  DViewCArrayKokkos <double> elem_mass;
+  DViewCArrayKokkos <size_t> elem_mat_id;
+  DViewCArrayKokkos <double> elem_statev;
+        
+  // Dual Views of the corner struct variables
+  DViewCArrayKokkos <double> corner_force;
+  DViewCArrayKokkos <double> corner_mass;
   
   //Boundary Conditions Data
   //CArray <Nodal_Combination> Patch_Nodes;
@@ -588,6 +589,11 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   //output dof data
   //Global arrays with collected data used to print
   int output_velocity_index, output_strain_index, output_stress_index;
+  
+  //file parameters
+  DCArrayKokkos <size_t>read_from_file;
+  DCArrayKokkos <double>file_state_vars;
+  DCArrayKokkos <size_t>mat_num_state_vars; // actual number of state_vars
 };
 
 #endif // end HEADER_H

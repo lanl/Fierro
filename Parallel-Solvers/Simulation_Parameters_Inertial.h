@@ -35,67 +35,29 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#include "utilities.h"
-#include "Simulation_Parameters_Thermal.h"
+#ifndef SIMULATION_PARAMETERS_INERTIAL_H
+#define SIMULATION_PARAMETERS_INERTIAL_H
 
+#include "utilities.h"
+#include "Simulation_Parameters.h"
 using namespace utils;
 
-Simulation_Parameters_Thermal::Simulation_Parameters_Thermal() : Simulation_Parameters(){
-
-  //initialize data and flags to defaults
-  output_temperature_flag = false;
-  output_temperature_gradient_flag = false;
-  output_heat_flux_flag = false;
-  report_runtime_flag = false;
-  unit_scaling = 1;
-  flux_max_flag = false;
-  direct_solver_flag = false;
-  thermal_flag = false;
-  multigrid_timers = false;
-  equilibrate_matrix_flag = false;
-  num_gauss_points = 2;
-  // ---- boundary conditions ---- //
-  NB = 0;
-  NBSF = 0;
-  NBT = 0;
-}
-
-Simulation_Parameters_Thermal::~Simulation_Parameters_Thermal(){
-}
-
-void Simulation_Parameters_Thermal::input(){
+class Simulation_Parameters_Inertial : public Simulation_Parameters
+{
+ public:
+  Simulation_Parameters_Inertial();
+  virtual ~Simulation_Parameters_Inertial();
+  virtual void input();
   
-  Simulation_Parameters::input();
-  //multigrid_timers = true;
-  equilibrate_matrix_flag = false;
+  //==============================================================================
+  //   Mesh Variables
+  //==============================================================================
 
-  //simulation spatial dimension
-  num_dim = 3;
-  unit_scaling = 1;
+  // --- Graphics output variables ---
+  bool output_flag, nodal_density_flag;
 
-  //polynomial interpolation order
-  p_order = 0;
+  // -- Integration rule
+  int num_gauss_points;
+};
 
-  // ---- graphics information ---- //
-  output_temperature_flag = true;
-  output_heat_flux_flag = true;
-  
-  //Isotropic Conductivity parameters to move into a child class later
-  Thermal_Conductivity = 10;
-
-  //Gauss-Legendre parameters
-  num_gauss_points = 2;
-
-  //debug and performance report flags
-  report_runtime_flag = true;
-
-  // ---- boundary conditions ---- //
-  NB = 6; // number of boundary conditions for this module
-  NBSF = 4; //number of surface heat flux conditions
-  NBT = 2; //number of surface sets used to specify a fixed temperature on nodes belonging to respective surfaces
-
-  //apply body forces
-  thermal_flag = false;
-  specific_internal_energy_rate = 1;
-
-}
+#endif // end HEADER_H
