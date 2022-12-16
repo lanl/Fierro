@@ -41,6 +41,12 @@
 
 #include "Solver.h"
 
+//forward declarations
+namespace ROL{
+  template<class datatype>
+  class Problem;
+}
+
 class Explicit_Solver: public Solver{
 
 public:
@@ -53,6 +59,12 @@ public:
 
   virtual void solver_finalize() {}
 
+  Teuchos::RCP<MV> initial_node_coords_distributed;
+  
+  class Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
+
+  Teuchos::RCP<ROL::Problem<real_t>> problem;
+  //ROL::Problem<real_t> problem;
 };
 
 #endif // end Header Guard

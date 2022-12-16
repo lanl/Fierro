@@ -56,6 +56,8 @@
 #include "elements.h"
 #include "node_combination.h"
 
+using namespace mtr;
+
 //forward declare
 class Solver;
 
@@ -129,6 +131,8 @@ public:
   virtual void comm_variables(Teuchos::RCP<const MV> zp) {}
 
   virtual void update_linear_solve(Teuchos::RCP<const MV> zp) {}
+
+  virtual void update_forward_solve(Teuchos::RCP<const MV> zp) {}
 
   virtual void local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix) {}
 

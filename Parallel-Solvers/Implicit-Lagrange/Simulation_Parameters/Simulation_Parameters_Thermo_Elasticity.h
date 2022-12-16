@@ -35,36 +35,58 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#include "utilities.h"
-#include "Simulation_Parameters_Inertial.h"
+#ifndef SIMULATION_PARAMETERS_THERMO_ELASTICITY_H
+#define SIMULATION_PARAMETERS_THERMO_ELASTICITY_H
 
+#include "utilities.h"
+#include "Simulation_Parameters.h"
 using namespace utils;
 
-Simulation_Parameters_Inertial::Simulation_Parameters_Inertial() : Simulation_Parameters(){
+class Simulation_Parameters_Thermo_Elasticity : public Simulation_Parameters
+{
+ public:
+  Simulation_Parameters_Thermo_Elasticity();
+  virtual ~Simulation_Parameters_Thermo_Elasticity();
+  virtual void input();
+  //==============================================================================
+  //   Mesh Variables
+  //==============================================================================
 
-  //initialize data and flags to defaults
-  report_runtime_flag = false;
-  unit_scaling = 1;
-}
+  // --- Mesh regions and material fills ---
+  int NB; // number of boundary patch sets to tag
+  int NBSF; //number of surface force density boundary conditions
+  int NBD; //number of displacement boundary conditions
+  int NBSH; //number of surface heat flux boundary conditions
+  int NBT; //number of temperature boundary conditions
 
-Simulation_Parameters_Inertial::~Simulation_Parameters_Inertial(){
-}
+  // --- Graphics output variables ---
+  bool output_displacement_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
 
-void Simulation_Parameters_Inertial::input(){
-  
-  Simulation_Parameters::input();
+  // --- Isotropic Elastic Parameters
+  real_t Elastic_Modulus, Poisson_Ratio, Thermal_Conductivity, Expansion_Coefficients[3], Initial_Temperature;
 
-  //simulation spatial dimension
-  num_dim = 3;
-  unit_scaling = 1;
+  // -- Integration rule
+  int num_gauss_points;
 
-  //polynomial interpolation order
-  p_order = 0;
-  
-  //Gauss-Legendre integration order
-  num_gauss_points = 2;
+  //debug and performance reporting flags
+  bool report_runtime_flag;
 
-  //debug and performance report flags
-  report_runtime_flag = true;
+  //Body force parameters
+  bool gravity_flag;
+  real_t gravity_vector[3];
 
-}
+  //Linear Solver Flags
+  bool direct_solver_flag, multigrid_timers, equilibrate_matrix_flag;
+
+  // --- Graphics output variables ---
+  bool output_temperature_flag, output_temperature_gradient_flag, output_heat_flux_flag, flux_max_flag;
+
+  //Body flux parameters
+  bool thermal_flag, electric_flag;
+  real_t specific_internal_energy_rate;
+
+  //Topology Optimization parameters
+  real_t maximum_strain, maximum_strain_energy;
+};
+
+#endif // end HEADER_H

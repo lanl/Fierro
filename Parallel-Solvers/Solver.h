@@ -57,6 +57,8 @@
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include <map>
 
+using namespace mtr;
+
 //forward declarations
 namespace swage{
   class mesh_t;
@@ -120,12 +122,33 @@ public:
 
   virtual void exit_solver(int status);
 
+  virtual void read_mesh_ensight(char *MESH);
+
+  virtual void read_mesh_tecplot(char *MESH);
+  
+  virtual void read_mesh_vtk(char *MESH);
+
+  virtual void repartition_nodes();
+
+  virtual void tecplot_writer() {}
+
+  virtual void parallel_tecplot_writer() {}
+
+  //setup ghosts and element maps
+  virtual void init_maps();
+
+  //finds the boundary element surfaces in this model
+  virtual void Get_Boundary_Patches();
+
   int setup_flag, finalize_flag;
 
   //MPI data
   int myrank; //index of this mpi rank in the world communicator
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
+
+  //class Simulation_Parameters *simparam;
+  class Simulation_Parameters *simparam;
 
   //Local FEA data
   size_t nlocal_nodes;
@@ -136,7 +159,7 @@ public:
   //host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
-  size_t max_nodes_per_element;
+  size_t max_nodes_per_element, max_nodes_per_patch;
   elements::element_selector *element_select;
   elements::Element3D *elem;
   elements::Element2D *elem2D;
@@ -166,6 +189,7 @@ public:
   Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
+  Teuchos::RCP<MV> initial_node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
   Teuchos::RCP<const MV> test_node_densities_distributed;
@@ -192,7 +216,23 @@ public:
   CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
   std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
   
-  
+  //file readin variables
+  std::ifstream *in;
+  std::streampos before_condition_header;
+  int words_per_line, elem_words_per_line;
+  enum node_ordering_convention {IJK, ENSIGHT};
+  node_ordering_convention active_node_ordering_convention;
+
+  //file output variables
+  int file_index, nsteps_print;  //file sequence index and print frequency in # of optimization steps
+
+  //output stream
+  Teuchos::RCP<Teuchos::FancyOStream> fos;
+
+  //debug and system functions/variables
+  double CPU_Time();
+  void init_clock();
+  double initial_CPU_time, communication_time, dev2host_time, host2dev_time;
 
 };
 

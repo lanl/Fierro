@@ -1,0 +1,31 @@
+#!/bin/bash
+export scriptdir=`pwd`
+cd ..
+export trilinosdir=`pwd`
+cd -
+export OMPI_CXX=hipcc
+cmake -DCMAKE_BUILD_TYPE=RELEASE \
+-DCMAKE_CXX_STANDARD:STRING=17 \
+-DTrilinos_MUST_FIND_ALL_TPL_LIBS=TRUE \
+-DTPL_ENABLE_MPI=ON \
+-DTrilinos_ENABLE_Kokkos=ON \
+-DTrilinos_ENABLE_OpenMP=OFF \
+-DKokkos_ENABLE_HIP=ON \
+-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=ON \
+-DKokkos_ENABLE_DEPRECATED_CODE=OFF \
+-DTrilinos_ENABLE_KokkosKernels=ON \
+-DKokkosKernels_ENABLE_TPL_CUBLAS=OFF \
+-DKokkosKernels_ENABLE_TPL_CUSPARSE=OFF \
+-DTrilinos_ENABLE_Amesos2=ON \
+-DTrilinos_ENABLE_Belos=ON \
+-DTrilinos_ENABLE_MueLu=ON \
+-DTpetra_INST_HIP=ON \
+-DXpetra_ENABLE_Kokkos_Refactor=ON \
+-DMueLu_ENABLE_Kokkos_Refactor=ON \
+-DTrilinos_ENABLE_ROL=ON \
+-DTrilinos_ENABLE_Ifpack2=ON \
+-DTrilinos_ENABLE_Zoltan2=ON \
+-DMueLu_ENABLE_TESTS=OFF \
+-DTrilinos_ENABLE_ALL_PACKAGES=OFF -DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF -DTrilinos_ENABLE_TESTS=OFF \
+-DCMAKE_INSTALL_PREFIX=. \
+..

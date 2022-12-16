@@ -46,6 +46,8 @@
 #include <Kokkos_View.hpp>
 
 using namespace utils;
+using namespace mtr;
+
 class Node_Combination;
 bool operator< (const Node_Combination &object1, const Node_Combination &object2);
 
