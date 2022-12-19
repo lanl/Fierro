@@ -17,10 +17,10 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
     //print_flag.update_device();
 
     // Loop over boundary sets
-    for (size_t bdy_set=0; bdy_set<mesh.num_bdy_sets; bdy_set++){
+    for (size_t bdy_set=0; bdy_set<num_bdy_sets; bdy_set++){
         
         // Loop over boundary nodes in a boundary set
-        FOR_ALL_CLASS(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+        FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
                 
             // reflected (boundary array is on the device)
             if (boundary(bdy_set).hydro_bc == bdy::reflected){
@@ -31,7 +31,7 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
                 // z_plane  = 2,
                 size_t direction = boundary(bdy_set).surface;
                 
-                size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+                size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                     
                 // Set velocity to zero in that directdion
                 node_vel(1, bdy_node_gid, direction) = 0.0;
@@ -39,7 +39,7 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
             }
             else if (boundary(bdy_set).hydro_bc == bdy::fixed){
                 
-                size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+                size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                 
                 //debug clause
                 //if(bdy_node_gid==549412) print_flag(0) = true;

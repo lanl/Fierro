@@ -27,7 +27,7 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
                    ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
         
         const size_t num_dims = 3;
         const size_t num_nodes_in_elem = 8;
@@ -289,10 +289,10 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
 
             
         // loop over the nieghboring cells
-        for (size_t elem_lid = 0; elem_lid < mesh.num_elems_in_elem(elem_gid); elem_lid++){
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++){
             
             // Get global index for neighboring cell
-            size_t neighbor_gid = mesh.elems_in_elem(elem_gid, elem_lid);
+            size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
             
             // calculate the velocity divergence in neighbor
             double div_neighbor = elem_div(neighbor_gid);
@@ -420,7 +420,7 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
                      ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
         
         const size_t num_dims = 2;
         const size_t num_nodes_in_elem = 4;
@@ -670,10 +670,10 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
 
             
         // loop over the nieghboring cells
-        for (size_t elem_lid = 0; elem_lid < mesh.num_elems_in_elem(elem_gid); elem_lid++){
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++){
             
             // Get global index for neighboring cell
-            size_t neighbor_gid = mesh.elems_in_elem(elem_gid, elem_lid);
+            size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
             
             // calculate the velocity divergence in neighbor
             double div_neighbor = elem_div(neighbor_gid);

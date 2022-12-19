@@ -243,7 +243,7 @@ void FEA_Module_SGH::get_vol(){
     const size_t num_dims = mesh.num_dims;
     
     if (num_dims == 2){
-        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elem, {
             
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
@@ -253,7 +253,7 @@ void FEA_Module_SGH::get_vol(){
         Kokkos::fence();
     }
     else {
-        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elem, {
             
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);

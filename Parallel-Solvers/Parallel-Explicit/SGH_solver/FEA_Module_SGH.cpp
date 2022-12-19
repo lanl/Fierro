@@ -87,7 +87,7 @@
 using namespace utils;
 
 
-FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module(Solver_Pointer), mesh(mesh), nodes_in_elem(mesh.nodes_in_elem){
+FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module(Solver_Pointer), mesh(mesh){
   //create parameter object
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver_SGH*>(Solver_Pointer);
@@ -155,7 +155,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     const size_t num_dims = simparam->num_dim;
     const size_t rk_num_bins = simparam->rk_num_bins;
 
-    size_t num_nodes_in_elem = 1;
+    num_nodes_in_elem = 1;
     for (int dim=0; dim<num_dims; dim++){
         num_nodes_in_elem *= 2;
     }
@@ -201,7 +201,6 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
       }
     } //end view scope
     // --- read in the elements in the mesh ---
-    size_t num_elem = 0;
     
     num_elem = Explicit_Solver_Pointer_->rnum_elem;
     //printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, num_elem);
@@ -210,7 +209,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     mesh.initialize_elems(num_elem, num_dims);
     elem.initialize(rk_num_bins, num_nodes, 3); // always 3D here, even for 2D
     nodes_in_elem = mesh.nodes_in_elem;
-    //save data to mesh.nodes_in_elem.host
+    //save data to nodes_in_elem.host
     //CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
     //view scope
     {
@@ -222,7 +221,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
             nodes_in_elem.host(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
             //debug print
-            //std::cout << mesh.nodes_in_elem.get_kokkos_dual_view().h_view(ielem*num_nodes_in_elem + inode)+1<< " ";
+            //std::cout << nodes_in_elem.get_kokkos_dual_view().h_view(ielem*num_nodes_in_elem + inode)+1<< " ";
         }
         //std::cout << std::endl;
       }
@@ -233,8 +232,8 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     //debug print
     
     //CArrayKokkos<size_t> device_mesh_nodes_in_elem(num_elem, num_nodes_in_elem);
-    //device_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().d_view;
-    //host_mesh_nodes_in_elem.get_kokkos_view() = mesh.nodes_in_elem.get_kokkos_dual_view().view_host();
+    //device_mesh_nodes_in_elem.get_kokkos_view() = nodes_in_elem.get_kokkos_dual_view().d_view;
+    //host_mesh_nodes_in_elem.get_kokkos_view() = nodes_in_elem.get_kokkos_dual_view().view_host();
     /*
     if(myrank==1){
     std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in LOCAL INDICES" << myrank << std::endl;
@@ -243,7 +242,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
             //debug print
             //device_mesh_nodes_in_elem(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
-            std::cout << mesh.nodes_in_elem(ielem, inode)+1<< " ";
+            std::cout << nodes_in_elem(ielem, inode)+1<< " ";
         }
         std::cout << std::endl;
     }
@@ -259,7 +258,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
         for(int inode = 0; inode < num_nodes_in_elem; inode++){
             //debug print
             //device_mesh_nodes_in_elem(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
-            std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(mesh.nodes_in_elem(ielem, inode))<< " ";
+            std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(nodes_in_elem(ielem, inode))<< " ";
         }
         std::cout << std::endl;
     }
@@ -321,7 +320,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
 
     
     // intialize corner variables
-    int num_corners = num_elem*mesh.num_nodes_in_elem;
+    int num_corners = num_elem*num_nodes_in_elem;
     mesh.initialize_corners(num_corners);
     corner.initialize(num_corners, num_dims);
 
@@ -599,10 +598,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t num_state_vars = simparam->max_num_state_vars;
   const size_t rk_level = 0;
   const size_t num_dims = simparam->num_dim;
-  size_t num_nodes_in_elem = 1;
-  for (int dim=0; dim<num_dims; dim++){
-        num_nodes_in_elem *= 2;
-  }
 
   // --- Read in the nodes in the mesh ---
 
@@ -693,7 +688,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
     for (int f_id = 0; f_id < num_fills; f_id++){
             
         // parallel loop over elements in mesh
-        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elem, {
 
             const size_t rk_level = 1;
 
@@ -704,19 +699,19 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
             elem_coords[2] = 0.0;
 
             // get the coordinates of the element center
-            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-                elem_coords[0] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords[1] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+                elem_coords[0] += node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords[1] += node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3){
-                    elem_coords[2] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_coords[2] += node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), 2);
                 } else
                 {
                     elem_coords[2] = 0.0;
                 }
             } // end loop over nodes in element
-            elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
-            elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
-            elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
+            elem_coords[0] = elem_coords[0]/num_nodes_in_elem;
+            elem_coords[1] = elem_coords[1]/num_nodes_in_elem;
+            elem_coords[2] = elem_coords[2]/num_nodes_in_elem;
                 
             
             // spherical radius
@@ -821,10 +816,10 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
 					    
                 
                 // loop over the nodes of this element and apply velocity
-                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+                for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
 
                     // get the mesh node index
-                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                    size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
                 
                     // --- Velocity ---
@@ -954,13 +949,13 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
     // calculate the corner massess if 2D
     if(mesh.num_dims==2){
         
-        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elem, {
             
             // facial area of the corners
             double corner_areas_array[4];
             
             ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
-            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+            ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
             
             get_area_weights2D(corner_areas,
                                elem_gid,
@@ -1088,6 +1083,7 @@ void FEA_Module_SGH::setup(){
     mesh.num_nodes_in_patch = 2*(mesh.num_dims-1);  // 2 (2D) or 4 (3D)
     mesh.num_patches_in_elem = 2*mesh.num_dims; // 4 (2D) or 6 (3D)
     mesh.init_bdy_sets(num_bcs);
+    num_bdy_sets = mesh.num_bdy_sets;
     printf("Num BC's = %lu\n", num_bcs);
     
     // tag boundary patches in the set
@@ -1095,13 +1091,25 @@ void FEA_Module_SGH::setup(){
 
     build_boundry_node_sets(boundary, mesh);
     
+    //assign mesh views needed by the FEA module
+
+    // patch ids in bdy set
+    bdy_patches_in_set = mesh.bdy_patches_in_set;
+    // node ids in bdy_patch set
+    bdy_nodes_in_set = mesh.bdy_nodes_in_set;
+    num_bdy_nodes_in_set = mesh.num_bdy_nodes_in_set;
+
+    // elem ids in elem
+    elems_in_elem = mesh.elems_in_elem;
+    num_elems_in_elem = mesh.num_elems_in_elem;
+
     // loop over BCs
     for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
         
         RUN_CLASS({
             printf("Boundary Condition number %lu \n", this_bdy);
-            printf("  Num bdy patches in this set = %lu \n", mesh.bdy_patches_in_set.stride(this_bdy));
-            printf("  Num bdy nodes in this set = %lu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
+            printf("  Num bdy patches in this set = %lu \n", bdy_patches_in_set.stride(this_bdy));
+            printf("  Num bdy nodes in this set = %lu \n", bdy_nodes_in_set.stride(this_bdy));
         });
         Kokkos::fence();
 
@@ -1122,7 +1130,7 @@ void FEA_Module_SGH::setup(){
     Kokkos::fence();
     
     // make memory to store state_vars from an external file
-    file_state_vars = DCArrayKokkos <double>(num_materials,mesh.num_elems,num_state_vars);
+    file_state_vars = DCArrayKokkos <double>(num_materials,num_elem,num_state_vars);
     mat_num_state_vars = DCArrayKokkos <size_t>(num_materials); // actual number of state_vars
     FOR_ALL_CLASS(mat_id, 0, num_materials, {
         
@@ -1144,7 +1152,7 @@ void FEA_Module_SGH::setup(){
             user_model_init(file_state_vars,
                             num_vars,
                             mat_id,
-                            mesh.num_elems);
+                            num_elem);
             
             // copy the values to the device
             file_state_vars.update_device();
@@ -1155,13 +1163,13 @@ void FEA_Module_SGH::setup(){
     } // end for
     
     
-    //--- apply the fill instructions over the Elements---//
+    //--- apply the fill instructions over each of the Elements---//
     
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++){
             
         // parallel loop over elements in mesh
-        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elem, {
 
             const size_t rk_level = 1;
 
@@ -1172,19 +1180,19 @@ void FEA_Module_SGH::setup(){
             elem_coords[2] = 0.0;
 
             // get the coordinates of the element center
-            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-                elem_coords[0] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords[1] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 1);
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+                elem_coords[0] += node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), 0);
+                elem_coords[1] += node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), 1);
                 if (mesh.num_dims == 3){
-                    elem_coords[2] += node_coords(rk_level, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+                    elem_coords[2] += node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), 2);
                 } else
                 {
                     elem_coords[2] = 0.0;
                 }
             } // end loop over nodes in element
-            elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
-            elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
-            elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
+            elem_coords[0] = elem_coords[0]/num_nodes_in_elem;
+            elem_coords[1] = elem_coords[1]/num_nodes_in_elem;
+            elem_coords[2] = elem_coords[2]/num_nodes_in_elem;
                 
             
             // spherical radius
@@ -1286,10 +1294,10 @@ void FEA_Module_SGH::setup(){
 					    
                 
                 // loop over the nodes of this element and apply velocity
-                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+                for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
 
                     // get the mesh node index
-                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                    size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
                 
                     // --- Velocity ---
@@ -1418,13 +1426,13 @@ void FEA_Module_SGH::setup(){
     // calculate the corner massess if 2D
     if(mesh.num_dims==2){
         
-        FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+        FOR_ALL_CLASS(elem_gid, 0, num_elem, {
             
             // facial area of the corners
             double corner_areas_array[4];
             
             ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
-            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+            ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
             
             get_area_weights2D(corner_areas,
                                elem_gid,
@@ -1930,7 +1938,7 @@ void FEA_Module_SGH::sgh_solve(){
                 elem_sie,
                 elem_stress,
                 mesh.num_dims,
-                mesh.num_elems,
+                num_elem,
                 mesh.num_nodes);
 	    
         
@@ -2213,12 +2221,12 @@ void FEA_Module_SGH::sgh_solve(){
                 // |   |  -- I
                 // 0---1
                 /*
-                FOR_ALL_CLASS(elem_gid, 0, mesh.num_elems, {
+                FOR_ALL_CLASS(elem_gid, 0, num_elem, {
                     
                     // loop over the corners of the element and calculate the mass
                     for (size_t node_lid=0; node_lid<4; node_lid++){
                         
-                        size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                        size_t node_gid = nodes_in_elem(elem_gid, node_lid);
                         size_t node_minus_gid;
                         size_t node_plus_gid;
                         
@@ -2228,16 +2236,16 @@ void FEA_Module_SGH::sgh_solve(){
                             
                             // minus node
                             if (node_lid==0){
-                                node_minus_gid = mesh.nodes_in_elem(elem_gid, 3);
+                                node_minus_gid = nodes_in_elem(elem_gid, 3);
                             } else {
-                                node_minus_gid = mesh.nodes_in_elem(elem_gid, node_lid-1);
+                                node_minus_gid = nodes_in_elem(elem_gid, node_lid-1);
                             }
                             
                             // plus node
                             if (node_lid==3){
-                                node_plus_gid = mesh.nodes_in_elem(elem_gid, 0);
+                                node_plus_gid = nodes_in_elem(elem_gid, 0);
                             } else {
-                                node_plus_gid = mesh.nodes_in_elem(elem_gid, node_lid+1);
+                                node_plus_gid = nodes_in_elem(elem_gid, node_lid+1);
                             }
                             
                             node_mass(node_gid) = fmax(node_mass(node_plus_gid), node_mass(node_minus_gid))/2.0;

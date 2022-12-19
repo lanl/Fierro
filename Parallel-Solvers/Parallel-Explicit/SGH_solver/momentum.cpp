@@ -224,7 +224,7 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
                     ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
     
         const size_t num_nodes_in_elem = 8;
         const size_t num_dims = 3;
@@ -301,7 +301,7 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos <double> &elem_div,
                       ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
     
         const size_t num_nodes_in_elem = 4;
         const size_t num_dims = 2;
