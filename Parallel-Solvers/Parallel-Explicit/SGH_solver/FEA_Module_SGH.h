@@ -481,6 +481,10 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   // patch ids in bdy set
   size_t num_bdy_sets;
   DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
+  
+  // bdy nodes
+  CArrayKokkos <size_t> bdy_nodes;
+
   // node ids in bdy_patch set
   RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
   DCArrayKokkos <size_t> num_bdy_nodes_in_set;
@@ -518,6 +522,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DViewCArrayKokkos <double> corner_mass;
   
   //Boundary Conditions Data
+  DCArrayKokkos<size_t> Local_Index_Boundary_Patches;
   //CArray <Nodal_Combination> Patch_Nodes;
   enum bc_type {NONE, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
   

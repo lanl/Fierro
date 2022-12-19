@@ -6,6 +6,7 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters_SGH.h"
 
 void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
                        const CArrayKokkos <boundary_t> &boundary,
@@ -15,7 +16,8 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
     //DCArrayKokkos<bool> print_flag(1, "print_flag");
     //print_flag.host(0) = false;
     //print_flag.update_device();
-
+    
+    int num_dims = simparam->num_dim;
     // Loop over boundary sets
     for (size_t bdy_set=0; bdy_set<num_bdy_sets; bdy_set++){
         
@@ -44,7 +46,7 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
                 //debug clause
                 //if(bdy_node_gid==549412) print_flag(0) = true;
 
-                for(size_t dim=0; dim<mesh.num_dims; dim++){
+                for(size_t dim=0; dim < num_dims; dim++){
                     // Set velocity to zero
                     node_vel(1, bdy_node_gid, dim) = 0.0;
                 }

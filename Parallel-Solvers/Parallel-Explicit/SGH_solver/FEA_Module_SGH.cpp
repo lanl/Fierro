@@ -106,6 +106,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module
 
   //boundary condition data
   max_boundary_sets = 0;
+  Local_Index_Boundary_Patches = Explicit_Solver_Pointer_->Local_Index_Boundary_Patches;
   
   //setup output
   noutput = 0;
@@ -1086,6 +1087,7 @@ void FEA_Module_SGH::setup(){
 
     // patch ids in bdy set
     bdy_patches_in_set = mesh.bdy_patches_in_set;
+    bdy_nodes = mesh.bdy_nodes;
 
     // tag boundary patches in the set
     tag_bdys(boundary, mesh, node_coords);
@@ -1605,7 +1607,7 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
         
         // get the nodal_gid for this node in the patch
         //size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
-        size_t node_gid = mesh.Local_Index_Boundary_Patches(patch_gid, patch_node_lid);
+        size_t node_gid = Local_Index_Boundary_Patches(patch_gid, patch_node_lid);
 
         for (size_t dim = 0; dim < num_dim; dim++){
             these_patch_coords[dim] = node_coords(1, node_gid, dim);  // (rk, node_gid, dim)
@@ -1679,29 +1681,30 @@ void FEA_Module_SGH::build_boundry_node_sets(const CArrayKokkos <boundary_t> &bo
     
     // build boundary nodes in each boundary set
     int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
-    mesh.num_bdy_nodes_in_set = DCArrayKokkos <size_t> (mesh.num_bdy_sets, "num_bdy_nodes_in_set");
-    CArrayKokkos <long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, nall_nodes, "temp_count_num_bdy_nodes_in_set");
+    int num_nodes_in_patch = mesh.num_nodes_in_patch;
+    num_bdy_nodes_in_set = mesh.num_bdy_nodes_in_set = DCArrayKokkos <size_t> (num_bdy_sets, "num_bdy_nodes_in_set");
+    CArrayKokkos <long long int> temp_count_num_bdy_nodes_in_set(num_bdy_sets, nall_nodes, "temp_count_num_bdy_nodes_in_set");
     
     DynamicRaggedRightArrayKokkos <size_t> temp_nodes_in_set (mesh.num_bdy_sets, nboundary_patches*mesh.num_nodes_in_patch, "temp_nodes_in_set");
     
     // Parallel loop over boundary sets on device
-    FOR_ALL_CLASS(bdy_set, 0, mesh.num_bdy_sets, {
+    FOR_ALL_CLASS(bdy_set, 0, num_bdy_sets, {
 	
         // finde the number of patches_in_set
-        size_t num_bdy_patches_in_set = mesh.bdy_patches_in_set.stride(bdy_set);
+        size_t num_bdy_patches_in_set = bdy_patches_in_set.stride(bdy_set);
 
-        mesh.num_bdy_nodes_in_set(bdy_set) = 0;
+        num_bdy_nodes_in_set(bdy_set) = 0;
         
         // Loop over boundary patches in boundary set
         for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
             
                 // get the global id for this boundary patch
-                size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+                size_t patch_gid = bdy_patches_in_set(bdy_set, bdy_patch_gid);
                 
                 // apply boundary condition at nodes on boundary
-                for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+                for(size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++){
                     
-                    size_t node_gid = mesh.Local_Index_Boundary_Patches(patch_gid, node_lid);
+                    size_t node_gid = Local_Index_Boundary_Patches(patch_gid, node_lid);
                     
                     temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = -1;
                         
@@ -1714,18 +1717,18 @@ void FEA_Module_SGH::build_boundry_node_sets(const CArrayKokkos <boundary_t> &bo
         for (size_t bdy_patch_gid = 0; bdy_patch_gid<num_bdy_patches_in_set; bdy_patch_gid++){
             
                 // get the global id for this boundary patch
-                size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+                size_t patch_gid = bdy_patches_in_set(bdy_set, bdy_patch_gid);
                 
                 // apply boundary condition at nodes on boundary
-                for(size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+                for(size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++){
                     
-                    size_t node_gid = mesh.Local_Index_Boundary_Patches(patch_gid, node_lid);
+                    size_t node_gid = Local_Index_Boundary_Patches(patch_gid, node_lid);
                     
                     if (temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) == -1){
                         
-                        size_t num_saved = mesh.num_bdy_nodes_in_set(bdy_set);
+                        size_t num_saved = num_bdy_nodes_in_set(bdy_set);
                         
-                        mesh.num_bdy_nodes_in_set(bdy_set)++;
+                        num_bdy_nodes_in_set(bdy_set)++;
                         
                         // replace -1 with node_gid to denote the node was already saved
                         temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = node_gid;
@@ -1745,22 +1748,22 @@ void FEA_Module_SGH::build_boundry_node_sets(const CArrayKokkos <boundary_t> &bo
     
    
     // allocate the RaggedRight bdy_nodes_in_set array
-    mesh.bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (mesh.num_bdy_nodes_in_set, "bdy_nodes_in_set");
+    bdy_nodes_in_set = mesh.bdy_nodes_in_set = RaggedRightArrayKokkos <size_t> (mesh.num_bdy_nodes_in_set, "bdy_nodes_in_set");
 
-    FOR_ALL_CLASS (bdy_set, 0, mesh.num_bdy_sets, {
+    FOR_ALL_CLASS (bdy_set, 0, num_bdy_sets, {
 	
         // Loop over boundary patches in boundary set
-        for (size_t bdy_node_lid=0; bdy_node_lid<mesh.num_bdy_nodes_in_set(bdy_set); bdy_node_lid++){
+        for (size_t bdy_node_lid=0; bdy_node_lid<num_bdy_nodes_in_set(bdy_set); bdy_node_lid++){
 
             // save the bdy_node_gid
-            mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_nodes_in_set(bdy_set, bdy_node_lid);
+            bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_nodes_in_set(bdy_set, bdy_node_lid);
             
         } // end for
         
     }); // end FOR_ALL_CLASS bdy_set
     
     // update the host side for the number nodes in a bdy_set
-    mesh.num_bdy_nodes_in_set.update_host();
+    num_bdy_nodes_in_set.update_host();
     
     return;
 } // end method to build boundary nodes
@@ -2277,7 +2280,7 @@ void FEA_Module_SGH::sgh_solve(){
                 
                 FOR_ALL_CLASS(node_bdy_gid, 0, num_bdy_nodes, {
                 //FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {    
-                    size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
+                    size_t node_gid = bdy_nodes(node_bdy_gid);
                     
                     if (node_coords(1,node_gid,1) < tiny){
                         // node is on the axis

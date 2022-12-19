@@ -5,6 +5,7 @@
 #include "state.h"
 #include "mesh.h"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters_SGH.h"
 
 void FEA_Module_SGH::update_state(const CArrayKokkos <material_t> &material,
                   const mesh_t &mesh,
@@ -24,16 +25,16 @@ void FEA_Module_SGH::update_state(const CArrayKokkos <material_t> &material,
                   ){
 
 
-    
+    int num_dims = simparam->num_dim;
     
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
-        const size_t num_dims = mesh.num_dims;
-        const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
+        const size_t num_dims = num_dims;
+        const size_t num_nodes_in_elem = num_nodes_in_elem;
 
         // cut out the node_gids for this element
-        ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
+        ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
         
         // --- Density ---
         elem_den(elem_gid) = elem_mass(elem_gid)/elem_vol(elem_gid);
@@ -46,7 +47,7 @@ void FEA_Module_SGH::update_state(const CArrayKokkos <material_t> &material,
         if(material(mat_id).strength_type == model::hyper){
 
             // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
+            ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
             
             // --- Density ---
             elem_den(elem_gid) = elem_mass(elem_gid)/elem_vol(elem_gid);
@@ -132,15 +133,16 @@ void FEA_Module_SGH::update_state2D(const CArrayKokkos <material_t> &material,
                     const double rk_alpha
                     ){
     
+    int num_dims = simparam->num_dim;
     
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
-        const size_t num_dims = mesh.num_dims;
-        const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
+        const size_t num_dims = num_dims;
+        const size_t num_nodes_in_elem = num_nodes_in_elem;
 
         // cut out the node_gids for this element
-        ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
+        ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
         
         // --- Density ---
         elem_den(elem_gid) = elem_mass(elem_gid)/elem_vol(elem_gid);
@@ -153,7 +155,7 @@ void FEA_Module_SGH::update_state2D(const CArrayKokkos <material_t> &material,
         if(material(mat_id).strength_type == model::hyper){
 
             // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
+            ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
             
             // --- Density ---
             elem_den(elem_gid) = elem_mass(elem_gid)/elem_vol(elem_gid);

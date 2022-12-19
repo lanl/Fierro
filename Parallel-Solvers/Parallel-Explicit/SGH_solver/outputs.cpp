@@ -133,19 +133,19 @@ void FEA_Module_SGH::ensight( const mesh_t &mesh,
         elem_vel[1] = 0.0;
         elem_vel[2] = 0.0;
         // get the coordinates of the element center
-        for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-            elem_vel[0] += node_vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 0);
-            elem_vel[1] += node_vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 1);
-            if (mesh.num_dims == 3){
-                elem_vel[2] += node_vel(1, mesh.nodes_in_elem(elem_gid, node_lid), 2);
+        for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+            elem_vel[0] += node_vel(1, nodes_in_elem(elem_gid, node_lid), 0);
+            elem_vel[1] += node_vel(1, nodes_in_elem(elem_gid, node_lid), 1);
+            if (num_dims == 3){
+                elem_vel[2] += node_vel(1, nodes_in_elem(elem_gid, node_lid), 2);
             }
             else {
                 elem_vel[2] = 0.0;
             }
         } // end loop over nodes in element
-        elem_vel[0] = elem_vel[0]/mesh.num_nodes_in_elem;
-        elem_vel[1] = elem_vel[1]/mesh.num_nodes_in_elem;
-        elem_vel[2] = elem_vel[2]/mesh.num_nodes_in_elem;
+        elem_vel[0] = elem_vel[0]/num_nodes_in_elem;
+        elem_vel[1] = elem_vel[1]/num_nodes_in_elem;
+        elem_vel[2] = elem_vel[2]/num_nodes_in_elem;
 
         double speed_sqrd = 0.0;
         for (int dim=0; dim<num_dims; dim++){
@@ -269,9 +269,9 @@ void FEA_Module_SGH::ensight( const mesh_t &mesh,
     
     // write all global point numbers for this cell
     for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-        for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+        for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
 
-            fprintf(out[0],"%10lu\t",mesh.nodes_in_elem.host(elem_gid, node_lid) + 1); // note: node_gid starts at 1
+            fprintf(out[0],"%10lu\t",nodes_in_elem.host(elem_gid, node_lid) + 1); // note: node_gid starts at 1
         }
         fprintf(out[0],"\n");
     }
@@ -458,20 +458,20 @@ void FEA_Module_SGH::state_file( const mesh_t &mesh,
 	
 	
         // get the coordinates of the element center
-        for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
-            elem_coords[0] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 0);
-            elem_coords[1] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 1);
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+            elem_coords[0] += node_coords.host(1, nodes_in_elem.host(elem_gid, node_lid), 0);
+            elem_coords[1] += node_coords.host(1, nodes_in_elem.host(elem_gid, node_lid), 1);
             if(num_dims == 3){
-                elem_coords[2] += node_coords.host(1, mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
+                elem_coords[2] += node_coords.host(1, nodes_in_elem.host(elem_gid, node_lid), 2);
             }
             else {
                 elem_coords[2] = 0.0;
             }
         } // end loop over nodes in element
 	
-        elem_coords[0] = elem_coords[0]/mesh.num_nodes_in_elem;
-        elem_coords[1] = elem_coords[1]/mesh.num_nodes_in_elem;
-        elem_coords[2] = elem_coords[2]/mesh.num_nodes_in_elem;
+        elem_coords[0] = elem_coords[0]/num_nodes_in_elem;
+        elem_coords[1] = elem_coords[1]/num_nodes_in_elem;
+        elem_coords[2] = elem_coords[2]/num_nodes_in_elem;
         
         double rad2 = sqrt(elem_coords[0]*elem_coords[0] +
                            elem_coords[1]*elem_coords[1]);

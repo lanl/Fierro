@@ -26,10 +26,10 @@ void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
         } // end for dim
         
         // loop over all corners around the node and calculate the nodal force
-        for (size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(node_gid); corner_lid++){
+        for (size_t corner_lid=0; corner_lid<num_corners_in_node(node_gid); corner_lid++){
         
             // Get corner gid
-            size_t corner_gid = mesh.corners_in_node(node_gid, corner_lid);
+            size_t corner_gid = corners_in_node(node_gid, corner_lid);
             
             // loop over dimension
             for (size_t dim = 0; dim < num_dims; dim++){
@@ -237,7 +237,7 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
         ViewCArrayKokkos <double> w(w_array, num_nodes_in_elem); // z-dir vel component
         
         // cut out the node_gids for this element
-        ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+        ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
         
         // The b_matrix are the outward corner area normals
         double b_matrix_array[24];
@@ -318,7 +318,7 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos <double> &elem_div,
         
         
         // cut out the node_gids for this element
-        ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+        ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
         
         // The b_matrix are the outward corner area normals
         double b_matrix_array[24];

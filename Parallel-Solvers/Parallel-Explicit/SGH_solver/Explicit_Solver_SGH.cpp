@@ -1600,7 +1600,6 @@ void Explicit_Solver_SGH::init_boundaries(){
     }
   }
   Local_Index_Boundary_Patches.update_device();
-  mesh->Local_Index_Boundary_Patches = Local_Index_Boundary_Patches;
   
   //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
   std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
