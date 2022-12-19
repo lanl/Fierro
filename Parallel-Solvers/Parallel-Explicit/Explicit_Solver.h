@@ -53,7 +53,7 @@ public:
   Explicit_Solver();
   ~Explicit_Solver();
 
-  virtual void run(int argc, char *argv[]) = 0;
+  virtual void run(int argc, char *argv[]) {}
 
   Teuchos::RCP<MV> initial_node_coords_distributed;
   

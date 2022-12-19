@@ -167,7 +167,7 @@ void Simulation_Parameters_SGH::input(){
     if (test_problem == Sedov3D){
         time_final = 1.0;  // 1.0 for Sedov
         
-        RUN({
+        RUN_CLASS({
             // gamma law model
             // statev(0) = gamma
             // statev(1) = minimum sound speed
@@ -252,14 +252,14 @@ void Simulation_Parameters_SGH::input(){
             boundary(5).value = 1.2;
             boundary(5).hydro_bc = bdy::reflected;
             
-        });  // end RUN
+        });  // end RUN_CLASS
 
     } // end if Sedov
     
     // 2D RZ Sedov blast wave test case
     if (test_problem == SedovRZ){
         time_final = 1.0;  // 1.0 for Sedov
-        RUN({
+        RUN_CLASS({
             // gamma law model
             // statev(0) = gamma
             // statev(1) = minimum sound speed
@@ -342,7 +342,7 @@ void Simulation_Parameters_SGH::input(){
             boundary(2).value = 0.01;
             boundary(2).hydro_bc = bdy::fixed;
             
-        });  // end RUN
+        });  // end RUN_CLASS
 
     } // end if Sedov
     
@@ -352,7 +352,7 @@ void Simulation_Parameters_SGH::input(){
 
         time_final = 0.6;
         
-        RUN({
+        RUN_CLASS({
             
             material(0).eos_model = ideal_gas; // EOS model
             material(0).q1        = 1.0;       // accoustic coefficient
@@ -391,7 +391,7 @@ void Simulation_Parameters_SGH::input(){
             boundary(2).value = 0.0;
             boundary(2).hydro_bc = bdy::reflected;
             
-        });  // end RUN
+        });  // end RUN_CLASS
             
     } // end if Noh
     
@@ -401,7 +401,7 @@ void Simulation_Parameters_SGH::input(){
 
         time_final = 0.6;
         
-        RUN({
+        RUN_CLASS({
             
             material(0).eos_model = ideal_gas; // EOS model
             material(0).q1        = 1.0;       // accoustic coefficient
@@ -441,7 +441,7 @@ void Simulation_Parameters_SGH::input(){
             boundary(2).hydro_bc = bdy::fixed;
             
             
-        });  // end RUN
+        });  // end RUN_CLASS
             
     } // end if Noh
     
@@ -451,7 +451,7 @@ void Simulation_Parameters_SGH::input(){
         
         time_final = 0.2;  // 1.0 for Sedov
         
-        RUN({
+        RUN_CLASS({
             // gamma law model
             // statev(0) = gamma
             // statev(1) = minimum sound speed
@@ -530,7 +530,7 @@ void Simulation_Parameters_SGH::input(){
             boundary(3).value = 0.1;
             boundary(3).hydro_bc = bdy::reflected;
             
-        });  // end RUN
+        });  // end RUN_CLASS
 
     } // end if SodZ
     
@@ -540,7 +540,7 @@ void Simulation_Parameters_SGH::input(){
         
         time_final = 4.0; 
         
-        RUN({
+        RUN_CLASS({
             // gamma law model
             // statev(0) = gamma
             // statev(1) = minimum sound speed
@@ -646,7 +646,7 @@ void Simulation_Parameters_SGH::input(){
             boundary(5).value = 1.0;
             boundary(5).hydro_bc = bdy::reflected;
             
-        });  // end RUN
+        });  // end RUN_CLASS
 
     } // end if SodZ
     
@@ -656,7 +656,7 @@ void Simulation_Parameters_SGH::input(){
 
         time_final = 25.0;
         
-        RUN({
+        RUN_CLASS({
             
             material(0).eos_model = ideal_gas; // EOS model
             material(0).q1        = 1.0;       // accoustic coefficient
@@ -699,7 +699,7 @@ void Simulation_Parameters_SGH::input(){
             boundary(2).hydro_bc = bdy::reflected;
             
             
-        });  // end RUN
+        });  // end RUN_CLASS
         
     } // end if Taylor Anvil
 
