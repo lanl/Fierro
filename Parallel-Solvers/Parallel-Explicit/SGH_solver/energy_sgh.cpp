@@ -14,7 +14,7 @@ void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
                        const DViewCArrayKokkos <double> &corner_force){
 
     // loop over all the elements in the mesh
-    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
         double elem_power = 0.0;
 

@@ -116,7 +116,7 @@ void FEA_Module_SGH::ensight( const mesh_t &mesh,
     };
     
     // short hand
-    const size_t num_nodes = mesh.num_local_nodes;
+    const size_t num_nodes = nlocal_nodes;
     const size_t num_elems = mesh.num_elems;
     const size_t num_dims  = mesh.num_dims;
 
@@ -449,7 +449,7 @@ void FEA_Module_SGH::state_file( const mesh_t &mesh,
 
     
     // write out values for the elem
-    for (size_t elem_gid=0; elem_gid<num_elem; elem_gid++){
+    for (size_t elem_gid=0; elem_gid < rnum_elem; elem_gid++){
         
         double elem_coords[3];
         elem_coords[0] = 0.0;

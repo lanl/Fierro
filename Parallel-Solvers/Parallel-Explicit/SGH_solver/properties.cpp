@@ -27,7 +27,7 @@ void FEA_Module_SGH::update_state(const CArrayKokkos <material_t> &material,
     
     
     // loop over all the elements in the mesh
-    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
         const size_t num_dims = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
@@ -134,7 +134,7 @@ void FEA_Module_SGH::update_state2D(const CArrayKokkos <material_t> &material,
     
     
     // loop over all the elements in the mesh
-    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
         const size_t num_dims = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;

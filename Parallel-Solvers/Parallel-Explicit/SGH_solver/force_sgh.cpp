@@ -27,7 +27,7 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
                    ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
         const size_t num_dims = 3;
         const size_t num_nodes_in_elem = 8;
@@ -420,7 +420,7 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
                      ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
         const size_t num_dims = 2;
         const size_t num_nodes_in_elem = 4;

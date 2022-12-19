@@ -71,7 +71,7 @@ void FEA_Module_SGH::get_timestep(mesh_t &mesh,
 
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN_CLASS(elem_gid, 0, num_elem, dt_lcl, {
+    REDUCE_MIN_CLASS(elem_gid, 0, rnum_elem, dt_lcl, {
         
         double coords0[24];  // element coords
         ViewCArrayKokkos <double> coords(coords0, 8, 3);

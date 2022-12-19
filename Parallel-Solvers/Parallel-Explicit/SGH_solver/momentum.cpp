@@ -18,7 +18,7 @@ void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
     const size_t num_dims = mesh.num_dims;
     
     // walk over the nodes to update the velocity
-    FOR_ALL_CLASS(node_gid, 0, mesh.num_local_nodes, {
+    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
 
         double node_force[3];
         for (size_t dim = 0; dim < num_dims; dim++){
@@ -224,7 +224,7 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
                     ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
     
         const size_t num_nodes_in_elem = 8;
         const size_t num_dims = 3;
@@ -301,7 +301,7 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos <double> &elem_div,
                       ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, num_elem, {
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
     
         const size_t num_nodes_in_elem = 4;
         const size_t num_dims = 2;
