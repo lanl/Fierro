@@ -446,9 +446,36 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   mesh_t& mesh;
   //shallow copies of mesh class views
   size_t num_nodes_in_elem;
-  DCArrayKokkos<size_t> nodes_in_elem;
+  // corner ids in node
+  RaggedRightArrayKokkos <size_t> corners_in_node;
+  CArrayKokkos <size_t> num_corners_in_node;
+    
+  // elem ids in node
+  RaggedRightArrayKokkos <size_t> elems_in_node;
+    
+  // node ids in node
+  RaggedRightArrayKokkos <size_t> nodes_in_node;
+  CArrayKokkos <size_t> num_nodes_in_node;
+    
+  // node ids in elem
+  DCArrayKokkos <size_t> nodes_in_elem;
+    
+  // corner ids in elem
+  CArrayKokkos <size_t> corners_in_elem;
+    
+  // elem ids in elem
   RaggedRightArrayKokkos <size_t> elems_in_elem;
   CArrayKokkos <size_t> num_elems_in_elem;
+    
+  // patch ids in elem
+  CArrayKokkos <size_t> patches_in_elem;
+    
+  // node ids in a patch
+  CArrayKokkos <size_t> nodes_in_patch;
+    
+  // element ids in a patch
+  CArrayKokkos <size_t> elems_in_patch;
+
   // patch ids in bdy set
   size_t num_bdy_sets;
   DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
