@@ -612,7 +612,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   //compute element averaged density ratios corresponding to nodal density design variables
   {//view scope
     const_host_vec_array all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    for(int elem_id = 0; elem_id < rnum_elem; elem_id){
+    for(int elem_id = 0; elem_id < rnum_elem; elem_id++){
       for(int inode = 0; inode < num_nodes_in_elem; inode++){
         current_element_nodal_densities(inode) = all_node_densities(nodes_in_elem(elem_id,inode),0);
       }
