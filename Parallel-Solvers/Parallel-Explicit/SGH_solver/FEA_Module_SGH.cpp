@@ -1112,11 +1112,11 @@ void FEA_Module_SGH::setup(){
 
     //elem-node conn & node-node conn
     elems_in_node = mesh.elems_in_node;
-    nodes_in_node = mesh.nodes_in_node;
-    num_nodes_in_node = mesh.num_nodes_in_node;
-
-    //patch conn
     if(num_dim==2){
+      nodes_in_node = mesh.nodes_in_node;
+      num_nodes_in_node = mesh.num_nodes_in_node;
+      //patch conn
+    
       patches_in_elem = mesh.patches_in_elem;
       nodes_in_patch = mesh.nodes_in_patch;
       elems_in_patch = mesh.elems_in_patch;
