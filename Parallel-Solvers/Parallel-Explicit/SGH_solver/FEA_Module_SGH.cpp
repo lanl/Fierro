@@ -1087,7 +1087,8 @@ void FEA_Module_SGH::setup(){
 
     // patch ids in bdy set
     bdy_patches_in_set = mesh.bdy_patches_in_set;
-    bdy_nodes = mesh.bdy_nodes;
+    if(num_dim==2)
+      bdy_nodes = mesh.bdy_nodes;
 
     // tag boundary patches in the set
     tag_bdys(boundary, mesh, node_coords);
@@ -1115,9 +1116,11 @@ void FEA_Module_SGH::setup(){
     num_nodes_in_node = mesh.num_nodes_in_node;
 
     //patch conn
-    patches_in_elem = mesh.patches_in_elem;
-    nodes_in_patch = mesh.nodes_in_patch;
-    elems_in_patch = mesh.elems_in_patch;
+    if(num_dim==2){
+      patches_in_elem = mesh.patches_in_elem;
+      nodes_in_patch = mesh.nodes_in_patch;
+      elems_in_patch = mesh.elems_in_patch;
+    }
 
     // loop over BCs
     for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
