@@ -225,7 +225,6 @@ public:
                    const int num_nodes_in_patch,
                    const int this_bc_tag,
                    const double val,
-                   const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords) const;
 
   void rk_init(DViewCArrayKokkos <double> &node_coords,

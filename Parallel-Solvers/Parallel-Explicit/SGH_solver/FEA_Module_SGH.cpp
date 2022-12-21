@@ -1546,7 +1546,6 @@ void FEA_Module_SGH::tag_bdys(const CArrayKokkos <boundary_t> &boundary,
                                          num_nodes_in_patch,
                                          bc_tag_id,
                                          val,
-                                         mesh,
                                          node_coords); // no=0, yes=1
             
             //debug check
@@ -1593,7 +1592,6 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
                  const int num_nodes_in_patch,
                  const int this_bc_tag,
                  const double val,
-                 const mesh_t &mesh,
                  const DViewCArrayKokkos <double> &node_coords) const {
     
     // default bool is not on the boundary
