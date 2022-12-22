@@ -126,6 +126,8 @@ public:
 
   void parallel_tecplot_writer();
 
+  void parallel_vtk_writer();
+
   //void init_boundary_sets(int num_boundary_sets);
 
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);

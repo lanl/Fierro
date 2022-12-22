@@ -527,7 +527,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
               << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
 
     // Data writers
-    parallel_tecplot_writer();
+    parallel_vtk_writer();
     // vtk_writer();
     /*
     if(myrank==0){
@@ -2075,6 +2075,241 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
    	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
 		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
   }
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //output nodal data
+  //compute buffer output size and file stream offset for this MPI rank
+  int default_vector_count = 2;
+  int buffer_size_per_node_line = 26*default_vector_count*num_dim + 1; //25 width per number + 1 space times 6 entries plus line terminator
+  int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  GO first_node_global_id = sorted_map->getGlobalElement(0);
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> print_buffer(buffer_size_per_node_line*nlocal_sorted_nodes);
+  MPI_Offset file_stream_offset = buffer_size_per_node_line*first_node_global_id;
+
+  //populate buffer
+  long long current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
+  for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+    current_line_stream.str("");
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+
+    //velocity print
+    current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,0) << " ";
+		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
+    
+        //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        /*
+        for (int imodule = 0; imodule < nfea_modules; imodule++){
+          noutput = fea_modules[imodule]->noutput;
+          for(int ioutput = 0; ioutput < noutput; ioutput++){
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
+              }
+            }
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
+              }
+            }
+          }
+        }
+        */
+    current_line_stream << std::endl;
+    
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+  //print buffers at offsets with collective MPI write
+  //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+  //MPI_File_close(&myfile_parallel);
+  
+  //write element connectivity; reopen to reset offset baseline.
+  //err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_APPEND|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+  
+  MPI_Offset current_stream_position;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+  
+  //expand print buffer if needed
+  int buffer_size_per_element_line = 11*max_nodes_per_element + 1; //25 width per number plus 6 spaces plus line terminator
+  int nlocal_elements = sorted_element_map->getLocalNumElements();
+  GO first_element_global_id = sorted_element_map->getGlobalElement(0);
+  if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
+  file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position;
+  
+  current_buffer_position = 0;
+  for (int elementline = 0; elementline < nlocal_elements; elementline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		for (int ii = 0; ii < max_nodes_per_element; ii++) {
+      if(active_node_ordering_convention == IJK)
+        temp_convert = convert_ijk_to_ensight(ii);
+      else
+        temp_convert = ii;
+				current_line_stream << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+		}
+		current_line_stream << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+  
+  MPI_File_close(&myfile_parallel);
+
+}
+
+/* ----------------------------------------------------------------------
+   Output Model Information in tecplot format
+------------------------------------------------------------------------- */
+
+void Explicit_Solver_SGH::parallel_vtk_writer(){
+  int num_dim = simparam->num_dim;
+	std::string current_file_name;
+	std::string base_file_name= "VTK";
+  std::string base_file_name_undeformed= "VTK_undeformed";
+  std::stringstream current_line_stream;
+  std::string current_line;
+	std::string file_extension= ".dat";
+  std::string file_count;
+	std::stringstream count_temp;
+  int time_step = 0;
+  int temp_convert;
+  int noutput, nvector;
+  bool displace_geometry = false;
+   /*
+  int displacement_index;
+  if(displacement_module!=-1){
+    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displacement_index = fea_modules[displacement_module]->displacement_index;
+  }
+  
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->compute_output();
+  }
+  */
+  // Convert ijk index system to the finite element numbering convention
+  // for vertices in cell
+  
+  //comm to vectors with contigously sorted global indices from unsorted zoltan2 repartition map
+  sort_information();
+  //set host views of the communicated data to print out from
+  const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
+  convert_ijk_to_ensight(0) = 0;
+  convert_ijk_to_ensight(1) = 1;
+  convert_ijk_to_ensight(2) = 3;
+  convert_ijk_to_ensight(3) = 2;
+  if(num_dim==3){
+    convert_ijk_to_ensight(4) = 4;
+    convert_ijk_to_ensight(5) = 5;
+    convert_ijk_to_ensight(6) = 7;
+    convert_ijk_to_ensight(7) = 6;
+  }
+
+  MPI_File myfile_parallel;
+  MPI_Offset header_stream_offset = 0;
+  //initial undeformed geometry
+  count_temp.str("");
+  count_temp << file_index;
+  file_index++;
+	file_count = count_temp.str();
+  if(displace_geometry&&displacement_module>=0)
+    current_file_name = base_file_name_undeformed + file_count + file_extension;
+  else
+    current_file_name = base_file_name + file_count + file_extension;
+  MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), 
+                MPI_MODE_CREATE|MPI_MODE_WRONLY, 
+                MPI_INFO_NULL, &myfile_parallel);
+  
+  int err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+  //allows overwriting the file if it already existed in the directory
+    if (err != MPI_SUCCESS)  {
+      if (myrank == 0){
+        MPI_File_delete(current_file_name.c_str(),MPI_INFO_NULL);
+      }
+      MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+    }
+
+  //output header of the tecplot file
+  
+  //std::cout << current_file_name << std::endl;
+	current_line_stream << "# vtk DataFile Version 2.0\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
+  //else
+  current_line_stream.str("");
+	current_line_stream << "Mesh for Fierro\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+    /*
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+        for(int ivector = 0; ivector < nvector; ivector++){
+          myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+        }
+      }
+    }
+    */
+
+	current_line_stream.str("");
+	current_line_stream << "ASCII\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+
+  current_line_stream.str("");
+	current_line_stream << "DATASET UNSTRUCTURED_GRID\n\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+
+  current_line_stream.str("");
+	current_line_stream << "POINTS " << num_nodes
+		  << " float\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
