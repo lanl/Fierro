@@ -298,8 +298,8 @@ void Simulation_Parameters_SGH::input(){
             // energy source initial conditions
             mat_fill(1).volume = region::sphere; // fill a sphere
             mat_fill(1).mat_id = 0;              // material id
-            mat_fill(1).radius1 = 0.0;           // inner radius of fill region
-            mat_fill(1).radius2 = 1.2/50;       // outer radius of fill region
+            mat_fill(1).radius1 = 0.01;           // inner radius of fill region
+            mat_fill(1).radius2 = (1.2-mat_fill(1).radius1)/50 + mat_fill(1).radius1;       // outer radius of fill region
             mat_fill(1).den = 1.0;               // initial density
             double vol = PI*( pow((mat_fill(1).radius2),3)
                             - pow((mat_fill(1).radius1),3) );
