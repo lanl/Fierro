@@ -52,12 +52,8 @@ class Explicit_Solver: public Solver{
 public:
   Explicit_Solver();
   ~Explicit_Solver();
-  
-  virtual void solver_setup() {}
 
-  virtual void run(int argc, char *argv[]) = 0;
-
-  virtual void solver_finalize() {}
+  virtual void run(int argc, char *argv[]) {}
 
   Teuchos::RCP<MV> initial_node_coords_distributed;
   

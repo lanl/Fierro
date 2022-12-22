@@ -221,9 +221,10 @@ public:
   
   KOKKOS_INLINE_FUNCTION 
   size_t check_bdy(const size_t patch_gid,
+                   const int num_dim,
+                   const int num_nodes_in_patch,
                    const int this_bc_tag,
                    const double val,
-                   const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords) const;
 
   void rk_init(DViewCArrayKokkos <double> &node_coords,
@@ -440,55 +441,57 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
   Explicit_Solver_SGH *Explicit_Solver_Pointer_;
-  
-  //output stream
-  Teuchos::RCP<Teuchos::FancyOStream> fos;
-  
-  elements::element_selector *element_select;
-  elements::Element3D *elem;
-  elements::Element2D *elem2D;
+
   elements::ref_element  *ref_elem;
   
   mesh_t& mesh;
-  // mesh class interface
-  DCArrayKokkos<size_t>& nodes_in_elem;
+  //shallow copies of mesh class views
+  size_t num_nodes_in_elem;
+  // corner ids in node
+  RaggedRightArrayKokkos <size_t> corners_in_node;
+  CArrayKokkos <size_t> num_corners_in_node;
+    
+  // elem ids in node
+  RaggedRightArrayKokkos <size_t> elems_in_node;
+    
+  // node ids in node
+  RaggedRightArrayKokkos <size_t> nodes_in_node;
+  CArrayKokkos <size_t> num_nodes_in_node;
+    
+  // node ids in elem
+  DCArrayKokkos <size_t> nodes_in_elem;
+    
+  // corner ids in elem
+  CArrayKokkos <size_t> corners_in_elem;
+    
+  // elem ids in elem
+  RaggedRightArrayKokkos <size_t> elems_in_elem;
+  CArrayKokkos <size_t> num_elems_in_elem;
+    
+  // patch ids in elem
+  CArrayKokkos <size_t> patches_in_elem;
+    
+  // node ids in a patch
+  CArrayKokkos <size_t> nodes_in_patch;
+    
+  // element ids in a patch
+  CArrayKokkos <size_t> elems_in_patch;
+
+  // patch ids in bdy set
+  size_t num_bdy_sets;
+  DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
+  
+  // bdy nodes
+  CArrayKokkos <size_t> bdy_nodes;
+
+  // node ids in bdy_patch set
+  RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
+  DCArrayKokkos <size_t> num_bdy_nodes_in_set;
   
   //Local FEA data
-  size_t nlocal_nodes;
-  dual_vec_array dual_node_coords; //coordinates of the nodes
-  dual_vec_array dual_node_densities; //topology optimization design variable
-  dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
   host_elem_conn_array interface_nodes_in_elem; //host view of element connectivity to nodes
-  CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
-
-  //Ghost data on this MPI rank
-  size_t nghost_nodes;
-  CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type> ghost_nodes;
-  CArrayKokkos<int, array_layout, device_type, memory_traits> ghost_node_ranks;
-
-  //Local FEA data including ghosts
-  size_t nall_nodes;
-  size_t rnum_elem;
 
   //Global FEA data
-  long long int num_nodes, num_elem;
-  Teuchos::RCP<const Teuchos::Comm<int> > comm;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > map; //map of node indices
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > ghost_node_map; //map of node indices with ghosts on each rank
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_node_map; //map of node indices with ghosts on each rank
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > element_map; //non overlapping map of elements owned by each rank used in reduction ops
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_element_map; //overlapping map of elements connected to the local nodes in each rank
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
-  Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
-  Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
-  Teuchos::RCP<MV> node_coords_distributed;
-  Teuchos::RCP<MV> all_node_coords_distributed;
-  Teuchos::RCP<MV> design_node_densities_distributed;
-  Teuchos::RCP<const MV> test_node_densities_distributed;
-  Teuchos::RCP<MV> all_node_densities_distributed;
-  Teuchos::RCP<MV> Global_Element_Densities;
   Teuchos::RCP<MV> node_velocities_distributed;
   Teuchos::RCP<MV> initial_node_coords_distributed;
   Teuchos::RCP<MV> initial_node_velocities_distributed;
@@ -518,70 +521,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DViewCArrayKokkos <double> corner_mass;
   
   //Boundary Conditions Data
+  DCArrayKokkos<size_t> Local_Index_Boundary_Patches;
   //CArray <Nodal_Combination> Patch_Nodes;
-  size_t nboundary_patches;
-  size_t num_boundary_conditions;
-  int current_bdy_id;
-  CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches; //set of patches corresponding to each boundary condition
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> NBoundary_Condition_Patches;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches_strides;
   enum bc_type {NONE, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
-
-  //element selection parameters and data
-  size_t max_nodes_per_element;
-
-  //determines if rhs gets a contribution from bcs
-  bool nonzero_bc_flag;
-
-  //lists what kind of boundary condition the nodal DOF is subjected to if any
-  CArrayKokkos<int, array_layout, device_type, memory_traits> Node_DOF_Boundary_Condition_Type;
-  //lists what kind of boundary condition each boundary set is assigned to
-  CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
-  
-  //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
-  size_t Number_DOF_BCS;
-
-  //MPI data
-  int myrank; //index of this mpi rank in the world communicator
-  int nranks; //number of mpi ranks in the world communicator
-  MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
-
-  //! mapping used to get local ghost index from the global ID.
-  //typedef ::Tpetra::Details::FixedHashTable<GO, LO, Kokkos::HostSpace::device_type>
-    //global_to_local_table_host_type;
-
-  //global_to_local_table_host_type global2local_map;
-  //CArrayKokkos<int, Kokkos::LayoutLeft, Kokkos::HostSpace::device_type> active_ranks;
-
-  //Pertains to local mesh information being stored as prescribed by the row map
-  global_size_t min_gid;
-  global_size_t max_gid;
-  global_size_t index_base;
-
-  //allocation flags to avoid repeat MV and global matrix construction
-  int Matrix_alloc;
-
-  //debug flags
-  int gradient_print_sync;
-
-  //Topology Optimization parameter
-  int penalty_power;
-  bool nodal_density_flag;
-
-  //runtime and counters for performance output
-  double linear_solve_time, hessvec_time, hessvec_linear_time;
-  int update_count, hessvec_count;
-
-  //nodal DOF output data
-  enum vector_styles {NODAL, DOF}; //multivector can store as ndof by 1 or nnode by vector_size
-  int noutput;
-  bool displaced_mesh_flag;
-  int displacement_index;
-  std::vector<std::vector<std::string>> output_dof_names;
-  std::vector<const_host_vec_array> module_outputs;
-  std::vector<vector_styles> vector_style;
-  std::vector<int> output_vector_sizes;
   
   //Boundary Conditions Data
   int max_boundary_sets;

@@ -2,6 +2,7 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function saves the variables at rk_stage = 0, which is t_n
@@ -68,10 +69,10 @@ void FEA_Module_SGH::get_timestep(mesh_t &mesh,
     
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
-
+    int num_dims = simparam->num_dim;
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN_CLASS(elem_gid, 0, mesh.num_elems, dt_lcl, {
+    REDUCE_MIN_CLASS(elem_gid, 0, rnum_elem, dt_lcl, {
         
         double coords0[24];  // element coords
         ViewCArrayKokkos <double> coords(coords0, 8, 3);
@@ -83,8 +84,8 @@ void FEA_Module_SGH::get_timestep(mesh_t &mesh,
         // Getting the coordinates of the element
         for(size_t node_lid = 0; node_lid < 8; node_lid++){
 
-            for (size_t dim = 0; dim < mesh.num_dims; dim++){
-                coords(node_lid, dim) = node_coords(1,  mesh.nodes_in_elem(elem_gid, node_lid), dim);
+            for (size_t dim = 0; dim < num_dims; dim++){
+                coords(node_lid, dim) = node_coords(1,  nodes_in_elem(elem_gid, node_lid), dim);
             } // end for dim
             
         } // end for loop over node_lid
@@ -175,10 +176,11 @@ void FEA_Module_SGH::get_timestep2D(mesh_t &mesh,
     
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
-
+    int num_dims = simparam->num_dim;
     double dt_lcl;
     double min_dt_calc;
-    REDUCE_MIN_CLASS(elem_gid, 0, mesh.num_elems, dt_lcl, {
+
+    REDUCE_MIN_CLASS(elem_gid, 0, rnum_elem, dt_lcl, {
         
         double coords0[8];  // element coords
         ViewCArrayKokkos <double> coords(coords0, 4, 2);
@@ -190,8 +192,8 @@ void FEA_Module_SGH::get_timestep2D(mesh_t &mesh,
         // Getting the coordinates of the nodes of the element
         for(size_t node_lid = 0; node_lid < 4; node_lid++){
 
-            for (size_t dim = 0; dim < mesh.num_dims; dim++){
-                coords(node_lid, dim) = node_coords(1,  mesh.nodes_in_elem(elem_gid, node_lid), dim);
+            for (size_t dim = 0; dim < num_dims; dim++){
+                coords(node_lid, dim) = node_coords(1,  nodes_in_elem(elem_gid, node_lid), dim);
             } // end for dim
             
         } // end for loop over node_lid

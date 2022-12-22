@@ -118,7 +118,9 @@ public:
 
   virtual void run(int argc, char *argv[]) = 0;
 
-  virtual void finalize() {}
+  virtual void solver_setup() {}
+
+  virtual void solver_finalize() {}
 
   virtual void exit_solver(int status);
 

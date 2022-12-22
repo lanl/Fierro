@@ -27,7 +27,7 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
                    ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
         const size_t num_dims = 3;
         const size_t num_nodes_in_elem = 8;
@@ -74,7 +74,7 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
         
         
         // cut out the node_gids for this element
-        ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+        ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
         
         
         
@@ -148,7 +148,7 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
 
             // Get node gloabl index and create view of nodal velocity
-            int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            int node_gid = nodes_in_elem(elem_gid, node_lid);
             
             ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
             
@@ -172,7 +172,7 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
 
             // Get global node id
-            size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // Create view of nodal velocity
             ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
@@ -289,10 +289,10 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
 
             
         // loop over the nieghboring cells
-        for (size_t elem_lid = 0; elem_lid < mesh.num_elems_in_elem(elem_gid); elem_lid++){
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++){
             
             // Get global index for neighboring cell
-            size_t neighbor_gid = mesh.elems_in_elem(elem_gid, elem_lid);
+            size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
             
             // calculate the velocity divergence in neighbor
             double div_neighbor = elem_div(neighbor_gid);
@@ -335,10 +335,10 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
             size_t corner_lid = node_lid;
 
             // Get corner gid
-            size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+            size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
             
             // Get node gid
-            size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            size_t node_gid = nodes_in_elem(elem_gid, node_lid);
    
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++){
@@ -364,7 +364,7 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
         if(material(mat_id).strength_type == model::hypo){
 
             // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t>   elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+            ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
             
             // --- call strength model ---
             material(mat_id).strength_model(elem_pres,
@@ -420,7 +420,7 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
                      ){
     
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, mesh.num_elems, {
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
         const size_t num_dims = 2;
         const size_t num_nodes_in_elem = 4;
@@ -462,7 +462,7 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
         
         
         // cut out the node_gids for this element
-        ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+        ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
         
         // get the B matrix which are the OUTWARD corner area normals
         get_bmatrix2D(area_normal,
@@ -535,7 +535,7 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
 
             // Get node gloabl index and create view of nodal velocity
-            int node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            int node_gid = nodes_in_elem(elem_gid, node_lid);
             
             ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
             
@@ -558,7 +558,7 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
 
             // Get global node id
-            size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // Create view of nodal velocity
             ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
@@ -670,10 +670,10 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
 
             
         // loop over the nieghboring cells
-        for (size_t elem_lid = 0; elem_lid < mesh.num_elems_in_elem(elem_gid); elem_lid++){
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++){
             
             // Get global index for neighboring cell
-            size_t neighbor_gid = mesh.elems_in_elem(elem_gid, elem_lid);
+            size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
             
             // calculate the velocity divergence in neighbor
             double div_neighbor = elem_div(neighbor_gid);
@@ -715,10 +715,10 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
             size_t corner_lid = node_lid;
 
             // Get corner gid
-            size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
+            size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
             
             // Get node gid
-            size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            size_t node_gid = nodes_in_elem(elem_gid, node_lid);
    
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++){
@@ -756,7 +756,7 @@ void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
         if(material(mat_id).strength_type == model::hypo){
 
             // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t>   elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
+            ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
             
             // --- call strength model ---
             material(mat_id).strength_model(elem_pres,
