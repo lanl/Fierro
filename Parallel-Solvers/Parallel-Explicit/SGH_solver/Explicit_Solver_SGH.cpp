@@ -318,7 +318,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //}
     
     //hack allocation of module
-    FEA_Module_SGH* sgh_module = new FEA_Module_SGH(this, *mesh);
+    sgh_module = new FEA_Module_SGH(this, *mesh);
     // The kokkos scope
     {
      
@@ -1194,6 +1194,7 @@ void Explicit_Solver_SGH::init_state_vectors(){
   if(!simparam->restart_file)
     design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+  Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, 1));
 }
 
 /* ----------------------------------------------------------------------
@@ -1821,14 +1822,22 @@ void Explicit_Solver_SGH::sort_information(){
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
 
-  //sort element connectivity
+  //interface element density data
+  host_vec_array Element_Densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  for(int ielem = 0; ielem < rnum_elem; ielem++)
+    Element_Densities(ielem,0) = sgh_module->elem_den(ielem);
+
+  //sorted element mapping
   sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
+  sorted_element_densities_distributed = Teuchos::rcp(new MV(sorted_element_map, 1));
+
   Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
   
   sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
 
   //comms
   sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
+  sorted_element_densities_distributed->doImport(*Global_Element_Densities, element_sorting_importer, Tpetra::INSERT);
   
 }
 
@@ -2207,9 +2216,14 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   int temp_convert;
   int noutput, nvector;
   bool displace_geometry = false;
-  MPI_Offset current_stream_position;
+  MPI_Offset current_stream_position, header_stream_offset, file_stream_offset;
+  MPI_File myfile_parallel;
   int buffer_size_per_element_line, nlocal_elements;
   GO first_element_global_id;
+  int default_vector_count;
+  int buffer_size_per_node_line;
+  int nlocal_sorted_nodes;
+  GO first_node_global_id;
    /*
   int displacement_index;
   if(displacement_module!=-1){
@@ -2231,6 +2245,7 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   const_host_vec_array sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_element_densities = sorted_element_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
@@ -2245,8 +2260,8 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
     convert_ijk_to_ensight(7) = 6;
   }
 
-  MPI_File myfile_parallel;
-  MPI_Offset header_stream_offset = 0;
+  myfile_parallel;
+  header_stream_offset = 0;
   //initial undeformed geometry
   count_temp.str("");
   count_temp << file_index;
@@ -2320,12 +2335,12 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   
   //output nodal data
   //compute buffer output size and file stream offset for this MPI rank
-  int default_vector_count = 1;
-  int buffer_size_per_node_line = 26*default_vector_count*num_dim + 1; //25 width per number + 1 space times 6 entries plus line terminator
-  int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
-  GO first_node_global_id = sorted_map->getGlobalElement(0);
+  default_vector_count = 1;
+  buffer_size_per_node_line = 26*default_vector_count*num_dim + 1; //25 width per number + 1 space times 6 entries plus line terminator
+  nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  first_node_global_id = sorted_map->getGlobalElement(0);
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> print_buffer(buffer_size_per_node_line*nlocal_sorted_nodes);
-  MPI_Offset file_stream_offset = buffer_size_per_node_line*first_node_global_id;
+  file_stream_offset = buffer_size_per_node_line*first_node_global_id;
 
   //populate buffer
   long long current_buffer_position = 0;
@@ -2469,9 +2484,160 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
 
     current_buffer_position += current_line.length();
 	}
+  
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
 
+  //Print Node scalars
+
+  header_stream_offset = 0;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+
+  current_line_stream.str("");
+	current_line_stream << std::endl << "POINT_DATA " << num_nodes << std::endl;
+  current_line_stream << "SCALARS point_var float 1" << std::endl;
+  current_line_stream << "LOOKUP_TABLE default" << std::endl;
+  current_line = current_line_stream.str();
+  //std::cout << current_line;
+  file_stream_offset = current_stream_position;
+  if(myrank == 0)
+    MPI_File_write_at(myfile_parallel, file_stream_offset, current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //expand print buffer if needed
+  default_vector_count = 1;
+  buffer_size_per_node_line = 26; //25 width per number + 1 space times 6 entries plus line terminator
+  nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  first_node_global_id = sorted_map->getGlobalElement(0);
+  if(buffer_size_per_node_line*nlocal_sorted_nodes > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_node_line*nlocal_sorted_nodes);
+  file_stream_offset = buffer_size_per_node_line*first_node_global_id + current_stream_position + header_stream_offset;
+  
+  current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
+  for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		current_line_stream << std::left << std::setw(25) << 1.0 << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+
+  //Print Node vectors
+
+  header_stream_offset = 0;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+
+  current_line_stream.str("");
+	current_line_stream << std::endl << "VECTORS point_vec float" << std::endl;
+  current_line = current_line_stream.str();
+  //std::cout << current_line;
+  file_stream_offset = current_stream_position;
+  if(myrank == 0)
+    MPI_File_write_at(myfile_parallel, file_stream_offset, current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //expand print buffer if needed
+  default_vector_count = 1;
+  buffer_size_per_node_line = num_dim*26 + 1; //25 width per number + 1 space times 6 entries plus line terminator
+  nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  first_node_global_id = sorted_map->getGlobalElement(0);
+  if(buffer_size_per_node_line*nlocal_sorted_nodes > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_node_line*nlocal_sorted_nodes);
+  file_stream_offset = buffer_size_per_node_line*first_node_global_id + current_stream_position + header_stream_offset;
+  
+  current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
+  for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		//velocity print
+    current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,0) << " ";
+		current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
+
+    current_line_stream << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+
+  //print Element Fields
+
+  header_stream_offset = 0;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+
+  current_line_stream.str("");
+	current_line_stream << std::endl << "CELL_DATA " << num_elem << std::endl;
+  current_line_stream << "SCALARS cell_var float 1" << std::endl;
+  current_line_stream << "LOOKUP_TABLE default" << std::endl;
+  current_line = current_line_stream.str();
+  //std::cout << current_line;
+  file_stream_offset = current_stream_position;
+  if(myrank == 0)
+    MPI_File_write_at(myfile_parallel, file_stream_offset, current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //expand print buffer if needed
+  buffer_size_per_element_line = 26; //25 width per number plus line terminator
+  nlocal_elements = sorted_element_map->getLocalNumElements();
+  first_element_global_id = sorted_element_map->getGlobalElement(0);
+  if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
+  file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position + header_stream_offset;
+  
+  current_buffer_position = 0;
+  for (int elementline = 0; elementline < nlocal_elements; elementline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		current_line_stream << std::left << std::setw(25) << sorted_element_densities(elementline,0) << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+  
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
   
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
   MPI_File_close(&myfile_parallel);
 
 }

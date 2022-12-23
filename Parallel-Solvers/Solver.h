@@ -211,6 +211,7 @@ public:
   Teuchos::RCP<MV> sorted_node_coords_distributed;
   Teuchos::RCP<MV> sorted_node_densities_distributed;
   Teuchos::RCP<MCONN> sorted_nodes_in_elem_distributed;
+  Teuchos::RCP<MV> sorted_element_densities_distributed;
 
   //Boundary Conditions Data
   //CArray <Nodal_Combination> Patch_Nodes;

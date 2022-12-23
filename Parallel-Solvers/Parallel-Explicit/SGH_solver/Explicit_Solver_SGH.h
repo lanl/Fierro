@@ -141,6 +141,9 @@ public:
   class Simulation_Parameters_SGH *simparam;
   class Simulation_Parameters_Dynamic_Optimization *simparam_TO;
 
+  //FEA simulations
+  class FEA_Module_SGH *sgh_module;
+
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;
   std::vector<FEA_Module*> fea_modules;
