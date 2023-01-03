@@ -319,15 +319,16 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     
     //hack allocation of module
     sgh_module = new FEA_Module_SGH(this, *mesh);
+    // ---------------------------------------------------------------------
+    //    state data type declarations (must stay in scope for output after run)
+    // ---------------------------------------------------------------------
+    node_t  node;
+    elem_t  elem;
+    corner_t  corner;
     // The kokkos scope
     {
      
-        // ---------------------------------------------------------------------
-        //    state data type declarations
-        // ---------------------------------------------------------------------
-        node_t  node;
-        elem_t  elem;
-        corner_t  corner;
+        
         
         // ---------------------------------------------------------------------
         //    mesh data type declarations
@@ -503,18 +504,16 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         
         sgh_module->sgh_solve();
-        
 
         //test forward solve call
         //sgh_module->update_forward_solve(test_node_densities_distributed);
-        
+         
         
     } // end of kokkos scope
 
     printf("Finished\n");
     
-    //CPU time
-    
+    //benchmark simulation run time end
     double current_cpu = CPU_Time();
     /*
     for(int imodule = 0; imodule < nfea_modules; imodule++){
@@ -525,7 +524,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
     std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
               << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
-
+   
     // Data writers
     parallel_vtk_writer();
     // vtk_writer();
@@ -1821,12 +1820,17 @@ void Explicit_Solver_SGH::sort_information(){
 
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
-
+  
   //interface element density data
+  {
   host_vec_array Element_Densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
-    Element_Densities(ielem,0) = sgh_module->elem_den(ielem);
-
+  sgh_module->elem_den.update_host();
+  for(int ielem = 0; ielem < rnum_elem; ielem++){
+    Element_Densities(ielem,0) = sgh_module->elem_den.host(ielem);
+  }
+  }
+  Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
+  
   //sorted element mapping
   sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
   sorted_element_densities_distributed = Teuchos::rcp(new MV(sorted_element_map, 1));
@@ -2622,6 +2626,7 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position + header_stream_offset;
   
   current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
   for (int elementline = 0; elementline < nlocal_elements; elementline++) {
     current_line_stream.str("");
     //convert node ordering
