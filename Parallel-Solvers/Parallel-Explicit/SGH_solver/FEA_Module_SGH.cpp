@@ -771,7 +771,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 		
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
-                size_t mat_id = elem_mat_id(elem_gid, nodes_per_elem); // short name
+                size_t mat_id = elem_mat_id(elem_gid); // short name
                 
                 
                 // get state_vars from the input file or read them in

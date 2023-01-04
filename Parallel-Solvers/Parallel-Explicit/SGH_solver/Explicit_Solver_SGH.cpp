@@ -504,9 +504,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         
         sgh_module->sgh_solve();
-
-        //test forward solve call
-        //sgh_module->update_forward_solve(test_node_densities_distributed);
          
         
     } // end of kokkos scope
@@ -524,9 +521,20 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
     std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
               << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
-   
-    // Data writers
+
     parallel_vtk_writer();
+    
+    //test forward solve call
+    int ntests = 0;
+    for(int itest = 0; itest < ntests; itest++){
+        design_node_densities_distributed->randomize(0.1,1);
+        test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
+        sgh_module->comm_variables(test_node_densities_distributed);
+        sgh_module->update_forward_solve(test_node_densities_distributed);
+        // Data writers
+        parallel_vtk_writer();
+    }
+
     // vtk_writer();
     /*
     if(myrank==0){
@@ -1192,6 +1200,7 @@ void Explicit_Solver_SGH::init_state_vectors(){
   ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
   if(!simparam->restart_file)
     design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+  test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, 1));
 }
@@ -2250,6 +2259,7 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_element_densities = sorted_element_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array design_node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
@@ -2529,7 +2539,7 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
     //convert node ordering
-		current_line_stream << std::left << std::setw(25) << 1.0 << std::endl;
+		current_line_stream << std::left << std::setw(25) << design_node_densities(nodeline,0) << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
