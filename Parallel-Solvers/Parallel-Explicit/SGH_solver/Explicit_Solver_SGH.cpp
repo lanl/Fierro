@@ -2275,7 +2275,6 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
     convert_ijk_to_ensight(7) = 6;
   }
 
-  myfile_parallel;
   header_stream_offset = 0;
   //initial undeformed geometry
   count_temp.str("");
