@@ -1829,7 +1829,7 @@ void Explicit_Solver_SGH::sort_information(){
     Element_Densities(ielem,0) = sgh_module->elem_den.host(ielem);
   }
   }
-  Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
+  //Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
   
   //sorted element mapping
   sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
