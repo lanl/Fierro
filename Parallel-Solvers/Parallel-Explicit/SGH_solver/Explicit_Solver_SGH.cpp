@@ -2516,7 +2516,7 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
 
   current_line_stream.str("");
 	current_line_stream << std::endl << "POINT_DATA " << num_nodes << std::endl;
-  current_line_stream << "SCALARS point_var float 1" << std::endl;
+  current_line_stream << "SCALARS design_density float 1" << std::endl;
   current_line_stream << "LOOKUP_TABLE default" << std::endl;
   current_line = current_line_stream.str();
   //std::cout << current_line;
@@ -2564,7 +2564,7 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "VECTORS point_vec float" << std::endl;
+	current_line_stream << std::endl << "VECTORS velocity float" << std::endl;
   current_line = current_line_stream.str();
   //std::cout << current_line;
   file_stream_offset = current_stream_position;
@@ -2618,7 +2618,7 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
 
   current_line_stream.str("");
 	current_line_stream << std::endl << "CELL_DATA " << num_elem << std::endl;
-  current_line_stream << "SCALARS cell_var float 1" << std::endl;
+  current_line_stream << "SCALARS element_density float 1" << std::endl;
   current_line_stream << "LOOKUP_TABLE default" << std::endl;
   current_line = current_line_stream.str();
   //std::cout << current_line;
