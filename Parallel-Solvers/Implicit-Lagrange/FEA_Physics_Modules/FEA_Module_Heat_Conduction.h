@@ -64,7 +64,7 @@ class Simulation_Parameters_Topology_Optimization;
 class FEA_Module_Heat_Conduction: public FEA_Module{
 
 public:
-  FEA_Module_Heat_Conduction(Solver *Solver_Pointer);
+  FEA_Module_Heat_Conduction(Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Heat_Conduction();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads

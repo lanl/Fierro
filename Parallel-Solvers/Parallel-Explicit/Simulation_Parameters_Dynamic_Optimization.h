@@ -84,6 +84,7 @@ class Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
   std::vector<std::string> TO_Module_List;
   std::vector<function_type> TO_Function_Type;
   std::vector<int> TO_Module_My_FEA_Module;
+  std::vector<std::vector<int>> FEA_Module_My_TO_Modules;
   std::vector<int> Multi_Objective_Modules;
   std::vector<real_t> Multi_Objective_Weights;
   std::vector<std::vector<real_t>> Function_Arguments;

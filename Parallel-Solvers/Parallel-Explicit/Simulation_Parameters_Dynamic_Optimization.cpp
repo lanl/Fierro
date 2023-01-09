@@ -162,6 +162,7 @@ void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
   bool module_found;
   int buffer_size = 10 + nfea_modules;
   FEA_Module_List.resize(buffer_size);
+  FEA_Module_My_TO_Modules.resize(buffer_size);
   fea_module_must_read.resize(buffer_size);
   int start_module = nfea_modules;
   
@@ -175,10 +176,12 @@ void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
         if(FEA_Module_List[ifea] == "SGH"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
+          FEA_Module_My_TO_Modules[ifea].push_back(imodule);
         }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
+        FEA_Module_My_TO_Modules[nfea_modules].push_back(imodule);
         FEA_Module_List[nfea_modules++] = "SGH";
         module_found = true;
       }
@@ -189,10 +192,12 @@ void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
         if(FEA_Module_List[ifea] == "Heat_Conduction"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
+          FEA_Module_My_TO_Modules[ifea].push_back(imodule);
         }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
+        FEA_Module_My_TO_Modules[nfea_modules].push_back(imodule);
         FEA_Module_List[nfea_modules++] = "Heat_Conduction";
         module_found = true;
       }
@@ -203,10 +208,12 @@ void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
         if(FEA_Module_List[ifea] == "Inertial"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
+          FEA_Module_My_TO_Modules[ifea].push_back(imodule);
         }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
+        FEA_Module_My_TO_Modules[nfea_modules].push_back(imodule);
         FEA_Module_List[nfea_modules++] = "Inertial";
         module_found = true;
       }
@@ -217,10 +224,12 @@ void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
         if(FEA_Module_List[ifea] == "Inertial"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
+          FEA_Module_My_TO_Modules[ifea].push_back(imodule);
         }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
+        FEA_Module_My_TO_Modules[nfea_modules].push_back(imodule);
         FEA_Module_List[nfea_modules++] = "Inertial";
         module_found = true;
       }
@@ -231,10 +240,12 @@ void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
         if(FEA_Module_List[ifea] == "Heat_Conduction"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
+          FEA_Module_My_TO_Modules[ifea].push_back(imodule);
         }
       }
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
+        FEA_Module_My_TO_Modules[nfea_modules].push_back(imodule);
         FEA_Module_List[nfea_modules++] = "Heat_Conduction";
         module_found = true;
       }
@@ -252,6 +263,7 @@ void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
       if(nfea_modules==buffer_size){
         buffer_size += 10;
         FEA_Module_List.resize(buffer_size);
+        FEA_Module_My_TO_Modules.resize(buffer_size);
         fea_module_must_read.resize(buffer_size);
       }
     }

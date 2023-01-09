@@ -87,10 +87,15 @@
 using namespace utils;
 
 
-FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module(Solver_Pointer), mesh(mesh){
-  //create parameter object
+FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int my_fea_module_index) :FEA_Module(Solver_Pointer), mesh(mesh){
+
+  //assign interfacing index
+  my_fea_module_index_ = my_fea_module_index;
+  
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver_SGH*>(Solver_Pointer);
+
+  //create parameter object
   simparam = dynamic_cast<Simulation_Parameters_SGH*>(Explicit_Solver_Pointer_->simparam);
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->input();
@@ -580,7 +585,7 @@ void FEA_Module_SGH::compute_output(){
 }
 
 /* ----------------------------------------------------------------------
-   Solve the FEA linear system
+   Compute new system response due to the design variable update
 ------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
@@ -609,6 +614,9 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
   CArrayKokkos<double> relative_element_densities = CArrayKokkos<double>(rnum_elem, "relative_element_densities");
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
+  
+  std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
+
   //compute element averaged density ratios corresponding to nodal density design variables
   {//view scope
     const_host_vec_array all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -630,6 +638,11 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
 
   //reset velocities to initial conditions
   node_velocities_distributed->assign(*initial_node_velocities_distributed);
+
+  //reset time accumulating objective and constraints
+  for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
+    
+  }
 
   //interface trial density vector
 

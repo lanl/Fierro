@@ -46,7 +46,7 @@ class Simulation_Parameters_Inertial;
 class FEA_Module_Inertial: public FEA_Module{
 
 public:
-  FEA_Module_Inertial(Solver *Solver_Pointer);
+  FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Inertial();
 
   void comm_variables(Teuchos::RCP<const MV> zp);

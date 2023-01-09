@@ -77,7 +77,10 @@
 using namespace utils;
 
 
-FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+  
+  //assign interfacing index
+  my_fea_module_index_ = my_fea_module_index;
 
   //create parameter object
   simparam = new Simulation_Parameters_Inertial();
