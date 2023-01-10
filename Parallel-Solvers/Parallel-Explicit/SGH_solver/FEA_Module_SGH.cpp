@@ -79,6 +79,21 @@
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 
+//optimization
+#include "ROL_Algorithm.hpp"
+#include "ROL_Solver.hpp"
+#include "ROL_LineSearchStep.hpp"
+#include "ROL_TrustRegionStep.hpp"
+#include "ROL_StatusTest.hpp"
+#include "ROL_Types.hpp"
+#include "ROL_Elementwise_Reduce.hpp"
+#include "ROL_Stream.hpp"
+
+#include "ROL_StdVector.hpp"
+#include "ROL_StdBoundConstraint.hpp"
+#include "ROL_ParameterList.hpp"
+#include <ROL_TpetraMultiVector.hpp>
+
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
 #define DENSITY_EPSILON 0.0001
@@ -617,7 +632,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   
   std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
   problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
-  Ptr<Objective<Real>>& obj_pointer;
+  ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
   //compute element averaged density ratios corresponding to nodal density design variables
   {//view scope
@@ -644,7 +659,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   //reset time accumulating objective and constraints
   for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
     //test if module needs reset
-    obj_pointer = problem->getObjective;
+    obj_pointer = problem->getObjective();
   }
 
   //interface trial density vector
