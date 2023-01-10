@@ -616,6 +616,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
   std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
+  problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
+  Ptr<Objective<Real>>& obj_pointer;
 
   //compute element averaged density ratios corresponding to nodal density design variables
   {//view scope
@@ -641,7 +643,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
 
   //reset time accumulating objective and constraints
   for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
-    
+    //test if module needs reset
+    obj_pointer = problem->getObjective;
   }
 
   //interface trial density vector

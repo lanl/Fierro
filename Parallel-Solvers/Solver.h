@@ -71,6 +71,12 @@ namespace elements{
   class ref_element;
 }
 
+//forward declarations
+namespace ROL{
+  template<class datatype>
+  class Problem;
+}
+
 class Solver{
 
 public:
@@ -238,6 +244,9 @@ public:
   double CPU_Time();
   void init_clock();
   double initial_CPU_time, communication_time, dev2host_time, host2dev_time;
+
+  //Pointer to ROL Problem for optimization solves
+  Teuchos::RCP<ROL::Problem<real_t>> problem;
 
 };
 
