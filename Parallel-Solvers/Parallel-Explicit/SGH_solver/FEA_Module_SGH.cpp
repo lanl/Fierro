@@ -609,6 +609,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
   int max_stride = 0;
+  int current_module_index;
   size_t access_index, row_access_index, row_counter;
   GO global_index, global_dof_index;
   LO local_dof_index;
@@ -618,6 +619,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t num_materials = simparam->num_materials;
   const size_t num_state_vars = simparam->max_num_state_vars;
   const size_t rk_level = 0;
+  real_t inner_product;
+  std::vector inner_product_interface(1);
 
   // --- Read in the nodes in the mesh ---
   int myrank = Explicit_Solver_Pointer_->myrank;
@@ -657,10 +660,20 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   node_velocities_distributed->assign(*initial_node_velocities_distributed);
 
   //reset time accumulating objective and constraints
+  /*
   for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
+    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
     //test if module needs reset
-    obj_pointer = problem->getObjective();
+    if(){
+      
+    }
   }
+  */
+  //simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
+  obj_pointer = problem->getObjective();
+  ROL::Ptr<KineticEnergyMinimize_TopOpt> kinetic_energy_minimize_function;
+  kinetic_energy_minimize_function = dynamic_cast<ROL::Ptr<KineticEnergyMinimize_TopOpt>>(obj_pointer);
+  kinetic_energy_minimize_function->objective_accumulation = 0;
 
   //interface trial density vector
 
@@ -1826,6 +1839,29 @@ void FEA_Module_SGH::sgh_solve(){
     const CArrayKokkos <boundary_t> boundary = simparam->boundary;
     const CArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
+    real_t inner_product;
+    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
+    problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
+    ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
+
+    //reset time accumulating objective and constraints
+    /*
+    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
+    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
+    //test if module needs reset
+    if(){
+      
+    }
+    }
+    */
+    //simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
+    if(simparam_dynamic_opt->topology_optimization_on){
+      obj_pointer = problem->getObjective();
+      ROL::Ptr<KineticEnergyMinimize_TopOpt> kinetic_energy_minimize_function;
+      kinetic_energy_minimize_function = dynamic_cast<ROL::Ptr<KineticEnergyMinimize_TopOpt>>(obj_pointer);
+      kinetic_energy_minimize_function->objective_accumulation = 0;
+    }
+
     if(simparam_dynamic_opt->topology_optimization_on)
       nTO_modules = simparam_dynamic_opt->nTO_modules;
 
