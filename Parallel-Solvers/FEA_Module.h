@@ -170,7 +170,7 @@ public:
 
   class Simulation_Parameters *simparam;
   Solver *Solver_Pointer_;
-  const int my_fea_module_index_;
+  int my_fea_module_index_;
   
   //Local FEA data
   size_t nlocal_nodes;
