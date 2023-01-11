@@ -128,6 +128,15 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   //boundary condition data
   max_boundary_sets = 0;
   Local_Index_Boundary_Patches = Explicit_Solver_Pointer_->Local_Index_Boundary_Patches;
+
+  //set Tpetra vector pointers
+  initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
+  initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
+  node_coords_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
+  node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
+  all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on)
+    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
   
   //setup output
   noutput = 0;
@@ -345,14 +354,6 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     int num_corners = rnum_elem*num_nodes_in_elem;
     mesh.initialize_corners(num_corners);
     corner.initialize(num_corners, num_dim);
-
-    //set Tpetra vector pointers
-    initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
-    initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
-    node_coords_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
-    node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
-    all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
-    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
     
     /*
     for(int inode = 0; inode < nall_nodes; inode++){

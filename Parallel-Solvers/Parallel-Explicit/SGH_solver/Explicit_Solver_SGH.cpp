@@ -237,10 +237,13 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //init_design();
 
     //construct list of FEA modules requested
-    //simparam->FEA_module_setup();
+    if(simparam_dynamic_opt->topology_optimization_on)
+      simparam_dynamic_opt->FEA_module_setup();
+    else
+      simparam->FEA_module_setup();
 
     //process process list of requested FEA modules to construct list of objects
-    //FEA_module_setup();
+    FEA_module_setup();
 
     //Have modules read in boundary/loading conditions if file format provides it
     /*
@@ -320,7 +323,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //}
     
     //hack allocation of module
-    sgh_module = new FEA_Module_SGH(this, *mesh);
+    //sgh_module = new FEA_Module_SGH(this, *mesh);
     // ---------------------------------------------------------------------
     //    state data type declarations (must stay in scope for output after run)
     // ---------------------------------------------------------------------
@@ -359,7 +362,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         
                  // Get corner gid
                  size_t corner_gid = mesh.corners_in_node(i, corner_lid);
-                 std::cout << all_node_map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
+                 std::cout << map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
             
                } // end for corner_lid
                //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
@@ -1213,26 +1216,33 @@ void Explicit_Solver_SGH::init_state_vectors(){
 ------------------------------------------------------------------------- */
 
 void Explicit_Solver_SGH::FEA_module_setup(){
-  nfea_modules = simparam->nfea_modules;
-  std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
-  fea_module_must_read = simparam->fea_module_must_read;
+  std::vector<std::string> FEA_Module_List;
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+    nfea_modules = simparam_dynamic_opt->nfea_modules;
+    FEA_Module_List = simparam_dynamic_opt->FEA_Module_List;
+    fea_module_must_read = simparam_dynamic_opt->fea_module_must_read;
+  }
+  else{
+    nfea_modules = simparam->nfea_modules;
+    FEA_Module_List = simparam->FEA_Module_List;
+    fea_module_must_read = simparam->fea_module_must_read;
+  }
   //allocate lists to size
   fea_module_types = std::vector<std::string>(nfea_modules);
   fea_modules = std::vector<FEA_Module*>(nfea_modules);
   bool module_found = false;
   
   //list should not have repeats since that was checked by simulation parameters setups
-  /*
+  
   for(int imodule = 0; imodule < nfea_modules; imodule++){
     //decides which FEA module objects to setup based on string.
     //automate selection list later; use std::map maybe?
-    if(FEA_Module_List[imodule] == "Elasticity"){
-      fea_module_types[imodule] = "Elasticity";
-      fea_modules[imodule] = new FEA_Module_Elasticity(this);
+    if(FEA_Module_List[imodule] == "SGH"){
+      fea_module_types[imodule] = "SGH";
+      fea_modules[imodule] = sgh_module = new FEA_Module_SGH(this, *mesh);
       module_found = true;
-      displacement_module = imodule;
       //debug print
-      *fos << " ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << " SGH MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
     else if(FEA_Module_List[imodule] == "Inertial"){
@@ -1243,19 +1253,12 @@ void Explicit_Solver_SGH::FEA_module_setup(){
       *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
-    else if(FEA_Module_List[imodule] == "Heat_Conduction"){
-      fea_module_types[imodule] = "Heat_Conduction";
-      fea_modules[imodule] = new FEA_Module_Heat_Conduction(this);
-      module_found = true; 
-      //debug print
-      *fos << " HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
-    }
     else{
       *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" <<FEA_Module_List[imodule]<<"\"" << std::endl;
       exit_solver(0);
     }
   }
-  */
+  
 }
 
 /* ----------------------------------------------------------------------
@@ -1578,7 +1581,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  solver.solve(*fos);
+  //solver.solve(*fos);
 
   //print final constraint satisfaction
   //fea_elasticity->compute_element_masses(design_densities,false);

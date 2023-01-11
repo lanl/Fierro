@@ -51,8 +51,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   Simulation_Parameters_SGH();
   virtual ~Simulation_Parameters_SGH();
   virtual void input();
-
-
+  virtual void FEA_module_setup();
     
     // applying initial conditions
   enum setup
