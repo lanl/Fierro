@@ -308,8 +308,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    //setup_optimization_problem();
-    //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      setup_optimization_problem();
+      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+    }
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -1289,7 +1291,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
-  std::string filename = "input_ex01.xml";
+  std::string filename = "optimization_parameters.xml";
   auto parlist = ROL::getParametersFromXmlFile( filename );
   //ROL::ParameterList parlist;
 

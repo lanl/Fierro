@@ -93,6 +93,7 @@
 #include "ROL_StdBoundConstraint.hpp"
 #include "ROL_ParameterList.hpp"
 #include <ROL_TpetraMultiVector.hpp>
+#include "Kinetic_Energy_Minimize.h"
 
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
@@ -620,7 +621,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t num_state_vars = simparam->max_num_state_vars;
   const size_t rk_level = 0;
   real_t inner_product;
-  std::vector inner_product_interface(1);
+  std::vector<real_t> inner_product_interface(1);
 
   // --- Read in the nodes in the mesh ---
   int myrank = Explicit_Solver_Pointer_->myrank;
@@ -671,9 +672,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   */
   //simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
   obj_pointer = problem->getObjective();
-  ROL::Ptr<KineticEnergyMinimize_TopOpt> kinetic_energy_minimize_function;
-  kinetic_energy_minimize_function = dynamic_cast<ROL::Ptr<KineticEnergyMinimize_TopOpt>>(obj_pointer);
-  kinetic_energy_minimize_function->objective_accumulation = 0;
+  KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
+  kinetic_energy_minimize_function.objective_accumulation = 0;
 
   //interface trial density vector
 
@@ -1857,9 +1857,8 @@ void FEA_Module_SGH::sgh_solve(){
     //simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
     if(simparam_dynamic_opt->topology_optimization_on){
       obj_pointer = problem->getObjective();
-      ROL::Ptr<KineticEnergyMinimize_TopOpt> kinetic_energy_minimize_function;
-      kinetic_energy_minimize_function = dynamic_cast<ROL::Ptr<KineticEnergyMinimize_TopOpt>>(obj_pointer);
-      kinetic_energy_minimize_function->objective_accumulation = 0;
+      KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
+      kinetic_energy_minimize_function.objective_accumulation = 0;
     }
 
     if(simparam_dynamic_opt->topology_optimization_on)
