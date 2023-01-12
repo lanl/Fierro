@@ -536,6 +536,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DCArrayKokkos <size_t>read_from_file;
   DCArrayKokkos <double>file_state_vars;
   DCArrayKokkos <size_t>mat_num_state_vars; // actual number of state_vars
+
+  //optimization flags
+  bool kinetic_energy_objective;
 };
 
 #endif // end HEADER_H

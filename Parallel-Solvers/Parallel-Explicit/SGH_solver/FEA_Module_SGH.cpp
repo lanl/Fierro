@@ -142,6 +142,9 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   noutput = 0;
   init_output();
 
+  //optimization flags
+  kinetic_energy_objective = false;
+
 }
 
 FEA_Module_SGH::~FEA_Module_SGH(){
@@ -621,8 +624,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t num_materials = simparam->num_materials;
   const size_t num_state_vars = simparam->max_num_state_vars;
   const size_t rk_level = 0;
-  real_t inner_product;
-  std::vector<real_t> inner_product_interface(1);
+  real_t objective_accumulation;
 
   // --- Read in the nodes in the mesh ---
   int myrank = Explicit_Solver_Pointer_->myrank;
@@ -1840,7 +1842,7 @@ void FEA_Module_SGH::sgh_solve(){
     const CArrayKokkos <boundary_t> boundary = simparam->boundary;
     const CArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
-    real_t inner_product;
+    real_t objective_accumulation, global_objective_accumulation;
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
@@ -1860,6 +1862,8 @@ void FEA_Module_SGH::sgh_solve(){
       obj_pointer = problem->getObjective();
       KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
       kinetic_energy_minimize_function.objective_accumulation = 0;
+      global_objective_accumulation = objective_accumulation = 0;
+      kinetic_energy_objective = true;
     }
 
     if(simparam_dynamic_opt->topology_optimization_on)
@@ -1905,6 +1909,16 @@ void FEA_Module_SGH::sgh_solve(){
     double global_IE_t0 = 0.0;
     double global_KE_t0 = 0.0;
     double global_TE_t0 = 0.0;
+
+    // ---- Calculate energy tallies ----
+    double IE_tend = 0.0;
+    double KE_tend = 0.0;
+    double TE_tend = 0.0;
+
+    double global_IE_tend = 0.0;
+    double global_KE_tend = 0.0;
+    double global_TE_tend = 0.0;
+
     int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
     const int num_dim = simparam->num_dim;
     
@@ -2429,8 +2443,44 @@ void FEA_Module_SGH::sgh_solve(){
         
         // end of calculation
         if (time_value>=time_final) break;
+
+        //kinetic energy accumulation
+        if(kinetic_energy_objective){
+          KE_loc_sum = 0.0;
+          KE_sum = 0.0;
+          // extensive KE
+          REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         
+          double ke = 0;
+          for (size_t dim=0; dim<num_dim; dim++){
+            ke += node_vel(1,node_gid,dim)*node_vel(1,node_gid,dim); // 1/2 at end
+          } // end for
+        
+          if(num_dim==2){
+            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
+          }
+          else{
+            KE_loc_sum += node_mass(node_gid)*ke;
+          }
+        
+          }, KE_sum);
+        }
+        Kokkos::fence();
+        KE_sum = 0.5*KE_sum;
+        objective_accumulation += KE_sum*dt;
     } // end for cycle loop
+
+    //simple setup to just calculate KE minimize objective for now
+    if(simparam_dynamic_opt->topology_optimization_on){
+      KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
+
+      //collect local objective values
+      MPI_Allreduce(&objective_accumulation,&global_objective_accumulation,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+      kinetic_energy_minimize_function.objective_accumulation = global_objective_accumulation;
+
+      if(myrank==0)
+      std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << global_objective_accumulation << std::endl;
+    }
     
     
     auto time_2 = std::chrono::system_clock::now();
@@ -2439,15 +2489,6 @@ void FEA_Module_SGH::sgh_solve(){
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
     if(myrank==0)
       printf("\nCalculation time in seconds: %f \n", calc_time*1e-09);
-    
-    // ---- Calculate energy tallies ----
-    double IE_tend = 0.0;
-    double KE_tend = 0.0;
-    double TE_tend = 0.0;
-
-    double global_IE_tend = 0.0;
-    double global_KE_tend = 0.0;
-    double global_TE_tend = 0.0;
     
     IE_loc_sum = 0.0;
     KE_loc_sum = 0.0;
@@ -2504,6 +2545,7 @@ void FEA_Module_SGH::sgh_solve(){
       printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
     if(myrank==0)
       printf("total energy conservation error %= %e \n\n", 100*(TE_tend - TE_t0)/TE_t0);
+
     
     return;
     
