@@ -497,6 +497,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> initial_node_velocities_distributed;
   Teuchos::RCP<MV> all_node_velocities_distributed;
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
+  std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
+  int max_time_steps;
 
   //Dual View wrappers
   // Dual Views of the individual node struct variables

@@ -144,6 +144,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
 
   //optimization flags
   kinetic_energy_objective = false;
+  max_time_steps = 100;
 
 }
 
@@ -1842,6 +1843,7 @@ void FEA_Module_SGH::sgh_solve(){
     const CArrayKokkos <boundary_t> boundary = simparam->boundary;
     const CArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
+    int old_max_forward_buffer;
     real_t objective_accumulation, global_objective_accumulation;
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
@@ -1864,6 +1866,14 @@ void FEA_Module_SGH::sgh_solve(){
       kinetic_energy_minimize_function.objective_accumulation = 0;
       global_objective_accumulation = objective_accumulation = 0;
       kinetic_energy_objective = true;
+      if(max_time_steps > forward_solve_velocity_data.size()){
+        old_max_forward_buffer = forward_solve_velocity_data.size();
+        forward_solve_velocity_data.resize(max_time_steps);
+        //assign a multivector of corresponding size to each new timestep in the buffer
+        for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
+          forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+        }
+      }
     }
 
     if(simparam_dynamic_opt->topology_optimization_on)
@@ -1982,6 +1992,19 @@ void FEA_Module_SGH::sgh_solve(){
 	    // stop calculation if flag
 	    if (stop_calc == 1) break;
         
+        if(cycle >= max_time_steps)
+          max_time_steps = cycle + 1;
+        
+        if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+          if(max_time_steps > forward_solve_velocity_data.size()){
+            old_max_forward_buffer = forward_solve_velocity_data.size();
+            forward_solve_velocity_data.resize(max_time_steps + 100);
+            //assign a multivector of corresponding size to each new timestep in the buffer
+            for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
+              forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+            }
+          }
+        }
 
 	    // get the step
         if(num_dim==2){
