@@ -1845,6 +1845,7 @@ void FEA_Module_SGH::sgh_solve(){
     int nTO_modules;
     int old_max_forward_buffer;
     size_t cycle;
+    const int num_dim = simparam->num_dim;
     real_t objective_accumulation, global_objective_accumulation;
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
@@ -1871,7 +1872,7 @@ void FEA_Module_SGH::sgh_solve(){
         old_max_forward_buffer = forward_solve_velocity_data.size();
         forward_solve_velocity_data.resize(max_time_steps);
         //assign a multivector of corresponding size to each new timestep in the buffer
-        for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
+        for(int istep = old_max_forward_buffer; istep < max_time_steps; istep++){
           forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
         }
       }
@@ -1932,7 +1933,6 @@ void FEA_Module_SGH::sgh_solve(){
     double global_TE_tend = 0.0;
 
     int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
-    const int num_dim = simparam->num_dim;
     
     // extensive IE
     REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {

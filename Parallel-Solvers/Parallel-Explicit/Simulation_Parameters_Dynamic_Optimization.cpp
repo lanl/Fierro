@@ -60,7 +60,7 @@ Simulation_Parameters_Dynamic_Optimization::~Simulation_Parameters_Dynamic_Optim
 
 void Simulation_Parameters_Dynamic_Optimization::input(){
   Simulation_Parameters::input();
-  topology_optimization_on = false;
+  topology_optimization_on = true;
   //Simulation_Parameters::input();
   //initial buffer size for TO module list storage
   int buffer_size = 10;
