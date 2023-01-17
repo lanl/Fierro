@@ -1844,6 +1844,7 @@ void FEA_Module_SGH::sgh_solve(){
     const CArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
     int old_max_forward_buffer;
+    size_t cycle;
     real_t objective_accumulation, global_objective_accumulation;
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
@@ -1871,9 +1872,10 @@ void FEA_Module_SGH::sgh_solve(){
         forward_solve_velocity_data.resize(max_time_steps);
         //assign a multivector of corresponding size to each new timestep in the buffer
         for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
-          forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+          forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
         }
       }
+      
     }
 
     if(simparam_dynamic_opt->topology_optimization_on)
@@ -1987,24 +1989,37 @@ void FEA_Module_SGH::sgh_solve(){
     auto time_1 = std::chrono::high_resolution_clock::now();
     
 	// loop over the max number of time integration cycles
-	for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
+	for (cycle = 0; cycle < cycle_stop; cycle++) {
 
 	    // stop calculation if flag
 	    if (stop_calc == 1) break;
         
+  
+      if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
         if(cycle >= max_time_steps)
           max_time_steps = cycle + 1;
-        
-        if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
-          if(max_time_steps > forward_solve_velocity_data.size()){
-            old_max_forward_buffer = forward_solve_velocity_data.size();
-            forward_solve_velocity_data.resize(max_time_steps + 100);
-            //assign a multivector of corresponding size to each new timestep in the buffer
-            for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
-              forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-            }
+
+        if(max_time_steps > forward_solve_velocity_data.size()){
+          old_max_forward_buffer = forward_solve_velocity_data.size();
+          forward_solve_velocity_data.resize(max_time_steps + 100);
+          //assign a multivector of corresponding size to each new timestep in the buffer
+          for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
+            forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
           }
         }
+
+        //view scope
+        {
+          Explicit_Solver_SGH::vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+          FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            for (int idim = 0; idim < num_dim; idim++){
+              node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
+            }
+          }); // end parallel for
+        } //end view scope
+        Kokkos::fence();
+        forward_solve_velocity_data[cycle]->assign(*node_velocities_distributed);
+      }
 
 	    // get the step
         if(num_dim==2){
@@ -2492,6 +2507,8 @@ void FEA_Module_SGH::sgh_solve(){
         KE_sum = 0.5*KE_sum;
         objective_accumulation += KE_sum*dt;
     } // end for cycle loop
+
+    last_time_step = cycle - 1;
 
     //simple setup to just calculate KE minimize objective for now
     if(simparam_dynamic_opt->topology_optimization_on){
