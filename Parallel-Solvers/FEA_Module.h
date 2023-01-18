@@ -61,6 +61,12 @@ using namespace mtr;
 //forward declare
 class Solver;
 
+//forward declarations
+namespace ROL{
+  template<class datatype>
+  class Problem;
+}
+
 class FEA_Module{
 
 public:
@@ -170,6 +176,7 @@ public:
 
   class Simulation_Parameters *simparam;
   Solver *Solver_Pointer_;
+  int my_fea_module_index_;
   
   //Local FEA data
   size_t nlocal_nodes;
@@ -276,6 +283,9 @@ public:
   std::vector<const_host_vec_array> module_outputs;
   std::vector<vector_styles> vector_style;
   std::vector<int> output_vector_sizes;
+
+  //Pointer to ROL Problem for optimization solves
+  Teuchos::RCP<ROL::Problem<real_t>> problem;
   
 };
 

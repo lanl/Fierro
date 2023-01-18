@@ -104,7 +104,10 @@
 using namespace utils;
 
 
-FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+
+  //assign interfacing index
+  my_fea_module_index_ = my_fea_module_index;
 
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);

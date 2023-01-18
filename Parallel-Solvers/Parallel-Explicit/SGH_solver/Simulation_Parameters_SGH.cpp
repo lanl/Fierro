@@ -207,7 +207,7 @@ void Simulation_Parameters_SGH::input(){
             mat_fill(1).volume = region::sphere; // fill a sphere
             mat_fill(1).mat_id = 0;              // material id
             mat_fill(1).radius1 = 0.0;           // inner radius of fill region
-            mat_fill(1).radius2 = 1.2/32.0;       // outer radius of fill region
+            mat_fill(1).radius2 = 1.2/128.0;       // outer radius of fill region
             mat_fill(1).den = 1.0;               // initial density
             mat_fill(1).sie = (963.652344*
                                pow((1.2/30.0),3))/pow((mat_fill(1).radius2),3);
@@ -703,4 +703,28 @@ void Simulation_Parameters_SGH::input(){
         
     } // end if Taylor Anvil
 
+}
+
+void Simulation_Parameters_SGH::FEA_module_setup(){
+  
+  //initial buffer size for FEA module list storage
+  int buffer_size = 10 + nfea_modules;
+  FEA_Module_List.resize(buffer_size);
+  fea_module_must_read.resize(buffer_size);
+  int start_module = nfea_modules;
+
+  //decides which FEA modules to setup based on user decided implicit solves
+  FEA_Module_List[nfea_modules] = "SGH";
+  nfea_modules++;
+  //example for later
+  if(nfea_modules==buffer_size){
+    buffer_size += 10;
+    FEA_Module_List.resize(buffer_size);
+    fea_module_must_read.resize(buffer_size);
+  }
+
+  //initialize
+  for(int imodule = start_module; imodule < nfea_modules; imodule++){
+    fea_module_must_read[imodule] = false;
+  }
 }

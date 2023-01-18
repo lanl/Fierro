@@ -54,7 +54,7 @@ class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh);
+  FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int my_fea_module_index = 0);
   ~FEA_Module_SGH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -497,6 +497,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> initial_node_velocities_distributed;
   Teuchos::RCP<MV> all_node_velocities_distributed;
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
+  std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
+  int max_time_steps, last_time_step;
 
   //Dual View wrappers
   // Dual Views of the individual node struct variables
@@ -536,6 +538,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DCArrayKokkos <size_t>read_from_file;
   DCArrayKokkos <double>file_state_vars;
   DCArrayKokkos <size_t>mat_num_state_vars; // actual number of state_vars
+
+  //optimization flags
+  bool kinetic_energy_objective;
 };
 
 #endif // end HEADER_H

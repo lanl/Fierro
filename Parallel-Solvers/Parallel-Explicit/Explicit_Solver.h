@@ -41,12 +41,6 @@
 
 #include "Solver.h"
 
-//forward declarations
-namespace ROL{
-  template<class datatype>
-  class Problem;
-}
-
 class Explicit_Solver: public Solver{
 
 public:
@@ -59,7 +53,6 @@ public:
   
   class Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
 
-  Teuchos::RCP<ROL::Problem<real_t>> problem;
   //ROL::Problem<real_t> problem;
 };
 

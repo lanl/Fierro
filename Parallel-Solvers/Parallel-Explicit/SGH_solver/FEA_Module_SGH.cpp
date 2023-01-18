@@ -79,6 +79,22 @@
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 
+//optimization
+#include "ROL_Algorithm.hpp"
+#include "ROL_Solver.hpp"
+#include "ROL_LineSearchStep.hpp"
+#include "ROL_TrustRegionStep.hpp"
+#include "ROL_StatusTest.hpp"
+#include "ROL_Types.hpp"
+#include "ROL_Elementwise_Reduce.hpp"
+#include "ROL_Stream.hpp"
+
+#include "ROL_StdVector.hpp"
+#include "ROL_StdBoundConstraint.hpp"
+#include "ROL_ParameterList.hpp"
+#include <ROL_TpetraMultiVector.hpp>
+#include "Kinetic_Energy_Minimize.h"
+
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
 #define DENSITY_EPSILON 0.0001
@@ -87,10 +103,15 @@
 using namespace utils;
 
 
-FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module(Solver_Pointer), mesh(mesh){
-  //create parameter object
+FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int my_fea_module_index) :FEA_Module(Solver_Pointer), mesh(mesh){
+
+  //assign interfacing index
+  my_fea_module_index_ = my_fea_module_index;
+  
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver_SGH*>(Solver_Pointer);
+
+  //create parameter object
   simparam = dynamic_cast<Simulation_Parameters_SGH*>(Explicit_Solver_Pointer_->simparam);
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->input();
@@ -107,10 +128,23 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh) :FEA_Module
   //boundary condition data
   max_boundary_sets = 0;
   Local_Index_Boundary_Patches = Explicit_Solver_Pointer_->Local_Index_Boundary_Patches;
+
+  //set Tpetra vector pointers
+  initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
+  initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
+  node_coords_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
+  node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
+  all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on)
+    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
   
   //setup output
   noutput = 0;
   init_output();
+
+  //optimization flags
+  kinetic_energy_objective = false;
+  max_time_steps = 100;
 
 }
 
@@ -324,14 +358,6 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     int num_corners = rnum_elem*num_nodes_in_elem;
     mesh.initialize_corners(num_corners);
     corner.initialize(num_corners, num_dim);
-
-    //set Tpetra vector pointers
-    initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
-    initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
-    node_coords_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
-    node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
-    all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
-    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
     
     /*
     for(int inode = 0; inode < nall_nodes; inode++){
@@ -580,7 +606,7 @@ void FEA_Module_SGH::compute_output(){
 }
 
 /* ----------------------------------------------------------------------
-   Solve the FEA linear system
+   Compute new system response due to the design variable update
 ------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
@@ -589,6 +615,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
   int max_stride = 0;
+  int current_module_index;
   size_t access_index, row_access_index, row_counter;
   GO global_index, global_dof_index;
   LO local_dof_index;
@@ -598,6 +625,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t num_materials = simparam->num_materials;
   const size_t num_state_vars = simparam->max_num_state_vars;
   const size_t rk_level = 0;
+  real_t objective_accumulation;
 
   // --- Read in the nodes in the mesh ---
   int myrank = Explicit_Solver_Pointer_->myrank;
@@ -609,6 +637,11 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
   CArrayKokkos<double> relative_element_densities = CArrayKokkos<double>(rnum_elem, "relative_element_densities");
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
+  
+  std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
+  problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
+  ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
+
   //compute element averaged density ratios corresponding to nodal density design variables
   {//view scope
     const_host_vec_array all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -630,6 +663,21 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
 
   //reset velocities to initial conditions
   node_velocities_distributed->assign(*initial_node_velocities_distributed);
+
+  //reset time accumulating objective and constraints
+  /*
+  for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
+    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
+    //test if module needs reset
+    if(){
+      
+    }
+  }
+  */
+  //simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
+  obj_pointer = problem->getObjective();
+  KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
+  kinetic_energy_minimize_function.objective_accumulation = 0;
 
   //interface trial density vector
 
@@ -771,7 +819,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 		
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
-                size_t mat_id = elem_mat_id(elem_gid, nodes_per_elem); // short name
+                size_t mat_id = elem_mat_id(elem_gid); // short name
                 
                 
                 // get state_vars from the input file or read them in
@@ -1795,6 +1843,42 @@ void FEA_Module_SGH::sgh_solve(){
     const CArrayKokkos <boundary_t> boundary = simparam->boundary;
     const CArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
+    int old_max_forward_buffer;
+    size_t cycle;
+    const int num_dim = simparam->num_dim;
+    real_t objective_accumulation, global_objective_accumulation;
+    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
+    problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
+    ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
+
+    //reset time accumulating objective and constraints
+    /*
+    for(int imodule = 0 ; imodule < FEA_Module_My_TO_Modules[my_fea_module_index_].size(); imodule++){
+    current_module_index = FEA_Module_My_TO_Modules[my_fea_module_index_][imodule];
+    //test if module needs reset
+    if(){
+      
+    }
+    }
+    */
+    //simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
+    if(simparam_dynamic_opt->topology_optimization_on){
+      obj_pointer = problem->getObjective();
+      KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
+      kinetic_energy_minimize_function.objective_accumulation = 0;
+      global_objective_accumulation = objective_accumulation = 0;
+      kinetic_energy_objective = true;
+      if(max_time_steps > forward_solve_velocity_data.size()){
+        old_max_forward_buffer = forward_solve_velocity_data.size();
+        forward_solve_velocity_data.resize(max_time_steps);
+        //assign a multivector of corresponding size to each new timestep in the buffer
+        for(int istep = old_max_forward_buffer; istep < max_time_steps; istep++){
+          forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
+        }
+      }
+      
+    }
+
     if(simparam_dynamic_opt->topology_optimization_on)
       nTO_modules = simparam_dynamic_opt->nTO_modules;
 
@@ -1838,8 +1922,17 @@ void FEA_Module_SGH::sgh_solve(){
     double global_IE_t0 = 0.0;
     double global_KE_t0 = 0.0;
     double global_TE_t0 = 0.0;
+
+    // ---- Calculate energy tallies ----
+    double IE_tend = 0.0;
+    double KE_tend = 0.0;
+    double TE_tend = 0.0;
+
+    double global_IE_tend = 0.0;
+    double global_KE_tend = 0.0;
+    double global_TE_tend = 0.0;
+
     int nlocal_elem_non_overlapping = Explicit_Solver_Pointer_->nlocal_elem_non_overlapping;
-    const int num_dim = simparam->num_dim;
     
     // extensive IE
     REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
@@ -1896,11 +1989,37 @@ void FEA_Module_SGH::sgh_solve(){
     auto time_1 = std::chrono::high_resolution_clock::now();
     
 	// loop over the max number of time integration cycles
-	for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
+	for (cycle = 0; cycle < cycle_stop; cycle++) {
 
 	    // stop calculation if flag
 	    if (stop_calc == 1) break;
         
+  
+      if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+        if(cycle >= max_time_steps)
+          max_time_steps = cycle + 1;
+
+        if(max_time_steps > forward_solve_velocity_data.size()){
+          old_max_forward_buffer = forward_solve_velocity_data.size();
+          forward_solve_velocity_data.resize(max_time_steps + 100);
+          //assign a multivector of corresponding size to each new timestep in the buffer
+          for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
+            forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
+          }
+        }
+
+        //view scope
+        {
+          Explicit_Solver_SGH::vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+          FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            for (int idim = 0; idim < num_dim; idim++){
+              node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
+            }
+          }); // end parallel for
+        } //end view scope
+        Kokkos::fence();
+        forward_solve_velocity_data[cycle]->assign(*node_velocities_distributed);
+      }
 
 	    // get the step
         if(num_dim==2){
@@ -2362,8 +2481,46 @@ void FEA_Module_SGH::sgh_solve(){
         
         // end of calculation
         if (time_value>=time_final) break;
+
+        //kinetic energy accumulation
+        if(kinetic_energy_objective){
+          KE_loc_sum = 0.0;
+          KE_sum = 0.0;
+          // extensive KE
+          REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         
+          double ke = 0;
+          for (size_t dim=0; dim<num_dim; dim++){
+            ke += node_vel(1,node_gid,dim)*node_vel(1,node_gid,dim); // 1/2 at end
+          } // end for
+        
+          if(num_dim==2){
+            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
+          }
+          else{
+            KE_loc_sum += node_mass(node_gid)*ke;
+          }
+        
+          }, KE_sum);
+        }
+        Kokkos::fence();
+        KE_sum = 0.5*KE_sum;
+        objective_accumulation += KE_sum*dt;
     } // end for cycle loop
+
+    last_time_step = cycle - 1;
+
+    //simple setup to just calculate KE minimize objective for now
+    if(simparam_dynamic_opt->topology_optimization_on){
+      KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
+
+      //collect local objective values
+      MPI_Allreduce(&objective_accumulation,&global_objective_accumulation,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+      kinetic_energy_minimize_function.objective_accumulation = global_objective_accumulation;
+
+      if(myrank==0)
+      std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << global_objective_accumulation << std::endl;
+    }
     
     
     auto time_2 = std::chrono::system_clock::now();
@@ -2372,15 +2529,6 @@ void FEA_Module_SGH::sgh_solve(){
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
     if(myrank==0)
       printf("\nCalculation time in seconds: %f \n", calc_time*1e-09);
-    
-    // ---- Calculate energy tallies ----
-    double IE_tend = 0.0;
-    double KE_tend = 0.0;
-    double TE_tend = 0.0;
-
-    double global_IE_tend = 0.0;
-    double global_KE_tend = 0.0;
-    double global_TE_tend = 0.0;
     
     IE_loc_sum = 0.0;
     KE_loc_sum = 0.0;
@@ -2437,6 +2585,7 @@ void FEA_Module_SGH::sgh_solve(){
       printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
     if(myrank==0)
       printf("total energy conservation error %= %e \n\n", 100*(TE_tend - TE_t0)/TE_t0);
+
     
     return;
     

@@ -702,7 +702,7 @@ void Solver::read_mesh_ensight(char *MESH){
 } // end read_mesh
 
 /* ----------------------------------------------------------------------
-   Read Ensight format mesh file
+   Read VTK format mesh file
 ------------------------------------------------------------------------- */
 
 void Solver::read_mesh_vtk(char *MESH){

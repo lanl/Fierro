@@ -126,6 +126,8 @@ public:
 
   void parallel_tecplot_writer();
 
+  void parallel_vtk_writer();
+
   //void init_boundary_sets(int num_boundary_sets);
 
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
@@ -138,6 +140,9 @@ public:
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters_SGH *simparam;
   class Simulation_Parameters_Dynamic_Optimization *simparam_TO;
+
+  //FEA simulations
+  class FEA_Module_SGH *sgh_module;
 
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;
