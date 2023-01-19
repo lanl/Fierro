@@ -2643,7 +2643,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
       if(cycle!=last_time_step)
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
           for (int idim = 0; idim < num_dim; idim++){
-            adjoint_vector(node_gid,idim) = -2*adjoint_vector(1,node_gid,idim)*dt + previous_adjoint_vector(1,node_gid,idim);
+            adjoint_vector(node_gid,idim) = -2*adjoint_vector(node_gid,idim)*dt + previous_adjoint_vector(node_gid,idim);
           }
         }); // end parallel for
       } //end view scope
