@@ -437,6 +437,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                   const double time_value );
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
+
+  void compute_topology_optimization_adjoint();
   
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
@@ -497,7 +499,10 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> initial_node_velocities_distributed;
   Teuchos::RCP<MV> all_node_velocities_distributed;
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
+  Teuchos::RCP<MV> adjoint_vector_distributed;
   std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
+  std::vector<Teuchos::RCP<MV>> adjoint_vector_data;
+  std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
 
   //Dual View wrappers

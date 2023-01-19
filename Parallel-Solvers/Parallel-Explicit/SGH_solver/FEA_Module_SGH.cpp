@@ -135,8 +135,10 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   node_coords_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
-  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on)
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
     all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+    adjoint_vector_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+  }
   
   //setup output
   noutput = 0;
@@ -1870,13 +1872,15 @@ void FEA_Module_SGH::sgh_solve(){
       kinetic_energy_objective = true;
       if(max_time_steps > forward_solve_velocity_data.size()){
         old_max_forward_buffer = forward_solve_velocity_data.size();
+        time_data.resize(max_time_steps);
         forward_solve_velocity_data.resize(max_time_steps);
+        adjoint_vector_data.resize(max_time_steps);
         //assign a multivector of corresponding size to each new timestep in the buffer
         for(int istep = old_max_forward_buffer; istep < max_time_steps; istep++){
           forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
+          adjoint_vector_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
         }
       }
-      
     }
 
     if(simparam_dynamic_opt->topology_optimization_on)
@@ -2001,10 +2005,13 @@ void FEA_Module_SGH::sgh_solve(){
 
         if(max_time_steps > forward_solve_velocity_data.size()){
           old_max_forward_buffer = forward_solve_velocity_data.size();
+          time_data.resize(max_time_steps + 101);
           forward_solve_velocity_data.resize(max_time_steps + 100);
+          adjoint_vector_data.resize(max_time_steps + 100);
           //assign a multivector of corresponding size to each new timestep in the buffer
           for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
             forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
+            adjoint_vector_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
           }
         }
 
@@ -2056,6 +2063,11 @@ void FEA_Module_SGH::sgh_solve(){
         double global_dt;
         MPI_Allreduce(&dt,&global_dt,1,MPI_DOUBLE,MPI_MIN,MPI_COMM_WORLD);
         dt = global_dt;
+
+        if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+          if(cycle==0) time_data[cycle] = global_dt;
+          else time_data[cycle] = global_dt + time_data[cycle-1];
+        }
 
         if (cycle==0){
             if(myrank==0)
@@ -2590,3 +2602,52 @@ void FEA_Module_SGH::sgh_solve(){
     return;
     
 } // end of SGH solve
+
+/* ----------------------------------------------------------------------------
+   SGH solver loop
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::compute_topology_optimization_adjoint(){
+  
+  size_t cycle;
+  double time_value = simparam->time_value;
+  const double time_final = simparam->time_final;
+  const double dt_max = simparam->dt_max;
+  const double dt_min = simparam->dt_min;
+  const double dt_cfl = simparam->dt_cfl;
+  double graphics_time = simparam->graphics_time;
+  size_t graphics_cyc_ival = simparam->graphics_cyc_ival;
+  double graphics_dt_ival = simparam->graphics_dt_ival;
+  const size_t rk_num_stages = simparam->rk_num_stages;
+  double dt = simparam->dt;
+  const double fuzz = simparam->fuzz;
+  const double tiny = simparam->tiny;
+  const double small = simparam->small;
+  CArray <double> graphics_times = simparam->graphics_times;
+  size_t graphics_id = simparam->graphics_id;
+  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  const CArrayKokkos <boundary_t> boundary = simparam->boundary;
+  const CArrayKokkos <material_t> material = simparam->material;
+  const int num_dim = simparam->num_dim;
+  Teuchos::RCP<MV> previous_adjoint_vector_distributed;
+
+  //initialize first adjoint vector at last_time_step to 0 as the terminal value
+
+  //solve terminal value problem, proceeds in time backward
+  for (cycle = last_time_step-1; cycle >= 0 ; cycle--) {
+    // walk over the nodes to update the velocity
+    //view scope
+      {
+      Explicit_Solver_SGH::vec_array adjoint_vector = adjoint_vector_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+      Explicit_Solver_SGH::vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+      if(cycle!=last_time_step)
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+          for (int idim = 0; idim < num_dim; idim++){
+            adjoint_vector(node_gid,idim) = -2*adjoint_vector(1,node_gid,idim)*dt + previous_adjoint_vector(1,node_gid,idim);
+          }
+        }); // end parallel for
+      } //end view scope
+      Kokkos::fence();
+      adjoint_vector_data[cycle]->assign(*adjoint_vector_distributed);
+  }
+}
