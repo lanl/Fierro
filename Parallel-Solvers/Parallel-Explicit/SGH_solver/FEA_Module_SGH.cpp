@@ -2514,10 +2514,11 @@ void FEA_Module_SGH::sgh_solve(){
           }
         
           }, KE_sum);
+          Kokkos::fence();
+          KE_sum = 0.5*KE_sum;
+          objective_accumulation += KE_sum*dt;
         }
-        Kokkos::fence();
-        KE_sum = 0.5*KE_sum;
-        objective_accumulation += KE_sum*dt;
+        
     } // end for cycle loop
 
     last_time_step = cycle - 1;
