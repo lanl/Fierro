@@ -2629,7 +2629,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   const CArrayKokkos <boundary_t> boundary = simparam->boundary;
   const CArrayKokkos <material_t> material = simparam->material;
   const int num_dim = simparam->num_dim;
-  real_t current time_floor, global_dt, velocity_value;
+  real_t global_dt;
   size_t current_data_index, next_data_index;
   Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
   //initialize first adjoint vector at last_time_step to 0 as the terminal value
@@ -2648,13 +2648,13 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
         const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
         const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
     
-        vec_array previous_adjoint_vector = adjoint_vector_distributed[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
-        vec_array current_adjoint_vector = adjoint_vector_distributed[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+        const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
 
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
           for (int idim = 0; idim < num_dim; idim++){
-            velocity_value = 0.5*(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim));
-            current_adjoint_vector(node_gid,idim) = -2*velocity_value*global_dt + previous_adjoint_vector(node_gid,idim);
+            //cancellation of half from midpoint and 2 from adjoint equation already done
+            current_adjoint_vector(node_gid,idim) = -(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
           } 
         }); // end parallel for
         Kokkos::fence();
