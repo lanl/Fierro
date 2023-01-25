@@ -2642,6 +2642,17 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
+    //print
+    if (cycle==last_time_step-1){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle+1], global_dt);
+    }
+        // print time step every 10 cycles
+    else if (cycle%20==0){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle+1], global_dt);
+    } // end if
+    
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
       {
