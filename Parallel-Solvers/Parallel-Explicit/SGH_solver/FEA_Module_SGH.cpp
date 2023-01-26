@@ -2604,7 +2604,7 @@ void FEA_Module_SGH::sgh_solve(){
 } // end of SGH solve
 
 /* ----------------------------------------------------------------------------
-   SGH solver loop
+   Adjoint vector for the kinetic energy minimization problem
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::compute_topology_optimization_adjoint(){
@@ -2637,6 +2637,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
 
   //solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
   //A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
+  if(myrank==0)
+    std::cout << "Computing adjoint vector" << std::endl;
 
   for (cycle = last_time_step-1; cycle >= 0 ; cycle--) {
     //compute timestep from time data
@@ -2666,6 +2668,84 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
           for (int idim = 0; idim < num_dim; idim++){
             //cancellation of half from midpoint and 2 from adjoint equation already done
             current_adjoint_vector(node_gid,idim) = -(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
+          } 
+        }); // end parallel for
+        Kokkos::fence();
+      } //end view scope
+    
+  }
+}
+
+
+/* ----------------------------------------------------------------------------
+   Adjoint vector for the kinetic energy minimization problem
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array design_variables, host_vec_array design_gradients){
+  
+  size_t cycle;
+  double time_value = simparam->time_value;
+  const double time_final = simparam->time_final;
+  const double dt_max = simparam->dt_max;
+  const double dt_min = simparam->dt_min;
+  const double dt_cfl = simparam->dt_cfl;
+  double graphics_time = simparam->graphics_time;
+  size_t graphics_cyc_ival = simparam->graphics_cyc_ival;
+  double graphics_dt_ival = simparam->graphics_dt_ival;
+  const size_t rk_num_stages = simparam->rk_num_stages;
+  double dt = simparam->dt;
+  const double fuzz = simparam->fuzz;
+  const double tiny = simparam->tiny;
+  const double small = simparam->small;
+  CArray <double> graphics_times = simparam->graphics_times;
+  size_t graphics_id = simparam->graphics_id;
+  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  const CArrayKokkos <boundary_t> boundary = simparam->boundary;
+  const CArrayKokkos <material_t> material = simparam->material;
+  const int num_dim = simparam->num_dim;
+  real_t global_dt;
+  size_t current_data_index, next_data_index;
+  Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
+
+  //initialize gradient vector
+  FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+    design_gradients(node_gid,0) = 0;
+  }); // end parallel for
+
+  if(myrank==0)
+    std::cout << "Computing accumulated kinetic energy gradient" << std::endl;
+
+  //solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
+  //A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
+  
+  for (cycle = last_time_step-1; cycle >= 0 ; cycle--) {
+    //compute timestep from time data
+    global_dt = time_data[cycle+1] - time_data[cycle];
+    
+    //print
+    if (cycle==last_time_step-1){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle+1], global_dt);
+    }
+        // print time step every 10 cycles
+    else if (cycle%40==0){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle+1], global_dt);
+    } // end if
+
+    //compute adjoint vector for this data point; use velocity midpoint
+      //view scope
+      {
+        const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+    
+        const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+          for (int idim = 0; idim < num_dim; idim++){
+            //cancellation of half from midpoint and 2 from adjoint equation already done
+            design_gradients(node_gid,0) += -(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
           } 
         }); // end parallel for
         Kokkos::fence();

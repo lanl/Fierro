@@ -1206,8 +1206,10 @@ void Explicit_Solver_SGH::init_state_vectors(){
   ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
   if(!simparam->restart_file)
     design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-  if(simparam_dynamic_opt->topology_optimization_on)
+  if(simparam_dynamic_opt->topology_optimization_on){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+    corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nlocal_nodes*max_nodes_per_element);
+  }
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, 1));
 }

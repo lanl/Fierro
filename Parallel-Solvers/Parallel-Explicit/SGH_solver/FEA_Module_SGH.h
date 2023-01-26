@@ -439,6 +439,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
   void compute_topology_optimization_adjoint();
+
+  void compute_topology_optimization_gradient(const_host_vec_array design_densities, host_vec_array gradients);
   
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;

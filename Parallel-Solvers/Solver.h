@@ -169,6 +169,7 @@ public:
   //host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
   size_t max_nodes_per_element, max_nodes_per_patch;
   elements::element_selector *element_select;
   elements::Element3D *elem;

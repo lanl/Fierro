@@ -186,6 +186,7 @@ public:
   host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;

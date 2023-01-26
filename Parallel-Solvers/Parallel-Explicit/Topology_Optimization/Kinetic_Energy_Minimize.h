@@ -241,7 +241,7 @@ public:
   //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
     //g.zero();
   //}
-  /*
+  
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
     //std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
     //get Tpetra multivector pointer from the ROL vector
@@ -255,7 +255,7 @@ public:
     host_vec_array objective_gradients = gp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
-    FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
+    FEM_->compute_topology_optimization_gradient(design_densities, objective_gradients);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -281,7 +281,7 @@ public:
     //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
   }
   
-  
+  /*
   void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
     //debug
     std::ostream &out = std::cout;
