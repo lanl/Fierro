@@ -2740,6 +2740,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
 
         FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
           size_t node_id;
+          size_t corner_id;
           real_t inner_product;
 
           //current_nodal_velocities
@@ -2758,11 +2759,23 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
             }
           }
 
-          if(node_id < nlocal_nodes){
-            for (int inode = 0; inode < num_nodes_in_elem; inode++){
-              //compute gradient of local element contribution to v^t*M*v product
-              design_gradients(node_id,0) += elem_den(elem_id)*inner_product;
-            }
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            //compute gradient of local element contribution to v^t*M*v product
+            corner_id = elem_id*num_nodes_in_elem + inode;
+            corner_value_storage(corner_id) += elem_den(elem_id)*inner_product;
+          }
+          
+        }); // end parallel for
+        Kokkos::fence();
+        
+        //accumulate node values from corner storage
+        //multiply
+        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+          size_t corner_id;
+          design_gradients(node_id,0) = 0;
+          for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
+            corner_id = corners_in_node(inode,icorner);
+            design_gradients(node_id,0) += corner_value_storage(corner_id);
           }
         }); // end parallel for
         Kokkos::fence();
