@@ -2717,6 +2717,10 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
 
   //solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
   //A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
+  FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+    design_gradients(node_id,0) = 0;
+  }); // end parallel for
+  Kokkos::fence();
   
   for (cycle = 0; cycle <= last_time_step; cycle++) {
     //compute timestep from time data
@@ -2762,7 +2766,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
           for (int inode = 0; inode < num_nodes_in_elem; inode++){
             //compute gradient of local element contribution to v^t*M*v product
             corner_id = elem_id*num_nodes_in_elem + inode;
-            corner_value_storage(corner_id) += elem_den(elem_id)*inner_product;
+            corner_value_storage(corner_id) += elem_den(elem_id)*inner_product*global_dt;
           }
           
         }); // end parallel for
@@ -2772,7 +2776,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
         //multiply
         FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
           size_t corner_id;
-          design_gradients(node_id,0) = 0;
           for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
             corner_id = corners_in_node(inode,icorner);
             design_gradients(node_id,0) += corner_value_storage(corner_id);
@@ -2780,12 +2783,13 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
         }); // end parallel for
         Kokkos::fence();
 
-        //multiply
-        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-          design_gradients(node_id,0) *=-0.125*0.125;
-        }); // end parallel for
-        Kokkos::fence();
       } //end view scope
     
   }
+
+  //multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
+  FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+    design_gradients(node_id,0) *=-0.125*0.125;
+  }); // end parallel for
+  Kokkos::fence();
 }
