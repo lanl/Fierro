@@ -94,7 +94,6 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   all_node_densities_distributed = Solver_Pointer->all_node_densities_distributed;
   Global_Element_Densities = Solver_Pointer->Global_Element_Densities;
   Element_Types = Solver_Pointer->Element_Types;
-  corner_value_storage = Solver_Pointer->corner_value_storage;
 
   //element select data
   element_select = Solver_Pointer->element_select;

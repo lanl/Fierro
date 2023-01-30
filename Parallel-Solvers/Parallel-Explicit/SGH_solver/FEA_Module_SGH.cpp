@@ -137,6 +137,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
   if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
     all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+    corner_value_storage = Solver_Pointer->corner_value_storage;
   }
   
   //setup output
@@ -2777,7 +2778,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
         FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
           size_t corner_id;
           for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
-            corner_id = corners_in_node(inode,icorner);
+            corner_id = corners_in_node(node_id,icorner);
             design_gradients(node_id,0) += corner_value_storage(corner_id);
           }
         }); // end parallel for
