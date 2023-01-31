@@ -105,6 +105,8 @@ void Simulation_Parameters::FEA_module_setup(){
   nfea_modules++;
   FEA_Module_List[nfea_modules] = "Heat_Conduction";
   nfea_modules++;
+  //FEA_Module_List[nfea_modules] = "Thermo_Elasticity";
+  //nfea_modules++;
   //example for later
   if(nfea_modules==buffer_size){
     buffer_size += 10;

@@ -73,11 +73,11 @@ void Simulation_Parameters_Topology_Optimization::input(){
   //use pushback to add arguments for each TO module
   
   //TO objectives and constraints
-  
+  /*
   TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
-  /*
+  */
   //Multi objective format
   TO_Module_List[nTO_modules] = "Multi_Objective";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
@@ -94,7 +94,7 @@ void Simulation_Parameters_Topology_Optimization::input(){
   Multi_Objective_Modules[1] = nTO_modules;
   Multi_Objective_Weights[1] = 0.75;
   nTO_modules++;
-  */
+  
 
   //Constraints
   /*
@@ -180,6 +180,20 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
       if(!module_found){
         TO_Module_My_FEA_Module[imodule] = nfea_modules;
         FEA_Module_List[nfea_modules++] = "Elasticity";
+        module_found = true;
+      }
+    }
+    else if(TO_Module_List[imodule] == "Thermo_Elastic_Strain_Energy_Minimize"){
+      //check if module type was already allocated
+      for(int ifea = 0; ifea < nfea_modules; ifea++){
+        if(FEA_Module_List[ifea] == "Thermo_Elasticity"){
+          module_found = true;
+          TO_Module_My_FEA_Module[imodule] = ifea;
+        }
+      }
+      if(!module_found){
+        TO_Module_My_FEA_Module[imodule] = nfea_modules;
+        FEA_Module_List[nfea_modules++] = "Thermo_Elasticity";
         module_found = true;
       }
     }
