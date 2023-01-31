@@ -359,7 +359,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
   tag_boundaries(bc_tag, value, num_boundary_conditions);
   Boundary_Condition_Type_List(num_boundary_conditions) = TEMPERATURE_CONDITION;
-  Boundary_Surface_Temperatures(num_surface_temp_sets,0) = 20;
+  Boundary_Surface_Temperatures(num_surface_temp_sets,0) = 293;
   if(Boundary_Surface_Temperatures(num_surface_temp_sets,0)) nonzero_bc_flag = true;
     
   *fos << "tagged a set " << std::endl;
@@ -397,7 +397,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Heat_Flux(num_surface_flux_sets,0) = 0;
   Boundary_Surface_Heat_Flux(num_surface_flux_sets,1) = 0;
-  Boundary_Surface_Heat_Flux(num_surface_flux_sets,2) = -1/simparam->unit_scaling/simparam->unit_scaling;
+  Boundary_Surface_Heat_Flux(num_surface_flux_sets,2) = -0.1/simparam->unit_scaling/simparam->unit_scaling;
 
   *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
@@ -2811,18 +2811,17 @@ void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node
   
   //collect nodal temperature information
   if(output_temperature_flag){
-  //importer from local node distribution to collected distribution
-  Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
+    //importer from local node distribution to collected distribution
+    Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
 
-  sorted_node_temperatures_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+    sorted_node_temperatures_distributed = Teuchos::rcp(new MV(sorted_map, 1));
 
-  //comms to collect
-  sorted_node_temperatures_distributed->doImport(*(node_temperatures_distributed), node_sorting_importer, Tpetra::INSERT);
+    //comms to collect
+    sorted_node_temperatures_distributed->doImport(*(node_temperatures_distributed), node_sorting_importer, Tpetra::INSERT);
 
-  //set host views of the collected data to print out from
-  if(myrank==0){
-   module_outputs[output_temperature_index] = sorted_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  }
+    //set host views of the collected data to print out from
+    module_outputs[output_temperature_index] = sorted_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  
   }
 
   //collect strain data
@@ -2850,8 +2849,7 @@ void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node
     //std::fflush(stdout);
 
     //host view to print from
-    if(myrank==0)
-      module_outputs[output_heat_flux_index] = sorted_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    module_outputs[output_heat_flux_index] = sorted_node_heat_fluxes_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 }
 

@@ -144,6 +144,8 @@ public:
 
   virtual void parallel_vtk_writer() {}
 
+  virtual void output_design(int current_step) {}
+
   //setup ghosts and element maps
   virtual void init_maps();
 
@@ -240,6 +242,7 @@ public:
 
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
+  int last_print_step;
 
   //debug and system functions/variables
   double CPU_Time();

@@ -310,7 +310,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
               << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
-    parallel_tecplot_writer();
+    output_design(last_print_step+1);
     // vtk_writer();
     if(myrank==0){
       std::cout << "Total number of solves and assembly " << fea_modules[0]->update_count <<std::endl;
@@ -1761,6 +1761,18 @@ void Implicit_Solver::sort_information(){
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
+void Implicit_Solver::output_design(int current_step){
+  if(current_step!=last_print_step){
+    last_print_step = current_step;
+    parallel_tecplot_writer();
+  }
+
+}
+
+/* ----------------------------------------------------------------------
+   Output Model Information in tecplot format
+------------------------------------------------------------------------- */
+
 void Implicit_Solver::parallel_tecplot_writer(){
   
   int num_dim = simparam->num_dim;
@@ -1987,7 +1999,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
 
     current_buffer_position += current_line.length();
 	}
-  
+
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
   

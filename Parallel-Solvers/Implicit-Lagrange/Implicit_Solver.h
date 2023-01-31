@@ -106,6 +106,8 @@ public:
 
   void init_topology_conditions (int num_sets);
 
+  void output_design(int current_step);
+
   void tecplot_writer();
 
   void parallel_tecplot_writer();

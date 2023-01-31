@@ -4410,16 +4410,16 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
 
   //collect nodal displacement information
   if(output_displacement_flag){
-  //importer from local node distribution to sorted distribution
-  Tpetra::Import<LO, GO> dof_sorting_importer(local_dof_map, sorted_dof_map);
+    //importer from local node distribution to sorted distribution
+    Tpetra::Import<LO, GO> dof_sorting_importer(local_dof_map, sorted_dof_map);
 
-  sorted_node_displacements_distributed = Teuchos::rcp(new MV(sorted_dof_map, 1));
+    sorted_node_displacements_distributed = Teuchos::rcp(new MV(sorted_dof_map, 1));
 
-  //comms to collect
-  sorted_node_displacements_distributed->doImport(*(node_displacements_distributed), dof_sorting_importer, Tpetra::INSERT);
+    //comms to collect
+    sorted_node_displacements_distributed->doImport(*(node_displacements_distributed), dof_sorting_importer, Tpetra::INSERT);
 
-  //set host views of the collected data to print out from
-  module_outputs[output_displacement_index] = sorted_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    //set host views of the collected data to print out from
+    module_outputs[output_displacement_index] = sorted_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 
   //collect strain data
