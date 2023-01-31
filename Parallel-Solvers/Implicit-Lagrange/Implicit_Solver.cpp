@@ -1987,7 +1987,8 @@ void Implicit_Solver::parallel_tecplot_writer(){
 
     current_buffer_position += current_line.length();
 	}
-
+  
+  MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
   
   MPI_File_close(&myfile_parallel);
@@ -2128,6 +2129,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
 	  }
 		//print buffers at offsets with collective MPI write
     //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
+    MPI_Barrier(world);
     MPI_File_write_at_all(myfile_parallel_deformed, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
     //MPI_File_close(&myfile_parallel);
   
@@ -2169,9 +2171,12 @@ void Implicit_Solver::parallel_tecplot_writer(){
 
       current_buffer_position += current_line.length();
 	  }
-
+    
+    MPI_Barrier(world);
     MPI_File_write_at_all(myfile_parallel_deformed, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
-  
+    
+    MPI_Barrier(world);
+    MPI_File_sync(myfile_parallel);
     MPI_File_close(&myfile_parallel_deformed);
   }
 }
