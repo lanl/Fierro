@@ -60,6 +60,7 @@ namespace Xpetra{
 class Implicit_Solver;
 class Simulation_Parameters_Thermo_Elasticity;
 class Simulation_Parameters_Topology_Optimization;
+class FEA_Module_Heat_Conduction;
 
 class FEA_Module_Thermo_Elasticity: public FEA_Module{
 
@@ -136,6 +137,7 @@ public:
   Simulation_Parameters_Thermo_Elasticity *simparam;
   Simulation_Parameters_Topology_Optimization *simparam_TO;
   Implicit_Solver *Implicit_Solver_Pointer_;
+  FEA_Module_Heat_Conduction *Heat_Conduction_Module_Pointer_;
   
   //Local FEA data
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;

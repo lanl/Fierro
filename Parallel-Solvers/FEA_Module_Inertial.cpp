@@ -81,6 +81,7 @@ FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fe
   
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
+  Module_Type = "Inertial";
 
   //create parameter object
   simparam = new Simulation_Parameters_Inertial();

@@ -166,6 +166,9 @@ public:
 
   virtual void node_density_constraints(host_vec_array node_densities_lower_bound){}
 
+  //interfacing information
+  std::string Module_Type;
+
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   

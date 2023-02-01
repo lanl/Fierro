@@ -78,6 +78,7 @@
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Thermo_Elasticity.h"
+#include "FEA_Module_Heat_Conduction.h"
 #include "Implicit_Solver.h"
 
 //Multigrid Solver
@@ -106,8 +107,9 @@ using namespace utils;
 
 FEA_Module_Thermo_Elasticity::FEA_Module_Thermo_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
 
-  //assign interfacing index
+  //assign interfacing information
   my_fea_module_index_ = my_fea_module_index;
+  Module_Type = "Thermo_Elasticity";
 
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
@@ -174,6 +176,7 @@ FEA_Module_Thermo_Elasticity::FEA_Module_Thermo_Elasticity(Solver *Solver_Pointe
 FEA_Module_Thermo_Elasticity::~FEA_Module_Thermo_Elasticity(){
    delete simparam;
    delete simparam_TO;
+   delete Heat_Conduction_Module_Pointer_;
 }
 
 /* ----------------------------------------------------------------------

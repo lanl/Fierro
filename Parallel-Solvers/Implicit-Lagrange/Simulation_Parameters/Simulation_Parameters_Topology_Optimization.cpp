@@ -196,6 +196,23 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         FEA_Module_List[nfea_modules++] = "Thermo_Elasticity";
         module_found = true;
       }
+
+      //allocate required Heat Conduction Module if missing
+      for(int ifea = 0; ifea < nfea_modules; ifea++){
+        if(FEA_Module_List[ifea] == "Heat_Conduction"){
+          module_found = true;
+        }
+      }
+      if(!module_found){
+        //resize if needed
+        if(nfea_modules==buffer_size){
+          buffer_size += 10;
+          FEA_Module_List.resize(buffer_size);
+          fea_module_must_read.resize(buffer_size);
+        }
+        FEA_Module_List[nfea_modules++] = "Heat_Conduction";
+        module_found = true;
+      }
     }
     else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
       //check if module type was already allocated
