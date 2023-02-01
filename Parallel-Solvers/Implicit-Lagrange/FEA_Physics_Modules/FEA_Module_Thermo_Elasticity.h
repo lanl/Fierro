@@ -151,7 +151,7 @@ public:
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Stiffness_Entries_Strides;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_RHS_Entries;
 
-  //Global FEA data
+  //Mechanical Global FEA data
   Teuchos::RCP<MV> node_displacements_distributed;
   Teuchos::RCP<MV> node_strains_distributed;
   Teuchos::RCP<MV> all_node_displacements_distributed;
@@ -164,9 +164,12 @@ public:
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
   Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MV> Global_Nodal_Forces;
+
+  //Thermal Global FEA data
+  Teuchos::RCP<MV> node_temperatures_distributed;
+  Teuchos::RCP<MV> all_node_temperatures_distributed;
   
   //Boundary Conditions Data
-  
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
    Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, SURFACE_PRESSURE_CONDITION};
   int max_boundary_sets, max_disp_boundary_sets, max_load_boundary_sets;
