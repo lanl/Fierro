@@ -1095,7 +1095,7 @@ void Implicit_Solver::FEA_module_setup(){
     //automate selection list later; use std::map maybe?
     if(FEA_Module_List[imodule] == "Elasticity"){
       fea_module_types[imodule] = "Elasticity";
-      fea_modules[imodule] = new FEA_Module_Elasticity(this);
+      fea_modules[imodule] = new FEA_Module_Elasticity(this, imodule);
       module_found = true;
       displacement_module = imodule;
       //debug print
@@ -1104,7 +1104,7 @@ void Implicit_Solver::FEA_module_setup(){
     }
     else if(FEA_Module_List[imodule] == "Inertial"){
       fea_module_types[imodule] = "Inertial";
-      fea_modules[imodule] = new FEA_Module_Inertial(this);
+      fea_modules[imodule] = new FEA_Module_Inertial(this, imodule);
       module_found = true;
       //debug print
       *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
@@ -1112,10 +1112,17 @@ void Implicit_Solver::FEA_module_setup(){
     }
     else if(FEA_Module_List[imodule] == "Heat_Conduction"){
       fea_module_types[imodule] = "Heat_Conduction";
-      fea_modules[imodule] = new FEA_Module_Heat_Conduction(this);
+      fea_modules[imodule] = new FEA_Module_Heat_Conduction(this, imodule);
       module_found = true; 
       //debug print
       *fos << " HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
+    }
+    else if(FEA_Module_List[imodule] == "Thermo_Elasticity"){
+      fea_module_types[imodule] = "Heat_Conduction";
+      fea_modules[imodule] = new FEA_Module_Thermo_Elasticity(this, imodule);
+      module_found = true; 
+      //debug print
+      *fos << " THERMO-ELASTIC MODULE ALLOCATED AS " <<imodule << std::endl;
     }
     else{
       *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" <<FEA_Module_List[imodule]<<"\"" << std::endl;

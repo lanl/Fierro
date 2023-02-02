@@ -114,6 +114,12 @@ FEA_Module_Thermo_Elasticity::FEA_Module_Thermo_Elasticity(Solver *Solver_Pointe
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
 
+  //assign pointer to coupled heat conduction FEA module to get thermal data
+  for(int imodule = 0; imodule < Implicit_Solver_Pointer_->nfea_modules; imodule++){
+    if(Implicit_Solver_Pointer_->fea_module_types[imodule] == "Heat_Conduction")
+      Heat_Conduction_Module_Pointer_ = Implicit_Solver_Pointer_->fea_modules[imodule];
+  }
+
   //create parameter object
   simparam = new Simulation_Parameters_Thermo_Elasticity();
   // ---- Read input file, define state and boundary conditions ---- //
