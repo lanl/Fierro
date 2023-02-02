@@ -184,23 +184,23 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
       }
     }
     else if(TO_Module_List[imodule] == "Thermo_Elastic_Strain_Energy_Minimize"){
-      //check if module type was already allocated
-      for(int ifea = 0; ifea < nfea_modules; ifea++){
-        if(FEA_Module_List[ifea] == "Thermo_Elasticity"){
-          module_found = true;
-          TO_Module_My_FEA_Module[imodule] = ifea;
-        }
-      }
-      if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Thermo_Elasticity";
-        module_found = true;
-      }
 
       //allocate required Heat Conduction Module if missing
       for(int ifea = 0; ifea < nfea_modules; ifea++){
         if(FEA_Module_List[ifea] == "Heat_Conduction"){
           module_found = true;
+        }
+      }
+      if(!module_found){
+        FEA_Module_List[nfea_modules++] = "Heat_Conduction";
+        module_found = true;
+      }
+
+      //check if module type was already allocated
+      for(int ifea = 0; ifea < nfea_modules; ifea++){
+        if(FEA_Module_List[ifea] == "Thermo_Elasticity"){
+          module_found = true;
+          TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
       if(!module_found){
@@ -210,9 +210,11 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
           FEA_Module_List.resize(buffer_size);
           fea_module_must_read.resize(buffer_size);
         }
-        FEA_Module_List[nfea_modules++] = "Heat_Conduction";
+        TO_Module_My_FEA_Module[imodule] = nfea_modules;
+        FEA_Module_List[nfea_modules++] = "Thermo_Elasticity";
         module_found = true;
       }
+
     }
     else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
       //check if module type was already allocated

@@ -142,7 +142,7 @@ public:
       last_comm_step = current_step;
     }
     if(last_solve_step!=current_step){
-      FEM_->update_linear_solve(zp);
+      FEM_->update_linear_solve(zp, current_step);
       last_solve_step = current_step;
     }
 

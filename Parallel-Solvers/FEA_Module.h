@@ -136,7 +136,7 @@ public:
 
   virtual void comm_variables(Teuchos::RCP<const MV> zp) {}
 
-  virtual void update_linear_solve(Teuchos::RCP<const MV> zp) {}
+  virtual void update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step) {}
 
   virtual void update_forward_solve(Teuchos::RCP<const MV> zp) {}
 
@@ -168,6 +168,7 @@ public:
 
   //interfacing information
   std::string Module_Type;
+  int last_compute_step;
 
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;

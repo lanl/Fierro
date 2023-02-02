@@ -3610,28 +3610,27 @@ void FEA_Module_Heat_Conduction::comm_variables(Teuchos::RCP<const MV> zp){
    update nodal displacement information in accordance with current optimization vector
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Heat_Conduction::update_linear_solve(Teuchos::RCP<const MV> zp){
+void FEA_Module_Heat_Conduction::update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step){
   
-  //set density vector to the current value chosen by the optimizer
-  test_node_densities_distributed = zp;
+  if(compute_step!=last_compute_step){
+    //set density vector to the current value chosen by the optimizer
+    test_node_densities_distributed = zp;
 
-  assemble_matrix();
+    assemble_matrix();
 
-  if(body_term_flag||nonzero_bc_flag)
-    assemble_vector();
+    if(body_term_flag||nonzero_bc_flag)
+      assemble_vector();
   
-  //solve for new nodal temperatures
-  int solver_exit = solve();
-  if(solver_exit != EXIT_SUCCESS){
-    std::cout << "Linear Solver Error" << std::endl <<std::flush;
-    return;
+    //solve for new nodal temperatures
+    int solver_exit = solve();
+    if(solver_exit != EXIT_SUCCESS){
+      std::cout << "Linear Solver Error" << std::endl <<std::flush;
+      return;
+    }
+  
+    update_count++;
+    last_compute_step = compute_step;
   }
-  
-  update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
 }
 
 /* -------------------------------------------------------------------------------------------

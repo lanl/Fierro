@@ -91,7 +91,7 @@ public:
 
   void comm_variables(Teuchos::RCP<const MV> zp);
 
-  void update_linear_solve(Teuchos::RCP<const MV> zp);
+  void update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step);
 
   void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
 
