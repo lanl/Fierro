@@ -241,40 +241,33 @@ void Implicit_Solver::run(int argc, char *argv[]){
         //set applied loading conditions for FEA modules
         fea_modules[imodule]->generate_applied_loads();
       }
+
+      if(myrank == 0)
+        std::cout << "Starting init assembly for module " << imodule <<std::endl <<std::flush;
+      //allocate and fill sparse structures needed for global solution in each FEA module
+      fea_modules[imodule]->init_assembly();
+    
+      //assemble the global solution (stiffness matrix etc. and nodal forces)
+      fea_modules[imodule]->assemble_matrix();
+      std::cout << "Finished matrix assembly for module " << imodule << std::endl <<std::flush;
+    
+      fea_modules[imodule]->assemble_vector();
+
+      fea_modules[imodule]->linear_solver_parameters();
+    
+      if(myrank == 0)
+        std::cout << "Starting First Solve for module " << imodule << std::endl <<std::flush;
+
+      int solver_exit = fea_modules[imodule]->solve();
+      if(solver_exit != EXIT_SUCCESS){
+        std::cout << "Linear Solver Error for module " << imodule << std::endl <<std::flush;
+        return;
+      }
+    
     }
 
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;
     //call boundary routines on fea modules
-
-    if(myrank == 0)
-    std::cout << "Starting init assembly" << std::endl <<std::flush;
-    //allocate and fill sparse structures needed for global solution in each FEA module
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->init_assembly();
-    
-    //assemble the global solution (stiffness matrix etc. and nodal forces)
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->assemble_matrix();
-
-    if(myrank == 0)
-    std::cout << "Finished matrix assembly" << std::endl <<std::flush;
-    
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->assemble_vector();
-
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->linear_solver_parameters();
-    
-    if(myrank == 0)
-    std::cout << "Starting First Solve" << std::endl <<std::flush;
-    
-    for(int imodule = 0; imodule < nfea_modules; imodule++){
-      int solver_exit = fea_modules[imodule]->solve();
-      if(solver_exit != EXIT_SUCCESS){
-        std::cout << "Linear Solver Error" << std::endl <<std::flush;
-        return;
-      }
-    }
     /*
     //debug print
     
