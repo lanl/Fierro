@@ -2077,7 +2077,8 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
         }//for
       }//for
   }
-
+  
+  //Thermo Elastic Contribution
   //initialize quadrature data
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
@@ -2091,7 +2092,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-      current_nodal_temperatures(node_loop) = all_node_temperatures(local_node_id,0)
+      current_nodal_temperatures(node_loop) = all_node_temperatures(local_node_id,0);
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
     }
 
@@ -2330,7 +2331,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
     for(int irow=0; irow < Brows; irow++){
         Calpha_contribution(irow) = 0;
         for(int span=0; span < Brows; span++){
-          Calpha_contribution(irow) += C_matrix(irow,span)*Expansion_Coefficients(span);
+          Calpha_contribution(irow) += C_matrix(irow,span)*Expansion_Coefficients[span];
         }
     }
 
@@ -2339,7 +2340,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
       for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
         matrix_term = 0;
         for(int span = 0; span < Brows; span++){
-          matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
+          matrix_term += B_matrix_contribution(span,ifill)*Calpha_contribution(span,jfill);
         }
         //Local_Matrix(ifill,jfill) += Elastic_Constant*weight_multiply*matrix_term*invJacobian;
         //if(ifill!=jfill)
@@ -2355,7 +2356,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
           //B^T*C*alpha
           inner_product = 0;
           for(int ispan = 0; ispan < Brows; ispan++){
-            inner_product += B_matrix_contribution(span,num_dim*ibasis + idim)*Calpha_contribution(span);
+            inner_product += B_matrix_contribution(ispan,num_dim*ibasis + idim)*Calpha_contribution(ispan);
           }
           Nodal_RHS(num_dim*local_node_id + idim,0) -= inner_product*weight_multiply*(current_temperature-Initial_Temperature);
         }
