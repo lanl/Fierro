@@ -1632,7 +1632,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
   ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
   ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
-  real_t force_density[3], wedge_product, Jacobian, current_density, weight_multiply, surface_normal[3], pressure, normal_displacement;
+  real_t force_density[3], wedge_product, Jacobian, current_density, current_temperature, weight_multiply, surface_normal[3], pressure, normal_displacement;
   CArray<GO> Surface_Nodes;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> JT_row1(num_dim);
@@ -1649,6 +1649,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(nodes_per_elem);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_temperatures(nodes_per_elem);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s1(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s2(nodes_per_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> surf_basis_derivative_s3(nodes_per_elem,num_dim);
@@ -1659,14 +1660,28 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   if(num_dim==3) Brows = 6;
   FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
+  //FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
+  FArrayKokkos<real_t, array_layout, device_type, memory_traits> Calpha_contribution(Brows);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian;
   real_t Element_Modulus, Poisson_Ratio;
+  real_t inner_product;
 
-   //force vector initialization
+  //contribution from thermal expansion
+  all_node_temperatures_distributed = Heat_Conduction_Module_Pointer_->all_node_temperatures_distributed;
+  const_host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  real_t Expansion_Coefficients[6], Initial_Temperature;
+  Initial_Temperature = simparam->Initial_Temperature;
+  Expansion_Coefficients[0] = simparam->Expansion_Coefficients[0];
+  Expansion_Coefficients[1] = simparam->Expansion_Coefficients[1];
+  Expansion_Coefficients[2] = simparam->Expansion_Coefficients[2];
+  Expansion_Coefficients[3] = simparam->Expansion_Coefficients[3];
+  Expansion_Coefficients[4] = simparam->Expansion_Coefficients[4];
+  Expansion_Coefficients[5] = simparam->Expansion_Coefficients[5];
+
+  //force vector initialization
   for(int i=0; i < num_dim*nlocal_nodes; i++)
     Nodal_RHS(i,0) = 0;
 
@@ -2063,17 +2078,6 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
       }//for
   }
 
-  //add contribution from thermal expansion
-  all_node_temperatures_distributed = Heat_Conduction_Module_Pointer_->all_node_temperatures_distributed;
-  real_t Expansion_Coefficients[3], Initial_Temperature;
-  Initial_Temperature = simparam->Initial_Temperature;
-  Expansion_Coefficients[0] = simparam->Expansion_Coefficients[0];
-  Expansion_Coefficients[1] = simparam->Expansion_Coefficients[1];
-  Expansion_Coefficients[2] = simparam->Expansion_Coefficients[2];
-  Expansion_Coefficients[3] = simparam->Expansion_Coefficients[3];
-  Expansion_Coefficients[4] = simparam->Expansion_Coefficients[4];
-  Expansion_Coefficients[5] = simparam->Expansion_Coefficients[5];
-
   //initialize quadrature data
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
@@ -2087,6 +2091,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+      current_nodal_temperatures(node_loop) = all_node_temperatures(local_node_id,0)
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
     }
 
@@ -2116,9 +2121,11 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
     
       //compute density
       current_density = 0;
+      current_temperature = 0;
       if(nodal_density_flag)
       for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
         current_density += nodal_density(node_loop)*basis_values(node_loop);
+        current_temperature += current_nodal_temperatures(node_loop)*basis_values(node_loop);
       }
       //default constant element density
       else{
@@ -2218,11 +2225,11 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
     
     
     //compute the determinant of the Jacobian
-    Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-               JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-               JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-    if(Jacobian<0) Jacobian = -Jacobian;
-    invJacobian = 1/Jacobian;
+    //Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+               //JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+               //JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+    //if(Jacobian<0) Jacobian = -Jacobian;
+    //invJacobian = 1/Jacobian;
     //compute the contributions of this quadrature point to the B matrix
     if(num_dim==2)
     for(int ishape=0; ishape < nodes_per_elem; ishape++){
@@ -2321,21 +2328,14 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
 
     //compute the previous multiplied by the Elastic (C) Matrix
     for(int irow=0; irow < Brows; irow++){
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
-        CB_matrix_contribution(irow,icol) = 0;
+        Calpha_contribution(irow) = 0;
         for(int span=0; span < Brows; span++){
-          CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+          Calpha_contribution(irow) += C_matrix(irow,span)*Expansion_Coefficients(span);
         }
-      }
     }
 
-    //accumulate CB matrix
-    for(int irow=0; irow < Brows; irow++)
-      for(int icol=0; icol < num_dim*nodes_per_elem; icol++)
-      CB_matrix(irow,icol) += CB_matrix_contribution(irow,icol);
-
     //compute the contributions of this quadrature point to all the local stiffness matrix elements
-    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
+    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
       for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
         matrix_term = 0;
         for(int span = 0; span < Brows; span++){
@@ -2345,18 +2345,22 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
         //if(ifill!=jfill)
           //Local_Matrix(jfill,ifill) = Local_Matrix(ifill,jfill);
       }
-    
-      //evaluate contribution to force vector component
+    }
+    //evaluate contribution to force vector component
       for(int ibasis=0; ibasis < nodes_per_elem; ibasis++){
         if(!map->isNodeGlobalElement(nodes_in_elem(ielem, ibasis))) continue;
         local_node_id = map->getLocalElement(nodes_in_elem(ielem, ibasis));
 
         for(int idim = 0; idim < num_dim; idim++){
-            if(force_density[idim]!=0)
-            Nodal_RHS(num_dim*local_node_id + idim,0) += Jacobian*weight_multiply*force_density[idim]*basis_values(ibasis);
+          //B^T*C*alpha
+          inner_product = 0;
+          for(int ispan = 0; ispan < Brows; ispan++){
+            inner_product += B_matrix_contribution(span,num_dim*ibasis + idim)*Calpha_contribution(span);
+          }
+          Nodal_RHS(num_dim*local_node_id + idim,0) -= inner_product*weight_multiply*(current_temperature-Initial_Temperature);
         }
       }
-      }
+    }
   }//for
 
 
