@@ -2326,7 +2326,9 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
           for(int ispan = 0; ispan < Brows; ispan++){
             inner_product += B_matrix_contribution(ispan,num_dim*ibasis + idim)*Calpha_contribution(ispan);
           }
-          Nodal_RHS(num_dim*local_node_id + idim,0) -= inner_product*weight_multiply*(current_temperature-Initial_Temperature);
+          //debug print
+          //std::cout << "RHS data " << inner_product << " " << Nodal_RHS(num_dim*local_node_id + idim,0) << " " << current_temperature << " " << Initial_Temperature << std::endl;
+          Nodal_RHS(num_dim*local_node_id + idim,0) -= Elastic_Constant*inner_product*weight_multiply*(current_temperature-Initial_Temperature);
         }
       }
     }
@@ -2336,10 +2338,10 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
     //debug print of force vector
     /*
     std::cout << "---------FORCE VECTOR-------------" << std::endl;
-    for(int iforce=0; iforce < num_nodes*num_dim; iforce++)
-      std::cout << " DOF: "<< iforce+1 << ", "<< Nodal_RHS(iforce) << std::endl;
+    for(int iforce=0; iforce < nlocal_nodes*num_dim; iforce++)
+      std::cout << " DOF: "<< iforce+1 << ", "<< Nodal_RHS(iforce,0) << std::endl;
     */
-
+  
 }
 
 /* ----------------------------------------------------------------------
@@ -5641,7 +5643,7 @@ int FEA_Module_Thermo_Elasticity::solve(){
   // =========================================================================
   // System solution (Ax = b)
   // =========================================================================
-
+  
   SystemSolve(xA,xX,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
