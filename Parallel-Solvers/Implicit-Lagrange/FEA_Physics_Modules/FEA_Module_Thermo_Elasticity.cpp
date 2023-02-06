@@ -115,10 +115,16 @@ FEA_Module_Thermo_Elasticity::FEA_Module_Thermo_Elasticity(Solver *Solver_Pointe
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
 
   //assign pointer to coupled heat conduction FEA module to get thermal data
+  bool module_found = false;
   for(int imodule = 0; imodule < Implicit_Solver_Pointer_->nfea_modules; imodule++){
-    if(Implicit_Solver_Pointer_->fea_module_types[imodule] == "Heat_Conduction")
+    if(Implicit_Solver_Pointer_->fea_module_types[imodule] == "Heat_Conduction"){
       Heat_Conduction_Module_Pointer_ = dynamic_cast<FEA_Module_Heat_Conduction*>(Implicit_Solver_Pointer_->fea_modules[imodule]);
+      module_found = true;
+      *fos << "THERMO ELASTIC MODULE FOUND HEAT CONDUCTION MODULE AS MODULE " << imodule << std::endl;
+    }
   }
+
+  if(!module_found) *fos << "PROGRAM IS ENDING DUE TO ERROR; COULD NOT FIND HEAT CONDUCTION MODULE FOR THERMO ELASTIC MODULE"  << std::endl;
 
   //create parameter object
   simparam = new Simulation_Parameters_Thermo_Elasticity();
@@ -2358,7 +2364,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
           for(int ispan = 0; ispan < Brows; ispan++){
             inner_product += B_matrix_contribution(ispan,num_dim*ibasis + idim)*Calpha_contribution(ispan);
           }
-          Nodal_RHS(num_dim*local_node_id + idim,0) -= inner_product*weight_multiply*(current_temperature-Initial_Temperature);
+          //Nodal_RHS(num_dim*local_node_id + idim,0) -= inner_product*weight_multiply*(current_temperature-Initial_Temperature);
         }
       }
     }

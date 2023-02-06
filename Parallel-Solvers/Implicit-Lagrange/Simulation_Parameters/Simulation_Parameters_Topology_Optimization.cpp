@@ -51,6 +51,7 @@ Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Opti
   report_runtime_flag = false;
   nodal_density_flag = true;
   thick_condition_boundary = true;
+  topology_optimization_on = shape_optimization_on = false;
   optimization_output_freq = 20;
   penalty_power = 3;
   nTO_modules = 0;
@@ -61,6 +62,7 @@ Simulation_Parameters_Topology_Optimization::~Simulation_Parameters_Topology_Opt
 
 void Simulation_Parameters_Topology_Optimization::input(){
   Simulation_Parameters::input();
+  //topology_optimization_on = true;
   //Simulation_Parameters::input();
   //initial buffer size for TO module list storage
   int buffer_size = 10;
@@ -89,7 +91,7 @@ void Simulation_Parameters_Topology_Optimization::input(){
   Multi_Objective_Modules[0] = nTO_modules;
   Multi_Objective_Weights[0] = 0.25;
   nTO_modules++;
-  TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+  TO_Module_List[nTO_modules] = "Thermo_Elastic_Strain_Energy_Minimize";
   TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
   Multi_Objective_Modules[1] = nTO_modules;
   Multi_Objective_Weights[1] = 0.75;
@@ -193,9 +195,8 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
       }
       if(!module_found){
         FEA_Module_List[nfea_modules++] = "Heat_Conduction";
-        module_found = true;
       }
-
+      module_found = false;
       //check if module type was already allocated
       for(int ifea = 0; ifea < nfea_modules; ifea++){
         if(FEA_Module_List[ifea] == "Thermo_Elasticity"){

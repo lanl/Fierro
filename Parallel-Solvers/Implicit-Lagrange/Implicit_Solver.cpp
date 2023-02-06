@@ -284,6 +284,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
+    if(simparam_TO->topology_optimization_on||simparam_TO->shape_optimization_on)
     setup_optimization_problem();
     
     //solver_exit = solve();
@@ -1092,7 +1093,7 @@ void Implicit_Solver::FEA_module_setup(){
       module_found = true;
       displacement_module = imodule;
       //debug print
-      *fos << " ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << "ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
     else if(FEA_Module_List[imodule] == "Inertial"){
@@ -1100,7 +1101,7 @@ void Implicit_Solver::FEA_module_setup(){
       fea_modules[imodule] = new FEA_Module_Inertial(this, imodule);
       module_found = true;
       //debug print
-      *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << "INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
     else if(FEA_Module_List[imodule] == "Heat_Conduction"){
@@ -1108,14 +1109,14 @@ void Implicit_Solver::FEA_module_setup(){
       fea_modules[imodule] = new FEA_Module_Heat_Conduction(this, imodule);
       module_found = true; 
       //debug print
-      *fos << " HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << "HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
     }
     else if(FEA_Module_List[imodule] == "Thermo_Elasticity"){
-      fea_module_types[imodule] = "Heat_Conduction";
+      fea_module_types[imodule] = "Thermo_Elasticity";
       fea_modules[imodule] = new FEA_Module_Thermo_Elasticity(this, imodule);
       module_found = true; 
       //debug print
-      *fos << " THERMO-ELASTIC MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << "THERMO-ELASTIC MODULE ALLOCATED AS " <<imodule << std::endl;
     }
     else{
       *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" <<FEA_Module_List[imodule]<<"\"" << std::endl;
