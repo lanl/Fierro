@@ -97,7 +97,7 @@ void Simulation_Parameters_Thermo_Elasticity::input(){
   Thermal_Conductivity = 10;
   Initial_Temperature = 293;
   Expansion_Coefficients[0] = Expansion_Coefficients[1] = Expansion_Coefficients[2] = 12e-06;
-  Expansion_Coefficients[4] = Expansion_Coefficients[5] = Expansion_Coefficients[6] = 0;
+  Expansion_Coefficients[3] = Expansion_Coefficients[4] = Expansion_Coefficients[5] = 0;
 
   //Gauss-Legendre parameters
   num_gauss_points = 2;
