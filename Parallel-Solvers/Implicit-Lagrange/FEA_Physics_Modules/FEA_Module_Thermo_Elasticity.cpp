@@ -1671,7 +1671,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   FArrayKokkos<real_t, array_layout, device_type, memory_traits> Calpha_contribution(Brows);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
-  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian;
+  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian_sign;
   real_t Element_Modulus, Poisson_Ratio;
   real_t inner_product;
 
@@ -2217,10 +2217,11 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
     
     
       //compute the determinant of the Jacobian
-      //Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                 //JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                 //JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      //if(Jacobian<0) Jacobian = -Jacobian;
+      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+      if(Jacobian<0) Jacobian_sign = -1;
+      else Jacobian_sign = 1;
       //invJacobian = 1/Jacobian;
       //compute the contributions of this quadrature point to the B matrix
       if(num_dim==2)
@@ -2328,7 +2329,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
           }
           //debug print
           //std::cout << "RHS data " << inner_product << " " << Nodal_RHS(num_dim*local_node_id + idim,0) << " " << current_temperature << " " << Initial_Temperature << std::endl;
-          Nodal_RHS(num_dim*local_node_id + idim,0) -= Elastic_Constant*inner_product*weight_multiply*(current_temperature-Initial_Temperature);
+          Nodal_RHS(num_dim*local_node_id + idim,0) -= Jacobian_sign*Elastic_Constant*inner_product*weight_multiply*(current_temperature-Initial_Temperature);
         }
       }
     }
