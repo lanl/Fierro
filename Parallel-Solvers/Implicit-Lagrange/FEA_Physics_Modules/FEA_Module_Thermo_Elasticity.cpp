@@ -2329,7 +2329,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
           }
           //debug print
           //std::cout << "RHS data " << inner_product << " " << Nodal_RHS(num_dim*local_node_id + idim,0) << " " << current_temperature << " " << Initial_Temperature << std::endl;
-          Nodal_RHS(num_dim*local_node_id + idim,0) -= Jacobian_sign*Elastic_Constant*inner_product*weight_multiply*(current_temperature-Initial_Temperature);
+          Nodal_RHS(num_dim*local_node_id + idim,0) += Jacobian_sign*Elastic_Constant*inner_product*weight_multiply*(current_temperature-Initial_Temperature);
         }
       }
     }
