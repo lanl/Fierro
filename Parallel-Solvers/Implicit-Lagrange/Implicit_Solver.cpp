@@ -1112,9 +1112,17 @@ void Implicit_Solver::FEA_module_setup(){
       *fos << "HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
     }
     else if(FEA_Module_List[imodule] == "Thermo_Elasticity"){
+
+      //ensure another momentum conservation module was not allocated
+      if(displacement_module>=0){
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; MORE THAN ONE ELASTIC MODULE ALLOCATED \"" <<FEA_Module_List[imodule]<<"\"" << std::endl;
+        exit_solver(0);
+      }
+
       fea_module_types[imodule] = "Thermo_Elasticity";
       fea_modules[imodule] = new FEA_Module_Thermo_Elasticity(this, imodule);
-      module_found = true; 
+      module_found = true;
+      displacement_module = imodule;
       //debug print
       *fos << "THERMO-ELASTIC MODULE ALLOCATED AS " <<imodule << std::endl;
     }
