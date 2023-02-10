@@ -235,7 +235,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //generate_tcs();
 
     //initialize TO design variable storage
-    //init_design();
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on)
+      init_design();
 
     //construct list of FEA modules requested
     if(simparam_dynamic_opt->topology_optimization_on)
@@ -532,13 +533,16 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     
     //test forward solve call
     int ntests = 0;
-    for(int itest = 0; itest < ntests; itest++){
-        design_node_densities_distributed->randomize(0.1,1);
+    if(simparam_dynamic_opt->topology_optimization_on){
+      for(int itest = 0; itest < ntests; itest++){
+        design_node_densities_distributed->randomize(1,1);
         test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
         sgh_module->comm_variables(test_node_densities_distributed);
         sgh_module->update_forward_solve(test_node_densities_distributed);
+        sgh_module->compute_topology_optimization_adjoint();
         // Data writers
         parallel_vtk_writer();
+      }
     }
 
     // vtk_writer();
@@ -1204,8 +1208,6 @@ void Explicit_Solver_SGH::init_state_vectors(){
   initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
-  if(!simparam->restart_file)
-    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   if(simparam_dynamic_opt->topology_optimization_on){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   }
@@ -1467,7 +1469,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          if(simparam_TO->thick_condition_boundary){
+          if(simparam_dynamic_opt->thick_condition_boundary){
             Surface_Nodes = Boundary_Patches(patch_id).node_set;
             current_element_index = Boundary_Patches(patch_id).element_id;
             //debug print of local surface ids
@@ -1836,8 +1838,10 @@ void Explicit_Solver_SGH::sort_information(){
   */
 
   //sorted nodal density information
-  sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
-
+  if(simparam_dynamic_opt->topology_optimization_on){
+    sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+    sorted_node_densities_distributed->doImport(*design_node_densities_distributed, node_sorting_importer, Tpetra::INSERT);
+  }
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
   
@@ -2023,7 +2027,10 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   //set host views of the communicated data to print out from
   const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_densities;
+  if(simparam_dynamic_opt->topology_optimization_on){
+    sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
@@ -2272,7 +2279,10 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_element_densities = sorted_element_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array design_node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_densities;
+  if(simparam_dynamic_opt->topology_optimization_on){
+    sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
 
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
@@ -2554,7 +2564,10 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
     //convert node ordering
-		current_line_stream << std::left << std::setw(25) << design_node_densities(nodeline,0) << std::endl;
+    if(simparam_dynamic_opt->topology_optimization_on)
+		  current_line_stream << std::left << std::setw(25) << sorted_node_densities(nodeline,0) << std::endl;
+    else
+		  current_line_stream << std::left << std::setw(25) << 1 << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
@@ -3411,10 +3424,10 @@ void Explicit_Solver_SGH::ensight_writer(){
 /* -----------------------------------------------------------------------------
    Initialize local views and global vectors needed to describe the design
 -------------------------------------------------------------------------------- */
-/*
+
 void Explicit_Solver_SGH::init_design(){
   int num_dim = simparam->num_dim;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  bool nodal_density_flag = simparam_dynamic_opt->nodal_density_flag;
 
   //set densities
   if(nodal_density_flag){
@@ -3493,4 +3506,3 @@ void Explicit_Solver_SGH::init_design(){
   }
 
 }
-*/
