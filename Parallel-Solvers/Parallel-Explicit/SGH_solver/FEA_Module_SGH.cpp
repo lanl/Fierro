@@ -1877,8 +1877,8 @@ void FEA_Module_SGH::sgh_solve(){
         adjoint_vector_data.resize(max_time_steps);
         //assign a multivector of corresponding size to each new timestep in the buffer
         for(int istep = old_max_forward_buffer; istep < max_time_steps; istep++){
-          forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
-          adjoint_vector_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
+          forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+          adjoint_vector_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
         }
       }
     }
@@ -2005,16 +2005,17 @@ void FEA_Module_SGH::sgh_solve(){
 
         if(max_time_steps > forward_solve_velocity_data.size()){
           old_max_forward_buffer = forward_solve_velocity_data.size();
-          time_data.resize(max_time_steps + 101);
+          time_data.resize(max_time_steps + 100);
           forward_solve_velocity_data.resize(max_time_steps + 100);
           adjoint_vector_data.resize(max_time_steps + 100);
           //assign a multivector of corresponding size to each new timestep in the buffer
           for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
-            forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
-            adjoint_vector_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
+            forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+            adjoint_vector_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
           }
         }
-
+        
+        //assign current velocity data to multivector
         //view scope
         {
           Explicit_Solver_SGH::vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
@@ -2025,7 +2026,44 @@ void FEA_Module_SGH::sgh_solve(){
           }); // end parallel for
         } //end view scope
         Kokkos::fence();
-        forward_solve_velocity_data[cycle]->assign(*node_velocities_distributed);
+
+        //communicate ghosts
+        double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
+            
+        //active view scope
+        {
+          const_host_vec_array node_velocities_host = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+        }
+        double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+        Explicit_Solver_Pointer_->dev2host_time += comm_time2-comm_time1;
+
+        //communicate ghost velocities
+        Explicit_Solver_Pointer_->comm_velocities();
+            
+        double comm_time3 = Explicit_Solver_Pointer_->CPU_Time();
+
+        //view scope
+        {
+          Explicit_Solver_SGH::const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+          Explicit_Solver_SGH::const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+          Explicit_Solver_SGH::vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+          FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            for (int idim = 0; idim < num_dim; idim++){
+              all_node_velocities_interface(node_gid,idim) = node_velocities_interface(node_gid,idim);
+            }
+          }); // end parallel for
+          Kokkos::fence();
+
+          FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes+nghost_nodes, {
+            for (int idim = 0; idim < num_dim; idim++){
+              all_node_velocities_interface(node_gid,idim) = ghost_node_velocities_interface(node_gid-nlocal_nodes,idim);
+            }
+          }); // end parallel for
+          Kokkos::fence();
+        } //end view scope
+        
+
+        forward_solve_velocity_data[cycle]->assign(*all_node_velocities_distributed);
       }
 
 	    // get the step
@@ -2641,29 +2679,29 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   if(myrank==0)
     std::cout << "Computing adjoint vector" << std::endl;
 
-  for (cycle = last_time_step-1; cycle >= 0 ; cycle--) {
+  for (cycle = last_time_step; cycle >= 1 ; cycle--) {
     //compute timestep from time data
-    global_dt = time_data[cycle+1] - time_data[cycle];
+    global_dt = time_data[cycle] - time_data[cycle-1];
     
     //print
-    if (cycle==last_time_step-1){
+    if (cycle==last_time_step){
       if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle+1], global_dt);
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
     }
         // print time step every 10 cycles
     else if (cycle%20==0){
       if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle+1], global_dt);
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
     } // end if
 
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
       {
-        const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle-1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
     
-        const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
-        vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+        const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        vec_array current_adjoint_vector = adjoint_vector_data[cycle-1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
 
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
           for (int idim = 0; idim < num_dim; idim++){
@@ -2723,7 +2761,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
   }); // end parallel for
   Kokkos::fence();
   
-  for (cycle = 0; cycle <= last_time_step; cycle++) {
+  for (cycle = 0; cycle < last_time_step; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     

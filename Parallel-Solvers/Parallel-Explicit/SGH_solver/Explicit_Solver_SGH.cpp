@@ -515,7 +515,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         
     } // end of kokkos scope
 
-    printf("Finished\n");
+    //printf("Finished\n");
     
     //benchmark simulation run time end
     double current_cpu = CPU_Time();
