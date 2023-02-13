@@ -42,6 +42,11 @@
 using namespace utils;
 
 Simulation_Parameters_SGH::Simulation_Parameters_SGH() : Simulation_Parameters(){
+  
+  //equate parent class multi maps for parser code
+  possible_options = sgh_possible_options;
+  possible_options_nested2 = sgh_possible_options_nested2;
+  possible_options_nested3 = sgh_possible_options_nested3;
 
   //initialize data and flags to defaults
   output_strain_flag = false;
@@ -207,7 +212,7 @@ void Simulation_Parameters_SGH::input(){
             mat_fill(1).volume = region::sphere; // fill a sphere
             mat_fill(1).mat_id = 0;              // material id
             mat_fill(1).radius1 = 0.0;           // inner radius of fill region
-            mat_fill(1).radius2 = 1.2/128.0;       // outer radius of fill region
+            mat_fill(1).radius2 = 1.2/32.0;       // outer radius of fill region
             mat_fill(1).den = 1.0;               // initial density
             mat_fill(1).sie = (963.652344*
                                pow((1.2/30.0),3))/pow((mat_fill(1).radius2),3);
@@ -703,6 +708,11 @@ void Simulation_Parameters_SGH::input(){
         
     } // end if Taylor Anvil
 
+}
+
+void Simulation_Parameters_SGH::yaml_input(std::string filename){
+  //open yaml file and use mini yaml parser to get all settings
+  
 }
 
 void Simulation_Parameters_SGH::FEA_module_setup(){

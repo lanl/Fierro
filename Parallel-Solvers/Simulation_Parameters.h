@@ -35,8 +35,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#ifndef IMPLICIT_SIMULATION_PARAMETERS_H
-#define IMPLICIT_SIMULATION_PARAMETERS_H
+#ifndef SIMULATION_PARAMETERS_H
+#define SIMULATION_PARAMETERS_H
 
 #include "utilities.h"
 #include "Yaml.hpp"
@@ -51,6 +51,7 @@ class Simulation_Parameters
   Simulation_Parameters();
   virtual ~Simulation_Parameters();
   virtual void input();
+  virtual void yaml_input(std::string filename){}
   virtual void FEA_module_setup();
   //==============================================================================
   //   Mesh Variables
@@ -81,6 +82,24 @@ class Simulation_Parameters
   std::vector<std::string> FEA_Module_List;
   std::vector<bool> fea_module_must_read;
   int nfea_modules;
+
+  //====================================================================================================
+  //  possible values in dictionary of options (our yaml parser supports three nested levels of options)
+  //====================================================================================================
+  std::multimap<std::string,std::string> possible_options;
+
+  std::multimap<std::string,std::multimap<std::string,std::string>> possible_options_nested2;
+
+  std::multimap<std::string,std::multimap<std::string,std::multimap<std::string,std::string>>> possible_options_nested3;
+
+  std::map<std::string,std::string> set_options;
+
+  std::map<std::string,std::map<std::string,std::string>> set_options_nested2;
+
+  std::map<std::string,std::map<std::string,std::map<std::string,std::string>>> set_options_nested3;
+
+  typedef std::pair<std::string,std::string> option_type;
+
 };
 
 #endif // end HEADER_H

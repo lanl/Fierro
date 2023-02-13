@@ -52,6 +52,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   virtual ~Simulation_Parameters_SGH();
   virtual void input();
   virtual void FEA_module_setup();
+  void yaml_input(std::string filename);
     
     // applying initial conditions
   enum setup
@@ -141,6 +142,61 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   real_t gravity_vector[3];
 
   //SGH Solver Flags
+
+  //Possible options to parse
+  std::multimap<std::string,std::string> sgh_possible_options
+  {
+    { "solver_type", "SGH"}
+  }; // end std::map
+
+  std::multimap<std::string,std::multimap<std::string,std::string>> sgh_possible_options_nested2
+  {
+    { "solver_options",
+        {
+            { "test_problem", "Sedov3D"}
+        }
+    }
+  }; // end std::map
+
+  std::multimap<std::string,std::multimap<std::string,std::multimap<std::string,std::string>>> sgh_possible_options_nested3
+  {
+
+
+
+    //mesh options
+    { "mesh",
+        {
+            { "create",
+                {
+                    {"type" , "3D-Box"}
+                }
+            },
+            { "format",
+                {
+                    {"type" , "geo"}
+                }
+            },
+            { "parameters",
+                {
+                    {"length_x" , "1.0"},
+                    {"length_y" , "1.0"},
+                    {"length_z" , "1.0"},
+                    {"num_x_elems", "10"},
+                    {"num_y_elems", "10"},
+                    {"num_z_elems", "10"},
+                    {"inner_radius" , "1.0"},
+                    {"outer_radius" , "1.0"},
+                    {"starting_angle" , "0.0"},
+                    {"ending_angle" , "180.0"},
+                    {"num_radial_elems" , "10"},
+                    {"num_angular_elems" , "10"},
+                    {"origin", "[0,0,0]"},
+                    {"order", "1"}
+                }
+            }
+        }
+    }
+  }; // end std::map
   
 };
 
