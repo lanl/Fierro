@@ -132,6 +132,7 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //simparam->Simulation_Parameters::input();
   simparam->input();
   simparam_dynamic_opt->input();
+
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
@@ -197,6 +198,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
     //error handle for file input name
     //if(argc < 2)
+    //yaml file reader
+    std::string filename = std::string(argv[2]);
+    if(myrank==0)
+      simparam->yaml_input(filename);
 
     // ---- Read intial mesh, refine, and build connectivity ---- //
     if(simparam->tecplot_input)
@@ -207,6 +212,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       read_mesh_ansys_dat(argv[1]);
     else
       read_mesh_ensight(argv[1]);
+
 
     //debug
     //return;

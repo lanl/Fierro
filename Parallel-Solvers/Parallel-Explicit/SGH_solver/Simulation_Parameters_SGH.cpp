@@ -711,8 +711,65 @@ void Simulation_Parameters_SGH::input(){
 }
 
 void Simulation_Parameters_SGH::yaml_input(std::string filename){
-  //open yaml file and use mini yaml parser to get all settings
-  
+  Yaml::Node root;
+    try
+    {
+        Yaml::Parse(root, filename.c_str());
+    }
+    catch (const Yaml::Exception e)
+    {
+        std::cout << "Exception " << e.Type() << ": " << e.what() << std::endl;
+    }
+    
+    
+    std::cout << "print root Size = " << root.Size() << "\n";
+    std::cout << "print root = \n";
+    //for (size_t i=0; i<root.Size(); i++){
+        
+        // get the outer stuff
+        Yaml::Node & outer_item = root;
+        
+        std::cout << "\n";
+        std::cout << "size = " << outer_item.Size() << std::endl;
+        if (outer_item.Size()!=0){
+            for(auto outer_it = outer_item.Begin(); outer_it != outer_item.End(); outer_it++)
+            {
+            
+                std::cout << (*outer_it).first << " "
+                          << (*outer_it).second.As<std::string>()
+                          << std::endl;
+            
+            
+                Yaml::Node & inner_item = (*outer_it).second;
+            
+                // inner layer
+                if (inner_item.Size()!=0){
+                    for(auto inner_it = inner_item.Begin(); inner_it != inner_item.End();   inner_it++)
+                    {
+                        std::cout << "    " << (*inner_it).first << " "
+                                  << (*inner_it).second.As<std::string>()
+                                  << std::endl;
+            
+                        // inner_most layer
+                        Yaml::Node & center_item = (*inner_it).second;
+            
+                        //std::cout << "  \n";
+                        if (center_item.Size()!=0){
+                            for(auto center_it = center_item.Begin(); center_it !=  center_item.End();   center_it++)
+                            {
+                                std::cout << "        " << (*center_it).first << "   "
+                                          << (*center_it).second.As<std::string>()
+                                          << std::endl;
+                            } // end for
+                        }
+            
+                    } // end for
+                } // end if inner_item.Size
+            
+            
+            } // end for outer_it
+        } // end if outer_it
+    //} // end for
 }
 
 void Simulation_Parameters_SGH::FEA_module_setup(){
