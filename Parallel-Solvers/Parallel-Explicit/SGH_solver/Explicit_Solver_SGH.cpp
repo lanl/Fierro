@@ -200,9 +200,14 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //if(argc < 2)
     //yaml file reader
     std::string filename = std::string(argv[2]);
-    if(myrank==0)
-      simparam->yaml_input(filename);
-
+    std::string yaml_error;
+    if(myrank==0){
+      yaml_error = simparam->yaml_input(filename);
+      if(yaml_error!="success"){
+        std::cout << yaml_error << std::endl;
+        //exit_solver(0);
+      } 
+    }
     // ---- Read intial mesh, refine, and build connectivity ---- //
     if(simparam->tecplot_input)
       read_mesh_tecplot(argv[1]);

@@ -52,7 +52,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   virtual ~Simulation_Parameters_SGH();
   virtual void input();
   virtual void FEA_module_setup();
-  void yaml_input(std::string filename);
+  std::string yaml_input(std::string filename);
     
     // applying initial conditions
   enum setup
@@ -144,12 +144,12 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   //SGH Solver Flags
 
   //Possible options to parse
-  std::multimap<std::string,std::string> sgh_possible_options
+  options_multimap sgh_possible_options
   {
     { "solver_type", "SGH"}
   }; // end std::map
 
-  std::multimap<std::string,std::multimap<std::string,std::string>> sgh_possible_options_nested2
+  nested_options_multimap sgh_possible_options_nested2
   {
     { "solver_options",
         {
@@ -158,7 +158,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
     }
   }; // end std::map
 
-  std::multimap<std::string,std::multimap<std::string,std::multimap<std::string,std::string>>> sgh_possible_options_nested3
+  doubly_nested_options_multimap sgh_possible_options_nested3
   {
 
 

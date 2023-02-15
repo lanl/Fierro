@@ -710,8 +710,12 @@ void Simulation_Parameters_SGH::input(){
 
 }
 
-void Simulation_Parameters_SGH::yaml_input(std::string filename){
+std::string Simulation_Parameters_SGH::yaml_input(std::string filename){
   Yaml::Node root;
+  std::string current_option_outer, current_setting_outer;
+  std::string current_option_inner, current_setting_inner;
+  std::string current_option_center, current_setting_center;
+  std::string error = "success";
     try
     {
         Yaml::Parse(root, filename.c_str());
@@ -733,12 +737,26 @@ void Simulation_Parameters_SGH::yaml_input(std::string filename){
         std::cout << "size = " << outer_item.Size() << std::endl;
         if (outer_item.Size()!=0){
             for(auto outer_it = outer_item.Begin(); outer_it != outer_item.End(); outer_it++)
-            {
-            
-                std::cout << (*outer_it).first << " "
-                          << (*outer_it).second.As<std::string>()
-                          << std::endl;
-            
+            {   
+                current_option_outer = (*outer_it).first;
+                current_setting_outer = (*outer_it).second.As<std::string>();
+                
+                //check if this keyword is an option for this solver type
+                multimap_iterator multi_outer_iterator = sgh_possible_options.find(current_option_outer);
+                multimap_iterator_nested2 multi_outer_iterator_nested2 = sgh_possible_options_nested2.find(current_option_outer);
+                multimap_iterator_nested3 multi_outer_iterator_nested3 = sgh_possible_options_nested3.find(current_option_outer);
+
+                //check if this keyword is an option for this solver type
+                if(multi_outer_iterator==sgh_possible_options.end()){
+                    if(multi_outer_iterator_nested2==sgh_possible_options_nested2.end()){
+                        if(multi_outer_iterator_nested3==sgh_possible_options_nested3.end()){
+                            error = "Unsupported option requested in YAML input file: ";
+                        }
+                    }
+                  //return error;
+                }
+                
+                std::cout << current_option_outer << " " << current_setting_outer << std::endl;
             
                 Yaml::Node & inner_item = (*outer_it).second;
             
@@ -746,9 +764,13 @@ void Simulation_Parameters_SGH::yaml_input(std::string filename){
                 if (inner_item.Size()!=0){
                     for(auto inner_it = inner_item.Begin(); inner_it != inner_item.End();   inner_it++)
                     {
-                        std::cout << "    " << (*inner_it).first << " "
-                                  << (*inner_it).second.As<std::string>()
-                                  << std::endl;
+                        current_option_inner = (*inner_it).first;
+                        current_setting_inner = (*inner_it).second.As<std::string>();
+
+                        //check if this option is supported
+
+
+                        //std::cout << "    " << current_option_inner << " " << current_setting_inner << std::endl;
             
                         // inner_most layer
                         Yaml::Node & center_item = (*inner_it).second;
@@ -757,9 +779,9 @@ void Simulation_Parameters_SGH::yaml_input(std::string filename){
                         if (center_item.Size()!=0){
                             for(auto center_it = center_item.Begin(); center_it !=  center_item.End();   center_it++)
                             {
-                                std::cout << "        " << (*center_it).first << "   "
-                                          << (*center_it).second.As<std::string>()
-                                          << std::endl;
+                                current_option_center = (*center_it).first;
+                                current_setting_center = (*center_it).second.As<std::string>();
+                                //std::cout << "        " << current_option_center << "   " << current_setting_center << std::endl;
                             } // end for
                         }
             
@@ -770,6 +792,7 @@ void Simulation_Parameters_SGH::yaml_input(std::string filename){
             } // end for outer_it
         } // end if outer_it
     //} // end for
+    return error;
 }
 
 void Simulation_Parameters_SGH::FEA_module_setup(){
