@@ -198,16 +198,28 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
     //error handle for file input name
     //if(argc < 2)
-    //yaml file reader
-    std::string filename = std::string(argv[2]);
-    std::string yaml_error;
-    if(myrank==0){
-      yaml_error = simparam->yaml_input(filename);
-      if(yaml_error!="success"){
-        std::cout << yaml_error << std::endl;
+    //yaml file reader for simulation parameters
+    if(argc==3){
+      std::string filename = std::string(argv[2]);
+      std::string yaml_error;
+      bool yaml_exit_flag = false;
+    
+      //check for user error in providing yaml options (flags unsupported options)
+      if(myrank==0){
+        yaml_error = simparam->yaml_input(filename);
+        if(yaml_error!="success"){
+          std::cout << yaml_error << std::endl;
+          yaml_exit_flag = true;
+        } 
+      }
+
+      MPI_Bcast(&yaml_exit_flag,1,MPI_CXX_BOOL,0,world);
+    
+      if(yaml_exit_flag){
         //exit_solver(0);
-      } 
+      }
     }
+
     // ---- Read intial mesh, refine, and build connectivity ---- //
     if(simparam->tecplot_input)
       read_mesh_tecplot(argv[1]);

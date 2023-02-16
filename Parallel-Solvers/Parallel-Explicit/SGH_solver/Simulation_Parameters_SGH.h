@@ -143,7 +143,8 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
 
   //SGH Solver Flags
 
-  //Possible options to parse
+  //Possible options to parse; setting marked arbitrary if the options are not limited
+
   options_multimap sgh_possible_options
   {
     { "solver_type", "SGH"}
@@ -153,15 +154,17 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   {
     { "solver_options",
         {
-            { "test_problem", "Sedov3D"}
+            { "test_problem", "Sedov3D"},
+            { "mesh_file_name", "arbitrary"},
+            { "mesh_file_format", "ensight"},
+            { "mesh_file_format", "tecplot"},
+            { "mesh_file_format", "vtk"}
         }
     }
   }; // end std::map
 
   doubly_nested_options_multimap sgh_possible_options_nested3
   {
-
-
 
     //mesh options
     { "mesh",

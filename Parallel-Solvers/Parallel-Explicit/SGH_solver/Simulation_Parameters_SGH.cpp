@@ -741,7 +741,7 @@ std::string Simulation_Parameters_SGH::yaml_input(std::string filename){
                 current_option_outer = (*outer_it).first;
                 current_setting_outer = (*outer_it).second.As<std::string>();
                 
-                //check if this keyword is an option for this solver type
+                //find the keyword for this option out of the three multimaps of possible options with different nesting structure
                 multimap_iterator multi_outer_iterator = sgh_possible_options.find(current_option_outer);
                 multimap_iterator_nested2 multi_outer_iterator_nested2 = sgh_possible_options_nested2.find(current_option_outer);
                 multimap_iterator_nested3 multi_outer_iterator_nested3 = sgh_possible_options_nested3.find(current_option_outer);
@@ -750,7 +750,8 @@ std::string Simulation_Parameters_SGH::yaml_input(std::string filename){
                 if(multi_outer_iterator==sgh_possible_options.end()){
                     if(multi_outer_iterator_nested2==sgh_possible_options_nested2.end()){
                         if(multi_outer_iterator_nested3==sgh_possible_options_nested3.end()){
-                            error = "Unsupported option requested in YAML input file: ";
+                            std::string message = "Unsupported option requested in YAML input file: ";
+                            error = message + current_option_outer;
                         }
                     }
                   //return error;
@@ -766,9 +767,20 @@ std::string Simulation_Parameters_SGH::yaml_input(std::string filename){
                     {
                         current_option_inner = (*inner_it).first;
                         current_setting_inner = (*inner_it).second.As<std::string>();
-
+                        /*
                         //check if this option is supported
+                        multimap_iterator multi_outer_iterator_nested2 = sgh_possible_options_nested2[current_option_outer].find(current_option_outer);
+                        multimap_iterator_nested2 multi_outer_iterator_nested3 = sgh_possible_options_nested3[current_option_outer].find(current_option_outer);
 
+                        //check if this keyword is an option for this solver type
+                        if(multi_outer_iterator_nested2==sgh_possible_options[current_option_outer].end()){
+                            if(multi_outer_iterator_nested3==sgh_possible_options_nested2[current_option_outer].end()){
+                                std::string message = "Unsupported option requested in YAML input file: ";
+                                error = message + current_option_outer;
+                            }
+                        //return error;
+                        }
+                        */
 
                         //std::cout << "    " << current_option_inner << " " << current_setting_inner << std::endl;
             
@@ -787,7 +799,15 @@ std::string Simulation_Parameters_SGH::yaml_input(std::string filename){
             
                     } // end for
                 } // end if inner_item.Size
-            
+                else{
+                    //there were no inner items; add setting to map of user defined settings to query later
+                    set_options[current_option_outer] = current_setting_outer;
+                    //if(current_option_outer=="solver_type"){
+                      //std::string test_string = "solver_type";
+                      //std::cout << "solver type: " << set_options[test_string] << std::endl;
+                    //}
+
+                } //end else for outer item with no inner items
             
             } // end for outer_it
         } // end if outer_it

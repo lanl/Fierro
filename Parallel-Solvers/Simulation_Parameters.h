@@ -51,7 +51,7 @@ class Simulation_Parameters
   Simulation_Parameters();
   virtual ~Simulation_Parameters();
   virtual void input();
-  virtual void yaml_input(std::string filename){}
+  virtual std::string yaml_input(std::string filename){}
   virtual void FEA_module_setup();
   //==============================================================================
   //   Mesh Variables
@@ -86,11 +86,17 @@ class Simulation_Parameters
   //====================================================================================================
   //  possible values in dictionary of options (our yaml parser supports three nested levels of options)
   //====================================================================================================
-  std::multimap<std::string,std::string> possible_options;
+  typedef std::multimap<std::string,std::string> options_multimap;
 
-  std::multimap<std::string,std::multimap<std::string,std::string>> possible_options_nested2;
+  typedef std::multimap<std::string,std::multimap<std::string,std::string>> nested_options_multimap;
 
-  std::multimap<std::string,std::multimap<std::string,std::multimap<std::string,std::string>>> possible_options_nested3;
+  typedef std::multimap<std::string,std::multimap<std::string,std::multimap<std::string,std::string>>> doubly_nested_options_multimap;
+
+  options_multimap possible_options;
+
+  nested_options_multimap possible_options_nested2;
+
+  doubly_nested_options_multimap possible_options_nested3;
 
   std::map<std::string,std::string> set_options;
 
@@ -98,7 +104,13 @@ class Simulation_Parameters
 
   std::map<std::string,std::map<std::string,std::map<std::string,std::string>>> set_options_nested3;
 
-  typedef std::pair<std::string,std::string> option_type;
+  typedef std::pair<std::string,std::string> option_setting_pair;
+
+  typedef options_multimap::iterator multimap_iterator;
+
+  typedef nested_options_multimap::iterator multimap_iterator_nested2;
+  
+  typedef doubly_nested_options_multimap::iterator multimap_iterator_nested3;
 
 };
 
