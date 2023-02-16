@@ -716,6 +716,7 @@ std::string Simulation_Parameters_SGH::yaml_input(std::string filename){
   std::string current_option_inner, current_setting_inner;
   std::string current_option_center, current_setting_center;
   std::string error = "success";
+  bool inner_found, inner_found_nest;
     try
     {
         Yaml::Parse(root, filename.c_str());
@@ -767,22 +768,38 @@ std::string Simulation_Parameters_SGH::yaml_input(std::string filename){
                     {
                         current_option_inner = (*inner_it).first;
                         current_setting_inner = (*inner_it).second.As<std::string>();
-                        /*
+                        
                         //check if this option is supported
-                        multimap_iterator multi_outer_iterator_nested2 = sgh_possible_options_nested2[current_option_outer].find(current_option_outer);
-                        multimap_iterator_nested2 multi_outer_iterator_nested3 = sgh_possible_options_nested3[current_option_outer].find(current_option_outer);
-
-                        //check if this keyword is an option for this solver type
-                        if(multi_outer_iterator_nested2==sgh_possible_options[current_option_outer].end()){
-                            if(multi_outer_iterator_nested3==sgh_possible_options_nested2[current_option_outer].end()){
-                                std::string message = "Unsupported option requested in YAML input file: ";
-                                error = message + current_option_outer;
+                        std::pair<multimap_iterator_nested2,multimap_iterator_nested2> iterator_range = sgh_possible_options_nested2.equal_range(current_option_outer);
+                        std::pair<multimap_iterator_nested3,multimap_iterator_nested3> iterator_range_nested = sgh_possible_options_nested3.equal_range(current_option_outer);
+                        //multimap_iterator multi_outer_iterator_nested2 = sgh_possible_options_nested2[current_option_outer].find(current_option_outer);
+                        //multimap_iterator_nested2 multi_outer_iterator_nested3 = sgh_possible_options_nested3[current_option_outer].find(current_option_outer);
+                        
+                        inner_found = inner_found_nest = false;
+                        for(auto temp_it = iterator_range.first; temp_it != iterator_range.second; temp_it++){
+                            //test if map element corresponds to a possible option
+                            multimap_iterator multi_outer_iterator = temp_it->second.find(current_option_inner);
+                            std::cout << "Test print " << temp_it->first << std::endl;
+                            if(multi_outer_iterator!=temp_it->second.end()){
+                                inner_found = true;
                             }
-                        //return error;
                         }
-                        */
 
-                        //std::cout << "    " << current_option_inner << " " << current_setting_inner << std::endl;
+                        for(auto temp_it = iterator_range_nested.first; temp_it != iterator_range_nested.second; temp_it++){
+                            //test if map element corresponds to a possible option
+                            multimap_iterator_nested2 multi_outer_iterator = temp_it->second.find(current_option_inner);
+                            std::cout << "Test print " << temp_it->first << std::endl;
+                            if(multi_outer_iterator!=temp_it->second.end()){
+                                inner_found_nest = true;
+                            }
+                        }
+                        
+                        if(!inner_found&&!inner_found_nest){
+                            std::string message = "Unsupported option requested in YAML input file: ";
+                            error = message + current_option_inner;
+                        }
+
+                        //std::cout << "    " << current_option_inner << " " << current_setting_inner << " " << inner_found << " " << inner_found_nest << std::endl;
             
                         // inner_most layer
                         Yaml::Node & center_item = (*inner_it).second;
@@ -793,8 +810,15 @@ std::string Simulation_Parameters_SGH::yaml_input(std::string filename){
                             {
                                 current_option_center = (*center_it).first;
                                 current_setting_center = (*center_it).second.As<std::string>();
+
+                                //check if this option is supported=
                                 //std::cout << "        " << current_option_center << "   " << current_setting_center << std::endl;
+
+                                set_options[current_option_center] = current_setting_center;
                             } // end for
+                        }
+                        else{
+                            set_options[current_option_inner] = current_setting_inner;
                         }
             
                     } // end for

@@ -156,6 +156,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
         {
             { "test_problem", "Sedov3D"},
             { "mesh_file_name", "arbitrary"},
+            { "num_dims", "arbitrary"},
             { "mesh_file_format", "ensight"},
             { "mesh_file_format", "tecplot"},
             { "mesh_file_format", "vtk"}
