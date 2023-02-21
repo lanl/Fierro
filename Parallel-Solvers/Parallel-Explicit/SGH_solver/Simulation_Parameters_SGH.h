@@ -51,6 +51,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   Simulation_Parameters_SGH();
   virtual ~Simulation_Parameters_SGH();
   virtual void input();
+  virtual void apply_settings();
   virtual void FEA_module_setup();
   std::string yaml_input(std::string filename);
     
@@ -72,6 +73,9 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
       TriplePoint = 9,
       TaylorAnvil = 10,
   };
+
+  
+  void select_problem(setup problem_selector);
     
   // end of initial conditions enum
 

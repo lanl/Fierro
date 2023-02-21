@@ -52,6 +52,11 @@ Simulation_Parameters::Simulation_Parameters(){
   zero_index_base = false;
   nfea_modules = 0;
   element_type = "Hex8";
+
+  //MPI info
+  world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
+  MPI_Comm_rank(world,&myrank);
+  MPI_Comm_size(world,&nranks);
 }
 
 Simulation_Parameters::~Simulation_Parameters(){

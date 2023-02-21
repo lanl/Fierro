@@ -40,6 +40,7 @@
 
 #include "utilities.h"
 #include "Yaml.hpp"
+#include "mpi.h"
 #include <stdio.h>
 #include <vector>
 #include <string>
@@ -50,9 +51,11 @@ class Simulation_Parameters
  public:
   Simulation_Parameters();
   virtual ~Simulation_Parameters();
-  virtual void input();
-  virtual std::string yaml_input(std::string filename){}
+  virtual void input(); //typically sets default problem parameters
+  virtual void apply_settings(){}
+  virtual std::string yaml_input(std::string filename){} //reads in user defined parameters
   virtual void FEA_module_setup();
+
   //==============================================================================
   //   Mesh Variables
   //==============================================================================
@@ -111,6 +114,11 @@ class Simulation_Parameters
   typedef nested_options_multimap::iterator multimap_iterator_nested2;
   
   typedef doubly_nested_options_multimap::iterator multimap_iterator_nested3;
+
+  //MPI data
+  int myrank; //index of this mpi rank in the world communicator
+  int nranks; //number of mpi ranks in the world communicator
+  MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
 
 };
 
