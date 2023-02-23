@@ -1872,7 +1872,7 @@ void FEA_Module_SGH::sgh_solve(){
       kinetic_energy_objective = true;
       if(max_time_steps > forward_solve_velocity_data.size()){
         old_max_forward_buffer = forward_solve_velocity_data.size();
-        time_data.resize(max_time_steps);
+        time_data.resize(max_time_steps+1);
         forward_solve_velocity_data.resize(max_time_steps);
         adjoint_vector_data.resize(max_time_steps);
         //assign a multivector of corresponding size to each new timestep in the buffer
@@ -2005,7 +2005,7 @@ void FEA_Module_SGH::sgh_solve(){
 
         if(max_time_steps > forward_solve_velocity_data.size()){
           old_max_forward_buffer = forward_solve_velocity_data.size();
-          time_data.resize(max_time_steps + 100);
+          time_data.resize(max_time_steps + 101);
           forward_solve_velocity_data.resize(max_time_steps + 100);
           adjoint_vector_data.resize(max_time_steps + 100);
           //assign a multivector of corresponding size to each new timestep in the buffer
@@ -2103,8 +2103,8 @@ void FEA_Module_SGH::sgh_solve(){
         dt = global_dt;
 
         if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
-          if(cycle==0) time_data[cycle] = global_dt;
-          else time_data[cycle] = global_dt + time_data[cycle-1];
+          if(cycle==0) time_data[0] = 0;
+          time_data[cycle+1] = global_dt + time_data[cycle];
         }
 
         if (cycle==0){
@@ -2679,7 +2679,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   if(myrank==0)
     std::cout << "Computing adjoint vector" << std::endl;
 
-  for (cycle = last_time_step; cycle >= 1 ; cycle--) {
+  for (cycle = last_time_step; cycle >= 1; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle] - time_data[cycle-1];
     
@@ -2692,6 +2692,10 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
     else if (cycle%20==0){
       if(myrank==0)
         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    } // end if
+    else if (cycle==1){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle-1, time_data[cycle-1], global_dt);
     } // end if
 
     //compute adjoint vector for this data point; use velocity midpoint
@@ -2745,11 +2749,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
   real_t global_dt;
   size_t current_data_index, next_data_index;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
-  //initialize gradient vector
-  FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
-    design_gradients(node_gid,0) = 0;
-  }); // end parallel for
-  Kokkos::fence();
 
   if(myrank==0)
     std::cout << "Computing accumulated kinetic energy gradient" << std::endl;
@@ -2761,7 +2760,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
   }); // end parallel for
   Kokkos::fence();
   
-  for (cycle = 0; cycle < last_time_step; cycle++) {
+  for (cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     

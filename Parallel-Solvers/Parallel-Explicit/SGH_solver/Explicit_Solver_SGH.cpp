@@ -558,14 +558,19 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     parallel_vtk_writer();
     
     //test forward solve call
-    int ntests = 0;
+    int ntests = 1;
     if(simparam_dynamic_opt->topology_optimization_on){
       for(int itest = 0; itest < ntests; itest++){
         design_node_densities_distributed->randomize(1,1);
         test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
+        Teuchos::RCP<MV> test_gradients_distributed = Teuchos::rcp(new MV(map, 1));
+        const_vec_array test_node_densities = test_node_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        vec_array test_gradients = test_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+
         sgh_module->comm_variables(test_node_densities_distributed);
         sgh_module->update_forward_solve(test_node_densities_distributed);
         sgh_module->compute_topology_optimization_adjoint();
+        sgh_module->compute_topology_optimization_gradient(test_node_densities, test_gradients);
         // Data writers
         parallel_vtk_writer();
       }
