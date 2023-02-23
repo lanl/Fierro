@@ -2795,16 +2795,17 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
           }
 
           inner_product = 0;
-          for(int ifill=0; ifill < num_dim*num_nodes_in_elem; ifill++){
-            for(int idim=0; idim < num_dim*num_nodes_in_elem; idim++){
-              inner_product += node_mass(ifill)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
+          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+            node_id = nodes_in_elem(elem_id, ifill);
+            for(int idim=0; idim < num_dim; idim++){
+              inner_product += node_mass(node_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
             }
           }
 
           for (int inode = 0; inode < num_nodes_in_elem; inode++){
             //compute gradient of local element contribution to v^t*M*v product
             corner_id = elem_id*num_nodes_in_elem + inode;
-            corner_value_storage(corner_id) += elem_den(elem_id)*inner_product*global_dt;
+            corner_value_storage(corner_id) += inner_product*global_dt;
           }
           
         }); // end parallel for
@@ -2827,7 +2828,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
 
   //multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
   FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-    design_gradients(node_id,0) *=-0.125*0.125;
+    design_gradients(node_id,0) *=-1/num_nodes_in_elem;
   }); // end parallel for
   Kokkos::fence();
 }
