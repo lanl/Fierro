@@ -353,7 +353,7 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
             material(0).strength_model = NULL;  // not needed, but illistrates the syntax
             
             material(0).q1        = 1.0;       // accoustic coefficient
-            material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q2        = 0;    // linear slope of UsUp for Riemann solver
             material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
@@ -938,9 +938,94 @@ void Simulation_Parameters_SGH::apply_settings(){
         //std::cout << "User option on rank: " << myrank << " " << temp_it->first << "=" << temp_it->second << std::endl;
 
     //}
+
+    //test option; the problem definition should be self contained in parameters later
     if(set_options["solver_options:test_problem"]=="Sedov3D")
       test_problem = Sedov3D;
 
+    if(set_options.find("solver_options:time_variables")!=set_options.end())
+       time_final = stod(set_options["solver_options:time_variables:time_final"]);
+    
+    if(set_options.find("solver_options:dt_min")!=set_options.end())
+       dt_min = stod(set_options["solver_options:time_variables:dt_min"]);
+
+    if(set_options.find("solver_options:dt_max")!=set_options.end())
+       dt_max = stod(set_options["solver_options:time_variables:dt_max"]);
+
+    if(set_options.find("solver_options:dt_start")!=set_options.end())
+       dt_start = stod(set_options["solver_options:time_variables:dt_start"]);
+
+    if(set_options.find("solver_options:cycle_stop")!=set_options.end())
+       cycle_stop = stod(set_options["solver_options:time_variables:cycle_stop"]);
+
+    //obtain number of materials
+    if(set_options.find("material_options:num_materials")!=set_options.end()){
+        num_materials = stod(set_options["material_options:num_materials"]);
+        material = CArrayKokkos <material_t> (num_materials); // create material
+    }
+
+    //obtain number of stave vars
+    if(set_options.find("state_options:num_state_var")!=set_options.end()){
+        max_num_state_vars = stod(set_options["state_options:num_state_var"]);
+        state_vars = CArrayKokkos <double> (num_materials, max_num_state_vars);
+    }
+
+    //obtain number of mat fill regions
+    std::string fill_base = "region_options:mat_fill_";
+    std::string index;
+    std::string mat_fill_name;
+    std::string colon = ":";
+    std::string fill_data;
+    if(set_options.find("region_options:num_fills")!=set_options.end()){
+        num_fills = stod(set_options["region_options:num_fills"]);
+        mat_fill = CArrayKokkos <mat_fill_t> (num_fills); // create fills
+        for(int ifill=0; ifill < num_fills; ifill++){
+            //readin mat fill region data
+            index = std::to_string(ifill+1);
+            mat_fill_name = fill_base + index;
+            if(set_options.find(mat_fill_name+":volume")!=set_options.end()){
+                if(set_options[mat_fill_name+":volume"]=="global")
+                    mat_fill(ifill).volume = region::global;
+                else if(set_options[mat_fill_name+":volume"]=="box")
+                    mat_fill(ifill).volume = region::box;
+                else if(set_options[mat_fill_name+":volume"]=="cylinder")
+                    mat_fill(ifill).volume = region::cylinder;
+                else if(set_options[mat_fill_name+":volume"]=="sphere")
+                    mat_fill(ifill).volume = region::sphere;
+            }
+
+            if(set_options.find(mat_fill_name+":velocity")!=set_options.end()){
+                if(set_options[mat_fill_name+":velocity"]=="cartesian"){
+                    mat_fill(ifill).velocity = init_conds::cartesian;
+                    //read in u,v,w velocity components
+                    if(set_options.find(mat_fill_name+":u")!=set_options.end())
+                        mat_fill(ifill).u = stod(set_options[mat_fill_name+":u"]);
+                    if(set_options.find(mat_fill_name+":v")!=set_options.end())
+                        mat_fill(ifill).v = stod(set_options[mat_fill_name+":v"]);
+                    if(set_options.find(mat_fill_name+":w")!=set_options.end())
+                        mat_fill(ifill).w = stod(set_options[mat_fill_name+":w"]);
+
+                }
+                else if(set_options[mat_fill_name+":velocity"]=="radial")
+                    mat_fill(ifill).velocity = init_conds::radial;
+                else if(set_options[mat_fill_name+":velocity"]=="spherical")
+                    mat_fill(ifill).velocity = init_conds::spherical;
+                else if(set_options[mat_fill_name+":velocity"]=="radial_linear")
+                    mat_fill(ifill).velocity = init_conds::radial_linear;
+                else if(set_options[mat_fill_name+":velocity"]=="spherical_linear")
+                    mat_fill(ifill).velocity = init_conds::spherical_linear;
+                else if(set_options[mat_fill_name+":velocity"]=="tg_vortex")
+                    mat_fill(ifill).velocity = init_conds::tg_vortex;
+            }
+        }
+    }
+
+    // --- number of boundary conditions ---
+    if(set_options.find("region_options:num_bcs")!=set_options.end()){
+        num_bcs = stod(set_options["region_options:num_bcs"]);
+        boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
+    }
+    
     select_problem(test_problem);
 
 }
