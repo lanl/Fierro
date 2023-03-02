@@ -633,10 +633,10 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   int myrank = Explicit_Solver_Pointer_->myrank;
   int nranks = Explicit_Solver_Pointer_->nranks;
 
-  const CArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-  const CArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const CArrayKokkos <material_t> material = simparam->material;
-  const CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
+  const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
+  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+  const DCArrayKokkos <material_t> material = simparam->material;
+  const DCArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
   CArrayKokkos<double> relative_element_densities = CArrayKokkos<double>(rnum_elem, "relative_element_densities");
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
@@ -1123,10 +1123,10 @@ void FEA_Module_SGH::setup(){
     const size_t num_state_vars = simparam->max_num_state_vars;
     const int num_dim = simparam->num_dim;
 
-    const CArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-    const CArrayKokkos <boundary_t> boundary = simparam->boundary;
-    const CArrayKokkos <material_t> material = simparam->material;
-    const CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
+    const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
+    const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+    const DCArrayKokkos <material_t> material = simparam->material;
+    const DCArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
     
     //--- calculate bdy sets ---//
     mesh.num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
@@ -1560,7 +1560,7 @@ void FEA_Module_SGH::setup(){
     val = plane value, cyl radius, sphere radius
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::tag_bdys(const CArrayKokkos <boundary_t> &boundary,
+void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
               mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords){
 
@@ -1728,7 +1728,7 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
    Build set of nodes assigned to each boundary condition
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary, mesh_t &mesh){
+void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh){
     
     // build boundary nodes in each boundary set
     int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
@@ -1842,8 +1842,8 @@ void FEA_Module_SGH::sgh_solve(){
     CArray <double> graphics_times = simparam->graphics_times;
     size_t graphics_id = simparam->graphics_id;
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
-    const CArrayKokkos <boundary_t> boundary = simparam->boundary;
-    const CArrayKokkos <material_t> material = simparam->material;
+    const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+    const DCArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
     int old_max_forward_buffer;
     size_t cycle;
@@ -2665,8 +2665,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   CArray <double> graphics_times = simparam->graphics_times;
   size_t graphics_id = simparam->graphics_id;
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
-  const CArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const CArrayKokkos <material_t> material = simparam->material;
+  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+  const DCArrayKokkos <material_t> material = simparam->material;
   const int num_dim = simparam->num_dim;
   real_t global_dt;
   size_t current_data_index, next_data_index;
@@ -2743,8 +2743,8 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
   CArray <double> graphics_times = simparam->graphics_times;
   size_t graphics_id = simparam->graphics_id;
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
-  const CArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const CArrayKokkos <material_t> material = simparam->material;
+  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+  const DCArrayKokkos <material_t> material = simparam->material;
   const int num_dim = simparam->num_dim;
   real_t global_dt;
   size_t current_data_index, next_data_index;

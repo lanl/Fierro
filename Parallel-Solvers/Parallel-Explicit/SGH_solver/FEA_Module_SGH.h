@@ -64,7 +64,7 @@ public:
 
   void sgh_solve();
 
-  void get_force_sgh(const CArrayKokkos <material_t> &material,
+  void get_force_sgh(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -83,7 +83,7 @@ public:
                      const double dt,
                      const double rk_alpha);
 
-  void get_force_sgh2D(const CArrayKokkos <material_t> &material,
+  void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
                        const DViewCArrayKokkos <double> &node_coords,
                        const DViewCArrayKokkos <double> &node_vel,
@@ -211,12 +211,12 @@ public:
                            const DViewCArrayKokkos <double> &node_mass,
                            const DViewCArrayKokkos <double> &corner_force);
   
-  void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
+  void tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
                 mesh_t &mesh,
                 const DViewCArrayKokkos <double> &node_coords);
 
   void boundary_velocity(const mesh_t &mesh,
-                         const CArrayKokkos <boundary_t> &boundary,
+                         const DCArrayKokkos <boundary_t> &boundary,
                          DViewCArrayKokkos <double> &node_vel);
   
   KOKKOS_INLINE_FUNCTION 
@@ -274,7 +274,7 @@ public:
                          const DViewCArrayKokkos <double> &elem_mass,
                          const DViewCArrayKokkos <double> &corner_force);
                    
-  void update_state(const CArrayKokkos <material_t> &material,
+  void update_state(const DCArrayKokkos <material_t> &material,
                     const mesh_t &mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
@@ -291,7 +291,7 @@ public:
                     const double rk_alpha);
 
 
-  void update_state2D(const CArrayKokkos <material_t> &material,
+  void update_state2D(const DCArrayKokkos <material_t> &material,
                       const mesh_t &mesh,
                       const DViewCArrayKokkos <double> &node_coords,
                       const DViewCArrayKokkos <double> &node_vel,
@@ -359,7 +359,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t mat_id,
                      const size_t num_elems);
 
-  void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
+  void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
   
   void init_boundaries();
 

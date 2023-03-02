@@ -94,11 +94,11 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   // --- Graphics output variables ---
   bool output_velocity_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
 
-  CArrayKokkos <material_t> material;
-  CArrayKokkos <double> state_vars; // array to hold init model variables
+  DCArrayKokkos <material_t> material;
+  DCArrayKokkos <double> state_vars; // array to hold init model variables
 
-  CArrayKokkos <mat_fill_t> mat_fill;
-  CArrayKokkos <boundary_t> boundary;
+  DCArrayKokkos <mat_fill_t> mat_fill;
+  DCArrayKokkos <boundary_t> boundary;
 
   // --- num vars ----
   size_t num_dims;
