@@ -956,28 +956,43 @@ void Simulation_Parameters_SGH::apply_settings(){
        dt_start = stod(set_options["solver_options:time_variables:dt_start"]);
 
     if(set_options.find("solver_options:cycle_stop")!=set_options.end())
-       cycle_stop = stod(set_options["solver_options:time_variables:cycle_stop"]);
+       cycle_stop = stoi(set_options["solver_options:time_variables:cycle_stop"]);
 
     //obtain number of materials
     if(set_options.find("material_options:num_materials")!=set_options.end()){
-        num_materials = stod(set_options["material_options:num_materials"]);
+        num_materials = stoi(set_options["material_options:num_materials"]);
         material = DCArrayKokkos <material_t> (num_materials); // create material
     }
 
-    //obtain number of stave vars
-    if(set_options.find("state_options:num_state_var")!=set_options.end()){
-        max_num_state_vars = stod(set_options["state_options:num_state_var"]);
+    //obtain max number of stave vars for set of materials
+    if(set_options.find("material_options:max_num_state_var")!=set_options.end()){
+        max_num_state_vars = stoi(set_options["material_options:max_num_state_var"]);
         state_vars = DCArrayKokkos <double> (num_materials, max_num_state_vars);
     }
 
+    std::string material_base = "material_options:material_";
+    std::string index;
+    std::string material_name;
+    // --- set of material specifications ---
+    for(int imat=0; imat < num_materials; imat++){
+        //readin material data
+        index = std::to_string(imat+1);
+        material_name = material_base + index;
+
+        //eos model
+        if(set_options.find(material_name+":eos_model")!=set_options.end()){
+            if(set_options[material_name+":eos_model"]=="ideal_gas")
+                material(imat).eos_model = ideal_gas;
+        }
+
+    }
+    
+
     //obtain number of mat fill regions
     std::string fill_base = "region_options:mat_fill_";
-    std::string index;
     std::string mat_fill_name;
-    std::string colon = ":";
-    std::string fill_data;
     if(set_options.find("region_options:num_fills")!=set_options.end()){
-        num_fills = stod(set_options["region_options:num_fills"]);
+        num_fills = stoi(set_options["region_options:num_fills"]);
         mat_fill = DCArrayKokkos <mat_fill_t> (num_fills); // create fills
         for(int ifill=0; ifill < num_fills; ifill++){
             //readin mat fill region data
@@ -1039,11 +1054,56 @@ void Simulation_Parameters_SGH::apply_settings(){
             }
         }
     }
-
+    
+    std::string bc_base = "boundary_condition_options:boundary_condition_";
+    std::string bc_name;
     // --- number of boundary conditions ---
-    if(set_options.find("region_options:num_bcs")!=set_options.end()){
-        num_bcs = stod(set_options["region_options:num_bcs"]);
+    if(set_options.find("boundary_condition_options:num_bcs")!=set_options.end()){
+        num_bcs = stoi(set_options["boundary_condition_options:num_bcs"]);
         boundary = DCArrayKokkos <boundary_t> (num_bcs);  // create boundaries
+        for(int ibc=0; ibc < num_bcs; ibc++){
+            //readin mat fill region data
+            index = std::to_string(ibc+1);
+            bc_name = bc_base + index;
+            
+            //class of bc geometry
+            if(set_options.find(bc_name+":surface")!=set_options.end()){
+                if(set_options[bc_name+":surface"]=="x_plane")
+                    boundary.host(ibc).surface = bdy::x_plane;
+                else if(set_options[bc_name+":surface"]=="y_plane")
+                    boundary.host(ibc).surface = bdy::y_plane;
+                else if(set_options[bc_name+":surface"]=="z_plane")
+                    boundary.host(ibc).surface = bdy::z_plane;
+                else if(set_options[bc_name+":surface"]=="cylinder")
+                    boundary.host(ibc).surface = bdy::cylinder;
+                else if(set_options[bc_name+":surface"]=="sphere")
+                    boundary.host(ibc).surface = bdy::sphere;
+                else if(set_options[bc_name+":surface"]=="readFile")
+                    boundary.host(ibc).surface = bdy::readFile;
+            }
+            
+            //class of bc condition
+            if(set_options.find(bc_name+":condition_type")!=set_options.end()){
+                if(set_options[bc_name+":condition_type"]=="fixed")
+                    boundary.host(ibc).hydro_bc = bdy::fixed;
+                else if(set_options[bc_name+":condition_type"]=="reflected")
+                    boundary.host(ibc).hydro_bc = bdy::reflected;
+                else if(set_options[bc_name+":condition_type"]=="velocity")
+                    boundary.host(ibc).hydro_bc = bdy::velocity;
+                else if(set_options[bc_name+":condition_type"]=="pressure")
+                    boundary.host(ibc).hydro_bc = bdy::pressure;
+                else if(set_options[bc_name+":condition_type"]=="acceleration")
+                    boundary.host(ibc).hydro_bc = bdy::acceleration;
+                else if(set_options[bc_name+":condition_type"]=="contact")
+                    boundary.host(ibc).hydro_bc = bdy::contact;
+            }
+
+            //bc position value
+            if(set_options.find(bc_name+":value")!=set_options.end()){
+                boundary.host(ibc).value = stod(set_options[bc_name+":value"]);
+            }
+
+        }
     }
     
     select_problem(test_problem);
