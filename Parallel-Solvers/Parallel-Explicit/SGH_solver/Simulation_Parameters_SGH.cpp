@@ -877,7 +877,7 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
 }
 
 //==============================================================================
-//    Read in user settings from YAML file
+//    Communicate user settings from YAML file and apply to class members
 //==============================================================================
 
 void Simulation_Parameters_SGH::apply_settings(){
@@ -944,37 +944,38 @@ void Simulation_Parameters_SGH::apply_settings(){
       test_problem = Sedov3D;
 
     if(set_options.find("solver_options:time_variables")!=set_options.end())
-       time_final = stod(set_options["solver_options:time_variables:time_final"]);
+       time_final = std::stod(set_options["solver_options:time_variables:time_final"]);
     
     if(set_options.find("solver_options:dt_min")!=set_options.end())
-       dt_min = stod(set_options["solver_options:time_variables:dt_min"]);
+       dt_min = std::stod(set_options["solver_options:time_variables:dt_min"]);
 
     if(set_options.find("solver_options:dt_max")!=set_options.end())
-       dt_max = stod(set_options["solver_options:time_variables:dt_max"]);
+       dt_max = std::stod(set_options["solver_options:time_variables:dt_max"]);
 
     if(set_options.find("solver_options:dt_start")!=set_options.end())
-       dt_start = stod(set_options["solver_options:time_variables:dt_start"]);
+       dt_start = std::stod(set_options["solver_options:time_variables:dt_start"]);
 
     if(set_options.find("solver_options:cycle_stop")!=set_options.end())
-       cycle_stop = stoi(set_options["solver_options:time_variables:cycle_stop"]);
+       cycle_stop = std::stoi(set_options["solver_options:time_variables:cycle_stop"]);
 
     //obtain number of materials
     if(set_options.find("material_options:num_materials")!=set_options.end()){
-        num_materials = stoi(set_options["material_options:num_materials"]);
+        num_materials = std::stoi(set_options["material_options:num_materials"]);
         material = DCArrayKokkos <material_t> (num_materials); // create material
     }
 
     //obtain max number of stave vars for set of materials
     if(set_options.find("material_options:max_num_state_var")!=set_options.end()){
-        max_num_state_vars = stoi(set_options["material_options:max_num_state_var"]);
+        max_num_state_vars = std::stoi(set_options["material_options:max_num_state_var"]);
         state_vars = DCArrayKokkos <double> (num_materials, max_num_state_vars);
     }
 
     std::string material_base = "material_options:material_";
-    std::string index;
-    std::string material_name;
+    std::string state_var_base = ":state_vars_";
+    std::string index, inner_index;
+    std::string material_name, state_var_name;
     // --- set of material specifications ---
-    for(int imat=0; imat < num_materials; imat++){
+    for(int imat = 0; imat < num_materials; imat++){
         //readin material data
         index = std::to_string(imat+1);
         material_name = material_base + index;
@@ -982,7 +983,42 @@ void Simulation_Parameters_SGH::apply_settings(){
         //eos model
         if(set_options.find(material_name+":eos_model")!=set_options.end()){
             if(set_options[material_name+":eos_model"]=="ideal_gas")
-                material(imat).eos_model = ideal_gas;
+                material.host(imat).eos_model = ideal_gas;
+        }
+
+        //strength model
+        if(set_options.find(material_name+":strength_model")!=set_options.end()){
+            if(set_options[material_name+":strength_model"]=="none")
+                material.host(imat).strength_type = model::none;
+        }
+
+        //coefficients
+        if(set_options.find(material_name+":q1")!=set_options.end()){
+           material.host(imat).q1 = std::stod(set_options[material_name+":q1"]);
+        }
+        if(set_options.find(material_name+":q2")!=set_options.end()){
+           material.host(imat).q2 = std::stod(set_options[material_name+":q2"]);
+        }
+        if(set_options.find(material_name+":q1ex")!=set_options.end()){
+           material.host(imat).q1ex = std::stod(set_options[material_name+":q1ex"]);
+        }
+        if(set_options.find(material_name+":q2ex")!=set_options.end()){
+           material.host(imat).q2ex = std::stod(set_options[material_name+":q2ex"]);
+        }
+
+        material.host(imat).read_state_vars = 0;
+
+        //read state variables for materials
+        if(set_options.find(material_name+":num_state_vars")!=set_options.end()){
+           material.host(imat).num_state_vars = std::stoi(set_options[material_name+":num_state_vars"]);
+        }
+
+        for(int isvar = 0; isvar < material.host(imat).num_state_vars; isvar++){
+            inner_index = std::to_string(isvar+1);
+            state_var_name = material_name + state_var_base + inner_index;
+            if(set_options.find(state_var_name)!=set_options.end()){
+                state_vars.host(imat,isvar) = std::stod(set_options[state_var_name]);
+            }
         }
 
     }
@@ -1011,9 +1047,9 @@ void Simulation_Parameters_SGH::apply_settings(){
                 else if(set_options[mat_fill_name+":volume"]=="sphere"){
                     mat_fill.host(ifill).volume = region::sphere;
                     if(set_options.find(mat_fill_name+":radius1")!=set_options.end())
-                        mat_fill.host(ifill).radius1 = stod(set_options[mat_fill_name+":radius1"]);
+                        mat_fill.host(ifill).radius1 = std::stod(set_options[mat_fill_name+":radius1"]);
                     if(set_options.find(mat_fill_name+":radius2")!=set_options.end()){
-                        mat_fill.host(ifill).radius2 = stod(set_options[mat_fill_name+":radius2"]);
+                        mat_fill.host(ifill).radius2 = std::stod(set_options[mat_fill_name+":radius2"]);
                         mat_fill.host(ifill).sie = (963.652344*
                                pow((1.2/30.0),3))/pow((mat_fill(ifill).radius2),3);
                     }
@@ -1025,11 +1061,11 @@ void Simulation_Parameters_SGH::apply_settings(){
                     mat_fill.host(ifill).velocity = init_conds::cartesian;
                     //read in u,v,w velocity components
                     if(set_options.find(mat_fill_name+":u")!=set_options.end())
-                        mat_fill.host(ifill).u = stod(set_options[mat_fill_name+":u"]);
+                        mat_fill.host(ifill).u = std::stod(set_options[mat_fill_name+":u"]);
                     if(set_options.find(mat_fill_name+":v")!=set_options.end())
-                        mat_fill.host(ifill).v = stod(set_options[mat_fill_name+":v"]);
+                        mat_fill.host(ifill).v = std::stod(set_options[mat_fill_name+":v"]);
                     if(set_options.find(mat_fill_name+":w")!=set_options.end())
-                        mat_fill.host(ifill).w = stod(set_options[mat_fill_name+":w"]);
+                        mat_fill.host(ifill).w = std::stod(set_options[mat_fill_name+":w"]);
 
                 }
                 else if(set_options[mat_fill_name+":velocity"]=="radial")
@@ -1046,11 +1082,11 @@ void Simulation_Parameters_SGH::apply_settings(){
 
             //material index
             if(set_options.find(mat_fill_name+":mat_id")!=set_options.end()){
-                mat_fill.host(ifill).mat_id = stod(set_options[mat_fill_name+":mat_id"]);
+                mat_fill.host(ifill).mat_id = std::stod(set_options[mat_fill_name+":mat_id"]);
             }
             
             if(set_options.find(mat_fill_name+":den")!=set_options.end()){
-                mat_fill.host(ifill).den = stod(set_options[mat_fill_name+":den"]);
+                mat_fill.host(ifill).den = std::stod(set_options[mat_fill_name+":den"]);
             }
         }
     }
@@ -1100,13 +1136,13 @@ void Simulation_Parameters_SGH::apply_settings(){
 
             //bc position value
             if(set_options.find(bc_name+":value")!=set_options.end()){
-                boundary.host(ibc).value = stod(set_options[bc_name+":value"]);
+                boundary.host(ibc).value = std::stod(set_options[bc_name+":value"]);
             }
 
         }
     }
     
-    select_problem(test_problem);
+    //select_problem(test_problem);
 
     mat_fill.update_device();
     boundary.update_device();

@@ -21,7 +21,6 @@ material_options:
     material_1:
         #eos model is required
         eos_model: ideal_gas
-        strength_type: none
         strength_model: none
         q1: 1.0
         q2: 0
@@ -29,7 +28,6 @@ material_options:
         q2ex: 0.0
             
         num_state_vars: 3
-        read_state_vars: 0
         state_vars_1: 1.666666666666667
         state_vars_2: 1.0E-14
         state_vars_3: 1.0
