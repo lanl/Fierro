@@ -15,6 +15,9 @@ solver_options:
         dt_start: 1.e-5
         cycle_stop: 2000000
 
+output_options:
+  graphics_step: 0.25;
+
 material_options:
     num_materials: 1
     max_num_state_var: 6

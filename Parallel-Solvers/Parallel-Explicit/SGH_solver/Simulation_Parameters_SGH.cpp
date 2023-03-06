@@ -958,6 +958,9 @@ void Simulation_Parameters_SGH::apply_settings(){
     if(set_options.find("solver_options:cycle_stop")!=set_options.end())
        cycle_stop = std::stoi(set_options["solver_options:time_variables:cycle_stop"]);
 
+    if(set_options.find("output_options:graphics_step")!=set_options.end())
+       graphics_time = std::stod(set_options["output_options:graphics_step"]);
+       
     //obtain number of materials
     if(set_options.find("material_options:num_materials")!=set_options.end()){
         num_materials = std::stoi(set_options["material_options:num_materials"]);
