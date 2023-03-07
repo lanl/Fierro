@@ -2559,7 +2559,7 @@ void FEA_Module_SGH::sgh_solve(){
         
     } // end for cycle loop
 
-    last_time_step = cycle - 1;
+    last_time_step = cycle;
 
     //simple setup to just calculate KE minimize objective for now
     if(simparam_dynamic_opt->topology_optimization_on){
@@ -2746,6 +2746,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
   const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;
   const int num_dim = simparam->num_dim;
+  int num_corners = rnum_elem*num_nodes_in_elem;
   real_t global_dt;
   size_t current_data_index, next_data_index;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
@@ -2757,6 +2758,11 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
   //A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
   FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
     design_gradients(node_id,0) = 0;
+  }); // end parallel for
+  Kokkos::fence();
+
+  FOR_ALL_CLASS(corner_id, 0, num_corners, {
+    corner_value_storage(corner_id) = 0;
   }); // end parallel for
   Kokkos::fence();
   
@@ -2828,7 +2834,8 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
 
   //multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
   FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-    design_gradients(node_id,0) *=-1/num_nodes_in_elem;
+    design_gradients(node_id,0) *=-1/(double)num_nodes_in_elem;
+    //design_gradients(node_id,0) =0.00001;
   }); // end parallel for
   Kokkos::fence();
 }

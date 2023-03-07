@@ -339,10 +339,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
-      setup_optimization_problem();
-      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
-    }
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -358,28 +354,23 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     node_t  node;
     elem_t  elem;
     corner_t  corner;
-    // The kokkos scope
-    {
-     
-        
-        
-        // ---------------------------------------------------------------------
-        //    mesh data type declarations
-        // ---------------------------------------------------------------------
-        //mesh_t mesh;
+    // ---------------------------------------------------------------------
+    //    mesh data type declarations
+    // ---------------------------------------------------------------------
+    //mesh_t mesh;
         
 
-        // ---------------------------------------------------------------------
-        //    read the input file
-        // ---------------------------------------------------------------------  
-        //simparam->input();
+    // ---------------------------------------------------------------------
+    //    read the input file
+    // ---------------------------------------------------------------------  
+    //simparam->input();
         
 
-        // ---------------------------------------------------------------------
-        //    read in supplied mesh
-        // --------------------------------------------------------------------- 
-        sgh_module->sgh_interface_setup(*mesh, node, elem, corner);
-        mesh->build_corner_connectivity();
+    // ---------------------------------------------------------------------
+    //    read in supplied mesh
+    // --------------------------------------------------------------------- 
+    sgh_module->sgh_interface_setup(*mesh, node, elem, corner);
+    mesh->build_corner_connectivity();
         //debug print of corner ids
         /*
         if(myrank==1){
@@ -415,27 +406,27 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
              }
             }
             */
-        mesh->build_elem_elem_connectivity();
-        mesh->num_bdy_patches = nboundary_patches;
-        if(num_dim==2){
-        mesh->build_patch_connectivity();
-        mesh->build_node_node_connectivity();
-        }
+    mesh->build_elem_elem_connectivity();
+    mesh->num_bdy_patches = nboundary_patches;
+    if(num_dim==2){
+      mesh->build_patch_connectivity();
+      mesh->build_node_node_connectivity();
+    }
         
-        // ---------------------------------------------------------------------
-        //    allocate memory
-        // ---------------------------------------------------------------------
+      // ---------------------------------------------------------------------
+      //    allocate memory
+      // ---------------------------------------------------------------------
 
-        // shorthand names
-        const size_t num_nodes = mesh->num_nodes;
-        const size_t num_elems = mesh->num_elems;
-        const size_t num_corners = mesh->num_corners;
-        const size_t max_num_state_vars = simparam->max_num_state_vars;
-        const size_t rk_num_bins = simparam->rk_num_bins;
+      // shorthand names
+    const size_t num_nodes = mesh->num_nodes;
+    const size_t num_elems = mesh->num_elems;
+    const size_t num_corners = mesh->num_corners;
+    const size_t max_num_state_vars = simparam->max_num_state_vars;
+    const size_t rk_num_bins = simparam->rk_num_bins;
 
         
-        // allocate elem_statev
-        elem.statev = CArray <double> (num_elems, max_num_state_vars);
+      // allocate elem_statev
+    elem.statev = CArray <double> (num_elems, max_num_state_vars);
 
         // --- make dual views of data on CPU and GPU ---
         //  Notes:
@@ -450,96 +441,100 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         //     for memory movement.
 
         
-        // create Dual Views of the individual node struct variables
-        sgh_module->node_coords = DViewCArrayKokkos<double>(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+    // create Dual Views of the individual node struct variables
+    sgh_module->node_coords = DViewCArrayKokkos<double>(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        sgh_module->node_vel = DViewCArrayKokkos<double>(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+    sgh_module->node_vel = DViewCArrayKokkos<double>(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
+    sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
         
         
-        // create Dual Views of the individual elem struct variables
-        sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
+      // create Dual Views of the individual elem struct variables
+    sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
                                             num_elems);
 
-        sgh_module->elem_pres = DViewCArrayKokkos<double>(&elem.pres(0),
+    sgh_module->elem_pres = DViewCArrayKokkos<double>(&elem.pres(0),
                                              num_elems);
 
-        sgh_module->elem_stress = DViewCArrayKokkos<double>(&elem.stress(0,0,0,0),
+    sgh_module->elem_stress = DViewCArrayKokkos<double>(&elem.stress(0,0,0,0),
                                                rk_num_bins,
                                                num_elems,
                                                3,
                                                3); // always 3D even in 2D-RZ
 
-        sgh_module->elem_sspd = DViewCArrayKokkos<double>(&elem.sspd(0),
+    sgh_module->elem_sspd = DViewCArrayKokkos<double>(&elem.sspd(0),
                                              num_elems);
 
-        sgh_module->elem_sie = DViewCArrayKokkos<double>(&elem.sie(0,0),
+    sgh_module->elem_sie = DViewCArrayKokkos<double>(&elem.sie(0,0),
                                             rk_num_bins,
                                             num_elems);
 
-        sgh_module->elem_vol = DViewCArrayKokkos<double>(&elem.vol(0),
+    sgh_module->elem_vol = DViewCArrayKokkos<double>(&elem.vol(0),
                                             num_elems);
         
-        sgh_module->elem_div = DViewCArrayKokkos<double>(&elem.div(0),
+    sgh_module->elem_div = DViewCArrayKokkos<double>(&elem.div(0),
                                             num_elems);
         
 
-        sgh_module->elem_mass = DViewCArrayKokkos<double>(&elem.mass(0),
+    sgh_module->elem_mass = DViewCArrayKokkos<double>(&elem.mass(0),
                                              num_elems);
 
-        sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
+    sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
                                                num_elems);
 
-        sgh_module->elem_statev = DViewCArrayKokkos<double>(&elem.statev(0,0),
+    sgh_module->elem_statev = DViewCArrayKokkos<double>(&elem.statev(0,0),
                                                num_elems,
                                                max_num_state_vars );
         
-        // create Dual Views of the corner struct variables
-        sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
+      // create Dual Views of the corner struct variables
+    sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
                                                 num_corners, 
                                                 num_dim);
 
-        sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
+    sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
                                                num_corners);
         
         
-        // ---------------------------------------------------------------------
-        //   calculate geometry
-        // ---------------------------------------------------------------------
-        sgh_module->node_coords.update_device();
-        Kokkos::fence();
+      // ---------------------------------------------------------------------
+      //   calculate geometry
+      // ---------------------------------------------------------------------
+    sgh_module->node_coords.update_device();
+    Kokkos::fence();
         
-        //set initial saved coordinates
-        initial_node_coords_distributed->assign(*node_coords_distributed);
+      //set initial saved coordinates
+    initial_node_coords_distributed->assign(*node_coords_distributed);
 
-        sgh_module->get_vol();
+    sgh_module->get_vol();
 
 
-        // ---------------------------------------------------------------------
-        //   setup the IC's and BC's
-        // ---------------------------------------------------------------------
-        sgh_module->setup();
+      // ---------------------------------------------------------------------
+      //   setup the IC's and BC's
+      // ---------------------------------------------------------------------
+    sgh_module->setup();
+
+    
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      setup_optimization_problem();
+      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+    }
         
-        // intialize time, time_step, and cycles
-        //time_value = 0.0;
-        //dt = dt_start;
-        //graphics_id = 0;
-        //graphics_times(0) = 0.0;
-        //graphics_time = graphics_dt_ival;  // the times for writing graphics dump
+      // intialize time, time_step, and cycles
+      //time_value = 0.0;
+      //dt = dt_start;
+      //graphics_id = 0;
+      //graphics_times(0) = 0.0;
+      //graphics_time = graphics_dt_ival;  // the times for writing graphics dump
         
-        //set initial saved velocities
-        initial_node_velocities_distributed->assign(*node_velocities_distributed);
+      //set initial saved velocities
+    initial_node_velocities_distributed->assign(*node_velocities_distributed);
         
 
-        // ---------------------------------------------------------------------
-        //   Calculate the SGH solution
-        // ---------------------------------------------------------------------
+      // ---------------------------------------------------------------------
+      //   Calculate the SGH solution
+      // ---------------------------------------------------------------------
         
-        sgh_module->sgh_solve();
+    sgh_module->sgh_solve();
          
-        
-    } // end of kokkos scope
 
     //printf("Finished\n");
     
