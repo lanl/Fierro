@@ -2064,6 +2064,32 @@ void FEA_Module_SGH::sgh_solve(){
         
 
         forward_solve_velocity_data[cycle]->assign(*all_node_velocities_distributed);
+
+        //kinetic energy accumulation
+        if(kinetic_energy_objective){
+          Explicit_Solver_SGH::const_vec_array node_velocities_interface = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+          KE_loc_sum = 0.0;
+          KE_sum = 0.0;
+          // extensive KE
+          REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+        
+          double ke = 0;
+          for (size_t dim=0; dim<num_dim; dim++){
+            ke += node_vel(1,node_gid,dim)*node_velocities_interface(node_gid,dim); // 1/2 at end
+          } // end for
+        
+          if(num_dim==2){
+            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
+          }
+          else{
+            KE_loc_sum += node_mass(node_gid)*ke;
+          }
+        
+          }, KE_sum);
+          Kokkos::fence();
+          KE_sum = 0.5*KE_sum;
+          objective_accumulation += KE_sum*dt;
+        }
       }
 
 	    // get the step
@@ -2532,30 +2558,6 @@ void FEA_Module_SGH::sgh_solve(){
         // end of calculation
         if (time_value>=time_final) break;
 
-        //kinetic energy accumulation
-        if(kinetic_energy_objective){
-          KE_loc_sum = 0.0;
-          KE_sum = 0.0;
-          // extensive KE
-          REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
-        
-          double ke = 0;
-          for (size_t dim=0; dim<num_dim; dim++){
-            ke += node_vel(1,node_gid,dim)*node_vel(1,node_gid,dim); // 1/2 at end
-          } // end for
-        
-          if(num_dim==2){
-            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
-          }
-          else{
-            KE_loc_sum += node_mass(node_gid)*ke;
-          }
-        
-          }, KE_sum);
-          Kokkos::fence();
-          KE_sum = 0.5*KE_sum;
-          objective_accumulation += KE_sum*dt;
-        }
         
     } // end for cycle loop
 
@@ -2761,10 +2763,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
   }); // end parallel for
   Kokkos::fence();
 
-  FOR_ALL_CLASS(corner_id, 0, num_corners, {
-    corner_value_storage(corner_id) = 0;
-  }); // end parallel for
-  Kokkos::fence();
   
   for (cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
@@ -2804,14 +2802,14 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
           for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
             node_id = nodes_in_elem(elem_id, ifill);
             for(int idim=0; idim < num_dim; idim++){
-              inner_product += node_mass(node_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
+              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
             }
           }
 
           for (int inode = 0; inode < num_nodes_in_elem; inode++){
             //compute gradient of local element contribution to v^t*M*v product
             corner_id = elem_id*num_nodes_in_elem + inode;
-            corner_value_storage(corner_id) += inner_product*global_dt;
+            corner_value_storage(corner_id) = inner_product*global_dt;
           }
           
         }); // end parallel for
@@ -2834,7 +2832,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
 
   //multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
   FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-    design_gradients(node_id,0) *=-1/(double)num_nodes_in_elem;
+    design_gradients(node_id,0) *=-0.5/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
     //design_gradients(node_id,0) =0.00001;
   }); // end parallel for
   Kokkos::fence();
