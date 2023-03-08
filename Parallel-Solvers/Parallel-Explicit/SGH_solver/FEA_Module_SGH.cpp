@@ -1995,6 +1995,42 @@ void FEA_Module_SGH::sgh_solve(){
 	// loop over the max number of time integration cycles
 	for (cycle = 0; cycle < cycle_stop; cycle++) {
 
+      // get the step
+        if(num_dim==2){
+            get_timestep2D(mesh,
+                           node_coords,
+                           node_vel,
+                           elem_sspd,
+                           elem_vol,
+                           time_value,
+                           graphics_time,
+                           time_final,
+                           dt_max,
+                           dt_min,
+                           dt_cfl,
+                           dt,
+                           fuzz);
+        }
+        else {
+            get_timestep(mesh,
+                         node_coords,
+                         node_vel,
+                         elem_sspd,
+                         elem_vol,
+                         time_value,
+                         graphics_time,
+                         time_final,
+                         dt_max,
+                         dt_min,
+                         dt_cfl,
+                         dt,
+                         fuzz);
+        } // end if 2D
+
+        double global_dt;
+        MPI_Allreduce(&dt,&global_dt,1,MPI_DOUBLE,MPI_MIN,MPI_COMM_WORLD);
+        dt = global_dt;
+
 	    // stop calculation if flag
 	    if (stop_calc == 1) break;
         
@@ -2075,7 +2111,7 @@ void FEA_Module_SGH::sgh_solve(){
         
           double ke = 0;
           for (size_t dim=0; dim<num_dim; dim++){
-            ke += node_vel(1,node_gid,dim)*node_velocities_interface(node_gid,dim); // 1/2 at end
+            ke += node_velocities_interface(node_gid,dim)*node_velocities_interface(node_gid,dim); // 1/2 at end
           } // end for
         
           if(num_dim==2){
@@ -2092,45 +2128,10 @@ void FEA_Module_SGH::sgh_solve(){
         }
       }
 
-	    // get the step
-        if(num_dim==2){
-            get_timestep2D(mesh,
-                           node_coords,
-                           node_vel,
-                           elem_sspd,
-                           elem_vol,
-                           time_value,
-                           graphics_time,
-                           time_final,
-                           dt_max,
-                           dt_min,
-                           dt_cfl,
-                           dt,
-                           fuzz);
-        }
-        else {
-            get_timestep(mesh,
-                         node_coords,
-                         node_vel,
-                         elem_sspd,
-                         elem_vol,
-                         time_value,
-                         graphics_time,
-                         time_final,
-                         dt_max,
-                         dt_min,
-                         dt_cfl,
-                         dt,
-                         fuzz);
-        } // end if 2D
-        
-        double global_dt;
-        MPI_Allreduce(&dt,&global_dt,1,MPI_DOUBLE,MPI_MIN,MPI_COMM_WORLD);
-        dt = global_dt;
 
         if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
           if(cycle==0) time_data[0] = 0;
-          time_data[cycle+1] = global_dt + time_data[cycle];
+          time_data[cycle+1] = dt + time_data[cycle];
         }
 
         if (cycle==0){
@@ -2783,7 +2784,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
       //view scope
       {
         const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
-
+        
         FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
           size_t node_id;
           size_t corner_id;
@@ -2825,8 +2826,42 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
           }
         }); // end parallel for
         Kokkos::fence();
+        
+        //test code
+        /*
+        for(int elem_id=0; elem_id < rnum_elem; elem_id++) {
+          size_t node_id;
+          size_t corner_id;
+          real_t inner_product;
 
+          //current_nodal_velocities
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            node_id = nodes_in_elem(elem_id, inode);
+            current_element_velocities(inode,0) = current_velocity_vector(node_id,0);
+            current_element_velocities(inode,1) = current_velocity_vector(node_id,1);
+            if(num_dim==3)
+            current_element_velocities(inode,2) = current_velocity_vector(node_id,2);
+          }
+
+          inner_product = 0;
+          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+            node_id = nodes_in_elem(elem_id, ifill);
+            for(int idim=0; idim < num_dim; idim++){
+              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
+            }
+          }
+
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            node_id = nodes_in_elem(elem_id, inode);
+            if(node_id < nlocal_nodes)
+              design_gradients(node_id,0) += inner_product*global_dt;
+          }
+          
+        } 
+        */
       } //end view scope
+
+      
     
   }
 
