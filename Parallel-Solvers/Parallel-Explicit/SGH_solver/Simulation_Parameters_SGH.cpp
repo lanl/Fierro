@@ -943,19 +943,20 @@ void Simulation_Parameters_SGH::apply_settings(){
     if(set_options["solver_options:test_problem"]=="Sedov3D")
       test_problem = Sedov3D;
 
-    if(set_options.find("solver_options:time_variables")!=set_options.end())
+    if(set_options.find("solver_options:time_variables:time_final")!=set_options.end())
        time_final = std::stod(set_options["solver_options:time_variables:time_final"]);
+    //std::cout<< "FINAL TIME IS: " << time_final << std::endl;
     
-    if(set_options.find("solver_options:dt_min")!=set_options.end())
+    if(set_options.find("solver_options:time_variables:dt_min")!=set_options.end())
        dt_min = std::stod(set_options["solver_options:time_variables:dt_min"]);
 
-    if(set_options.find("solver_options:dt_max")!=set_options.end())
+    if(set_options.find("solver_options:time_variables:dt_max")!=set_options.end())
        dt_max = std::stod(set_options["solver_options:time_variables:dt_max"]);
 
-    if(set_options.find("solver_options:dt_start")!=set_options.end())
+    if(set_options.find("solver_options:time_variables:dt_start")!=set_options.end())
        dt_start = std::stod(set_options["solver_options:time_variables:dt_start"]);
 
-    if(set_options.find("solver_options:cycle_stop")!=set_options.end())
+    if(set_options.find("solver_options:time_variables:cycle_stop")!=set_options.end())
        cycle_stop = std::stoi(set_options["solver_options:time_variables:cycle_stop"]);
 
     if(set_options.find("output_options:graphics_step")!=set_options.end())
