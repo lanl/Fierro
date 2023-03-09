@@ -514,6 +514,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
     
     if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      //design_node_densities_distributed->randomize(1,1);
       setup_optimization_problem();
       //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
     }
@@ -567,7 +568,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         sgh_module->compute_topology_optimization_adjoint();
         sgh_module->compute_topology_optimization_gradient(test_node_densities, test_gradients);
         // Data writers
-        parallel_vtk_writer();
+        //parallel_vtk_writer();
       }
     }
 
@@ -1238,7 +1239,7 @@ void Explicit_Solver_SGH::init_state_vectors(){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   }
   if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
-    corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(nlocal_nodes*max_nodes_per_element);
+    corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element);
   }
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, 1));
@@ -1591,8 +1592,8 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-  //directions_distributed->putScalar(1);
-  directions_distributed->randomize(-1,1);
+  directions_distributed->putScalar(1);
+  //directions_distributed->randomize(-1,1);
   //real_t normd = directions_distributed->norm2();
   //directions_distributed->scale(normd);
   //set all but first component to 0 for debug
