@@ -637,7 +637,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;
   const DCArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
-  CArrayKokkos<double> relative_element_densities = CArrayKokkos<double>(rnum_elem, "relative_element_densities");
+  relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
   std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
@@ -647,13 +647,16 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   //compute element averaged density ratios corresponding to nodal density design variables
   {//view scope
     const_host_vec_array all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    //debug print
+    //std::cout << "NODE DENSITY TEST " << all_node_densities(0,0) << std::endl;
     for(int elem_id = 0; elem_id < rnum_elem; elem_id++){
       for(int inode = 0; inode < num_nodes_in_elem; inode++){
         current_element_nodal_densities(inode) = all_node_densities(nodes_in_elem(elem_id,inode),0);
       }
-      relative_element_densities(elem_id) = average_element_density(num_nodes_in_elem, current_element_nodal_densities);
+      relative_element_densities.host(elem_id) = average_element_density(num_nodes_in_elem, current_element_nodal_densities);
     }//for
   } //view scope
+  relative_element_densities.update_device();
 
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
@@ -2032,7 +2035,7 @@ void FEA_Module_SGH::sgh_solve(){
         dt = global_dt;
 
 	    // stop calculation if flag
-	    if (stop_calc == 1) break;
+	    //if (stop_calc == 1) break;
         
   
       if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
@@ -2789,7 +2792,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array
           size_t node_id;
           size_t corner_id;
           real_t inner_product;
-
+          //std::cout << elem_mass(elem_id) <<std::endl;
           //current_nodal_velocities
           for (int inode = 0; inode < num_nodes_in_elem; inode++){
             node_id = nodes_in_elem(elem_id, inode);

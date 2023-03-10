@@ -492,6 +492,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
   DCArrayKokkos <size_t> num_bdy_nodes_in_set;
   
+  //Topology optimization filter variable
+  DCArrayKokkos<double> relative_element_densities;
+  
   //Local FEA data
   host_elem_conn_array interface_nodes_in_elem; //host view of element connectivity to nodes
 
