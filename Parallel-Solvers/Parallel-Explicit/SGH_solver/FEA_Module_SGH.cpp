@@ -2718,7 +2718,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
           for (int idim = 0; idim < num_dim; idim++){
             //cancellation of half from midpoint and 2 from adjoint equation already done
-            current_adjoint_vector(node_gid,idim) = -(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
+            current_adjoint_vector(node_gid,idim) = 0.5*(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
           } 
         }); // end parallel for
         Kokkos::fence();
