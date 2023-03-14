@@ -2732,7 +2732,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
    Adjoint vector for the kinetic energy minimization problem
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array design_variables, host_vec_array design_gradients){
+void FEA_Module_SGH::compute_topology_optimization_gradient(const_host_vec_array design_variables, vec_array design_gradients){
 
   double time_value = simparam->time_value;
   const double time_final = simparam->time_final;
