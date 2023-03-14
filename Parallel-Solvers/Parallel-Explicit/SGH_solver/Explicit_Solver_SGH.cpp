@@ -205,15 +205,11 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       bool yaml_exit_flag = false;
     
       //check for user error in providing yaml options (flags unsupported options)
-      if(myrank==0){
-        yaml_error = simparam->yaml_input(filename);
-        if(yaml_error!="success"){
-          std::cout << yaml_error << std::endl;
-          yaml_exit_flag = true;
-        } 
-      }
-
-      MPI_Bcast(&yaml_exit_flag,1,MPI_CXX_BOOL,0,world);
+      yaml_error = simparam->yaml_input(filename);
+      if(yaml_error!="success"){
+        std::cout << yaml_error << std::endl;
+        yaml_exit_flag = true;
+      } 
     
       if(yaml_exit_flag){
         //exit_solver(0);
@@ -554,17 +550,17 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     parallel_vtk_writer();
     
     //test forward solve call
-    int ntests = 1;
+    int ntests = 0;
     if(simparam_dynamic_opt->topology_optimization_on){
       for(int itest = 0; itest < ntests; itest++){
         design_node_densities_distributed->randomize(1,1);
-        test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
+        //test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
         Teuchos::RCP<MV> test_gradients_distributed = Teuchos::rcp(new MV(map, 1));
-        const_vec_array test_node_densities = test_node_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array test_node_densities = design_node_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         vec_array test_gradients = test_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
-        sgh_module->comm_variables(test_node_densities_distributed);
-        sgh_module->update_forward_solve(test_node_densities_distributed);
+        sgh_module->comm_variables(design_node_densities_distributed);
+        sgh_module->update_forward_solve(design_node_densities_distributed);
         sgh_module->compute_topology_optimization_adjoint();
         sgh_module->compute_topology_optimization_gradient(test_node_densities, test_gradients);
         // Data writers

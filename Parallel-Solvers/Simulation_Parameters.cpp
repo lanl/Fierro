@@ -110,6 +110,7 @@ std::string Simulation_Parameters::yaml_input(std::string filename){
   std::string error = "success";
   std::string colon = ":";
   bool inner_found, inner_found_nest;
+  if(myrank==0){
     try
     {
         Yaml::Parse(root, filename.c_str());
@@ -254,8 +255,59 @@ std::string Simulation_Parameters::yaml_input(std::string filename){
         std::cout << "User option: " << temp_it->first << "=" << temp_it->second << std::endl;
 
     }
+  }
+  size_t max_string_size = 100;
+  size_t settings_map_size;
+  std::string temp_option, temp_setting;
+  std::map<std::string,std::string>::iterator temp_it;
 
-    return error;
+  //compute maximum string size in settings
+  if(myrank==0){
+    for(auto temp_it = set_options.begin(); temp_it != set_options.end(); temp_it++){
+          if(temp_it->first.length()>max_string_size) max_string_size = temp_it->first.length() + 100;
+          if(temp_it->second.length()>max_string_size) max_string_size = temp_it->second.length() + 100;
+      }
+  }
+
+  if(myrank==0) settings_map_size = set_options.size();
+
+  MPI_Bcast(&max_string_size,1,MPI_LONG_LONG_INT,0,world);
+  MPI_Bcast(&settings_map_size,1,MPI_LONG_LONG_INT,0,world);
+
+  //std::cout << "max string length on rank " << myrank << " " << max_string_size << std::endl;
+
+  char* read_buffer = new char[max_string_size];
+  char* read_buffer2 = new char[max_string_size];
+    
+  //for(auto temp_it = set_options.begin(); temp_it != set_options.end(); temp_it++){
+  if(myrank==0)
+    temp_it = set_options.begin();
+    
+  for(int imap = 0; imap < settings_map_size; imap++){
+    //copy map strings to read buffer for mpi
+    if(myrank==0){
+      strncpy(read_buffer, temp_it->first.c_str(), temp_it->first.length()+1); //includes null terminator
+      strncpy(read_buffer2, temp_it->second.c_str(), temp_it->second.length()+1); //includes null terminator
+      temp_it++;
+    }
+
+    //communicate map settings read in on rank 0 to other ranks
+    MPI_Bcast(read_buffer,max_string_size,MPI_CHAR,0,world);
+    MPI_Bcast(read_buffer2,max_string_size,MPI_CHAR,0,world);
+
+    temp_option = read_buffer;
+    temp_setting = read_buffer2;
+
+    //insert option name into map
+    set_options[temp_option] = temp_setting;
+  }
+
+  MPI_Barrier(world);
+
+  delete[] read_buffer;
+  delete[] read_buffer2;
+
+  return error;
 }
 
 //==============================================================================
