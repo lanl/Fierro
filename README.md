@@ -13,7 +13,7 @@
 **Fierro** supports a range of published multi-step time integration methods.  The code has an explicit multi-step Runge Kutta time integration method.  Implicit time integration methods can be implemented in **Fierro**.
 
 ## Material models  
-The classical ideal gas model is the only material model implemented in the code, and it is useful for verification tests of the software and simple gas dynamic simulations.  A forthcoming version of the code will have C++ to Fortran interfaces to enable code users the ability to use their own material models and test them on quasi static problems or material dynamic applications.  The interfaces follow an industry standard format so that **Fierro** can be used for model research and development that has historically been done with commercial implicit or explicit finite element codes. 
+The classical ideal gas model is the only material model implemented in the code, and it is useful for verification tests of the software and simple gas dynamic simulations.  The linear Lagrangian finite element methods for explicit material dynamics have an interface to user developed material models.  The interface is to enable **Fierro** to be used for model research and development that has historically been done with commercial explicit finite element codes. 
 
 ## Cloning the code
 If the user has set up ssh keys with GitHub, type
