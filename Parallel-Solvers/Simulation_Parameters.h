@@ -52,8 +52,8 @@ class Simulation_Parameters
   Simulation_Parameters();
   virtual ~Simulation_Parameters();
   virtual void input(); //typically sets default problem parameters
-  virtual void apply_settings(){}
-  virtual std::string yaml_input(std::string filename){} //reads in user defined parameters
+  virtual void apply_settings();
+  virtual std::string yaml_input(std::string filename); //reads in user defined parameters
   virtual void FEA_module_setup();
 
   //==============================================================================
@@ -77,6 +77,7 @@ class Simulation_Parameters
   bool restart_file;
   bool tecplot_input, ansys_dat_input, vtk_input, zero_index_base;
   std::string element_type;
+  std::string solver_type;
 
   //debug and performance reporting flags
   int report_runtime_flag;

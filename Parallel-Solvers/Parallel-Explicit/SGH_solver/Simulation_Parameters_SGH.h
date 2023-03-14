@@ -53,7 +53,6 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   virtual void input();
   virtual void apply_settings();
   virtual void FEA_module_setup();
-  std::string yaml_input(std::string filename);
     
     // applying initial conditions
   enum setup

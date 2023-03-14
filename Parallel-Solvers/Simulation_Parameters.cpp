@@ -97,6 +97,181 @@ void Simulation_Parameters::input(){
 
 }
 
+
+//==============================================================================
+//    Read in user settings from YAML file
+//==============================================================================
+
+std::string Simulation_Parameters::yaml_input(std::string filename){
+  Yaml::Node root;
+  std::string current_option_outer, current_setting_outer;
+  std::string current_option_inner, current_setting_inner;
+  std::string current_option_center, current_setting_center;
+  std::string error = "success";
+  std::string colon = ":";
+  bool inner_found, inner_found_nest;
+    try
+    {
+        Yaml::Parse(root, filename.c_str());
+    }
+    catch (const Yaml::Exception e)
+    {
+        std::cout << "Exception " << e.Type() << ": " << e.what() << std::endl;
+    }
+    
+    
+    //std::cout << "print root Size = " << root.Size() << "\n";
+    //std::cout << "print root = \n";
+    //for (size_t i=0; i<root.Size(); i++){
+        
+        // get the outer stuff
+        Yaml::Node & outer_item = root;
+        
+        //std::cout << "\n";
+        //std::cout << "size = " << outer_item.Size() << std::endl;
+        if (outer_item.Size()!=0){
+            for(auto outer_it = outer_item.Begin(); outer_it != outer_item.End(); outer_it++)
+            {   
+                current_option_outer = (*outer_it).first;
+                current_setting_outer = (*outer_it).second.As<std::string>();
+                
+                //find the keyword for this option out of the three multimaps of possible options with different nesting structure
+                //multimap_iterator multi_outer_iterator = sgh_possible_options.find(current_option_outer);
+                //multimap_iterator_nested2 multi_outer_iterator_nested2 = sgh_possible_options_nested2.find(current_option_outer);
+                //multimap_iterator_nested3 multi_outer_iterator_nested3 = sgh_possible_options_nested3.find(current_option_outer);
+
+                //check if this keyword is an option for this solver type
+                /*
+                if(multi_outer_iterator==possible_options.end()){
+                    if(multi_outer_iterator_nested2==possible_options_nested2.end()){
+                        if(multi_outer_iterator_nested3==possible_options_nested3.end()){
+                            std::string message = "Unsupported option requested in YAML input file: ";
+                            error = message + current_option_outer;
+                        }
+                    }
+                  //return error;
+                }
+                */
+                
+                //std::cout << current_option_outer << " " << current_setting_outer << std::endl;
+            
+                Yaml::Node & inner_item = (*outer_it).second;
+            
+                // inner layer
+                if (inner_item.Size()!=0){
+                    for(auto inner_it = inner_item.Begin(); inner_it != inner_item.End();   inner_it++)
+                    {
+                        current_option_inner = (*inner_it).first;
+                        current_setting_inner = (*inner_it).second.As<std::string>();
+                        
+                        //check if this option is supported
+                        //std::pair<multimap_iterator_nested2,multimap_iterator_nested2> iterator_range = sgh_possible_options_nested2.equal_range(current_option_outer);
+                        //std::pair<multimap_iterator_nested3,multimap_iterator_nested3> iterator_range_nested = sgh_possible_options_nested3.equal_range(current_option_outer);
+                        //multimap_iterator multi_outer_iterator_nested2 = sgh_possible_options_nested2[current_option_outer].find(current_option_outer);
+                        //multimap_iterator_nested2 multi_outer_iterator_nested3 = sgh_possible_options_nested3[current_option_outer].find(current_option_outer);
+                        
+                        inner_found = inner_found_nest = false;
+                        /*
+                        for(auto temp_it = iterator_range.first; temp_it != iterator_range.second; temp_it++){
+                            //test if map element corresponds to a possible option
+                            multimap_iterator multi_inner_iterator = temp_it->second.find(current_option_inner);
+                            //std::cout << "Test print " << temp_it->first << std::endl;
+                            if(multi_inner_iterator!=temp_it->second.end()){
+                                inner_found = true;
+                            }
+                        }
+
+                        for(auto temp_it = iterator_range_nested.first; temp_it != iterator_range_nested.second; temp_it++){
+                            //test if map element corresponds to a possible option
+                            multimap_iterator_nested2 multi_inner_iterator = temp_it->second.find(current_option_inner);
+                            //std::cout << "Test print " << temp_it->first << std::endl;
+                            if(multi_inner_iterator!=temp_it->second.end()){
+                                inner_found_nest = true;
+                            }
+                        }
+                        */
+                        /*
+                        if(!inner_found&&!inner_found_nest){
+                            std::string message = "Unsupported option requested in YAML input file: ";
+                            error = message + current_option_inner;
+                        }
+                        */
+                        //std::cout << "    " << current_option_inner << " " << current_setting_inner << " " << inner_found << " " << inner_found_nest << std::endl;
+            
+                        // inner_most layer
+                        Yaml::Node & center_item = (*inner_it).second;
+            
+                        //std::cout << "  \n";
+                        if (center_item.Size()!=0){
+                            for(auto center_it = center_item.Begin(); center_it !=  center_item.End();   center_it++)
+                            {
+                                current_option_center = (*center_it).first;
+                                current_setting_center = (*center_it).second.As<std::string>();
+
+                                //check if this option is supported
+                                /*
+                                for(auto temp_it = iterator_range_nested.first; temp_it != iterator_range_nested.second; temp_it++){
+                                    //test if map element corresponds to a possible option
+                                    std::pair<multimap_iterator_nested2,multimap_iterator_nested2> iterator_range_nested3 = temp_it->second.equal_range(current_option_inner);
+                                    for(auto temp_it_inner = iterator_range_nested3.first; temp_it_inner != iterator_range_nested3.second; temp_it_inner++){
+                                        //test if map element corresponds to a possible option
+                                        multimap_iterator multi_center_iterator = temp_it_inner->second.find(current_option_center);
+                                        if(multi_center_iterator!=temp_it_inner->second.end()){
+                                            std::string message = "Unsupported option requested in YAML input file: ";
+                                            error = message + current_option_center;
+                                        }
+                                    }
+                                }
+                                */
+                                //std::cout << "        " << current_option_center << "   " << current_setting_center << std::endl;
+
+                                set_options[current_option_outer + colon + current_option_inner + colon + current_option_center] = current_setting_center;
+                            } // end for
+                        }
+                        else{
+                            set_options[current_option_outer + colon + current_option_inner] = current_setting_inner;
+                        }
+            
+                    } // end for
+                } // end if inner_item.Size
+                else{
+                    //there were no inner items; add setting to map of user defined settings to query later
+                    set_options[current_option_outer] = current_setting_outer;
+                    //if(current_option_outer=="solver_type"){
+                      //std::string test_string = "solver_type";
+                      //std::cout << "solver type: " << set_options[test_string] << std::endl;
+                    //}
+
+                } //end else for outer item with no inner items
+            
+            } // end for outer_it
+        } // end if outer_it
+    //} // end for
+
+    //print user settings for this module
+    for(auto temp_it = set_options.begin(); temp_it != set_options.end(); temp_it++){
+        //print current option
+        std::cout << "User option: " << temp_it->first << "=" << temp_it->second << std::endl;
+
+    }
+
+    return error;
+}
+
+//==============================================================================
+//    Communicate user settings from YAML file and apply to class members
+//==============================================================================
+
+void Simulation_Parameters::apply_settings(){
+  if(set_options.find("solver_type")!=set_options.end())
+       solver_type = set_options["solver_type"];
+  std::cout << "Solver Type is " << solver_type << std::endl;
+}
+
+//==============================================================================
+//    Setup FEA Modules for the simulation
+//==============================================================================
+
 void Simulation_Parameters::FEA_module_setup(){
   
   //initial buffer size for FEA module list storage
