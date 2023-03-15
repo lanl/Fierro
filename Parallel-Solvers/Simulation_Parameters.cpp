@@ -318,6 +318,14 @@ void Simulation_Parameters::apply_settings(){
   if(set_options.find("solver_type")!=set_options.end())
        solver_type = set_options["solver_type"];
   std::cout << "Solver Type is " << solver_type << std::endl;
+
+  if(set_options.find("solver_options:mesh_file_name")!=set_options.end())
+       mesh_file_name = set_options["solver_options:mesh_file_name"];
+  
+  if(set_options.find("solver_options:mesh_file_format")!=set_options.end())
+       mesh_file_format = set_options["solver_options:mesh_file_format"];
+  
+  std::cout << "Mesh File name is " << mesh_file_name << std::endl;
 }
 
 //==============================================================================
