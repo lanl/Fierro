@@ -77,7 +77,8 @@ void solver_setup(int argc, char *argv[]){
   //read user solver settings
   Simulation_Parameters *simparam;
   Solver *solver;
-  if(argc==3){
+  std::string filename = std::string(argv[2]);
+  if(filename.find(".yaml") != std::string::npos){
       simparam = new Simulation_Parameters();
       std::string filename = std::string(argv[2]);
       std::string yaml_error;
@@ -98,6 +99,8 @@ void solver_setup(int argc, char *argv[]){
       simparam->apply_settings();
       if(simparam->solver_type=="SGH"){
         solver = new Explicit_Solver_SGH();
+        //assign parameters read in by the base simulation parameters class to derived class in solver
+        solver->simparam->Simulation_Parameters::operator=(*simparam);
   
         //solver = new Static_Solver();
         //solver = new Pseudo_Laplacian();

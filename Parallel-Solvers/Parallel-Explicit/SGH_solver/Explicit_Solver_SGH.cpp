@@ -130,8 +130,6 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->Simulation_Parameters::input();
-  simparam->input();
-  simparam_dynamic_opt->input();
 
   //create ref element object
   ref_elem = new elements::ref_element();
@@ -177,7 +175,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
     MPI_Comm_rank(world,&myrank);
     MPI_Comm_size(world,&nranks);
-    int num_dim = simparam->num_dim;
     
     if(myrank == 0){
       std::cout << "Running TO Explicit_Solver" << std::endl;
@@ -196,16 +193,22 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //initialize Trilinos communicator class
     comm = Tpetra::getDefaultComm();
 
+    //default simulation parameters
+    
+    simparam->input();
+    simparam_dynamic_opt->input();
+    int num_dim = simparam->num_dim;
+
     //error handle for file input name
     //if(argc < 2)
     //yaml file reader for simulation parameters
-    if(argc==3){
-      std::string filename = std::string(argv[2]);
+    std::string filename = std::string(argv[2]);
+    if(filename.find(".yaml") != std::string::npos){
       std::string yaml_error;
       bool yaml_exit_flag = false;
     
       //check for user error in providing yaml options (flags unsupported options)
-      yaml_error = simparam->yaml_input(filename);
+      //yaml_error = simparam->yaml_input(filename);
       if(yaml_error!="success"){
         std::cout << yaml_error << std::endl;
         yaml_exit_flag = true;
