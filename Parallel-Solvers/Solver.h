@@ -130,13 +130,13 @@ public:
 
   virtual void exit_solver(int status);
 
-  virtual void read_mesh_ensight(char *MESH);
+  virtual void read_mesh_ensight(const char *MESH);
 
   virtual void init_design() {}
 
-  virtual void read_mesh_tecplot(char *MESH);
+  virtual void read_mesh_tecplot(const char *MESH);
   
-  virtual void read_mesh_vtk(char *MESH);
+  virtual void read_mesh_vtk(const char *MESH);
 
   virtual void repartition_nodes();
 

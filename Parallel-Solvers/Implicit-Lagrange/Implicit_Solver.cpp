@@ -316,7 +316,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read ANSYS dat format mesh file
 ------------------------------------------------------------------------- */
-void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
+void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;

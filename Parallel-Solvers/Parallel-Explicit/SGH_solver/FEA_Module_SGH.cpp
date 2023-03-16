@@ -138,6 +138,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
     all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
     corner_value_storage = Solver_Pointer->corner_value_storage;
+    relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
   }
   
   //setup output
@@ -637,7 +638,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;
   const DCArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
-  relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
   std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
@@ -1236,6 +1236,14 @@ void FEA_Module_SGH::setup(){
     
     
     //--- apply the fill instructions over each of the Elements---//
+    
+    //initialize if topology optimization is used
+    if(simparam_dynamic_opt->topology_optimization_on){
+      for(int elem_id = 0; elem_id < rnum_elem; elem_id++){
+        relative_element_densities.host(elem_id) = 1;
+      }//for
+      relative_element_densities.update_device();
+    }
     
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++){

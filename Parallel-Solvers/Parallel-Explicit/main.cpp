@@ -77,10 +77,9 @@ void solver_setup(int argc, char *argv[]){
   //read user solver settings
   Simulation_Parameters *simparam;
   Solver *solver;
-  std::string filename = std::string(argv[2]);
+  std::string filename = std::string(argv[1]);
   if(filename.find(".yaml") != std::string::npos){
       simparam = new Simulation_Parameters();
-      std::string filename = std::string(argv[2]);
       std::string yaml_error;
       bool yaml_exit_flag = false;
     
@@ -99,7 +98,8 @@ void solver_setup(int argc, char *argv[]){
       simparam->apply_settings();
       if(simparam->solver_type=="SGH"){
         solver = new Explicit_Solver_SGH();
-        //assign parameters read in by the base simulation parameters class to derived class in solver
+        //assign parameters read in by the base simulation parameters class to derived class in solver;
+        //this includes the map of all yaml options read in.
         solver->simparam->Simulation_Parameters::operator=(*simparam);
   
         //solver = new Static_Solver();

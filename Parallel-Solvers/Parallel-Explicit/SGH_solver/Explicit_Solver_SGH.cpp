@@ -177,7 +177,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     MPI_Comm_size(world,&nranks);
     
     if(myrank == 0){
-      std::cout << "Running TO Explicit_Solver" << std::endl;
+      std::cout << "Starting Lagrangian SGH code" << std::endl;
        // check to see of a mesh was supplied when running the code
       if (argc == 1) {
         std::cout << "\n\n**********************************\n\n";
@@ -187,8 +187,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         return;
       }
     }
-
-    printf("Starting Lagrangian SGH code\n");
 
     //initialize Trilinos communicator class
     comm = Tpetra::getDefaultComm();
@@ -202,7 +200,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //error handle for file input name
     //if(argc < 2)
     //yaml file reader for simulation parameters
-    std::string filename = std::string(argv[2]);
+    std::string filename = std::string(argv[1]);
     if(filename.find(".yaml") != std::string::npos){
       std::string yaml_error;
       bool yaml_exit_flag = false;
@@ -220,17 +218,27 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
       //use map of set options to set member variables of the class
       simparam->apply_settings();
-    }
 
-    // ---- Read intial mesh, refine, and build connectivity ---- //
-    if(simparam->tecplot_input)
-      read_mesh_tecplot(argv[1]);
-    else if(simparam->vtk_input)
-      read_mesh_vtk(argv[1]);
-    else if(simparam->ansys_dat_input)
-      read_mesh_ansys_dat(argv[1]);
-    else
-      read_mesh_ensight(argv[1]);
+      // ---- Read intial mesh, refine, and build connectivity ---- //
+      if(simparam->mesh_file_format=="tecplot")
+        read_mesh_tecplot(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="vtk")
+        read_mesh_vtk(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ansys_dat")
+        read_mesh_ansys_dat(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ensight")
+        read_mesh_ensight(simparam->mesh_file_name.c_str());
+    }
+    else{
+      if(simparam->tecplot_input)
+        read_mesh_tecplot(argv[1]);
+      else if(simparam->vtk_input)
+        read_mesh_vtk(argv[1]);
+      else if(simparam->ansys_dat_input)
+        read_mesh_ansys_dat(argv[1]);
+      else
+        read_mesh_ensight(argv[1]);
+    }
 
 
     //debug
@@ -584,7 +592,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read ANSYS dat format mesh file
 ------------------------------------------------------------------------- */
-void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
+void Explicit_Solver_SGH::read_mesh_ansys_dat(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;

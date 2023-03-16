@@ -111,7 +111,7 @@ Solver::~Solver(){}
    Read Ensight format mesh file
 ------------------------------------------------------------------------- */
 
-void Solver::read_mesh_ensight(char *MESH){
+void Solver::read_mesh_ensight(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -706,7 +706,7 @@ void Solver::read_mesh_ensight(char *MESH){
    Read VTK format mesh file
 ------------------------------------------------------------------------- */
 
-void Solver::read_mesh_vtk(char *MESH){
+void Solver::read_mesh_vtk(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -1207,7 +1207,7 @@ void Solver::read_mesh_vtk(char *MESH){
 /* ----------------------------------------------------------------------
    Read Tecplot format mesh file
 ------------------------------------------------------------------------- */
-void Solver::read_mesh_tecplot(char *MESH){
+void Solver::read_mesh_tecplot(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;

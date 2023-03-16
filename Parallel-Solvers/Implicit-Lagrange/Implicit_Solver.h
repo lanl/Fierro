@@ -76,7 +76,7 @@ public:
 
   //void read_mesh_tecplot(char *MESH);
 
-  void read_mesh_ansys_dat(char *MESH);
+  void read_mesh_ansys_dat(const char *MESH);
 
   //void repartition_nodes();
 
