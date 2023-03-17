@@ -850,7 +850,7 @@ void Simulation_Parameters_SGH::apply_settings(){
                     if(set_options.find(mat_fill_name+":radius2")!=set_options.end()){
                         mat_fill.host(ifill).radius2 = std::stod(set_options[mat_fill_name+":radius2"]);
                         mat_fill.host(ifill).sie = (963.652344*
-                               pow((1.2/30.0),3))/pow((mat_fill(ifill).radius2),3);
+                               pow((1.2/30.0),3))/pow((mat_fill.host(ifill).radius2),3);
                     }
                 }
             }
