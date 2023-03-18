@@ -948,6 +948,23 @@ void Simulation_Parameters_SGH::apply_settings(){
     material.update_device();
     state_vars.update_device();
 
+    //set eos pointer
+    // --- set of material specifications ---
+    for(int imat = 0; imat < num_materials; imat++){
+        //readin material data
+        index = std::to_string(imat+1);
+        material_name = material_base + index;
+
+        //eos model
+        if(set_options.find(material_name+":eos_model")!=set_options.end()){
+            if(set_options[material_name+":eos_model"]=="ideal_gas"){
+                RUN_CLASS({
+                    material(imat).eos_model = ideal_gas;
+                });
+            }
+        }
+    }
+
 }
 
 void Simulation_Parameters_SGH::FEA_module_setup(){

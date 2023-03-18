@@ -73,7 +73,6 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
       TaylorAnvil = 10,
   };
 
-  
   void select_problem(setup problem_selector);
     
   // end of initial conditions enum

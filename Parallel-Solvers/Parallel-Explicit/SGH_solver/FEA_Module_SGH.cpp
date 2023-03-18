@@ -1497,8 +1497,6 @@ void FEA_Module_SGH::setup(){
   
     } // end for loop over fills
     
-   
-    
     // apply BC's to velocity
     FEA_Module_SGH::boundary_velocity(mesh, boundary, node_vel);
     
