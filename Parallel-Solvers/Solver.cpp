@@ -2046,6 +2046,7 @@ void Solver::init_maps(){
 
   //create distributed multivector of the local node data and all (local + ghost) node storage
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  ghost_node_coords_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
   
   //debug print
   //std::ostream &out = std::cout;
@@ -2323,6 +2324,21 @@ void Solver::Get_Boundary_Patches(){
   */
   //std::fflush(stdout);
   
+}
+
+/* ----------------------------------------------------------------------
+  Communicate updated nodal coordinates to ghost nodes
+------------------------------------------------------------------------- */
+
+void Solver::comm_coordinates(){
+
+  //create import object using local node indices map and ghost indices map
+  Tpetra::Import<LO, GO> importer(map, ghost_node_map);
+  
+  //comms to get ghosts
+  ghost_node_coords_distributed->doImport(*node_coords_distributed, importer, Tpetra::INSERT);
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_coords_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 }
 
 /* ----------------------------------------------------------------------

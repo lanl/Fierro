@@ -505,6 +505,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> all_node_velocities_distributed;
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
   std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
+  std::vector<Teuchos::RCP<MV>> forward_solve_coordinate_data;
   std::vector<Teuchos::RCP<MV>> adjoint_vector_data;
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;

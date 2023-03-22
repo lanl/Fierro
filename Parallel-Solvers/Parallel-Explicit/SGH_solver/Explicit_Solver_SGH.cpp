@@ -519,27 +519,18 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       // ---------------------------------------------------------------------
     sgh_module->setup();
 
+    //set initial saved velocities
+    initial_node_velocities_distributed->assign(*node_velocities_distributed);
     
     if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
       //design_node_densities_distributed->randomize(1,1);
       setup_optimization_problem();
       //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
     }
-        
-      // intialize time, time_step, and cycles
-      //time_value = 0.0;
-      //dt = dt_start;
-      //graphics_id = 0;
-      //graphics_times(0) = 0.0;
-      //graphics_time = graphics_dt_ival;  // the times for writing graphics dump
-        
-      //set initial saved velocities
-    initial_node_velocities_distributed->assign(*node_velocities_distributed);
-        
-
-      // ---------------------------------------------------------------------
-      //   Calculate the SGH solution
-      // ---------------------------------------------------------------------
+    
+    // ---------------------------------------------------------------------
+    //  Calculate the SGH solution
+    // ---------------------------------------------------------------------
         
     sgh_module->sgh_solve();
          
