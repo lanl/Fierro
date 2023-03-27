@@ -218,6 +218,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
       //use map of set options to set member variables of the class
       simparam->apply_settings();
+      //assign base class data such as map of settings to TO simparam class
+      simparam_dynamic_opt->Simulation_Parameters::operator=(*simparam);
+      simparam_dynamic_opt->apply_settings();
 
       // ---- Read intial mesh, refine, and build connectivity ---- //
       if(simparam->mesh_file_format=="tecplot")

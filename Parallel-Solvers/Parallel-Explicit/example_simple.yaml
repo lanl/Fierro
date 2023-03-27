@@ -7,7 +7,7 @@ solver_options:
     test_problem: Sedov3D
     num_dims: 3
     mesh_file_format: ensight
-    mesh_file_name: mesh_Sedov_32.geo
+    mesh_file_name: mesh_Sedov_8.geo
     time_variables:
         time_final: 1.0
         dt_min: 1.e-8
@@ -54,7 +54,7 @@ region_options:
         volume: sphere
         mat_id: 0
         radius1: 0.0
-        radius2: 0.0375
+        radius2: 0.15
         den: 1.0
             
         velocity: cartesian
@@ -101,5 +101,12 @@ boundary_condition_options:
         value: 1.2
         condition_type: reflected
 
-    
+optimization_options:
+    optimization_process: topology_optimization
+    optimization_objective: minimize_kinetic_energy
+    num_optimization_constraint: 1
+    constraint_1:
+        type: mass_constraint
+        relation: equality
+        value: 0.15
     

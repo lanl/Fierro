@@ -53,16 +53,7 @@ Simulation_Parameters_Dynamic_Optimization::Simulation_Parameters_Dynamic_Optimi
   optimization_output_freq = 20;
   penalty_power = 3;
   nTO_modules = 0;
-}
-
-Simulation_Parameters_Dynamic_Optimization::~Simulation_Parameters_Dynamic_Optimization(){
-}
-
-void Simulation_Parameters_Dynamic_Optimization::input(){
-  Simulation_Parameters::input();
-  topology_optimization_on = false;
-  //Simulation_Parameters::input();
-  //initial buffer size for TO module list storage
+  
   int buffer_size = 10;
   TO_Module_List.resize(buffer_size);
   TO_Function_Type.resize(buffer_size);
@@ -70,6 +61,16 @@ void Simulation_Parameters_Dynamic_Optimization::input(){
   Multi_Objective_Weights.resize(buffer_size);
   Function_Arguments.resize(buffer_size);
   TO_Module_My_FEA_Module.resize(buffer_size);
+}
+
+Simulation_Parameters_Dynamic_Optimization::~Simulation_Parameters_Dynamic_Optimization(){
+}
+
+void Simulation_Parameters_Dynamic_Optimization::input(){
+  Simulation_Parameters::input();
+  //topology_optimization_on = true;
+  //Simulation_Parameters::input();
+  //initial buffer size for TO module list storage
   //use pushback to add arguments for each TO module
   
   //TO objectives and constraints
@@ -123,17 +124,6 @@ void Simulation_Parameters_Dynamic_Optimization::input(){
   nTO_modules++;
   */
 
-  //example for later
-  if(nTO_modules==buffer_size){
-    buffer_size += 10;
-    TO_Module_List.resize(buffer_size);
-    TO_Function_Type.resize(buffer_size);
-    Multi_Objective_Modules.resize(buffer_size);
-    Multi_Objective_Weights.resize(buffer_size);
-    Function_Arguments.resize(buffer_size);
-    TO_Module_My_FEA_Module.resize(buffer_size);
-  }
-
   //simulation spatial dimension
   num_dim = 3;
 
@@ -155,6 +145,86 @@ void Simulation_Parameters_Dynamic_Optimization::input(){
 
 }
 
+
+//==============================================================================
+//    Communicate user settings from YAML file and apply to class members
+//==============================================================================
+
+void Simulation_Parameters_Dynamic_Optimization::apply_settings(){
+
+    //print user settings for this module
+    //for(auto temp_it = set_options.begin(); temp_it != set_options.end(); temp_it++){
+        //print current option
+        //std::cout << "User option on rank: " << myrank << " " << temp_it->first << "=" << temp_it->second << std::endl;
+
+    //}
+
+    if(set_options.find("optimization_options:optimization_process")!=set_options.end()){
+       if(set_options["optimization_options:optimization_process"]=="topology_optimization")
+         topology_optimization_on = true;
+       if(set_options["optimization_options:optimization_process"]=="shape_optimization")
+         shape_optimization_on = true;
+    }
+    nTO_modules = 0;
+    if(set_options.find("optimization_options:optimization_objective")!=set_options.end()){
+       //cycle_stop = std::stoi(set_options["solver_options:time_variables:cycle_stop"]);
+       if(set_options["optimization_options:optimization_objective"]=="minimize_kinetic_energy"){
+        TO_Module_List[0] = "Kinetic_Energy_Minimize";
+        TO_Function_Type[0] = OBJECTIVE;
+        nTO_modules++;
+       }
+    }
+    
+    int num_constraints;
+    if(set_options.find("optimization_options:num_optimization_constraint")!=set_options.end()){
+       num_constraints = std::stoi(set_options["optimization_options:num_optimization_constraint"]);
+    }
+
+    //allocate constraint modules requested by the user
+    std::string constraint_base = "optimization_options:constraint_";
+    std::string index;
+    std::string constraint_name;
+    double constraint_value;
+    int buffer_size = TO_Module_List.size();
+    // --- set of material specifications ---
+    for(int icon = 0; icon < num_constraints; icon++){
+        //readin material data
+        index = std::to_string(icon+1);
+        constraint_name = constraint_base + index;
+
+        //expand storage if needed
+        if(nTO_modules==buffer_size){
+          buffer_size += 10;
+          TO_Module_List.resize(buffer_size);
+          TO_Function_Type.resize(buffer_size);
+          Multi_Objective_Modules.resize(buffer_size);
+          Multi_Objective_Weights.resize(buffer_size);
+          Function_Arguments.resize(buffer_size);
+          TO_Module_My_FEA_Module.resize(buffer_size);
+        }
+
+        //constraint request
+        if(set_options.find(constraint_name+":type")!=set_options.end()){
+            if(set_options[constraint_name+":type"]=="mass_constraint"){
+              TO_Module_List[nTO_modules] = "Mass_Constraint";
+            }
+        }
+        if(set_options.find(constraint_name+":relation")!=set_options.end()){
+            if(set_options[constraint_name+":relation"]=="equality"){
+              TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
+            }
+        }
+        if(set_options.find(constraint_name+":value")!=set_options.end()){
+            constraint_value = std::stod(set_options[constraint_name+":value"]);
+            Function_Arguments[nTO_modules].push_back(constraint_value); 
+        }
+        nTO_modules++;
+    }
+}
+
+//==============================================================================
+//    Setup requests for FEA modules needed by requested optimization modules
+//==============================================================================
 
 void Simulation_Parameters_Dynamic_Optimization::FEA_module_setup(){
   

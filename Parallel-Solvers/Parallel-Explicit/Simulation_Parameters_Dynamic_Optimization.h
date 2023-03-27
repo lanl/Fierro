@@ -51,6 +51,7 @@ class Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
   Simulation_Parameters_Dynamic_Optimization(Solver *solver_pointer);
   virtual ~Simulation_Parameters_Dynamic_Optimization();
   virtual void input();
+  virtual void apply_settings();
   virtual void FEA_module_setup();
   //==============================================================================
   //   Mesh Variables
