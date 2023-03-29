@@ -114,7 +114,7 @@ void solver_setup(int argc, char *argv[]){
         //invoke optional finalize function
         if(solver->finalize_flag) solver->solver_finalize();
       }
-
+    delete simparam;
   }
   else{
     solver = new Explicit_Solver_SGH();
@@ -136,6 +136,5 @@ void solver_setup(int argc, char *argv[]){
   //solver = new Static_Solver_Parallel();
   //Static_Solver_Parallel solver;
   //delete solver;
-  delete simparam;
   delete solver;
 }
