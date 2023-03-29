@@ -106,7 +106,7 @@ optimization_options:
     optimization_objective: minimize_kinetic_energy
     num_optimization_constraint: 1
     constraint_1:
-        type: mass_constraint
+        type: mass
         relation: equality
         value: 0.15
     

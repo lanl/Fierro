@@ -185,14 +185,44 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //error handle for file input name
     //if(argc < 2)
+    std::string filename = std::string(argv[1]);
+    if(filename.find(".yaml") != std::string::npos){
+      std::string yaml_error;
+      bool yaml_exit_flag = false;
+    
+      //check for user error in providing yaml options (flags unsupported options)
+      //yaml_error = simparam->yaml_input(filename);
+      if(yaml_error!="success"){
+        std::cout << yaml_error << std::endl;
+        yaml_exit_flag = true;
+      } 
+    
+      if(yaml_exit_flag){
+        //exit_solver(0);
+      }
 
-    // ---- Read intial mesh, refine, and build connectivity ---- //
-    if(simparam->tecplot_input)
-      read_mesh_tecplot(argv[1]);
-    else if(simparam->ansys_dat_input)
-      read_mesh_ansys_dat(argv[1]);
-    else
-      read_mesh_ensight(argv[1]);
+      //use map of set options to set member variables of the class
+      simparam->apply_settings();
+      //assign base class data such as map of settings to TO simparam class
+      simparam_TO->Simulation_Parameters::operator=(*simparam);
+      simparam_TO->apply_settings();
+
+      // ---- Read intial mesh, refine, and build connectivity ---- //
+      if(simparam->mesh_file_format=="tecplot")
+        read_mesh_tecplot(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ansys_dat")
+        read_mesh_ansys_dat(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ensight")
+        read_mesh_ensight(simparam->mesh_file_name.c_str());
+    }
+    else{
+      if(simparam->tecplot_input)
+        read_mesh_tecplot(argv[1]);
+      else if(simparam->ansys_dat_input)
+        read_mesh_ansys_dat(argv[1]);
+      else
+        read_mesh_ensight(argv[1]);
+    }
 
     //debug
     //return;

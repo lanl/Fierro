@@ -94,7 +94,7 @@ void solver_setup(int argc, char *argv[]){
 
       //use map of set options to set member variables of the class
       simparam->apply_settings();
-      if(simparam->solver_type=="SGH"){
+      if(simparam->solver_type=="Implicit"){
         solver = new Implicit_Solver();
         //assign parameters read in by the base simulation parameters class to derived class in solver;
         //this includes the map of all yaml options read in.

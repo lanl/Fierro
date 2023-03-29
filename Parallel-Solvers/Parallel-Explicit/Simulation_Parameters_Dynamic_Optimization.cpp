@@ -205,7 +205,7 @@ void Simulation_Parameters_Dynamic_Optimization::apply_settings(){
 
         //constraint request
         if(set_options.find(constraint_name+":type")!=set_options.end()){
-            if(set_options[constraint_name+":type"]=="mass_constraint"){
+            if(set_options[constraint_name+":type"]=="mass"){
               TO_Module_List[nTO_modules] = "Mass_Constraint";
             }
         }
