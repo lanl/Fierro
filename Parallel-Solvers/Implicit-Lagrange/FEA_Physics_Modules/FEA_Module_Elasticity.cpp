@@ -117,7 +117,10 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer, const int m
   simparam = new Simulation_Parameters_Elasticity();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
-  
+
+  //acquire base class data from existing simparam in solver (gets yaml options etc.)
+  simparam->Simulation_Parameters::operator=(*(Implicit_Solver_Pointer_->simparam));
+
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
   

@@ -11,30 +11,39 @@ solver_options:
 output_options:
   graphics_step_frequency: 100;
     
-boundary_condition_options:
+fea_module_1:
+    type: elasticity
     #number includes BCS and Loading Conditions
-    num_bcs: 4
     # Dirichlet conditions
+    num_bcs: 2
     boundary_condition_1:
         surface: z_plane
         plane_position: 0.0
         condition_type: fixed_displacement
         displacement_value: 0.0
-    boundary_condition_2:
-        surface: z_plane
-        plane_position: 0.0
-        condition_type: fixed_temperature
-        temperature_value: 0.0
             
     # Loading/Neumann Conditions
-    boundary_condition_3:
+    boundary_condition_2:
         surface: z_plane
         plane_position: 100.0
         condition_type: surface_traction
         component_x: 500
         component_y: 0
         component_z: 0
-    boundary_condition_4:
+
+fea_module_2:
+    type: steady_heat
+    #number includes BCS and Loading Conditions
+    num_bcs: 2
+    # Dirichlet conditions
+    boundary_condition_1:
+        surface: z_plane
+        plane_position: 0.0
+        condition_type: fixed_temperature
+        temperature_value: 0.0
+
+    # Loading/Neumann Conditions
+    boundary_condition_2:
         surface: z_plane
         plane_position: 100.0
         condition_type: surface_heat_flux

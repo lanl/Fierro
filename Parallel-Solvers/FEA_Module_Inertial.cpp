@@ -87,6 +87,9 @@ FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fe
   simparam = new Simulation_Parameters_Inertial();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
+
+  //acquire base class data from existing simparam in solver (gets yaml options etc.)
+  simparam->Simulation_Parameters::operator=(*(Solver_Pointer->simparam));
   
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;

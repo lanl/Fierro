@@ -130,6 +130,9 @@ FEA_Module_Thermo_Elasticity::FEA_Module_Thermo_Elasticity(Solver *Solver_Pointe
   simparam = new Simulation_Parameters_Thermo_Elasticity();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
+
+  //acquire base class data from existing simparam in solver (gets yaml options etc.)
+  simparam->Simulation_Parameters::operator=(*(Implicit_Solver_Pointer_->simparam));
   
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;

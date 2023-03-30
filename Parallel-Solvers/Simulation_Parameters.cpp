@@ -362,3 +362,48 @@ void Simulation_Parameters::FEA_module_setup(){
     fea_module_must_read[imodule] = false;
   }
 }
+
+//==============================================================================
+//    Setup FEA Modules for the simulation from requested yaml option
+//==============================================================================
+
+void Simulation_Parameters::yaml_FEA_module_setup(){
+  
+  //initial buffer size for FEA module list storage
+  int buffer_size = 10 + nfea_modules;
+  FEA_Module_List.resize(buffer_size);
+  fea_module_must_read.resize(buffer_size);
+  int start_module = nfea_modules;
+
+  std::string fea_module_base = "fea_module_";
+  std::string index;
+  std::string fea_module_name;
+  
+  index = std::to_string(nfea_modules+1);
+  fea_module_name = fea_module_base + index;
+
+    // --- set of material specifications ---
+  while(set_options.find(fea_module_name+":type")!=set_options.end()){
+    
+    if(set_options[fea_module_name+":type"]=="elasticity")
+        FEA_Module_List[nfea_modules] = "Elasticity";
+    if(set_options[fea_module_name+":type"]=="steady_heat")
+        FEA_Module_List[nfea_modules] = "Heat_Conduction";
+    
+    nfea_modules++;
+
+    if(nfea_modules==buffer_size){
+      buffer_size += 10;
+      FEA_Module_List.resize(buffer_size);
+      fea_module_must_read.resize(buffer_size);
+    }
+
+    index = std::to_string(nfea_modules+1);
+    fea_module_name = fea_module_base + index;
+  }
+
+  //initialize
+  for(int imodule = start_module; imodule < nfea_modules; imodule++){
+    fea_module_must_read[imodule] = false;
+  }
+}

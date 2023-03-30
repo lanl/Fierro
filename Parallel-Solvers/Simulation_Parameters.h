@@ -55,6 +55,7 @@ class Simulation_Parameters
   virtual void apply_settings();
   virtual std::string yaml_input(std::string filename); //reads in user defined parameters
   virtual void FEA_module_setup();
+  virtual void yaml_FEA_module_setup();
 
   //==============================================================================
   //   Mesh Variables

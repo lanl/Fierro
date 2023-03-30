@@ -116,6 +116,9 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Solver *Solver_Pointer, c
   simparam = new Simulation_Parameters_Thermal();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
+
+  //acquire base class data from existing simparam in solver (gets yaml options etc.)
+  simparam->Simulation_Parameters::operator=(*(Implicit_Solver_Pointer_->simparam));
   
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
