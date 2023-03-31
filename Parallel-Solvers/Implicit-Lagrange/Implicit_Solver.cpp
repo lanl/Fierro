@@ -120,9 +120,6 @@ Implicit_Solver::Implicit_Solver() : Solver(){
   //create parameter objects
   simparam = new Simulation_Parameters();
   simparam_TO = new Simulation_Parameters_Topology_Optimization(this);
-  // ---- Read input file, define state and boundary conditions ---- //
-  simparam->input();
-  simparam_TO->input();
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
@@ -189,7 +186,8 @@ void Implicit_Solver::run(int argc, char *argv[]){
     if(filename.find(".yaml") != std::string::npos){
       std::string yaml_error;
       bool yaml_exit_flag = false;
-    
+      // default conditions //
+      simparam->input();
       //check for user error in providing yaml options (flags unsupported options)
       //yaml_error = simparam->yaml_input(filename);
       if(yaml_error!="success"){
@@ -203,8 +201,11 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
       //use map of set options to set member variables of the class
       simparam->apply_settings();
+      //construct list of FEA modules requested
+      simparam->yaml_FEA_module_setup();
       //assign base class data such as map of settings to TO simparam class
       simparam_TO->Simulation_Parameters::operator=(*simparam);
+      simparam_TO->input();
       simparam_TO->apply_settings();
 
       // ---- Read intial mesh, refine, and build connectivity ---- //
@@ -215,10 +216,12 @@ void Implicit_Solver::run(int argc, char *argv[]){
       else if(simparam->mesh_file_format=="ensight")
         read_mesh_ensight(simparam->mesh_file_name.c_str());
 
-      //construct list of FEA modules requested
-      simparam_TO->yaml_FEA_module_setup();
+      simparam_TO->FEA_module_setup();
     }
     else{
+      // default conditions //
+      simparam->input();
+      simparam_TO->input();
       if(simparam->tecplot_input)
         read_mesh_tecplot(argv[1]);
       else if(simparam->ansys_dat_input)

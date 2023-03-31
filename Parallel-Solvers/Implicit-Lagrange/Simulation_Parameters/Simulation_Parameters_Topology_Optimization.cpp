@@ -62,7 +62,7 @@ Simulation_Parameters_Topology_Optimization::~Simulation_Parameters_Topology_Opt
 
 void Simulation_Parameters_Topology_Optimization::input(){
   Simulation_Parameters::input();
-  //topology_optimization_on = true;
+  topology_optimization_on = true;
   //Simulation_Parameters::input();
   //initial buffer size for TO module list storage
   int buffer_size = 10;
@@ -91,12 +91,20 @@ void Simulation_Parameters_Topology_Optimization::input(){
   Multi_Objective_Modules[0] = nTO_modules;
   Multi_Objective_Weights[0] = 0.25;
   nTO_modules++;
+
+  TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+  TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
+  Multi_Objective_Modules[1] = nTO_modules;
+  Multi_Objective_Weights[1] = 0.75;
+  nTO_modules++;
+
+  /*
   TO_Module_List[nTO_modules] = "Thermo_Elastic_Strain_Energy_Minimize";
   TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
   Multi_Objective_Modules[1] = nTO_modules;
   Multi_Objective_Weights[1] = 0.75;
   nTO_modules++;
-  
+  */
 
   //Constraints
   /*
@@ -157,6 +165,16 @@ void Simulation_Parameters_Topology_Optimization::input(){
 
 }
 
+//==============================================================================
+//    Communicate user settings from YAML file and apply to class members
+//==============================================================================
+
+void Simulation_Parameters_Topology_Optimization::apply_settings(){
+}
+
+//==============================================================================
+//    Detect pairings of TO Modules with FEA Modules
+//==============================================================================
 
 void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
   
@@ -180,9 +198,9 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         }
       }
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Elasticity";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_strain_energy)"
+                              << "REQUIRES FEA MODULE (elasticity)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Thermo_Elastic_Strain_Energy_Minimize"){
@@ -194,7 +212,9 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         }
       }
       if(!module_found){
-        FEA_Module_List[nfea_modules++] = "Heat_Conduction";
+          *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_strain_energy)"
+                              << "REQUIRES FEA MODULE (steady_heat)" << std::endl;
+          solver_pointer_->exit_solver(0);
       }
       module_found = false;
       //check if module type was already allocated
@@ -205,15 +225,9 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         }
       }
       if(!module_found){
-        //resize if needed
-        if(nfea_modules==buffer_size){
-          buffer_size += 10;
-          FEA_Module_List.resize(buffer_size);
-          fea_module_must_read.resize(buffer_size);
-        }
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Thermo_Elasticity";
-        module_found = true;
+          *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_strain_energy)"
+                              << "REQUIRES FEA MODULE (thermo_elasticity)" << std::endl;
+          solver_pointer_->exit_solver(0);
       }
 
     }
@@ -223,12 +237,13 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         if(FEA_Module_List[ifea] == "Heat_Conduction"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
+          
         }
       }
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Heat_Conduction";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_mean_temperature)"
+                              << "REQUIRES FEA MODULE (steady_heat)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Mass_Constraint"){
@@ -237,12 +252,13 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         if(FEA_Module_List[ifea] == "Inertial"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
+          
         }
       }
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Inertial";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (mass)"
+                              << "REQUIRES FEA MODULE (inertial)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Moment_of_Inertia_Constraint"){
@@ -253,10 +269,11 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
           TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
+      
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Inertial";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (mass)"
+                              << "REQUIRES FEA MODULE (inertial)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Strain_Energy_Constraint"){
@@ -267,10 +284,11 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
           TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
+      
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Elasticity";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_strain_energy)"
+                              << "REQUIRES FEA MODULE (elasticity)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Constraint"){
@@ -281,10 +299,11 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
           TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
+      
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Heat_Conduction";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_mean_temperature)"
+                              << "REQUIRES FEA MODULE (steady_heat)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Multi_Objective"){

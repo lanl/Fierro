@@ -52,6 +52,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   virtual ~Simulation_Parameters_Topology_Optimization();
   virtual void input();
   virtual void FEA_module_setup();
+  virtual void apply_settings();
   //==============================================================================
   //   Mesh Variables
   //==============================================================================

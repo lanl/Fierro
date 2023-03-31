@@ -402,6 +402,15 @@ void Simulation_Parameters::yaml_FEA_module_setup(){
     fea_module_name = fea_module_base + index;
   }
 
+  if(nfea_modules==buffer_size){
+      buffer_size += 10;
+      FEA_Module_List.resize(buffer_size);
+      fea_module_must_read.resize(buffer_size);
+  }
+
+  //allocate Inertial module (needed generally so far)
+  FEA_Module_List[nfea_modules++] = "Inertial";
+
   //initialize
   for(int imodule = start_module; imodule < nfea_modules; imodule++){
     fea_module_must_read[imodule] = false;
