@@ -13,9 +13,7 @@ output_options:
     
 fea_module_1:
     type: elasticity
-    #number includes BCS and Loading Conditions
     # Dirichlet conditions
-    num_bcs: 2
     boundary_condition_1:
         surface: z_plane
         plane_position: 0.0
@@ -23,7 +21,7 @@ fea_module_1:
         displacement_value: 0.0
             
     # Loading/Neumann Conditions
-    boundary_condition_2:
+    loading_condition_1:
         surface: z_plane
         plane_position: 100.0
         condition_type: surface_traction
@@ -33,8 +31,6 @@ fea_module_1:
 
 fea_module_2:
     type: steady_heat
-    #number includes BCS and Loading Conditions
-    num_bcs: 2
     # Dirichlet conditions
     boundary_condition_1:
         surface: z_plane
@@ -43,7 +39,7 @@ fea_module_2:
         temperature_value: 0.0
 
     # Loading/Neumann Conditions
-    boundary_condition_2:
+    loading_condition_1:
         surface: z_plane
         plane_position: 100.0
         condition_type: surface_heat_flux

@@ -766,10 +766,65 @@ void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
 
 void FEA_Module_Elasticity::generate_bcs(){
   int num_dim = simparam->num_dim;
+  int num_bcs;
   int bc_tag;
+  double temp_disp;
   real_t value;
   real_t fix_limits[4];
 
+  //find user bc settings
+  std::string fea_module_base = "fea_module_";
+  std::string bc_base = ":boundary_condition_";
+  std::string index, bc_index;
+  std::string fea_module_name, bc_name;
+  
+  index = std::to_string(my_fea_module_index_+1);
+  bc_index = std::to_string(num_surface_disp_sets+1);
+  fea_module_name = fea_module_base + index;
+  bc_name = fea_module_name + bc_base + bc_index;
+  
+  while(simparam->set_options.find(bc_name+":condition_type")!=simparam->set_options.end()){
+    
+    if(simparam->set_options[bc_name+":surface"]=="x_plane"){
+      bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="y_plane"){
+      bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="z_plane"){
+      bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    value = std::stod(simparam->set_options[bc_name+":plane_position"]) * simparam->unit_scaling;
+    fix_limits[0] = fix_limits[2] = 4;
+    fix_limits[1] = fix_limits[3] = 6;
+    if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+    if(num_surface_disp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_disp_sets+1);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    if(simparam->set_options[bc_name+":condition_type"]=="fixed_displacement"){
+      Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
+    }
+    if(simparam->set_options.find(bc_name+":displacement_value")!=simparam->set_options.end()){
+      temp_disp = std::stod(simparam->set_options[bc_name+":displacement_value"]);
+      Boundary_Surface_Displacements(num_surface_disp_sets,0) = temp_disp;
+      Boundary_Surface_Displacements(num_surface_disp_sets,1) = temp_disp;
+      Boundary_Surface_Displacements(num_surface_disp_sets,2) = temp_disp;
+    }
+    if(Boundary_Surface_Displacements(num_surface_disp_sets,0)||Boundary_Surface_Displacements(num_surface_disp_sets,1)||Boundary_Surface_Displacements(num_surface_disp_sets,2)) nonzero_bc_flag = true;
+    *fos << "tagging " << simparam->set_options[bc_name+":surface"] << " at " << simparam->set_options[bc_name+":plane_position"] <<  std::endl;
+    
+    *fos << "tagged a set " << std::endl;
+    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    *fos << std::endl;
+    num_boundary_conditions++;
+    num_surface_disp_sets++;
+    
+    bc_index = std::to_string(num_surface_disp_sets+1);
+    bc_name = fea_module_name + bc_base + bc_index;
+  }
+ 
+  
+  /*
   // tag the z=0 plane,  (Direction, value, bdy_set)
   *fos << "tagging z = 0 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
@@ -791,7 +846,7 @@ void FEA_Module_Elasticity::generate_bcs(){
   *fos << std::endl;
   num_boundary_conditions++;
   num_surface_disp_sets++;
- /*
+ 
   // tag the y=10 plane,  (Direction, value, bdy_set)
   std::cout << "tagging y = 10 " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
@@ -1658,7 +1713,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   are assumed to be additive*/
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
     if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION&&Boundary_Condition_Type_List(iboundary)!=SURFACE_PRESSURE_CONDITION) continue;
-    std::cout << " NUMBER OF BOUNDARY PATCHES "<< NBoundary_Condition_Patches(iboundary) << std::endl;
+    //std::cout << " NUMBER OF BOUNDARY PATCHES "<< NBoundary_Condition_Patches(iboundary) << std::endl;
     //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
