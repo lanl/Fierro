@@ -170,6 +170,115 @@ void Simulation_Parameters_Topology_Optimization::input(){
 //==============================================================================
 
 void Simulation_Parameters_Topology_Optimization::apply_settings(){
+
+  if(set_options.find("optimization_options:optimization_process")!=set_options.end()){
+       if(set_options["optimization_options:optimization_process"]=="topology_optimization")
+         topology_optimization_on = true;
+       if(set_options["optimization_options:optimization_process"]=="shape_optimization")
+         shape_optimization_on = true;
+  }
+  nTO_modules = 0;
+    if(set_options.find("optimization_options:optimization_objective")!=set_options.end()){
+       //cycle_stop = std::stoi(set_options["solver_options:time_variables:cycle_stop"]);
+      if(set_options["optimization_options:optimization_objective"]=="minimize_compliance"){
+        TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+        TO_Function_Type[nTO_modules] = OBJECTIVE;
+        nTO_modules++;
+      }
+
+      if(set_options["optimization_options:optimization_objective"]=="minimize_thermal_resistance"){
+        TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
+        TO_Function_Type[nTO_modules] = OBJECTIVE;
+        nTO_modules++;
+      }
+
+      if(set_options["optimization_options:optimization_objective"]=="multi_objective"){
+        TO_Module_List[nTO_modules] = "Multi_Objective";
+        TO_Function_Type[nTO_modules] = OBJECTIVE;
+        nTO_modules++;
+
+        //read in multi-objective function definition and terms
+      }
+    }
+    
+    int num_constraints;
+    if(set_options.find("optimization_options:num_optimization_constraint")!=set_options.end()){
+       num_constraints = std::stoi(set_options["optimization_options:num_optimization_constraint"]);
+    }
+
+    //allocate constraint modules requested by the user
+    std::string constraint_base = "optimization_options:constraint_";
+    std::string index;
+    std::string constraint_name;
+    double constraint_value;
+    int buffer_size = TO_Module_List.size();
+    // --- set of material specifications ---
+    for(int icon = 0; icon < num_constraints; icon++){
+        //readin material data
+        index = std::to_string(icon+1);
+        constraint_name = constraint_base + index;
+
+        //expand storage if needed
+        if(nTO_modules==buffer_size){
+          buffer_size += 10;
+          TO_Module_List.resize(buffer_size);
+          TO_Function_Type.resize(buffer_size);
+          Multi_Objective_Modules.resize(buffer_size);
+          Multi_Objective_Weights.resize(buffer_size);
+          Function_Arguments.resize(buffer_size);
+          TO_Module_My_FEA_Module.resize(buffer_size);
+        }
+
+        //constraint request
+        //constraint type
+        if(set_options.find(constraint_name+":type")!=set_options.end()){
+            if(set_options[constraint_name+":type"]=="mass"){
+              TO_Module_List[nTO_modules] = "Mass_Constraint";
+            }
+        }
+        if(set_options.find(constraint_name+":type")!=set_options.end()){
+            if(set_options[constraint_name+":type"]=="moment_of_inertia"){
+              TO_Module_List[nTO_modules] = "Moment_of_Inertia_Constraint";
+            }
+        }
+
+        //equality or inequality
+        if(set_options.find(constraint_name+":relation")!=set_options.end()){
+            if(set_options[constraint_name+":relation"]=="equality"){
+              TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
+            }
+        }
+
+        //function arguments for constraint
+        if(set_options.find(constraint_name+":value")!=set_options.end()){
+            constraint_value = std::stod(set_options[constraint_name+":value"]);
+            Function_Arguments[nTO_modules].push_back(constraint_value); 
+        }
+
+        if(set_options[constraint_name+":type"]=="moment_of_inertia"){
+            if(set_options.find(constraint_name+":component")!=set_options.end()){
+              if(set_options[constraint_name+":component"]=="xx"){
+                Function_Arguments[nTO_modules].push_back(0);
+              }
+              if(set_options[constraint_name+":component"]=="yy"){
+                Function_Arguments[nTO_modules].push_back(1);
+              }
+              if(set_options[constraint_name+":component"]=="zz"){
+                Function_Arguments[nTO_modules].push_back(2);
+              }
+              if(set_options[constraint_name+":component"]=="xy"){
+                Function_Arguments[nTO_modules].push_back(3);
+              }
+              if(set_options[constraint_name+":component"]=="xz"){
+                Function_Arguments[nTO_modules].push_back(4);
+              }
+              if(set_options[constraint_name+":component"]=="yz"){
+                Function_Arguments[nTO_modules].push_back(5);
+              }
+            }
+        }
+        nTO_modules++;
+    }
 }
 
 //==============================================================================
