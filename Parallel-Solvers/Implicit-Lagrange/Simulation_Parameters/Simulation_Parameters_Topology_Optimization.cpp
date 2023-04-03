@@ -170,7 +170,8 @@ void Simulation_Parameters_Topology_Optimization::input(){
 //==============================================================================
 
 void Simulation_Parameters_Topology_Optimization::apply_settings(){
-
+  int buffer_size = TO_Module_List.size();
+  
   if(set_options.find("optimization_options:optimization_process")!=set_options.end()){
        if(set_options["optimization_options:optimization_process"]=="topology_optimization")
          topology_optimization_on = true;
@@ -192,7 +193,7 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
         nTO_modules++;
       }
 
-      if(set_options["optimization_options:optimization_objective"]=="multi_objective"){
+      if(set_options["optimization_options:optimization_objective"]=="multi-objective"){
         TO_Module_List[nTO_modules] = "Multi_Objective";
         TO_Function_Type[nTO_modules] = OBJECTIVE;
         nTO_modules++;
@@ -202,9 +203,9 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
         std::string optimization_module_base = "optimization_options:multi-objective_module_";
         std::string index;
         std::string optimization_module_name;
-        int imodule = 0;
+        nmulti_objective_modules = 0;
   
-        index = std::to_string(imodule+1);
+        index = std::to_string(nmulti_objective_modules+1);
         optimization_module_name = optimization_module_base + index;
 
         // --- set of user requested multi-objective terms---
@@ -216,14 +217,12 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
 
           if(set_options[optimization_module_name+":type"]=="minimize_thermal_resistance"){
             TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
-            
-            
           }
 
           if(set_options.find(optimization_module_name+":weight_coefficient")!=set_options.end()){
-            Multi_Objective_Weights[imodule] = std::stod(set_options[optimization_module_name+":weight_coefficient"]);
+            Multi_Objective_Weights[nmulti_objective_modules] = std::stod(set_options[optimization_module_name+":weight_coefficient"]);
           }
-          Multi_Objective_Modules[imodules] = nTO_modules;
+          Multi_Objective_Modules[nmulti_objective_modules] = nTO_modules;
           TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
           nTO_modules++;
           if(nTO_modules==buffer_size){
@@ -236,8 +235,8 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
             TO_Module_My_FEA_Module.resize(buffer_size);
           }
 
-          imodule++;
-          index = std::to_string(imodule+1);
+          nmulti_objective_modules++;
+          index = std::to_string(nmulti_objective_modules+1);
           optimization_module_name = optimization_module_base + index;
         }
       }
@@ -253,7 +252,7 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
     std::string index;
     std::string constraint_name;
     double constraint_value;
-    int buffer_size = TO_Module_List.size();
+
     // --- set of material specifications ---
     for(int icon = 0; icon < num_constraints; icon++){
         //readin material data
