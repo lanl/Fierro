@@ -36,7 +36,7 @@ fea_module_2:
         surface: z_plane
         plane_position: 0.0
         condition_type: fixed_temperature
-        temperature_value: 0.0
+        temperature_value: 293.0
 
     # Loading/Neumann Conditions
     loading_condition_1:

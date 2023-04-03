@@ -349,9 +349,58 @@ void FEA_Module_Heat_Conduction::grow_loading_condition_sets(int num_sets){
 void FEA_Module_Heat_Conduction::generate_bcs(){
   int num_dim = simparam->num_dim;
   int bc_tag;
-  real_t value;
+  real_t value, temp_temp;
   real_t fix_limits[4];
 
+  //find user bc settings
+  std::string fea_module_base = "fea_module_";
+  std::string bc_base = ":boundary_condition_";
+  std::string index, bc_index;
+  std::string fea_module_name, bc_name;
+  
+  index = std::to_string(my_fea_module_index_+1);
+  bc_index = std::to_string(num_surface_temp_sets+1);
+  fea_module_name = fea_module_base + index;
+  bc_name = fea_module_name + bc_base + bc_index;
+  
+  while(simparam->set_options.find(bc_name+":condition_type")!=simparam->set_options.end()){
+    
+    if(simparam->set_options[bc_name+":surface"]=="x_plane"){
+      bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="y_plane"){
+      bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="z_plane"){
+      bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    value = std::stod(simparam->set_options[bc_name+":plane_position"]) * simparam->unit_scaling;
+    fix_limits[0] = fix_limits[2] = 4;
+    fix_limits[1] = fix_limits[3] = 6;
+    if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+    if(num_surface_temp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_temp_sets+1);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    if(simparam->set_options[bc_name+":condition_type"]=="fixed_temperature"){
+      Boundary_Condition_Type_List(num_boundary_conditions) = TEMPERATURE_CONDITION;
+    }
+    if(simparam->set_options.find(bc_name+":temperature_value")!=simparam->set_options.end()){
+      Boundary_Surface_Temperatures(num_surface_temp_sets,0) = std::stod(simparam->set_options[bc_name+":temperature_value"]);
+    }
+    
+    if(Boundary_Surface_Temperatures(num_surface_temp_sets,0)) nonzero_bc_flag = true;
+    *fos << "tagging " << simparam->set_options[bc_name+":surface"] << " at " << simparam->set_options[bc_name+":plane_position"] <<  std::endl;
+    *fos << "tagged a set " << std::endl;
+    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    *fos << std::endl;
+    num_boundary_conditions++;
+    num_surface_temp_sets++;
+    
+    bc_index = std::to_string(num_surface_temp_sets+1);
+    bc_name = fea_module_name + bc_base + bc_index;
+  }
+  
+  /*
   // tag the z=0 plane,  (Direction, value, bdy_set)
   *fos << "tagging z = 0 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
@@ -372,6 +421,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   
   num_boundary_conditions++;
   num_surface_temp_sets++;
+  */
   //Tag nodes for Boundary conditions such as temperatures
   Temperature_Boundary_Conditions();
 } // end generate_bcs
@@ -382,11 +432,75 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
 
 void FEA_Module_Heat_Conduction::generate_applied_loads(){
   int num_dim = simparam->num_dim;
-  int bc_tag;
+  int bc_tag, dim1_other, dim2_other;
   real_t value;
   
   //Surface Fluxes Section
+  //find user flux settings
+  std::string fea_module_base = "fea_module_";
+  std::string bc_base = ":loading_condition_";
+  std::string index, bc_index;
+  std::string fea_module_name, bc_name;
   
+  index = std::to_string(my_fea_module_index_+1);
+  bc_index = std::to_string(num_surface_flux_sets+1);
+  fea_module_name = fea_module_base + index;
+  bc_name = fea_module_name + bc_base + bc_index;
+  
+  while(simparam->set_options.find(bc_name+":condition_type")!=simparam->set_options.end()){
+    
+    if(simparam->set_options[bc_name+":surface"]=="x_plane"){
+      bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="y_plane"){
+      bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="z_plane"){
+      bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    value = std::stod(simparam->set_options[bc_name+":plane_position"]) * simparam->unit_scaling;
+    if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+    if(num_surface_flux_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_flux_sets+1);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    if(simparam->set_options[bc_name+":condition_type"]=="surface_heat_flux"){
+      Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
+    }
+
+    if(simparam->set_options.find(bc_name+":specification")!=simparam->set_options.end()){
+      if(simparam->set_options[bc_name+":specification"]=="normal"){
+        if(bc_tag==0){
+          dim1_other = 1;
+          dim2_other = 2;
+        }
+        else if(bc_tag==1){
+          dim1_other = 0;
+          dim2_other = 2;
+        }
+        else if(bc_tag==2){
+          dim1_other = 0;
+          dim2_other = 1;
+        }
+        if(simparam->set_options.find(bc_name+":flux_value")!=simparam->set_options.end()){
+          Boundary_Surface_Heat_Flux(num_surface_flux_sets,bc_tag) = std::stod(simparam->set_options[bc_name+":flux_value"])/simparam->unit_scaling/simparam->unit_scaling;
+          Boundary_Surface_Heat_Flux(num_surface_flux_sets,dim1_other) = 0;
+          Boundary_Surface_Heat_Flux(num_surface_flux_sets,dim2_other) = 0;
+        }
+      }
+    }
+
+    *fos << "tagging " << simparam->set_options[bc_name+":surface"] << " at " << simparam->set_options[bc_name+":plane_position"] <<  std::endl;
+    
+    *fos << "tagged a set " << std::endl;
+    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    *fos << std::endl;
+    num_boundary_conditions++;
+    num_surface_flux_sets++;
+    
+    bc_index = std::to_string(num_surface_flux_sets+1);
+    bc_name = fea_module_name + bc_base + bc_index;
+  }
+  /*
   *fos << "tagging beam +z heat flux " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
@@ -409,7 +523,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads(){
   
   num_boundary_conditions++;
   num_surface_flux_sets++;
-
+  */
   //Body Term Section
 
   //apply body terms

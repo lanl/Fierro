@@ -942,7 +942,7 @@ void FEA_Module_Elasticity::generate_bcs(){
 void FEA_Module_Elasticity::generate_applied_loads(){
   int num_dim = simparam->num_dim;
   int bc_tag;
-  real_t value;
+  real_t value, temp_flux;
   
   //Surface Forces Section
 
@@ -1071,6 +1071,70 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   std::cout << std::endl;
   */
   
+  //find user bc settings
+  std::string fea_module_base = "fea_module_";
+  std::string bc_base = ":loading_condition_";
+  std::string index, bc_index;
+  std::string fea_module_name, bc_name;
+  
+  index = std::to_string(my_fea_module_index_+1);
+  bc_index = std::to_string(num_surface_force_sets+1);
+  fea_module_name = fea_module_base + index;
+  bc_name = fea_module_name + bc_base + bc_index;
+  
+  while(simparam->set_options.find(bc_name+":condition_type")!=simparam->set_options.end()){
+    
+    if(simparam->set_options[bc_name+":surface"]=="x_plane"){
+      bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="y_plane"){
+      bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="z_plane"){
+      bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    value = std::stod(simparam->set_options[bc_name+":plane_position"]) * simparam->unit_scaling;
+    if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+    if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    if(simparam->set_options[bc_name+":condition_type"]=="surface_traction"){
+      Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
+    }
+
+    if(simparam->set_options.find(bc_name+":component_x")!=simparam->set_options.end()){
+      Boundary_Surface_Force_Densities(num_surface_force_sets,0) = std::stod(simparam->set_options[bc_name+":component_x"])/simparam->unit_scaling/simparam->unit_scaling;
+    }
+    else{
+      Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 0;
+    }
+
+    if(simparam->set_options.find(bc_name+":component_y")!=simparam->set_options.end()){
+      Boundary_Surface_Force_Densities(num_surface_force_sets,1) = std::stod(simparam->set_options[bc_name+":component_y"])/simparam->unit_scaling/simparam->unit_scaling;
+    }
+    else{
+      Boundary_Surface_Force_Densities(num_surface_force_sets,1) = 0;
+    }
+
+    if(simparam->set_options.find(bc_name+":component_z")!=simparam->set_options.end()){
+      Boundary_Surface_Force_Densities(num_surface_force_sets,2) = std::stod(simparam->set_options[bc_name+":component_z"])/simparam->unit_scaling/simparam->unit_scaling;
+    }
+    else{
+      Boundary_Surface_Force_Densities(num_surface_force_sets,2) = 0;
+    }
+
+    *fos << "tagging " << simparam->set_options[bc_name+":surface"] << " at " << simparam->set_options[bc_name+":plane_position"] <<  std::endl;
+    
+    *fos << "tagged a set " << std::endl;
+    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    *fos << std::endl;
+    num_boundary_conditions++;
+    num_surface_force_sets++;
+    
+    bc_index = std::to_string(num_surface_force_sets+1);
+    bc_name = fea_module_name + bc_base + bc_index;
+  }
+  /*
   *fos << "tagging beam +z force " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
@@ -1091,7 +1155,7 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   num_boundary_conditions++;
   num_surface_force_sets++;
   
-  /*
+  
   std::cout << "tagging y = 2 " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 2.0;
