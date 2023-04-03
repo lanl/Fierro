@@ -382,7 +382,7 @@ void Simulation_Parameters::yaml_FEA_module_setup(){
   index = std::to_string(nfea_modules+1);
   fea_module_name = fea_module_base + index;
 
-    // --- set of material specifications ---
+    // --- set of user requested FEA modules ---
   while(set_options.find(fea_module_name+":type")!=set_options.end()){
     
     if(set_options[fea_module_name+":type"]=="elasticity")

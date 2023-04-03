@@ -198,6 +198,48 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
         nTO_modules++;
 
         //read in multi-objective function definition and terms
+        //read in multi-objective function definition and terms
+        std::string optimization_module_base = "optimization_options:multi-objective_module_";
+        std::string index;
+        std::string optimization_module_name;
+        int imodule = 0;
+  
+        index = std::to_string(imodule+1);
+        optimization_module_name = optimization_module_base + index;
+
+        // --- set of user requested multi-objective terms---
+        while(set_options.find(optimization_module_name+":type")!=set_options.end()){
+    
+          if(set_options[optimization_module_name+":type"]=="minimize_compliance"){
+            TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+          }
+
+          if(set_options[optimization_module_name+":type"]=="minimize_thermal_resistance"){
+            TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
+            
+            
+          }
+
+          if(set_options.find(optimization_module_name+":weight_coefficient")!=set_options.end()){
+            Multi_Objective_Weights[imodule] = std::stod(set_options[optimization_module_name+":weight_coefficient"]);
+          }
+          Multi_Objective_Modules[imodules] = nTO_modules;
+          TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
+          nTO_modules++;
+          if(nTO_modules==buffer_size){
+            buffer_size += 10;
+            TO_Module_List.resize(buffer_size);
+            TO_Function_Type.resize(buffer_size);
+            Multi_Objective_Modules.resize(buffer_size);
+            Multi_Objective_Weights.resize(buffer_size);
+            Function_Arguments.resize(buffer_size);
+            TO_Module_My_FEA_Module.resize(buffer_size);
+          }
+
+          imodule++;
+          index = std::to_string(imodule+1);
+          optimization_module_name = optimization_module_base + index;
+        }
       }
     }
     

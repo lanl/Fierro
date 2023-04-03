@@ -49,18 +49,26 @@ fea_module_2:
 
 optimization_options:
     optimization_process: topology_optimization
-    optimization_objective: minimize_compliance
+    optimization_objective: multi-objective
+    #Weight coefficients should add up to 1
+    multi-objective_structure: linear
+    multi-objective_module_1:
+        type: minimize_thermal_resistance
+        weight_coefficient: 0.25
+    multi-objective_module_2:
+        type: minimize_strain_energy
+        weight_coefficient: 0.75
     num_optimization_constraint: 3
     constraint_1:
         type: mass
         relation: equality
         value: 0.15
-    constraint_1:
+    constraint_2:
         type: moment_of_inertia
         relation: equality
         component: yy
         value: 0.20
-    constraint_1:
+    constraint_3:
         type: moment_of_inertia
         relation: equality
         component: xy
