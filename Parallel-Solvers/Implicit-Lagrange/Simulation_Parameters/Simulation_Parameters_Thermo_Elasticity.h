@@ -63,7 +63,7 @@ class Simulation_Parameters_Thermo_Elasticity : public Simulation_Parameters
   bool output_displacement_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
 
   // --- Isotropic Elastic Parameters
-  real_t Elastic_Modulus, Poisson_Ratio, Thermal_Conductivity, Expansion_Coefficients[3], Initial_Temperature;
+  real_t Elastic_Modulus, Poisson_Ratio, Thermal_Conductivity, Expansion_Coefficients[6], Initial_Temperature;
 
   // -- Integration rule
   int num_gauss_points;

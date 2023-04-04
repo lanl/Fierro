@@ -51,6 +51,7 @@ Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Opti
   report_runtime_flag = false;
   nodal_density_flag = true;
   thick_condition_boundary = true;
+  topology_optimization_on = shape_optimization_on = false;
   optimization_output_freq = 20;
   penalty_power = 3;
   nTO_modules = 0;
@@ -61,6 +62,7 @@ Simulation_Parameters_Topology_Optimization::~Simulation_Parameters_Topology_Opt
 
 void Simulation_Parameters_Topology_Optimization::input(){
   Simulation_Parameters::input();
+  topology_optimization_on = true;
   //Simulation_Parameters::input();
   //initial buffer size for TO module list storage
   int buffer_size = 10;
@@ -73,11 +75,11 @@ void Simulation_Parameters_Topology_Optimization::input(){
   //use pushback to add arguments for each TO module
   
   //TO objectives and constraints
-  
+  /*
   TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
   nTO_modules++;
-  /*
+  */
   //Multi objective format
   TO_Module_List[nTO_modules] = "Multi_Objective";
   TO_Function_Type[nTO_modules] = OBJECTIVE;
@@ -89,7 +91,15 @@ void Simulation_Parameters_Topology_Optimization::input(){
   Multi_Objective_Modules[0] = nTO_modules;
   Multi_Objective_Weights[0] = 0.25;
   nTO_modules++;
+
   TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+  TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
+  Multi_Objective_Modules[1] = nTO_modules;
+  Multi_Objective_Weights[1] = 0.75;
+  nTO_modules++;
+
+  /*
+  TO_Module_List[nTO_modules] = "Thermo_Elastic_Strain_Energy_Minimize";
   TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
   Multi_Objective_Modules[1] = nTO_modules;
   Multi_Objective_Weights[1] = 0.75;
@@ -155,6 +165,166 @@ void Simulation_Parameters_Topology_Optimization::input(){
 
 }
 
+//==============================================================================
+//    Communicate user settings from YAML file and apply to class members
+//==============================================================================
+
+void Simulation_Parameters_Topology_Optimization::apply_settings(){
+  int buffer_size = TO_Module_List.size();
+  
+  if(set_options.find("optimization_options:optimization_process")!=set_options.end()){
+       if(set_options["optimization_options:optimization_process"]=="topology_optimization")
+         topology_optimization_on = true;
+       if(set_options["optimization_options:optimization_process"]=="shape_optimization")
+         shape_optimization_on = true;
+  }
+  nTO_modules = 0;
+    if(set_options.find("optimization_options:optimization_objective")!=set_options.end()){
+       //cycle_stop = std::stoi(set_options["solver_options:time_variables:cycle_stop"]);
+      if(set_options["optimization_options:optimization_objective"]=="minimize_compliance"){
+        TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+        TO_Function_Type[nTO_modules] = OBJECTIVE;
+        nTO_modules++;
+      }
+
+      if(set_options["optimization_options:optimization_objective"]=="minimize_thermal_resistance"){
+        TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
+        TO_Function_Type[nTO_modules] = OBJECTIVE;
+        nTO_modules++;
+      }
+
+      if(set_options["optimization_options:optimization_objective"]=="multi-objective"){
+        TO_Module_List[nTO_modules] = "Multi_Objective";
+        TO_Function_Type[nTO_modules] = OBJECTIVE;
+        nTO_modules++;
+
+        //read in multi-objective function definition and terms
+        //read in multi-objective function definition and terms
+        std::string optimization_module_base = "optimization_options:multi-objective_module_";
+        std::string index;
+        std::string optimization_module_name;
+        nmulti_objective_modules = 0;
+  
+        index = std::to_string(nmulti_objective_modules+1);
+        optimization_module_name = optimization_module_base + index;
+
+        // --- set of user requested multi-objective terms---
+        while(set_options.find(optimization_module_name+":type")!=set_options.end()){
+    
+          if(set_options[optimization_module_name+":type"]=="minimize_compliance"){
+            TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+          }
+
+          if(set_options[optimization_module_name+":type"]=="minimize_thermal_resistance"){
+            TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
+          }
+
+          if(set_options.find(optimization_module_name+":weight_coefficient")!=set_options.end()){
+            Multi_Objective_Weights[nmulti_objective_modules] = std::stod(set_options[optimization_module_name+":weight_coefficient"]);
+          }
+          Multi_Objective_Modules[nmulti_objective_modules] = nTO_modules;
+          TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
+          nTO_modules++;
+          if(nTO_modules==buffer_size){
+            buffer_size += 10;
+            TO_Module_List.resize(buffer_size);
+            TO_Function_Type.resize(buffer_size);
+            Multi_Objective_Modules.resize(buffer_size);
+            Multi_Objective_Weights.resize(buffer_size);
+            Function_Arguments.resize(buffer_size);
+            TO_Module_My_FEA_Module.resize(buffer_size);
+          }
+
+          nmulti_objective_modules++;
+          index = std::to_string(nmulti_objective_modules+1);
+          optimization_module_name = optimization_module_base + index;
+        }
+      }
+    }
+    
+    int num_constraints;
+    if(set_options.find("optimization_options:num_optimization_constraint")!=set_options.end()){
+       num_constraints = std::stoi(set_options["optimization_options:num_optimization_constraint"]);
+    }
+
+    //allocate constraint modules requested by the user
+    std::string constraint_base = "optimization_options:constraint_";
+    std::string index;
+    std::string constraint_name;
+    double constraint_value;
+
+    // --- set of material specifications ---
+    for(int icon = 0; icon < num_constraints; icon++){
+        //readin material data
+        index = std::to_string(icon+1);
+        constraint_name = constraint_base + index;
+
+        //expand storage if needed
+        if(nTO_modules==buffer_size){
+          buffer_size += 10;
+          TO_Module_List.resize(buffer_size);
+          TO_Function_Type.resize(buffer_size);
+          Multi_Objective_Modules.resize(buffer_size);
+          Multi_Objective_Weights.resize(buffer_size);
+          Function_Arguments.resize(buffer_size);
+          TO_Module_My_FEA_Module.resize(buffer_size);
+        }
+
+        //constraint request
+        //constraint type
+        if(set_options.find(constraint_name+":type")!=set_options.end()){
+            if(set_options[constraint_name+":type"]=="mass"){
+              TO_Module_List[nTO_modules] = "Mass_Constraint";
+            }
+        }
+        if(set_options.find(constraint_name+":type")!=set_options.end()){
+            if(set_options[constraint_name+":type"]=="moment_of_inertia"){
+              TO_Module_List[nTO_modules] = "Moment_of_Inertia_Constraint";
+            }
+        }
+
+        //equality or inequality
+        if(set_options.find(constraint_name+":relation")!=set_options.end()){
+            if(set_options[constraint_name+":relation"]=="equality"){
+              TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
+            }
+        }
+
+        //function arguments for constraint
+        if(set_options.find(constraint_name+":value")!=set_options.end()){
+            constraint_value = std::stod(set_options[constraint_name+":value"]);
+            Function_Arguments[nTO_modules].push_back(constraint_value); 
+        }
+
+        if(set_options[constraint_name+":type"]=="moment_of_inertia"){
+            if(set_options.find(constraint_name+":component")!=set_options.end()){
+              if(set_options[constraint_name+":component"]=="xx"){
+                Function_Arguments[nTO_modules].push_back(0);
+              }
+              if(set_options[constraint_name+":component"]=="yy"){
+                Function_Arguments[nTO_modules].push_back(1);
+              }
+              if(set_options[constraint_name+":component"]=="zz"){
+                Function_Arguments[nTO_modules].push_back(2);
+              }
+              if(set_options[constraint_name+":component"]=="xy"){
+                Function_Arguments[nTO_modules].push_back(3);
+              }
+              if(set_options[constraint_name+":component"]=="xz"){
+                Function_Arguments[nTO_modules].push_back(4);
+              }
+              if(set_options[constraint_name+":component"]=="yz"){
+                Function_Arguments[nTO_modules].push_back(5);
+              }
+            }
+        }
+        nTO_modules++;
+    }
+}
+
+//==============================================================================
+//    Detect pairings of TO Modules with FEA Modules
+//==============================================================================
 
 void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
   
@@ -178,10 +348,38 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         }
       }
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Elasticity";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_strain_energy)"
+                              << "REQUIRES FEA MODULE (elasticity)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
+    }
+    else if(TO_Module_List[imodule] == "Thermo_Elastic_Strain_Energy_Minimize"){
+
+      //allocate required Heat Conduction Module if missing
+      for(int ifea = 0; ifea < nfea_modules; ifea++){
+        if(FEA_Module_List[ifea] == "Heat_Conduction"){
+          module_found = true;
+        }
+      }
+      if(!module_found){
+          *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_strain_energy)"
+                              << "REQUIRES FEA MODULE (steady_heat)" << std::endl;
+          solver_pointer_->exit_solver(0);
+      }
+      module_found = false;
+      //check if module type was already allocated
+      for(int ifea = 0; ifea < nfea_modules; ifea++){
+        if(FEA_Module_List[ifea] == "Thermo_Elasticity"){
+          module_found = true;
+          TO_Module_My_FEA_Module[imodule] = ifea;
+        }
+      }
+      if(!module_found){
+          *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_strain_energy)"
+                              << "REQUIRES FEA MODULE (thermo_elasticity)" << std::endl;
+          solver_pointer_->exit_solver(0);
+      }
+
     }
     else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
       //check if module type was already allocated
@@ -189,12 +387,13 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         if(FEA_Module_List[ifea] == "Heat_Conduction"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
+          
         }
       }
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Heat_Conduction";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_mean_temperature)"
+                              << "REQUIRES FEA MODULE (steady_heat)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Mass_Constraint"){
@@ -203,12 +402,13 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
         if(FEA_Module_List[ifea] == "Inertial"){
           module_found = true;
           TO_Module_My_FEA_Module[imodule] = ifea;
+          
         }
       }
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Inertial";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (mass)"
+                              << "REQUIRES FEA MODULE (inertial)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Moment_of_Inertia_Constraint"){
@@ -219,10 +419,11 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
           TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
+      
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Inertial";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (mass)"
+                              << "REQUIRES FEA MODULE (inertial)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Strain_Energy_Constraint"){
@@ -233,10 +434,11 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
           TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
+      
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Elasticity";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_strain_energy)"
+                              << "REQUIRES FEA MODULE (elasticity)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Constraint"){
@@ -247,10 +449,11 @@ void Simulation_Parameters_Topology_Optimization::FEA_module_setup(){
           TO_Module_My_FEA_Module[imodule] = ifea;
         }
       }
+      
       if(!module_found){
-        TO_Module_My_FEA_Module[imodule] = nfea_modules;
-        FEA_Module_List[nfea_modules++] = "Heat_Conduction";
-        module_found = true;
+        *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; TOPOLOGY OPTIMIZATION FUNCTION (minimize_mean_temperature)"
+                              << "REQUIRES FEA MODULE (steady_heat)" << std::endl;
+        solver_pointer_->exit_solver(0);
       }
     }
     else if(TO_Module_List[imodule] == "Multi_Objective"){

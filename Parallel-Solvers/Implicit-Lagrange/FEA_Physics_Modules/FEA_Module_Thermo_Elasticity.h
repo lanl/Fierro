@@ -35,8 +35,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#ifndef FEA_MODULE_ELASTICITY_H
-#define FEA_MODULE_ELASTICITY_H
+#ifndef FEA_MODULE_THERMO_ELASTICITY_H
+#define FEA_MODULE_THERMO_ELASTICITY_H
 
 #include "FEA_Module.h"
 
@@ -58,14 +58,15 @@ namespace Xpetra{
 }
 
 class Implicit_Solver;
-class Simulation_Parameters_Elasticity;
+class Simulation_Parameters_Thermo_Elasticity;
 class Simulation_Parameters_Topology_Optimization;
+class FEA_Module_Heat_Conduction;
 
-class FEA_Module_Elasticity: public FEA_Module{
+class FEA_Module_Thermo_Elasticity: public FEA_Module{
 
 public:
-  FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index = 0);
-  ~FEA_Module_Elasticity();
+  FEA_Module_Thermo_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index = 0);
+  ~FEA_Module_Thermo_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
   void init_boundaries();
@@ -133,9 +134,10 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  Simulation_Parameters_Elasticity *simparam;
+  Simulation_Parameters_Thermo_Elasticity *simparam;
   Simulation_Parameters_Topology_Optimization *simparam_TO;
   Implicit_Solver *Implicit_Solver_Pointer_;
+  FEA_Module_Heat_Conduction *Heat_Conduction_Module_Pointer_;
   
   //Local FEA data
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
@@ -151,7 +153,7 @@ public:
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Stiffness_Entries_Strides;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_RHS_Entries;
 
-  //Global FEA data
+  //Mechanical Global FEA data
   Teuchos::RCP<MV> node_displacements_distributed;
   Teuchos::RCP<MV> node_strains_distributed;
   Teuchos::RCP<MV> all_node_displacements_distributed;
@@ -164,9 +166,12 @@ public:
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
   Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MV> Global_Nodal_Forces;
+
+  //Thermal Global FEA data
+  Teuchos::RCP<MV> node_temperatures_distributed;
+  Teuchos::RCP<MV> all_node_temperatures_distributed;
   
   //Boundary Conditions Data
-  
   enum bc_type {NONE,DISPLACEMENT_CONDITION, X_DISPLACEMENT_CONDITION,
    Y_DISPLACEMENT_CONDITION, Z_DISPLACEMENT_CONDITION, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION, SURFACE_PRESSURE_CONDITION};
   int max_boundary_sets, max_disp_boundary_sets, max_load_boundary_sets;

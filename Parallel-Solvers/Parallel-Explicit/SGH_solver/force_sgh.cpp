@@ -6,7 +6,7 @@
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
+void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
@@ -399,7 +399,7 @@ void FEA_Module_SGH::get_force_sgh(const CArrayKokkos <material_t> &material,
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_SGH::get_force_sgh2D(const CArrayKokkos <material_t> &material,
+void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,

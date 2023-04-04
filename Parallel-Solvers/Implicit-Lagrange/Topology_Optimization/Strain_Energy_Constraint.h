@@ -173,7 +173,7 @@ public:
       //communicate density variables for ghosts
       FEM_->comm_variables(zp);
       //update deformation variables
-      FEM_->update_linear_solve(zp);
+      FEM_->update_linear_solve(zp, current_step);
       if(FEM_->myrank==0)
       *fos << "called Trial" << std::endl;
     }
@@ -184,7 +184,7 @@ public:
         *fos << "called Temp" << std::endl;
       FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
       FEM_->comm_variables(zp);
-      FEM_->update_linear_solve(zp);
+      FEM_->update_linear_solve(zp, current_step);
     }
   }
 

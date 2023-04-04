@@ -132,11 +132,14 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   //set Tpetra vector pointers
   initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
   initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
-  node_coords_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
+  node_coords_distributed = Explicit_Solver_Pointer_->node_coords_distributed;
   node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
-  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on)
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
     all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+    corner_value_storage = Solver_Pointer->corner_value_storage;
+    relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
+  }
   
   //setup output
   noutput = 0;
@@ -631,11 +634,10 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   int myrank = Explicit_Solver_Pointer_->myrank;
   int nranks = Explicit_Solver_Pointer_->nranks;
 
-  const CArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-  const CArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const CArrayKokkos <material_t> material = simparam->material;
-  const CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
-  CArrayKokkos<double> relative_element_densities = CArrayKokkos<double>(rnum_elem, "relative_element_densities");
+  const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
+  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+  const DCArrayKokkos <material_t> material = simparam->material;
+  const DCArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
   std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
@@ -645,13 +647,16 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   //compute element averaged density ratios corresponding to nodal density design variables
   {//view scope
     const_host_vec_array all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    //debug print
+    //std::cout << "NODE DENSITY TEST " << all_node_densities(0,0) << std::endl;
     for(int elem_id = 0; elem_id < rnum_elem; elem_id++){
       for(int inode = 0; inode < num_nodes_in_elem; inode++){
         current_element_nodal_densities(inode) = all_node_densities(nodes_in_elem(elem_id,inode),0);
       }
-      relative_element_densities(elem_id) = average_element_density(num_nodes_in_elem, current_element_nodal_densities);
+      relative_element_densities.host(elem_id) = average_element_density(num_nodes_in_elem, current_element_nodal_densities);
     }//for
   } //view scope
+  relative_element_densities.update_device();
 
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
@@ -660,6 +665,27 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   node_coords_distributed->assign(*initial_node_coords_distributed);
 
   //comms for ghosts
+  Explicit_Solver_Pointer_->comm_coordinates();
+
+  //view scope
+  {
+    Explicit_Solver_SGH::const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+    Explicit_Solver_SGH::const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+    Explicit_Solver_SGH::vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+      for (int idim = 0; idim < num_dim; idim++){
+        all_node_coords_interface(node_gid,idim) = node_coords_interface(node_gid,idim);
+      }
+    }); // end parallel for
+    Kokkos::fence();
+
+    FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes+nghost_nodes, {
+      for (int idim = 0; idim < num_dim; idim++){
+        all_node_coords_interface(node_gid,idim) = ghost_node_coords_interface(node_gid-nlocal_nodes,idim);
+      }
+    }); // end parallel for
+    Kokkos::fence();
+  } //end view scope
 
   //reset velocities to initial conditions
   node_velocities_distributed->assign(*initial_node_velocities_distributed);
@@ -685,27 +711,29 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   //view scope
   {
     Explicit_Solver_SGH::host_vec_array interface_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    //save node data to node.coords
-    //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
-    if(num_dim==2){
-      for(int inode = 0; inode < nall_nodes; inode++){
-        //std::cout << "Node index " << inode+1 << " ";
-        node_coords.host(0,inode,0) = interface_node_coords(inode,0);
-        //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
-        node_coords.host(0,inode,1) = interface_node_coords(inode,1);
-        //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+    for(size_t ibin = 0; ibin < rk_num_bins; ibin++){
+      //save node data to node.coords
+      //std::cout << "NODE DATA ON RANK " << myrank << std::endl;
+      if(num_dim==2){
+        for(int inode = 0; inode < nall_nodes; inode++){
+          //std::cout << "Node index " << inode+1 << " ";
+          node_coords.host(ibin,inode,0) = interface_node_coords(inode,0);
+          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+          node_coords.host(ibin,inode,1) = interface_node_coords(inode,1);
+          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+        }
       }
-    }
-    else if(num_dim==3){
-      for(int inode = 0; inode < nall_nodes; inode++){
-        //std::cout << "Node index " << inode+1 << " ";
-        node_coords.host(0,inode,0) = interface_node_coords(inode,0);
-        //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
-        node_coords.host(0,inode,1) = interface_node_coords(inode,1);
-        //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
+      else if(num_dim==3){
+        for(int inode = 0; inode < nall_nodes; inode++){
+          //std::cout << "Node index " << inode+1 << " ";
+          node_coords.host(ibin,inode,0) = interface_node_coords(inode,0);
+          //std::cout << host_node_coords_state(0,inode,0)+1<< " ";
+          node_coords.host(ibin,inode,1) = interface_node_coords(inode,1);
+          //std::cout << host_node_coords_state(0,inode,1)+1<< " ";
         
-        node_coords.host(0,inode,2) = interface_node_coords(inode,2);
-        //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
+          node_coords.host(ibin,inode,2) = interface_node_coords(inode,2);
+          //std::cout << host_node_coords_state(0,inode,2)+1<< std::endl;
+        }
       }
     }
   } //end view scope
@@ -1121,10 +1149,10 @@ void FEA_Module_SGH::setup(){
     const size_t num_state_vars = simparam->max_num_state_vars;
     const int num_dim = simparam->num_dim;
 
-    const CArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-    const CArrayKokkos <boundary_t> boundary = simparam->boundary;
-    const CArrayKokkos <material_t> material = simparam->material;
-    const CArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
+    const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
+    const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+    const DCArrayKokkos <material_t> material = simparam->material;
+    const DCArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
     
     //--- calculate bdy sets ---//
     mesh.num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
@@ -1231,6 +1259,14 @@ void FEA_Module_SGH::setup(){
     
     
     //--- apply the fill instructions over each of the Elements---//
+    
+    //initialize if topology optimization is used
+    if(simparam_dynamic_opt->topology_optimization_on){
+      for(int elem_id = 0; elem_id < rnum_elem; elem_id++){
+        relative_element_densities.host(elem_id) = 1;
+      }//for
+      relative_element_densities.update_device();
+    }
     
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++){
@@ -1484,8 +1520,6 @@ void FEA_Module_SGH::setup(){
   
     } // end for loop over fills
     
-   
-    
     // apply BC's to velocity
     FEA_Module_SGH::boundary_velocity(mesh, boundary, node_vel);
     
@@ -1558,7 +1592,7 @@ void FEA_Module_SGH::setup(){
     val = plane value, cyl radius, sphere radius
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::tag_bdys(const CArrayKokkos <boundary_t> &boundary,
+void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
               mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords){
 
@@ -1726,7 +1760,7 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
    Build set of nodes assigned to each boundary condition
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary, mesh_t &mesh){
+void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh){
     
     // build boundary nodes in each boundary set
     int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
@@ -1840,8 +1874,8 @@ void FEA_Module_SGH::sgh_solve(){
     CArray <double> graphics_times = simparam->graphics_times;
     size_t graphics_id = simparam->graphics_id;
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
-    const CArrayKokkos <boundary_t> boundary = simparam->boundary;
-    const CArrayKokkos <material_t> material = simparam->material;
+    const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+    const DCArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
     int old_max_forward_buffer;
     size_t cycle;
@@ -1868,15 +1902,19 @@ void FEA_Module_SGH::sgh_solve(){
       kinetic_energy_minimize_function.objective_accumulation = 0;
       global_objective_accumulation = objective_accumulation = 0;
       kinetic_energy_objective = true;
-      if(max_time_steps > forward_solve_velocity_data.size()){
+      if(max_time_steps +1 > forward_solve_velocity_data.size()){
         old_max_forward_buffer = forward_solve_velocity_data.size();
-        forward_solve_velocity_data.resize(max_time_steps);
+        time_data.resize(max_time_steps+1);
+        forward_solve_velocity_data.resize(max_time_steps+1);
+        forward_solve_coordinate_data.resize(max_time_steps+1);
+        adjoint_vector_data.resize(max_time_steps+1);
         //assign a multivector of corresponding size to each new timestep in the buffer
-        for(int istep = old_max_forward_buffer; istep < max_time_steps; istep++){
-          forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
+        for(int istep = old_max_forward_buffer; istep < max_time_steps+1; istep++){
+          forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+          forward_solve_coordinate_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+          adjoint_vector_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
         }
       }
-      
     }
 
     if(simparam_dynamic_opt->topology_optimization_on)
@@ -1987,41 +2025,76 @@ void FEA_Module_SGH::sgh_solve(){
     size_t stop_calc=0;
     
     auto time_1 = std::chrono::high_resolution_clock::now();
+
+  //save initial data
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+    time_data[0] = 0;
+    //assign current velocity data to multivector
+    //view scope
+    {
+      Explicit_Solver_SGH::vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+      Explicit_Solver_SGH::vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+        for (int idim = 0; idim < num_dim; idim++){
+          node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
+          node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
+        }
+      });
+    } //end view scope
+    Kokkos::fence();
+
+    //communicate ghosts
+    double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
+            
+    //active view scope; triggers host comms from updated data on device
+    {
+      const_host_vec_array node_velocities_host = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      const_host_vec_array node_coords_host = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    }
+    double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+    Explicit_Solver_Pointer_->dev2host_time += comm_time2-comm_time1;
+
+    //communicate ghost velocities
+    Explicit_Solver_Pointer_->comm_velocities();
+    Explicit_Solver_Pointer_->comm_coordinates();
+        
+            
+    double comm_time3 = Explicit_Solver_Pointer_->CPU_Time();
+
+    //view scope
+    {
+      Explicit_Solver_SGH::const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+      Explicit_Solver_SGH::const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+      Explicit_Solver_SGH::vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+      Explicit_Solver_SGH::const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+      Explicit_Solver_SGH::const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+      Explicit_Solver_SGH::vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+        for (int idim = 0; idim < num_dim; idim++){
+          all_node_velocities_interface(node_gid,idim) = node_velocities_interface(node_gid,idim);
+          all_node_coords_interface(node_gid,idim) = node_coords_interface(node_gid,idim);
+        }
+      }); // end parallel for
+      Kokkos::fence();
+
+      FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes+nghost_nodes, {
+        for (int idim = 0; idim < num_dim; idim++){
+          all_node_velocities_interface(node_gid,idim) = ghost_node_velocities_interface(node_gid-nlocal_nodes,idim);
+          all_node_coords_interface(node_gid,idim) = ghost_node_coords_interface(node_gid-nlocal_nodes,idim);
+        }
+      }); // end parallel for
+      Kokkos::fence();
+    } //end view scope
+        
+
+    forward_solve_velocity_data[0]->assign(*Explicit_Solver_Pointer_->all_node_velocities_distributed);
+    forward_solve_coordinate_data[0]->assign(*Explicit_Solver_Pointer_->all_node_coords_distributed);
+  }
     
 	// loop over the max number of time integration cycles
 	for (cycle = 0; cycle < cycle_stop; cycle++) {
 
-	    // stop calculation if flag
-	    if (stop_calc == 1) break;
-        
-  
-      if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
-        if(cycle >= max_time_steps)
-          max_time_steps = cycle + 1;
-
-        if(max_time_steps > forward_solve_velocity_data.size()){
-          old_max_forward_buffer = forward_solve_velocity_data.size();
-          forward_solve_velocity_data.resize(max_time_steps + 100);
-          //assign a multivector of corresponding size to each new timestep in the buffer
-          for(int istep = old_max_forward_buffer; istep < max_time_steps + 100; istep++){
-            forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(map, simparam->num_dim));
-          }
-        }
-
-        //view scope
-        {
-          Explicit_Solver_SGH::vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
-          FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-            for (int idim = 0; idim < num_dim; idim++){
-              node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
-            }
-          }); // end parallel for
-        } //end view scope
-        Kokkos::fence();
-        forward_solve_velocity_data[cycle]->assign(*node_velocities_distributed);
-      }
-
-	    // get the step
+      // get the step
         if(num_dim==2){
             get_timestep2D(mesh,
                            node_coords,
@@ -2052,10 +2125,15 @@ void FEA_Module_SGH::sgh_solve(){
                          dt,
                          fuzz);
         } // end if 2D
-        
+
         double global_dt;
         MPI_Allreduce(&dt,&global_dt,1,MPI_DOUBLE,MPI_MIN,MPI_COMM_WORLD);
         dt = global_dt;
+
+	    // stop calculation if flag
+	    //if (stop_calc == 1) break;
+        
+  
 
         if (cycle==0){
             if(myrank==0)
@@ -2422,28 +2500,143 @@ void FEA_Module_SGH::sgh_solve(){
                 
             } // end of if 2D-RZ
 
-        } // end of RK loop
+
+      } // end of RK loop
 
 	    // increment the time
 	    time_value+=dt;
-    	
+
+      if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+        if(cycle >= max_time_steps)
+          max_time_steps = cycle + 1;
+
+        if(max_time_steps + 1 > forward_solve_velocity_data.size()){
+          old_max_forward_buffer = forward_solve_velocity_data.size();
+          time_data.resize(max_time_steps + 101);
+          forward_solve_velocity_data.resize(max_time_steps + 101);
+          forward_solve_coordinate_data.resize(max_time_steps + 101);
+          adjoint_vector_data.resize(max_time_steps + 101);
+          //assign a multivector of corresponding size to each new timestep in the buffer
+          for(int istep = old_max_forward_buffer; istep < max_time_steps + 101; istep++){
+            forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+            forward_solve_coordinate_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+            adjoint_vector_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+          }
+        }
+
         
-        size_t write = 0;
-        if ((cycle+1)%graphics_cyc_ival == 0 && cycle>0){
-            write = 1;
+        time_data[cycle+1] = dt + time_data[cycle];
+        
+        
+        //assign current velocity data to multivector
+        //view scope
+        {
+          Explicit_Solver_SGH::vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+          Explicit_Solver_SGH::vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+          FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            for (int idim = 0; idim < num_dim; idim++){
+              node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
+              node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
+            }
+          });
+        } //end view scope
+        Kokkos::fence();
+
+        //communicate ghosts
+        double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
+            
+        //active view scope; triggers host comms from updated data on device
+        {
+          const_host_vec_array node_velocities_host = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+          const_host_vec_array node_coords_host = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
         }
-        else if (cycle == cycle_stop) {
-            write = 1;
+        double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+        Explicit_Solver_Pointer_->dev2host_time += comm_time2-comm_time1;
+
+        //communicate ghost velocities
+        Explicit_Solver_Pointer_->comm_velocities();
+        Explicit_Solver_Pointer_->comm_coordinates();
+        
+            
+        double comm_time3 = Explicit_Solver_Pointer_->CPU_Time();
+
+        //view scope
+        {
+          Explicit_Solver_SGH::const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+          Explicit_Solver_SGH::const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+          Explicit_Solver_SGH::vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+          Explicit_Solver_SGH::const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+          Explicit_Solver_SGH::const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+          Explicit_Solver_SGH::vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+          FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+            for (int idim = 0; idim < num_dim; idim++){
+              all_node_velocities_interface(node_gid,idim) = node_velocities_interface(node_gid,idim);
+              all_node_coords_interface(node_gid,idim) = node_coords_interface(node_gid,idim);
+            }
+          }); // end parallel for
+          Kokkos::fence();
+
+          FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes+nghost_nodes, {
+            for (int idim = 0; idim < num_dim; idim++){
+              all_node_velocities_interface(node_gid,idim) = ghost_node_velocities_interface(node_gid-nlocal_nodes,idim);
+              all_node_coords_interface(node_gid,idim) = ghost_node_coords_interface(node_gid-nlocal_nodes,idim);
+            }
+          }); // end parallel for
+          Kokkos::fence();
+        } //end view scope
+
+        double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
+        Explicit_Solver_Pointer_->host2dev_time += comm_time4-comm_time3;
+        Explicit_Solver_Pointer_->communication_time += comm_time4-comm_time1;
+        
+        forward_solve_velocity_data[cycle+1]->assign(*Explicit_Solver_Pointer_->all_node_velocities_distributed);
+        forward_solve_coordinate_data[cycle+1]->assign(*Explicit_Solver_Pointer_->all_node_coords_distributed);
+
+        //kinetic energy accumulation
+        if(kinetic_energy_objective){
+          Explicit_Solver_SGH::const_vec_array node_velocities_interface = forward_solve_velocity_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+          Explicit_Solver_SGH::const_vec_array previous_node_velocities_interface = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+          KE_loc_sum = 0.0;
+          KE_sum = 0.0;
+          // extensive KE
+          REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
+        
+          double ke = 0;
+          for (size_t dim=0; dim<num_dim; dim++){
+            //midpoint integration approximation
+            ke += (node_velocities_interface(node_gid,dim)+node_velocities_interface(node_gid,dim))*(node_velocities_interface(node_gid,dim)+node_velocities_interface(node_gid,dim))/4; // 1/2 at end
+          } // end for
+        
+          if(num_dim==2){
+            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
+          }
+          else{
+            KE_loc_sum += node_mass(node_gid)*ke;
+          }
+        
+          }, KE_sum);
+          Kokkos::fence();
+          KE_sum = 0.5*KE_sum;
+          objective_accumulation += KE_sum*dt;
         }
-        else if (time_value >= time_final){
-            write = 1;
-        }
-        else if (time_value >= graphics_time){
-            write = 1;
-        }
+      }
+        
+      size_t write = 0;
+      if ((cycle+1)%graphics_cyc_ival == 0 && cycle>0){
+        write = 1;
+      }
+      else if (cycle == cycle_stop) {
+        write = 1;
+      }
+      else if (time_value >= time_final){
+        write = 1;
+      }
+      else if (time_value >= graphics_time){
+        write = 1;
+      }
             
         // write outputs
-        if (write == 1){
+      if (write == 1){
             //interface nodal coordinate data
             //view scope
             {
@@ -2476,39 +2669,16 @@ void FEA_Module_SGH::sgh_solve(){
                           time_value);
             */
             graphics_time = time_value + graphics_dt_ival;
-        } // end if
+      } // end if
         
         
-        // end of calculation
-        if (time_value>=time_final) break;
+      // end of calculation
+      if (time_value>=time_final) break;
 
-        //kinetic energy accumulation
-        if(kinetic_energy_objective){
-          KE_loc_sum = 0.0;
-          KE_sum = 0.0;
-          // extensive KE
-          REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         
-          double ke = 0;
-          for (size_t dim=0; dim<num_dim; dim++){
-            ke += node_vel(1,node_gid,dim)*node_vel(1,node_gid,dim); // 1/2 at end
-          } // end for
-        
-          if(num_dim==2){
-            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
-          }
-          else{
-            KE_loc_sum += node_mass(node_gid)*ke;
-          }
-        
-          }, KE_sum);
-        }
-        Kokkos::fence();
-        KE_sum = 0.5*KE_sum;
-        objective_accumulation += KE_sum*dt;
     } // end for cycle loop
 
-    last_time_step = cycle - 1;
+    last_time_step = cycle;
 
     //simple setup to just calculate KE minimize objective for now
     if(simparam_dynamic_opt->topology_optimization_on){
@@ -2590,3 +2760,349 @@ void FEA_Module_SGH::sgh_solve(){
     return;
     
 } // end of SGH solve
+
+/* ----------------------------------------------------------------------------
+   Adjoint vector for the kinetic energy minimization problem
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::compute_topology_optimization_adjoint(){
+  
+  double time_value = simparam->time_value;
+  const double time_final = simparam->time_final;
+  const double dt_max = simparam->dt_max;
+  const double dt_min = simparam->dt_min;
+  const double dt_cfl = simparam->dt_cfl;
+  double graphics_time = simparam->graphics_time;
+  size_t graphics_cyc_ival = simparam->graphics_cyc_ival;
+  double graphics_dt_ival = simparam->graphics_dt_ival;
+  const size_t rk_num_stages = simparam->rk_num_stages;
+  double dt = simparam->dt;
+  const double fuzz = simparam->fuzz;
+  const double tiny = simparam->tiny;
+  const double small = simparam->small;
+  CArray <double> graphics_times = simparam->graphics_times;
+  size_t graphics_id = simparam->graphics_id;
+  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+  const DCArrayKokkos <material_t> material = simparam->material;
+  const int num_dim = simparam->num_dim;
+  real_t global_dt;
+  size_t current_data_index, next_data_index;
+  Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
+  //initialize first adjoint vector at last_time_step to 0 as the terminal value
+  adjoint_vector_data[last_time_step+1]->putScalar(0);
+
+  //solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
+  //A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
+  if(myrank==0)
+    std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
+
+  for (int cycle = last_time_step; cycle >= 0; cycle--) {
+    //compute timestep from time data
+    global_dt = time_data[cycle+1] - time_data[cycle];
+    
+    //print
+    if (cycle==last_time_step){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    }
+        // print time step every 10 cycles
+    else if (cycle%20==0){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    } // end if
+    //else if (cycle==1){
+      //if(myrank==0)
+        //printf("cycle = %lu, time = %f, time step = %f \n", cycle-1, time_data[cycle-1], global_dt);
+    //} // end if
+
+    //compute adjoint vector for this data point; use velocity midpoint
+      //view scope
+      {
+        const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+    
+        const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
+
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+          for (int idim = 0; idim < num_dim; idim++){
+            //cancellation of half from midpoint and 2 from adjoint equation already done
+            current_adjoint_vector(node_gid,idim) = -0.5*(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
+          } 
+        }); // end parallel for
+        Kokkos::fence();
+      } //end view scope
+    
+  }
+}
+
+
+/* ----------------------------------------------------------------------------
+   Adjoint vector for the kinetic energy minimization problem
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients){
+
+  double time_value = simparam->time_value;
+  const double time_final = simparam->time_final;
+  const double dt_max = simparam->dt_max;
+  const double dt_min = simparam->dt_min;
+  const double dt_cfl = simparam->dt_cfl;
+  double graphics_time = simparam->graphics_time;
+  size_t graphics_cyc_ival = simparam->graphics_cyc_ival;
+  double graphics_dt_ival = simparam->graphics_dt_ival;
+  const size_t rk_num_stages = simparam->rk_num_stages;
+  double dt = simparam->dt;
+  const double fuzz = simparam->fuzz;
+  const double tiny = simparam->tiny;
+  const double small = simparam->small;
+  CArray <double> graphics_times = simparam->graphics_times;
+  size_t graphics_id = simparam->graphics_id;
+  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+  const DCArrayKokkos <material_t> material = simparam->material;
+  const int num_dim = simparam->num_dim;
+  int num_corners = rnum_elem*num_nodes_in_elem;
+  real_t global_dt;
+  size_t current_data_index, next_data_index;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
+
+  if(myrank==0)
+    std::cout << "Computing accumulated kinetic energy gradient" << std::endl;
+
+  compute_topology_optimization_adjoint();
+
+  //compute design gradients
+  FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+    design_gradients(node_id,0) = 0;
+  }); // end parallel for
+  Kokkos::fence();
+
+  //gradient contribution from kinetic energy vMv product.
+  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    //compute timestep from time data
+    global_dt = time_data[cycle+1] - time_data[cycle];
+    
+    //print
+    if (cycle==0){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    }
+        // print time step every 10 cycles
+    else if (cycle%20==0){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    } // end if
+
+    //compute adjoint vector for this data point; use velocity midpoint
+      //view scope
+      {
+        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        
+        FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+          size_t node_id;
+          size_t corner_id;
+          real_t inner_product;
+          //std::cout << elem_mass(elem_id) <<std::endl;
+          //current_nodal_velocities
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            node_id = nodes_in_elem(elem_id, inode);
+            //midpoint rule for integration being used; add velocities and divide by 2
+            current_element_velocities(inode,0) = (current_velocity_vector(node_id,0) + next_velocity_vector(node_id,0))/2;
+            current_element_velocities(inode,1) = (current_velocity_vector(node_id,1) + next_velocity_vector(node_id,1))/2;
+            if(num_dim==3)
+            current_element_velocities(inode,2) = (current_velocity_vector(node_id,2) + next_velocity_vector(node_id,2))/2;
+          }
+
+          inner_product = 0;
+          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+            node_id = nodes_in_elem(elem_id, ifill);
+            for(int idim=0; idim < num_dim; idim++){
+              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
+            }
+          }
+
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            //compute gradient of local element contribution to v^t*M*v product
+            corner_id = elem_id*num_nodes_in_elem + inode;
+            corner_value_storage(corner_id) = inner_product*global_dt;
+          }
+          
+        }); // end parallel for
+        Kokkos::fence();
+        
+        //accumulate node values from corner storage
+        //multiply
+        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+          size_t corner_id;
+          for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
+            corner_id = corners_in_node(node_id,icorner);
+            design_gradients(node_id,0) += corner_value_storage(corner_id);
+          }
+        }); // end parallel for
+        Kokkos::fence();
+        
+        //test code
+        /*
+        for(int elem_id=0; elem_id < rnum_elem; elem_id++) {
+          size_t node_id;
+          size_t corner_id;
+          real_t inner_product;
+
+          //current_nodal_velocities
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            node_id = nodes_in_elem(elem_id, inode);
+            current_element_velocities(inode,0) = current_velocity_vector(node_id,0);
+            current_element_velocities(inode,1) = current_velocity_vector(node_id,1);
+            if(num_dim==3)
+            current_element_velocities(inode,2) = current_velocity_vector(node_id,2);
+          }
+
+          inner_product = 0;
+          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+            node_id = nodes_in_elem(elem_id, ifill);
+            for(int idim=0; idim < num_dim; idim++){
+              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
+            }
+          }
+
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            node_id = nodes_in_elem(elem_id, inode);
+            if(node_id < nlocal_nodes)
+              design_gradients(node_id,0) += inner_product*global_dt;
+          }
+          
+        } 
+        */
+      } //end view scope
+
+      
+    
+  }
+
+  //multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
+  FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+    design_gradients(node_id,0) *=-0.5/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
+    //design_gradients(node_id,0) =0.00001;
+  }); // end parallel for
+  Kokkos::fence();
+
+  //gradient contribution from Force vector.
+  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    //compute timestep from time data
+    global_dt = time_data[cycle+1] - time_data[cycle];
+    
+    //print
+    if (cycle==0){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    }
+        // print time step every 10 cycles
+    else if (cycle%20==0){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    } // end if
+
+    //compute adjoint vector for this data point; use velocity midpoint
+      //view scope
+      {
+        //const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        //const_vec_array current_coord_vector = forward_solve_coordinate_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        //const_vec_array final_coordinates = forward_solve_coordinate_data[last_time_step+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        
+        FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+          size_t node_id;
+          size_t corner_id;
+          real_t inner_product;
+          //std::cout << elem_mass(elem_id) <<std::endl;
+          //current_nodal_velocities
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            node_id = nodes_in_elem(elem_id, inode);
+            //analytical solution debug
+            /*
+            current_element_adjoint(inode,0) = current_coord_vector(node_id,0) - final_coordinates(node_id,0);
+            current_element_adjoint(inode,1) = current_coord_vector(node_id,1) - final_coordinates(node_id,1);
+            if(num_dim==3)
+            current_element_adjoint(inode,2) = current_coord_vector(node_id,2) - final_coordinates(node_id,2);
+            */
+            current_element_adjoint(inode,0) = (current_adjoint_vector(node_id,0)+next_adjoint_vector(node_id,0))/2;
+            current_element_adjoint(inode,1) = (current_adjoint_vector(node_id,1)+next_adjoint_vector(node_id,1))/2;
+            if(num_dim==3)
+            current_element_adjoint(inode,2) = (current_adjoint_vector(node_id,2)+next_adjoint_vector(node_id,2))/2;
+          }
+
+          inner_product = 0;
+          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+            node_id = nodes_in_elem(elem_id, ifill);
+            for(int idim=0; idim < num_dim; idim++){
+              inner_product += 0.00001*current_element_adjoint(ifill,idim);
+              //inner_product += 0.0001;
+            }
+          }
+
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            //compute gradient of local element contribution to v^t*M*v product
+            corner_id = elem_id*num_nodes_in_elem + inode;
+            corner_value_storage(corner_id) = -inner_product*global_dt/(double)num_nodes_in_elem;
+          }
+          
+        }); // end parallel for
+        Kokkos::fence();
+        
+        //accumulate node values from corner storage
+        //multiply
+        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+          size_t corner_id;
+          for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
+            corner_id = corners_in_node(node_id,icorner);
+            design_gradients(node_id,0) += corner_value_storage(corner_id);
+          }
+        }); // end parallel for
+        Kokkos::fence();
+        
+        //test code
+        /*
+        for(int elem_id=0; elem_id < rnum_elem; elem_id++) {
+          size_t node_id;
+          size_t corner_id;
+          real_t inner_product;
+
+          //current_nodal_velocities
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            node_id = nodes_in_elem(elem_id, inode);
+            current_element_velocities(inode,0) = current_velocity_vector(node_id,0);
+            current_element_velocities(inode,1) = current_velocity_vector(node_id,1);
+            if(num_dim==3)
+            current_element_velocities(inode,2) = current_velocity_vector(node_id,2);
+          }
+
+          inner_product = 0;
+          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+            node_id = nodes_in_elem(elem_id, ifill);
+            for(int idim=0; idim < num_dim; idim++){
+              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
+            }
+          }
+
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            node_id = nodes_in_elem(elem_id, inode);
+            if(node_id < nlocal_nodes)
+              design_gradients(node_id,0) += inner_product*global_dt;
+          }
+          
+        } 
+        */
+      } //end view scope
+
+      
+    
+  }
+
+}

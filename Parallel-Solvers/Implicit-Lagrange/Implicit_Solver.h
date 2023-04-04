@@ -76,7 +76,7 @@ public:
 
   //void read_mesh_tecplot(char *MESH);
 
-  void read_mesh_ansys_dat(char *MESH);
+  void read_mesh_ansys_dat(const char *MESH);
 
   //void repartition_nodes();
 
@@ -105,6 +105,8 @@ public:
   void generate_tcs();
 
   void init_topology_conditions (int num_sets);
+
+  void output_design(int current_step);
 
   void tecplot_writer();
 

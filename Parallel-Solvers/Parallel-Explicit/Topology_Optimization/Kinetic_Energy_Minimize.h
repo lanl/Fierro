@@ -86,6 +86,7 @@ class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
   typedef MV::dual_view_type::t_dev vec_array;
   typedef MV::dual_view_type::t_host host_vec_array;
   typedef Kokkos::View<const real_t**, array_layout, HostSpace, memory_traits> const_host_vec_array;
+  typedef Kokkos::View<const real_t**, array_layout, device_type, memory_traits> const_vec_array;
   typedef MV::dual_view_type dual_vec_array;
 
 private:
@@ -241,7 +242,7 @@ public:
   //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
     //g.zero();
   //}
-  /*
+  
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
     //std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
     //get Tpetra multivector pointer from the ROL vector
@@ -252,10 +253,10 @@ public:
     //FEM_->gradient_print_sync=1;
     //FEM_->gradient_print_sync=0;
     //get local view of the data
-    host_vec_array objective_gradients = gp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    vec_array objective_gradients = gp->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+    const_vec_array design_densities = zp->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
-    FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
+    FEM_->compute_topology_optimization_gradient(design_densities, objective_gradients);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -281,7 +282,7 @@ public:
     //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
   }
   
-  
+  /*
   void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
     //debug
     std::ostream &out = std::cout;

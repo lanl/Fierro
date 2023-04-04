@@ -41,7 +41,9 @@
 #include <sys/stat.h>
 #include <mpi.h>
 #include "Solver.h"
+#include <Kokkos_Core.hpp>
 #include "Implicit_Solver.h"
+#include "Simulation_Parameters.h"
 
 void solver_setup(int argc, char *argv[]);
 
@@ -53,12 +55,15 @@ int main(int argc, char *argv[]){
   
   //initialize MPI
   MPI_Init(&argc,&argv);
-
+  
+  Kokkos::initialize();
   solver_setup(argc, argv);
 
   MPI_Barrier(MPI_COMM_WORLD);
-  MPI_Finalize();
 
+  Kokkos::finalize();
+  MPI_Finalize();
+  
   return 0;
 }
 
@@ -68,23 +73,64 @@ void solver_setup(int argc, char *argv[]){
   */
   
   //base solver class pointer
-  //Solver *solver;
-  
-  //set base pointer to the chosen solver
-  //solver = new Static_Solver_Parallel();
-  //Static_Solver_Parallel solver;
-  Implicit_Solver solver;
-  //solver = new Static_Solver();
-  //solver = new Pseudo_Laplacian();
+  Solver *solver;
+  Simulation_Parameters *simparam;
+  std::string filename = std::string(argv[1]);
+  if(filename.find(".yaml") != std::string::npos){
+      simparam = new Simulation_Parameters();
+      std::string yaml_error;
+      bool yaml_exit_flag = false;
+    
+      //check for user error in providing yaml options (flags unsupported options)
+      yaml_error = simparam->yaml_input(filename);
+      if(yaml_error!="success"){
+        std::cout << yaml_error << std::endl;
+        yaml_exit_flag = true;
+      } 
+    
+      if(yaml_exit_flag){
+        //exit_solver(0);
+      }
 
-  //checks for optional solver routines
-  if(solver.setup_flag) solver.solver_setup();
-
-  // invoke solver's run function (should perform most of the computation)//
-  solver.run(argc,argv);
+      //use map of set options to set member variables of the class
+      simparam->apply_settings();
+      if(simparam->solver_type=="Implicit"){
+        solver = new Implicit_Solver();
+        //assign parameters read in by the base simulation parameters class to derived class in solver;
+        //this includes the map of all yaml options read in.
+        solver->simparam->Simulation_Parameters::operator=(*simparam);
   
-  //invoke optional finalize function
-  if(solver.finalize_flag) solver.solver_finalize();
- 
-  //delete solver;
+        //solver = new Static_Solver();
+        //solver = new Pseudo_Laplacian();
+
+        //checks for optional solver routines
+        if(solver->setup_flag) solver->solver_setup();
+
+        // invoke solver's run function (should perform most of the computation)//
+        solver->run(argc,argv);
+  
+        //invoke optional finalize function
+        if(solver->finalize_flag) solver->solver_finalize();
+      }
+    delete simparam;
+  }
+  else{
+    //set base pointer to the chosen solver
+    //solver = new Static_Solver_Parallel();
+    //Static_Solver_Parallel solver;
+    solver = new Implicit_Solver();
+    //solver = new Static_Solver();
+    //solver = new Pseudo_Laplacian();
+
+    //checks for optional solver routines
+    if(solver->setup_flag) solver->solver_setup();
+
+    // invoke solver's run function (should perform most of the computation)//
+    solver->run(argc,argv);
+  
+    //invoke optional finalize function
+    if(solver->finalize_flag) solver->solver_finalize();
+  }
+  
+  delete solver;
 }

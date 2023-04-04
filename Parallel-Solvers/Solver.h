@@ -130,19 +130,25 @@ public:
 
   virtual void exit_solver(int status);
 
-  virtual void read_mesh_ensight(char *MESH);
+  virtual void read_mesh_ensight(const char *MESH);
 
-  virtual void read_mesh_tecplot(char *MESH);
+  virtual void init_design() {}
+
+  virtual void read_mesh_tecplot(const char *MESH);
   
-  virtual void read_mesh_vtk(char *MESH);
+  virtual void read_mesh_vtk(const char *MESH);
 
   virtual void repartition_nodes();
+
+  virtual void comm_coordinates();
 
   virtual void tecplot_writer() {}
 
   virtual void parallel_tecplot_writer() {}
 
   virtual void parallel_vtk_writer() {}
+
+  virtual void output_design(int current_step) {}
 
   //setup ghosts and element maps
   virtual void init_maps();
@@ -169,6 +175,7 @@ public:
   //host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
   size_t max_nodes_per_element, max_nodes_per_patch;
   elements::element_selector *element_select;
   elements::Element3D *elem;
@@ -199,6 +206,7 @@ public:
   Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
+  Teuchos::RCP<MV> ghost_node_coords_distributed;
   Teuchos::RCP<MV> initial_node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
@@ -239,6 +247,7 @@ public:
 
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
+  int last_print_step;
 
   //debug and system functions/variables
   double CPU_Time();

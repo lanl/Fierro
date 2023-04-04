@@ -51,6 +51,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   Simulation_Parameters_SGH();
   virtual ~Simulation_Parameters_SGH();
   virtual void input();
+  virtual void apply_settings();
   virtual void FEA_module_setup();
     
     // applying initial conditions
@@ -71,6 +72,8 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
       TriplePoint = 9,
       TaylorAnvil = 10,
   };
+
+  void select_problem(setup problem_selector);
     
   // end of initial conditions enum
 
@@ -89,11 +92,11 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   // --- Graphics output variables ---
   bool output_velocity_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
 
-  CArrayKokkos <material_t> material;
-  CArrayKokkos <double> state_vars; // array to hold init model variables
+  DCArrayKokkos <material_t> material;
+  DCArrayKokkos <double> state_vars; // array to hold init model variables
 
-  CArrayKokkos <mat_fill_t> mat_fill;
-  CArrayKokkos <boundary_t> boundary;
+  DCArrayKokkos <mat_fill_t> mat_fill;
+  DCArrayKokkos <boundary_t> boundary;
 
   // --- num vars ----
   size_t num_dims;
@@ -141,6 +144,65 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
   real_t gravity_vector[3];
 
   //SGH Solver Flags
+
+  //Possible options to parse; setting marked arbitrary if the options are not limited
+
+  options_multimap sgh_possible_options
+  {
+    { "solver_type", "SGH"}
+  }; // end std::map
+
+  nested_options_multimap sgh_possible_options_nested2
+  {
+    { "solver_options",
+        {
+            { "test_problem", "Sedov3D"},
+            { "mesh_file_name", "arbitrary"},
+            { "num_dims", "arbitrary"},
+            { "mesh_file_format", "ensight"},
+            { "mesh_file_format", "tecplot"},
+            { "mesh_file_format", "vtk"}
+        }
+    }
+  }; // end std::map
+
+  doubly_nested_options_multimap sgh_possible_options_nested3
+  {
+
+    //mesh options
+    { "mesh",
+        {
+            { "create",
+                {
+                    {"type" , "3D-Box"}
+                }
+            },
+            { "format",
+                {
+                    {"type" , "geo"}
+                }
+            },
+            { "parameters",
+                {
+                    {"length_x" , "1.0"},
+                    {"length_y" , "1.0"},
+                    {"length_z" , "1.0"},
+                    {"num_x_elems", "10"},
+                    {"num_y_elems", "10"},
+                    {"num_z_elems", "10"},
+                    {"inner_radius" , "1.0"},
+                    {"outer_radius" , "1.0"},
+                    {"starting_angle" , "0.0"},
+                    {"ending_angle" , "180.0"},
+                    {"num_radial_elems" , "10"},
+                    {"num_angular_elems" , "10"},
+                    {"origin", "[0,0,0]"},
+                    {"order", "1"}
+                }
+            }
+        }
+    }
+  }; // end std::map
   
 };
 

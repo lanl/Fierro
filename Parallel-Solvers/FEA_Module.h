@@ -136,7 +136,7 @@ public:
 
   virtual void comm_variables(Teuchos::RCP<const MV> zp) {}
 
-  virtual void update_linear_solve(Teuchos::RCP<const MV> zp) {}
+  virtual void update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step) {}
 
   virtual void update_forward_solve(Teuchos::RCP<const MV> zp) {}
 
@@ -166,6 +166,10 @@ public:
 
   virtual void node_density_constraints(host_vec_array node_densities_lower_bound){}
 
+  //interfacing information
+  std::string Module_Type;
+  int last_compute_step;
+
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   
@@ -186,6 +190,7 @@ public:
   host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;

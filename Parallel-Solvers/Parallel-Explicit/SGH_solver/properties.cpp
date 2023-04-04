@@ -7,7 +7,7 @@
 #include "FEA_Module_SGH.h"
 #include "Simulation_Parameters_SGH.h"
 
-void FEA_Module_SGH::update_state(const CArrayKokkos <material_t> &material,
+void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                   const mesh_t &mesh,
                   const DViewCArrayKokkos <double> &node_coords,
                   const DViewCArrayKokkos <double> &node_vel,
@@ -116,7 +116,7 @@ void FEA_Module_SGH::update_state(const CArrayKokkos <material_t> &material,
 
 
 
-void FEA_Module_SGH::update_state2D(const CArrayKokkos <material_t> &material,
+void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                     const mesh_t &mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,

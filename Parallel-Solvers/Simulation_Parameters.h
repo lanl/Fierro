@@ -35,11 +35,12 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#ifndef IMPLICIT_SIMULATION_PARAMETERS_H
-#define IMPLICIT_SIMULATION_PARAMETERS_H
+#ifndef SIMULATION_PARAMETERS_H
+#define SIMULATION_PARAMETERS_H
 
 #include "utilities.h"
 #include "Yaml.hpp"
+#include "mpi.h"
 #include <stdio.h>
 #include <vector>
 #include <string>
@@ -50,8 +51,12 @@ class Simulation_Parameters
  public:
   Simulation_Parameters();
   virtual ~Simulation_Parameters();
-  virtual void input();
+  virtual void input(); //typically sets default problem parameters
+  virtual void apply_settings();
+  virtual std::string yaml_input(std::string filename); //reads in user defined parameters
   virtual void FEA_module_setup();
+  virtual void yaml_FEA_module_setup();
+
   //==============================================================================
   //   Mesh Variables
   //==============================================================================
@@ -73,6 +78,7 @@ class Simulation_Parameters
   bool restart_file;
   bool tecplot_input, ansys_dat_input, vtk_input, zero_index_base;
   std::string element_type;
+  std::string solver_type, mesh_file_name, mesh_file_format;
 
   //debug and performance reporting flags
   int report_runtime_flag;
@@ -81,6 +87,41 @@ class Simulation_Parameters
   std::vector<std::string> FEA_Module_List;
   std::vector<bool> fea_module_must_read;
   int nfea_modules;
+
+  //====================================================================================================
+  //  possible values in dictionary of options (our yaml parser supports three nested levels of options)
+  //====================================================================================================
+  typedef std::multimap<std::string,std::string> options_multimap;
+
+  typedef std::multimap<std::string,std::multimap<std::string,std::string>> nested_options_multimap;
+
+  typedef std::multimap<std::string,std::multimap<std::string,std::multimap<std::string,std::string>>> doubly_nested_options_multimap;
+
+  options_multimap possible_options;
+
+  nested_options_multimap possible_options_nested2;
+
+  doubly_nested_options_multimap possible_options_nested3;
+
+  std::map<std::string,std::string> set_options;
+
+  std::map<std::string,std::map<std::string,std::string>> set_options_nested2;
+
+  std::map<std::string,std::map<std::string,std::map<std::string,std::string>>> set_options_nested3;
+
+  typedef std::pair<std::string,std::string> option_setting_pair;
+
+  typedef options_multimap::iterator multimap_iterator;
+
+  typedef nested_options_multimap::iterator multimap_iterator_nested2;
+  
+  typedef doubly_nested_options_multimap::iterator multimap_iterator_nested3;
+
+  //MPI data
+  int myrank; //index of this mpi rank in the world communicator
+  int nranks; //number of mpi ranks in the world communicator
+  MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
+
 };
 
 #endif // end HEADER_H

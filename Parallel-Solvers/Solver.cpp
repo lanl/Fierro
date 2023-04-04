@@ -95,6 +95,7 @@ Solver::Solver(){
   //default flags assume optional routines are off
   setup_flag = finalize_flag = 0;
   communication_time = dev2host_time = host2dev_time = 0;
+  last_print_step = -1;
 }
 
 void Solver::exit_solver(int status){
@@ -110,7 +111,7 @@ Solver::~Solver(){}
    Read Ensight format mesh file
 ------------------------------------------------------------------------- */
 
-void Solver::read_mesh_ensight(char *MESH){
+void Solver::read_mesh_ensight(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -705,7 +706,7 @@ void Solver::read_mesh_ensight(char *MESH){
    Read VTK format mesh file
 ------------------------------------------------------------------------- */
 
-void Solver::read_mesh_vtk(char *MESH){
+void Solver::read_mesh_vtk(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -1206,7 +1207,7 @@ void Solver::read_mesh_vtk(char *MESH){
 /* ----------------------------------------------------------------------
    Read Tecplot format mesh file
 ------------------------------------------------------------------------- */
-void Solver::read_mesh_tecplot(char *MESH){
+void Solver::read_mesh_tecplot(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -2045,6 +2046,7 @@ void Solver::init_maps(){
 
   //create distributed multivector of the local node data and all (local + ghost) node storage
   all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  ghost_node_coords_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
   
   //debug print
   //std::ostream &out = std::cout;
@@ -2322,6 +2324,21 @@ void Solver::Get_Boundary_Patches(){
   */
   //std::fflush(stdout);
   
+}
+
+/* ----------------------------------------------------------------------
+  Communicate updated nodal coordinates to ghost nodes
+------------------------------------------------------------------------- */
+
+void Solver::comm_coordinates(){
+
+  //create import object using local node indices map and ghost indices map
+  Tpetra::Import<LO, GO> importer(map, ghost_node_map);
+  
+  //comms to get ghosts
+  ghost_node_coords_distributed->doImport(*node_coords_distributed, importer, Tpetra::INSERT);
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_coords_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 }
 
 /* ----------------------------------------------------------------------

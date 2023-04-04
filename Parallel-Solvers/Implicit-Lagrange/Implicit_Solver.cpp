@@ -120,9 +120,6 @@ Implicit_Solver::Implicit_Solver() : Solver(){
   //create parameter objects
   simparam = new Simulation_Parameters();
   simparam_TO = new Simulation_Parameters_Topology_Optimization(this);
-  // ---- Read input file, define state and boundary conditions ---- //
-  simparam->input();
-  simparam_TO->input();
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
@@ -185,15 +182,57 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //error handle for file input name
     //if(argc < 2)
+    std::string filename = std::string(argv[1]);
+    if(filename.find(".yaml") != std::string::npos){
+      std::string yaml_error;
+      bool yaml_exit_flag = false;
+      // default conditions //
+      simparam->input();
+      //check for user error in providing yaml options (flags unsupported options)
+      //yaml_error = simparam->yaml_input(filename);
+      if(yaml_error!="success"){
+        std::cout << yaml_error << std::endl;
+        yaml_exit_flag = true;
+      } 
+    
+      if(yaml_exit_flag){
+        //exit_solver(0);
+      }
 
-    // ---- Read intial mesh, refine, and build connectivity ---- //
-    if(simparam->tecplot_input)
-      read_mesh_tecplot(argv[1]);
-    else if(simparam->ansys_dat_input)
-      read_mesh_ansys_dat(argv[1]);
-    else
-      read_mesh_ensight(argv[1]);
+      //use map of set options to set member variables of the class
+      simparam->apply_settings();
+      //construct list of FEA modules requested
+      simparam->yaml_FEA_module_setup();
+      //assign base class data such as map of settings to TO simparam class
+      simparam_TO->Simulation_Parameters::operator=(*simparam);
+      simparam_TO->input();
+      simparam_TO->apply_settings();
 
+      // ---- Read intial mesh, refine, and build connectivity ---- //
+      if(simparam->mesh_file_format=="tecplot")
+        read_mesh_tecplot(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ansys_dat")
+        read_mesh_ansys_dat(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ensight")
+        read_mesh_ensight(simparam->mesh_file_name.c_str());
+
+      simparam_TO->FEA_module_setup();
+    }
+    else{
+      // default conditions //
+      simparam->input();
+      simparam_TO->input();
+      if(simparam->tecplot_input)
+        read_mesh_tecplot(argv[1]);
+      else if(simparam->ansys_dat_input)
+        read_mesh_ansys_dat(argv[1]);
+      else
+        read_mesh_ensight(argv[1]);
+
+      //construct list of FEA modules requested
+      simparam_TO->FEA_module_setup();
+    }
+    
     //debug
     //return;
     init_maps();
@@ -221,9 +260,6 @@ void Implicit_Solver::run(int argc, char *argv[]){
     //initialize TO design variable storage
     init_design();
 
-    //construct list of FEA modules requested
-    simparam_TO->FEA_module_setup();
-
     //process process list of requested FEA modules to construct list of objects
     FEA_module_setup();
 
@@ -241,40 +277,33 @@ void Implicit_Solver::run(int argc, char *argv[]){
         //set applied loading conditions for FEA modules
         fea_modules[imodule]->generate_applied_loads();
       }
+
+      if(myrank == 0)
+        std::cout << "Starting init assembly for module " << imodule <<std::endl <<std::flush;
+      //allocate and fill sparse structures needed for global solution in each FEA module
+      fea_modules[imodule]->init_assembly();
+    
+      //assemble the global solution (stiffness matrix etc. and nodal forces)
+      fea_modules[imodule]->assemble_matrix();
+      std::cout << "Finished matrix assembly for module " << imodule << std::endl <<std::flush;
+    
+      fea_modules[imodule]->assemble_vector();
+
+      fea_modules[imodule]->linear_solver_parameters();
+    
+      if(myrank == 0)
+        std::cout << "Starting First Solve for module " << imodule << std::endl <<std::flush;
+
+      int solver_exit = fea_modules[imodule]->solve();
+      if(solver_exit != EXIT_SUCCESS){
+        std::cout << "Linear Solver Error for module " << imodule << std::endl <<std::flush;
+        return;
+      }
+    
     }
 
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;
     //call boundary routines on fea modules
-
-    if(myrank == 0)
-    std::cout << "Starting init assembly" << std::endl <<std::flush;
-    //allocate and fill sparse structures needed for global solution in each FEA module
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->init_assembly();
-    
-    //assemble the global solution (stiffness matrix etc. and nodal forces)
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->assemble_matrix();
-
-    if(myrank == 0)
-    std::cout << "Finished matrix assembly" << std::endl <<std::flush;
-    
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->assemble_vector();
-
-    for(int imodule = 0; imodule < nfea_modules; imodule++)
-      fea_modules[imodule]->linear_solver_parameters();
-    
-    if(myrank == 0)
-    std::cout << "Starting First Solve" << std::endl <<std::flush;
-    
-    for(int imodule = 0; imodule < nfea_modules; imodule++){
-      int solver_exit = fea_modules[imodule]->solve();
-      if(solver_exit != EXIT_SUCCESS){
-        std::cout << "Linear Solver Error" << std::endl <<std::flush;
-        return;
-      }
-    }
     /*
     //debug print
     
@@ -291,6 +320,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
+    if(simparam_TO->topology_optimization_on||simparam_TO->shape_optimization_on)
     setup_optimization_problem();
     
     //solver_exit = solve();
@@ -310,7 +340,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
               << linear_solve_time << " hess solve time " << hessvec_linear_time <<std::endl;
 
     // Data writers
-    parallel_tecplot_writer();
+    output_design(last_print_step+1);
     // vtk_writer();
     if(myrank==0){
       std::cout << "Total number of solves and assembly " << fea_modules[0]->update_count <<std::endl;
@@ -322,7 +352,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read ANSYS dat format mesh file
 ------------------------------------------------------------------------- */
-void Implicit_Solver::read_mesh_ansys_dat(char *MESH){
+void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -1095,27 +1125,42 @@ void Implicit_Solver::FEA_module_setup(){
     //automate selection list later; use std::map maybe?
     if(FEA_Module_List[imodule] == "Elasticity"){
       fea_module_types[imodule] = "Elasticity";
-      fea_modules[imodule] = new FEA_Module_Elasticity(this);
+      fea_modules[imodule] = new FEA_Module_Elasticity(this, imodule);
       module_found = true;
       displacement_module = imodule;
       //debug print
-      *fos << " ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << "ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
     else if(FEA_Module_List[imodule] == "Inertial"){
       fea_module_types[imodule] = "Inertial";
-      fea_modules[imodule] = new FEA_Module_Inertial(this);
+      fea_modules[imodule] = new FEA_Module_Inertial(this, imodule);
       module_found = true;
       //debug print
-      *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << "INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
     else if(FEA_Module_List[imodule] == "Heat_Conduction"){
       fea_module_types[imodule] = "Heat_Conduction";
-      fea_modules[imodule] = new FEA_Module_Heat_Conduction(this);
+      fea_modules[imodule] = new FEA_Module_Heat_Conduction(this, imodule);
       module_found = true; 
       //debug print
-      *fos << " HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << "HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
+    }
+    else if(FEA_Module_List[imodule] == "Thermo_Elasticity"){
+
+      //ensure another momentum conservation module was not allocated
+      if(displacement_module>=0){
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; MORE THAN ONE ELASTIC MODULE ALLOCATED \"" <<FEA_Module_List[imodule]<<"\"" << std::endl;
+        exit_solver(0);
+      }
+
+      fea_module_types[imodule] = "Thermo_Elasticity";
+      fea_modules[imodule] = new FEA_Module_Thermo_Elasticity(this, imodule);
+      module_found = true;
+      displacement_module = imodule;
+      //debug print
+      *fos << "THERMO-ELASTIC MODULE ALLOCATED AS " <<imodule << std::endl;
     }
     else{
       *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" <<FEA_Module_List[imodule]<<"\"" << std::endl;
@@ -1201,6 +1246,11 @@ void Implicit_Solver::setup_optimization_problem(){
             Multi_Objective_Terms[imulti] = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
           }
           else if(TO_Module_List[module_id] == "Heat_Capacity_Potential_Minimize"){
+            //debug print
+            *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
+            Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+          }
+          else if(TO_Module_List[module_id] == "Thermo_Elastic_Strain_Energy_Minimize"){
             //debug print
             *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
             Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
@@ -1761,6 +1811,18 @@ void Implicit_Solver::sort_information(){
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
+void Implicit_Solver::output_design(int current_step){
+  if(current_step!=last_print_step){
+    last_print_step = current_step;
+    parallel_tecplot_writer();
+  }
+
+}
+
+/* ----------------------------------------------------------------------
+   Output Model Information in tecplot format
+------------------------------------------------------------------------- */
+
 void Implicit_Solver::parallel_tecplot_writer(){
   
   int num_dim = simparam->num_dim;
@@ -1988,6 +2050,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
     current_buffer_position += current_line.length();
 	}
 
+  MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
   
   MPI_File_close(&myfile_parallel);
@@ -2128,6 +2191,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
 	  }
 		//print buffers at offsets with collective MPI write
     //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
+    MPI_Barrier(world);
     MPI_File_write_at_all(myfile_parallel_deformed, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
     //MPI_File_close(&myfile_parallel);
   
@@ -2169,9 +2233,12 @@ void Implicit_Solver::parallel_tecplot_writer(){
 
       current_buffer_position += current_line.length();
 	  }
-
+    
+    MPI_Barrier(world);
     MPI_File_write_at_all(myfile_parallel_deformed, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
-  
+    
+    MPI_Barrier(world);
+    MPI_File_sync(myfile_parallel);
     MPI_File_close(&myfile_parallel_deformed);
   }
 }

@@ -166,7 +166,7 @@ public:
       //communicate density variables for ghosts
       FEM_->comm_variables(zp);
       //update deformation variables
-      FEM_->update_linear_solve(zp);
+      FEM_->update_linear_solve(zp, current_step);
       if(FEM_->myrank==0)
       *fos << "called Trial" << std::endl;
     }
@@ -177,12 +177,12 @@ public:
       *fos << "called Temp" << std::endl;
       FEM_->all_node_temperatures_distributed = all_node_temperatures_distributed_temp;
       FEM_->comm_variables(zp);
-      FEM_->update_linear_solve(zp);
+      FEM_->update_linear_solve(zp, current_step);
     }
 
     //decide to output current optimization state
     if(current_step%FEM_->simparam_TO->optimization_output_freq==0)
-      FEM_->Implicit_Solver_Pointer_->parallel_tecplot_writer();
+        FEM_->Implicit_Solver_Pointer_->output_design(current_step);
   }
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {

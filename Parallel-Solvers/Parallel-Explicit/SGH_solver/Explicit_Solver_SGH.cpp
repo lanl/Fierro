@@ -73,6 +73,7 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module.h"
 #include "FEA_Module_SGH.h"
+#include "FEA_Module_Inertial.h"
 #include "Explicit_Solver_SGH.h"
 #include "mesh.h"
 #include "state.h"
@@ -129,8 +130,7 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->Simulation_Parameters::input();
-  simparam->input();
-  simparam_dynamic_opt->input();
+
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
@@ -175,10 +175,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
     MPI_Comm_rank(world,&myrank);
     MPI_Comm_size(world,&nranks);
-    int num_dim = simparam->num_dim;
     
     if(myrank == 0){
-      std::cout << "Running TO Explicit_Solver" << std::endl;
+      std::cout << "Starting Lagrangian SGH code" << std::endl;
        // check to see of a mesh was supplied when running the code
       if (argc == 1) {
         std::cout << "\n\n**********************************\n\n";
@@ -189,23 +188,61 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       }
     }
 
-    printf("Starting Lagrangian SGH code\n");
-
     //initialize Trilinos communicator class
     comm = Tpetra::getDefaultComm();
 
+    //default simulation parameters
+    
+    simparam->input();
+    simparam_dynamic_opt->input();
+    int num_dim = simparam->num_dim;
+
     //error handle for file input name
     //if(argc < 2)
+    //yaml file reader for simulation parameters
+    std::string filename = std::string(argv[1]);
+    if(filename.find(".yaml") != std::string::npos){
+      std::string yaml_error;
+      bool yaml_exit_flag = false;
+    
+      //check for user error in providing yaml options (flags unsupported options)
+      //yaml_error = simparam->yaml_input(filename);
+      if(yaml_error!="success"){
+        std::cout << yaml_error << std::endl;
+        yaml_exit_flag = true;
+      } 
+    
+      if(yaml_exit_flag){
+        //exit_solver(0);
+      }
 
-    // ---- Read intial mesh, refine, and build connectivity ---- //
-    if(simparam->tecplot_input)
-      read_mesh_tecplot(argv[1]);
-    else if(simparam->vtk_input)
-      read_mesh_vtk(argv[1]);
-    else if(simparam->ansys_dat_input)
-      read_mesh_ansys_dat(argv[1]);
-    else
-      read_mesh_ensight(argv[1]);
+      //use map of set options to set member variables of the class
+      simparam->apply_settings();
+      //assign base class data such as map of settings to TO simparam class
+      simparam_dynamic_opt->Simulation_Parameters::operator=(*simparam);
+      simparam_dynamic_opt->apply_settings();
+
+      // ---- Read intial mesh, refine, and build connectivity ---- //
+      if(simparam->mesh_file_format=="tecplot")
+        read_mesh_tecplot(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="vtk")
+        read_mesh_vtk(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ansys_dat")
+        read_mesh_ansys_dat(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ensight")
+        read_mesh_ensight(simparam->mesh_file_name.c_str());
+    }
+    else{
+      if(simparam->tecplot_input)
+        read_mesh_tecplot(argv[1]);
+      else if(simparam->vtk_input)
+        read_mesh_vtk(argv[1]);
+      else if(simparam->ansys_dat_input)
+        read_mesh_ansys_dat(argv[1]);
+      else
+        read_mesh_ensight(argv[1]);
+    }
+
 
     //debug
     //return;
@@ -234,7 +271,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //generate_tcs();
 
     //initialize TO design variable storage
-    //init_design();
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on)
+      init_design();
 
     //construct list of FEA modules requested
     if(simparam_dynamic_opt->topology_optimization_on)
@@ -311,10 +349,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
-      setup_optimization_problem();
-      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
-    }
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -330,28 +364,23 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     node_t  node;
     elem_t  elem;
     corner_t  corner;
-    // The kokkos scope
-    {
-     
-        
-        
-        // ---------------------------------------------------------------------
-        //    mesh data type declarations
-        // ---------------------------------------------------------------------
-        //mesh_t mesh;
+    // ---------------------------------------------------------------------
+    //    mesh data type declarations
+    // ---------------------------------------------------------------------
+    //mesh_t mesh;
         
 
-        // ---------------------------------------------------------------------
-        //    read the input file
-        // ---------------------------------------------------------------------  
-        //simparam->input();
+    // ---------------------------------------------------------------------
+    //    read the input file
+    // ---------------------------------------------------------------------  
+    //simparam->input();
         
 
-        // ---------------------------------------------------------------------
-        //    read in supplied mesh
-        // --------------------------------------------------------------------- 
-        sgh_module->sgh_interface_setup(*mesh, node, elem, corner);
-        mesh->build_corner_connectivity();
+    // ---------------------------------------------------------------------
+    //    read in supplied mesh
+    // --------------------------------------------------------------------- 
+    sgh_module->sgh_interface_setup(*mesh, node, elem, corner);
+    mesh->build_corner_connectivity();
         //debug print of corner ids
         /*
         if(myrank==1){
@@ -387,27 +416,27 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
              }
             }
             */
-        mesh->build_elem_elem_connectivity();
-        mesh->num_bdy_patches = nboundary_patches;
-        if(num_dim==2){
-        mesh->build_patch_connectivity();
-        mesh->build_node_node_connectivity();
-        }
+    mesh->build_elem_elem_connectivity();
+    mesh->num_bdy_patches = nboundary_patches;
+    if(num_dim==2){
+      mesh->build_patch_connectivity();
+      mesh->build_node_node_connectivity();
+    }
         
-        // ---------------------------------------------------------------------
-        //    allocate memory
-        // ---------------------------------------------------------------------
+      // ---------------------------------------------------------------------
+      //    allocate memory
+      // ---------------------------------------------------------------------
 
-        // shorthand names
-        const size_t num_nodes = mesh->num_nodes;
-        const size_t num_elems = mesh->num_elems;
-        const size_t num_corners = mesh->num_corners;
-        const size_t max_num_state_vars = simparam->max_num_state_vars;
-        const size_t rk_num_bins = simparam->rk_num_bins;
+      // shorthand names
+    const size_t num_nodes = mesh->num_nodes;
+    const size_t num_elems = mesh->num_elems;
+    const size_t num_corners = mesh->num_corners;
+    const size_t max_num_state_vars = simparam->max_num_state_vars;
+    const size_t rk_num_bins = simparam->rk_num_bins;
 
         
-        // allocate elem_statev
-        elem.statev = CArray <double> (num_elems, max_num_state_vars);
+      // allocate elem_statev
+    elem.statev = CArray <double> (num_elems, max_num_state_vars);
 
         // --- make dual views of data on CPU and GPU ---
         //  Notes:
@@ -422,98 +451,94 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         //     for memory movement.
 
         
-        // create Dual Views of the individual node struct variables
-        sgh_module->node_coords = DViewCArrayKokkos<double>(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+    // create Dual Views of the individual node struct variables
+    sgh_module->node_coords = DViewCArrayKokkos<double>(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        sgh_module->node_vel = DViewCArrayKokkos<double>(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+    sgh_module->node_vel = DViewCArrayKokkos<double>(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
+    sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
         
         
-        // create Dual Views of the individual elem struct variables
-        sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
+      // create Dual Views of the individual elem struct variables
+    sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
                                             num_elems);
 
-        sgh_module->elem_pres = DViewCArrayKokkos<double>(&elem.pres(0),
+    sgh_module->elem_pres = DViewCArrayKokkos<double>(&elem.pres(0),
                                              num_elems);
 
-        sgh_module->elem_stress = DViewCArrayKokkos<double>(&elem.stress(0,0,0,0),
+    sgh_module->elem_stress = DViewCArrayKokkos<double>(&elem.stress(0,0,0,0),
                                                rk_num_bins,
                                                num_elems,
                                                3,
                                                3); // always 3D even in 2D-RZ
 
-        sgh_module->elem_sspd = DViewCArrayKokkos<double>(&elem.sspd(0),
+    sgh_module->elem_sspd = DViewCArrayKokkos<double>(&elem.sspd(0),
                                              num_elems);
 
-        sgh_module->elem_sie = DViewCArrayKokkos<double>(&elem.sie(0,0),
+    sgh_module->elem_sie = DViewCArrayKokkos<double>(&elem.sie(0,0),
                                             rk_num_bins,
                                             num_elems);
 
-        sgh_module->elem_vol = DViewCArrayKokkos<double>(&elem.vol(0),
+    sgh_module->elem_vol = DViewCArrayKokkos<double>(&elem.vol(0),
                                             num_elems);
         
-        sgh_module->elem_div = DViewCArrayKokkos<double>(&elem.div(0),
+    sgh_module->elem_div = DViewCArrayKokkos<double>(&elem.div(0),
                                             num_elems);
         
 
-        sgh_module->elem_mass = DViewCArrayKokkos<double>(&elem.mass(0),
+    sgh_module->elem_mass = DViewCArrayKokkos<double>(&elem.mass(0),
                                              num_elems);
 
-        sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
+    sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
                                                num_elems);
 
-        sgh_module->elem_statev = DViewCArrayKokkos<double>(&elem.statev(0,0),
+    sgh_module->elem_statev = DViewCArrayKokkos<double>(&elem.statev(0,0),
                                                num_elems,
                                                max_num_state_vars );
         
-        // create Dual Views of the corner struct variables
-        sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
+      // create Dual Views of the corner struct variables
+    sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
                                                 num_corners, 
                                                 num_dim);
 
-        sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
+    sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
                                                num_corners);
         
         
-        // ---------------------------------------------------------------------
-        //   calculate geometry
-        // ---------------------------------------------------------------------
-        sgh_module->node_coords.update_device();
-        Kokkos::fence();
+      // ---------------------------------------------------------------------
+      //   calculate geometry
+      // ---------------------------------------------------------------------
+    sgh_module->node_coords.update_device();
+    Kokkos::fence();
         
-        //set initial saved coordinates
-        initial_node_coords_distributed->assign(*node_coords_distributed);
+      //set initial saved coordinates
+    initial_node_coords_distributed->assign(*node_coords_distributed);
 
-        sgh_module->get_vol();
+    sgh_module->get_vol();
 
 
-        // ---------------------------------------------------------------------
-        //   setup the IC's and BC's
-        // ---------------------------------------------------------------------
-        sgh_module->setup();
-        
-        // intialize time, time_step, and cycles
-        //time_value = 0.0;
-        //dt = dt_start;
-        //graphics_id = 0;
-        //graphics_times(0) = 0.0;
-        //graphics_time = graphics_dt_ival;  // the times for writing graphics dump
-        
-        //set initial saved velocities
-        initial_node_velocities_distributed->assign(*node_velocities_distributed);
-        
+      // ---------------------------------------------------------------------
+      //   setup the IC's and BC's
+      // ---------------------------------------------------------------------
+    sgh_module->setup();
 
-        // ---------------------------------------------------------------------
-        //   Calculate the SGH solution
-        // ---------------------------------------------------------------------
+    //set initial saved velocities
+    initial_node_velocities_distributed->assign(*node_velocities_distributed);
+    
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      //design_node_densities_distributed->randomize(1,1);
+      setup_optimization_problem();
+      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+    }
+    
+    // ---------------------------------------------------------------------
+    //  Calculate the SGH solution
+    // ---------------------------------------------------------------------
         
-        sgh_module->sgh_solve();
+    sgh_module->sgh_solve();
          
-        
-    } // end of kokkos scope
 
-    printf("Finished\n");
+    //printf("Finished\n");
     
     //benchmark simulation run time end
     double current_cpu = CPU_Time();
@@ -531,13 +556,21 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     
     //test forward solve call
     int ntests = 0;
-    for(int itest = 0; itest < ntests; itest++){
-        design_node_densities_distributed->randomize(0.1,1);
-        test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
-        sgh_module->comm_variables(test_node_densities_distributed);
-        sgh_module->update_forward_solve(test_node_densities_distributed);
+    if(simparam_dynamic_opt->topology_optimization_on){
+      for(int itest = 0; itest < ntests; itest++){
+        design_node_densities_distributed->randomize(1,1);
+        //test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
+        Teuchos::RCP<MV> test_gradients_distributed = Teuchos::rcp(new MV(map, 1));
+        const_vec_array test_node_densities = design_node_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        vec_array test_gradients = test_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+
+        sgh_module->comm_variables(design_node_densities_distributed);
+        sgh_module->update_forward_solve(design_node_densities_distributed);
+        sgh_module->compute_topology_optimization_adjoint();
+        sgh_module->compute_topology_optimization_gradient(test_node_densities, test_gradients);
         // Data writers
-        parallel_vtk_writer();
+        //parallel_vtk_writer();
+      }
     }
 
     // vtk_writer();
@@ -553,7 +586,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read ANSYS dat format mesh file
 ------------------------------------------------------------------------- */
-void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
+void Explicit_Solver_SGH::read_mesh_ansys_dat(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -1203,10 +1236,12 @@ void Explicit_Solver_SGH::init_state_vectors(){
   initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
-  if(!simparam->restart_file)
-    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-  if(simparam_dynamic_opt->topology_optimization_on)
+  if(simparam_dynamic_opt->topology_optimization_on){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+  }
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+    corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element);
+  }
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, 1));
 }
@@ -1462,7 +1497,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          if(simparam_TO->thick_condition_boundary){
+          if(simparam_dynamic_opt->thick_condition_boundary){
             Surface_Nodes = Boundary_Patches(patch_id).node_set;
             current_element_index = Boundary_Patches(patch_id).element_id;
             //debug print of local surface ids
@@ -1558,8 +1593,8 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-  //directions_distributed->putScalar(1);
-  directions_distributed->randomize(-1,1);
+  directions_distributed->putScalar(1);
+  //directions_distributed->randomize(-1,1);
   //real_t normd = directions_distributed->norm2();
   //directions_distributed->scale(normd);
   //set all but first component to 0 for debug
@@ -1831,8 +1866,10 @@ void Explicit_Solver_SGH::sort_information(){
   */
 
   //sorted nodal density information
-  sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
-
+  if(simparam_dynamic_opt->topology_optimization_on){
+    sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+    sorted_node_densities_distributed->doImport(*design_node_densities_distributed, node_sorting_importer, Tpetra::INSERT);
+  }
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
   
@@ -2018,7 +2055,10 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   //set host views of the communicated data to print out from
   const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_densities;
+  if(simparam_dynamic_opt->topology_optimization_on){
+    sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
@@ -2267,7 +2307,10 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_element_densities = sorted_element_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array design_node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_densities;
+  if(simparam_dynamic_opt->topology_optimization_on){
+    sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
 
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
@@ -2549,7 +2592,10 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
     //convert node ordering
-		current_line_stream << std::left << std::setw(25) << design_node_densities(nodeline,0) << std::endl;
+    if(simparam_dynamic_opt->topology_optimization_on)
+		  current_line_stream << std::left << std::setw(25) << sorted_node_densities(nodeline,0) << std::endl;
+    else
+		  current_line_stream << std::left << std::setw(25) << 1 << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
@@ -3406,10 +3452,10 @@ void Explicit_Solver_SGH::ensight_writer(){
 /* -----------------------------------------------------------------------------
    Initialize local views and global vectors needed to describe the design
 -------------------------------------------------------------------------------- */
-/*
+
 void Explicit_Solver_SGH::init_design(){
   int num_dim = simparam->num_dim;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  bool nodal_density_flag = simparam_dynamic_opt->nodal_density_flag;
 
   //set densities
   if(nodal_density_flag){
@@ -3488,4 +3534,3 @@ void Explicit_Solver_SGH::init_design(){
   }
 
 }
-*/

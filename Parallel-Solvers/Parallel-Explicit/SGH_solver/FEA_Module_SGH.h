@@ -64,7 +64,7 @@ public:
 
   void sgh_solve();
 
-  void get_force_sgh(const CArrayKokkos <material_t> &material,
+  void get_force_sgh(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -83,7 +83,7 @@ public:
                      const double dt,
                      const double rk_alpha);
 
-  void get_force_sgh2D(const CArrayKokkos <material_t> &material,
+  void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
                        const DViewCArrayKokkos <double> &node_coords,
                        const DViewCArrayKokkos <double> &node_vel,
@@ -211,12 +211,12 @@ public:
                            const DViewCArrayKokkos <double> &node_mass,
                            const DViewCArrayKokkos <double> &corner_force);
   
-  void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
+  void tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
                 mesh_t &mesh,
                 const DViewCArrayKokkos <double> &node_coords);
 
   void boundary_velocity(const mesh_t &mesh,
-                         const CArrayKokkos <boundary_t> &boundary,
+                         const DCArrayKokkos <boundary_t> &boundary,
                          DViewCArrayKokkos <double> &node_vel);
   
   KOKKOS_INLINE_FUNCTION 
@@ -274,7 +274,7 @@ public:
                          const DViewCArrayKokkos <double> &elem_mass,
                          const DViewCArrayKokkos <double> &corner_force);
                    
-  void update_state(const CArrayKokkos <material_t> &material,
+  void update_state(const DCArrayKokkos <material_t> &material,
                     const mesh_t &mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
@@ -291,7 +291,7 @@ public:
                     const double rk_alpha);
 
 
-  void update_state2D(const CArrayKokkos <material_t> &material,
+  void update_state2D(const DCArrayKokkos <material_t> &material,
                       const mesh_t &mesh,
                       const DViewCArrayKokkos <double> &node_coords,
                       const DViewCArrayKokkos <double> &node_vel,
@@ -359,7 +359,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t mat_id,
                      const size_t num_elems);
 
-  void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
+  void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
   
   void init_boundaries();
 
@@ -437,6 +437,10 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                   const double time_value );
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
+
+  void compute_topology_optimization_adjoint();
+
+  void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
   
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
@@ -488,6 +492,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
   DCArrayKokkos <size_t> num_bdy_nodes_in_set;
   
+  //Topology optimization filter variable
+  DCArrayKokkos<double> relative_element_densities;
+  
   //Local FEA data
   host_elem_conn_array interface_nodes_in_elem; //host view of element connectivity to nodes
 
@@ -498,6 +505,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> all_node_velocities_distributed;
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
   std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
+  std::vector<Teuchos::RCP<MV>> forward_solve_coordinate_data;
+  std::vector<Teuchos::RCP<MV>> adjoint_vector_data;
+  std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
 
   //Dual View wrappers

@@ -86,7 +86,7 @@ public:
 
   //void read_mesh_ensight(char *MESH);
 
-  void read_mesh_ansys_dat(char *MESH);
+  void read_mesh_ansys_dat(const char *MESH);
 
   void init_state_vectors();
 
@@ -96,7 +96,7 @@ public:
 
   void comm_densities();
 
-  //void init_design();
+  void init_design();
 
   void collect_information();
 
@@ -139,7 +139,6 @@ public:
   
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters_SGH *simparam;
-  class Simulation_Parameters_Dynamic_Optimization *simparam_TO;
 
   //FEA simulations
   class FEA_Module_SGH *sgh_module;

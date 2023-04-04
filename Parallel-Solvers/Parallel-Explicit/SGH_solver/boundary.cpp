@@ -9,7 +9,7 @@
 #include "Simulation_Parameters_SGH.h"
 
 void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
-                       const CArrayKokkos <boundary_t> &boundary,
+                       const DCArrayKokkos <boundary_t> &boundary,
                        DViewCArrayKokkos <double> &node_vel){
 
     //error and debug flag
