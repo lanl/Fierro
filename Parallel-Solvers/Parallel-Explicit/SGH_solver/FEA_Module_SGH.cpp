@@ -3009,9 +3009,13 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
           real_t rate_of_change;
           for (int idim = 0; idim < num_dim; idim++){
-            rate_of_change = current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim);
+            rate_of_change = previous_velocity_vector(node_gid,idim)- 
+                             previous_adjoint_vector(node_gid,idim)*previous_force_gradient_velocity(node_gid,idim)/node_mass(gid)-
+                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(gid);
             //cancellation of half from midpoint and 2 from adjoint equation already done
             current_adjoint_vector(node_gid,idim) = rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
+            rate_of_change = -previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim)
+            phi_current_adjoint_vector(node_gid,idim) = rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
           } 
         }); // end parallel for
         Kokkos::fence();
