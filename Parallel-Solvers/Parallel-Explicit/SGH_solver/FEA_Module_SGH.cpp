@@ -3007,11 +3007,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
           real_t rate_of_change;
           for (int idim = 0; idim < num_dim; idim++){
             rate_of_change = previous_velocity_vector(node_gid,idim)- 
-                             previous_adjoint_vector(node_gid,idim)*previous_force_gradient_velocity(node_gid,idim)/node_mass(gid)-
-                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(gid);
+                             previous_adjoint_vector(node_gid,idim)*previous_force_gradient_velocity(node_gid,idim)/node_mass(node_gid)-
+                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
             //cancellation of half from midpoint and 2 from adjoint equation already done
             current_adjoint_vector(node_gid,idim) = rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
-            rate_of_change = -previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim)
+            rate_of_change = -previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim);
             phi_current_adjoint_vector(node_gid,idim) = rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
           } 
         }); // end parallel for
