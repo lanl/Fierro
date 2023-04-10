@@ -48,7 +48,7 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
-#include <Kokkos_View.hpp>
+#include <Kokkos_Core.hpp>
 //#include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "utilities.h"

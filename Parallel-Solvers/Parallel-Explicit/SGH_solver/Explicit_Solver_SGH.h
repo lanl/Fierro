@@ -52,7 +52,6 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
-#include <Kokkos_View.hpp>
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include <map>
 

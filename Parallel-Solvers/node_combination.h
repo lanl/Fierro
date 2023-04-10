@@ -43,7 +43,7 @@
 
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
-#include <Kokkos_View.hpp>
+#include <Kokkos_Core.hpp>
 
 using namespace utils;
 using namespace mtr;
