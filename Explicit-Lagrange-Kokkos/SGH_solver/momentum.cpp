@@ -408,8 +408,8 @@ void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
     
     for(size_t i=0; i<num_dims; i++){
         for(size_t j=0; j<num_dims; j++){
-            D_tensor(i,j) += 0.5*(vel_grad(i,j) + vel_grad(j,i));
-            W_tensor(i,j) += 0.5*(vel_grad(i,j) - vel_grad(j,i));
+            D_tensor(i,j) = 0.5*(vel_grad(i,j) + vel_grad(j,i));
+            W_tensor(i,j) = 0.5*(vel_grad(i,j) - vel_grad(j,i));
         }
     } // end for
     
