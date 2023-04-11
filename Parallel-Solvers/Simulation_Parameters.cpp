@@ -307,7 +307,7 @@ std::string Simulation_Parameters::yaml_input(std::string filename){
 //    Communicate user settings from YAML file and apply to class members
 //==============================================================================
 
-void Simulation_Parameters::unapplied_settings(){
+size_t Simulation_Parameters::unapplied_settings(){
 
   if(myrank==0){
     //print user settings for this module
@@ -316,6 +316,8 @@ void Simulation_Parameters::unapplied_settings(){
         std::cout << "Unapplied user option: " << temp_it->first << "=" << temp_it->second << std::endl;
     }
   }
+
+  return set_options.size();
 }
 
 //==============================================================================
