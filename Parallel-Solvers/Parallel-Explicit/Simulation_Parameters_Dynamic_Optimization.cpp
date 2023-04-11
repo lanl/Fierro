@@ -160,10 +160,12 @@ void Simulation_Parameters_Dynamic_Optimization::apply_settings(){
     //}
 
     if(set_options.find("optimization_options:optimization_process")!=set_options.end()){
-       if(set_options["optimization_options:optimization_process"]=="topology_optimization")
-         topology_optimization_on = true;
-       if(set_options["optimization_options:optimization_process"]=="shape_optimization")
-         shape_optimization_on = true;
+      if(set_options["optimization_options:optimization_process"]=="topology_optimization")
+        topology_optimization_on = true;
+      if(set_options["optimization_options:optimization_process"]=="shape_optimization")
+        shape_optimization_on = true;
+
+      set_options.erase("optimization_options:optimization_process");
     }
     nTO_modules = 0;
     if(set_options.find("optimization_options:optimization_objective")!=set_options.end()){
@@ -173,11 +175,13 @@ void Simulation_Parameters_Dynamic_Optimization::apply_settings(){
         TO_Function_Type[0] = OBJECTIVE;
         nTO_modules++;
        }
+       set_options.erase("optimization_options:optimization_objective");
     }
     
     int num_constraints;
     if(set_options.find("optimization_options:num_optimization_constraint")!=set_options.end()){
        num_constraints = std::stoi(set_options["optimization_options:num_optimization_constraint"]);
+       set_options.erase("optimization_options:num_optimization_constraint");
     }
 
     //allocate constraint modules requested by the user
@@ -208,15 +212,18 @@ void Simulation_Parameters_Dynamic_Optimization::apply_settings(){
             if(set_options[constraint_name+":type"]=="mass"){
               TO_Module_List[nTO_modules] = "Mass_Constraint";
             }
+          set_options.erase(constraint_name+":type");
         }
         if(set_options.find(constraint_name+":relation")!=set_options.end()){
             if(set_options[constraint_name+":relation"]=="equality"){
               TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
             }
+          set_options.erase(constraint_name+":relation");
         }
         if(set_options.find(constraint_name+":value")!=set_options.end()){
             constraint_value = std::stod(set_options[constraint_name+":value"]);
             Function_Arguments[nTO_modules].push_back(constraint_value); 
+            set_options.erase(constraint_name+":value");
         }
         nTO_modules++;
     }

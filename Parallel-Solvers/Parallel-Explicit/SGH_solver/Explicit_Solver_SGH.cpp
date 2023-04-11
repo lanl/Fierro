@@ -218,7 +218,13 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       //assign base class data such as map of settings to TO simparam class
       simparam_dynamic_opt->Simulation_Parameters::operator=(*simparam);
       simparam_dynamic_opt->apply_settings();
-      simparam->unapplied_settings();
+      //assign map with read in options removed from inheritors to the base class
+      simparam->set_options = simparam_dynamic_opt->set_options;
+      int map_size = simparam->unapplied_settings();
+      if(map_size) {
+        *fos << "YAML input has encountered an error; please correct options that were not applied, or remove unnecessary options." << std::endl;
+        exit_solver(0);
+      }
 
       // ---- Read intial mesh, refine, and build connectivity ---- //
       if(simparam->mesh_file_format=="tecplot")
