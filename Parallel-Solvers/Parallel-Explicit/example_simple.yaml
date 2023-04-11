@@ -15,7 +15,7 @@ solver_options:
         cycle_stop: 2000000
 
 output_options:
-  graphics_step: 0.25;
+  graphics_step: 0.25
 
 material_options:
     num_materials: 1

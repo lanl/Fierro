@@ -325,22 +325,30 @@ size_t Simulation_Parameters::unapplied_settings(){
 //==============================================================================
 
 void Simulation_Parameters::apply_settings(){
-  if(set_options.find("solver_type")!=set_options.end()){
-      solver_type = set_options["solver_type"];
-      set_options.erase("solver_type");
+  std::string current_option;
+
+  current_option = "solver_type"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      solver_type = set_options[current_option];
+      set_options.erase(current_option);
   }
 
   if(myrank==0)
     std::cout << "Solver Type is " << solver_type << std::endl;
 
-  if(set_options.find("solver_options:mesh_file_name")!=set_options.end()){
-      mesh_file_name = set_options["solver_options:mesh_file_name"];
-      set_options.erase("solver_options:mesh_file_name");
+  current_option = "solver_options:mesh_file_name"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      mesh_file_name = set_options[current_option];
+      set_options.erase(current_option);
   }
   
-  if(set_options.find("solver_options:mesh_file_format")!=set_options.end()){
-      mesh_file_format = set_options["solver_options:mesh_file_format"];
-      set_options.erase("solver_options:mesh_file_format");
+  current_option = "solver_options:mesh_file_format"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      mesh_file_format = set_options[current_option];
+      set_options.erase(current_option);
   }
   
   if(myrank==0)

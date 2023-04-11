@@ -9,7 +9,7 @@ solver_options:
     mesh_file_name: TO_small_beam.geo
 
 output_options:
-  graphics_step_frequency: 100;
+  graphics_step_frequency: 100
     
 fea_module_1:
     type: elasticity
