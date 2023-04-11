@@ -248,13 +248,6 @@ std::string Simulation_Parameters::yaml_input(std::string filename){
             } // end for outer_it
         } // end if outer_it
     //} // end for
-
-    //print user settings for this module
-    for(auto temp_it = set_options.begin(); temp_it != set_options.end(); temp_it++){
-        //print current option
-        std::cout << "User option: " << temp_it->first << "=" << temp_it->second << std::endl;
-
-    }
   }
   size_t max_string_size = 100;
   size_t settings_map_size;
@@ -314,18 +307,39 @@ std::string Simulation_Parameters::yaml_input(std::string filename){
 //    Communicate user settings from YAML file and apply to class members
 //==============================================================================
 
+void Simulation_Parameters::unapplied_settings(){
+
+  if(myrank==0){
+    //print user settings for this module
+    for(auto temp_it = set_options.begin(); temp_it != set_options.end(); temp_it++){
+        //print current option
+        std::cout << "Unapplied user option: " << temp_it->first << "=" << temp_it->second << std::endl;
+    }
+  }
+}
+
+//==============================================================================
+//    Communicate user settings from YAML file and apply to class members
+//==============================================================================
+
 void Simulation_Parameters::apply_settings(){
-  if(set_options.find("solver_type")!=set_options.end())
-       solver_type = set_options["solver_type"];
+  if(set_options.find("solver_type")!=set_options.end()){
+      solver_type = set_options["solver_type"];
+      set_options.erase("solver_type");
+  }
 
   if(myrank==0)
     std::cout << "Solver Type is " << solver_type << std::endl;
 
-  if(set_options.find("solver_options:mesh_file_name")!=set_options.end())
-       mesh_file_name = set_options["solver_options:mesh_file_name"];
+  if(set_options.find("solver_options:mesh_file_name")!=set_options.end()){
+      mesh_file_name = set_options["solver_options:mesh_file_name"];
+      set_options.erase("solver_options:mesh_file_name");
+  }
   
-  if(set_options.find("solver_options:mesh_file_format")!=set_options.end())
-       mesh_file_format = set_options["solver_options:mesh_file_format"];
+  if(set_options.find("solver_options:mesh_file_format")!=set_options.end()){
+      mesh_file_format = set_options["solver_options:mesh_file_format"];
+      set_options.erase("solver_options:mesh_file_format");
+  }
   
   if(myrank==0)
     std::cout << "Mesh File name is " << mesh_file_name << std::endl;

@@ -53,6 +53,7 @@ class Simulation_Parameters
   virtual ~Simulation_Parameters();
   virtual void input(); //typically sets default problem parameters
   virtual void apply_settings();
+  virtual void unapplied_settings();
   virtual std::string yaml_input(std::string filename); //reads in user defined parameters
   virtual void FEA_module_setup();
   virtual void yaml_FEA_module_setup();
