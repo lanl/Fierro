@@ -392,7 +392,7 @@ void Simulation_Parameters::FEA_module_setup(){
 //==============================================================================
 
 void Simulation_Parameters::yaml_FEA_module_setup(){
-  
+  std::string current_option;
   //initial buffer size for FEA module list storage
   int buffer_size = 10 + nfea_modules;
   FEA_Module_List.resize(buffer_size);
@@ -407,12 +407,17 @@ void Simulation_Parameters::yaml_FEA_module_setup(){
   fea_module_name = fea_module_base + index;
 
     // --- set of user requested FEA modules ---
-  while(set_options.find(fea_module_name+":type")!=set_options.end()){
+  current_option = fea_module_name+":type";
+  while(set_options.find(current_option)!=set_options.end()){
     
-    if(set_options[fea_module_name+":type"]=="elasticity")
+    if(set_options[current_option]=="elasticity"){
         FEA_Module_List[nfea_modules] = "Elasticity";
-    if(set_options[fea_module_name+":type"]=="steady_heat")
+        set_options.erase(current_option);
+    }
+    if(set_options[current_option]=="steady_heat"){
         FEA_Module_List[nfea_modules] = "Heat_Conduction";
+        set_options.erase(current_option);
+    }
     
     nfea_modules++;
 
@@ -432,7 +437,7 @@ void Simulation_Parameters::yaml_FEA_module_setup(){
       fea_module_must_read.resize(buffer_size);
   }
 
-  //allocate Inertial module (needed generally so far)
+  //allocate request for Inertial module (needed generally so far)
   FEA_Module_List[nfea_modules++] = "Inertial";
 
   //initialize

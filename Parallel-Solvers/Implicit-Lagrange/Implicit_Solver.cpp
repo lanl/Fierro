@@ -228,6 +228,8 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
       //construct list of FEA modules requested
       simparam_TO->FEA_module_setup();
+      //assign map with read in options removed from inheritors to the base class
+      simparam->set_options = simparam_TO->set_options;
     }
     
     //debug
@@ -262,6 +264,10 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //Have modules read in boundary/loading conditions if file format provides it
     for(int imodule = 0; imodule < nfea_modules; imodule++){
+      //update set options for next FEA module in loop with synchronized set options in solver's simparam class
+      fea_modules[imodule]->simparam->Simulation_Parameters::operator=(*simparam);
+      fea_modules[imodule]->simparam->apply_settings();
+
       if(fea_module_must_read[imodule]){
         fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
       }
@@ -275,6 +281,19 @@ void Implicit_Solver::run(int argc, char *argv[]){
         fea_modules[imodule]->generate_applied_loads();
       }
 
+      //assign map with read in options removed from inheritors to the base class
+      simparam->set_options = fea_modules[imodule]->simparam->set_options;
+
+    }
+
+    //check for errors in the yaml input and exit if any found with an error message
+    int map_size = simparam->unapplied_settings();
+    if(map_size) {
+      *fos << "YAML input has encountered an error; please correct options that were not applied, or remove unnecessary options." << std::endl;
+      exit_solver(0);
+    }
+
+    for(int imodule = 0; imodule < nfea_modules; imodule++){
       if(myrank == 0)
         std::cout << "Starting init assembly for module " << imodule <<std::endl <<std::flush;
       //allocate and fill sparse structures needed for global solution in each FEA module
@@ -296,7 +315,6 @@ void Implicit_Solver::run(int argc, char *argv[]){
         std::cout << "Linear Solver Error for module " << imodule << std::endl <<std::flush;
         return;
       }
-    
     }
 
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;

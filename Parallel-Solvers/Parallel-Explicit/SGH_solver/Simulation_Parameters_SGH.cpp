@@ -805,17 +805,19 @@ void Simulation_Parameters_SGH::apply_settings(){
         //eos model
         current_option = material_name+":eos_model";
         if(set_options.find(current_option)!=set_options.end()){
-            if(set_options[current_option]=="ideal_gas")
+            if(set_options[current_option]=="ideal_gas"){
                 material.host(imat).eos_model = ideal_gas;
-            set_options.erase(current_option);
+                set_options.erase(current_option);
+            }
         }
 
         //strength model
         current_option = material_name+":strength_model";
         if(set_options.find(current_option)!=set_options.end()){
-            if(set_options[current_option]=="none")
+            if(set_options[current_option]=="none"){
                 material.host(imat).strength_type = model::none;
-            set_options.erase(current_option);
+                set_options.erase(current_option);
+            }
         }
 
         //coefficients
@@ -919,18 +921,26 @@ void Simulation_Parameters_SGH::apply_settings(){
                     }
 
                 }
-                else if(set_options[mat_fill_name+":velocity"]=="radial")
+                else if(set_options[mat_fill_name+":velocity"]=="radial"){
                     mat_fill.host(ifill).velocity = init_conds::radial;
-                else if(set_options[mat_fill_name+":velocity"]=="spherical")
+                    set_options.erase(mat_fill_name+":velocity");
+                }
+                else if(set_options[mat_fill_name+":velocity"]=="spherical"){
                     mat_fill.host(ifill).velocity = init_conds::spherical;
-                else if(set_options[mat_fill_name+":velocity"]=="radial_linear")
+                    set_options.erase(mat_fill_name+":velocity");
+                }
+                else if(set_options[mat_fill_name+":velocity"]=="radial_linear"){
                     mat_fill.host(ifill).velocity = init_conds::radial_linear;
-                else if(set_options[mat_fill_name+":velocity"]=="spherical_linear")
+                    set_options.erase(mat_fill_name+":velocity");
+                }
+                else if(set_options[mat_fill_name+":velocity"]=="spherical_linear"){
                     mat_fill.host(ifill).velocity = init_conds::spherical_linear;
-                else if(set_options[mat_fill_name+":velocity"]=="tg_vortex")
+                    set_options.erase(mat_fill_name+":velocity");
+                }
+                else if(set_options[mat_fill_name+":velocity"]=="tg_vortex"){
                     mat_fill.host(ifill).velocity = init_conds::tg_vortex;
-
-                set_options.erase(mat_fill_name+":velocity");
+                    set_options.erase(mat_fill_name+":velocity");
+                }
             }
 
             //material index
@@ -960,38 +970,59 @@ void Simulation_Parameters_SGH::apply_settings(){
             
             //class of bc geometry
             if(set_options.find(bc_name+":surface")!=set_options.end()){
-                if(set_options[bc_name+":surface"]=="x_plane")
+                if(set_options[bc_name+":surface"]=="x_plane"){
                     boundary.host(ibc).surface = bdy::x_plane;
-                else if(set_options[bc_name+":surface"]=="y_plane")
+                    set_options.erase(bc_name+":surface");
+                }
+                else if(set_options[bc_name+":surface"]=="y_plane"){
                     boundary.host(ibc).surface = bdy::y_plane;
-                else if(set_options[bc_name+":surface"]=="z_plane")
+                    set_options.erase(bc_name+":surface");
+                }
+                else if(set_options[bc_name+":surface"]=="z_plane"){
                     boundary.host(ibc).surface = bdy::z_plane;
-                else if(set_options[bc_name+":surface"]=="cylinder")
+                    set_options.erase(bc_name+":surface");
+                }
+                else if(set_options[bc_name+":surface"]=="cylinder"){
                     boundary.host(ibc).surface = bdy::cylinder;
-                else if(set_options[bc_name+":surface"]=="sphere")
+                    set_options.erase(bc_name+":surface");
+                }
+                else if(set_options[bc_name+":surface"]=="sphere"){
                     boundary.host(ibc).surface = bdy::sphere;
-                else if(set_options[bc_name+":surface"]=="readFile")
+                    set_options.erase(bc_name+":surface");
+                }
+                else if(set_options[bc_name+":surface"]=="readFile"){
                     boundary.host(ibc).surface = bdy::readFile;
-
-                set_options.erase(bc_name+":surface");
+                    set_options.erase(bc_name+":surface");
+                }
             }
             
             //class of bc condition
             if(set_options.find(bc_name+":condition_type")!=set_options.end()){
-                if(set_options[bc_name+":condition_type"]=="fixed")
+                if(set_options[bc_name+":condition_type"]=="fixed"){
                     boundary.host(ibc).hydro_bc = bdy::fixed;
-                else if(set_options[bc_name+":condition_type"]=="reflected")
+                    set_options.erase(bc_name+":condition_type");
+                }
+                else if(set_options[bc_name+":condition_type"]=="reflected"){
                     boundary.host(ibc).hydro_bc = bdy::reflected;
-                else if(set_options[bc_name+":condition_type"]=="velocity")
+                    set_options.erase(bc_name+":condition_type");
+                }
+                else if(set_options[bc_name+":condition_type"]=="velocity"){
                     boundary.host(ibc).hydro_bc = bdy::velocity;
-                else if(set_options[bc_name+":condition_type"]=="pressure")
+                    set_options.erase(bc_name+":condition_type");
+                }
+                else if(set_options[bc_name+":condition_type"]=="pressure"){
                     boundary.host(ibc).hydro_bc = bdy::pressure;
-                else if(set_options[bc_name+":condition_type"]=="acceleration")
+                    set_options.erase(bc_name+":condition_type");
+                }
+                else if(set_options[bc_name+":condition_type"]=="acceleration"){
                     boundary.host(ibc).hydro_bc = bdy::acceleration;
-                else if(set_options[bc_name+":condition_type"]=="contact")
+                    set_options.erase(bc_name+":condition_type");
+                }
+                else if(set_options[bc_name+":condition_type"]=="contact"){
                     boundary.host(ibc).hydro_bc = bdy::contact;
+                    set_options.erase(bc_name+":condition_type");
+                }
 
-                set_options.erase(bc_name+":condition_type");
             }
 
             //bc position value

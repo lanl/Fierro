@@ -171,95 +171,72 @@ void Simulation_Parameters_Topology_Optimization::input(){
 
 void Simulation_Parameters_Topology_Optimization::apply_settings(){
   int buffer_size = TO_Module_List.size();
+  std::string current_option;
   
-  if(set_options.find("optimization_options:optimization_process")!=set_options.end()){
-       if(set_options["optimization_options:optimization_process"]=="topology_optimization")
-         topology_optimization_on = true;
-       if(set_options["optimization_options:optimization_process"]=="shape_optimization")
-         shape_optimization_on = true;
+  current_option = "optimization_options:optimization_process";
+  if(set_options.find(current_option)!=set_options.end()){
+    if(set_options[current_option]=="topology_optimization"){
+      topology_optimization_on = true;
+      set_options.erase(current_option);
+    }
+    if(set_options[current_option]=="shape_optimization"){
+      shape_optimization_on = true;
+      set_options.erase(current_option);
+    }
   }
   nTO_modules = 0;
-    if(set_options.find("optimization_options:optimization_objective")!=set_options.end()){
-       //cycle_stop = std::stoi(set_options["solver_options:time_variables:cycle_stop"]);
-      if(set_options["optimization_options:optimization_objective"]=="minimize_compliance"){
-        TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
-        TO_Function_Type[nTO_modules] = OBJECTIVE;
-        nTO_modules++;
-      }
+  current_option = "optimization_options:optimization_objective";
+  if(set_options.find(current_option)!=set_options.end()){
 
-      if(set_options["optimization_options:optimization_objective"]=="minimize_thermal_resistance"){
-        TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
-        TO_Function_Type[nTO_modules] = OBJECTIVE;
-        nTO_modules++;
-      }
+    if(set_options[current_option]=="minimize_compliance"){
+      TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+      TO_Function_Type[nTO_modules] = OBJECTIVE;
+      nTO_modules++;
+      set_options.erase(current_option);
+    }
 
-      if(set_options["optimization_options:optimization_objective"]=="multi-objective"){
-        TO_Module_List[nTO_modules] = "Multi_Objective";
-        TO_Function_Type[nTO_modules] = OBJECTIVE;
-        nTO_modules++;
+    if(set_options[current_option]=="minimize_thermal_resistance"){
+      TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
+      TO_Function_Type[nTO_modules] = OBJECTIVE;
+      nTO_modules++;
+      set_options.erase(current_option);
+    }
 
-        //read in multi-objective function definition and terms
-        //read in multi-objective function definition and terms
-        std::string optimization_module_base = "optimization_options:multi-objective_module_";
-        std::string index;
-        std::string optimization_module_name;
-        nmulti_objective_modules = 0;
+    if(set_options[current_option]=="multi-objective"){
+      TO_Module_List[nTO_modules] = "Multi_Objective";
+      TO_Function_Type[nTO_modules] = OBJECTIVE;
+      nTO_modules++;
+
+      //read in multi-objective function definition and terms
+      //read in multi-objective function definition and terms
+      std::string optimization_module_base = "optimization_options:multi-objective_module_";
+      std::string index;
+      std::string optimization_module_name;
+      nmulti_objective_modules = 0;
+
+      index = std::to_string(nmulti_objective_modules+1);
+      optimization_module_name = optimization_module_base + index;
+
+      // --- set of user requested multi-objective terms---
+      while(set_options.find(optimization_module_name+":type")!=set_options.end()){
   
-        index = std::to_string(nmulti_objective_modules+1);
-        optimization_module_name = optimization_module_base + index;
-
-        // --- set of user requested multi-objective terms---
-        while(set_options.find(optimization_module_name+":type")!=set_options.end()){
-    
-          if(set_options[optimization_module_name+":type"]=="minimize_compliance"){
-            TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
-          }
-
-          if(set_options[optimization_module_name+":type"]=="minimize_thermal_resistance"){
-            TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
-          }
-
-          if(set_options.find(optimization_module_name+":weight_coefficient")!=set_options.end()){
-            Multi_Objective_Weights[nmulti_objective_modules] = std::stod(set_options[optimization_module_name+":weight_coefficient"]);
-          }
-          Multi_Objective_Modules[nmulti_objective_modules] = nTO_modules;
-          TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
-          nTO_modules++;
-          if(nTO_modules==buffer_size){
-            buffer_size += 10;
-            TO_Module_List.resize(buffer_size);
-            TO_Function_Type.resize(buffer_size);
-            Multi_Objective_Modules.resize(buffer_size);
-            Multi_Objective_Weights.resize(buffer_size);
-            Function_Arguments.resize(buffer_size);
-            TO_Module_My_FEA_Module.resize(buffer_size);
-          }
-
-          nmulti_objective_modules++;
-          index = std::to_string(nmulti_objective_modules+1);
-          optimization_module_name = optimization_module_base + index;
+        if(set_options[optimization_module_name+":type"]=="minimize_compliance"){
+          TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
+          set_options.erase(optimization_module_name+":type");
         }
-      }
-    }
-    
-    int num_constraints;
-    if(set_options.find("optimization_options:num_optimization_constraint")!=set_options.end()){
-       num_constraints = std::stoi(set_options["optimization_options:num_optimization_constraint"]);
-    }
 
-    //allocate constraint modules requested by the user
-    std::string constraint_base = "optimization_options:constraint_";
-    std::string index;
-    std::string constraint_name;
-    double constraint_value;
+        if(set_options[optimization_module_name+":type"]=="minimize_thermal_resistance"){
+          TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
+          set_options.erase(optimization_module_name+":type");
+        }
 
-    // --- set of material specifications ---
-    for(int icon = 0; icon < num_constraints; icon++){
-        //readin material data
-        index = std::to_string(icon+1);
-        constraint_name = constraint_base + index;
-
-        //expand storage if needed
+        if(set_options.find(optimization_module_name+":weight_coefficient")!=set_options.end()){
+          Multi_Objective_Weights[nmulti_objective_modules] = std::stod(set_options[optimization_module_name+":weight_coefficient"]);
+          set_options.erase(optimization_module_name+":weight_coefficient");
+        }
+        Multi_Objective_Modules[nmulti_objective_modules] = nTO_modules;
+        TO_Function_Type[nTO_modules] = MULTI_OBJECTIVE_TERM;
+        nTO_modules++;
         if(nTO_modules==buffer_size){
           buffer_size += 10;
           TO_Module_List.resize(buffer_size);
@@ -270,56 +247,104 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
           TO_Module_My_FEA_Module.resize(buffer_size);
         }
 
-        //constraint request
-        //constraint type
-        if(set_options.find(constraint_name+":type")!=set_options.end()){
-            if(set_options[constraint_name+":type"]=="mass"){
-              TO_Module_List[nTO_modules] = "Mass_Constraint";
-            }
-        }
-        if(set_options.find(constraint_name+":type")!=set_options.end()){
-            if(set_options[constraint_name+":type"]=="moment_of_inertia"){
-              TO_Module_List[nTO_modules] = "Moment_of_Inertia_Constraint";
-            }
-        }
+        nmulti_objective_modules++;
+        index = std::to_string(nmulti_objective_modules+1);
+        optimization_module_name = optimization_module_base + index;
+      }
+      set_options.erase(current_option);
+    }
+  }
+    
+  int num_constraints;
+  current_option = "optimization_options:num_optimization_constraint";
+  if(set_options.find(current_option)!=set_options.end()){
+      num_constraints = std::stoi(set_options[current_option]);
+      set_options.erase(current_option);
+  }
 
-        //equality or inequality
-        if(set_options.find(constraint_name+":relation")!=set_options.end()){
-            if(set_options[constraint_name+":relation"]=="equality"){
-              TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
-            }
-        }
+  //allocate constraint modules requested by the user
+  std::string constraint_base = "optimization_options:constraint_";
+  std::string index;
+  std::string constraint_name;
+  double constraint_value;
 
-        //function arguments for constraint
-        if(set_options.find(constraint_name+":value")!=set_options.end()){
-            constraint_value = std::stod(set_options[constraint_name+":value"]);
-            Function_Arguments[nTO_modules].push_back(constraint_value); 
-        }
+  // --- set of material specifications ---
+  for(int icon = 0; icon < num_constraints; icon++){
+      //readin material data
+      index = std::to_string(icon+1);
+      constraint_name = constraint_base + index;
 
-        if(set_options[constraint_name+":type"]=="moment_of_inertia"){
+      //expand storage if needed
+      if(nTO_modules==buffer_size){
+        buffer_size += 10;
+        TO_Module_List.resize(buffer_size);
+        TO_Function_Type.resize(buffer_size);
+        Multi_Objective_Modules.resize(buffer_size);
+        Multi_Objective_Weights.resize(buffer_size);
+        Function_Arguments.resize(buffer_size);
+        TO_Module_My_FEA_Module.resize(buffer_size);
+      }
+
+      //constraint request
+      //function arguments for constraint; constraint value is the first
+      current_option = constraint_name+":value";
+      if(set_options.find(current_option)!=set_options.end()){
+          constraint_value = std::stod(set_options[current_option]);
+          Function_Arguments[nTO_modules].push_back(constraint_value); 
+          set_options.erase(current_option);
+      }
+
+      //constraint type; some may have additional arguments that follow the value
+      current_option = constraint_name+":type";
+      if(set_options.find(current_option)!=set_options.end()){
+          if(set_options[current_option]=="mass"){
+            TO_Module_List[nTO_modules] = "Mass_Constraint";
+            set_options.erase(current_option);
+          }
+      }
+      if(set_options.find(current_option)!=set_options.end()){
+          if(set_options[current_option]=="moment_of_inertia"){
+            TO_Module_List[nTO_modules] = "Moment_of_Inertia_Constraint";
+            //obtain function arguments
             if(set_options.find(constraint_name+":component")!=set_options.end()){
               if(set_options[constraint_name+":component"]=="xx"){
                 Function_Arguments[nTO_modules].push_back(0);
+                set_options.erase(constraint_name+":component");
               }
               if(set_options[constraint_name+":component"]=="yy"){
                 Function_Arguments[nTO_modules].push_back(1);
+                set_options.erase(constraint_name+":component");
               }
               if(set_options[constraint_name+":component"]=="zz"){
                 Function_Arguments[nTO_modules].push_back(2);
+                set_options.erase(constraint_name+":component");
               }
               if(set_options[constraint_name+":component"]=="xy"){
                 Function_Arguments[nTO_modules].push_back(3);
+                set_options.erase(constraint_name+":component");
               }
               if(set_options[constraint_name+":component"]=="xz"){
                 Function_Arguments[nTO_modules].push_back(4);
+                set_options.erase(constraint_name+":component");
               }
               if(set_options[constraint_name+":component"]=="yz"){
                 Function_Arguments[nTO_modules].push_back(5);
+                set_options.erase(constraint_name+":component");
               }
             }
-        }
-        nTO_modules++;
-    }
+            set_options.erase(current_option);
+          }
+      }
+
+      //equality or inequality
+      if(set_options.find(constraint_name+":relation")!=set_options.end()){
+          if(set_options[constraint_name+":relation"]=="equality"){
+            TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
+          }
+          set_options.erase(constraint_name+":relation");
+      }
+      nTO_modules++;
+  }
 }
 
 //==============================================================================

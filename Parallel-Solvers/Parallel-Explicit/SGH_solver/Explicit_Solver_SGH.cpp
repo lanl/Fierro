@@ -220,6 +220,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       simparam_dynamic_opt->apply_settings();
       //assign map with read in options removed from inheritors to the base class
       simparam->set_options = simparam_dynamic_opt->set_options;
+
+      //check for errors in the yaml input and exit if any found with an error message
       int map_size = simparam->unapplied_settings();
       if(map_size) {
         *fos << "YAML input has encountered an error; please correct options that were not applied, or remove unnecessary options." << std::endl;
