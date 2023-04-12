@@ -726,61 +726,69 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
 //==============================================================================
 
 void Simulation_Parameters_SGH::apply_settings(){
-
+    std::string current_option;
     //print user settings for this module
     //for(auto temp_it = set_options.begin(); temp_it != set_options.end(); temp_it++){
         //print current option
         //std::cout << "User option on rank: " << myrank << " " << temp_it->first << "=" << temp_it->second << std::endl;
 
     //}
-
-    if(set_options.find("solver_options:time_variables:time_final")!=set_options.end()){
-       time_final = std::stod(set_options["solver_options:time_variables:time_final"]);
-       set_options.erase("solver_options:time_variables:time_final");
+    current_option = "solver_options:time_variables:time_final";
+    if(set_options.find(current_option)!=set_options.end()){
+       time_final = std::stod(set_options[current_option]);
+       set_options.erase(current_option);
     }
 
-    if(set_options.find("solver_options:num_dims")!=set_options.end()){
-       num_dim = std::stoi(set_options["solver_options:num_dims"]);
-       set_options.erase("solver_options:num_dims");
+    current_option = "solver_options:num_dims";
+    if(set_options.find(current_option)!=set_options.end()){
+       num_dim = std::stoi(set_options[current_option]);
+       set_options.erase(current_option);
     }
     //std::cout<< "FINAL TIME IS: " << time_final << std::endl;
     
-    if(set_options.find("solver_options:time_variables:dt_min")!=set_options.end()){
-       dt_min = std::stod(set_options["solver_options:time_variables:dt_min"]);
-       set_options.erase("solver_options:time_variables:dt_min");
+    current_option = "solver_options:time_variables:dt_min";
+    if(set_options.find(current_option)!=set_options.end()){
+       dt_min = std::stod(set_options[current_option]);
+       set_options.erase(current_option);
     }
 
-    if(set_options.find("solver_options:time_variables:dt_max")!=set_options.end()){
-       dt_max = std::stod(set_options["solver_options:time_variables:dt_max"]);
-       set_options.erase("solver_options:time_variables:dt_max");
+    current_option = "solver_options:time_variables:dt_max";
+    if(set_options.find(current_option)!=set_options.end()){
+       dt_max = std::stod(set_options[current_option]);
+       set_options.erase(current_option);
     }
 
-    if(set_options.find("solver_options:time_variables:dt_start")!=set_options.end()){
-       dt_start = std::stod(set_options["solver_options:time_variables:dt_start"]);
-       set_options.erase("solver_options:time_variables:dt_start");
+    current_option = "solver_options:time_variables:dt_start";
+    if(set_options.find(current_option)!=set_options.end()){
+       dt_start = std::stod(set_options[current_option]);
+       set_options.erase(current_option);
     }
 
-    if(set_options.find("solver_options:time_variables:cycle_stop")!=set_options.end()){
-       cycle_stop = std::stoi(set_options["solver_options:time_variables:cycle_stop"]);
-       set_options.erase("solver_options:time_variables:cycle_stop");
+    current_option = "solver_options:time_variables:cycle_stop";
+    if(set_options.find(current_option)!=set_options.end()){
+       cycle_stop = std::stoi(set_options[current_option]);
+       set_options.erase(current_option);
+    }
+    
+    current_option = "output_options:graphics_step";
+    if(set_options.find(current_option)!=set_options.end()){
+       graphics_time = std::stod(set_options[current_option]);
+       set_options.erase(current_option);
     }
 
-    if(set_options.find("output_options:graphics_step")!=set_options.end()){
-       graphics_time = std::stod(set_options["output_options:graphics_step"]);
-       set_options.erase("output_options:graphics_step");
-    }
-       
+    current_option = "material_options:num_materials";   
     //obtain number of materials
-    if(set_options.find("material_options:num_materials")!=set_options.end()){
-        num_materials = std::stoi(set_options["material_options:num_materials"]);
-        set_options.erase("material_options:num_materials");
+    if(set_options.find(current_option)!=set_options.end()){
+        num_materials = std::stoi(set_options[current_option]);
+        set_options.erase(current_option);
         material = DCArrayKokkos <material_t> (num_materials); // create material
     }
 
+    current_option = "material_options:max_num_state_var";
     //obtain max number of stave vars for set of materials
-    if(set_options.find("material_options:max_num_state_var")!=set_options.end()){
-        max_num_state_vars = std::stoi(set_options["material_options:max_num_state_var"]);
-        set_options.erase("material_options:max_num_state_var");
+    if(set_options.find(current_option)!=set_options.end()){
+        max_num_state_vars = std::stoi(set_options[current_option]);
+        set_options.erase(current_option);
         state_vars = DCArrayKokkos <double> (num_materials, max_num_state_vars);
     }
 
@@ -795,43 +803,50 @@ void Simulation_Parameters_SGH::apply_settings(){
         material_name = material_base + index;
 
         //eos model
-        if(set_options.find(material_name+":eos_model")!=set_options.end()){
-            if(set_options[material_name+":eos_model"]=="ideal_gas")
+        current_option = material_name+":eos_model";
+        if(set_options.find(current_option)!=set_options.end()){
+            if(set_options[current_option]=="ideal_gas")
                 material.host(imat).eos_model = ideal_gas;
-            set_options.erase(material_name+":eos_model");
+            set_options.erase(current_option);
         }
 
         //strength model
-        if(set_options.find(material_name+":strength_model")!=set_options.end()){
-            if(set_options[material_name+":strength_model"]=="none")
+        current_option = material_name+":strength_model";
+        if(set_options.find(current_option)!=set_options.end()){
+            if(set_options[current_option]=="none")
                 material.host(imat).strength_type = model::none;
-            set_options.erase(material_name+":strength_model");
+            set_options.erase(current_option);
         }
 
         //coefficients
-        if(set_options.find(material_name+":q1")!=set_options.end()){
-           material.host(imat).q1 = std::stod(set_options[material_name+":q1"]);
-           set_options.erase(material_name+":q1");
+        current_option = material_name+":q1";
+        if(set_options.find(current_option)!=set_options.end()){
+           material.host(imat).q1 = std::stod(set_options[current_option]);
+           set_options.erase(current_option);
         }
-        if(set_options.find(material_name+":q2")!=set_options.end()){
-           material.host(imat).q2 = std::stod(set_options[material_name+":q2"]);
-           set_options.erase(material_name+":q2");
+        current_option = material_name+":q2";
+        if(set_options.find(current_option)!=set_options.end()){
+           material.host(imat).q2 = std::stod(set_options[current_option]);
+           set_options.erase(current_option);
         }
-        if(set_options.find(material_name+":q1ex")!=set_options.end()){
-           material.host(imat).q1ex = std::stod(set_options[material_name+":q1ex"]);
-           set_options.erase(material_name+":q1ex");
+        current_option = material_name+":q1ex";
+        if(set_options.find(current_option)!=set_options.end()){
+           material.host(imat).q1ex = std::stod(set_options[current_option]);
+           set_options.erase(current_option);
         }
-        if(set_options.find(material_name+":q2ex")!=set_options.end()){
-           material.host(imat).q2ex = std::stod(set_options[material_name+":q2ex"]);
-           set_options.erase(material_name+":q2ex");
+        current_option = material_name+":q2ex";
+        if(set_options.find(current_option)!=set_options.end()){
+           material.host(imat).q2ex = std::stod(set_options[current_option]);
+           set_options.erase(current_option);
         }
 
         material.host(imat).read_state_vars = 0;
 
         //read state variables for materials
-        if(set_options.find(material_name+":num_state_vars")!=set_options.end()){
-           material.host(imat).num_state_vars = std::stoi(set_options[material_name+":num_state_vars"]);
-           set_options.erase(material_name+":num_state_vars");
+        current_option = material_name+":num_state_vars";
+        if(set_options.find(current_option)!=set_options.end()){
+           material.host(imat).num_state_vars = std::stoi(set_options[current_option]);
+           set_options.erase(current_option);
         }
 
         for(int isvar = 0; isvar < material.host(imat).num_state_vars; isvar++){
@@ -849,9 +864,10 @@ void Simulation_Parameters_SGH::apply_settings(){
     //obtain number of mat fill regions
     std::string fill_base = "region_options:mat_fill_";
     std::string mat_fill_name;
-    if(set_options.find("region_options:num_fills")!=set_options.end()){
-        num_fills = stoi(set_options["region_options:num_fills"]);
-        set_options.erase("region_options:num_fills");
+    current_option = "region_options:num_fills";
+    if(set_options.find(current_option)!=set_options.end()){
+        num_fills = stoi(set_options[current_option]);
+        set_options.erase(current_option);
         mat_fill = DCArrayKokkos <mat_fill_t> (num_fills); // create fills
         for(int ifill=0; ifill < num_fills; ifill++){
             //readin mat fill region data
@@ -979,9 +995,10 @@ void Simulation_Parameters_SGH::apply_settings(){
             }
 
             //bc position value
-            if(set_options.find(bc_name+":value")!=set_options.end()){
-                boundary.host(ibc).value = std::stod(set_options[bc_name+":value"]);
-                set_options.erase(bc_name+":value");
+            current_option = bc_name+":value";
+            if(set_options.find(current_option)!=set_options.end()){
+                boundary.host(ibc).value = std::stod(set_options[current_option]);
+                set_options.erase(current_option);
             }
 
         }
@@ -1002,8 +1019,9 @@ void Simulation_Parameters_SGH::apply_settings(){
         material_name = material_base + index;
 
         //eos model
-        if(set_options.find(material_name+":eos_model")!=set_options.end()){
-            if(set_options[material_name+":eos_model"]=="ideal_gas"){
+        current_option = material_name+":eos_model";
+        if(set_options.find(current_option)!=set_options.end()){
+            if(set_options[current_option]=="ideal_gas"){
                 RUN_CLASS({
                     material(imat).eos_model = ideal_gas;
                 });
