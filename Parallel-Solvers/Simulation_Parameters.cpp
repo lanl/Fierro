@@ -350,6 +350,20 @@ void Simulation_Parameters::apply_settings(){
       mesh_file_format = set_options[current_option];
       set_options.erase(current_option);
   }
+
+  current_option = "solver_options:num_dims"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      num_dim = std::stoi(set_options[current_option]);
+      set_options.erase(current_option);
+  }
+
+  current_option = "output_options:graphics_step_frequency"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      file_output_frequency = std::stoi(set_options[current_option]);
+      set_options.erase(current_option);
+  }
   
   if(myrank==0)
     std::cout << "Mesh File name is " << mesh_file_name << std::endl;
@@ -405,31 +419,49 @@ void Simulation_Parameters::yaml_FEA_module_setup(){
   
   index = std::to_string(nfea_modules+1);
   fea_module_name = fea_module_base + index;
-
-    // --- set of user requested FEA modules ---
-  current_option = fea_module_name+":type";
-  while(set_options.find(current_option)!=set_options.end()){
-    
-    if(set_options[current_option]=="elasticity"){
+  
+  // --- set of user requested FEA modules ---
+  while(set_options.find(fea_module_name+":type")!=set_options.end()){
+    std::cout << "WHILE LOOP ENTERED " << index << std::endl;
+    if(set_options[fea_module_name+":type"]=="elasticity"){
+        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
         FEA_Module_List[nfea_modules] = "Elasticity";
-        set_options.erase(current_option);
+        set_options.erase(fea_module_name+":type");
     }
-    if(set_options[current_option]=="steady_heat"){
+    else if(set_options[fea_module_name+":type"]=="steady_heat"){
+        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
         FEA_Module_List[nfea_modules] = "Heat_Conduction";
-        set_options.erase(current_option);
+        set_options.erase(fea_module_name+":type");
     }
     
     nfea_modules++;
-
-    if(nfea_modules==buffer_size){
-      buffer_size += 10;
-      FEA_Module_List.resize(buffer_size);
-      fea_module_must_read.resize(buffer_size);
-    }
-
+    
+    //if(nfea_modules==buffer_size){
+      //buffer_size += 10;
+      //FEA_Module_List.resize(buffer_size);
+      //fea_module_must_read.resize(buffer_size);
+    //}
+    
     index = std::to_string(nfea_modules+1);
     fea_module_name = fea_module_base + index;
   }
+  
+  /*
+  if(set_options[fea_module_name+":type"]=="elasticity"){
+        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
+        FEA_Module_List[nfea_modules] = "Elasticity";
+        set_options.erase(fea_module_name+":type");
+  }
+  nfea_modules++;
+  index = std::to_string(nfea_modules+1);
+  fea_module_name = fea_module_base + index;
+  if(set_options[fea_module_name+":type"]=="steady_heat"){
+        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
+        FEA_Module_List[nfea_modules] = "Heat_Conduction";
+        set_options.erase(fea_module_name+":type");
+  }
+  nfea_modules++;
+  */
 
   if(nfea_modules==buffer_size){
       buffer_size += 10;

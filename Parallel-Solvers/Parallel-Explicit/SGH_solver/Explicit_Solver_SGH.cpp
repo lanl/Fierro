@@ -204,14 +204,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     
       //check for user error in providing yaml options (flags unsupported options)
       //yaml_error = simparam->yaml_input(filename);
-      if(yaml_error!="success"){
-        std::cout << yaml_error << std::endl;
-        yaml_exit_flag = true;
-      } 
-    
-      if(yaml_exit_flag){
-        //exit_solver(0);
-      }
 
       //use map of set options to set member variables of the class
       simparam->apply_settings();

@@ -160,12 +160,14 @@ void Simulation_Parameters_Dynamic_Optimization::apply_settings(){
     //}
 
     if(set_options.find("optimization_options:optimization_process")!=set_options.end()){
-      if(set_options["optimization_options:optimization_process"]=="topology_optimization")
+      if(set_options["optimization_options:optimization_process"]=="topology_optimization"){
         topology_optimization_on = true;
-      if(set_options["optimization_options:optimization_process"]=="shape_optimization")
+        set_options.erase("optimization_options:optimization_process");
+      }
+      else if(set_options["optimization_options:optimization_process"]=="shape_optimization"){
         shape_optimization_on = true;
-
-      set_options.erase("optimization_options:optimization_process");
+        set_options.erase("optimization_options:optimization_process");
+      }
     }
     nTO_modules = 0;
     if(set_options.find("optimization_options:optimization_objective")!=set_options.end()){

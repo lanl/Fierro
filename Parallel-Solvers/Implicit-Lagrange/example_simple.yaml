@@ -56,7 +56,7 @@ optimization_options:
         type: minimize_thermal_resistance
         weight_coefficient: 0.25
     multi-objective_module_2:
-        type: minimize_strain_energy
+        type: minimize_compliance
         weight_coefficient: 0.75
     num_optimization_constraint: 3
     constraint_1:

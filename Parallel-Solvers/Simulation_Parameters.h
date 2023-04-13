@@ -123,6 +123,9 @@ class Simulation_Parameters
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
 
+  //output options
+  int file_output_frequency;
+
 };
 
 #endif // end HEADER_H

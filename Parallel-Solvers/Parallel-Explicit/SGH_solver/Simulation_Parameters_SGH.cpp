@@ -919,7 +919,7 @@ void Simulation_Parameters_SGH::apply_settings(){
                         mat_fill.host(ifill).w = std::stod(set_options[mat_fill_name+":w"]);
                         set_options.erase(mat_fill_name+":w");
                     }
-
+                    set_options.erase(mat_fill_name+":velocity");
                 }
                 else if(set_options[mat_fill_name+":velocity"]=="radial"){
                     mat_fill.host(ifill).velocity = init_conds::radial;

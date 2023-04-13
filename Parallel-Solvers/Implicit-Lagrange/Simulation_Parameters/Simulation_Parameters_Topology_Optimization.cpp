@@ -55,6 +55,7 @@ Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Opti
   optimization_output_freq = 20;
   penalty_power = 3;
   nTO_modules = 0;
+  multi_objective_structure = "linear";
 }
 
 Simulation_Parameters_Topology_Optimization::~Simulation_Parameters_Topology_Optimization(){
@@ -176,10 +177,11 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
   current_option = "optimization_options:optimization_process";
   if(set_options.find(current_option)!=set_options.end()){
     if(set_options[current_option]=="topology_optimization"){
+      //std::cout << "FOUND TO SETTING" << std::endl;
       topology_optimization_on = true;
       set_options.erase(current_option);
     }
-    if(set_options[current_option]=="shape_optimization"){
+    else if(set_options[current_option]=="shape_optimization"){
       shape_optimization_on = true;
       set_options.erase(current_option);
     }
@@ -195,17 +197,24 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
       set_options.erase(current_option);
     }
 
-    if(set_options[current_option]=="minimize_thermal_resistance"){
+    else if(set_options[current_option]=="minimize_thermal_resistance"){
       TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
       TO_Function_Type[nTO_modules] = OBJECTIVE;
       nTO_modules++;
       set_options.erase(current_option);
     }
 
-    if(set_options[current_option]=="multi-objective"){
+    else if(set_options[current_option]=="multi-objective"){
       TO_Module_List[nTO_modules] = "Multi_Objective";
       TO_Function_Type[nTO_modules] = OBJECTIVE;
       nTO_modules++;
+
+      if(set_options.find("optimization_options:multi-objective_structure")!=set_options.end()){
+        if(set_options["optimization_options:multi-objective_structure"]=="linear"){
+          multi_objective_structure = "linear";
+          set_options.erase("optimization_options:multi-objective_structure");
+        }
+      }
 
       //read in multi-objective function definition and terms
       //read in multi-objective function definition and terms
@@ -224,8 +233,7 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
           TO_Module_List[nTO_modules] = "Strain_Energy_Minimize";
           set_options.erase(optimization_module_name+":type");
         }
-
-        if(set_options[optimization_module_name+":type"]=="minimize_thermal_resistance"){
+        else if(set_options[optimization_module_name+":type"]=="minimize_thermal_resistance"){
           TO_Module_List[nTO_modules] = "Heat_Capacity_Potential_Minimize";
           set_options.erase(optimization_module_name+":type");
         }
@@ -297,13 +305,13 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
       //constraint type; some may have additional arguments that follow the value
       current_option = constraint_name+":type";
       if(set_options.find(current_option)!=set_options.end()){
+          
           if(set_options[current_option]=="mass"){
             TO_Module_List[nTO_modules] = "Mass_Constraint";
             set_options.erase(current_option);
           }
-      }
-      if(set_options.find(current_option)!=set_options.end()){
-          if(set_options[current_option]=="moment_of_inertia"){
+
+          else if(set_options[current_option]=="moment_of_inertia"){
             TO_Module_List[nTO_modules] = "Moment_of_Inertia_Constraint";
             //obtain function arguments
             if(set_options.find(constraint_name+":component")!=set_options.end()){
@@ -311,23 +319,23 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
                 Function_Arguments[nTO_modules].push_back(0);
                 set_options.erase(constraint_name+":component");
               }
-              if(set_options[constraint_name+":component"]=="yy"){
+              else if(set_options[constraint_name+":component"]=="yy"){
                 Function_Arguments[nTO_modules].push_back(1);
                 set_options.erase(constraint_name+":component");
               }
-              if(set_options[constraint_name+":component"]=="zz"){
+              else if(set_options[constraint_name+":component"]=="zz"){
                 Function_Arguments[nTO_modules].push_back(2);
                 set_options.erase(constraint_name+":component");
               }
-              if(set_options[constraint_name+":component"]=="xy"){
+              else if(set_options[constraint_name+":component"]=="xy"){
                 Function_Arguments[nTO_modules].push_back(3);
                 set_options.erase(constraint_name+":component");
               }
-              if(set_options[constraint_name+":component"]=="xz"){
+              else if(set_options[constraint_name+":component"]=="xz"){
                 Function_Arguments[nTO_modules].push_back(4);
                 set_options.erase(constraint_name+":component");
               }
-              if(set_options[constraint_name+":component"]=="yz"){
+              else if(set_options[constraint_name+":component"]=="yz"){
                 Function_Arguments[nTO_modules].push_back(5);
                 set_options.erase(constraint_name+":component");
               }

@@ -187,23 +187,17 @@ void Implicit_Solver::run(int argc, char *argv[]){
       simparam->input();
       //check for user error in providing yaml options (flags unsupported options)
       //yaml_error = simparam->yaml_input(filename);
-      if(yaml_error!="success"){
-        std::cout << yaml_error << std::endl;
-        yaml_exit_flag = true;
-      } 
-    
-      if(yaml_exit_flag){
-        //exit_solver(0);
-      }
 
       //use map of set options to set member variables of the class
-      simparam->apply_settings();
+      //simparam->apply_settings();
       //construct list of FEA modules requested
+      
       simparam->yaml_FEA_module_setup();
       //assign base class data such as map of settings to TO simparam class
       simparam_TO->Simulation_Parameters::operator=(*simparam);
       simparam_TO->input();
       simparam_TO->apply_settings();
+      simparam->set_options = simparam_TO->set_options;
 
       // ---- Read intial mesh, refine, and build connectivity ---- //
       if(simparam->mesh_file_format=="tecplot")
@@ -213,6 +207,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
       else if(simparam->mesh_file_format=="ensight")
         read_mesh_ensight(simparam->mesh_file_name.c_str());
 
+      //assign map with read in options removed from inheritors to the base class
       simparam_TO->FEA_module_setup();
     }
     else{
@@ -228,8 +223,6 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
       //construct list of FEA modules requested
       simparam_TO->FEA_module_setup();
-      //assign map with read in options removed from inheritors to the base class
-      simparam->set_options = simparam_TO->set_options;
     }
     
     //debug
