@@ -57,9 +57,6 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
-#include <Kokkos_View.hpp>
-#include <Kokkos_Parallel.hpp>
-#include <Kokkos_Parallel_Reduce.hpp>
 #include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Details_FixedHashTable.hpp"
@@ -104,7 +101,11 @@
 using namespace utils;
 
 
-FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+
+  //assign interfacing index
+  my_fea_module_index_ = my_fea_module_index;
+  Module_Type = "Elasticity";
 
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
@@ -113,7 +114,10 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer) :FEA_Module
   simparam = new Simulation_Parameters_Elasticity();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
-  
+
+  //acquire base class data from existing simparam in solver (gets yaml options etc.)
+  simparam->Simulation_Parameters::operator=(*(Implicit_Solver_Pointer_->simparam));
+
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
   
@@ -759,10 +763,65 @@ void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
 
 void FEA_Module_Elasticity::generate_bcs(){
   int num_dim = simparam->num_dim;
+  int num_bcs;
   int bc_tag;
+  double temp_disp;
   real_t value;
   real_t fix_limits[4];
 
+  //find user bc settings
+  std::string fea_module_base = "fea_module_";
+  std::string bc_base = ":boundary_condition_";
+  std::string index, bc_index;
+  std::string fea_module_name, bc_name;
+  
+  index = std::to_string(my_fea_module_index_+1);
+  bc_index = std::to_string(num_surface_disp_sets+1);
+  fea_module_name = fea_module_base + index;
+  bc_name = fea_module_name + bc_base + bc_index;
+  
+  while(simparam->set_options.find(bc_name+":condition_type")!=simparam->set_options.end()){
+    
+    if(simparam->set_options[bc_name+":surface"]=="x_plane"){
+      bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="y_plane"){
+      bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="z_plane"){
+      bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    value = std::stod(simparam->set_options[bc_name+":plane_position"]) * simparam->unit_scaling;
+    fix_limits[0] = fix_limits[2] = 4;
+    fix_limits[1] = fix_limits[3] = 6;
+    if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+    if(num_surface_disp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_disp_sets+1);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    if(simparam->set_options[bc_name+":condition_type"]=="fixed_displacement"){
+      Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
+    }
+    if(simparam->set_options.find(bc_name+":displacement_value")!=simparam->set_options.end()){
+      temp_disp = std::stod(simparam->set_options[bc_name+":displacement_value"]);
+      Boundary_Surface_Displacements(num_surface_disp_sets,0) = temp_disp;
+      Boundary_Surface_Displacements(num_surface_disp_sets,1) = temp_disp;
+      Boundary_Surface_Displacements(num_surface_disp_sets,2) = temp_disp;
+    }
+    if(Boundary_Surface_Displacements(num_surface_disp_sets,0)||Boundary_Surface_Displacements(num_surface_disp_sets,1)||Boundary_Surface_Displacements(num_surface_disp_sets,2)) nonzero_bc_flag = true;
+    *fos << "tagging " << simparam->set_options[bc_name+":surface"] << " at " << simparam->set_options[bc_name+":plane_position"] <<  std::endl;
+    
+    *fos << "tagged a set " << std::endl;
+    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    *fos << std::endl;
+    num_boundary_conditions++;
+    num_surface_disp_sets++;
+    
+    bc_index = std::to_string(num_surface_disp_sets+1);
+    bc_name = fea_module_name + bc_base + bc_index;
+  }
+ 
+  
+  /*
   // tag the z=0 plane,  (Direction, value, bdy_set)
   *fos << "tagging z = 0 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
@@ -784,7 +843,7 @@ void FEA_Module_Elasticity::generate_bcs(){
   *fos << std::endl;
   num_boundary_conditions++;
   num_surface_disp_sets++;
- /*
+ 
   // tag the y=10 plane,  (Direction, value, bdy_set)
   std::cout << "tagging y = 10 " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
@@ -880,7 +939,7 @@ void FEA_Module_Elasticity::generate_bcs(){
 void FEA_Module_Elasticity::generate_applied_loads(){
   int num_dim = simparam->num_dim;
   int bc_tag;
-  real_t value;
+  real_t value, temp_flux;
   
   //Surface Forces Section
 
@@ -1009,6 +1068,70 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   std::cout << std::endl;
   */
   
+  //find user bc settings
+  std::string fea_module_base = "fea_module_";
+  std::string bc_base = ":loading_condition_";
+  std::string index, bc_index;
+  std::string fea_module_name, bc_name;
+  
+  index = std::to_string(my_fea_module_index_+1);
+  bc_index = std::to_string(num_surface_force_sets+1);
+  fea_module_name = fea_module_base + index;
+  bc_name = fea_module_name + bc_base + bc_index;
+  
+  while(simparam->set_options.find(bc_name+":condition_type")!=simparam->set_options.end()){
+    
+    if(simparam->set_options[bc_name+":surface"]=="x_plane"){
+      bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="y_plane"){
+      bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    if(simparam->set_options[bc_name+":surface"]=="z_plane"){
+      bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
+    }
+    value = std::stod(simparam->set_options[bc_name+":plane_position"]) * simparam->unit_scaling;
+    if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+    if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
+    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    if(simparam->set_options[bc_name+":condition_type"]=="surface_traction"){
+      Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
+    }
+
+    if(simparam->set_options.find(bc_name+":component_x")!=simparam->set_options.end()){
+      Boundary_Surface_Force_Densities(num_surface_force_sets,0) = std::stod(simparam->set_options[bc_name+":component_x"])/simparam->unit_scaling/simparam->unit_scaling;
+    }
+    else{
+      Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 0;
+    }
+
+    if(simparam->set_options.find(bc_name+":component_y")!=simparam->set_options.end()){
+      Boundary_Surface_Force_Densities(num_surface_force_sets,1) = std::stod(simparam->set_options[bc_name+":component_y"])/simparam->unit_scaling/simparam->unit_scaling;
+    }
+    else{
+      Boundary_Surface_Force_Densities(num_surface_force_sets,1) = 0;
+    }
+
+    if(simparam->set_options.find(bc_name+":component_z")!=simparam->set_options.end()){
+      Boundary_Surface_Force_Densities(num_surface_force_sets,2) = std::stod(simparam->set_options[bc_name+":component_z"])/simparam->unit_scaling/simparam->unit_scaling;
+    }
+    else{
+      Boundary_Surface_Force_Densities(num_surface_force_sets,2) = 0;
+    }
+
+    *fos << "tagging " << simparam->set_options[bc_name+":surface"] << " at " << simparam->set_options[bc_name+":plane_position"] <<  std::endl;
+    
+    *fos << "tagged a set " << std::endl;
+    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    *fos << std::endl;
+    num_boundary_conditions++;
+    num_surface_force_sets++;
+    
+    bc_index = std::to_string(num_surface_force_sets+1);
+    bc_name = fea_module_name + bc_base + bc_index;
+  }
+  /*
   *fos << "tagging beam +z force " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   //value = 0;
@@ -1029,7 +1152,7 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   num_boundary_conditions++;
   num_surface_force_sets++;
   
-  /*
+  
   std::cout << "tagging y = 2 " << std::endl;
   bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 2.0;
@@ -1651,7 +1774,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   are assumed to be additive*/
   for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
     if(Boundary_Condition_Type_List(iboundary)!=SURFACE_LOADING_CONDITION&&Boundary_Condition_Type_List(iboundary)!=SURFACE_PRESSURE_CONDITION) continue;
-    std::cout << " NUMBER OF BOUNDARY PATCHES "<< NBoundary_Condition_Patches(iboundary) << std::endl;
+    //std::cout << " NUMBER OF BOUNDARY PATCHES "<< NBoundary_Condition_Patches(iboundary) << std::endl;
     //std::cout << "I REACHED THE LOADING BOUNDARY CONDITION" <<std::endl;
     num_bdy_patches_in_set = NBoundary_Condition_Patches(iboundary);
     
@@ -4407,16 +4530,16 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
 
   //collect nodal displacement information
   if(output_displacement_flag){
-  //importer from local node distribution to sorted distribution
-  Tpetra::Import<LO, GO> dof_sorting_importer(local_dof_map, sorted_dof_map);
+    //importer from local node distribution to sorted distribution
+    Tpetra::Import<LO, GO> dof_sorting_importer(local_dof_map, sorted_dof_map);
 
-  sorted_node_displacements_distributed = Teuchos::rcp(new MV(sorted_dof_map, 1));
+    sorted_node_displacements_distributed = Teuchos::rcp(new MV(sorted_dof_map, 1));
 
-  //comms to collect
-  sorted_node_displacements_distributed->doImport(*(node_displacements_distributed), dof_sorting_importer, Tpetra::INSERT);
+    //comms to collect
+    sorted_node_displacements_distributed->doImport(*(node_displacements_distributed), dof_sorting_importer, Tpetra::INSERT);
 
-  //set host views of the collected data to print out from
-  module_outputs[output_displacement_index] = sorted_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    //set host views of the collected data to print out from
+    module_outputs[output_displacement_index] = sorted_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 
   //collect strain data
@@ -5444,28 +5567,25 @@ void FEA_Module_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
    update nodal displacement information in accordance with current optimization vector
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp){
-  
-  //set density vector to the current value chosen by the optimizer
-  test_node_densities_distributed = zp;
+void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step){
+  if(last_compute_step!=compute_step){
+    //set density vector to the current value chosen by the optimizer
+    test_node_densities_distributed = zp;
 
-  assemble_matrix();
+    assemble_matrix();
 
-  if(body_term_flag||nonzero_bc_flag)
-    assemble_vector();
+    if(body_term_flag||nonzero_bc_flag)
+      assemble_vector();
   
-  //solve for new nodal displacements
-  int solver_exit = solve();
-  if(solver_exit != EXIT_SUCCESS){
-    std::cout << "Linear Solver Error" << std::endl <<std::flush;
-    return;
+    //solve for new nodal displacements
+    int solver_exit = solve();
+    if(solver_exit != EXIT_SUCCESS){
+      std::cout << "Linear Solver Error" << std::endl <<std::flush;
+      return;
+    }
+  
+    update_count++;
   }
-  
-  update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
 }
 
 /* -------------------------------------------------------------------------------------------

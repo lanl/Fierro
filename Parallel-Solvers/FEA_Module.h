@@ -48,7 +48,7 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
-#include <Kokkos_View.hpp>
+#include <Kokkos_Core.hpp>
 //#include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "utilities.h"
@@ -60,6 +60,12 @@ using namespace mtr;
 
 //forward declare
 class Solver;
+
+//forward declarations
+namespace ROL{
+  template<class datatype>
+  class Problem;
+}
 
 class FEA_Module{
 
@@ -130,7 +136,7 @@ public:
 
   virtual void comm_variables(Teuchos::RCP<const MV> zp) {}
 
-  virtual void update_linear_solve(Teuchos::RCP<const MV> zp) {}
+  virtual void update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step) {}
 
   virtual void update_forward_solve(Teuchos::RCP<const MV> zp) {}
 
@@ -160,6 +166,10 @@ public:
 
   virtual void node_density_constraints(host_vec_array node_densities_lower_bound){}
 
+  //interfacing information
+  std::string Module_Type;
+  int last_compute_step;
+
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   
@@ -170,6 +180,7 @@ public:
 
   class Simulation_Parameters *simparam;
   Solver *Solver_Pointer_;
+  int my_fea_module_index_;
   
   //Local FEA data
   size_t nlocal_nodes;
@@ -179,6 +190,7 @@ public:
   host_elem_conn_array nodes_in_elem; //host view of element connectivity to nodes
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;
@@ -276,6 +288,9 @@ public:
   std::vector<const_host_vec_array> module_outputs;
   std::vector<vector_styles> vector_style;
   std::vector<int> output_vector_sizes;
+
+  //Pointer to ROL Problem for optimization solves
+  Teuchos::RCP<ROL::Problem<real_t>> problem;
   
 };
 

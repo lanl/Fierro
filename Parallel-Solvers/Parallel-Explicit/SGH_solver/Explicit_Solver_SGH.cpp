@@ -57,9 +57,6 @@
 #include <Tpetra_CrsMatrix.hpp>
 
 #include <Xpetra_MultiVector.hpp>
-#include <Kokkos_View.hpp>
-#include <Kokkos_Parallel.hpp>
-#include <Kokkos_Parallel_Reduce.hpp>
 #include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Details_FixedHashTable.hpp"
@@ -73,6 +70,7 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module.h"
 #include "FEA_Module_SGH.h"
+#include "FEA_Module_Inertial.h"
 #include "Explicit_Solver_SGH.h"
 #include "mesh.h"
 #include "state.h"
@@ -129,8 +127,7 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->Simulation_Parameters::input();
-  simparam->input();
-  simparam_dynamic_opt->input();
+
   //create ref element object
   ref_elem = new elements::ref_element();
   //create mesh objects
@@ -175,10 +172,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
     MPI_Comm_rank(world,&myrank);
     MPI_Comm_size(world,&nranks);
-    int num_dim = simparam->num_dim;
     
     if(myrank == 0){
-      std::cout << "Running TO Explicit_Solver" << std::endl;
+      std::cout << "Starting Lagrangian SGH code" << std::endl;
        // check to see of a mesh was supplied when running the code
       if (argc == 1) {
         std::cout << "\n\n**********************************\n\n";
@@ -189,23 +185,61 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       }
     }
 
-    printf("Starting Lagrangian SGH code\n");
-
     //initialize Trilinos communicator class
     comm = Tpetra::getDefaultComm();
 
+    //default simulation parameters
+    
+    simparam->input();
+    simparam_dynamic_opt->input();
+    int num_dim = simparam->num_dim;
+
     //error handle for file input name
     //if(argc < 2)
+    //yaml file reader for simulation parameters
+    std::string filename = std::string(argv[1]);
+    if(filename.find(".yaml") != std::string::npos){
+      std::string yaml_error;
+      bool yaml_exit_flag = false;
+    
+      //check for user error in providing yaml options (flags unsupported options)
+      //yaml_error = simparam->yaml_input(filename);
+      if(yaml_error!="success"){
+        std::cout << yaml_error << std::endl;
+        yaml_exit_flag = true;
+      } 
+    
+      if(yaml_exit_flag){
+        //exit_solver(0);
+      }
 
-    // ---- Read intial mesh, refine, and build connectivity ---- //
-    if(simparam->tecplot_input)
-      read_mesh_tecplot(argv[1]);
-    else if(simparam->vtk_input)
-      read_mesh_vtk(argv[1]);
-    else if(simparam->ansys_dat_input)
-      read_mesh_ansys_dat(argv[1]);
-    else
-      read_mesh_ensight(argv[1]);
+      //use map of set options to set member variables of the class
+      simparam->apply_settings();
+      //assign base class data such as map of settings to TO simparam class
+      simparam_dynamic_opt->Simulation_Parameters::operator=(*simparam);
+      simparam_dynamic_opt->apply_settings();
+
+      // ---- Read intial mesh, refine, and build connectivity ---- //
+      if(simparam->mesh_file_format=="tecplot")
+        read_mesh_tecplot(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="vtk")
+        read_mesh_vtk(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ansys_dat")
+        read_mesh_ansys_dat(simparam->mesh_file_name.c_str());
+      else if(simparam->mesh_file_format=="ensight")
+        read_mesh_ensight(simparam->mesh_file_name.c_str());
+    }
+    else{
+      if(simparam->tecplot_input)
+        read_mesh_tecplot(argv[1]);
+      else if(simparam->vtk_input)
+        read_mesh_vtk(argv[1]);
+      else if(simparam->ansys_dat_input)
+        read_mesh_ansys_dat(argv[1]);
+      else
+        read_mesh_ensight(argv[1]);
+    }
+
 
     //debug
     //return;
@@ -234,13 +268,17 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //generate_tcs();
 
     //initialize TO design variable storage
-    //init_design();
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on)
+      init_design();
 
     //construct list of FEA modules requested
-    //simparam->FEA_module_setup();
+    if(simparam_dynamic_opt->topology_optimization_on)
+      simparam_dynamic_opt->FEA_module_setup();
+    else
+      simparam->FEA_module_setup();
 
     //process process list of requested FEA modules to construct list of objects
-    //FEA_module_setup();
+    FEA_module_setup();
 
     //Have modules read in boundary/loading conditions if file format provides it
     /*
@@ -308,8 +346,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    //setup_optimization_problem();
-    //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -318,34 +354,30 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     //}
     
     //hack allocation of module
-    FEA_Module_SGH* sgh_module = new FEA_Module_SGH(this, *mesh);
-    // The kokkos scope
-    {
-     
-        // ---------------------------------------------------------------------
-        //    state data type declarations
-        // ---------------------------------------------------------------------
-        node_t  node;
-        elem_t  elem;
-        corner_t  corner;
-        
-        // ---------------------------------------------------------------------
-        //    mesh data type declarations
-        // ---------------------------------------------------------------------
-        //mesh_t mesh;
+    //sgh_module = new FEA_Module_SGH(this, *mesh);
+    // ---------------------------------------------------------------------
+    //    state data type declarations (must stay in scope for output after run)
+    // ---------------------------------------------------------------------
+    node_t  node;
+    elem_t  elem;
+    corner_t  corner;
+    // ---------------------------------------------------------------------
+    //    mesh data type declarations
+    // ---------------------------------------------------------------------
+    //mesh_t mesh;
         
 
-        // ---------------------------------------------------------------------
-        //    read the input file
-        // ---------------------------------------------------------------------  
-        //simparam->input();
+    // ---------------------------------------------------------------------
+    //    read the input file
+    // ---------------------------------------------------------------------  
+    //simparam->input();
         
 
-        // ---------------------------------------------------------------------
-        //    read in supplied mesh
-        // --------------------------------------------------------------------- 
-        sgh_module->sgh_interface_setup(*mesh, node, elem, corner);
-        mesh->build_corner_connectivity();
+    // ---------------------------------------------------------------------
+    //    read in supplied mesh
+    // --------------------------------------------------------------------- 
+    sgh_module->sgh_interface_setup(*mesh, node, elem, corner);
+    mesh->build_corner_connectivity();
         //debug print of corner ids
         /*
         if(myrank==1){
@@ -356,7 +388,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         
                  // Get corner gid
                  size_t corner_gid = mesh.corners_in_node(i, corner_lid);
-                 std::cout << all_node_map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
+                 std::cout << map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
             
                } // end for corner_lid
                //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
@@ -381,27 +413,27 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
              }
             }
             */
-        mesh->build_elem_elem_connectivity();
-        mesh->num_bdy_patches = nboundary_patches;
-        if(num_dim==2){
-        mesh->build_patch_connectivity();
-        mesh->build_node_node_connectivity();
-        }
+    mesh->build_elem_elem_connectivity();
+    mesh->num_bdy_patches = nboundary_patches;
+    if(num_dim==2){
+      mesh->build_patch_connectivity();
+      mesh->build_node_node_connectivity();
+    }
         
-        // ---------------------------------------------------------------------
-        //    allocate memory
-        // ---------------------------------------------------------------------
+      // ---------------------------------------------------------------------
+      //    allocate memory
+      // ---------------------------------------------------------------------
 
-        // shorthand names
-        const size_t num_nodes = mesh->num_nodes;
-        const size_t num_elems = mesh->num_elems;
-        const size_t num_corners = mesh->num_corners;
-        const size_t max_num_state_vars = simparam->max_num_state_vars;
-        const size_t rk_num_bins = simparam->rk_num_bins;
+      // shorthand names
+    const size_t num_nodes = mesh->num_nodes;
+    const size_t num_elems = mesh->num_elems;
+    const size_t num_corners = mesh->num_corners;
+    const size_t max_num_state_vars = simparam->max_num_state_vars;
+    const size_t rk_num_bins = simparam->rk_num_bins;
 
         
-        // allocate elem_statev
-        elem.statev = CArray <double> (num_elems, max_num_state_vars);
+      // allocate elem_statev
+    elem.statev = CArray <double> (num_elems, max_num_state_vars);
 
         // --- make dual views of data on CPU and GPU ---
         //  Notes:
@@ -416,105 +448,96 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         //     for memory movement.
 
         
-        // create Dual Views of the individual node struct variables
-        sgh_module->node_coords = DViewCArrayKokkos<double>(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+    // create Dual Views of the individual node struct variables
+    sgh_module->node_coords = DViewCArrayKokkos<double>(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        sgh_module->node_vel = DViewCArrayKokkos<double>(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+    sgh_module->node_vel = DViewCArrayKokkos<double>(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
 
-        sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
+    sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
         
         
-        // create Dual Views of the individual elem struct variables
-        sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
+      // create Dual Views of the individual elem struct variables
+    sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
                                             num_elems);
 
-        sgh_module->elem_pres = DViewCArrayKokkos<double>(&elem.pres(0),
+    sgh_module->elem_pres = DViewCArrayKokkos<double>(&elem.pres(0),
                                              num_elems);
 
-        sgh_module->elem_stress = DViewCArrayKokkos<double>(&elem.stress(0,0,0,0),
+    sgh_module->elem_stress = DViewCArrayKokkos<double>(&elem.stress(0,0,0,0),
                                                rk_num_bins,
                                                num_elems,
                                                3,
                                                3); // always 3D even in 2D-RZ
 
-        sgh_module->elem_sspd = DViewCArrayKokkos<double>(&elem.sspd(0),
+    sgh_module->elem_sspd = DViewCArrayKokkos<double>(&elem.sspd(0),
                                              num_elems);
 
-        sgh_module->elem_sie = DViewCArrayKokkos<double>(&elem.sie(0,0),
+    sgh_module->elem_sie = DViewCArrayKokkos<double>(&elem.sie(0,0),
                                             rk_num_bins,
                                             num_elems);
 
-        sgh_module->elem_vol = DViewCArrayKokkos<double>(&elem.vol(0),
+    sgh_module->elem_vol = DViewCArrayKokkos<double>(&elem.vol(0),
                                             num_elems);
         
-        sgh_module->elem_div = DViewCArrayKokkos<double>(&elem.div(0),
+    sgh_module->elem_div = DViewCArrayKokkos<double>(&elem.div(0),
                                             num_elems);
         
 
-        sgh_module->elem_mass = DViewCArrayKokkos<double>(&elem.mass(0),
+    sgh_module->elem_mass = DViewCArrayKokkos<double>(&elem.mass(0),
                                              num_elems);
 
-        sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
+    sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
                                                num_elems);
 
-        sgh_module->elem_statev = DViewCArrayKokkos<double>(&elem.statev(0,0),
+    sgh_module->elem_statev = DViewCArrayKokkos<double>(&elem.statev(0,0),
                                                num_elems,
                                                max_num_state_vars );
         
-        // create Dual Views of the corner struct variables
-        sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
+      // create Dual Views of the corner struct variables
+    sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
                                                 num_corners, 
                                                 num_dim);
 
-        sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
+    sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
                                                num_corners);
         
         
-        // ---------------------------------------------------------------------
-        //   calculate geometry
-        // ---------------------------------------------------------------------
-        sgh_module->node_coords.update_device();
-        Kokkos::fence();
+      // ---------------------------------------------------------------------
+      //   calculate geometry
+      // ---------------------------------------------------------------------
+    sgh_module->node_coords.update_device();
+    Kokkos::fence();
         
-        //set initial saved coordinates
-        initial_node_coords_distributed->assign(*node_coords_distributed);
+      //set initial saved coordinates
+    initial_node_coords_distributed->assign(*node_coords_distributed);
 
-        sgh_module->get_vol();
+    sgh_module->get_vol();
 
 
-        // ---------------------------------------------------------------------
-        //   setup the IC's and BC's
-        // ---------------------------------------------------------------------
-        sgh_module->setup();
-        
-        // intialize time, time_step, and cycles
-        //time_value = 0.0;
-        //dt = dt_start;
-        //graphics_id = 0;
-        //graphics_times(0) = 0.0;
-        //graphics_time = graphics_dt_ival;  // the times for writing graphics dump
-        
-        //set initial saved velocities
-        initial_node_velocities_distributed->assign(*node_velocities_distributed);
-        
+      // ---------------------------------------------------------------------
+      //   setup the IC's and BC's
+      // ---------------------------------------------------------------------
+    sgh_module->setup();
 
-        // ---------------------------------------------------------------------
-        //   Calculate the SGH solution
-        // ---------------------------------------------------------------------
-        
-        sgh_module->sgh_solve();
-        
-
-        //test forward solve call
-        //sgh_module->update_forward_solve(test_node_densities_distributed);
-        
-        
-    } // end of kokkos scope
-
-    printf("Finished\n");
+    //set initial saved velocities
+    initial_node_velocities_distributed->assign(*node_velocities_distributed);
     
-    //CPU time
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      //design_node_densities_distributed->randomize(1,1);
+      setup_optimization_problem();
+      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+    }
     
+    // ---------------------------------------------------------------------
+    //  Calculate the SGH solution
+    // ---------------------------------------------------------------------
+        
+    sgh_module->sgh_solve();
+         
+
+    //printf("Finished\n");
+    
+    //benchmark simulation run time end
     double current_cpu = CPU_Time();
     /*
     for(int imodule = 0; imodule < nfea_modules; imodule++){
@@ -526,8 +549,27 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
               << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
 
-    // Data writers
-    parallel_tecplot_writer();
+    parallel_vtk_writer();
+    
+    //test forward solve call
+    int ntests = 0;
+    if(simparam_dynamic_opt->topology_optimization_on){
+      for(int itest = 0; itest < ntests; itest++){
+        design_node_densities_distributed->randomize(1,1);
+        //test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
+        Teuchos::RCP<MV> test_gradients_distributed = Teuchos::rcp(new MV(map, 1));
+        const_vec_array test_node_densities = design_node_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        vec_array test_gradients = test_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+
+        sgh_module->comm_variables(design_node_densities_distributed);
+        sgh_module->update_forward_solve(design_node_densities_distributed);
+        sgh_module->compute_topology_optimization_adjoint();
+        sgh_module->compute_topology_optimization_gradient(test_node_densities, test_gradients);
+        // Data writers
+        //parallel_vtk_writer();
+      }
+    }
+
     // vtk_writer();
     /*
     if(myrank==0){
@@ -541,7 +583,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 /* ----------------------------------------------------------------------
    Read ANSYS dat format mesh file
 ------------------------------------------------------------------------- */
-void Explicit_Solver_SGH::read_mesh_ansys_dat(char *MESH){
+void Explicit_Solver_SGH::read_mesh_ansys_dat(const char *MESH){
 
   char ch;
   int num_dim = simparam->num_dim;
@@ -1191,9 +1233,14 @@ void Explicit_Solver_SGH::init_state_vectors(){
   initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
-  if(!simparam->restart_file)
-    design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+  if(simparam_dynamic_opt->topology_optimization_on){
+    test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+  }
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+    corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element);
+  }
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
+  Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, 1));
 }
 
 /* ----------------------------------------------------------------------
@@ -1201,26 +1248,33 @@ void Explicit_Solver_SGH::init_state_vectors(){
 ------------------------------------------------------------------------- */
 
 void Explicit_Solver_SGH::FEA_module_setup(){
-  nfea_modules = simparam->nfea_modules;
-  std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
-  fea_module_must_read = simparam->fea_module_must_read;
+  std::vector<std::string> FEA_Module_List;
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+    nfea_modules = simparam_dynamic_opt->nfea_modules;
+    FEA_Module_List = simparam_dynamic_opt->FEA_Module_List;
+    fea_module_must_read = simparam_dynamic_opt->fea_module_must_read;
+  }
+  else{
+    nfea_modules = simparam->nfea_modules;
+    FEA_Module_List = simparam->FEA_Module_List;
+    fea_module_must_read = simparam->fea_module_must_read;
+  }
   //allocate lists to size
   fea_module_types = std::vector<std::string>(nfea_modules);
   fea_modules = std::vector<FEA_Module*>(nfea_modules);
   bool module_found = false;
   
   //list should not have repeats since that was checked by simulation parameters setups
-  /*
+  
   for(int imodule = 0; imodule < nfea_modules; imodule++){
     //decides which FEA module objects to setup based on string.
     //automate selection list later; use std::map maybe?
-    if(FEA_Module_List[imodule] == "Elasticity"){
-      fea_module_types[imodule] = "Elasticity";
-      fea_modules[imodule] = new FEA_Module_Elasticity(this);
+    if(FEA_Module_List[imodule] == "SGH"){
+      fea_module_types[imodule] = "SGH";
+      fea_modules[imodule] = sgh_module = new FEA_Module_SGH(this, *mesh);
       module_found = true;
-      displacement_module = imodule;
       //debug print
-      *fos << " ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << " SGH MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
     else if(FEA_Module_List[imodule] == "Inertial"){
@@ -1231,19 +1285,12 @@ void Explicit_Solver_SGH::FEA_module_setup(){
       *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
-    else if(FEA_Module_List[imodule] == "Heat_Conduction"){
-      fea_module_types[imodule] = "Heat_Conduction";
-      fea_modules[imodule] = new FEA_Module_Heat_Conduction(this);
-      module_found = true; 
-      //debug print
-      *fos << " HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
-    }
     else{
       *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" <<FEA_Module_List[imodule]<<"\"" << std::endl;
       exit_solver(0);
     }
   }
-  */
+  
 }
 
 /* ----------------------------------------------------------------------
@@ -1279,7 +1326,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
-  std::string filename = "input_ex01.xml";
+  std::string filename = "optimization_parameters.xml";
   auto parlist = ROL::getParametersFromXmlFile( filename );
   //ROL::ParameterList parlist;
 
@@ -1447,7 +1494,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          if(simparam_TO->thick_condition_boundary){
+          if(simparam_dynamic_opt->thick_condition_boundary){
             Surface_Nodes = Boundary_Patches(patch_id).node_set;
             current_element_index = Boundary_Patches(patch_id).element_id;
             //debug print of local surface ids
@@ -1543,8 +1590,8 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-  //directions_distributed->putScalar(1);
-  directions_distributed->randomize(-1,1);
+  directions_distributed->putScalar(1);
+  //directions_distributed->randomize(-1,1);
   //real_t normd = directions_distributed->norm2();
   //directions_distributed->scale(normd);
   //set all but first component to 0 for debug
@@ -1566,7 +1613,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  solver.solve(*fos);
+  //solver.solve(*fos);
 
   //print final constraint satisfaction
   //fea_elasticity->compute_element_masses(design_densities,false);
@@ -1600,7 +1647,6 @@ void Explicit_Solver_SGH::init_boundaries(){
     }
   }
   Local_Index_Boundary_Patches.update_device();
-  mesh->Local_Index_Boundary_Patches = Local_Index_Boundary_Patches;
   
   //std::cout << "Done with boundary patch setup" << std::endl <<std::flush;
   std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
@@ -1817,19 +1863,34 @@ void Explicit_Solver_SGH::sort_information(){
   */
 
   //sorted nodal density information
-  sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
-
+  if(simparam_dynamic_opt->topology_optimization_on){
+    sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+    sorted_node_densities_distributed->doImport(*design_node_densities_distributed, node_sorting_importer, Tpetra::INSERT);
+  }
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
-
-  //sort element connectivity
+  
+  //interface element density data
+  {
+  host_vec_array Element_Densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  sgh_module->elem_den.update_host();
+  for(int ielem = 0; ielem < rnum_elem; ielem++){
+    Element_Densities(ielem,0) = sgh_module->elem_den.host(ielem);
+  }
+  }
+  //Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  //sorted element mapping
   sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
+  sorted_element_densities_distributed = Teuchos::rcp(new MV(sorted_element_map, 1));
+
   Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
   
   sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
 
   //comms
   sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
+  sorted_element_densities_distributed->doImport(*Global_Element_Densities, element_sorting_importer, Tpetra::INSERT);
   
 }
 
@@ -1991,7 +2052,10 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
   //set host views of the communicated data to print out from
   const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_densities;
+  if(simparam_dynamic_opt->topology_optimization_on){
+    sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
@@ -2139,6 +2203,7 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
 
   //print buffers at offsets with collective MPI write
   //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
+  MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
   //MPI_File_close(&myfile_parallel);
   
@@ -2183,9 +2248,467 @@ void Explicit_Solver_SGH::parallel_tecplot_writer(){
 
     current_buffer_position += current_line.length();
 	}
-
+  
+  MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
   
+  MPI_File_close(&myfile_parallel);
+
+}
+
+/* ----------------------------------------------------------------------
+   Output Model Information in tecplot format
+------------------------------------------------------------------------- */
+
+void Explicit_Solver_SGH::parallel_vtk_writer(){
+  int num_dim = simparam->num_dim;
+	std::string current_file_name;
+	std::string base_file_name= "VTK";
+  std::string base_file_name_undeformed= "VTK_undeformed";
+  std::stringstream current_line_stream;
+  std::string current_line;
+	std::string file_extension= ".vtk";
+  std::string file_count;
+	std::stringstream count_temp;
+  int time_step = 0;
+  int temp_convert;
+  int noutput, nvector;
+  bool displace_geometry = false;
+  MPI_Offset current_stream_position, header_stream_offset, file_stream_offset;
+  MPI_File myfile_parallel;
+  int buffer_size_per_element_line, nlocal_elements;
+  GO first_element_global_id;
+  int default_vector_count;
+  int buffer_size_per_node_line;
+  int nlocal_sorted_nodes;
+  GO first_node_global_id;
+   /*
+  int displacement_index;
+  if(displacement_module!=-1){
+    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displacement_index = fea_modules[displacement_module]->displacement_index;
+  }
+  
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->compute_output();
+  }
+  */
+  // Convert ijk index system to the finite element numbering convention
+  // for vertices in cell
+  
+  //comm to vectors with contigously sorted global indices from unsorted zoltan2 repartition map
+  sort_information();
+  //set host views of the communicated data to print out from
+  const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_element_densities = sorted_element_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_densities;
+  if(simparam_dynamic_opt->topology_optimization_on){
+    sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ijk_to_ensight(max_nodes_per_element);
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
+  convert_ijk_to_ensight(0) = 0;
+  convert_ijk_to_ensight(1) = 1;
+  convert_ijk_to_ensight(2) = 3;
+  convert_ijk_to_ensight(3) = 2;
+  if(num_dim==3){
+    convert_ijk_to_ensight(4) = 4;
+    convert_ijk_to_ensight(5) = 5;
+    convert_ijk_to_ensight(6) = 7;
+    convert_ijk_to_ensight(7) = 6;
+  }
+
+  header_stream_offset = 0;
+  //initial undeformed geometry
+  count_temp.str("");
+  count_temp << file_index;
+  file_index++;
+	file_count = count_temp.str();
+  if(displace_geometry&&displacement_module>=0)
+    current_file_name = base_file_name_undeformed + file_count + file_extension;
+  else
+    current_file_name = base_file_name + file_count + file_extension;
+  MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), 
+                MPI_MODE_CREATE|MPI_MODE_WRONLY, 
+                MPI_INFO_NULL, &myfile_parallel);
+  
+  int err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+  //allows overwriting the file if it already existed in the directory
+    if (err != MPI_SUCCESS)  {
+      if (myrank == 0){
+        MPI_File_delete(current_file_name.c_str(),MPI_INFO_NULL);
+      }
+      MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_CREATE|MPI_MODE_EXCL|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+    }
+
+  //output header of the tecplot file
+  
+  //std::cout << current_file_name << std::endl;
+	current_line_stream << "# vtk DataFile Version 2.0\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
+  //else
+  current_line_stream.str("");
+	current_line_stream << "Mesh for Fierro\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+    /*
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+        for(int ivector = 0; ivector < nvector; ivector++){
+          myfile << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+        }
+      }
+    }
+    */
+
+	current_line_stream.str("");
+	current_line_stream << "ASCII\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+
+  current_line_stream.str("");
+	current_line_stream << "DATASET UNSTRUCTURED_GRID\n\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+
+  current_line_stream.str("");
+	current_line_stream << "POINTS " << num_nodes
+		  << " float\n";
+  current_line = current_line_stream.str();
+  if(myrank == 0)
+    MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //output nodal data
+  //compute buffer output size and file stream offset for this MPI rank
+  default_vector_count = 1;
+  buffer_size_per_node_line = 26*default_vector_count*num_dim + 1; //25 width per number + 1 space times 6 entries plus line terminator
+  nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  first_node_global_id = sorted_map->getGlobalElement(0);
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> print_buffer(buffer_size_per_node_line*nlocal_sorted_nodes);
+  file_stream_offset = buffer_size_per_node_line*first_node_global_id;
+
+  //populate buffer
+  long long current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
+  for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+    current_line_stream.str("");
+		current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+		current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+    
+        //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
+        /*
+        for (int imodule = 0; imodule < nfea_modules; imodule++){
+          noutput = fea_modules[imodule]->noutput;
+          for(int ioutput = 0; ioutput < noutput; ioutput++){
+            current_collected_output = fea_modules[imodule]->module_outputs[ioutput];
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline*nvector + ivector,0) << " ";
+              }
+            }
+            if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
+              nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+              for(int ivector = 0; ivector < nvector; ivector++){
+                myfile << std::setw(25) << current_collected_output(nodeline,ivector) << " ";
+              }
+            }
+          }
+        }
+        */
+    current_line_stream << std::endl;
+    
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+
+  //print buffers at offsets with collective MPI write
+  //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
+  MPI_Barrier(world);
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset + header_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+  //MPI_File_close(&myfile_parallel);
+  
+  //write element connectivity; reopen to reset offset baseline.
+  //err = MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), MPI_MODE_APPEND|MPI_MODE_WRONLY, MPI_INFO_NULL, &myfile_parallel);
+  
+  header_stream_offset = 0;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+
+  current_line_stream.str("");
+	current_line_stream << std::endl << "CELLS " << num_elem << " " << num_elem*(max_nodes_per_element+1) << std::endl;
+  current_line = current_line_stream.str();
+  //std::cout << current_line;
+  file_stream_offset = current_stream_position;
+  if(myrank == 0)
+    MPI_File_write_at(myfile_parallel, file_stream_offset, current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //expand print buffer if needed
+  buffer_size_per_element_line = 11*(max_nodes_per_element+1) + 1; //25 width per number plus 6 spaces plus line terminator
+  nlocal_elements = sorted_element_map->getLocalNumElements();
+  first_element_global_id = sorted_element_map->getGlobalElement(0);
+  if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
+  file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position + header_stream_offset;
+  
+  current_buffer_position = 0;
+  for (int elementline = 0; elementline < nlocal_elements; elementline++) {
+    current_line_stream.str("");
+    //convert node ordering
+    current_line_stream << std::left << std::setw(10) << max_nodes_per_element << " ";
+		for (int ii = 0; ii < max_nodes_per_element; ii++) {
+      if(active_node_ordering_convention == IJK)
+        temp_convert = convert_ijk_to_ensight(ii);
+      else
+        temp_convert = ii;
+				current_line_stream << std::left << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert)<< " ";
+		}
+		current_line_stream << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+  
+  MPI_Barrier(world);
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+
+  //print Element Types
+
+  header_stream_offset = 0;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+
+  current_line_stream.str("");
+	current_line_stream << std::endl << "CELL_TYPES " << num_elem << std::endl;
+  current_line = current_line_stream.str();
+  //std::cout << current_line;
+  file_stream_offset = current_stream_position;
+  if(myrank == 0)
+    MPI_File_write_at(myfile_parallel, file_stream_offset, current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //expand print buffer if needed
+  buffer_size_per_element_line = 11; //10 width per number plus line terminator
+  nlocal_elements = sorted_element_map->getLocalNumElements();
+  first_element_global_id = sorted_element_map->getGlobalElement(0);
+  if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
+  file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position + header_stream_offset;
+  
+  current_buffer_position = 0;
+  for (int elementline = 0; elementline < nlocal_elements; elementline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		current_line_stream << std::left << std::setw(10) << 12 << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+  
+  MPI_Barrier(world);
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+
+  //Print Node scalars
+
+  header_stream_offset = 0;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+
+  current_line_stream.str("");
+	current_line_stream << std::endl << "POINT_DATA " << num_nodes << std::endl;
+  current_line_stream << "SCALARS design_density float 1" << std::endl;
+  current_line_stream << "LOOKUP_TABLE default" << std::endl;
+  current_line = current_line_stream.str();
+  //std::cout << current_line;
+  file_stream_offset = current_stream_position;
+  if(myrank == 0)
+    MPI_File_write_at(myfile_parallel, file_stream_offset, current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //expand print buffer if needed
+  default_vector_count = 1;
+  buffer_size_per_node_line = 26; //25 width per number + 1 space times 6 entries plus line terminator
+  nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  first_node_global_id = sorted_map->getGlobalElement(0);
+  if(buffer_size_per_node_line*nlocal_sorted_nodes > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_node_line*nlocal_sorted_nodes);
+  file_stream_offset = buffer_size_per_node_line*first_node_global_id + current_stream_position + header_stream_offset;
+  
+  current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
+  for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+    current_line_stream.str("");
+    //convert node ordering
+    if(simparam_dynamic_opt->topology_optimization_on)
+		  current_line_stream << std::left << std::setw(25) << sorted_node_densities(nodeline,0) << std::endl;
+    else
+		  current_line_stream << std::left << std::setw(25) << 1 << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+  
+  MPI_Barrier(world);
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+
+  //Print Node vectors
+
+  header_stream_offset = 0;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+
+  current_line_stream.str("");
+	current_line_stream << std::endl << "VECTORS velocity float" << std::endl;
+  current_line = current_line_stream.str();
+  //std::cout << current_line;
+  file_stream_offset = current_stream_position;
+  if(myrank == 0)
+    MPI_File_write_at(myfile_parallel, file_stream_offset, current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //expand print buffer if needed
+  default_vector_count = 1;
+  buffer_size_per_node_line = num_dim*26 + 1; //25 width per number + 1 space times 6 entries plus line terminator
+  nlocal_sorted_nodes = sorted_map->getLocalNumElements();
+  first_node_global_id = sorted_map->getGlobalElement(0);
+  if(buffer_size_per_node_line*nlocal_sorted_nodes > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_node_line*nlocal_sorted_nodes);
+  file_stream_offset = buffer_size_per_node_line*first_node_global_id + current_stream_position + header_stream_offset;
+  
+  current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
+  for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		//velocity print
+    current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,0) << " ";
+		current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
+    if(num_dim==3)
+		current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
+
+    current_line_stream << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+  
+  MPI_Barrier(world);
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
+
+  //print Element Fields
+
+  header_stream_offset = 0;
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+  
+  //debug check 
+  //std::cout << "offset on rank " << myrank << " is " << file_stream_offset + header_stream_offset + current_buffer_position << std::endl;
+  //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
+
+  current_line_stream.str("");
+	current_line_stream << std::endl << "CELL_DATA " << num_elem << std::endl;
+  current_line_stream << "SCALARS element_density float 1" << std::endl;
+  current_line_stream << "LOOKUP_TABLE default" << std::endl;
+  current_line = current_line_stream.str();
+  //std::cout << current_line;
+  file_stream_offset = current_stream_position;
+  if(myrank == 0)
+    MPI_File_write_at(myfile_parallel, file_stream_offset, current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
+  header_stream_offset += current_line.length();
+  
+  //expand print buffer if needed
+  buffer_size_per_element_line = 26; //25 width per number plus line terminator
+  nlocal_elements = sorted_element_map->getLocalNumElements();
+  first_element_global_id = sorted_element_map->getGlobalElement(0);
+  if(buffer_size_per_element_line*nlocal_elements > print_buffer.size())
+    print_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(buffer_size_per_element_line*nlocal_elements);
+  file_stream_offset = buffer_size_per_element_line*first_element_global_id + current_stream_position + header_stream_offset;
+  
+  current_buffer_position = 0;
+  current_line_stream << std::fixed << std::setprecision(8);
+  for (int elementline = 0; elementline < nlocal_elements; elementline++) {
+    current_line_stream.str("");
+    //convert node ordering
+		current_line_stream << std::left << std::setw(25) << sorted_element_densities(elementline,0) << std::endl;
+    current_line = current_line_stream.str();
+
+    //copy current line over to C style string buffer (wrapped by matar)
+    strcpy(&print_buffer(current_buffer_position),current_line.c_str());
+
+    current_buffer_position += current_line.length();
+	}
+  
+  MPI_Barrier(world);
+  MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
+  
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
   MPI_File_close(&myfile_parallel);
 
 }
@@ -2926,10 +3449,10 @@ void Explicit_Solver_SGH::ensight_writer(){
 /* -----------------------------------------------------------------------------
    Initialize local views and global vectors needed to describe the design
 -------------------------------------------------------------------------------- */
-/*
+
 void Explicit_Solver_SGH::init_design(){
   int num_dim = simparam->num_dim;
-  bool nodal_density_flag = simparam->nodal_density_flag;
+  bool nodal_density_flag = simparam_dynamic_opt->nodal_density_flag;
 
   //set densities
   if(nodal_density_flag){
@@ -3008,4 +3531,3 @@ void Explicit_Solver_SGH::init_design(){
   }
 
 }
-*/

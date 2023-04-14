@@ -64,7 +64,7 @@ class Simulation_Parameters_Topology_Optimization;
 class FEA_Module_Elasticity: public FEA_Module{
 
 public:
-  FEA_Module_Elasticity(Solver *Solver_Pointer);
+  FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -91,7 +91,7 @@ public:
 
   void comm_variables(Teuchos::RCP<const MV> zp);
 
-  void update_linear_solve(Teuchos::RCP<const MV> zp);
+  void update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step);
 
   void compute_adjoint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
 

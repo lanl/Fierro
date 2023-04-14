@@ -56,9 +56,6 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
-#include <Kokkos_View.hpp>
-#include <Kokkos_Parallel.hpp>
-#include <Kokkos_Parallel_Reduce.hpp>
 #include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Details_FixedHashTable.hpp"
@@ -77,12 +74,19 @@
 using namespace utils;
 
 
-FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer) :FEA_Module(Solver_Pointer){
+FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+  
+  //assign interfacing index
+  my_fea_module_index_ = my_fea_module_index;
+  Module_Type = "Inertial";
 
   //create parameter object
   simparam = new Simulation_Parameters_Inertial();
   // ---- Read input file, define state and boundary conditions ---- //
   simparam->input();
+
+  //acquire base class data from existing simparam in solver (gets yaml options etc.)
+  simparam->Simulation_Parameters::operator=(*(Solver_Pointer->simparam));
   
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;

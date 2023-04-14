@@ -52,7 +52,6 @@
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
 #include <Tpetra_CrsMatrix.hpp>
-#include <Kokkos_View.hpp>
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include <map>
 
@@ -86,7 +85,7 @@ public:
 
   //void read_mesh_ensight(char *MESH);
 
-  void read_mesh_ansys_dat(char *MESH);
+  void read_mesh_ansys_dat(const char *MESH);
 
   void init_state_vectors();
 
@@ -96,7 +95,7 @@ public:
 
   void comm_densities();
 
-  //void init_design();
+  void init_design();
 
   void collect_information();
 
@@ -126,6 +125,8 @@ public:
 
   void parallel_tecplot_writer();
 
+  void parallel_vtk_writer();
+
   //void init_boundary_sets(int num_boundary_sets);
 
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
@@ -137,7 +138,9 @@ public:
   
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters_SGH *simparam;
-  class Simulation_Parameters_Dynamic_Optimization *simparam_TO;
+
+  //FEA simulations
+  class FEA_Module_SGH *sgh_module;
 
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;

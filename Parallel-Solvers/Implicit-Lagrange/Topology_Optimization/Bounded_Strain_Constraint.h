@@ -49,7 +49,6 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
-#include <Kokkos_View.hpp>
 #include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 
@@ -142,7 +141,7 @@ public:
       last_comm_step = current_step;
     }
     if(last_solve_step!=current_step){
-      FEM_->update_linear_solve(zp);
+      FEM_->update_linear_solve(zp, current_step);
       last_solve_step = current_step;
     }
 

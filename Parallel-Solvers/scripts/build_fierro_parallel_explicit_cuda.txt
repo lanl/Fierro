@@ -52,13 +52,21 @@ fi
 #check if Trilinos library files were installed, install them otherwise.
 [ -d "Trilinos/build/lib" ] && echo "Directory Trilinos/build/lib exists, assuming successful installation; delete build folder and run build script again if there was an environment error that has been corrected."
 
-if [ ! -d "Trilinos/build/lib" ]
+#check if Trilinos cmake was already configured.
+[ -e "Trilinos/build/CMakeCache.txt" ] && echo "CMake build exists, skipping cmake configure"
+if [ ! -e "Trilinos/build/CMakeCache.txt" ]
 then
-  echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
   #make text files for scripts executable
   chmod +x Trilinos-Build-Scripts/cmake_configure_cuda_mpi.txt
   cd Trilinos/build
-  source ../../Trilinos-Build-Scripts/cmake_configure_cuda_mpi.txt
+  ./../../Trilinos-Build-Scripts/cmake_configure_cuda_mpi.txt
+  cd ../..
+fi
+
+if [ ! -d "Trilinos/build/lib" ]
+then
+  echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
+  cd Trilinos/build
   make $NUM_TASKS install all
   cd ../..
 fi

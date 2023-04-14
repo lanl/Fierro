@@ -58,6 +58,7 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
 
   hessvec_count = update_count = 0;
   linear_solve_time = hessvec_time = hessvec_linear_time = 0;
+  last_compute_step = -1;
 
   Matrix_alloc=0;
   gradient_print_sync = 0;

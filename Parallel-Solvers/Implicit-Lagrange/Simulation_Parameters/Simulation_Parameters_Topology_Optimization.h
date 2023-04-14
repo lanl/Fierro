@@ -52,6 +52,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   virtual ~Simulation_Parameters_Topology_Optimization();
   virtual void input();
   virtual void FEA_module_setup();
+  virtual void apply_settings();
   //==============================================================================
   //   Mesh Variables
   //==============================================================================
@@ -61,7 +62,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   int NBD; //number of density boundary conditions
 
   //Topology Optimization flags
-  bool nodal_density_flag;
+  bool topology_optimization_on, shape_optimization_on, nodal_density_flag;
   
   //When on, all element nodes connected to a boundary condition patch will have their density constrained
   bool thick_condition_boundary;

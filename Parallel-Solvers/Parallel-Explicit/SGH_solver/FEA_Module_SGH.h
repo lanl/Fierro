@@ -54,7 +54,7 @@ class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh);
+  FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int my_fea_module_index = 0);
   ~FEA_Module_SGH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -64,7 +64,7 @@ public:
 
   void sgh_solve();
 
-  void get_force_sgh(const CArrayKokkos <material_t> &material,
+  void get_force_sgh(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -83,7 +83,7 @@ public:
                      const double dt,
                      const double rk_alpha);
 
-  void get_force_sgh2D(const CArrayKokkos <material_t> &material,
+  void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
                        const DViewCArrayKokkos <double> &node_coords,
                        const DViewCArrayKokkos <double> &node_vel,
@@ -211,19 +211,20 @@ public:
                            const DViewCArrayKokkos <double> &node_mass,
                            const DViewCArrayKokkos <double> &corner_force);
   
-  void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
+  void tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
                 mesh_t &mesh,
                 const DViewCArrayKokkos <double> &node_coords);
 
   void boundary_velocity(const mesh_t &mesh,
-                         const CArrayKokkos <boundary_t> &boundary,
+                         const DCArrayKokkos <boundary_t> &boundary,
                          DViewCArrayKokkos <double> &node_vel);
   
   KOKKOS_INLINE_FUNCTION 
   size_t check_bdy(const size_t patch_gid,
+                   const int num_dim,
+                   const int num_nodes_in_patch,
                    const int this_bc_tag,
                    const double val,
-                   const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords) const;
 
   void rk_init(DViewCArrayKokkos <double> &node_coords,
@@ -273,7 +274,7 @@ public:
                          const DViewCArrayKokkos <double> &elem_mass,
                          const DViewCArrayKokkos <double> &corner_force);
                    
-  void update_state(const CArrayKokkos <material_t> &material,
+  void update_state(const DCArrayKokkos <material_t> &material,
                     const mesh_t &mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
@@ -290,7 +291,7 @@ public:
                     const double rk_alpha);
 
 
-  void update_state2D(const CArrayKokkos <material_t> &material,
+  void update_state2D(const DCArrayKokkos <material_t> &material,
                       const mesh_t &mesh,
                       const DViewCArrayKokkos <double> &node_coords,
                       const DViewCArrayKokkos <double> &node_vel,
@@ -358,7 +359,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t mat_id,
                      const size_t num_elems);
 
-  void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
+  void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
   
   void init_boundaries();
 
@@ -368,6 +369,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   void grow_boundary_sets(int num_boundary_sets);
 
   virtual void update_forward_solve(Teuchos::RCP<const MV> zp);
+
+  void comm_node_masses();
 
   void comm_variables(Teuchos::RCP<const MV> zp);
 
@@ -436,64 +439,85 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                   const double time_value );
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
+
+  void compute_topology_optimization_adjoint(); //Force does not depend on node coords and velocity
+
+  void compute_topology_optimization_adjoint_full(); //Force depends on node coords and velocity
+
+  void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
   
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
   Explicit_Solver_SGH *Explicit_Solver_Pointer_;
-  
-  //output stream
-  Teuchos::RCP<Teuchos::FancyOStream> fos;
-  
-  elements::element_selector *element_select;
-  elements::Element3D *elem;
-  elements::Element2D *elem2D;
+
   elements::ref_element  *ref_elem;
   
   mesh_t& mesh;
-  // mesh class interface
-  DCArrayKokkos<size_t>& nodes_in_elem;
+  //shallow copies of mesh class views
+  size_t num_nodes_in_elem;
+  // corner ids in node
+  RaggedRightArrayKokkos <size_t> corners_in_node;
+  CArrayKokkos <size_t> num_corners_in_node;
+    
+  // elem ids in node
+  RaggedRightArrayKokkos <size_t> elems_in_node;
+    
+  // node ids in node
+  RaggedRightArrayKokkos <size_t> nodes_in_node;
+  CArrayKokkos <size_t> num_nodes_in_node;
+    
+  // node ids in elem
+  DCArrayKokkos <size_t> nodes_in_elem;
+    
+  // corner ids in elem
+  CArrayKokkos <size_t> corners_in_elem;
+    
+  // elem ids in elem
+  RaggedRightArrayKokkos <size_t> elems_in_elem;
+  CArrayKokkos <size_t> num_elems_in_elem;
+    
+  // patch ids in elem
+  CArrayKokkos <size_t> patches_in_elem;
+    
+  // node ids in a patch
+  CArrayKokkos <size_t> nodes_in_patch;
+    
+  // element ids in a patch
+  CArrayKokkos <size_t> elems_in_patch;
+
+  // patch ids in bdy set
+  size_t num_bdy_sets;
+  DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
+  
+  // bdy nodes
+  CArrayKokkos <size_t> bdy_nodes;
+
+  // node ids in bdy_patch set
+  RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
+  DCArrayKokkos <size_t> num_bdy_nodes_in_set;
+  
+  //Topology optimization filter variable
+  DCArrayKokkos<double> relative_element_densities;
   
   //Local FEA data
-  size_t nlocal_nodes;
-  dual_vec_array dual_node_coords; //coordinates of the nodes
-  dual_vec_array dual_node_densities; //topology optimization design variable
-  dual_elem_conn_array dual_nodes_in_elem; //dual view of element connectivity to nodes
   host_elem_conn_array interface_nodes_in_elem; //host view of element connectivity to nodes
-  CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
-
-  //Ghost data on this MPI rank
-  size_t nghost_nodes;
-  CArrayKokkos<GO, Kokkos::LayoutLeft, node_type::device_type> ghost_nodes;
-  CArrayKokkos<int, array_layout, device_type, memory_traits> ghost_node_ranks;
-
-  //Local FEA data including ghosts
-  size_t nall_nodes;
-  size_t rnum_elem;
 
   //Global FEA data
-  long long int num_nodes, num_elem;
-  Teuchos::RCP<const Teuchos::Comm<int> > comm;
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > map; //map of node indices
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > ghost_node_map; //map of node indices with ghosts on each rank
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_node_map; //map of node indices with ghosts on each rank
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > element_map; //non overlapping map of elements owned by each rank used in reduction ops
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_element_map; //overlapping map of elements connected to the local nodes in each rank
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
-  Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
-  Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
-  Teuchos::RCP<MV> node_coords_distributed;
-  Teuchos::RCP<MV> all_node_coords_distributed;
-  Teuchos::RCP<MV> design_node_densities_distributed;
-  Teuchos::RCP<const MV> test_node_densities_distributed;
-  Teuchos::RCP<MV> all_node_densities_distributed;
-  Teuchos::RCP<MV> Global_Element_Densities;
   Teuchos::RCP<MV> node_velocities_distributed;
   Teuchos::RCP<MV> initial_node_coords_distributed;
   Teuchos::RCP<MV> initial_node_velocities_distributed;
   Teuchos::RCP<MV> all_node_velocities_distributed;
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
+  Teuchos::RCP<MV> node_masses_distributed;
+  Teuchos::RCP<MV> ghost_node_masses_distributed;
+  std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
+  std::vector<Teuchos::RCP<MV>> forward_solve_coordinate_data;
+  std::vector<Teuchos::RCP<MV>> adjoint_vector_data;
+  std::vector<Teuchos::RCP<MV>> phi_adjoint_vector_data;
+  std::vector<Teuchos::RCP<MV>> force_gradient_position;
+  std::vector<Teuchos::RCP<MV>> force_gradient_velocity;
+  std::vector<real_t> time_data;
+  int max_time_steps, last_time_step;
 
   //Dual View wrappers
   // Dual Views of the individual node struct variables
@@ -518,70 +542,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DViewCArrayKokkos <double> corner_mass;
   
   //Boundary Conditions Data
+  DCArrayKokkos<size_t> Local_Index_Boundary_Patches;
   //CArray <Nodal_Combination> Patch_Nodes;
-  size_t nboundary_patches;
-  size_t num_boundary_conditions;
-  int current_bdy_id;
-  CArrayKokkos<Node_Combination, array_layout, device_type, memory_traits> Boundary_Patches;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches; //set of patches corresponding to each boundary condition
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> NBoundary_Condition_Patches;
-  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Boundary_Condition_Patches_strides;
   enum bc_type {NONE, POINT_LOADING_CONDITION, LINE_LOADING_CONDITION, SURFACE_LOADING_CONDITION};
-
-  //element selection parameters and data
-  size_t max_nodes_per_element;
-
-  //determines if rhs gets a contribution from bcs
-  bool nonzero_bc_flag;
-
-  //lists what kind of boundary condition the nodal DOF is subjected to if any
-  CArrayKokkos<int, array_layout, device_type, memory_traits> Node_DOF_Boundary_Condition_Type;
-  //lists what kind of boundary condition each boundary set is assigned to
-  CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
-  
-  //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
-  size_t Number_DOF_BCS;
-
-  //MPI data
-  int myrank; //index of this mpi rank in the world communicator
-  int nranks; //number of mpi ranks in the world communicator
-  MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
-
-  //! mapping used to get local ghost index from the global ID.
-  //typedef ::Tpetra::Details::FixedHashTable<GO, LO, Kokkos::HostSpace::device_type>
-    //global_to_local_table_host_type;
-
-  //global_to_local_table_host_type global2local_map;
-  //CArrayKokkos<int, Kokkos::LayoutLeft, Kokkos::HostSpace::device_type> active_ranks;
-
-  //Pertains to local mesh information being stored as prescribed by the row map
-  global_size_t min_gid;
-  global_size_t max_gid;
-  global_size_t index_base;
-
-  //allocation flags to avoid repeat MV and global matrix construction
-  int Matrix_alloc;
-
-  //debug flags
-  int gradient_print_sync;
-
-  //Topology Optimization parameter
-  int penalty_power;
-  bool nodal_density_flag;
-
-  //runtime and counters for performance output
-  double linear_solve_time, hessvec_time, hessvec_linear_time;
-  int update_count, hessvec_count;
-
-  //nodal DOF output data
-  enum vector_styles {NODAL, DOF}; //multivector can store as ndof by 1 or nnode by vector_size
-  int noutput;
-  bool displaced_mesh_flag;
-  int displacement_index;
-  std::vector<std::vector<std::string>> output_dof_names;
-  std::vector<const_host_vec_array> module_outputs;
-  std::vector<vector_styles> vector_style;
-  std::vector<int> output_vector_sizes;
   
   //Boundary Conditions Data
   int max_boundary_sets;
@@ -594,6 +557,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DCArrayKokkos <size_t>read_from_file;
   DCArrayKokkos <double>file_state_vars;
   DCArrayKokkos <size_t>mat_num_state_vars; // actual number of state_vars
+
+  //optimization flags
+  bool kinetic_energy_objective;
 };
 
 #endif // end HEADER_H
