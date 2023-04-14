@@ -48,6 +48,7 @@ class Simulation_Parameters_Inertial : public Simulation_Parameters
   Simulation_Parameters_Inertial();
   virtual ~Simulation_Parameters_Inertial();
   virtual void input();
+  virtual void apply_settings() {}
   
   //==============================================================================
   //   Mesh Variables

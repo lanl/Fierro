@@ -187,23 +187,17 @@ void Implicit_Solver::run(int argc, char *argv[]){
       simparam->input();
       //check for user error in providing yaml options (flags unsupported options)
       //yaml_error = simparam->yaml_input(filename);
-      if(yaml_error!="success"){
-        std::cout << yaml_error << std::endl;
-        yaml_exit_flag = true;
-      } 
-    
-      if(yaml_exit_flag){
-        //exit_solver(0);
-      }
 
       //use map of set options to set member variables of the class
-      simparam->apply_settings();
+      //simparam->apply_settings();
       //construct list of FEA modules requested
+      
       simparam->yaml_FEA_module_setup();
       //assign base class data such as map of settings to TO simparam class
       simparam_TO->Simulation_Parameters::operator=(*simparam);
       simparam_TO->input();
       simparam_TO->apply_settings();
+      simparam->set_options = simparam_TO->set_options;
 
       // ---- Read intial mesh, refine, and build connectivity ---- //
       if(simparam->mesh_file_format=="tecplot")
@@ -213,6 +207,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
       else if(simparam->mesh_file_format=="ensight")
         read_mesh_ensight(simparam->mesh_file_name.c_str());
 
+      //assign map with read in options removed from inheritors to the base class
       simparam_TO->FEA_module_setup();
     }
     else{
@@ -262,6 +257,10 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
     //Have modules read in boundary/loading conditions if file format provides it
     for(int imodule = 0; imodule < nfea_modules; imodule++){
+      //update set options for next FEA module in loop with synchronized set options in solver's simparam class
+      fea_modules[imodule]->simparam->Simulation_Parameters::operator=(*simparam);
+      fea_modules[imodule]->simparam->apply_settings();
+
       if(fea_module_must_read[imodule]){
         fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
       }
@@ -275,6 +274,19 @@ void Implicit_Solver::run(int argc, char *argv[]){
         fea_modules[imodule]->generate_applied_loads();
       }
 
+      //assign map with read in options removed from inheritors to the base class
+      simparam->set_options = fea_modules[imodule]->simparam->set_options;
+
+    }
+
+    //check for errors in the yaml input and exit if any found with an error message
+    int map_size = simparam->unapplied_settings();
+    if(map_size) {
+      *fos << "YAML input has encountered an error; please correct options that were not applied, or remove unnecessary options." << std::endl;
+      exit_solver(0);
+    }
+
+    for(int imodule = 0; imodule < nfea_modules; imodule++){
       if(myrank == 0)
         std::cout << "Starting init assembly for module " << imodule <<std::endl <<std::flush;
       //allocate and fill sparse structures needed for global solution in each FEA module
@@ -296,7 +308,6 @@ void Implicit_Solver::run(int argc, char *argv[]){
         std::cout << "Linear Solver Error for module " << imodule << std::endl <<std::flush;
         return;
       }
-    
     }
 
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam->nfea_modules << std::endl;

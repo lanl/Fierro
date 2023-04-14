@@ -48,6 +48,7 @@ class Simulation_Parameters_Elasticity : public Simulation_Parameters
   Simulation_Parameters_Elasticity();
   virtual ~Simulation_Parameters_Elasticity();
   virtual void input();
+  virtual void apply_settings() {}
   //==============================================================================
   //   Mesh Variables
   //==============================================================================

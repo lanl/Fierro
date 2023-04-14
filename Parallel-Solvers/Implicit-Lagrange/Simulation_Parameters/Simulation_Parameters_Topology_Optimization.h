@@ -63,6 +63,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
 
   //Topology Optimization flags
   bool topology_optimization_on, shape_optimization_on, nodal_density_flag;
+  std::string multi_objective_structure;
   
   //When on, all element nodes connected to a boundary condition patch will have their density constrained
   bool thick_condition_boundary;

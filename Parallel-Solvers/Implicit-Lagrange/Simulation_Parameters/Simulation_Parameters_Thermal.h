@@ -48,6 +48,7 @@ class Simulation_Parameters_Thermal: public Simulation_Parameters
   Simulation_Parameters_Thermal();
   virtual ~Simulation_Parameters_Thermal();
   virtual void input();
+  virtual void apply_settings() {}
   //==============================================================================
   //   Thermal FEA problem parameters
   //==============================================================================
