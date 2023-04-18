@@ -49,6 +49,8 @@ fea_module_2:
 
 optimization_options:
     optimization_process: topology_optimization
+    density_epsilon: 0.00001
+    simp_penalty_power: 4
     optimization_objective: multi-objective
     #Weight coefficients should add up to 1
     multi-objective_structure: linear

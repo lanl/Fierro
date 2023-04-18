@@ -95,7 +95,6 @@
 
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
-#define DENSITY_EPSILON 0.0001
 #define BC_EPSILON 1.0e-6
 
 using namespace utils;
@@ -1708,7 +1707,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
   /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
     for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON)
+      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*density_epsilon)
       Stiffness_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -2259,11 +2258,12 @@ void FEA_Module_Elasticity::Gradient_Body_Term(size_t ielem, real_t density, rea
 void FEA_Module_Elasticity::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
+  real_t density_epsilon = simparam_TO->density_epsilon;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus = density*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
 }
@@ -2275,12 +2275,13 @@ void FEA_Module_Elasticity::Element_Material_Properties(size_t ielem, real_t &El
 void FEA_Module_Elasticity::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
+  real_t density_epsilon = simparam_TO->density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
 }
@@ -2292,13 +2293,14 @@ void FEA_Module_Elasticity::Gradient_Element_Material_Properties(size_t ielem, r
 void FEA_Module_Elasticity::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
+  real_t density_epsilon = simparam_TO->density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
   if(penalty_power>=2){
     for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and stiffness
-    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   }
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;

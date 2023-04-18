@@ -72,7 +72,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   int optimization_output_freq;
 
   //Topology Optimization parameters
-  real_t penalty_power;
+  real_t penalty_power, density_epsilon;
 
   //pointer to Solver object (just used to consolidate error handling for now)
   Implicit_Solver *solver_pointer_;

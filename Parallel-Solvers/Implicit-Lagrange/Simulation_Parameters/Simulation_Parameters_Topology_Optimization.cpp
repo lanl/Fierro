@@ -54,6 +54,7 @@ Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Opti
   topology_optimization_on = shape_optimization_on = false;
   optimization_output_freq = 20;
   penalty_power = 3;
+  density_epsilon = 0.0001;
   nTO_modules = 0;
   multi_objective_structure = "linear";
 }
@@ -159,6 +160,7 @@ void Simulation_Parameters_Topology_Optimization::input(){
 
   //Topology Optimization parameters
   penalty_power = 3;
+  density_epsilon = 0.0001;
 
   // ---- boundary conditions ---- //
   NB = 6; // number of boundaries
@@ -185,6 +187,23 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
       shape_optimization_on = true;
       set_options.erase(current_option);
     }
+  }
+
+  //read in TO parameters
+  if(topology_optimization_on){
+    current_option = "optimization_options:simp_penalty_power";
+    if(set_options.find(current_option)!=set_options.end()){
+      //std::cout << "FOUND TO SETTING" << std::endl;
+      penalty_power = std::stod(set_options[current_option]);
+      set_options.erase(current_option);
+    }
+    current_option = "optimization_options:density_epsilon";
+    if(set_options.find(current_option)!=set_options.end()){
+      //std::cout << "FOUND TO SETTING" << std::endl;
+      density_epsilon = std::stod(set_options[current_option]);
+      set_options.erase(current_option);
+    }
+
   }
   nTO_modules = 0;
   current_option = "optimization_options:optimization_objective";
