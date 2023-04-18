@@ -119,6 +119,7 @@ include_directories(Elements/common)
 include_directories(Elements/geometry)
 include_directories(Elements/slam)
 
+
 if(BUILD_1D_KOKKOS_SGH)
 if(NOT BUILD_IMPLICIT_SOLVER)
 find_package(Kokkos REQUIRED) #new
@@ -146,6 +147,16 @@ add_subdirectory(Elements/slam)
 #add_subdirectory(Elements/tests)
 add_subdirectory(Elements/mesh_tools)
 endif()
+
+# new User Material Interface
+include_directories(User-Material-Interface)
+add_subdirectory(User-Material-Interface)
+
+#-------------------------
+if(BUILD_EVPFFT)
+  add_subdirectory(EVPFFT)
+endif()
+#--------------------------
 
 if(BUILD_1D_KOKKOS_SGH)
 MESSAGE("\nbuilding 1D SGH!  Here are the details: ")
