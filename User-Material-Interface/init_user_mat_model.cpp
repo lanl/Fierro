@@ -1,6 +1,6 @@
 #include "user_mat_functions.h"
 
-void init_user_model(const DCArrayKokkos <double> &file_state_vars,
+void init_user_material_model(const DCArrayKokkos <double> &file_state_vars,
                      const size_t num_state_vars,
                      const size_t mat_id,
                      const size_t num_elems)
@@ -10,7 +10,7 @@ void init_user_model(const DCArrayKokkos <double> &file_state_vars,
   */
 }
 
-void destroy_user_mat_model()
+void destroy_user_material_model()
 {
   /*
   All memory cleanup related to the user material model should be done in this fuction.
@@ -18,7 +18,22 @@ void destroy_user_mat_model()
   */
 }
 
-void user_strength_model_host()
+void user_material_model_host(const DViewCArrayKokkos <double> &elem_pres,
+                              const DViewCArrayKokkos <double> &elem_stress,
+                              const size_t elem_gid,
+                              const size_t mat_id,
+                              const DViewCArrayKokkos <double> &elem_state_vars,
+                              const DViewCArrayKokkos <double> &elem_sspd,
+                              const double den,
+                         const double sie,
+                         const ViewCArrayKokkos <double> &vel_grad,
+                         const ViewCArrayKokkos <size_t> &elem_node_gids,
+                         const DViewCArrayKokkos <double> &node_coords,
+                         const DViewCArrayKokkos <double> &node_vel,
+                         const double vol,
+                         const double dt,
+                         const double rk_alpha,
+                         const size_t cycle)
 {
   /*
   This function is called from the host (CPU) in feirro to solve the
@@ -27,7 +42,7 @@ void user_strength_model_host()
   */
 }
 
-void user_strength_model_device()
+void user_material_model_device()
 {
   /*
   This function is called from the device (GPU) in feirro to solve the
