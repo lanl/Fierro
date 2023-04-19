@@ -148,16 +148,6 @@ add_subdirectory(Elements/slam)
 add_subdirectory(Elements/mesh_tools)
 endif()
 
-# new User Material Interface
-include_directories(User-Material-Interface)
-add_subdirectory(User-Material-Interface)
-
-#-------------------------
-if(BUILD_EVPFFT)
-  add_subdirectory(EVPFFT)
-endif()
-#--------------------------
-
 if(BUILD_1D_KOKKOS_SGH)
 MESSAGE("\nbuilding 1D SGH!  Here are the details: ")
 if(NOT BUILD_ELEMENTS)

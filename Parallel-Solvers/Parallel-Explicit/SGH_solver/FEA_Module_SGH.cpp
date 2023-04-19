@@ -75,6 +75,7 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
+#include "user_material_functions.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -1301,10 +1302,10 @@ void FEA_Module_SGH::setup(){
             
             size_t num_vars = mat_num_state_vars.host(mat_id);
             
-            user_model_init(file_state_vars,
-                            num_vars,
-                            mat_id,
-                            rnum_elem);
+            init_user_strength_model(file_state_vars,
+                                     num_vars,
+                                     mat_id,
+                                     rnum_elem);
             
             // copy the values to the device
             file_state_vars.update_device();
