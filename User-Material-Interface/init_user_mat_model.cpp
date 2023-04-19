@@ -31,8 +31,5 @@ void init_user_mat_model(std::shared_ptr<UserMatModel>* elem_user_mat_model,
 void destroy_user_mat_model()
 {}
 
-void solve_user_mat_model_host()
-{}
-
-void solve_user_mat_model_device()
+void solve_user_mat_model()
 {}
