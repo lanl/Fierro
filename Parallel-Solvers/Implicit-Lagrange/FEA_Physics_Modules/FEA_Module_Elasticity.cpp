@@ -2708,10 +2708,15 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   //local variable for host view of densities from the dual view
   //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
-  if(nodal_density_flag)
-  all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  else
-  Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+  if(nodal_density_flag){
+    if(simparam_TO->helmholtz_filter)
+      all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    else
+      all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+  else{
+    Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+  }
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
@@ -5561,30 +5566,10 @@ int FEA_Module_Elasticity::solve(){
 
 void FEA_Module_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
   
-  //set density vector to the current value chosen by the optimizer
-  test_node_densities_distributed = zp;
+  if(simparam_TO->topology_optimization_on)
+    comm_densities(zp);
   
-  //debug print of design vector
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(myrank==0)
-      //*fos << "Density data :" << std::endl;
-      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
-
-  //communicate design densities
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
-
-  //comms to get ghosts
-  all_node_densities_distributed->doImport(*test_node_densities_distributed, importer, Tpetra::INSERT);
-
-  //update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
+  //add other variables you need commed here
 }
 
 /* -------------------------------------------------------------------------------------------

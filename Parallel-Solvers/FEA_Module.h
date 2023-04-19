@@ -136,6 +136,8 @@ public:
 
   virtual void comm_variables(Teuchos::RCP<const MV> zp) {}
 
+  virtual void comm_densities(Teuchos::RCP<const MV> zp);
+
   virtual void update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step) {}
 
   virtual void update_forward_solve(Teuchos::RCP<const MV> zp) {}
@@ -216,8 +218,10 @@ public:
   Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
+  Teuchos::RCP<MV> filtered_node_densities_distributed;
   Teuchos::RCP<const MV> test_node_densities_distributed;
   Teuchos::RCP<MV> all_node_densities_distributed;
+  Teuchos::RCP<MV> all_filtered_node_densities_distributed;
   Teuchos::RCP<MV> Global_Element_Densities;
   
   //Boundary Conditions Data

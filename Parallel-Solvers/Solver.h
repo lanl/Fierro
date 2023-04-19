@@ -210,8 +210,10 @@ public:
   Teuchos::RCP<MV> initial_node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
+  Teuchos::RCP<MV> filtered_node_densities_distributed;
   Teuchos::RCP<const MV> test_node_densities_distributed;
   Teuchos::RCP<MV> all_node_densities_distributed;
+  Teuchos::RCP<MV> all_filtered_node_densities_distributed;
   Teuchos::RCP<MV> lower_bound_node_densities_distributed;
   Teuchos::RCP<MV> upper_bound_node_densities_distributed;
   Teuchos::RCP<MV> Global_Element_Densities_Upper_Bound;

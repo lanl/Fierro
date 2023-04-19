@@ -91,8 +91,10 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   node_coords_distributed = Solver_Pointer->node_coords_distributed;
   all_node_coords_distributed = Solver_Pointer->all_node_coords_distributed;
   design_node_densities_distributed = Solver_Pointer->design_node_densities_distributed;
+  filtered_node_densities_distributed = Solver_Pointer->filtered_node_densities_distributed;
   test_node_densities_distributed = Solver_Pointer->test_node_densities_distributed;
   all_node_densities_distributed = Solver_Pointer->all_node_densities_distributed;
+  all_filtered_node_densities_distributed = Solver_Pointer->all_filtered_node_densities_distributed;
   Global_Element_Densities = Solver_Pointer->Global_Element_Densities;
   Element_Types = Solver_Pointer->Element_Types;
 
@@ -157,6 +159,38 @@ void FEA_Module::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *pat
   NBoundary_Condition_Patches(bdy_set) = counter;
     
   *fos << " tagged boundary patches " << std::endl;
+}
+
+/* -------------------------------------------------------------------------------------------
+   Communicate ghosts using the current optimization design data
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module::comm_densities(Teuchos::RCP<const MV> zp){
+  
+  //set density vector to the current value chosen by the optimizer
+  test_node_densities_distributed = zp;
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  Tpetra::Import<LO, GO> importer(map, all_node_map);
+
+  //comms to get ghosts
+  all_node_densities_distributed->doImport(*test_node_densities_distributed, importer, Tpetra::INSERT);
+
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
 }
 
 /* ----------------------------------------------------------------------

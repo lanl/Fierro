@@ -51,7 +51,7 @@ Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Opti
   report_runtime_flag = false;
   nodal_density_flag = true;
   thick_condition_boundary = true;
-  topology_optimization_on = shape_optimization_on = false;
+  topology_optimization_on = shape_optimization_on = helmholtz_filter = false;
   optimization_output_freq = 20;
   penalty_power = 3;
   density_epsilon = 0.0001;
@@ -197,11 +197,21 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
       penalty_power = std::stod(set_options[current_option]);
       set_options.erase(current_option);
     }
+
     current_option = "optimization_options:density_epsilon";
     if(set_options.find(current_option)!=set_options.end()){
       //std::cout << "FOUND TO SETTING" << std::endl;
       density_epsilon = std::stod(set_options[current_option]);
       set_options.erase(current_option);
+    }
+
+    current_option = "optimization_options:density_filter";
+    if(set_options.find(current_option)!=set_options.end()){
+      if(set_options[current_option]=="helmholtz_filter"){
+        //std::cout << "FOUND TO SETTING" << std::endl;
+        helmholtz_filter = true;
+        set_options.erase(current_option);
+      }
     }
 
   }
