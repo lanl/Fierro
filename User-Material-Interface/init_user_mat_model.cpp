@@ -27,3 +27,12 @@ void init_user_mat_model(std::shared_ptr<UserMatModel>* elem_user_mat_model,
     //elem_user_mat_model[elem_gid] = std::shared_ptr<UserMatModel>(new EVPFFT(cmd, stress_scale));
   }
 }
+
+void destroy_user_mat_model()
+{}
+
+void solve_user_mat_model_host()
+{}
+
+void solve_user_mat_model_device()
+{}
