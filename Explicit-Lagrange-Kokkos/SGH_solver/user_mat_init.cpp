@@ -7,9 +7,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <sstream>
+#include <fstream>
+#include <math.h>
+#include <vector>
+#include <algorithm>
+
+
 
 #include "mesh.h"
 #include "state.h"
+
+
 
 
 // -----------------------------------------------------------------------------
@@ -30,3 +39,5 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
 
 	return;
 }
+
+
