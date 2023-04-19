@@ -39,4 +39,4 @@ target_link_libraries (parallel_sgh_solver ${CMAKE_SOURCE_DIR}/Elements/build/ma
 endif()
 target_include_directories(parallel_sgh_solver PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options (parallel_sgh_solver PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
-target_link_libraries (parallel_sgh_solver parallel_base_src user_material_interface)
+target_link_libraries (parallel_sgh_solver parallel_base_src)
