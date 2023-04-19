@@ -1,35 +1,55 @@
-#include "UserMatModel.h"
-#include "command_line_args.h" 
-#include "evpfft.h"
+#include "user_mat_functions.h"
 
-
-void init_user_mat_model(std::shared_ptr<UserMatModel>* elem_user_mat_model,
-                         const size_t* elem_mat_id,
-                         const size_t num_elems)
+void init_user_model(const DCArrayKokkos <double> &file_state_vars,
+                     const size_t num_state_vars,
+                     const size_t mat_id,
+                     const size_t num_elems)
 {
   /*
-      Initialize user_mat_model in this function
-      Different user_mat_model per material can be initialized here using elem_mat_id(elem_gid)
+  User material model should be initialized here.
   */
-
-  real_t stress_scale = 1.0; // 1.0e-5; // used to convert MPa to MBar
-  real_t time_scale = 1.0; // 1.0e+6; // used to convert second to microsecond
-
-  CommandLineArgs cmd;
-  cmd.nn = {8,8,8};
-  cmd.input_filename = "fft.in";
-  cmd.micro_filetype = 0;
-  cmd.check_cmd_args();
- 
-  for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++)
-  {
-    elem_user_mat_model[elem_gid] = std::make_shared<EVPFFT>(cmd, stress_scale, time_scale);
-    //elem_user_mat_model[elem_gid] = std::shared_ptr<UserMatModel>(new EVPFFT(cmd, stress_scale));
-  }
 }
 
 void destroy_user_mat_model()
-{}
+{
+  /*
+  All memory cleanup related to the user material model should be done in this fuction.
+  Fierro calls `destroy_user_mat_model()` at the end of a simulation.
+  */
+}
 
 void solve_user_mat_model()
-{}
+{
+}
+
+void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
+                    const DViewCArrayKokkos <double> &elem_stress,
+                    const size_t elem_gid,
+                    const size_t mat_id,
+                    const DViewCArrayKokkos <double> &elem_state_vars,
+                    const DViewCArrayKokkos <double> &elem_sspd,
+                    const double den,
+                    const double sie)
+{
+  /*
+  // -----------------------------------------------------------------------------
+  // This is the user defined equation of state (eos) model
+  // An eos function must be supplied or the code will fail to run.
+  // The pressure and sound speed can be calculated from an analytic eos.
+  // The pressure can also be calculated using p = -1/3 Trace(Stress).
+  //------------------------------------------------------------------------------
+  */
+  
+    const size_t num_dims = 3;
+    elem_pres(elem_gid) = 0.0;  // pressure
+    elem_sspd(elem_gid) = 2400.0;  // sound speed
+    
+    // pressure = 1/3tr(stress)
+    for (size_t i=0; i<num_dims; i++){
+        elem_pres(elem_gid) -= elem_stress(1,elem_gid,i,i);
+    }
+    elem_pres(elem_gid) *= 1.0/3.0;
+    
+    
+    return;
+}
