@@ -18,8 +18,22 @@ void destroy_user_mat_model()
   */
 }
 
-void solve_user_mat_model()
+void user_strength_model_host()
 {
+  /*
+  This function is called from the host (CPU) in feirro to solve the
+  user strength model specified herein. Leave empty if the user strength model is 
+  to be solved on the device.
+  */
+}
+
+void user_strength_model_device()
+{
+  /*
+  This function is called from the device (GPU) in feirro to solve the
+  user strength model specified herein. Leave empty if the user strength model is 
+  to be solved on host.
+  */
 }
 
 void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
