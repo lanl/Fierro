@@ -74,7 +74,7 @@ public:
                      const DViewCArrayKokkos <double> &elem_den,
                      const DViewCArrayKokkos <double> &elem_sie,
                      const DViewCArrayKokkos <double> &elem_pres,
-                     const DViewCArrayKokkos <double> &elem_stress,
+                     DViewCArrayKokkos <double> &elem_stress,
                      const DViewCArrayKokkos <double> &elem_sspd,
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,

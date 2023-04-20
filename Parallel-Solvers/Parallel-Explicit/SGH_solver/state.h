@@ -128,9 +128,9 @@ namespace model_run_location
     // strength model run location
     enum run_location
     {
-        device = 0;
-        host = 1;
-    }
+        device = 0,
+        host = 1,
+    };
 } // end of namespace
 
 

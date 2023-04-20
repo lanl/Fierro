@@ -13,7 +13,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                    const DViewCArrayKokkos <double> &elem_den,
                    const DViewCArrayKokkos <double> &elem_sie,
                    const DViewCArrayKokkos <double> &elem_pres,
-                   const DViewCArrayKokkos <double> &elem_stress,
+                   DViewCArrayKokkos <double> &elem_stress,
                    const DViewCArrayKokkos <double> &elem_sspd,
                    const DViewCArrayKokkos <double> &elem_vol,
                    const DViewCArrayKokkos <double> &elem_div,
@@ -407,6 +407,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
     // calling user strength model on host
     for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
 
+        const size_t num_dims = 3;
         size_t mat_id = elem_mat_id(elem_gid);
         
         // hypo elastic plastic model
