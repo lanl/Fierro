@@ -29,52 +29,28 @@ void destroy_user_strength_model(const DCArrayKokkos <double> &file_state_vars,
     */
 }
 
-void user_strength_model_host(const DViewCArrayKokkos <double> &elem_pres,
-                              const DViewCArrayKokkos <double> &elem_stress,
-                              const size_t elem_gid,
-                              const size_t mat_id,
-                              const DViewCArrayKokkos <double> &elem_state_vars,
-                              const DViewCArrayKokkos <double> &elem_sspd,
-                              const double den,
-                              const double sie,
-                              const ViewCArrayKokkos <double> &vel_grad,
-                              const ViewCArrayKokkos <size_t> &elem_node_gids,
-                              const DViewCArrayKokkos <double> &node_coords,
-                              const DViewCArrayKokkos <double> &node_vel,
-                              const double vol,
-                              const double dt,
-                              const double rk_alpha,
-                              const size_t cycle)
-{
-    /*
-    This function is called from the host (CPU) in feirro to solve the
-    user strength model specified herein. Leave empty if the user strength model is 
-    to be solved on the device.
-    */
-}
 
 KOKKOS_INLINE_FUNCTION
-void user_strength_model_device(const DViewCArrayKokkos <double> &elem_pres,
-                                const DViewCArrayKokkos <double> &elem_stress,
-                                const size_t elem_gid,
-                                const size_t mat_id,
-                                const DViewCArrayKokkos <double> &elem_state_vars,
-                                const DViewCArrayKokkos <double> &elem_sspd,
-                                const double den,
-                                const double sie,
-                                const ViewCArrayKokkos <double> &vel_grad,
-                                const ViewCArrayKokkos <size_t> &elem_node_gids,
-                                const DViewCArrayKokkos <double> &node_coords,
-                                const DViewCArrayKokkos <double> &node_vel,
-                                const double vol,
-                                const double dt,
-                                const double rk_alpha,
-                                const size_t cycle)
+void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
+                         const DViewCArrayKokkos <double> &elem_stress,
+                         const size_t elem_gid,
+                         const size_t mat_id,
+                         const DViewCArrayKokkos <double> &elem_state_vars,
+                         const DViewCArrayKokkos <double> &elem_sspd,
+                         const double den,
+                         const double sie,
+                         const ViewCArrayKokkos <double> &vel_grad,
+                         const ViewCArrayKokkos <size_t> &elem_node_gids,
+                         const DViewCArrayKokkos <double> &node_coords,
+                         const DViewCArrayKokkos <double> &node_vel,
+                         const double vol,
+                         const double dt,
+                         const double rk_alpha,
+                         const size_t cycle)
 {
     /*
-    This function is called from the device (GPU) in feirro to solve the
-    user strength model specified herein. Leave empty if the user strength model is 
-    to be solved on host.
+    This function is called to solve the user strength model specified herein. 
+    If using a user material model, this function must be provided to avoid error.
     */
 }
 
