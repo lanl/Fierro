@@ -25,6 +25,10 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                    const double dt,
                    const double rk_alpha
                    ){
+
+    // elem_vel_grad is added for the new UserMatModel interface
+    // which allows user strength model to be called from the host
+    DCArrayKokkos <double> elem_vel_grad(mesh.num_elems,3,3); 
     
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -93,6 +97,12 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                     vol,
                     elem_gid);
         
+         // save vel_grad in elem_vel_grad 
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
+                elem_vel_grad(elem_gid,i,j) = vel_grad(i,j);
+            }
+        }       
         
         // the -1 is for the inward surface area normal,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
@@ -363,32 +373,78 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         // hypo elastic plastic model
         if(material(mat_id).strength_type == model::hypo){
 
-            // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
+            if(material(mat_id).strength_run_location == model_run_location::device){
+
+                // cut out the node_gids for this element
+                ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
             
-            // --- call strength model ---
-            material(mat_id).strength_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            mat_id,
-                                            elem_statev,
-                                            elem_sspd,
-                                            elem_den(elem_gid),
-                                            elem_sie(elem_gid),
-                                            vel_grad,
-                                            elem_node_gids,
-                                            node_coords,
-                                            node_vel,
-                                            elem_vol(elem_gid),
-                                            dt,
-                                            rk_alpha);
+                // --- call strength model ---
+                material(mat_id).strength_model(elem_pres,
+                                                elem_stress,
+                                                elem_gid,
+                                                mat_id,
+                                                elem_statev,
+                                                elem_sspd,
+                                                elem_den(elem_gid),
+                                                elem_sie(elem_gid),
+                                                vel_grad,
+                                                elem_node_gids,
+                                                node_coords,
+                                                node_vel,
+                                                elem_vol(elem_gid),
+                                                dt,
+                                                rk_alpha);
+            } // end logical for strength run location
             
         } // end logical on hypo strength model
         
 
     }); // end parallel for loop over elements
 
-    
+    // update host
+    elem_vel_grad.update_host();   
+
+    // calling user strength model on host
+    for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
+
+        size_t mat_id = elem_mat_id(elem_gid);
+        
+        // hypo elastic plastic model
+        if(material(mat_id).strength_type == model::hypo){
+
+            if(material(mat_id).strength_run_location == model_run_location::host){
+
+                // cut out the node_gids for this element
+                ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
+
+                // cut out vel_grad 
+                ViewCArrayKokkos <double> vel_grad(&elem_vel_grad.host(elem_gid,0,0), num_dims, num_dims);
+
+                // --- call strength model ---
+                material(mat_id).strength_model(elem_pres,
+                                                elem_stress,
+                                                elem_gid,
+                                                mat_id,
+                                                elem_statev,
+                                                elem_sspd,
+                                                elem_den(elem_gid),
+                                                elem_sie(elem_gid),
+                                                vel_grad,
+                                                elem_node_gids,
+                                                node_coords,
+                                                node_vel,
+                                                elem_vol(elem_gid),
+                                                dt,
+                                                rk_alpha);
+            } // end logical for strength run location
+            
+        } // end logical on hypo strength model
+
+    } // end for loop over elements    
+
+    // update device
+    elem_stress.update_device();
+ 
     return;
     
 } // end of routine
@@ -484,7 +540,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                       elem_area,
                       elem_gid);
         
-        
+
         // the -1 is for the inward surface area normal,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
             for (size_t dim = 0; dim < num_dims; dim++){

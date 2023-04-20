@@ -123,6 +123,17 @@ namespace model
 } // end of namespace
 
 
+namespace model_run_location
+{
+    // strength model run location
+    enum run_location
+    {
+        device = 0;
+        host = 1;
+    }
+} // end of namespace
+
+
 // material model parameters
 struct material_t {
 
@@ -162,7 +173,10 @@ struct material_t {
     
     // hypo or hyper elastic plastic model
     model::strength_tag strength_type;
-    
+
+    // strength model run location (device or host)
+    model_run_location::run_location strength_run_location;
+
     size_t num_state_vars;
     size_t read_state_vars=0;
     

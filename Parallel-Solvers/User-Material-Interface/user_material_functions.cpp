@@ -78,40 +78,21 @@ void user_strength_model_device(const DViewCArrayKokkos <double> &elem_pres,
     */
 }
 
-void user_eos_model_host(const DViewCArrayKokkos <double> &elem_pres,
-                         const DViewCArrayKokkos <double> &elem_stress,
-                         const size_t elem_gid,
-                         const size_t mat_id,
-                         const DViewCArrayKokkos <double> &elem_state_vars,
-                         const DViewCArrayKokkos <double> &elem_sspd,
-                         const double den,
-                         const double sie)
-{
-    /*
-    This is the user defined equation of state (eos) model
-    An eos function must be supplied or the code will fail to run.
-    The pressure and sound speed can be calculated from an analytic eos.
-    The pressure can also be calculated using p = -1/3 Trace(Stress).
-    If the user eos is on the device, leave this function empty.
-    */
-}
-
 KOKKOS_INLINE_FUNCTION
-void user_eos_model_device(const DViewCArrayKokkos <double> &elem_pres,
-                           const DViewCArrayKokkos <double> &elem_stress,
-                           const size_t elem_gid,
-                           const size_t mat_id,
-                           const DViewCArrayKokkos <double> &elem_state_vars,
-                           const DViewCArrayKokkos <double> &elem_sspd,
-                           const double den,
-                           const double sie)
+void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
+                    const DViewCArrayKokkos <double> &elem_stress,
+                    const size_t elem_gid,
+                    const size_t mat_id,
+                    const DViewCArrayKokkos <double> &elem_state_vars,
+                    const DViewCArrayKokkos <double> &elem_sspd,
+                    const double den,
+                    const double sie)
 {
     /*
     This is the user defined equation of state (eos) model
     An eos function must be supplied or the code will fail to run.
     The pressure and sound speed can be calculated from an analytic eos.
     The pressure can also be calculated using p = -1/3 Trace(Stress).
-    If the user eos is on the host, leave this function empty.
     */
   
     const size_t num_dims = 3;
@@ -123,7 +104,6 @@ void user_eos_model_device(const DViewCArrayKokkos <double> &elem_pres,
         elem_pres(elem_gid) -= elem_stress(1,elem_gid,i,i);
     }
     elem_pres(elem_gid) *= 1.0/3.0;
-    
     
     return;
 }
