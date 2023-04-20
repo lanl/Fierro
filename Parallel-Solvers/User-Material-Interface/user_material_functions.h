@@ -49,6 +49,15 @@ void user_strength_model_device(const DViewCArrayKokkos <double> &elem_pres,
                                 const double rk_alpha,
                                 const size_t cycle);
 
+void user_eos_model_host(const DViewCArrayKokkos <double> &elem_pres,
+                         const DViewCArrayKokkos <double> &elem_stress,
+                         const size_t elem_gid,
+                         const size_t mat_id,
+                         const DViewCArrayKokkos <double> &elem_state_vars,
+                         const DViewCArrayKokkos <double> &elem_sspd,
+                         const double den,
+                         const double sie);
+
 KOKKOS_INLINE_FUNCTION
 void user_eos_model_device(const DViewCArrayKokkos <double> &elem_pres,
                            const DViewCArrayKokkos <double> &elem_stress,
@@ -58,12 +67,3 @@ void user_eos_model_device(const DViewCArrayKokkos <double> &elem_pres,
                            const DViewCArrayKokkos <double> &elem_sspd,
                            const double den,
                            const double sie);
-
-void user_eos_model_host(const DViewCArrayKokkos <double> &elem_pres,
-                         const DViewCArrayKokkos <double> &elem_stress,
-                         const size_t elem_gid,
-                         const size_t mat_id,
-                         const DViewCArrayKokkos <double> &elem_state_vars,
-                         const DViewCArrayKokkos <double> &elem_sspd,
-                         const double den,
-                         const double sie);

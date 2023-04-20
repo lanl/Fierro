@@ -62,6 +62,9 @@ public:
 
   void setup();
 
+  // to allow the user strngth model interface to do all neccesary cleanup
+  void cleanup_user_strength_model();
+
   void sgh_solve();
 
   void get_force_sgh(const DCArrayKokkos <material_t> &material,

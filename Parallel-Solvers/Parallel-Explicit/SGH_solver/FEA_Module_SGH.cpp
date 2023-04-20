@@ -155,6 +155,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
 }
 
 FEA_Module_SGH::~FEA_Module_SGH(){
+   cleanup_user_strength_model();
    //delete simparam;
 }
 
@@ -1665,6 +1666,35 @@ void FEA_Module_SGH::setup(){
     return;
     
 } // end of setup
+
+
+void FEA_Module_SGH::cleanup_user_strength_model() {
+/*
+  This function is called in the destructor of FEA_Module_SGH setup.
+  This gives the user a chance to cleanup any memory allocation done using the
+  by calling the `destroy_user_strength_model(...)` in the User-Material-Interface folder.
+*/
+
+    size_t num_materials = simparam->num_materials;
+
+    for (size_t mat_id=0; mat_id<num_materials; mat_id++){
+        
+        if (read_from_file.host(mat_id) == 1){
+            
+            size_t num_vars = mat_num_state_vars.host(mat_id);
+            
+            destroy_user_strength_model(file_state_vars,
+                                        num_vars,
+                                        mat_id,
+                                        rnum_elem);
+            
+        } // end if
+        
+    } // end for
+
+    return;
+
+} // end cleanup_user_strength_model;
 
 
 /* ----------------------------------------------------------------------------
