@@ -6,8 +6,7 @@ EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const rea
 //-------------------------------------------------
 // Data Members needed for EVPFFT Calculations
 //-------------------------------------------------
-  : UserMatModel()
-  , cmd (cmd_)
+  : cmd (cmd_)
   , npts1 (cmd.nn[0])
   , npts2 (cmd.nn[1])
   , npts3 (cmd.nn[2])

@@ -10,3 +10,10 @@ endif()
 
 set(SRC_Files user_material_functions.cpp)
 add_library(user_material_interface OBJECT ${SRC_Files})
+
+if (BUILD_EVPFFT)
+  add_definitions(-DBUILD_EVPFFT=1)
+  add_subdirectory(../../EVPFFT EVPFFT)
+  include_directories(../../EVPFFT)
+  target_link_libraries(user_material_interface evpfft)
+endif()

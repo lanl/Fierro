@@ -4,9 +4,8 @@
 #include "chg_basis.h"
 #include "FFT3D_R2C.h"
 #include "output_file_manager.h"
-#include "UserMatModel.h"
 
-class EVPFFT : public UserMatModel
+class EVPFFT
 {
 public:
 //-----------------------------------------------
@@ -178,7 +177,7 @@ public:
   void init_dvm();
   void check_mixed_bc();
   void init_after_reading_input_data();
-  void solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid) override;
+  void solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid);
   void evolve();
   void check_macrostress();
   void print_vel_grad();

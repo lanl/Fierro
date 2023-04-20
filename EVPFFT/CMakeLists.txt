@@ -118,10 +118,10 @@ set(This evpfft)
        write_macro_state.cpp
        write_micro_state.cpp
        write_texture.cpp
-       UserMatModel.cpp)
+       evpfft_fierro_link.cpp)
 
   #add_executable(${This} ${Sources})
-  add_library(${This} OBJECT ${Sources})
+  add_library(${This} STATIC ${Sources})
   target_link_libraries(${This} matar ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 
   if (USE_FFTW)
