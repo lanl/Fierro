@@ -126,6 +126,9 @@ class Simulation_Parameters
   //output options
   int file_output_frequency;
 
+  //flags
+  bool filtered_density;
+
 };
 
 #endif // end HEADER_H

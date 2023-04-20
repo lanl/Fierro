@@ -138,6 +138,8 @@ public:
 
   virtual void comm_densities(Teuchos::RCP<const MV> zp);
 
+  virtual void comm_filtered_densities();
+
   virtual void update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step) {}
 
   virtual void update_forward_solve(Teuchos::RCP<const MV> zp) {}

@@ -193,6 +193,31 @@ void FEA_Module::comm_densities(Teuchos::RCP<const MV> zp){
   //}
 }
 
+void FEA_Module::comm_filtered_densities(){
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  Tpetra::Import<LO, GO> importer(map, all_node_map);
+
+  //comms to get ghosts
+  all_filtered_node_densities_distributed->doImport(*filtered_node_densities_distributed, importer, Tpetra::INSERT);
+
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
+}
+
 /* ----------------------------------------------------------------------
    routine for checking to see if a patch is on a boundary set
    bc_tag = 0 xplane, 1 yplane, 3 zplane, 4 cylinder, 5 is shell

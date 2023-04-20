@@ -209,8 +209,9 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
     if(set_options.find(current_option)!=set_options.end()){
       if(set_options[current_option]=="helmholtz_filter"){
         //std::cout << "FOUND TO SETTING" << std::endl;
-        helmholtz_filter = true;
+        filtered_density = helmholtz_filter = true;
         set_options.erase(current_option);
+        solver_pointer_->simparam->filtered_density = filtered_density;
       }
     }
 
