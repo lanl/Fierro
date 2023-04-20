@@ -176,6 +176,7 @@ public:
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_vector_storage;
   size_t max_nodes_per_element, max_nodes_per_patch;
   elements::element_selector *element_select;
   elements::Element3D *elem;

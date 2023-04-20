@@ -5,14 +5,13 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters_SGH.h"
 
 void FEA_Module_SGH::update_position_sgh(double rk_alpha,
-                         double dt,
-                         const size_t num_dims,
                          const size_t num_nodes,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
-    
+    int num_dims = simparam->num_dim;
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
 

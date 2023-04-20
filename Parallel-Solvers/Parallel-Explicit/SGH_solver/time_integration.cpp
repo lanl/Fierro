@@ -11,10 +11,9 @@ void FEA_Module_SGH::rk_init(DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &node_vel,
              DViewCArrayKokkos <double> &elem_sie,
              DViewCArrayKokkos <double> &elem_stress,
-             const size_t num_dims,
              const size_t num_elems,
              const size_t num_nodes){
-
+    int num_dims = simparam->num_dim;
     // save elem quantities
     FOR_ALL_CLASS(elem_gid, 0, num_elems, {
 
@@ -56,15 +55,7 @@ void FEA_Module_SGH::get_timestep(mesh_t &mesh,
                   DViewCArrayKokkos <double> &node_coords,
                   DViewCArrayKokkos <double> &node_vel,
                   DViewCArrayKokkos <double> &elem_sspd,
-                  DViewCArrayKokkos <double> &elem_vol,
-                  double time_value,
-                  const double graphics_time,
-                  const double time_final,
-                  const double dt_max,
-                  const double dt_min,
-                  const double dt_cfl,
-                  double &dt,
-                  const double fuzz){
+                  DViewCArrayKokkos <double> &elem_vol){
 
     
     // increase dt by 10%, that is the largest dt value
@@ -163,15 +154,7 @@ void FEA_Module_SGH::get_timestep2D(mesh_t &mesh,
                     DViewCArrayKokkos <double> &node_coords,
                     DViewCArrayKokkos <double> &node_vel,
                     DViewCArrayKokkos <double> &elem_sspd,
-                    DViewCArrayKokkos <double> &elem_vol,
-                    double time_value,
-                    const double graphics_time,
-                    const double time_final,
-                    const double dt_max,
-                    const double dt_min,
-                    const double dt_cfl,
-                    double &dt,
-                    const double fuzz){
+                    DViewCArrayKokkos <double> &elem_vol){
 
     
     // increase dt by 10%, that is the largest dt value

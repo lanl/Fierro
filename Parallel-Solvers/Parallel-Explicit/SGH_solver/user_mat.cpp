@@ -62,7 +62,6 @@ void FEA_Module_SGH::user_strength_model(const DViewCArrayKokkos <double> &elem_
                          const DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel,
                          const double vol,
-                         const double dt,
                          const double rk_alpha) const{
     
 
@@ -102,7 +101,6 @@ void FEA_Module_SGH::user_strength_model_vpsc(const DViewCArrayKokkos <double> &
                               const DViewCArrayKokkos <double> &node_coords,
                               const DViewCArrayKokkos <double> &node_vel,
                               const double vol,
-                              const double dt,
                               const double rk_alpha) const {
     
 
