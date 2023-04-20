@@ -19,7 +19,7 @@ void init_evpfft(const DCArrayKokkos <double> &file_state_vars,
 
     CommandLineArgs cmd;
     cmd.nn = {8,8,8};
-    cmd.input_filename = "fft.in";
+    cmd.input_filename = "evpfft.in";
     cmd.micro_filetype = 0;
     cmd.check_cmd_args();
 
