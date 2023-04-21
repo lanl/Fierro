@@ -16,10 +16,7 @@ void FEA_Module_SGH::write_outputs (const mesh_t &mesh,
                     DViewCArrayKokkos <double> &elem_sie,
                     DViewCArrayKokkos <double> &elem_vol,
                     DViewCArrayKokkos <double> &elem_mass,
-                    DViewCArrayKokkos <size_t> &elem_mat_id,
-                    CArray <double> &graphics_times,
-                    size_t &graphics_id,
-                    const double time_value){
+                    DViewCArrayKokkos <size_t> &elem_mat_id){
     
     // ---------------------------------------------------------------------
     //   t=tval ensight and state output
@@ -50,8 +47,7 @@ void FEA_Module_SGH::write_outputs (const mesh_t &mesh,
                elem_sie,
                elem_vol,
                elem_mass,
-               elem_mat_id,
-               time_value);
+               elem_mat_id);
     
     
     // write out ensight file
@@ -66,10 +62,7 @@ void FEA_Module_SGH::write_outputs (const mesh_t &mesh,
             elem_sie,
             elem_vol,
             elem_mass,
-            elem_mat_id,
-            graphics_times,
-            graphics_id,
-            time_value);
+            elem_mat_id);
     
     return;
     
@@ -91,10 +84,7 @@ void FEA_Module_SGH::ensight( const mesh_t &mesh,
               const DViewCArrayKokkos <double> &elem_sie,
               const DViewCArrayKokkos <double> &elem_vol,
               const DViewCArrayKokkos <double> &elem_mass,
-              const DViewCArrayKokkos <size_t> &elem_mat_id,
-              CArray <double> &graphics_times,
-              size_t &graphics_id,
-              const double time_value) {
+              const DViewCArrayKokkos <size_t> &elem_mat_id) {
 
     const int num_scalar_vars = 9;
     const int num_vec_vars = 2;
@@ -419,8 +409,7 @@ void FEA_Module_SGH::state_file( const mesh_t &mesh,
                  const DViewCArrayKokkos <double> &elem_sie,
                  const DViewCArrayKokkos <double> &elem_vol,
                  const DViewCArrayKokkos <double> &elem_mass,
-                 const DViewCArrayKokkos <size_t> &elem_mat_id,
-                 const double time_value ) {
+                 const DViewCArrayKokkos <size_t> &elem_mat_id) {
     
     struct stat st;
     

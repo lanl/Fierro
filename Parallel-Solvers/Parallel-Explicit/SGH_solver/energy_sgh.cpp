@@ -5,7 +5,6 @@
 #include "Simulation_Parameters_SGH.h"
 
 void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
-                       double dt,
                        const mesh_t &mesh,
                        const DViewCArrayKokkos <double> &node_vel,
                        const DViewCArrayKokkos <double> &node_coords,

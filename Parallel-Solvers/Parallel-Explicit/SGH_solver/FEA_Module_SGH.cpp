@@ -134,7 +134,10 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
   if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
     all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+    force_gradient_velocity = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+    force_gradient_position = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
     corner_value_storage = Solver_Pointer->corner_value_storage;
+    corner_vector_storage = Solver_Pointer->corner_vector_storage;
     relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
   }
 
@@ -150,6 +153,24 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   //optimization flags
   kinetic_energy_objective = false;
   max_time_steps = 100;
+
+  //set parameters
+  time_value = simparam->time_value;
+  time_final = simparam->time_final;
+  dt_max = simparam->dt_max;
+  dt_min = simparam->dt_min;
+  dt_cfl = simparam->dt_cfl;
+  graphics_time = simparam->graphics_time;
+  graphics_cyc_ival = simparam->graphics_cyc_ival;
+  graphics_dt_ival = simparam->graphics_dt_ival;
+  cycle_stop = simparam->cycle_stop;
+  rk_num_stages = simparam->rk_num_stages;
+  dt = simparam->dt;
+  fuzz = simparam->fuzz;
+  tiny = simparam->tiny;
+  small = simparam->small;
+  graphics_times = simparam->graphics_times;
+  graphics_id = simparam->graphics_id;
 
 }
 
@@ -1937,22 +1958,6 @@ void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &b
 
 void FEA_Module_SGH::sgh_solve(){
 
-    double time_value = simparam->time_value;
-    const double time_final = simparam->time_final;
-    const double dt_max = simparam->dt_max;
-    const double dt_min = simparam->dt_min;
-    const double dt_cfl = simparam->dt_cfl;
-    double graphics_time = simparam->graphics_time;
-    size_t graphics_cyc_ival = simparam->graphics_cyc_ival;
-    double graphics_dt_ival = simparam->graphics_dt_ival;
-    const size_t cycle_stop = simparam->cycle_stop;
-    const size_t rk_num_stages = simparam->rk_num_stages;
-    double dt = simparam->dt;
-    const double fuzz = simparam->fuzz;
-    const double tiny = simparam->tiny;
-    const double small = simparam->small;
-    CArray <double> graphics_times = simparam->graphics_times;
-    size_t graphics_id = simparam->graphics_id;
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
     const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
     const DCArrayKokkos <material_t> material = simparam->material;
@@ -1987,16 +1992,12 @@ void FEA_Module_SGH::sgh_solve(){
         time_data.resize(max_time_steps+1);
         forward_solve_velocity_data.resize(max_time_steps+1);
         forward_solve_coordinate_data.resize(max_time_steps+1);
-        force_gradient_position.resize(max_time_steps+1);
-        force_gradient_velocity.resize(max_time_steps+1);
         adjoint_vector_data.resize(max_time_steps+1);
         phi_adjoint_vector_data.resize(max_time_steps+1);
         //assign a multivector of corresponding size to each new timestep in the buffer
         for(int istep = old_max_forward_buffer; istep < max_time_steps+1; istep++){
           forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
           forward_solve_coordinate_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-          force_gradient_position[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-          force_gradient_velocity[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
           adjoint_vector_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
           phi_adjoint_vector_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
         }
@@ -2186,30 +2187,14 @@ void FEA_Module_SGH::sgh_solve(){
                            node_coords,
                            node_vel,
                            elem_sspd,
-                           elem_vol,
-                           time_value,
-                           graphics_time,
-                           time_final,
-                           dt_max,
-                           dt_min,
-                           dt_cfl,
-                           dt,
-                           fuzz);
+                           elem_vol);
         }
         else {
             get_timestep(mesh,
                          node_coords,
                          node_vel,
                          elem_sspd,
-                         elem_vol,
-                         time_value,
-                         graphics_time,
-                         time_final,
-                         dt_max,
-                         dt_min,
-                         dt_cfl,
-                         dt,
-                         fuzz);
+                         elem_vol);
         } // end if 2D
 
         double global_dt;
@@ -2241,7 +2226,6 @@ void FEA_Module_SGH::sgh_solve(){
                 node_vel,
                 elem_sie,
                 elem_stress,
-                num_dim,
                 rnum_elem,
                 nall_nodes);
 	    
@@ -2285,10 +2269,7 @@ void FEA_Module_SGH::sgh_solve(){
                                 elem_div,
                                 elem_mat_id,
                                 corner_force,
-                                fuzz,
-                                small,
                                 elem_statev,
-                                dt,
                                 rk_alpha);
             }
             else {
@@ -2305,10 +2286,7 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_div,
                               elem_mat_id,
                               corner_force,
-                              fuzz,
-                              small,
                               elem_statev,
-                              dt,
                               rk_alpha);
             }
 
@@ -2349,7 +2327,6 @@ void FEA_Module_SGH::sgh_solve(){
 
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
-                                dt,
                                 mesh,
                                 node_vel,
                                 node_mass,
@@ -2408,7 +2385,6 @@ void FEA_Module_SGH::sgh_solve(){
             */ 
             // ---- Update specific internal energy in the elements ----
             update_energy_sgh(rk_alpha,
-                              dt,
                               mesh,
                               node_vel,
                               node_coords,
@@ -2419,8 +2395,6 @@ void FEA_Module_SGH::sgh_solve(){
             
             // ---- Update nodal positions ----
             update_position_sgh(rk_alpha,
-                                dt,
-                                num_dim,
                                 nall_nodes,
                                 node_coords,
                                 node_vel);
@@ -2446,7 +2420,6 @@ void FEA_Module_SGH::sgh_solve(){
                                elem_mass,
                                elem_mat_id,
                                elem_statev,
-                               dt,
                                rk_alpha);
             }
             else{
@@ -2463,7 +2436,6 @@ void FEA_Module_SGH::sgh_solve(){
                              elem_mass,
                              elem_mat_id,
                              elem_statev,
-                             dt,
                              rk_alpha);
             }
             // ----
@@ -2601,16 +2573,12 @@ void FEA_Module_SGH::sgh_solve(){
           time_data.resize(max_time_steps + 101);
           forward_solve_velocity_data.resize(max_time_steps + 101);
           forward_solve_coordinate_data.resize(max_time_steps + 101);
-          force_gradient_position.resize(max_time_steps+1);
-          force_gradient_velocity.resize(max_time_steps+1);
           adjoint_vector_data.resize(max_time_steps + 101);
           phi_adjoint_vector_data.resize(max_time_steps + 101);
           //assign a multivector of corresponding size to each new timestep in the buffer
           for(int istep = old_max_forward_buffer; istep < max_time_steps + 101; istep++){
             forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
             forward_solve_coordinate_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-            force_gradient_position[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-            force_gradient_velocity[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
             adjoint_vector_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
             phi_adjoint_vector_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
           }
@@ -2993,10 +2961,12 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       {
         const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
         const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array previous_force_gradient_position = force_gradient_position[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_force_gradient_position = force_gradient_position[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array previous_force_gradient_velocity = force_gradient_velocity[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_force_gradient_velocity = force_gradient_velocity[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        //const_vec_array current_force_gradient_position = force_gradient_position->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array previous_force_gradient_velocity = force_gradient_velocity->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        //const_vec_array current_force_gradient_velocity = force_gradient_velocity->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
+        //compute gradient of force with respect to velocity
+        //get_force_vgradient_sgh();
     
         const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadOnly);
         vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<Explicit_Solver_SGH::device_type> (Tpetra::Access::ReadWrite);
@@ -3009,7 +2979,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
             rate_of_change = previous_velocity_vector(node_gid,idim)- 
                              previous_adjoint_vector(node_gid,idim)*previous_force_gradient_velocity(node_gid,idim)/node_mass(node_gid)-
                              phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
-            //cancellation of half from midpoint and 2 from adjoint equation already done
             current_adjoint_vector(node_gid,idim) = rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
             rate_of_change = -previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim);
             phi_current_adjoint_vector(node_gid,idim) = rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);

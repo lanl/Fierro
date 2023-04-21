@@ -45,7 +45,7 @@ message( ${CMAKE_MODULE_PATH} )
 INCLUDE( cmake/Modules/TargetDistclean.cmake OPTIONAL)
 
 enable_language(CXX)
-enable_language(Fortran)
+#enable_language(Fortran)
 
 if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   find_package(MPI REQUIRED)

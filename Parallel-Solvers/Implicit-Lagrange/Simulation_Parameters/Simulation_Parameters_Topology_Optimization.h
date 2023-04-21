@@ -62,7 +62,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   int NBD; //number of density boundary conditions
 
   //Topology Optimization flags
-  bool topology_optimization_on, shape_optimization_on, nodal_density_flag;
+  bool topology_optimization_on, shape_optimization_on, nodal_density_flag, helmholtz_filter;
   std::string multi_objective_structure;
   
   //When on, all element nodes connected to a boundary condition patch will have their density constrained
@@ -72,7 +72,7 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   int optimization_output_freq;
 
   //Topology Optimization parameters
-  real_t penalty_power;
+  real_t penalty_power, density_epsilon;
 
   //pointer to Solver object (just used to consolidate error handling for now)
   Implicit_Solver *solver_pointer_;

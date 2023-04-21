@@ -96,7 +96,6 @@
 
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
-#define DENSITY_EPSILON 0.0001
 #define BC_EPSILON 1.0e-6
 
 using namespace utils;
@@ -1581,7 +1580,7 @@ void FEA_Module_Thermo_Elasticity::assemble_matrix(){
   /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
     for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*DENSITY_EPSILON)
+      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*density_epsilon)
       Stiffness_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -2412,11 +2411,12 @@ void FEA_Module_Thermo_Elasticity::Gradient_Body_Term(size_t ielem, real_t densi
 void FEA_Module_Thermo_Elasticity::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
+  real_t density_epsilon = simparam_TO->density_epsilon;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus = (DENSITY_EPSILON + (1 - DENSITY_EPSILON)*penalty_product)*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus = density*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
 }
@@ -2428,12 +2428,13 @@ void FEA_Module_Thermo_Elasticity::Element_Material_Properties(size_t ielem, rea
 void FEA_Module_Thermo_Elasticity::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
+  real_t density_epsilon = simparam_TO->density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
 }
@@ -2445,13 +2446,14 @@ void FEA_Module_Thermo_Elasticity::Gradient_Element_Material_Properties(size_t i
 void FEA_Module_Thermo_Elasticity::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam->unit_scaling;
   real_t penalty_product = 1;
+  real_t density_epsilon = simparam_TO->density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
   if(penalty_power>=2){
     for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and stiffness
-    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - DENSITY_EPSILON)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   }
   //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam->Poisson_Ratio;
@@ -5712,30 +5714,8 @@ int FEA_Module_Thermo_Elasticity::solve(){
 
 void FEA_Module_Thermo_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
   
-  //set density vector to the current value chosen by the optimizer
-  test_node_densities_distributed = zp;
-  
-  //debug print of design vector
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(myrank==0)
-      //*fos << "Density data :" << std::endl;
-      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
-
-  //communicate design densities
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
-
-  //comms to get ghosts
-  all_node_densities_distributed->doImport(*test_node_densities_distributed, importer, Tpetra::INSERT);
-
-  //update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
+  if(simparam_TO->topology_optimization_on)
+    comm_densities(zp);
 }
 
 /* -------------------------------------------------------------------------------------------

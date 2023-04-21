@@ -136,6 +136,10 @@ public:
 
   virtual void comm_variables(Teuchos::RCP<const MV> zp) {}
 
+  virtual void comm_densities(Teuchos::RCP<const MV> zp);
+
+  virtual void comm_filtered_densities();
+
   virtual void update_linear_solve(Teuchos::RCP<const MV> zp, int compute_step) {}
 
   virtual void update_forward_solve(Teuchos::RCP<const MV> zp) {}
@@ -191,6 +195,7 @@ public:
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_vector_storage;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;
@@ -216,8 +221,10 @@ public:
   Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
+  Teuchos::RCP<MV> filtered_node_densities_distributed;
   Teuchos::RCP<const MV> test_node_densities_distributed;
   Teuchos::RCP<MV> all_node_densities_distributed;
+  Teuchos::RCP<MV> all_filtered_node_densities_distributed;
   Teuchos::RCP<MV> Global_Element_Densities;
   
   //Boundary Conditions Data

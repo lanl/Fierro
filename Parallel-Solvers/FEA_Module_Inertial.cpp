@@ -1495,29 +1495,5 @@ void FEA_Module_Inertial::compute_element_volumes(){
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Inertial::comm_variables(Teuchos::RCP<const MV> zp){
-  
-  //set density vector to the current value chosen by the optimizer
-  test_node_densities_distributed = zp;
-  
-  //debug print of design vector
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(myrank==0)
-      //*fos << "Density data :" << std::endl;
-      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
-
-  //communicate design densities
-  //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
-
-  //comms to get ghosts
-  all_node_densities_distributed->doImport(*test_node_densities_distributed, importer, Tpetra::INSERT);
-
-  //update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
+  comm_densities(zp);
 }
