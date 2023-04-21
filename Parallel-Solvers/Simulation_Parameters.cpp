@@ -248,13 +248,6 @@ std::string Simulation_Parameters::yaml_input(std::string filename){
             } // end for outer_it
         } // end if outer_it
     //} // end for
-
-    //print user settings for this module
-    for(auto temp_it = set_options.begin(); temp_it != set_options.end(); temp_it++){
-        //print current option
-        std::cout << "User option: " << temp_it->first << "=" << temp_it->second << std::endl;
-
-    }
   }
   size_t max_string_size = 100;
   size_t settings_map_size;
@@ -314,18 +307,63 @@ std::string Simulation_Parameters::yaml_input(std::string filename){
 //    Communicate user settings from YAML file and apply to class members
 //==============================================================================
 
+size_t Simulation_Parameters::unapplied_settings(){
+
+  if(myrank==0){
+    //print user settings for this module
+    for(auto temp_it = set_options.begin(); temp_it != set_options.end(); temp_it++){
+        //print current option
+        std::cout << "Unapplied user option: " << temp_it->first << "=" << temp_it->second << std::endl;
+    }
+  }
+
+  return set_options.size();
+}
+
+//==============================================================================
+//    Communicate user settings from YAML file and apply to class members
+//==============================================================================
+
 void Simulation_Parameters::apply_settings(){
-  if(set_options.find("solver_type")!=set_options.end())
-       solver_type = set_options["solver_type"];
+  std::string current_option;
+
+  current_option = "solver_type"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      solver_type = set_options[current_option];
+      set_options.erase(current_option);
+  }
 
   if(myrank==0)
     std::cout << "Solver Type is " << solver_type << std::endl;
 
-  if(set_options.find("solver_options:mesh_file_name")!=set_options.end())
-       mesh_file_name = set_options["solver_options:mesh_file_name"];
+  current_option = "solver_options:mesh_file_name"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      mesh_file_name = set_options[current_option];
+      set_options.erase(current_option);
+  }
   
-  if(set_options.find("solver_options:mesh_file_format")!=set_options.end())
-       mesh_file_format = set_options["solver_options:mesh_file_format"];
+  current_option = "solver_options:mesh_file_format"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      mesh_file_format = set_options[current_option];
+      set_options.erase(current_option);
+  }
+
+  current_option = "solver_options:num_dims"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      num_dim = std::stoi(set_options[current_option]);
+      set_options.erase(current_option);
+  }
+
+  current_option = "output_options:graphics_step_frequency"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      file_output_frequency = std::stoi(set_options[current_option]);
+      set_options.erase(current_option);
+  }
   
   if(myrank==0)
     std::cout << "Mesh File name is " << mesh_file_name << std::endl;
@@ -368,7 +406,7 @@ void Simulation_Parameters::FEA_module_setup(){
 //==============================================================================
 
 void Simulation_Parameters::yaml_FEA_module_setup(){
-  
+  std::string current_option;
   //initial buffer size for FEA module list storage
   int buffer_size = 10 + nfea_modules;
   FEA_Module_List.resize(buffer_size);
@@ -381,26 +419,49 @@ void Simulation_Parameters::yaml_FEA_module_setup(){
   
   index = std::to_string(nfea_modules+1);
   fea_module_name = fea_module_base + index;
-
-    // --- set of user requested FEA modules ---
+  
+  // --- set of user requested FEA modules ---
   while(set_options.find(fea_module_name+":type")!=set_options.end()){
-    
-    if(set_options[fea_module_name+":type"]=="elasticity")
+    std::cout << "WHILE LOOP ENTERED " << index << std::endl;
+    if(set_options[fea_module_name+":type"]=="elasticity"){
+        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
         FEA_Module_List[nfea_modules] = "Elasticity";
-    if(set_options[fea_module_name+":type"]=="steady_heat")
+        set_options.erase(fea_module_name+":type");
+    }
+    else if(set_options[fea_module_name+":type"]=="steady_heat"){
+        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
         FEA_Module_List[nfea_modules] = "Heat_Conduction";
+        set_options.erase(fea_module_name+":type");
+    }
     
     nfea_modules++;
-
-    if(nfea_modules==buffer_size){
-      buffer_size += 10;
-      FEA_Module_List.resize(buffer_size);
-      fea_module_must_read.resize(buffer_size);
-    }
-
+    
+    //if(nfea_modules==buffer_size){
+      //buffer_size += 10;
+      //FEA_Module_List.resize(buffer_size);
+      //fea_module_must_read.resize(buffer_size);
+    //}
+    
     index = std::to_string(nfea_modules+1);
     fea_module_name = fea_module_base + index;
   }
+  
+  /*
+  if(set_options[fea_module_name+":type"]=="elasticity"){
+        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
+        FEA_Module_List[nfea_modules] = "Elasticity";
+        set_options.erase(fea_module_name+":type");
+  }
+  nfea_modules++;
+  index = std::to_string(nfea_modules+1);
+  fea_module_name = fea_module_base + index;
+  if(set_options[fea_module_name+":type"]=="steady_heat"){
+        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
+        FEA_Module_List[nfea_modules] = "Heat_Conduction";
+        set_options.erase(fea_module_name+":type");
+  }
+  nfea_modules++;
+  */
 
   if(nfea_modules==buffer_size){
       buffer_size += 10;
@@ -408,7 +469,7 @@ void Simulation_Parameters::yaml_FEA_module_setup(){
       fea_module_must_read.resize(buffer_size);
   }
 
-  //allocate Inertial module (needed generally so far)
+  //allocate request for Inertial module (needed generally so far)
   FEA_Module_List[nfea_modules++] = "Inertial";
 
   //initialize

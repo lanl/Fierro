@@ -71,7 +71,8 @@ void solver_setup(int argc, char *argv[]){
   /*General strategy: process initial input here to determine which solver
     object to construct
   */
-  
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
   //base solver class pointer
   //Solver *solver;
   //read user solver settings
@@ -113,6 +114,12 @@ void solver_setup(int argc, char *argv[]){
   
         //invoke optional finalize function
         if(solver->finalize_flag) solver->solver_finalize();
+        delete solver;
+      }
+      else{
+        if(myrank==0){
+          std::cout << "Solver type undefined, please check yaml file for correctness" << std::endl;
+        }
       }
     delete simparam;
   }
@@ -136,5 +143,4 @@ void solver_setup(int argc, char *argv[]){
   //solver = new Static_Solver_Parallel();
   //Static_Solver_Parallel solver;
   //delete solver;
-  delete solver;
 }

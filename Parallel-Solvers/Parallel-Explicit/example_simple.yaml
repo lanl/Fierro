@@ -4,10 +4,9 @@ solver_type: SGH
      #   dt_cfl: 0.2
 
 solver_options:
-    test_problem: Sedov3D
     num_dims: 3
     mesh_file_format: ensight
-    mesh_file_name: mesh_Sedov_8.geo
+    mesh_file_name: mesh_Sedov_32.geo
     time_variables:
         time_final: 1.0
         dt_min: 1.e-8
@@ -16,7 +15,7 @@ solver_options:
         cycle_stop: 2000000
 
 output_options:
-  graphics_step: 0.25;
+  graphics_step: 0.25
 
 material_options:
     num_materials: 1
@@ -54,7 +53,7 @@ region_options:
         volume: sphere
         mat_id: 0
         radius1: 0.0
-        radius2: 0.15
+        radius2: 0.0375
         den: 1.0
             
         velocity: cartesian
