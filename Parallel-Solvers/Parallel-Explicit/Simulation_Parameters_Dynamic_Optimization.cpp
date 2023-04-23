@@ -209,7 +209,15 @@ void Simulation_Parameters_Dynamic_Optimization::apply_settings(){
           TO_Module_My_FEA_Module.resize(buffer_size);
         }
 
+        Function_Arguments[nTO_modules].clear();
         //constraint request
+
+        if(set_options.find(constraint_name+":value")!=set_options.end()){
+            constraint_value = std::stod(set_options[constraint_name+":value"]);
+            Function_Arguments[nTO_modules].push_back(constraint_value); 
+            set_options.erase(constraint_name+":value");
+        }
+
         if(set_options.find(constraint_name+":type")!=set_options.end()){
             if(set_options[constraint_name+":type"]=="mass"){
               TO_Module_List[nTO_modules] = "Mass_Constraint";
@@ -221,11 +229,6 @@ void Simulation_Parameters_Dynamic_Optimization::apply_settings(){
               TO_Function_Type[nTO_modules] = EQUALITY_CONSTRAINT;
             }
           set_options.erase(constraint_name+":relation");
-        }
-        if(set_options.find(constraint_name+":value")!=set_options.end()){
-            constraint_value = std::stod(set_options[constraint_name+":value"]);
-            Function_Arguments[nTO_modules].push_back(constraint_value); 
-            set_options.erase(constraint_name+":value");
         }
         nTO_modules++;
     }

@@ -2828,21 +2828,6 @@ void FEA_Module_SGH::sgh_solve(){
 
 void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   
-  double time_value = simparam->time_value;
-  const double time_final = simparam->time_final;
-  const double dt_max = simparam->dt_max;
-  const double dt_min = simparam->dt_min;
-  const double dt_cfl = simparam->dt_cfl;
-  double graphics_time = simparam->graphics_time;
-  size_t graphics_cyc_ival = simparam->graphics_cyc_ival;
-  double graphics_dt_ival = simparam->graphics_dt_ival;
-  const size_t rk_num_stages = simparam->rk_num_stages;
-  double dt = simparam->dt;
-  const double fuzz = simparam->fuzz;
-  const double tiny = simparam->tiny;
-  const double small = simparam->small;
-  CArray <double> graphics_times = simparam->graphics_times;
-  size_t graphics_id = simparam->graphics_id;
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;
@@ -2904,22 +2889,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
 --------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
-  
-  double time_value = simparam->time_value;
-  const double time_final = simparam->time_final;
-  const double dt_max = simparam->dt_max;
-  const double dt_min = simparam->dt_min;
-  const double dt_cfl = simparam->dt_cfl;
-  double graphics_time = simparam->graphics_time;
-  size_t graphics_cyc_ival = simparam->graphics_cyc_ival;
-  double graphics_dt_ival = simparam->graphics_dt_ival;
-  const size_t rk_num_stages = simparam->rk_num_stages;
-  double dt = simparam->dt;
-  const double fuzz = simparam->fuzz;
-  const double tiny = simparam->tiny;
-  const double small = simparam->small;
-  CArray <double> graphics_times = simparam->graphics_times;
-  size_t graphics_id = simparam->graphics_id;
+
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;
@@ -2997,21 +2967,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
 
 void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients){
 
-  double time_value = simparam->time_value;
-  const double time_final = simparam->time_final;
-  const double dt_max = simparam->dt_max;
-  const double dt_min = simparam->dt_min;
-  const double dt_cfl = simparam->dt_cfl;
-  double graphics_time = simparam->graphics_time;
-  size_t graphics_cyc_ival = simparam->graphics_cyc_ival;
-  double graphics_dt_ival = simparam->graphics_dt_ival;
-  const size_t rk_num_stages = simparam->rk_num_stages;
-  double dt = simparam->dt;
-  const double fuzz = simparam->fuzz;
-  const double tiny = simparam->tiny;
-  const double small = simparam->small;
-  CArray <double> graphics_times = simparam->graphics_times;
-  size_t graphics_id = simparam->graphics_id;
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;

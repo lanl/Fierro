@@ -322,6 +322,7 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
         Function_Arguments.resize(buffer_size);
         TO_Module_My_FEA_Module.resize(buffer_size);
       }
+      Function_Arguments[nTO_modules].clear();
 
       //constraint request
       //function arguments for constraint; constraint value is the first
