@@ -20,7 +20,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
                    DViewCArrayKokkos <double> &corner_force,
                    const DViewCArrayKokkos <double> &elem_statev,
-                   const double rk_alpha
+                   const double rk_alpha,
+                   const size_t cycle
                    ){
 
     // elem_vel_grad is added for the new UserMatModel interface
@@ -391,7 +392,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                                                 node_vel,
                                                 elem_vol(elem_gid),
                                                 dt,
-                                                rk_alpha);
+                                                rk_alpha,
+                                                cycle);
 
             } // end logical for strength run location
             
@@ -435,7 +437,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                                                 node_vel,
                                                 elem_vol(elem_gid),
                                                 dt,
-                                                rk_alpha);
+                                                rk_alpha,
+                                                cycle);
             } // end logical for strength run location
 
         } // end logical on hypo strength model
@@ -467,7 +470,8 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
                    DViewCArrayKokkos <double> &corner_force,
                    const DViewCArrayKokkos <double> &elem_statev,
-                   const double rk_alpha
+                   const double rk_alpha,
+                   const size_t cycle
                    ){
     
     // --- calculate the forces acting on the nodes from the element ---
@@ -821,7 +825,8 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                                             node_vel,
                                             elem_vol(elem_gid),
                                             dt,
-                                            rk_alpha);
+                                            rk_alpha,
+                                            cycle);
             
         } // end logical on hypo strength model
         
@@ -862,7 +867,8 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
                      DViewCArrayKokkos <double> &corner_force,
                      const DViewCArrayKokkos <double> &elem_statev,
-                     const double rk_alpha
+                     const double rk_alpha,
+                     const size_t cycle
                      ){
     
     // --- calculate the forces acting on the nodes from the element ---
@@ -1219,7 +1225,8 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                                             node_vel,
                                             elem_vol(elem_gid),
                                             dt,
-                                            rk_alpha);
+                                            rk_alpha,
+                                            cycle);
             
         } // end logical on hypo strength model
         

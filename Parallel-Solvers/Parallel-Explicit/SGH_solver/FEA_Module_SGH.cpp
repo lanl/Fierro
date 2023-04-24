@@ -2301,7 +2301,8 @@ void FEA_Module_SGH::sgh_solve(){
                                 elem_mat_id,
                                 corner_force,
                                 elem_statev,
-                                rk_alpha);
+                                rk_alpha,
+                                cycle);
             }
             else {
                 get_force_sgh(material,
@@ -2318,7 +2319,8 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_mat_id,
                               corner_force,
                               elem_statev,
-                              rk_alpha);
+                              rk_alpha,
+                              cycle);
             }
 
             /*
@@ -2451,7 +2453,8 @@ void FEA_Module_SGH::sgh_solve(){
                                elem_mass,
                                elem_mat_id,
                                elem_statev,
-                               rk_alpha);
+                               rk_alpha,
+                               cycle);
             }
             else{
                 update_state(material,
@@ -2467,7 +2470,8 @@ void FEA_Module_SGH::sgh_solve(){
                              elem_mass,
                              elem_mat_id,
                              elem_statev,
-                             rk_alpha);
+                             rk_alpha,
+                             cycle);
             }
             // ----
             // Notes on strength:

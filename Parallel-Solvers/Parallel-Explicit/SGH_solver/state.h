@@ -169,7 +169,8 @@ struct material_t {
                             const DViewCArrayKokkos <double> &node_vel,
                             const double vol,
                             const double dt,
-                            const double alpha) = NULL;
+                            const double alpha,
+                            const size_t cycle) = NULL;
     
     // hypo or hyper elastic plastic model
     model::strength_tag strength_type;
