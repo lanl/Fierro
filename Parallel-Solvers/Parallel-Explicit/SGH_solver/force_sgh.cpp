@@ -405,9 +405,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                    const DViewCArrayKokkos <double> &elem_vol,
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
-                   DViewCArrayKokkos <double> &corner_force,
-                   const DViewCArrayKokkos <double> &elem_statev,
-                   const double rk_alpha
+                   const DViewCArrayKokkos <double> &elem_statev
                    ){
     
     // --- calculate the forces acting on the nodes from the element ---
@@ -740,41 +738,21 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
         
         size_t mat_id = elem_mat_id(elem_gid);
         
-        // hypo elastic plastic model
-        if(material(mat_id).strength_type == model::hypo){
-
-            // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
-            
-            // --- call strength model ---
-            material(mat_id).strength_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            mat_id,
-                                            elem_statev,
-                                            elem_sspd,
-                                            elem_den(elem_gid),
-                                            elem_sie(elem_gid),
-                                            vel_grad,
-                                            elem_node_gids,
-                                            node_coords,
-                                            node_vel,
-                                            elem_vol(elem_gid),
-                                            dt,
-                                            rk_alpha);
-            
-        } // end logical on hypo strength model
         
 
     }); // end parallel for loop over elements
 
     //accumulate node values from corner storage
-        //multiply
+    force_gradient_velocity->putScalar(0);
+    
+    vec_array force_gradient_velocity_view = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         size_t corner_id;
         for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
             corner_id = corners_in_node(node_id,icorner);
-            //design_gradients(node_id,0) += corner_vector_storage(corner_id);
+            force_gradient_velocity_view(node_id,0) += corner_vector_storage(corner_id, 0);
+            force_gradient_velocity_view(node_id,1) += corner_vector_storage(corner_id, 1);
+            force_gradient_velocity_view(node_id,2) += corner_vector_storage(corner_id, 2);
         }
     }); // end parallel for
     Kokkos::fence();
