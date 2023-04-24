@@ -50,7 +50,7 @@ void destroy_user_strength_model(const DCArrayKokkos <double> &file_state_vars,
 } // end destroy_user_strength_model
 
 
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                          const DViewCArrayKokkos <double> &elem_stress,
                          const size_t elem_gid,
@@ -93,7 +93,7 @@ void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
 #endif
 } // end user_strength_model
 
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
                     const DViewCArrayKokkos <double> &elem_stress,
                     const size_t elem_gid,
