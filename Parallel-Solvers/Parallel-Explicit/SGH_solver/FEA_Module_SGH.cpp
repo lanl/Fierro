@@ -2932,7 +2932,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
-        //clear gradient values
         get_force_vgradient_sgh(material,
                                 mesh,
                                 node_coords,
@@ -2946,6 +2945,21 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                                 elem_div,
                                 elem_mat_id,
                                 elem_statev);
+
+        get_force_ugradient_sgh(material,
+                                mesh,
+                                node_coords,
+                                node_vel,
+                                elem_den,
+                                elem_sie,
+                                elem_pres,
+                                elem_stress,
+                                elem_sspd,
+                                elem_vol,
+                                elem_div,
+                                elem_mat_id,
+                                elem_statev);
+
         const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         //const_vec_array current_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array previous_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
