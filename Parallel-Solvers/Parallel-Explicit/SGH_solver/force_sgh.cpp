@@ -135,11 +135,9 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         } //end for
 
         // add the pressure
-        // Caleb: commented this out because EVPFFT and VPSC supplies the full stress tensor
-        //        and not the deviatoric stress tensor.
-        //for (int i = 0; i < num_dims; i++){
-        //    tau(i, i) -= elem_pres(elem_gid);
-        //} // end for
+        for (int i = 0; i < num_dims; i++){
+            tau(i, i) -= elem_pres(elem_gid);
+        } // end for
         
         
 
