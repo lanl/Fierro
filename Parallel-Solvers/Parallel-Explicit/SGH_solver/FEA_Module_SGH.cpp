@@ -75,6 +75,7 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
+#include "user_material_functions.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -175,6 +176,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
 }
 
 FEA_Module_SGH::~FEA_Module_SGH(){
+   cleanup_user_strength_model();
    //delete simparam;
 }
 
@@ -1322,10 +1324,10 @@ void FEA_Module_SGH::setup(){
             
             size_t num_vars = mat_num_state_vars.host(mat_id);
             
-            user_model_init(file_state_vars,
-                            num_vars,
-                            mat_id,
-                            rnum_elem);
+            init_user_strength_model(file_state_vars,
+                                     num_vars,
+                                     mat_id,
+                                     rnum_elem);
             
             // copy the values to the device
             file_state_vars.update_device();
@@ -1685,6 +1687,35 @@ void FEA_Module_SGH::setup(){
     return;
     
 } // end of setup
+
+
+void FEA_Module_SGH::cleanup_user_strength_model() {
+/*
+  This function is called in the destructor of FEA_Module_SGH setup.
+  This gives the user a chance to cleanup any memory allocation done using the
+  by calling the `destroy_user_strength_model(...)` in the User-Material-Interface folder.
+*/
+
+    size_t num_materials = simparam->num_materials;
+
+    for (size_t mat_id=0; mat_id<num_materials; mat_id++){
+     
+        if (read_from_file.host(mat_id) == 1){
+     
+            size_t num_vars = mat_num_state_vars.host(mat_id);
+     
+            destroy_user_strength_model(file_state_vars,
+                                        num_vars,
+                                        mat_id,
+                                        rnum_elem);
+     
+        } // end if
+     
+    } // end for
+
+    return;
+
+} // end cleanup_user_strength_model;
 
 
 /* ----------------------------------------------------------------------------
