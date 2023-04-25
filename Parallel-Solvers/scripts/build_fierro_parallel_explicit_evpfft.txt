@@ -63,6 +63,6 @@ then
 fi
 
 #build Fierro
-#echo "Building Fierro Coupled EVPFFT"
-#cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_EVPFFT=ON -DUSE_FFTW=ON .
-#make $NUM_TASKS
+echo "Building Fierro Coupled EVPFFT"
+cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_EVPFFT=ON -DUSE_FFTW=ON .
+make $NUM_TASKS
