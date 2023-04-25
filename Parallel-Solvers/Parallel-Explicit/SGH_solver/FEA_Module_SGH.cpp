@@ -176,7 +176,6 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
 }
 
 FEA_Module_SGH::~FEA_Module_SGH(){
-   cleanup_user_strength_model();
    //delete simparam;
 }
 
