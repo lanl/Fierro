@@ -1220,9 +1220,111 @@ void Implicit_Solver::setup_optimization_problem(){
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(design_node_densities_distributed);
   else
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities);
+
+  //set bounds on design variables
+  if(nodal_density_flag){
+    dual_vec_array dual_node_densities_upper_bound = dual_vec_array("dual_node_densities_upper_bound", nlocal_nodes, 1);
+    dual_vec_array dual_node_densities_lower_bound = dual_vec_array("dual_node_densities_lower_bound", nlocal_nodes, 1);
+    host_vec_array node_densities_upper_bound = dual_node_densities_upper_bound.view_host();
+    host_vec_array node_densities_lower_bound = dual_node_densities_lower_bound.view_host();
+    //notify that the host view is going to be modified in the file readin
+    dual_node_densities_upper_bound.modify_host();
+    dual_node_densities_lower_bound.modify_host();
+
+    //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
+    for(int inode = 0; inode < nlocal_nodes; inode++){
+      node_densities_upper_bound(inode,0) = 1;
+      node_densities_lower_bound(inode,0) = DENSITY_EPSILON;
+    }
+
+    //set lower bounds for nodes on surfaces with boundary and loading conditions
+    for(int imodule = 0; imodule < nfea_modules; imodule++){
+      num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
+      for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
+
+        num_bdy_patches_in_set = fea_modules[imodule]->NBoundary_Condition_Patches(iboundary);
+
+        //loop over boundary patches for this boundary set
+        for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
+                
+          // get the global id for this boundary patch
+          patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
+          if(simparam_TO->thick_condition_boundary){
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            current_element_index = Boundary_Patches(patch_id).element_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+              current_node_index = nodes_in_elem(current_element_index,node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
+          else{
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+              current_node_index = Surface_Nodes(node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
+        }//boundary patch for
+      }//boundary set for
+
+      //set node conditions due to point BCS that might not show up in boundary sets
+      //possible to have overlap in which nodes are set with the previous loop
+      fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
+    }//module for
+  
+    //sync device view
+    dual_node_densities_upper_bound.sync_device();
+    dual_node_densities_lower_bound.sync_device();
+    
+    //allocate global vector information
+    upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_upper_bound));
+    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_lower_bound));
+  
+  }
+  else{
+    //initialize memory for volume storage
+    vec_array Element_Densities_Upper_Bound("Element Densities_Upper_Bound", rnum_elem, 1);
+    vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
+    for(int ielem = 0; ielem < rnum_elem; ielem++){
+      Element_Densities_Upper_Bound(ielem,0) = 1;
+      Element_Densities_Lower_Bound(ielem,0) = DENSITY_EPSILON;
+    }
+
+    //create global vector
+    Global_Element_Densities_Upper_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Upper_Bound));
+    Global_Element_Densities_Lower_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Lower_Bound));
+  }
+    
+  // Bound constraint defining the possible range of design density variables
+  ROL::Ptr<ROL::Vector<real_t> > lower_bounds;
+  ROL::Ptr<ROL::Vector<real_t> > upper_bounds;
+  if(nodal_density_flag){
+    lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(lower_bound_node_densities_distributed);
+    upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(upper_bound_node_densities_distributed);
+  }
+  else{
+    lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Lower_Bound);
+    upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Upper_Bound);
+  }
+  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
   
   //Instantiate (the one) objective function for the problem
-  ROL::Ptr<ROL::Objective<real_t>> obj;
+  ROL::Ptr<ROL::Objective<real_t>> obj, sub_obj;
   bool objective_declared = false;
   for(int imodule = 0; imodule < nTO_modules; imodule++){
     if(TO_Function_Type[imodule] == Simulation_Parameters_Topology_Optimization::OBJECTIVE){
@@ -1234,12 +1336,24 @@ void Implicit_Solver::setup_optimization_problem(){
       if(TO_Module_List[imodule] == "Strain_Energy_Minimize"){
         //debug print
         *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        if(simparam_TO->mma_on){
+          sub_obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);
+        }
+        else{
+          obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        }
       }
       else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
         //debug print
         *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        if(simparam_TO->mma_on){
+          sub_obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);
+        }
+        else{
+          obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        }
       }
       //Multi-Objective case
       else if(TO_Module_List[imodule] == "Multi_Objective"){
@@ -1251,17 +1365,33 @@ void Implicit_Solver::setup_optimization_problem(){
           if(TO_Module_List[module_id] == "Strain_Energy_Minimize"){
             //debug print
             *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            Multi_Objective_Terms[imulti] = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+            if(simparam_TO->mma_on){
+              sub_obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+              Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);
+            }
+            else{
+              Multi_Objective_Terms[imulti] = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+            }
           }
           else if(TO_Module_List[module_id] == "Heat_Capacity_Potential_Minimize"){
             //debug print
             *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+            if(simparam_TO->mma_on){
+              sub_obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+              Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);}
+            else{
+              Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+            }
           }
           else if(TO_Module_List[module_id] == "Thermo_Elastic_Strain_Energy_Minimize"){
             //debug print
             *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+            if(simparam_TO->mma_on){
+              sub_obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+              Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);}
+            else{
+              Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
+            }
           }
         }
         //allocate multi objective function
@@ -1367,107 +1497,7 @@ void Implicit_Solver::setup_optimization_problem(){
     number_union.clear();
   }
 
-  //set bounds on design variables
-  if(nodal_density_flag){
-    dual_vec_array dual_node_densities_upper_bound = dual_vec_array("dual_node_densities_upper_bound", nlocal_nodes, 1);
-    dual_vec_array dual_node_densities_lower_bound = dual_vec_array("dual_node_densities_lower_bound", nlocal_nodes, 1);
-    host_vec_array node_densities_upper_bound = dual_node_densities_upper_bound.view_host();
-    host_vec_array node_densities_lower_bound = dual_node_densities_lower_bound.view_host();
-    //notify that the host view is going to be modified in the file readin
-    dual_node_densities_upper_bound.modify_host();
-    dual_node_densities_lower_bound.modify_host();
-
-    //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
-    for(int inode = 0; inode < nlocal_nodes; inode++){
-      node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = DENSITY_EPSILON;
-    }
-
-    //set lower bounds for nodes on surfaces with boundary and loading conditions
-    for(int imodule = 0; imodule < nfea_modules; imodule++){
-      num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
-      for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
-
-        num_bdy_patches_in_set = fea_modules[imodule]->NBoundary_Condition_Patches(iboundary);
-
-        //loop over boundary patches for this boundary set
-        for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
-                
-          // get the global id for this boundary patch
-          patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          if(simparam_TO->thick_condition_boundary){
-            Surface_Nodes = Boundary_Patches(patch_id).node_set;
-            current_element_index = Boundary_Patches(patch_id).element_id;
-            //debug print of local surface ids
-            //std::cout << " LOCAL SURFACE IDS " << std::endl;
-            //std::cout << local_surface_id << std::endl;
-            //acquire set of nodes for this face
-            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
-              current_node_index = nodes_in_elem(current_element_index,node_loop);
-              if(map->isNodeGlobalElement(current_node_index)){
-                local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = 1;
-              }
-            }// node loop for
-          }//if
-          else{
-            Surface_Nodes = Boundary_Patches(patch_id).node_set;
-            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-            //debug print of local surface ids
-            //std::cout << " LOCAL SURFACE IDS " << std::endl;
-            //std::cout << local_surface_id << std::endl;
-            //acquire set of nodes for this face
-            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
-              current_node_index = Surface_Nodes(node_loop);
-              if(map->isNodeGlobalElement(current_node_index)){
-                local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = 1;
-              }
-            }// node loop for
-          }//if
-        }//boundary patch for
-      }//boundary set for
-
-      //set node conditions due to point BCS that might not show up in boundary sets
-      //possible to have overlap in which nodes are set with the previous loop
-      fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
-    }//module for
   
-    //sync device view
-    dual_node_densities_upper_bound.sync_device();
-    dual_node_densities_lower_bound.sync_device();
-    
-    //allocate global vector information
-    upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_upper_bound));
-    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_lower_bound));
-  
-  }
-  else{
-    //initialize memory for volume storage
-    vec_array Element_Densities_Upper_Bound("Element Densities_Upper_Bound", rnum_elem, 1);
-    vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
-    for(int ielem = 0; ielem < rnum_elem; ielem++){
-      Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = DENSITY_EPSILON;
-    }
-
-    //create global vector
-    Global_Element_Densities_Upper_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Upper_Bound));
-    Global_Element_Densities_Lower_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Lower_Bound));
-  }
-    
-  // Bound constraint defining the possible range of design density variables
-  ROL::Ptr<ROL::Vector<real_t> > lower_bounds;
-  ROL::Ptr<ROL::Vector<real_t> > upper_bounds;
-  if(nodal_density_flag){
-    lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(lower_bound_node_densities_distributed);
-    upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(upper_bound_node_densities_distributed);
-  }
-  else{
-    lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Lower_Bound);
-    upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Upper_Bound);
-  }
-  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
   problem->addBoundConstraint(bnd);
 
   //compute initial constraint satisfaction
