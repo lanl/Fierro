@@ -100,7 +100,6 @@
 #define MAX_WORD 30
 #define MAX_ELEM_NODES 32
 #define STRAIN_EPSILON 0.000000001
-#define DENSITY_EPSILON 0.0001
 #define BC_EPSILON 1.0e-8
 
 using namespace utils;
@@ -1222,19 +1221,36 @@ void Implicit_Solver::setup_optimization_problem(){
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities);
 
   //set bounds on design variables
+  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd, mma_bnd;
+  // Bound constraint defining the possible range of design density variables
+  ROL::Ptr<ROL::Vector<real_t> > lower_bounds, mma_lower_bounds;
+  ROL::Ptr<ROL::Vector<real_t> > upper_bounds, mma_upper_bounds;
   if(nodal_density_flag){
-    dual_vec_array dual_node_densities_upper_bound = dual_vec_array("dual_node_densities_upper_bound", nlocal_nodes, 1);
-    dual_vec_array dual_node_densities_lower_bound = dual_vec_array("dual_node_densities_lower_bound", nlocal_nodes, 1);
-    host_vec_array node_densities_upper_bound = dual_node_densities_upper_bound.view_host();
-    host_vec_array node_densities_lower_bound = dual_node_densities_lower_bound.view_host();
-    //notify that the host view is going to be modified in the file readin
-    dual_node_densities_upper_bound.modify_host();
-    dual_node_densities_lower_bound.modify_host();
+    //allocate global vector information
+    upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+    host_vec_array node_densities_upper_bound = upper_bound_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array node_densities_lower_bound = lower_bound_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
 
     //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
     for(int inode = 0; inode < nlocal_nodes; inode++){
       node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = DENSITY_EPSILON;
+      node_densities_lower_bound(inode,0) = simparam_TO->density_epsilon;
+    }
+
+    if(simparam_TO->mma_on){
+      Teuchos::RCP<MV> mma_upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+      Teuchos::RCP<MV> mma_lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
+      //mma_lower_bound_node_densities_distributed->assign(*lower_bound_node_densities_distributed);
+      //mma_upper_bound_node_densities_distributed->assign(*upper_bound_node_densities_distributed);
+      
+      mma_lower_bound_node_densities_distributed->putScalar(-0.1);
+      mma_upper_bound_node_densities_distributed->putScalar(1.1);
+      mma_lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_lower_bound_node_densities_distributed);
+      mma_upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_upper_bound_node_densities_distributed);
+      
+      mma_bnd = ROL::makePtr<ROL::Bounds<real_t>>(mma_lower_bounds, mma_upper_bounds);
     }
 
     //set lower bounds for nodes on surfaces with boundary and loading conditions
@@ -1287,14 +1303,6 @@ void Implicit_Solver::setup_optimization_problem(){
       fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
     }//module for
   
-    //sync device view
-    dual_node_densities_upper_bound.sync_device();
-    dual_node_densities_lower_bound.sync_device();
-    
-    //allocate global vector information
-    upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_upper_bound));
-    lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, dual_node_densities_lower_bound));
-  
   }
   else{
     //initialize memory for volume storage
@@ -1302,7 +1310,7 @@ void Implicit_Solver::setup_optimization_problem(){
     vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
     for(int ielem = 0; ielem < rnum_elem; ielem++){
       Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = DENSITY_EPSILON;
+      Element_Densities_Lower_Bound(ielem,0) = simparam_TO->density_epsilon;
     }
 
     //create global vector
@@ -1310,9 +1318,6 @@ void Implicit_Solver::setup_optimization_problem(){
     Global_Element_Densities_Lower_Bound = Teuchos::rcp(new MV(element_map, Element_Densities_Lower_Bound));
   }
     
-  // Bound constraint defining the possible range of design density variables
-  ROL::Ptr<ROL::Vector<real_t> > lower_bounds;
-  ROL::Ptr<ROL::Vector<real_t> > upper_bounds;
   if(nodal_density_flag){
     lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(lower_bound_node_densities_distributed);
     upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(upper_bound_node_densities_distributed);
@@ -1321,7 +1326,7 @@ void Implicit_Solver::setup_optimization_problem(){
     lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Lower_Bound);
     upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities_Upper_Bound);
   }
-  ROL::Ptr<ROL::BoundConstraint<real_t> > bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
+  bnd = ROL::makePtr<ROL::Bounds<real_t>>(lower_bounds, upper_bounds);
   
   //Instantiate (the one) objective function for the problem
   ROL::Ptr<ROL::Objective<real_t>> obj, sub_obj;
@@ -1338,7 +1343,7 @@ void Implicit_Solver::setup_optimization_problem(){
         *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam_TO->mma_on){
           sub_obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
-          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
         }
         else{
           obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
@@ -1349,7 +1354,7 @@ void Implicit_Solver::setup_optimization_problem(){
         *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         if(simparam_TO->mma_on){
           sub_obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
-          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);
+          obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
         }
         else{
           obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
@@ -1367,7 +1372,7 @@ void Implicit_Solver::setup_optimization_problem(){
             *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
             if(simparam_TO->mma_on){
               sub_obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
-              Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);
+              Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
             }
             else{
               Multi_Objective_Terms[imulti] = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
@@ -1378,7 +1383,7 @@ void Implicit_Solver::setup_optimization_problem(){
             *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
             if(simparam_TO->mma_on){
               sub_obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
-              Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);}
+              Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);}
             else{
               Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
             }
@@ -1388,7 +1393,7 @@ void Implicit_Solver::setup_optimization_problem(){
             *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
             if(simparam_TO->mma_on){
               sub_obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
-              Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, bnd, x);}
+              Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);}
             else{
               Multi_Objective_Terms[imulti] = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
             }
@@ -1531,6 +1536,10 @@ void Implicit_Solver::setup_optimization_problem(){
   //directions(4,0) = -0.3;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
+  //real_t tol = 0.0001;
+  //obj->update(*rol_x,ROL::UpdateType::Initial);
+  //real_t obj_value = obj->value(*rol_x,tol);
+  //std::cout << " VALUE TEST " << obj_value << std::endl;
   //obj->checkGradient(*rol_x, *rol_d);
   //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);

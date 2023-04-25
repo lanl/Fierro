@@ -136,6 +136,7 @@ public:
 
     l_   = bnd_->getLowerBound();
     u_   = bnd_->getUpperBound();
+    
 
     p_   = x->clone();
     q_   = x->clone();
@@ -143,31 +144,124 @@ public:
  
   }
 
-  void update( const ROL::Vector<real_t> &x, bool flag = true, int iter = -1 ) {
+  void update(const ROL::Vector<real_t> &x, ROL::UpdateType type, int iter = -1 ) {
   
     ROL::Elementwise::ThresholdUpper<real_t> positive(0.0);
     ROL::Elementwise::ThresholdLower<real_t> negative(0.0);
     ROL::Elementwise::Power<real_t>          square(2.0);
     ROL::Elementwise::Multiply<real_t>       mult;
 
-    obj_->update(x,flag,iter);
+    if (type == ROL::UpdateType::Initial)  {
+      // This is the first call to update
+      obj_->update(x,type,iter);
+      
+      fval_ = obj_->value(x,tol_);
+      obj_->gradient(*p_,x,tol_);
+      q_->set(*p_);
+
+      p_->applyUnary(positive);
+      q_->applyUnary(negative);
+
+      d_->set(x);
+      d_->axpy(-1.0,*l_);
+      d_->applyUnary(square);
+      p_->applyBinary(mult,*d_);
+
+      d_->set(*u_);
+      d_->axpy(-1.0,x);
+      d_->applyUnary(square);
+      q_->applyBinary(mult,*d_);
+    }
+    else if (type == ROL::UpdateType::Accept) {
+      // u_ was set to u=S(x) during a trial update
+      // and has been accepted as the new iterate
+      obj_->update(x,type,iter);
+      
+      fval_ = obj_->value(x,tol_);
+      obj_->gradient(*p_,x,tol_);
+      q_->set(*p_);
+
+      p_->applyUnary(positive);
+      q_->applyUnary(negative);
+
+      d_->set(x);
+      d_->axpy(-1.0,*l_);
+      d_->applyUnary(square);
+      p_->applyBinary(mult,*d_);
+
+      d_->set(*u_);
+      d_->axpy(-1.0,x);
+      d_->applyUnary(square);
+      q_->applyBinary(mult,*d_);
+    }
+    else if (type == ROL::UpdateType::Revert) {
+      // u_ was set to u=S(x) during a trial update
+      // and has been rejected as the new iterate
+      // Revert to cached value
+      obj_->update(x,type,iter);
+      
+      fval_ = obj_->value(x,tol_);
+      obj_->gradient(*p_,x,tol_);
+      q_->set(*p_);
+
+      p_->applyUnary(positive);
+      q_->applyUnary(negative);
+
+      d_->set(x);
+      d_->axpy(-1.0,*l_);
+      d_->applyUnary(square);
+      p_->applyBinary(mult,*d_);
+
+      d_->set(*u_);
+      d_->axpy(-1.0,x);
+      d_->applyUnary(square);
+      q_->applyBinary(mult,*d_);
+    }
+    else if (type == ROL::UpdateType::Trial) {
+      // This is a new value of x
+
+      obj_->update(x,type,iter);
+      
+      fval_ = obj_->value(x,tol_);
+      obj_->gradient(*p_,x,tol_);
+      q_->set(*p_);
+
+      p_->applyUnary(positive);
+      q_->applyUnary(negative);
+
+      d_->set(x);
+      d_->axpy(-1.0,*l_);
+      d_->applyUnary(square);
+      p_->applyBinary(mult,*d_);
+
+      d_->set(*u_);
+      d_->axpy(-1.0,x);
+      d_->applyUnary(square);
+      q_->applyBinary(mult,*d_);
+    }
+    else { // ROL::UpdateType::Temp
+      // This is a new value of x used for,
+      // e.g., finite-difference checks
+      
+      obj_->update(x,type,iter);
    
-    fval_ = obj_->value(x,tol_);
-    obj_->gradient(*p_,x,tol_);
-    q_->set(*p_);
+      fval_ = obj_->value(x,tol_);
+      obj_->gradient(*p_,x,tol_);
+      q_->set(*p_);
 
-    p_->applyUnary(positive);
-    q_->applyUnary(negative);
+      p_->applyUnary(positive);
+      q_->applyUnary(negative);
 
-    d_->set(x);
-    d_->axpy(-1.0,*l_);
-    d_->applyUnary(square);
-    p_->applyBinary(mult,*d_);
+      d_->set(x);
+      d_->axpy(-1.0,*l_);
+      d_->applyUnary(square);
+      p_->applyBinary(mult,*d_);
 
-    d_->set(*u_);
-    d_->axpy(-1.0,x);
-    d_->applyUnary(square);
-    q_->applyBinary(mult,*d_);
+      d_->set(*u_);
+      d_->axpy(-1.0,x);
+      d_->applyUnary(square);
+      q_->applyBinary(mult,*d_);
+    }
 
   }
 
@@ -179,19 +273,26 @@ public:
     ROL::Elementwise::ReductionSum<real_t>    sum;
     ROL::Elementwise::DivideAndInvert<real_t> divinv;
     real_t fval = fval_;
+    
+    //debug print of design variables
+    //ROL::Ptr<MV> pp = getVector(*p_);
+    //std::ostream &out = std::cout;
+    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    //(*fos).setOutputToRootOnly(0);
+    //*fos << "Gradient data :" << std::endl;
+    //pp->describe(*fos,Teuchos::VERB_EXTREME);
 
     d_->set(*u_);
     d_->axpy(-1.0,x);
     d_->applyBinary(divinv,*p_);  
 
     fval += d_->reduce(sum);
-
     d_->set(x);
     d_->axpy(-1.0,*l_);
     d_->applyBinary(divinv,*q_);
 
     fval += d_->reduce(sum);   
-
+    
     return fval;
 
   }
