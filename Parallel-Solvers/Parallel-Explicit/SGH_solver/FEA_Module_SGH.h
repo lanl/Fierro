@@ -435,6 +435,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   void compute_topology_optimization_adjoint_full(); //Force depends on node coords and velocity
 
   void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
+
+    void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
   
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
