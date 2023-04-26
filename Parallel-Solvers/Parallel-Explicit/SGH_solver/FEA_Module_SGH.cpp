@@ -1663,27 +1663,28 @@ void FEA_Module_SGH::setup(){
 
     //current interface has differing mass arrays; this equates them until we unify memory
     //view scope
-    {
-      vec_array node_mass_interface = node_masses_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-        node_mass_interface(node_gid,0) = node_mass(node_gid);
-      }); // end parallel for
-    } //end view scope
-    Kokkos::fence();
-    //communicate ghost densities
-    comm_node_masses();
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on||simparam->num_dim==2){
+      {
+        vec_array node_mass_interface = node_masses_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+          node_mass_interface(node_gid,0) = node_mass(node_gid);
+        }); // end parallel for
+      } //end view scope
+      Kokkos::fence();
+      //communicate ghost densities
+      comm_node_masses();
 
-    //this is forcing a copy to the device
-    //view scope
-    {
-      vec_array ghost_node_mass_interface = ghost_node_masses_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      //this is forcing a copy to the device
+      //view scope
+      {
+        vec_array ghost_node_mass_interface = ghost_node_masses_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
-      FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
-        node_mass(node_gid) = ghost_node_mass_interface(node_gid-nlocal_nodes,0);
-      }); // end parallel for
-    } //end view scope
-    Kokkos::fence();
-    
+        FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
+          node_mass(node_gid) = ghost_node_mass_interface(node_gid-nlocal_nodes,0);
+        }); // end parallel for
+      } //end view scope
+      Kokkos::fence();
+    }
     return;
     
 } // end of setup
