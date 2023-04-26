@@ -134,6 +134,19 @@ namespace model_run_location
 } // end of namespace
 
 
+namespace model_init
+{
+
+    // strength model setup
+    enum strength_setup_tag
+    {
+        input = 0,
+        user_init = 1,
+    };
+
+} // end of namespace
+
+
 // material model parameters
 struct material_t {
 
@@ -178,8 +191,10 @@ struct material_t {
     // strength model run location (device or host)
     model_run_location::run_location strength_run_location;
 
+    // setup the strength model via the input file for via a user_setup
+    model_init::strength_setup_tag strength_setup=model_init::input;
+
     size_t num_state_vars;
-    size_t read_state_vars=0;
     
     double q1;    // acoustic coefficient in Riemann solver for compresion
     double q1ex;  // acoustic coefficient in Riemann solver for expansion

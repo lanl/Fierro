@@ -875,7 +875,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 
                 
                 // get state_vars from the input file or read them in
-                if (material(mat_id).read_state_vars == 1){
+                if (material(mat_id).strength_setup == model_init::user_init){
                     
                     // use the values read from a file to get elem state vars
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
@@ -1295,7 +1295,7 @@ void FEA_Module_SGH::setup(){
     read_from_file = DCArrayKokkos <size_t>(num_materials, "read_from_file");
     FOR_ALL_CLASS(mat_id, 0, num_materials, {
         
-        read_from_file(mat_id) = material(0).read_state_vars;
+        read_from_file(mat_id) = material(mat_id).strength_setup;
         
     }); // end parallel for
     Kokkos::fence();
@@ -1319,7 +1319,7 @@ void FEA_Module_SGH::setup(){
     
     for (size_t mat_id=0; mat_id<num_materials; mat_id++){
         
-        if (read_from_file.host(mat_id) == 1){
+        if (read_from_file.host(mat_id) == model_init::user_init){
             
             size_t num_vars = mat_num_state_vars.host(mat_id);
             
@@ -1437,7 +1437,7 @@ void FEA_Module_SGH::setup(){
                 
                 
                 // get state_vars from the input file or read them in
-                if (material(mat_id).read_state_vars == 1){
+                if (material(mat_id).strength_setup == model_init::user_init){
                     
                     // use the values read from a file to get elem state vars
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
