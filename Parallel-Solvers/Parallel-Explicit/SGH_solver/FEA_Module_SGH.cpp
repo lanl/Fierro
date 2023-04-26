@@ -679,6 +679,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
       relative_element_densities.host(elem_id) = average_element_density(num_nodes_in_elem, current_element_nodal_densities);
     }//for
   } //view scope
+  //debug print
+  //std::cout << "ELEMENT RELATIVE DENSITY TEST " << relative_element_densities.host(0) << std::endl;
   relative_element_densities.update_device();
 
   //set density vector to the current value chosen by the optimizer
@@ -1957,7 +1959,23 @@ void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &b
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::sgh_solve(){
-
+    
+    time_value = simparam->time_value;
+    time_final = simparam->time_final;
+    dt_max = simparam->dt_max;
+    dt_min = simparam->dt_min;
+    dt_cfl = simparam->dt_cfl;
+    graphics_time = simparam->graphics_time;
+    graphics_cyc_ival = simparam->graphics_cyc_ival;
+    graphics_dt_ival = simparam->graphics_dt_ival;
+    cycle_stop = simparam->cycle_stop;
+    rk_num_stages = simparam->rk_num_stages;
+    dt = simparam->dt;
+    fuzz = simparam->fuzz;
+    tiny = simparam->tiny;
+    small = simparam->small;
+    graphics_times = simparam->graphics_times;
+    graphics_id = simparam->graphics_id;
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
     const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
     const DCArrayKokkos <material_t> material = simparam->material;
@@ -1965,6 +1983,7 @@ void FEA_Module_SGH::sgh_solve(){
     int old_max_forward_buffer;
     size_t cycle;
     const int num_dim = simparam->num_dim;
+    time_value = simparam->time_value;
     real_t objective_accumulation, global_objective_accumulation;
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
@@ -3386,7 +3405,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
   for (int cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
-    real_t lambda_dot;
     //print
     if (cycle==0){
       if(myrank==0)
@@ -3407,6 +3425,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
         const_vec_array next_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         
         FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+          real_t lambda_dot;
           size_t node_id;
           size_t corner_id;
           real_t inner_product;
@@ -3490,7 +3509,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
 
   //multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
   FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-    design_gradients(node_id,0) *=1/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
+    design_gradients(node_id,0) *=-1/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
     //design_gradients(node_id,0) =0.00001;
   }); // end parallel for
   Kokkos::fence();

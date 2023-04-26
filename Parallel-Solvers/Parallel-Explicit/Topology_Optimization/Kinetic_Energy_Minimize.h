@@ -255,7 +255,7 @@ public:
     vec_array objective_gradients = gp->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     const_vec_array design_densities = zp->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
-    FEM_->compute_topology_optimization_gradient(design_densities, objective_gradients);
+    FEM_->compute_topology_optimization_gradient_full(design_densities, objective_gradients);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
