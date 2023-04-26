@@ -765,6 +765,12 @@ void Simulation_Parameters_SGH::apply_settings(){
        set_options.erase(current_option);
     }
 
+    current_option = "solver_options:time_variables:dt_cfl";
+    if(set_options.find(current_option)!=set_options.end()){
+       dt_cfl = std::stod(set_options[current_option]);
+       set_options.erase(current_option);
+    }
+
     current_option = "solver_options:time_variables:cycle_stop";
     if(set_options.find(current_option)!=set_options.end()){
        cycle_stop = std::stoi(set_options[current_option]);
@@ -1060,6 +1066,19 @@ void Simulation_Parameters_SGH::apply_settings(){
                 }
                 else if(set_options[bc_name+":condition_type"]=="velocity"){
                     boundary.host(ibc).hydro_bc = bdy::velocity;
+                    //read in u,v,w velocity components
+                    if(set_options.find(bc_name+":u")!=set_options.end()){
+                        boundary.host(ibc).u = std::stod(set_options[bc_name+":u"]);
+                        set_options.erase(bc_name+":u");
+                    }
+                    if(set_options.find(bc_name+":v")!=set_options.end()){
+                        boundary.host(ibc).v = std::stod(set_options[bc_name+":v"]);
+                        set_options.erase(bc_name+":v");
+                    }
+                    if(set_options.find(bc_name+":w")!=set_options.end()){
+                        boundary.host(ibc).w = std::stod(set_options[bc_name+":w"]);
+                        set_options.erase(bc_name+":w");
+                    }
                     set_options.erase(bc_name+":condition_type");
                 }
                 else if(set_options[bc_name+":condition_type"]=="pressure"){
