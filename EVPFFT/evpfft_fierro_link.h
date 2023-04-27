@@ -30,4 +30,3 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                            const double dt,
                            const double rk_alpha,
                            const size_t cycle);
-

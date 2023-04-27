@@ -109,14 +109,15 @@ void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
     The pressure and sound speed can be calculated from an analytic eos.
     The pressure can also be calculated using p = -1/3 Trace(Stress).
     */
-  
-    const size_t num_dims = 3;
-    elem_pres(elem_gid) = 0.0;  // pressure
-    elem_sspd(elem_gid) = 2400.0;  // sound speed
-    
+
+    const int num_dims = 3;
+ 
+    elem_pres(elem_gid) = 0.0;  // pressure 
+    elem_sspd(elem_gid) = 2270000;  // [mm/s] // sound speed
+
     // pressure = 1/3tr(stress)
-    for (size_t i=0; i<num_dims; i++){
-        elem_pres(elem_gid) -= elem_stress(1,elem_gid,i,i);
+    for (int i=0; i<num_dims; i++){
+        elem_pres(elem_gid) -= elem_stress(i,i);
     }
     elem_pres(elem_gid) *= 1.0/3.0;
     

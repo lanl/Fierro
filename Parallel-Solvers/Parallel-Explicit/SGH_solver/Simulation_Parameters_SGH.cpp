@@ -878,6 +878,19 @@ void Simulation_Parameters_SGH::apply_settings(){
             }
         }
 
+        //strength_stress_tensor
+        current_option = material_name+":strength_stress_tensor";
+        if(set_options.find(current_option)!=set_options.end()){
+            if(set_options[current_option]=="deviatoric"){
+                material.host(imat).strength_stress_tensor = model_stress_tensor::deviatoric;
+                set_options.erase(current_option);
+            }
+            else if(set_options[current_option]=="cauchy"){
+                material.host(imat).strength_stress_tensor = model_stress_tensor::cauchy;
+                set_options.erase(current_option);
+            }
+        }
+
 
         //coefficients
         current_option = material_name+":q1";

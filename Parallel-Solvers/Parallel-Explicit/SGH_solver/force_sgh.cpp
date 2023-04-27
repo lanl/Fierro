@@ -134,14 +134,15 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
             } // end for
         } //end for
 
-        // add the pressure
-        for (int i = 0; i < num_dims; i++){
-            tau(i, i) -= elem_pres(elem_gid);
-        } // end for
-        
-        
+        size_t mat_id = elem_mat_id(elem_gid);
 
-
+        if(material(mat_id).strength_stress_tensor == model_stress_tensor::deviatoric){
+            // add the pressure
+            for (int i = 0; i < num_dims; i++){
+                tau(i, i) -= elem_pres(elem_gid);
+            } // end for
+        }
+        
         // ---- Multidirectional Approximate Riemann solver (MARS) ----
         // find the average velocity of the elem, it is an
         // estimate of the Riemann velocity
@@ -364,9 +365,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a hypo model
-        
-        size_t mat_id = elem_mat_id(elem_gid);
-        
+                
         // hypo elastic plastic model
         if(material(mat_id).strength_type == model::hypo){
 

@@ -529,14 +529,15 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
 
   } // end if ddnorm
 
-  // update stress
+  // update stress for fierro
   ViewMatrixTypeReal stress_view(stress,3,3);
   for (int j = 1; j <= 3; j++) {
     for (int i = 1; i <= 3; i++) {
       stress_view(i,j) = scauav(i,j);
-    } // end for i
-  } // end for j
-
+    }
+  }
+ 
+ 
   if (evm >= 0.5) {
     write_texture();
     exit(0);

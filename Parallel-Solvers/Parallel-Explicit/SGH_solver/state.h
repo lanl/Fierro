@@ -147,6 +147,17 @@ namespace model_init
 } // end of namespace
 
 
+namespace model_stress_tensor
+{
+    // strength model stress tensor
+    enum stress_tensor
+    {
+        deviatoric = 0,
+        cauchy = 1,
+    };
+};
+
+
 // material model parameters
 struct material_t {
 
@@ -191,8 +202,11 @@ struct material_t {
     // strength model run location (device or host)
     model_run_location::run_location strength_run_location;
 
+    // strength model stress type
+    model_stress_tensor::stress_tensor strength_stress_tensor = model_stress_tensor::deviatoric;
+
     // setup the strength model via the input file for via a user_setup
-    model_init::strength_setup_tag strength_setup=model_init::input;
+    model_init::strength_setup_tag strength_setup = model_init::input;
 
     size_t num_state_vars;
     
