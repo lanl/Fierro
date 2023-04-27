@@ -75,6 +75,7 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
+#include "user_material_functions.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -878,7 +879,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 
                 
                 // get state_vars from the input file or read them in
-                if (material(mat_id).read_state_vars == 1){
+                if (material(mat_id).strength_setup == model_init::user_init){
                     
                     // use the values read from a file to get elem state vars
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
@@ -1330,7 +1331,7 @@ void FEA_Module_SGH::setup(){
     read_from_file = DCArrayKokkos <size_t>(num_materials, "read_from_file");
     FOR_ALL_CLASS(mat_id, 0, num_materials, {
         
-        read_from_file(mat_id) = material(0).read_state_vars;
+        read_from_file(mat_id) = material(mat_id).strength_setup;
         
     }); // end parallel for
     Kokkos::fence();
@@ -1354,14 +1355,14 @@ void FEA_Module_SGH::setup(){
     
     for (size_t mat_id=0; mat_id<num_materials; mat_id++){
         
-        if (read_from_file.host(mat_id) == 1){
+        if (read_from_file.host(mat_id) == model_init::user_init){
             
             size_t num_vars = mat_num_state_vars.host(mat_id);
             
-            user_model_init(file_state_vars,
-                            num_vars,
-                            mat_id,
-                            rnum_elem);
+            init_user_strength_model(file_state_vars,
+                                     num_vars,
+                                     mat_id,
+                                     rnum_elem);
             
             // copy the values to the device
             file_state_vars.update_device();
@@ -1472,7 +1473,7 @@ void FEA_Module_SGH::setup(){
                 
                 
                 // get state_vars from the input file or read them in
-                if (material(mat_id).read_state_vars == 1){
+                if (material(mat_id).strength_setup == model_init::user_init){
                     
                     // use the values read from a file to get elem state vars
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
@@ -1700,6 +1701,7 @@ void FEA_Module_SGH::setup(){
     if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on||simparam->num_dim==2){
       {
         vec_array node_mass_interface = node_masses_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
           node_mass_interface(node_gid,0) = node_mass(node_gid);
         }); // end parallel for
@@ -1713,15 +1715,46 @@ void FEA_Module_SGH::setup(){
       {
         vec_array ghost_node_mass_interface = ghost_node_masses_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
+
         FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
           node_mass(node_gid) = ghost_node_mass_interface(node_gid-nlocal_nodes,0);
         }); // end parallel for
       } //end view scope
       Kokkos::fence();
-    }
+    } //endif
+    
     return;
     
 } // end of setup
+
+
+void FEA_Module_SGH::cleanup_user_strength_model() {
+/*
+  This function is called in the destructor of FEA_Module_SGH setup.
+  This gives the user a chance to cleanup any memory allocation done using the
+  by calling the `destroy_user_strength_model(...)` in the User-Material-Interface folder.
+*/
+
+    size_t num_materials = simparam->num_materials;
+
+    for (size_t mat_id=0; mat_id<num_materials; mat_id++){
+     
+        if (read_from_file.host(mat_id) == 1){
+     
+            size_t num_vars = mat_num_state_vars.host(mat_id);
+     
+            destroy_user_strength_model(file_state_vars,
+                                        num_vars,
+                                        mat_id,
+                                        rnum_elem);
+     
+        } // end if
+     
+    } // end for
+
+    return;
+
+} // end cleanup_user_strength_model;
 
 
 /* ----------------------------------------------------------------------------

@@ -91,7 +91,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                                             node_vel,
                                             elem_vol(elem_gid),
                                             dt,
-                                            rk_alpha);
+                                            rk_alpha,
+                                            cycle);
             
         } // end logical on hyper strength model
         
@@ -199,7 +200,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                                             node_vel,
                                             elem_vol(elem_gid),
                                             dt,
-                                            rk_alpha);
+                                            rk_alpha,
+                                            cycle);
             
         } // end logical on hyper strength model
         
