@@ -144,6 +144,8 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on||simparam->num_dim==2){
     node_masses_distributed = Teuchos::rcp(new MV(map, 1));
     ghost_node_masses_distributed = Teuchos::rcp(new MV(ghost_node_map, 1));
+    adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam->num_dim));
+    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam->num_dim));
   }
   
   //setup output
@@ -1166,6 +1168,38 @@ void FEA_Module_SGH::comm_node_masses(){
   
   //comms to get ghosts
   ghost_node_masses_distributed->doImport(*node_masses_distributed, importer, Tpetra::INSERT);
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
+}
+
+/* ----------------------------------------------------------------------
+   Communicate updated nodal adjoint vectors to ghost nodes
+------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::comm_adjoint_vectors(int cycle){
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  
+  //comms to get ghosts
+  adjoint_vector_data[cycle]->doImport(*adjoint_vector_distributed, importer, Tpetra::INSERT);
+  phi_adjoint_vector_data[cycle]->doImport(*phi_adjoint_vector_distributed, importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   
@@ -2987,11 +3021,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         //compute gradient of force with respect to velocity
     
         const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+        vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
         const_vec_array phi_previous_adjoint_vector =  phi_adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        vec_array phi_current_adjoint_vector = phi_adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+        vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
-        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
           real_t rate_of_change;
           for (int idim = 0; idim < num_dim; idim++){
             rate_of_change = previous_velocity_vector(node_gid,idim)- 
@@ -3004,7 +3038,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         }); // end parallel for
         Kokkos::fence();
       } //end view scope
-    
+      comm_adjoint_vectors(cycle);
   }
 }
 

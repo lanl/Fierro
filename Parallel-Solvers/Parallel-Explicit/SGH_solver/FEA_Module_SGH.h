@@ -369,6 +369,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
 
   void comm_node_masses();
 
+  void comm_adjoint_vectors(int cycle);
+
   void comm_variables(Teuchos::RCP<const MV> zp);
 
   void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header);
@@ -436,7 +438,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
 
   void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
 
-    void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
+  void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
   
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
@@ -502,6 +504,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
   Teuchos::RCP<MV> node_masses_distributed;
   Teuchos::RCP<MV> ghost_node_masses_distributed;
+  Teuchos::RCP<MV> adjoint_vector_distributed;
+  Teuchos::RCP<MV> phi_adjoint_vector_distributed;
   std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
   std::vector<Teuchos::RCP<MV>> forward_solve_coordinate_data;
   std::vector<Teuchos::RCP<MV>> adjoint_vector_data;
