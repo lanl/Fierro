@@ -2324,7 +2324,8 @@ void FEA_Module_SGH::sgh_solve(){
                                 elem_mat_id,
                                 corner_force,
                                 elem_statev,
-                                rk_alpha);
+                                rk_alpha,
+                                cycle);
             }
             else {
                 get_force_sgh(material,
@@ -2341,7 +2342,8 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_mat_id,
                               corner_force,
                               elem_statev,
-                              rk_alpha);
+                              rk_alpha,
+                              cycle);
             }
 
             /*
@@ -2474,7 +2476,8 @@ void FEA_Module_SGH::sgh_solve(){
                                elem_mass,
                                elem_mat_id,
                                elem_statev,
-                               rk_alpha);
+                               rk_alpha,
+                               cycle);
             }
             else{
                 update_state(material,
@@ -2490,7 +2493,8 @@ void FEA_Module_SGH::sgh_solve(){
                              elem_mass,
                              elem_mat_id,
                              elem_statev,
-                             rk_alpha);
+                             rk_alpha,
+                             cycle);
             }
             // ----
             // Notes on strength:
@@ -2998,7 +3002,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                                 elem_vol,
                                 elem_div,
                                 elem_mat_id,
-                                elem_statev);
+                                elem_statev,
+                                1,
+                                cycle);
 
         get_force_ugradient_sgh(material,
                                 mesh,
@@ -3012,8 +3018,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                                 elem_vol,
                                 elem_div,
                                 elem_mat_id,
-                                elem_statev);
+                                elem_statev,
+                                1,
+                                cycle);
 
+        force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
         const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         //const_vec_array current_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array previous_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);

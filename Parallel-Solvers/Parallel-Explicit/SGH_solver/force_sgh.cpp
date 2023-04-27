@@ -20,7 +20,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
                    DViewCArrayKokkos <double> &corner_force,
                    const DViewCArrayKokkos <double> &elem_statev,
-                   const double rk_alpha
+                   const double rk_alpha,
+                   const size_t cycle
                    ){
     
     // --- calculate the forces acting on the nodes from the element ---
@@ -405,7 +406,9 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                    const DViewCArrayKokkos <double> &elem_vol,
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
-                   const DViewCArrayKokkos <double> &elem_statev
+                   const DViewCArrayKokkos <double> &elem_statev,
+                   const double rk_alpha,
+                   const size_t cycle
                    ){
     
     // --- calculate the forces acting on the nodes from the element ---
@@ -777,7 +780,9 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                    const DViewCArrayKokkos <double> &elem_vol,
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
-                   const DViewCArrayKokkos <double> &elem_statev
+                   const DViewCArrayKokkos <double> &elem_statev,
+                   const double rk_alpha,
+                   const size_t cycle
                    ){
     
     // --- calculate the forces acting on the nodes from the element ---
@@ -1152,7 +1157,8 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
                      DViewCArrayKokkos <double> &corner_force,
                      const DViewCArrayKokkos <double> &elem_statev,
-                     const double rk_alpha
+                     const double rk_alpha,
+                     const size_t cycle
                      ){
     
     // --- calculate the forces acting on the nodes from the element ---
