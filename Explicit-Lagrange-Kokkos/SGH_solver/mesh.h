@@ -825,10 +825,11 @@ namespace region
     // for tagging boundary faces
     enum vol_tag
     {
-        global = 0,     // tag every cell in the mesh
-        box = 1,        // tag all cells inside a box
-        cylinder = 2,   // tag all cells inside a cylinder
-        sphere = 3      // tag all cells inside a sphere
+        global = 0,     // tag every elements in the mesh
+        box = 1,        // tag all elements inside a box
+        cylinder = 2,   // tag all elements inside a cylinder
+        sphere = 3,     // tag all elements inside a sphere
+        readVoxelFile = 4       // tag all elements in a voxel mesh input
     };
 
 } // end of namespace
@@ -934,6 +935,13 @@ struct boundary_t {
     // BC type
     bdy::bdy_hydro_conds hydro_bc;
     
+    // velocity
+    // if t_end > time > t_start
+    // v(t) = v0 exp(-v1*(time - time_start) )
+    double hydro_bc_vel_0;
+    double hydro_bc_vel_1;
+    double hydro_bc_vel_t_start;
+    double hydro_bc_vel_t_end;
 };
 
 
@@ -1098,7 +1106,8 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
 
 void boundary_velocity(const mesh_t &mesh,
                        const CArrayKokkos <boundary_t> &boundary,
-                       DViewCArrayKokkos <double> &node_vel);
+                       DViewCArrayKokkos <double> &node_vel,
+                       const double time_value);
 
 
 KOKKOS_FUNCTION
