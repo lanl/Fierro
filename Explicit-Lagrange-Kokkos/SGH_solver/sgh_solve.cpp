@@ -172,7 +172,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
         // ---------------------------------------------------------------------
         // build mesh colors for load balancing
         // ---------------------------------------------------------------------
-        
+        /*
         DynamicRaggedRightArrayKokkos <size_t> elems_in_color(2, mesh.num_elems);
         DCArrayKokkos <size_t> num_elems_in_color(2);
 
@@ -309,7 +309,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
             
             
             // Using the mesh coloring as following
-            /*
+            
              
             for(size_t color = 0; color < 2; color++ ){
                 
@@ -324,11 +324,11 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                 
             } // end for over colors
              
-             */
+           
             
         } // end if on cycle for making the mesh coloring
         
-        
+         */
         
         // ---------------------------------------------------------------------
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
@@ -420,7 +420,7 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                                 corner_force);
             
             // ---- apply force boundary conditions to the boundary patches----
-            boundary_velocity(mesh, boundary, node_vel);
+            boundary_velocity(mesh, boundary, node_vel, time_value);
             
             
             

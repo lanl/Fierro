@@ -9,7 +9,8 @@
 
 void boundary_velocity(const mesh_t &mesh,
                        const CArrayKokkos <boundary_t> &boundary,
-                       DViewCArrayKokkos <double> &node_vel){
+                       DViewCArrayKokkos <double> &node_vel,
+                       const double time_value){
 
     
     // Loop over boundary sets
@@ -44,7 +45,33 @@ void boundary_velocity(const mesh_t &mesh,
                 }
                 
             }// end if
-            
+            else if (boundary(bdy_set).hydro_bc == bdy::velocity){
+                
+                
+                size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+                
+                
+                // directions with hydro_bc:
+                // x_plane  = 0,
+                // y_plane  = 1,
+                // z_plane  = 2,
+                size_t direction = boundary(bdy_set).surface;
+                
+                // Set velocity to that directdion to specified value
+                // if t_end > time > t_start
+                // v(t) = v0 exp(-v1*(time - time_start) )
+                if (time_value >= boundary(bdy_set).hydro_bc_vel_t_start &&
+                    time_value <= boundary(bdy_set).hydro_bc_vel_t_end){
+                    
+                    double time_delta = time_value - boundary(bdy_set).hydro_bc_vel_t_start;
+                    
+                    node_vel(1, bdy_node_gid, direction) =
+                        boundary(bdy_set).hydro_bc_vel_0 *
+                        exp(-boundary(bdy_set).hydro_bc_vel_1 * time_delta );
+                    
+                } // end if on time
+                
+            }// end if
             
                 
         }); // end for bdy_node_lid
