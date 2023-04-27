@@ -62,6 +62,9 @@ public:
 
   void setup();
 
+  // to allow the user strngth model interface to do all neccesary cleanup
+  void cleanup_user_strength_model();
+
   void sgh_solve();
 
   void get_force_sgh(const DCArrayKokkos <material_t> &material,
@@ -71,14 +74,15 @@ public:
                      const DViewCArrayKokkos <double> &elem_den,
                      const DViewCArrayKokkos <double> &elem_sie,
                      const DViewCArrayKokkos <double> &elem_pres,
-                     const DViewCArrayKokkos <double> &elem_stress,
+                     DViewCArrayKokkos <double> &elem_stress,
                      const DViewCArrayKokkos <double> &elem_sspd,
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
                      DViewCArrayKokkos <double> &corner_force,
                      const DViewCArrayKokkos <double> &elem_statev,
-                     const double rk_alpha);
+                     const double rk_alpha,
+                     const size_t cycle);
 
   void get_force_vgradient_sgh(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
@@ -94,7 +98,8 @@ public:
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
                      DViewCArrayKokkos <double> &corner_force,
                      const DViewCArrayKokkos <double> &elem_statev,
-                     const double rk_alpha);
+                     const double rk_alpha,
+                     const size_t cycle);
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
@@ -110,7 +115,8 @@ public:
                        const DViewCArrayKokkos <size_t> &elem_mat_id,
                        DViewCArrayKokkos <double> &corner_force,
                        const DViewCArrayKokkos <double> &elem_statev,
-                       const double rk_alpha);
+                       const double rk_alpha,
+                       const size_t cycle);
   
   void update_position_sgh(double rk_alpha,
                            const size_t num_nodes,
@@ -276,7 +282,8 @@ public:
                     const DViewCArrayKokkos <double> &elem_mass,
                     const DViewCArrayKokkos <size_t> &elem_mat_id,
                     const DViewCArrayKokkos <double> &elem_statev,
-                    const double rk_alpha);
+                    const double rk_alpha,
+                    const size_t cycle);
 
 
   void update_state2D(const DCArrayKokkos <material_t> &material,
@@ -292,7 +299,8 @@ public:
                       const DViewCArrayKokkos <double> &elem_mass,
                       const DViewCArrayKokkos <size_t> &elem_mat_id,
                       const DViewCArrayKokkos <double> &elem_statev,
-                      const double rk_alpha);
+                      const double rk_alpha,
+                      const size_t cycle);
 
   KOKKOS_INLINE_FUNCTION
   void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,

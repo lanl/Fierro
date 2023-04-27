@@ -1,0 +1,66 @@
+# input file
+solver_type: SGH
+
+solver_options:
+    num_dims: 3
+    mesh_file_format: ensight
+    mesh_file_name: mesh_single_element.geo
+    time_variables:
+        time_final: 1.0
+        dt_min: 1.e-14
+        dt_max: 1.e-3
+        dt_start: 1.e-11
+        dt_cfl: 0.4e+3
+        cycle_stop: 2000000
+
+output_options:
+  graphics_step: 1.e-2
+
+material_options:
+    num_materials: 1
+    max_num_state_var: 0
+    material_1:
+        #eos model is required
+        eos_model: user_eos_model
+        strength_model: user_strength_model
+        strength_type: hypo
+        strength_setup: user_init
+        strength_run_location: host
+        q1: 1.0
+        q2: 1.3333
+        q1ex: 1.0
+        q2ex: 0.0
+
+        num_state_vars: 0
+
+region_options:
+    num_fills: 1
+    #global initial conditions
+    mat_fill_1:
+        volume: global
+        mat_id: 0
+        den: 8.96e-9
+        sie: 1.0e-17
+            
+        velocity: cartesian
+        u: 0.0
+        v: 0.0
+        w: 0.0
+    
+boundary_condition_options:
+    num_bcs: 2
+    # Tag Z plane
+    boundary_condition_1:
+        surface: z_plane
+        value: 0.0
+        condition_type: fixed
+            
+    # Tag Z plane
+    boundary_condition_2:
+        surface: z_plane
+        value: 1.0
+        condition_type: velocity
+        u: 0.0
+        v: 0.0
+        w: 1.0
+

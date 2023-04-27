@@ -7,6 +7,10 @@ target_include_directories(parallel_base_src PRIVATE ${MPI_CXX_INCLUDE_PATH} ${M
 target_compile_options (parallel_base_src PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
 target_link_libraries (parallel_base_src ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 
+# New User Material Interface
+include_directories(User-Material-Interface)
+add_subdirectory(User-Material-Interface)
+
 if(BUILD_IMPLICIT_SOLVER)
 add_subdirectory(Implicit-Lagrange)
 endif()
