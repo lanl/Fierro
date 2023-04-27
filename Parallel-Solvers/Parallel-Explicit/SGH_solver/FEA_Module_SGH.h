@@ -96,10 +96,26 @@ public:
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     DViewCArrayKokkos <double> &corner_force,
                      const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
+
+  void get_force_ugradient_sgh(const DCArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_sie,
+                     const DViewCArrayKokkos <double> &elem_pres,
+                     const DViewCArrayKokkos <double> &elem_stress,
+                     const DViewCArrayKokkos <double> &elem_sspd,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     const DViewCArrayKokkos <double> &elem_statev,
+                     const double rk_alpha,
+                     const size_t cycle);
+
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
@@ -365,6 +381,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
 
   void comm_node_masses();
 
+  void comm_adjoint_vectors(int cycle);
+
   void comm_variables(Teuchos::RCP<const MV> zp);
 
   void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header);
@@ -431,6 +449,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   void compute_topology_optimization_adjoint_full(); //Force depends on node coords and velocity
 
   void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
+
+  void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
   
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
@@ -496,6 +516,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
   Teuchos::RCP<MV> node_masses_distributed;
   Teuchos::RCP<MV> ghost_node_masses_distributed;
+  Teuchos::RCP<MV> adjoint_vector_distributed;
+  Teuchos::RCP<MV> phi_adjoint_vector_distributed;
   std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
   std::vector<Teuchos::RCP<MV>> forward_solve_coordinate_data;
   std::vector<Teuchos::RCP<MV>> adjoint_vector_data;

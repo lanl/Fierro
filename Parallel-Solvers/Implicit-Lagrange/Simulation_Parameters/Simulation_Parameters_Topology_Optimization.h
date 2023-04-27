@@ -68,6 +68,9 @@ class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
   //When on, all element nodes connected to a boundary condition patch will have their density constrained
   bool thick_condition_boundary;
 
+  //method of moving asymptotes enabled for the optimization algorithm
+  bool mma_on;
+
   //file output parameters
   int optimization_output_freq;
 

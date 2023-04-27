@@ -49,5 +49,6 @@
 #include "Heat_Capacity_Potential_Minimize.h"
 #include "Heat_Capacity_Potential_Constraint.h"
 #include "Multi_Objective.h"
+#include "MMA_Objective.hpp"
 
 #endif // end HEADER_H

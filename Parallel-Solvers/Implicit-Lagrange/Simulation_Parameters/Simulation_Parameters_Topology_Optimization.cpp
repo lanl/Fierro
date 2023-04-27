@@ -52,11 +52,12 @@ Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Opti
   nodal_density_flag = true;
   thick_condition_boundary = true;
   topology_optimization_on = shape_optimization_on = helmholtz_filter = false;
-  optimization_output_freq = 20;
+  optimization_output_freq = 2000;
   penalty_power = 3;
   density_epsilon = 0.0001;
   nTO_modules = 0;
   multi_objective_structure = "linear";
+  mma_on = false;
 }
 
 Simulation_Parameters_Topology_Optimization::~Simulation_Parameters_Topology_Optimization(){
@@ -322,6 +323,7 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
         Function_Arguments.resize(buffer_size);
         TO_Module_My_FEA_Module.resize(buffer_size);
       }
+      Function_Arguments[nTO_modules].clear();
 
       //constraint request
       //function arguments for constraint; constraint value is the first
