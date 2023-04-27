@@ -937,7 +937,10 @@ struct boundary_t {
     
     // tag surface value or radius
     real_t value;
-    
+
+    // velocity coefficients by component
+    double u,v,w;
+   
     // BC type
     bdy::bdy_hydro_conds hydro_bc;
     

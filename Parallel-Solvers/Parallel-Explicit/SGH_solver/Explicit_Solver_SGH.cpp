@@ -531,10 +531,11 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     
     // ---------------------------------------------------------------------
     //  Calculate the SGH solution
-    // ---------------------------------------------------------------------
-        
+    // ---------------------------------------------------------------------  
     sgh_module->sgh_solve();
-         
+
+    // cleanup user strength model if any
+    sgh_module->cleanup_user_strength_model(); 
 
     //printf("Finished\n");
     
