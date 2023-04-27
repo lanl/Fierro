@@ -3070,11 +3070,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
           real_t rate_of_change;
           for (int idim = 0; idim < num_dim; idim++){
-            rate_of_change = previous_velocity_vector(node_gid,idim)- 
+            rate_of_change = -(previous_velocity_vector(node_gid,idim)- 
                              previous_adjoint_vector(node_gid,idim)*previous_force_gradient_velocity(node_gid,idim)/node_mass(node_gid)-
-                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
+                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid));
             current_adjoint_vector(node_gid,idim) = rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
-            rate_of_change = -previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim);
+            rate_of_change = -(-previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim));
             phi_current_adjoint_vector(node_gid,idim) = rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
           } 
         }); // end parallel for
@@ -3541,7 +3541,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
           size_t corner_id;
           for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
             corner_id = corners_in_node(node_id,icorner);
-            design_gradients(node_id,0) += corner_value_storage(corner_id);
+            design_gradients(node_id,0) += -corner_value_storage(corner_id)/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
           }
         }); // end parallel for
         Kokkos::fence();
@@ -3583,13 +3583,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
       
     
   }
-
-  //multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
-  FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-    design_gradients(node_id,0) *=-1/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
-    //design_gradients(node_id,0) =0.00001;
-  }); // end parallel for
-  Kokkos::fence();
 
   //gradient contribution from Force vector.
   for (int cycle = 0; cycle < last_time_step+1; cycle++) {
