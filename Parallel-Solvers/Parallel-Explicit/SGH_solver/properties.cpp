@@ -41,6 +41,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
         
         size_t mat_id = elem_mat_id(elem_gid);
         
+        //initialize elem pressure
+        elem_pres(elem_gid) = 0;
         
         // --- Stress ---
         // hyper elastic plastic model
@@ -149,7 +151,9 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
         elem_den(elem_gid) = elem_mass(elem_gid)/elem_vol(elem_gid);
         
         size_t mat_id = elem_mat_id(elem_gid);
-        
+
+        //initialize elem pressure
+        elem_pres(elem_gid) = 0;
         
         // --- Stress ---
         // hyper elastic plastic model

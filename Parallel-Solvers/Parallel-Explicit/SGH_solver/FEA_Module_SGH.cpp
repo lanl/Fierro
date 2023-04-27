@@ -3055,7 +3055,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                                 1,
                                 cycle);
 
-        force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
+        //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
         const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         //const_vec_array current_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array previous_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);

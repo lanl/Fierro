@@ -135,9 +135,11 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         } //end for
 
         // add the pressure
-        for (int i = 0; i < num_dims; i++){
-            tau(i, i) -= elem_pres(elem_gid);
-        } // end for
+        if(elem_pres(elem_gid)!=0){
+            for (int i = 0; i < num_dims; i++){
+                tau(i, i) -= elem_pres(elem_gid);
+            } // end for
+        }
         
         
 
