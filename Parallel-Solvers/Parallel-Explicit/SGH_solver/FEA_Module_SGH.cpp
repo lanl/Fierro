@@ -137,6 +137,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
     all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
     force_gradient_velocity = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
     force_gradient_position = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+    force_gradient_design = Teuchos::rcp(new MV(all_node_map, 1));
     corner_value_storage = Solver_Pointer->corner_value_storage;
     corner_vector_storage = Solver_Pointer->corner_vector_storage;
     relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
@@ -3721,7 +3722,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
           for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
             node_id = nodes_in_elem(elem_id, ifill);
             for(int idim=0; idim < num_dim; idim++){
-              inner_product += 0*current_element_adjoint(ifill,idim);
+              inner_product += 0.0001*current_element_adjoint(ifill,idim);
               //inner_product += 0.0001;
             }
           }
