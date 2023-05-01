@@ -116,6 +116,22 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
+  void get_force_dgradient_sgh(const DCArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_sie,
+                     const DViewCArrayKokkos <double> &elem_pres,
+                     const DViewCArrayKokkos <double> &elem_stress,
+                     const DViewCArrayKokkos <double> &elem_sspd,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     const DViewCArrayKokkos <double> &elem_statev,
+                     const double rk_alpha,
+                     const size_t cycle);
+
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
@@ -522,6 +538,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   std::vector<Teuchos::RCP<MV>> forward_solve_coordinate_data;
   std::vector<Teuchos::RCP<MV>> adjoint_vector_data;
   std::vector<Teuchos::RCP<MV>> phi_adjoint_vector_data;
+  Teuchos::RCP<MV> force_gradient_design;
   Teuchos::RCP<MV> force_gradient_position;
   Teuchos::RCP<MV> force_gradient_velocity;
   std::vector<real_t> time_data;
