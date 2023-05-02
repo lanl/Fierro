@@ -190,6 +190,19 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
     }
   }
 
+  current_option = "optimization_options:method_of_moving_asymptotes";
+  if(set_options.find(current_option)!=set_options.end()){
+    if(set_options[current_option]=="enabled"){
+      //std::cout << "FOUND TO SETTING" << std::endl;
+      mma_on = true;
+      set_options.erase(current_option);
+    }
+    else if(set_options[current_option]=="disabled"){
+      mma_on = false;
+      set_options.erase(current_option);
+    }
+  }
+
   //read in TO parameters
   if(topology_optimization_on){
     current_option = "optimization_options:simp_penalty_power";
