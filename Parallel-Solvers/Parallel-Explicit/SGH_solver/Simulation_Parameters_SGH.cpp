@@ -764,6 +764,7 @@ void Simulation_Parameters_SGH::apply_settings(){
        dt_start = std::stod(set_options[current_option]);
        set_options.erase(current_option);
     }
+    dt = dt_start;
 
     current_option = "solver_options:time_variables:dt_cfl";
     if(set_options.find(current_option)!=set_options.end()){
@@ -779,9 +780,10 @@ void Simulation_Parameters_SGH::apply_settings(){
     
     current_option = "output_options:graphics_step";
     if(set_options.find(current_option)!=set_options.end()){
-       graphics_time = std::stod(set_options[current_option]);
+       graphics_dt_ival = std::stod(set_options[current_option]);
        set_options.erase(current_option);
     }
+    graphics_time = graphics_dt_ival;
 
     current_option = "material_options:num_materials";   
     //obtain number of materials

@@ -6,19 +6,19 @@ solver_options:
     mesh_file_format: ensight
     mesh_file_name: mesh_single_element.geo
     time_variables:
-        time_final: 1.0
-        dt_min: 1.e-14
-        dt_max: 1.e-3
-        dt_start: 1.e-11
+        time_final: 1.0  #[s]
+        dt_min: 1.e-14  #[s]
+        dt_max: 1.e-3  #[s]
+        dt_start: 1.e-11  #[s]
         dt_cfl: 0.4e+3
         cycle_stop: 2000000
 
 output_options:
-  graphics_step: 1.e-2
+  graphics_step: 1.e-2  #[s]
 
 material_options:
     num_materials: 1
-    max_num_state_var: 0
+    max_num_state_var: 1
     material_1:
         #eos model is required
         eos_model: user_eos_model
@@ -31,7 +31,7 @@ material_options:
         q1ex: 1.0
         q2ex: 0.0
 
-        num_state_vars: 0
+        num_state_vars: 1
 
 region_options:
     num_fills: 1
@@ -39,13 +39,13 @@ region_options:
     mat_fill_1:
         volume: global
         mat_id: 0
-        den: 8.96e-9
-        sie: 1.0e-17
+        den: 8.96e-9  #[tonne/mm3]
+        sie: 1.0e-17  #[mJ]
             
         velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
+        u: 0.0  #[mm/s]
+        v: 0.0  #[mm/s]
+        w: 0.0  #[mm/s]
     
 boundary_condition_options:
     num_bcs: 2
@@ -60,7 +60,7 @@ boundary_condition_options:
         surface: z_plane
         value: 1.0
         condition_type: velocity
-        u: 0.0
-        v: 0.0
-        w: 1.0
+        u: 0.0  #[mm/s]
+        v: 0.0  #[mm/s]
+        w: 1.0  #[mm/s]
 
