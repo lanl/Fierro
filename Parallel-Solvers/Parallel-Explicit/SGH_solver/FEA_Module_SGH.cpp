@@ -3304,38 +3304,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
         }); // end parallel for
         Kokkos::fence();
         
-        //test code
-        /*
-        for(int elem_id=0; elem_id < rnum_elem; elem_id++) {
-          size_t node_id;
-          size_t corner_id;
-          real_t inner_product;
-
-          //current_nodal_velocities
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            current_element_velocities(inode,0) = current_velocity_vector(node_id,0);
-            current_element_velocities(inode,1) = current_velocity_vector(node_id,1);
-            if(num_dim==3)
-            current_element_velocities(inode,2) = current_velocity_vector(node_id,2);
-          }
-
-          inner_product = 0;
-          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-            node_id = nodes_in_elem(elem_id, ifill);
-            for(int idim=0; idim < num_dim; idim++){
-              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
-            }
-          }
-
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            if(node_id < nlocal_nodes)
-              design_gradients(node_id,0) += inner_product*global_dt;
-          }
-          
-        } 
-        */
       } //end view scope
 
       
@@ -3437,39 +3405,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
           }
         }); // end parallel for
         Kokkos::fence();
-        
-        //test code
-        /*
-        for(int elem_id=0; elem_id < rnum_elem; elem_id++) {
-          size_t node_id;
-          size_t corner_id;
-          real_t inner_product;
 
-          //current_nodal_velocities
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            current_element_velocities(inode,0) = current_velocity_vector(node_id,0);
-            current_element_velocities(inode,1) = current_velocity_vector(node_id,1);
-            if(num_dim==3)
-            current_element_velocities(inode,2) = current_velocity_vector(node_id,2);
-          }
-
-          inner_product = 0;
-          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-            node_id = nodes_in_elem(elem_id, ifill);
-            for(int idim=0; idim < num_dim; idim++){
-              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
-            }
-          }
-
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            if(node_id < nlocal_nodes)
-              design_gradients(node_id,0) += inner_product*global_dt;
-          }
-          
-        } 
-        */
       } //end view scope
 
       
@@ -3551,38 +3487,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
         }); // end parallel for
         Kokkos::fence();
         
-        //test code
-        /*
-        for(int elem_id=0; elem_id < rnum_elem; elem_id++) {
-          size_t node_id;
-          size_t corner_id;
-          real_t inner_product;
-
-          //current_nodal_velocities
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            current_element_velocities(inode,0) = current_velocity_vector(node_id,0);
-            current_element_velocities(inode,1) = current_velocity_vector(node_id,1);
-            if(num_dim==3)
-            current_element_velocities(inode,2) = current_velocity_vector(node_id,2);
-          }
-
-          inner_product = 0;
-          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-            node_id = nodes_in_elem(elem_id, ifill);
-            for(int idim=0; idim < num_dim; idim++){
-              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
-            }
-          }
-
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            if(node_id < nlocal_nodes)
-              design_gradients(node_id,0) += inner_product*global_dt;
-          }
-          
-        } 
-        */
       } //end view scope
 
       
@@ -3641,38 +3545,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
     }); // end parallel for
     Kokkos::fence();
     
-    //test code
-    /*
-    for(int elem_id=0; elem_id < rnum_elem; elem_id++) {
-      size_t node_id;
-      size_t corner_id;
-      real_t inner_product;
-
-      //current_nodal_velocities
-      for (int inode = 0; inode < num_nodes_in_elem; inode++){
-        node_id = nodes_in_elem(elem_id, inode);
-        current_element_velocities(inode,0) = current_velocity_vector(node_id,0);
-        current_element_velocities(inode,1) = current_velocity_vector(node_id,1);
-        if(num_dim==3)
-        current_element_velocities(inode,2) = current_velocity_vector(node_id,2);
-      }
-
-      inner_product = 0;
-      for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-        node_id = nodes_in_elem(elem_id, ifill);
-        for(int idim=0; idim < num_dim; idim++){
-          inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
-        }
-      }
-
-      for (int inode = 0; inode < num_nodes_in_elem; inode++){
-        node_id = nodes_in_elem(elem_id, inode);
-        if(node_id < nlocal_nodes)
-          design_gradients(node_id,0) += inner_product*global_dt;
-      }
-      
-    } 
-    */
   } //end view scope
 
   //gradient contribution from Force vector.
@@ -3708,13 +3580,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
           //current_nodal_velocities
           for (int inode = 0; inode < num_nodes_in_elem; inode++){
             node_id = nodes_in_elem(elem_id, inode);
-            //analytical solution debug
-            /*
-            current_element_adjoint(inode,0) = current_coord_vector(node_id,0) - final_coordinates(node_id,0);
-            current_element_adjoint(inode,1) = current_coord_vector(node_id,1) - final_coordinates(node_id,1);
-            if(num_dim==3)
-            current_element_adjoint(inode,2) = current_coord_vector(node_id,2) - final_coordinates(node_id,2);
-            */
             current_element_adjoint(inode,0) = (current_adjoint_vector(node_id,0)+next_adjoint_vector(node_id,0))/2;
             current_element_adjoint(inode,1) = (current_adjoint_vector(node_id,1)+next_adjoint_vector(node_id,1))/2;
             if(num_dim==3)
@@ -3750,38 +3615,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
         }); // end parallel for
         Kokkos::fence();
         
-        //test code
-        /*
-        for(int elem_id=0; elem_id < rnum_elem; elem_id++) {
-          size_t node_id;
-          size_t corner_id;
-          real_t inner_product;
-
-          //current_nodal_velocities
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            current_element_velocities(inode,0) = current_velocity_vector(node_id,0);
-            current_element_velocities(inode,1) = current_velocity_vector(node_id,1);
-            if(num_dim==3)
-            current_element_velocities(inode,2) = current_velocity_vector(node_id,2);
-          }
-
-          inner_product = 0;
-          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-            node_id = nodes_in_elem(elem_id, ifill);
-            for(int idim=0; idim < num_dim; idim++){
-              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
-            }
-          }
-
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            if(node_id < nlocal_nodes)
-              design_gradients(node_id,0) += inner_product*global_dt;
-          }
-          
-        } 
-        */
       } //end view scope
 
       
