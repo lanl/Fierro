@@ -99,6 +99,7 @@ class ObjectiveMMA : public ROL::Objective<real_t> {
   typedef MV::dual_view_type dual_vec_array;
   typedef ROL::Objective<real_t>       OBJ;
   typedef ROL::BoundConstraint<real_t> BND;
+  int update_count = 0;
 
 private:
 
@@ -106,8 +107,10 @@ private:
   const ROL::Ptr<BND> bnd_;
   
 
-  ROL::Ptr<const_V> l_; // Lower bound
-  ROL::Ptr<const_V> u_; // Upper bound
+  ROL::Ptr<const_V> l_shift; // Lower bound
+  ROL::Ptr<const_V> u_shift; // Upper bound
+  ROL::Ptr<V> lv_; // Lower bound
+  ROL::Ptr<V> uv_; // Upper bound
   
   ROL::Ptr<V> p_; // First MMA numerator
   ROL::Ptr<V> q_; // Second MMA numerator
@@ -134,13 +137,17 @@ public:
                 real_t tol=std::sqrt(ROL::ROL_EPSILON<real_t>()) ) : 
     obj_(obj), bnd_(bnd), tol_(tol) {
 
-    l_   = bnd_->getLowerBound();
-    u_   = bnd_->getUpperBound();
+    l_shift   = bnd_->getLowerBound();
+    u_shift   = bnd_->getUpperBound();
     
 
     p_   = x->clone();
     q_   = x->clone();
     d_   = x->clone();
+    lv_  = x->clone();
+    uv_  = x->clone();
+
+    update_count = 0;
  
   }
 
@@ -150,6 +157,9 @@ public:
     ROL::Elementwise::ThresholdLower<real_t> negative(0.0);
     ROL::Elementwise::Power<real_t>          square(2.0);
     ROL::Elementwise::Multiply<real_t>       mult;
+    ROL::Elementwise::Scale<real_t>          negative_one(-1);
+    ROL::Elementwise::Scale<real_t>          limit_scalar(0.25);
+    ROL::Elementwise::Scale<real_t>          limit_invscalar(4);
 
     if (type == ROL::UpdateType::Initial)  {
       // This is the first call to update
@@ -158,109 +168,119 @@ public:
       fval_ = obj_->value(x,tol_);
       obj_->gradient(*p_,x,tol_);
       q_->set(*p_);
+      lv_->set(x);
+      uv_->set(x);
+      lv_->axpy(1.0,*l_shift);
+      uv_->axpy(1.0,*u_shift);
 
       p_->applyUnary(positive);
       q_->applyUnary(negative);
 
-      d_->set(x);
-      d_->axpy(-1.0,*l_);
+      d_->set(*uv_);
+      d_->axpy(-1.0,x);
       d_->applyUnary(square);
       p_->applyBinary(mult,*d_);
 
-      d_->set(*u_);
-      d_->axpy(-1.0,x);
+      d_->set(x);
+      d_->axpy(-1.0,*lv_);
       d_->applyUnary(square);
       q_->applyBinary(mult,*d_);
+      q_->applyUnary(negative_one);
+
     }
     else if (type == ROL::UpdateType::Accept) {
       // u_ was set to u=S(x) during a trial update
       // and has been accepted as the new iterate
+      // This is the first call to update
       obj_->update(x,type,iter);
       
       fval_ = obj_->value(x,tol_);
       obj_->gradient(*p_,x,tol_);
       q_->set(*p_);
+      lv_->set(x);
+      uv_->set(x);
+      lv_->axpy(1.0,*l_shift);
+      uv_->axpy(1.0,*u_shift);
 
       p_->applyUnary(positive);
       q_->applyUnary(negative);
 
-      d_->set(x);
-      d_->axpy(-1.0,*l_);
+      d_->set(*uv_);
+      d_->axpy(-1.0,x);
       d_->applyUnary(square);
       p_->applyBinary(mult,*d_);
 
-      d_->set(*u_);
-      d_->axpy(-1.0,x);
+      d_->set(x);
+      d_->axpy(-1.0,*lv_);
       d_->applyUnary(square);
       q_->applyBinary(mult,*d_);
+      q_->applyUnary(negative_one);
     }
     else if (type == ROL::UpdateType::Revert) {
       // u_ was set to u=S(x) during a trial update
       // and has been rejected as the new iterate
       // Revert to cached value
+      // This is the first call to update
+      // u_ was set to u=S(x) during a trial update
+      // and has been accepted as the new iterate
+      // This is the first call to update
       obj_->update(x,type,iter);
       
       fval_ = obj_->value(x,tol_);
       obj_->gradient(*p_,x,tol_);
       q_->set(*p_);
+      lv_->set(x);
+      uv_->set(x);
+      lv_->axpy(1.0,*l_shift);
+      uv_->axpy(1.0,*u_shift);
 
       p_->applyUnary(positive);
       q_->applyUnary(negative);
 
-      d_->set(x);
-      d_->axpy(-1.0,*l_);
+      d_->set(*uv_);
+      d_->axpy(-1.0,x);
       d_->applyUnary(square);
       p_->applyBinary(mult,*d_);
 
-      d_->set(*u_);
-      d_->axpy(-1.0,x);
+      d_->set(x);
+      d_->axpy(-1.0,*lv_);
       d_->applyUnary(square);
       q_->applyBinary(mult,*d_);
+      q_->applyUnary(negative_one);
     }
     else if (type == ROL::UpdateType::Trial) {
       // This is a new value of x
-
       obj_->update(x,type,iter);
       
       fval_ = obj_->value(x,tol_);
       obj_->gradient(*p_,x,tol_);
       q_->set(*p_);
+      lv_->set(x);
+      uv_->set(x);
+      lv_->axpy(1.0,*l_shift);
+      uv_->axpy(1.0,*u_shift);
 
       p_->applyUnary(positive);
       q_->applyUnary(negative);
 
-      d_->set(x);
-      d_->axpy(-1.0,*l_);
+      d_->set(*uv_);
+      d_->axpy(-1.0,x);
       d_->applyUnary(square);
       p_->applyBinary(mult,*d_);
 
-      d_->set(*u_);
-      d_->axpy(-1.0,x);
+      d_->set(x);
+      d_->axpy(-1.0,*lv_);
       d_->applyUnary(square);
       q_->applyBinary(mult,*d_);
+      q_->applyUnary(negative_one);
+
+      // This is the first call to update
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,
       // e.g., finite-difference checks
       
-      obj_->update(x,type,iter);
-   
-      fval_ = obj_->value(x,tol_);
-      obj_->gradient(*p_,x,tol_);
-      q_->set(*p_);
-
-      p_->applyUnary(positive);
-      q_->applyUnary(negative);
-
-      d_->set(x);
-      d_->axpy(-1.0,*l_);
-      d_->applyUnary(square);
-      p_->applyBinary(mult,*d_);
-
-      d_->set(*u_);
-      d_->axpy(-1.0,x);
-      d_->applyUnary(square);
-      q_->applyBinary(mult,*d_);
+      // This is the first call to update
     }
 
   }
@@ -282,13 +302,13 @@ public:
     //*fos << "Gradient data :" << std::endl;
     //pp->describe(*fos,Teuchos::VERB_EXTREME);
 
-    d_->set(*u_);
+    d_->set(*uv_);
     d_->axpy(-1.0,x);
     d_->applyBinary(divinv,*p_);  
 
     fval += d_->reduce(sum);
     d_->set(x);
-    d_->axpy(-1.0,*l_);
+    d_->axpy(-1.0,*lv_);
     d_->applyBinary(divinv,*q_);
 
     fval += d_->reduce(sum);   
@@ -304,8 +324,9 @@ public:
 
     ROL::Elementwise::DivideAndInvert<real_t> divinv;
     ROL::Elementwise::Power<real_t>           square(2.0);
+    ROL::Elementwise::Scale<real_t>          negative_one(-1);
 
-    d_->set(*u_);
+    d_->set(*uv_);
     d_->axpy(-1.0,x);
     d_->applyUnary(square);
     d_->applyBinary(divinv,*p_);            
@@ -313,9 +334,10 @@ public:
     g.set(*d_);
 
     d_->set(x);
-    d_->axpy(-1.0,*l_);
+    d_->axpy(-1.0,*lv_);
     d_->applyUnary(square);
     d_->applyBinary(divinv,*q_);
+    d_->applyUnary(negative_one);
 
     g.plus(*d_);
 
@@ -327,16 +349,16 @@ public:
     ROL::Elementwise::Multiply<real_t>        mult;
     ROL::Elementwise::Power<real_t>           cube(3.0);
 
-    d_->set(*u_);
+    d_->set(*uv_);
     d_->axpy(-1.0,x);
     d_->applyUnary(cube);          
     d_->applyBinary(divinv,*p_);           
-    d_->scale(-2.0);
+    d_->scale(2.0);
 
     hv.set(*d_); 
 
     d_->set(x);
-    d_->axpy(-1.0,*l_);
+    d_->axpy(-1.0,*lv_);
     d_->applyUnary(cube);
     d_->applyBinary(divinv,*q_);
     d_->scale(2.0);
@@ -352,16 +374,16 @@ public:
     ROL::Elementwise::Multiply<real_t>        mult;
     ROL::Elementwise::Power<real_t>           cube(3.0);
 
-    d_->set(*u_);
+    d_->set(*uv_);
     d_->axpy(-1.0,x);
     d_->applyUnary(cube);          
     d_->applyBinary(divinv,*p_);           
-    d_->scale(-2.0);
+    d_->scale(2.0);
 
     hv.set(*d_); 
 
     d_->set(x);
-    d_->axpy(-1.0,*l_);
+    d_->axpy(-1.0,*lv_);
     d_->applyUnary(cube);
     d_->applyBinary(divinv,*q_);
     d_->scale(2.0);

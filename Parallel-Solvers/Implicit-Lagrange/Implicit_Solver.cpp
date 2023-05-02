@@ -1246,7 +1246,7 @@ void Implicit_Solver::setup_optimization_problem(){
       //mma_upper_bound_node_densities_distributed->assign(*upper_bound_node_densities_distributed);
       
       mma_lower_bound_node_densities_distributed->putScalar(-0.1);
-      mma_upper_bound_node_densities_distributed->putScalar(1.1);
+      mma_upper_bound_node_densities_distributed->putScalar(0.1);
       mma_lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_lower_bound_node_densities_distributed);
       mma_upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_upper_bound_node_densities_distributed);
       
