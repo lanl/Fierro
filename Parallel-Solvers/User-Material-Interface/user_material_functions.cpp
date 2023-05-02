@@ -111,14 +111,21 @@ void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
     */
   
     const size_t num_dims = 3;
+
+#if BUILD_EVPFFT
+    /* Note: since evpfft is a coupled model, no need to 
+             calculate pressure
+    */
     elem_pres(elem_gid) = 0.0;  // pressure
-    elem_sspd(elem_gid) = 2400.0;  // sound speed
-    
+    elem_sspd(elem_gid) = 2270000;  // [mm/s] // sound speed
+#endif
+
+#if 0    
     // pressure = 1/3tr(stress)
     for (size_t i=0; i<num_dims; i++){
         elem_pres(elem_gid) -= elem_stress(1,elem_gid,i,i);
     }
     elem_pres(elem_gid) *= 1.0/3.0;
-    
+#endif    
     return;
 } // end user_eos_model

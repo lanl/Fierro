@@ -2800,8 +2800,11 @@ void FEA_Module_SGH::sgh_solve(){
               }); // end parallel for
             } //end view scope
 
-            if(myrank==0)
+            if(myrank==0){
               printf("Writing outputs to file at %f \n", graphics_time);
+            }
+            Explicit_Solver_Pointer_->parallel_vtk_writer();
+            //Explicit_Solver_Pointer_->parallel_tecplot_writer();
               /*
             write_outputs(mesh,
                           Explicit_Solver_Pointer_,
