@@ -205,6 +205,10 @@ void Implicit_Solver::run(int argc, char *argv[]){
         read_mesh_ansys_dat(simparam->mesh_file_name.c_str());
       else if(simparam->mesh_file_format=="ensight")
         read_mesh_ensight(simparam->mesh_file_name.c_str());
+      else{
+        *fos << "YAML input requested an unrecognized mesh file format." << std::endl;
+        exit_solver(0);
+      }
 
       //assign map with read in options removed from inheritors to the base class
       simparam_TO->FEA_module_setup();
@@ -873,9 +877,9 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
   //flag elasticity fea module for boundary/loading conditions readin that remains
   if(!No_Conditions){
     //look for elasticity module in Simulation Parameters data; if not declared add the module
-    int nfea_modules = simparam_TO->nfea_modules;
+    int nfea_modules = simparam->nfea_modules;
     bool elasticity_found = false;
-    std::vector<std::string> FEA_Module_List = simparam_TO->FEA_Module_List;
+    std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       if(FEA_Module_List[imodule]=="Elasticity"){ 
         elasticity_found = true;
