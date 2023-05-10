@@ -196,7 +196,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
       simparam_TO->Simulation_Parameters::operator=(*simparam);
       simparam_TO->input();
       simparam_TO->apply_settings();
-      simparam->set_options = simparam_TO->set_options;
+      *simparam = *simparam_TO;
 
       // ---- Read intial mesh, refine, and build connectivity ---- //
       if(simparam->mesh_file_format=="tecplot")

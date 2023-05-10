@@ -18,7 +18,7 @@ optimization_options:
     density_epsilon: 0.00001
     simp_penalty_power: 3
     optimization_objective: minimize_compliance
-    num_optimization_constraint: 3
+    num_optimization_constraint: 2
     constraint_1:
         type: mass
         relation: equality
@@ -28,9 +28,7 @@ optimization_options:
         relation: equality
         component: yy
         value: 0.4
-    constraint_3:
-        type: moment_of_inertia
-        relation: equality
-        component: xy
-        value: 0.0
+        inertia_center_x: 0
+        inertia_center_y: 0
+        inertia_center_z: 0
     

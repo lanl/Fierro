@@ -487,7 +487,7 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
 }
 
 /* ------------------------------------------------------------------------------------------------------------------------
-   Compute the moment of inertia of each element for a specified component of the inertia tensor; estimated with quadrature
+   Compute the moment of each element for a specified component; estimated with quadrature
 --------------------------------------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component){
@@ -694,7 +694,7 @@ void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_de
 }
 
 /* ---------------------------------------------------------------------------------------------------
-   Compute the gradients of the specified moment of inertia component with respect to design densities
+   Compute the gradients of the specified moment component with respect to design densities
 ------------------------------------------------------------------------------------------------------ */
 
 void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, int moment_component){
@@ -898,6 +898,27 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
+  double inertia_center[3];
+  if(simparam->enable_inertia_center[0]){
+    inertia_center[0] = simparam->moment_of_inertia_center[0];
+  }
+  else{
+    inertia_center[0] = center_of_mass[0];
+  }
+  if(simparam->enable_inertia_center[1]){
+    inertia_center[1] = simparam->moment_of_inertia_center[1];
+  }
+  else{
+    inertia_center[1] = center_of_mass[1];
+  }
+  if(num_dim==3){
+    if(simparam->enable_inertia_center[2]){
+      inertia_center[2] = simparam->moment_of_inertia_center[2];
+    }
+    else{
+      inertia_center[2] = center_of_mass[2];
+    }
+  }
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
@@ -1073,33 +1094,33 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
       }
 
       if(inertia_component==0){
-        delx1 = current_position(1) - center_of_mass[1];
-        delx2 = current_position(2) - center_of_mass[2];
+        delx1 = current_position(1) - inertia_center[1];
+        delx2 = current_position(2) - inertia_center[2];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==1){
-        delx1 = current_position(0) - center_of_mass[0];
-        delx2 = current_position(2) - center_of_mass[2];
+        delx1 = current_position(0) - inertia_center[0];
+        delx2 = current_position(2) - inertia_center[2];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==2){
-        delx1 = current_position(0) - center_of_mass[0];
-        delx2 = current_position(1) - center_of_mass[1];
+        delx1 = current_position(0) - inertia_center[0];
+        delx2 = current_position(1) - inertia_center[1];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) += current_density*(delx1*delx1 + delx2*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==3){
-        delx1 = current_position(0) - center_of_mass[0];
-        delx2 = current_position(1) - center_of_mass[1];
+        delx1 = current_position(0) - inertia_center[0];
+        delx2 = current_position(1) - inertia_center[1];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==4){
-        delx1 = current_position(0) - center_of_mass[0];
-        delx2 = current_position(2) - center_of_mass[2];
+        delx1 = current_position(0) - inertia_center[0];
+        delx2 = current_position(2) - inertia_center[2];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*weight_multiply*Jacobian;
       }
       if(inertia_component==5){
-        delx1 = current_position(1) - center_of_mass[1];
-        delx2 = current_position(2) - center_of_mass[2];
+        delx1 = current_position(1) - inertia_center[1];
+        delx2 = current_position(2) - inertia_center[2];
         Element_Moments_of_Inertia(nonoverlapping_ielem,0) -= current_density*(delx1*delx2)*weight_multiply*Jacobian;
       }
     }
@@ -1124,6 +1145,27 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
+  double inertia_center[3];
+  if(simparam->enable_inertia_center[0]){
+    inertia_center[0] = simparam->moment_of_inertia_center[0];
+  }
+  else{
+    inertia_center[0] = center_of_mass[0];
+  }
+  if(simparam->enable_inertia_center[1]){
+    inertia_center[1] = simparam->moment_of_inertia_center[1];
+  }
+  else{
+    inertia_center[1] = center_of_mass[1];
+  }
+  if(num_dim==3){
+    if(simparam->enable_inertia_center[2]){
+      inertia_center[2] = simparam->moment_of_inertia_center[2];
+    }
+    else{
+      inertia_center[2] = center_of_mass[2];
+    }
+  }
   const_host_vec_array all_node_densities;
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
@@ -1285,33 +1327,33 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
           local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
             if(inertia_component==0){
-              delx1 = current_position(1) - center_of_mass[1];
-              delx2 = current_position(2) - center_of_mass[2];
+              delx1 = current_position(1) - inertia_center[1];
+              delx2 = current_position(2) - inertia_center[2];
               design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
             }
             if(inertia_component==1){
-              delx1 = current_position(0) - center_of_mass[0];
-              delx2 = current_position(2) - center_of_mass[2];
+              delx1 = current_position(0) - inertia_center[0];
+              delx2 = current_position(2) - inertia_center[2];
               design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
             }
             if(inertia_component==2){
-              delx1 = current_position(0) - center_of_mass[0];
-              delx2 = current_position(1) - center_of_mass[1];
+              delx1 = current_position(0) - inertia_center[0];
+              delx2 = current_position(1) - inertia_center[1];
               design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*(delx1*delx1 + delx2*delx2)*Jacobian;
             }
             if(inertia_component==3){
-              delx1 = current_position(0) - center_of_mass[0];
-              delx2 = current_position(1) - center_of_mass[1];
+              delx1 = current_position(0) - inertia_center[0];
+              delx2 = current_position(1) - inertia_center[1];
               design_gradients(local_node_id,0)-=weight_multiply*basis_values(node_loop)*(delx1*delx2)*Jacobian;
             }
             if(inertia_component==4){
-              delx1 = current_position(0) - center_of_mass[0];
-              delx2 = current_position(2) - center_of_mass[2];
+              delx1 = current_position(0) - inertia_center[0];
+              delx2 = current_position(2) - inertia_center[2];
               design_gradients(local_node_id,0)-=weight_multiply*basis_values(node_loop)*(delx1*delx2)*Jacobian;
             }
             if(inertia_component==5){
-              delx1 = current_position(1) - center_of_mass[1];
-              delx2 = current_position(2) - center_of_mass[2];
+              delx1 = current_position(1) - inertia_center[1];
+              delx2 = current_position(2) - inertia_center[2];
               design_gradients(local_node_id,0)-=weight_multiply*basis_values(node_loop)*(delx1*delx2)*Jacobian;
             }
         }
