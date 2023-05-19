@@ -50,6 +50,7 @@ std::string rtrim(const std::string &s);
  
 std::string trim(const std::string &s);
 
+KOKKOS_FUNCTION
 int get_id(int i, int j, int k, int num_i, int num_j);
 
 
@@ -1177,6 +1178,7 @@ std::string trim(const std::string &s) {
 //--------------------------------------------------------
 //
 // Returns a global id for a given i,j,k
+KOKKOS_FUNCTION
 int get_id(int i, int j, int k, int num_i, int num_j)
 {
     return i + j*num_i + k*num_i*num_j;
