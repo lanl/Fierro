@@ -9,6 +9,24 @@
 
 using namespace mtr;
 
+
+namespace mesh_init
+{
+
+    // element mesh types
+    enum elem_name_tag
+    {
+        linear_simplex_element   = 0,
+        linear_tensor_element    = 1,
+        arbitrary_tensor_element = 2
+    };
+
+    // other enums could go here on the mesh
+
+} // end namespace
+
+
+
 /*
 ==========================
 Nodal indexing convention
@@ -69,6 +87,8 @@ void bubble_sort(size_t arr[], const size_t num){
 // mesh sizes and connectivity data structures
 struct mesh_t {
     
+    mesh_init::elem_name_tag elem_kind;
+
     size_t num_dims;
     
     size_t num_nodes;
@@ -361,50 +381,443 @@ struct mesh_t {
     // build the patches
     void build_patch_connectivity(){
         
-        size_t high_order = 0;
+        // WARNING WARNING
+        // the mesh element kind should be in the input file and set when reading mesh
+        //mesh_elem_kind = mesh_init::linear_tensor_element; // MUST BE SET IN input.cpp
         
-        // building patches
-        DViewCArrayKokkos <size_t> node_ordering_in_elem;  // node lids in a patch
-        
-        num_nodes_in_patch = 2*(num_dims-1);  // 2 (2D) or 4 (3D)
-        num_patches_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
+        size_t Pn;  // polynomial order for element kind
         
         
-        size_t node_lids_in_patch_in_elem[24];
-        
-        if(num_dims == 3) {
-            size_t temp_node_lids[24] = {0,4,7,3,
-                                         1,2,6,5,
-                                         0,1,5,4,
-                                         2,3,7,6,
-                                         0,3,2,1,
-                                         4,5,6,7};
-            
-            for (size_t i=0; i<24; i++){
-                node_lids_in_patch_in_elem[i] = temp_node_lids[i];
-            } // end for i
-
+        if (elem_kind == mesh_init::linear_tensor_element){
+            Pn = 1; // linear element
+        }
+        else if (elem_kind == mesh_init::arbitrary_tensor_element) {
+            if(num_dims == 3) {
+                Pn = (size_t) pow( (double) num_nodes_in_elem, 1.0/3.0) - 1;
+            }
+            else
+            {
+                Pn = (size_t) pow( (double) num_nodes_in_elem, 1.0/2.0) - 1;
+            }
         }
         else {
-            //   J
-            //   |
-            // 3---2
-            // |   |  -- I
-            // 0---1
-            //
-            size_t temp_node_lids[8] =
-               {0,3,
-                1,2,
-                0,1,
-                3,2};
-            
-            for (size_t i=0; i<8; i++){
-                node_lids_in_patch_in_elem[i] = temp_node_lids[i];
-            } // end for i
-
-        } // end if on dims
+            printf("\nERROR: element type is not known \n");
+        } // end if on mesh_init
+        // -----
         
-        node_ordering_in_elem = DViewCArrayKokkos <size_t> (&node_lids_in_patch_in_elem[0],num_patches_in_elem,num_nodes_in_patch);
+        
+        // building patches
+        
+        num_nodes_in_patch = 2*(num_dims-1);  // 2 (2D) or 4 (3D)
+        num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
+        
+        size_t num_patches_in_surf;  // =Pn_order or =Pn_order*Pn_order
+        
+        int num_1D = Pn + 1; // number of nodes in 1D
+        
+        DCArrayKokkos <size_t> node_ordering_in_elem; // dimensions will be (num_patches_in_elem,num_nodes_in_patch);
+        
+        
+        
+        if(num_dims == 3) {
+            
+            // num_patches_in_surf = [1^2, 2^2, 3^2, 4^2, ... , Pn^2]
+            num_patches_in_surf = Pn*Pn;
+            
+            num_patches_in_elem = num_patches_in_surf*num_surfs_in_elem;
+            
+            // nodes in a patch in the element
+            node_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem,num_nodes_in_patch);
+            
+        } else {
+            num_patches_in_surf = Pn;
+            
+            num_patches_in_elem = num_patches_in_surf*num_surfs_in_elem;
+            
+            // nodes in a patch in the element
+            node_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem,num_nodes_in_patch);
+             
+        } // end if dim
+        
+        // On the CPU, set the node order for the patches in an element
+        // classic linear elements
+        if (elem_kind == mesh_init::linear_tensor_element){
+            
+            if(num_dims == 3) {
+                size_t temp_node_lids[24] = {0,4,7,3,
+                                             1,2,6,5,
+                                             0,1,5,4,
+                                             2,3,7,6,
+                                             0,3,2,1,
+                                             4,5,6,7};
+                
+                int count = 0;
+                int elem_patch_lid = 0;
+                for (size_t surf_lid=0; surf_lid<num_surfs_in_elem; surf_lid++){
+                    for (size_t patch_lid=0; patch_lid<num_patches_in_surf; patch_lid++){
+                        for (size_t node_lid=0; node_lid <num_nodes_in_patch; node_lid++){
+                            node_ordering_in_elem.host(elem_patch_lid,node_lid) = temp_node_lids[count];
+                            count++;
+                        } // end for node_lid
+                        elem_patch_lid ++;
+                    } // end for patch_lid in a surface
+                } // end for i
+                
+            }
+            else {
+                //   J
+                //   |
+                // 3---2
+                // |   |  -- I
+                // 0---1
+                //
+                size_t temp_node_lids[8] =
+                    {0,3,
+                     1,2,
+                     0,1,
+                     3,2};
+                
+                
+                int count = 0;
+                int elem_patch_lid = 0;
+                for (size_t surf_lid=0; surf_lid<num_surfs_in_elem; surf_lid++){
+                    for (size_t patch_lid=0; patch_lid<num_patches_in_surf; patch_lid++){
+                        for (size_t node_lid=0; node_lid <num_nodes_in_patch; node_lid++){
+                            node_ordering_in_elem.host(elem_patch_lid,node_lid) = temp_node_lids[count];
+                            count++;
+                        } // end for node_lid
+                        elem_patch_lid ++;
+                    } // end for patch_lid in a surface
+                } // end for i
+                
+            } // end if on dims
+            
+        } // end if linear element iwth classic numbering
+        // -----
+        // arbitrary-order element
+        // -----
+        else if (elem_kind == mesh_init::arbitrary_tensor_element) {
+            
+            size_t temp_node_lids[num_nodes_in_patch*num_surfs_in_elem];
+            
+            
+            // arbitrary-order node ordering in patches of an element
+            if(num_dims == 3) {
+                /*
+                    
+                    i,j,k layout
+                    
+                    k  j
+                    | /
+                    |/
+                    o-->i
+                    
+                    
+                    i=0,imax
+                    o (j+1,k+1)
+                    /|
+                    (j,k+1) o o (j+1,k)
+                    |/
+                    (j,k) o
+                    
+                    */
+                
+                int count = 0;
+                
+                int i_patch, j_patch, k_patch;
+                
+                // i-minus-dir patches
+                
+                i_patch=0;
+                for (int k=0; k<num_1D-1; k++){
+                    for (int j=0; j<num_1D-1; j++){
+                        
+                        // node_lid 0 in patch
+                        //index = i + j*num_1D + k*num_1D*num_1D;
+                        temp_node_lids[count] = i_patch + j*num_1D + k*num_1D*num_1D;//node_rid(i_patch, j, k, num_1D);
+                        count++;
+                        
+                        // node_lid 1 in patch
+                        //index = i + j*num_1D + (k+1)*num_1D*num_1D;
+                        temp_node_lids[count] = i_patch + j*num_1D + (k+1)*num_1D*num_1D;//node_rid(i_patch, j, k+1, num_1D);
+                        count ++;
+                        
+                        // node_lid 2 in patch
+                        //index = i + (j+1)*num_1D + (k+1)*num_1D*num_1D;
+                        temp_node_lids[count] = i_patch + (j+1)*num_1D + (k+1)*num_1D*num_1D;//node_rid(i_patch, j+1, k+1, num_1D);
+                        count ++;
+                        
+                        // node_lid 3 in patch
+                        // index = i + (j+1)*num_1D + k*num_1D*num_1D;
+                        temp_node_lids[count] = i_patch + (j+1)*num_1D + k*num_1D*num_1D;//node_rid(i_patch, j+1, k, num_1D);
+                        count ++;
+                        
+                    } // end for k
+                } // end for j
+                
+                
+                // i-plus-dir patches
+                i_patch=num_1D-1;
+                for (int k=0; k<num_1D-1; k++){
+                    for (int j=0; j<num_1D-1; j++){
+                        
+                        // node_lid 0 in patch
+                        //index = i + j*num_1D + k*num_1D*num_1D;
+                        temp_node_lids[count] = i_patch + j*num_1D + k*num_1D*num_1D;//node_rid(i_patch, j, k, num_1D);
+                        count++;
+                        
+                        // node_lid 1 in patch
+                        //index = i + (j+1)*num_1D + k*num_1D*num_1D;
+                        temp_node_lids[count] = i_patch + (j+1)*num_1D + k*num_1D*num_1D;//node_rid(i_patch, j+1, k, num_1D);
+                        count++;
+                        
+                        // node_lid 2 in patch
+                        //index = i + (j+1)*num_1D + (k+1)*num_1D*num_1D;
+                        temp_node_lids[count] = i_patch + (j+1)*num_1D + (k+1)*num_1D*num_1D;//node_rid(i_patch, j+1, k+1, num_1D);
+                        count ++;
+                        
+                        // node_lid 3 in patch
+                        //index = i + j*num_1D + (k+1)*num_1D*num_1D;
+                        temp_node_lids[count] = i_patch + j*num_1D + (k+1)*num_1D*num_1D;//node_rid(i_patch, j, k+1, num_1D);
+                        count ++;
+                        
+                    } // end for k
+                } // end for j
+                
+                
+                
+                /*
+                    
+                    i,j,k layout
+                    
+                    k  j
+                    | /
+                    |/
+                    o-->i
+                    
+                    
+                    j=0,jmax
+                    
+                    (i,,k+1) o--o (i+1,,k+1)
+                    |  |
+                    (i,,k) o--o (i+1,,k)
+                    
+                    */
+                
+                j_patch=0;
+                for (int k=0; k<num_1D-1; k++){
+                    for (int i=0; i<num_1D-1; i++){
+                        
+                        // node_lid 0 in patch
+                        temp_node_lids[count] = i + j_patch*num_1D + k*num_1D*num_1D;//node_rid(i, j_patch, k, num_1D);
+                        count++;
+                        
+                        // node_lid 1 in patch
+                        temp_node_lids[count] = i+1 + j_patch*num_1D + k*num_1D*num_1D;//node_rid(i+1, j_patch, k, num_1D);
+                        count ++;
+                        
+                        // node_lid 2 in patch
+                        temp_node_lids[count] = i+1 + j_patch*num_1D + (k+1)*num_1D*num_1D;//node_rid(i+1, j_patch, k+1, num_1D);
+                        count ++;
+                        
+                        // node_lid 3 in patch
+                        temp_node_lids[count] = i + j_patch*num_1D + (k+1)*num_1D*num_1D;//node_rid(i, j_patch, k+1, num_1D);
+                        count ++;
+                        
+                    } // end for i
+                } // end for k
+                
+                j_patch=num_1D-1;
+                for (int k=0; k<num_1D-1; k++){
+                    for (int i=0; i<num_1D-1; i++){
+                        
+                        // node_lid 0 in patch
+                        temp_node_lids[count] = i + j_patch*num_1D + k*num_1D*num_1D;//node_rid(i, j_patch, k, num_1D);
+                        count++;
+                        
+                        // node_lid 1 in patch
+                        temp_node_lids[count] = i + j_patch*num_1D + (k+1)*num_1D*num_1D;//node_rid(i, j_patch, k+1, num_1D);
+                        count ++;
+                        
+                        // node_lid 2 in patch
+                        temp_node_lids[count] = i+1 + j_patch*num_1D + (k+1)*num_1D*num_1D;//node_rid(i+1, j_patch, k+1, num_1D);
+                        count ++;
+                        
+                        // node_lid 3 in patch
+                        temp_node_lids[count] = i+1 + j_patch*num_1D + k*num_1D*num_1D;//node_rid(i+1, j_patch, k, num_1D);
+                        count ++;
+                        
+                    } // end for i
+                } // end for k
+                
+                
+                
+                
+                
+                /*
+                    
+                    i,j,k layout
+                    
+                    k  j
+                    | /
+                    |/
+                    o-->i
+                    
+                    
+                    k=0,kmax
+                    
+                    (i,j+1) o--o (i+1,j+1)
+                    /  /
+                    (i,j) o--o (i+1,j)
+                    
+                    */
+                
+                k_patch=0;
+                for (int j=0; j<num_1D-1; j++){
+                    for (int i=0; i<num_1D-1; i++){
+                        
+                        // node_lid 0 in patch
+                        temp_node_lids[count] = i + j*num_1D + k_patch*num_1D*num_1D;//node_rid(i, j, k_patch, num_1D);
+                        count++;
+                        
+                        // node_lid 1 in patch
+                        temp_node_lids[count] = i + (j+1)*num_1D + k_patch*num_1D*num_1D;//node_rid(i, j+1, k_patch, num_1D);
+                        count ++;
+                        
+                        // node_lid 2 in patch
+                        temp_node_lids[count] = i+1 + (j+1)*num_1D + k_patch*num_1D*num_1D;//node_rid(i+1, j+1, k_patch, num_1D);
+                        count ++;
+                        
+                        // node_lid 3 in patch
+                        temp_node_lids[count] = i+1 + j*num_1D + k_patch*num_1D*num_1D;//node_rid(i+1, j, k_patch, num_1D);
+                        count ++;
+                        
+                    } // end for i
+                } // end for j
+                
+                
+                k_patch=num_1D-1;
+                for (int j=0; j<num_1D-1; j++){
+                    for (int i=0; i<num_1D-1; i++){
+                        
+                        // node_lid 0 in patch
+                        temp_node_lids[count] = i + j*num_1D + k_patch*num_1D*num_1D;//node_rid(i, j, k_patch, num_1D);
+                        count++;
+                        
+                        // node_lid 1 in patch
+                        temp_node_lids[count] = i+1 + j*num_1D + k_patch*num_1D*num_1D;//node_rid(i+1, j, k_patch, num_1D);
+                        count ++;
+                        
+                        // node_lid 2 in patch
+                        temp_node_lids[count] = i+1 + (j+1)*num_1D + k_patch*num_1D*num_1D;//node_rid(i+1, j+1, k_patch, num_1D);
+                        count ++;
+                        
+                        // node_lid 3 in patch
+                        temp_node_lids[count] = i + (j+1)*num_1D + k_patch*num_1D*num_1D;//node_rid(i, j+1, k_patch, num_1D);
+                        count ++;
+                        
+                    } // end for i
+                } // end for j
+                
+                count = 0;
+                int elem_patch_lid = 0;
+                for (size_t surf_lid=0; surf_lid<6; surf_lid++){
+                    for (size_t patch_lid=0; patch_lid<num_patches_in_surf; patch_lid++){
+                        for (size_t node_lid=0; node_lid <4; node_lid++){
+                            node_ordering_in_elem.host(elem_patch_lid,node_lid) = temp_node_lids[count];
+                            count++;
+                        } // end for node_lid
+                        elem_patch_lid++;
+                    } // end for patch_lid in a surface
+                } // end for i
+                
+            }  // end if 3D
+            //
+            else{
+                
+                // 2D arbitrary order elements
+                int count = 0;
+                int i_patch, j_patch;
+                
+                // i-minus-dir patches
+                
+                i_patch=0;
+                for (int j=0; j<num_1D-1; j++){
+                    
+                    temp_node_lids[count] = i_patch + j*num_1D;//node_rid(i_patch, j, num_1D;
+                    count++;
+                    
+                    
+                    temp_node_lids[count] = i_patch + (j+1)*num_1D;//node_rid(i_patch, j+1, num_1D;
+                    count++;
+                    
+                } // end for j
+                
+                
+                // i-plus-dir patches
+                i_patch=num_1D-1;
+                for (int j=0; j<num_1D-1; j++){
+                    
+                    
+                    temp_node_lids[count] = i_patch + j*num_1D;//node_rid(i_patch, j, num_1D;
+                    count++;
+                    
+                    
+                    temp_node_lids[count] = i_patch + (j+1)*num_1D;//node_rid(i_patch, j+1, num_1D;
+                    count++;
+                    
+                } // end for j
+                
+                j_patch=0;
+                for (int i=0; i<num_1D-1; i++){
+                    
+                    
+                    temp_node_lids[count] = i + j_patch*num_1D;//node_rid(i, j_patch, num_1D);
+                    count++;
+                    
+                    
+                    temp_node_lids[count] = i+1 + j_patch*num_1D;//node_rid(i+1, j_patch, num_1D);
+                    count ++;
+                    
+                } // end for i
+                
+                j_patch=num_1D-1;
+                for (int i=0; i<num_1D-1; i++){
+                    
+                    
+                    temp_node_lids[count] = i + j_patch*num_1D;//node_rid(i, j_patch, num_1D);
+                    count++;
+                    
+                    
+                    temp_node_lids[count] = i+1 + j_patch*num_1D;//node_rid(i+1, j_patch, num_1D);
+                    count ++;
+                    
+                } // end for i
+                
+                count = 0;
+                int elem_patch_lid = 0;
+                for (size_t surf_lid=0; surf_lid<num_surfs_in_elem; surf_lid++){
+                    for (size_t patch_lid=0; patch_lid<num_patches_in_surf; patch_lid++){
+                        for (size_t node_lid=0; node_lid <num_nodes_in_patch; node_lid++){
+                            node_ordering_in_elem.host(elem_patch_lid,node_lid) = temp_node_lids[count];
+                            count++;
+                        } // end for node_lid
+                        elem_patch_lid ++;
+                    } // end for patch_lid in a surface
+                } // end for i
+                
+            }// end else on dim
+            
+        } // end if arbitrar-order element
+        else {
+            printf("\nERROR: mesh type is not known \n");
+        } // end if
+            
+        // update the device
+        Kokkos::fence();
+        node_ordering_in_elem.update_device();
+        Kokkos::fence();
+        
         
         
         // for saviong the hash keys of the patches and then the nighboring elem_gid
@@ -592,6 +1005,7 @@ struct mesh_t {
         
         for(size_t elem_gid=0; elem_gid<num_elems; elem_gid++) {
             
+            
             FOR_ALL_CLASS(patch_lid, 0, num_patches_in_elem, {
                 
                 size_t patch_gid = patches_in_elem(elem_gid, patch_lid);
@@ -620,10 +1034,7 @@ struct mesh_t {
         
         
         // Surfaces and patches in surface
-        if(high_order==1) {
-            
-            num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
-            num_patches_in_surf = 1;  // =Pn_order, must update for high-order mesh class
+        if(elem_kind == mesh_init::arbitrary_tensor_element) {
         
             // allocate memory for the surfaces in the elem
             surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);

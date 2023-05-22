@@ -81,18 +81,36 @@ void read_mesh_ensight(char* MESH,
     } // end for
 
     
-    ch = (char)fgetc(in);
-    //printf("%c",ch);
+    //ch = (char)fgetc(in);
+    ////printf("%c",ch);
+//
+    ////skip 1 line
+    //for (int j=1; j<=1; j++) {
+    //    int i=0;
+    //    while ((ch=(char)fgetc(in))!='\n') {
+    //        i++;
+    //        //printf("%c",ch);
+    //    }
+    //    //printf("\n");
+    //}
 
-    //skip 1 line
-    for (int j=1; j<=1; j++) {
-        int i=0;
-        while ((ch=(char)fgetc(in))!='\n') {
-            i++;
-            //printf("%c",ch);
-        }
-        //printf("\n");
+    std::string elem_str_name;
+    char temp_name[100];
+    fscanf(in,"%101s",&temp_name);
+    
+    elem_str_name = temp_name;
+    printf("element kind = %s \n", elem_str_name.c_str());
+    
+    if (elem_str_name == "hexa8"){
+        mesh.elem_kind = mesh_init::linear_tensor_element;
     }
+    else if (elem_str_name == "quad4"){
+        mesh.elem_kind = mesh_init::linear_tensor_element;
+    }
+    else {
+        printf("\n ERROR: element kind is unknown \n");
+    }
+    //...
     
 
     // --- read in the elements in the mesh ---
