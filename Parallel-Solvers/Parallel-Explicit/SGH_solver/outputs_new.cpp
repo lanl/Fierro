@@ -52,7 +52,7 @@ sort_and_write_data_to_file_mpi_all(
 
 Teuchos::RCP<CArray<int>>
 get_cell_data(
-  const DCArrayKokkos <size_t>& nodes_in_elem,
+  const CArray <size_t>& nodes_in_elem,
   size_t num_dim,
   Solver::node_ordering_convention active_node_ordering_convention);
 
@@ -147,16 +147,29 @@ Explicit_Solver_SGH::parallel_vtu_writer_new()
 /* to be added... */
 }
 
+std::string
+construct_file_name(
+  size_t file_count,
+  int displacement_module)
+{
+  bool displace_geometry = false;
+  std::string current_file_name;
+  std::string base_file_name= "VTK";
+  std::string base_file_name_undeformed= "VTK_undeformed";
+	std::string file_extension= ".vtk";
+
+  if(displace_geometry && displacement_module>=0)
+    current_file_name = base_file_name_undeformed + std::to_string(file_count) + file_extension;
+  else
+    current_file_name = base_file_name + std::to_string(file_count) + file_extension;
+  return current_file_name;
+}
+
 void
 Explicit_Solver_SGH::parallel_vtk_writer_new()
 {
 
   int num_dim = simparam->num_dim;
-  std::string current_file_name;
-  std::string base_file_name= "VTK";
-  std::string base_file_name_undeformed= "VTK_undeformed";
-	std::string file_extension= ".vtk";
-  std::string file_count;
   std::stringstream str_stream;
   MPI_Offset current_offset;
   MPI_File myfile_parallel;
@@ -182,14 +195,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   MPI_Barrier(world);
 
   //construct file name
-  str_stream.str("");
-  str_stream << simparam->graphics_id;
-  file_count = str_stream.str();
-  if(displace_geometry && displacement_module>=0)
-    current_file_name = base_file_name_undeformed + file_count + file_extension;
-  else
-    current_file_name = base_file_name + file_count + file_extension;
-
+  std::string current_file_name = construct_file_name(simparam->graphics_id, displacement_module);
   std::string file_path = vtk_data_dir + current_file_name;
   //open mpi file
   int err = MPI_File_open(MPI_COMM_WORLD, file_path.c_str(), 
@@ -212,7 +218,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   str_stream << "ASCII\n";
   str_stream << "DATASET UNSTRUCTURED_GRID\n";
   current_offset = mpi_get_file_position_shared(world, myfile_parallel);
-  if(myrank == 0) {
+  if (myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
 
@@ -236,13 +242,16 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
+  CArray <size_t> nodes_in_elem (sgh_module->nodes_in_elem.dims(0), sgh_module->nodes_in_elem.dims(1));
   { //view scope
-    auto host_view = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    for (size_t ielem = 0; ielem < sgh_module->nodes_in_elem.dims(0); ielem++)
-      for (size_t inode = 0; inode < sgh_module->nodes_in_elem.dims(1); inode++)
-        sgh_module->nodes_in_elem.host(ielem, inode) = host_view(ielem, inode);
+    auto host_view = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    for (size_t ielem = 0; ielem < nodes_in_elem.dims(0); ielem++) {
+      for (size_t inode = 0; inode < nodes_in_elem.dims(1); inode++) {
+        nodes_in_elem(ielem, inode) = host_view(ielem, inode);
+      }
+    }
   } //end view scope
-  auto cell_data = get_cell_data(sgh_module->nodes_in_elem, num_dim, active_node_ordering_convention);
+  auto cell_data = get_cell_data(nodes_in_elem, num_dim, active_node_ordering_convention);
   sort_and_write_data_to_file_mpi_all <CArrayLayout,int,LO,GO,node_type> (
     cell_data->pointer(), all_element_map, cell_data->dims(1), num_elem, world, myfile_parallel);
 
@@ -368,8 +377,9 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
     fprintf(myfile, "  \"file-series-version\" : \"1.0\",\n");
     fprintf(myfile, "  \"files\" : [\n");
     for (int i = 0; i <= simparam->graphics_id; i++) {
+      std::string vtk_filename = construct_file_name(i, displacement_module);
       fprintf(myfile, "    { \"name\" : \"data/%s\", \"time\" : %12.5e },\n",
-        current_file_name.c_str(), simparam->graphics_times(i));
+        vtk_filename.c_str(), simparam->graphics_times(i));
     }
     fprintf(myfile, "  ]\n");
     fprintf(myfile, "}\n");
@@ -382,9 +392,6 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   MPI_Barrier(world);
   MPI_File_sync(myfile_parallel);
   MPI_File_close(&myfile_parallel);
-
-MPI_Barrier(world);
-MPI_Abort(world, 1);
 }
 
 
@@ -540,7 +547,7 @@ sort_and_write_data_to_file_mpi_all(
 
 Teuchos::RCP<CArray<int>>
 get_cell_data(
-  const DCArrayKokkos <size_t>& nodes_in_elem,
+  const CArray <size_t>& nodes_in_elem,
   size_t num_dim,
   Solver::node_ordering_convention active_node_ordering_convention)
 {
@@ -567,8 +574,8 @@ get_cell_data(
         temp_convert = convert_ijk_to_ensight(ii);
       else
         temp_convert = ii;
-      (*cell_data)(ielem,ii+1) = nodes_in_elem.host(ielem,temp_convert);
-      //(*cell_data)(ielem,ii+1) = nodes_in_elem.host(ielem,ii);
+      (*cell_data)(ielem,ii+1) = nodes_in_elem(ielem,temp_convert);
+      //(*cell_data)(ielem,ii+1) = nodes_in_elem(ielem,ii);
     }
   }
 
@@ -620,9 +627,6 @@ calculate_elem_speed(
     }
 
     (*elem_speed)(elem_gid) = sqrt(speed_sqrd);
-    if ( std::isinf((*elem_speed)(elem_gid)) ) {
-      printf("inf in elem_gid=%d, elem_vel=(%f, %f, %f)\n", elem_gid, elem_vel[0], elem_vel[1], elem_vel[2]);
-    }
   } // end for
 
   return elem_speed;

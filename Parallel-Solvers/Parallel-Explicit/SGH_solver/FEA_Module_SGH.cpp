@@ -2098,6 +2098,7 @@ void FEA_Module_SGH::sgh_solve(){
     int myrank = Explicit_Solver_Pointer_->myrank;
     if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
+    Explicit_Solver_Pointer_->write_outputs_new();
     /*
     write_outputs(mesh,
                   Explicit_Solver_Pointer_,
@@ -2655,6 +2656,7 @@ void FEA_Module_SGH::sgh_solve(){
 
 	    // increment the time
 	    time_value+=dt;
+      simparam->time_value = time_value;
 
       if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
         if(cycle >= max_time_steps)
@@ -2797,7 +2799,7 @@ void FEA_Module_SGH::sgh_solve(){
                 for (int idim = 0; idim < num_dim; idim++){
                   node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
                 }
-              //}); // end parallel for
+              }); // end parallel for
             } //end view scope
 
             if(myrank==0){
