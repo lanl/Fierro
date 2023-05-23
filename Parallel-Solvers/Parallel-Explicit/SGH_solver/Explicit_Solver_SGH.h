@@ -127,6 +127,18 @@ public:
 
   void parallel_vtk_writer();
 
+  void write_outputs_new();
+  void parallel_vtk_writer_new();
+  void parallel_vtu_writer_new(); // not yet added
+  enum output_file_format_type {VTK, VTU};
+  output_file_format_type output_file_format = VTK;
+  // maps for variable_name:pointer
+  std::map <std::string, const double*> point_data_scalars_double;
+  std::map <std::string, const double*> point_data_vectors_double;
+  std::map <std::string, const double*> cell_data_scalars_double;
+  std::map <std::string, const int*> cell_data_scalars_int;
+  std::map <std::string, std::pair<const double*, size_t> > cell_data_fields_double;
+
   //void init_boundary_sets(int num_boundary_sets);
 
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);

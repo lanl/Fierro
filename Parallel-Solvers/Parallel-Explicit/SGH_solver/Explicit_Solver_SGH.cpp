@@ -551,7 +551,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
               << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
 
-    parallel_vtk_writer();
+    //parallel_vtk_writer();
     
     //test forward solve call
     int ntests = 0;
@@ -2396,6 +2396,20 @@ void Explicit_Solver_SGH::parallel_vtk_writer(){
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   header_stream_offset += current_line.length();
+
+#if 0
+MPI_Barrier(world);
+//MPI_File_sync(myfile_parallel);
+//MPI_Barrier(world);
+MPI_File_seek_shared(myfile_parallel, 0, MPI_SEEK_END);
+//MPI_File_sync(myfile_parallel);
+MPI_File_get_position_shared(myfile_parallel, &current_stream_position);
+std::cout << "current_stream_position on rank " << myrank << " is " << current_stream_position << std::endl;
+MPI_Barrier(world);
+std::cout << "header_stream_offset on rank " << myrank << " is " << header_stream_offset << std::endl;
+MPI_Barrier(world);
+MPI_Abort(world, 1);
+#endif
   
   //output nodal data
   //compute buffer output size and file stream offset for this MPI rank
