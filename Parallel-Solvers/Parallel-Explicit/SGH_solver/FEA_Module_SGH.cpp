@@ -2789,23 +2789,15 @@ void FEA_Module_SGH::sgh_solve(){
             
         // write outputs
       if (write == 1){
-            //interface nodal coordinate data
+            //interface nodal coordinate data (note: this is not needed if using write_outputs_new())
             //view scope
             {
-              //vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-              //FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-              //  for (int idim = 0; idim < num_dim; idim++){
-              //    node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
-              //  }
-              //}); // end parallel for
-              vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-              for (int node_gid = 0; node_gid < nlocal_nodes; node_gid++) {
-                for (int idim = 0; idim < num_dim; idim++) {
+              vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+              FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+                for (int idim = 0; idim < num_dim; idim++){
                   node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
                 }
-              }
-              //for (int i = 0; i < nlocal_nodes*num_dim; i++)
-              //  node_coords_interface.data()[i] = (&node_coords(1,0,0))[i];
+              //}); // end parallel for
             } //end view scope
 
             if(myrank==0){
