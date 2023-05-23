@@ -2098,7 +2098,7 @@ void FEA_Module_SGH::sgh_solve(){
     int myrank = Explicit_Solver_Pointer_->myrank;
     if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
-    Explicit_Solver_Pointer_->write_outputs_new();
+    //Explicit_Solver_Pointer_->write_outputs_new();
     /*
     write_outputs(mesh,
                   Explicit_Solver_Pointer_,
@@ -2156,7 +2156,7 @@ void FEA_Module_SGH::sgh_solve(){
     IE_t0 = IE_sum;
 
     MPI_Allreduce(&IE_t0,&global_IE_t0,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-    
+ 
     // extensive KE
     REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         

@@ -613,6 +613,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(const char *MESH){
   if(myrank==0){
     in = new std::ifstream();
     in->open(MESH);
+    if (!(*in)) throw std::runtime_error(std::string("Can't open ") + MESH);
   }
 
   //ANSYS dat file doesn't specify total number of nodes, which is needed for the node map.
