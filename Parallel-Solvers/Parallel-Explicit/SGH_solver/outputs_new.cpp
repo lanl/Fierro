@@ -231,7 +231,6 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
   sgh_module->node_coords.update_host();
-  std::cout << num_nodes << "***********" << std::endl;
   sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
     &sgh_module->node_coords.host(1,0,0), map, num_dim, num_nodes, world, myfile_parallel);
 
@@ -539,8 +538,6 @@ sort_and_write_data_to_file_mpi_all(
 
   { //view scope
     auto const_host_view = sorted_data->getLocalViewHost(Tpetra::Access::ReadOnly);
-    //std::cout << num_global_unique_elements << "***********" << std::endl;
-    //std::cout << sorted_data->getMap()->getGlobalNumElements() << "***********" << std::endl;
     std::stringstream str_stream;
     write_data_to_string_stream <TpetraHostViewLayout,SC> (const_host_view.data(), sorted_data->getMap()->getLocalNumElements(), dim1, str_stream);
     write_string_stream_to_file_mpi_all(str_stream, sorted_data->getMap()->getLocalNumElements(), 

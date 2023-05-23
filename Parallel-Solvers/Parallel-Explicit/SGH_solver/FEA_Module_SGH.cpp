@@ -2098,7 +2098,7 @@ void FEA_Module_SGH::sgh_solve(){
     int myrank = Explicit_Solver_Pointer_->myrank;
     if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
-    //Explicit_Solver_Pointer_->write_outputs_new();
+    Explicit_Solver_Pointer_->write_outputs_new();
     /*
     write_outputs(mesh,
                   Explicit_Solver_Pointer_,

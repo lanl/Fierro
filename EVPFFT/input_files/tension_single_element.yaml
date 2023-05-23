@@ -4,7 +4,7 @@ solver_type: SGH
 solver_options:
     num_dims: 3
     mesh_file_format: ensight
-    mesh_file_name: /vast/home/cyenusah/github/Fierro/Explicit-Lagrange/meshes/mesh_single_element.geo
+    mesh_file_name: /vast/home/cyenusah/github/Fierro/EVPFFT/input_files/mesh_single_element.geo
     time_variables:
         time_final: 1.0  #[s]
         dt_min: 1.e-14  #[s]
