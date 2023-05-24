@@ -139,7 +139,6 @@ EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const rea
 
 void EVPFFT::set_some_voxels_arrays_to_zero()
 {
-
   FOR_ALL_CLASS(k, 1, npts3+1,
                 j, 1, npts2+1,
                 i, 1, npts1+1, {
@@ -462,7 +461,8 @@ void EVPFFT::evolve()
 void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid)
 {
 
-  ViewMatrixTypeReal vel_grad_view(vel_grad,3,3);
+  //ViewMatrixTypeReal vel_grad_view(vel_grad,3,3);
+  ViewCMatrix <real_t> vel_grad_view(vel_grad,3,3);
 
   // is udot = vel_grad ???
   for (int j = 1; j <= 3; j++) {
@@ -495,7 +495,7 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
 
   if (ddnorm > 1.0e-16) {
 
-    if (fierro_cycle%100 == 0) print_vel_grad();
+    //if (fierro_cycle%100 == 0) print_vel_grad();
     
     // calculate strain-rate and rotation-rate
     decompose_vel_grad(udot.host_pointer());
@@ -530,17 +530,18 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   } // end if ddnorm
 
   // update stress
-  ViewMatrixTypeReal stress_view(stress,3,3);
+  //ViewMatrixTypeReal stress_view(stress,3,3);
+  ViewCMatrix <real_t> stress_view(stress,3,3);
   for (int j = 1; j <= 3; j++) {
     for (int i = 1; i <= 3; i++) {
       stress_view(i,j) = scauav(i,j);
     } // end for i
   } // end for j
 
-  if (evm >= 0.5) {
-    write_texture();
-    exit(0);
-  }
+  //if (evm >= 0.5) {
+  //  write_texture();
+  //  exit(0);
+  //}
 }
 
 void EVPFFT::check_macrostress()
