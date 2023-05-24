@@ -163,6 +163,7 @@ struct material_t {
                        const size_t elem_gid,
                        const size_t mat_id,
                        const DViewCArrayKokkos <double> &elem_state_vars,
+                       const DCArrayKokkos <double> &global_vars,
                        const DViewCArrayKokkos <double> &elem_sspd,
                        const double den,
                        const double sie) = NULL;
@@ -173,6 +174,7 @@ struct material_t {
                             const size_t elem_gid,
                             const size_t mat_id,
                             const DViewCArrayKokkos <double> &elem_state_vars,
+                            const DCArrayKokkos <double> &global_vars,
                             const DViewCArrayKokkos <double> &elem_sspd,
                             const double den,
                             const double sie,
@@ -195,6 +197,7 @@ struct material_t {
     model_init::strength_setup_tag strength_setup=model_init::input;
 
     size_t num_state_vars;
+    size_t num_global_vars=0;
     
     double q1;    // acoustic coefficient in Riemann solver for compresion
     double q1ex;  // acoustic coefficient in Riemann solver for expansion

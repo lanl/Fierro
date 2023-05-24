@@ -15,6 +15,7 @@ void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
                const size_t elem_gid,
                const size_t mat_id,
                const DViewCArrayKokkos <double> &elem_state_vars,
+               const DCArrayKokkos <double> &global_vars,
                const DViewCArrayKokkos <double> &elem_sspd,
                const double den,
                const double sie){

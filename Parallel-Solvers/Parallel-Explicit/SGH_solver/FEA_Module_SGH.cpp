@@ -913,6 +913,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                                            elem_gid,
                                            elem_mat_id(elem_gid),
                                            elem_statev,
+                                           global_vars,
                                            elem_sspd,
                                            elem_den(elem_gid),
                                            elem_sie(1,elem_gid));
@@ -1339,7 +1340,8 @@ void FEA_Module_SGH::setup(){
     
     read_from_file.update_host(); // copy to CPU if code is to read from a file
     Kokkos::fence();
-    
+   
+ 
     // make memory to store state_vars from an external file
     file_state_vars = DCArrayKokkos <double>(num_materials,rnum_elem,num_state_vars);
     mat_num_state_vars = DCArrayKokkos <size_t>(num_materials); // actual number of state_vars
@@ -1354,14 +1356,25 @@ void FEA_Module_SGH::setup(){
     mat_num_state_vars.update_host();
     Kokkos::fence();
     
+    // make memory for global_vars
+    global_vars = DCArrayKokkos <double> (num_materials,simparam->max_num_global_vars);
+    mat_num_global_vars = DCArrayKokkos <size_t> (num_materials);
+    FOR_ALL_CLASS(mat_id, 0, num_materials, {
+      mat_num_global_vars(mat_id) = material(mat_id).num_global_vars;
+    });
+    mat_num_global_vars.update_host();
+
     for (size_t mat_id=0; mat_id<num_materials; mat_id++){
         
         if (read_from_file.host(mat_id) == model_init::user_init){
             
             size_t num_vars = mat_num_state_vars.host(mat_id);
-            
+            size_t num_gvars = mat_num_global_vars.host(mat_id);
+ 
             init_user_strength_model(file_state_vars,
+                                     global_vars,
                                      num_vars,
+                                     num_gvars,
                                      mat_id,
                                      rnum_elem);
             
@@ -1507,6 +1520,7 @@ void FEA_Module_SGH::setup(){
                                            elem_gid,
                                            elem_mat_id(elem_gid),
                                            elem_statev,
+                                           global_vars,
                                            elem_sspd,
                                            elem_den(elem_gid),
                                            elem_sie(1,elem_gid));
@@ -1731,9 +1745,9 @@ void FEA_Module_SGH::setup(){
 
 void FEA_Module_SGH::cleanup_user_strength_model() {
 /*
-  This function is called in the destructor of FEA_Module_SGH setup.
-  This gives the user a chance to cleanup any memory allocation done using the
-  by calling the `destroy_user_strength_model(...)` in the User-Material-Interface folder.
+  This function is called at the end of the simulation.
+  This gives the user a chance to cleanup any memory allocation that was done during 
+  the call to `init_user_strength_model(...)`.
 */
 
     size_t num_materials = simparam->num_materials;
@@ -1743,9 +1757,12 @@ void FEA_Module_SGH::cleanup_user_strength_model() {
         if (read_from_file.host(mat_id) == 1){
      
             size_t num_vars = mat_num_state_vars.host(mat_id);
-     
+            size_t num_gvars = mat_num_global_vars.host(mat_id);
+
             destroy_user_strength_model(file_state_vars,
+                                        global_vars,
                                         num_vars,
+                                        num_gvars,
                                         mat_id,
                                         rnum_elem);
      

@@ -18,7 +18,8 @@ output_options:
 
 material_options:
     num_materials: 1
-    max_num_state_var: 1
+    max_num_state_var: 0
+    max_num_global_var: 0
     material_1:
         #eos model is required
         eos_model: user_eos_model
@@ -31,7 +32,8 @@ material_options:
         q1ex: 1.0
         q2ex: 0.0
 
-        num_state_vars: 1
+        num_state_vars: 0
+        num_global_vars: 0
 
 region_options:
     num_fills: 1
