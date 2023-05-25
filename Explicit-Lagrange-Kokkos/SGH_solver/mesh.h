@@ -1624,6 +1624,24 @@ void ensight(const mesh_t &mesh,
 void VTKHexN(const mesh_t &mesh,
              const node_t &node);
 
+
+void VTKHexN(const mesh_t &mesh,
+             const DViewCArrayKokkos <double> &node_coords,
+             const DViewCArrayKokkos <double> &node_vel,
+             const DViewCArrayKokkos <double> &node_mass,
+             const DViewCArrayKokkos <double> &elem_den,
+             const DViewCArrayKokkos <double> &elem_pres,
+             const DViewCArrayKokkos <double> &elem_stress,
+             const DViewCArrayKokkos <double> &elem_sspd,
+             const DViewCArrayKokkos <double> &elem_sie,
+             const DViewCArrayKokkos <double> &elem_vol,
+             const DViewCArrayKokkos <double> &elem_mass,
+             const DViewCArrayKokkos <size_t> &elem_mat_id,
+             CArray <double> &graphics_times,
+             size_t &graphics_id,
+             const double time_value);
+
+
 void state_file(const mesh_t &mesh,
                 const DViewCArrayKokkos <double> &node_coords,
                 const DViewCArrayKokkos <double> &node_vel,

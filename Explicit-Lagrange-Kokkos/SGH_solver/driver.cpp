@@ -294,6 +294,27 @@ int main(int argc, char *argv[]){
         graphics_times(0) = 0.0;
         graphics_time = graphics_dt_ival;  // the times for writing graphics dump
         
+        
+        // --- testing ---
+        // testing high-order mesh initialization
+        // --- testing ---
+        VTKHexN(mesh,
+                node_coords,
+                node_vel,
+                node_mass,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
+                elem_vol,
+                elem_mass,
+                elem_mat_id,
+                graphics_times,
+                graphics_id,
+                time_value);
+        
+        
 
         // ---------------------------------------------------------------------
         //   Calculate the SGH solution
