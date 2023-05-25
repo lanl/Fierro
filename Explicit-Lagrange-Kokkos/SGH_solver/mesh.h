@@ -89,6 +89,8 @@ struct mesh_t {
     
     mesh_init::elem_name_tag elem_kind;
 
+    size_t Pn;
+    
     size_t num_dims;
     
     size_t num_nodes;
@@ -109,6 +111,9 @@ struct mesh_t {
     size_t num_bdy_sets;
     size_t num_nodes_in_patch;
 
+    // mesh index converting
+    CArray <size_t> convert_vtk_to_fierro;
+    CArray <size_t> convert_fierro_to_vtk;
     
     // ---- nodes ----
     
@@ -205,6 +210,19 @@ struct mesh_t {
         
     }; // end method
     
+    // initialization method
+    void initialize_elems_Pn(const size_t num_elems_inp, const size_t num_nodes_in_elem_inp)
+    {
+        num_elems = num_elems_inp;
+        num_nodes_in_elem = num_nodes_in_elem_inp;
+        
+        nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
+        corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
+        
+        return;
+        
+    }; // end method
+    
     
     // initialization methods
     void initialize_corners(const size_t num_corners_inp)
@@ -225,6 +243,7 @@ struct mesh_t {
         FOR_ALL_CLASS(node_gid, 0, num_nodes, {
             num_corners_in_node(node_gid) = 0;
         });
+
         
         
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++){
@@ -245,6 +264,8 @@ struct mesh_t {
 
         CArrayKokkos <size_t> count_saved_corners_in_node(num_nodes);
 
+        
+        
         // reset num_corners to zero
         FOR_ALL_CLASS(node_gid, 0, num_nodes, {
             count_saved_corners_in_node(node_gid) = 0;
@@ -383,27 +404,9 @@ struct mesh_t {
         
         // WARNING WARNING
         // the mesh element kind should be in the input file and set when reading mesh
-        //mesh_elem_kind = mesh_init::linear_tensor_element; // MUST BE SET IN input.cpp
+        //mesh_elem_kind = mesh_init::linear_tensor_element; // MUST BE SET
+    
         
-        size_t Pn;  // polynomial order for element kind
-        
-        
-        if (elem_kind == mesh_init::linear_tensor_element){
-            Pn = 1; // linear element
-        }
-        else if (elem_kind == mesh_init::arbitrary_tensor_element) {
-            if(num_dims == 3) {
-                Pn = (size_t) pow( (double) num_nodes_in_elem, 1.0/3.0) - 1;
-            }
-            else
-            {
-                Pn = (size_t) pow( (double) num_nodes_in_elem, 1.0/2.0) - 1;
-            }
-        }
-        else {
-            printf("\nERROR: element type is not known \n");
-        } // end if on mesh_init
-        // -----
         
         
         // building patches
@@ -413,7 +416,7 @@ struct mesh_t {
         
         size_t num_patches_in_surf;  // =Pn_order or =Pn_order*Pn_order
         
-        int num_1D = Pn + 1; // number of nodes in 1D
+        size_t num_1D = Pn + 1; // number of nodes in 1D
         
         DCArrayKokkos <size_t> node_ordering_in_elem; // dimensions will be (num_patches_in_elem,num_nodes_in_patch);
         
@@ -1467,6 +1470,18 @@ void read_mesh_ensight(char* MESH,
                        const size_t num_dims,
                        const size_t rk_num_bins);
 
+// for string delimiter parsing
+std::vector<std::string> split (std::string s, std::string delimiter);
+
+
+void readVTKPn(char* MESH,
+                 mesh_t &mesh,
+                 node_t &node,
+                 elem_t &elem,
+                 corner_t &corner,
+                 const size_t num_dims,
+               const size_t rk_num_bins);
+
 
 void input(CArrayKokkos <material_t> &material,
            CArrayKokkos <mat_fill_t> &mat_fill,
@@ -1585,6 +1600,8 @@ void ensight(const mesh_t &mesh,
              size_t &graphics_id,
              const double time_value);
 
+void VTKHexN(const mesh_t &mesh,
+             const node_t &node);
 
 void state_file(const mesh_t &mesh,
                 const DViewCArrayKokkos <double> &node_coords,

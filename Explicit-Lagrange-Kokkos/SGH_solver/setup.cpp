@@ -36,8 +36,7 @@ void user_voxel_init(DCArrayKokkos <size_t> &elem_values,
                      size_t &voxel_num_j,
                      size_t &voxel_num_k);
 
-// for string delimiter parsing
-std::vector<std::string> split (std::string s, std::string delimiter);
+
 
 // retrieves multiple values between [ ]
 std::vector<double> extract_list(std::string str);

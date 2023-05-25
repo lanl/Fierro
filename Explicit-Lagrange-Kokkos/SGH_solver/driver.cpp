@@ -134,13 +134,34 @@ int main(int argc, char *argv[]){
 
         // ---------------------------------------------------------------------
         //    read in supplied mesh
-        // --------------------------------------------------------------------- 
-        read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
-        mesh.build_corner_connectivity();
-        mesh.build_elem_elem_connectivity();
-        mesh.build_patch_connectivity();
-        mesh.build_node_node_connectivity();
+        // ---------------------------------------------------------------------
+        std::string str;
+        std::string delimiter = ".";
+        std::string arg1(argv[1]);
+        std::vector<std::string> split_file_str = split (arg1, delimiter);
+        size_t len = split_file_str.size();
+        if(split_file_str[len-1]=="geo"){
+            read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
+        }
+        else
+        {
+            // arbitrary order elements
+            readVTKPn(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
+        }
         
+        // write VTKPn
+        printf("writing VTK file \n");
+        VTKHexN(mesh, node);
+        
+        printf("building corners \n");
+        mesh.build_corner_connectivity();
+        printf("building elem_elem \n");
+        mesh.build_elem_elem_connectivity();
+        printf("building patches \n");
+        mesh.build_patch_connectivity();
+        printf("building node_node \n");
+        mesh.build_node_node_connectivity();
+        printf("done building connectivity \n");
         
         // ---------------------------------------------------------------------
         //    allocate memory

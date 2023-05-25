@@ -6,7 +6,7 @@
 
 
 
-
+// Ensight file
 void write_outputs (const mesh_t &mesh,
                     DViewCArrayKokkos <double> &node_coords,
                     DViewCArrayKokkos <double> &node_vel,
@@ -508,6 +508,165 @@ void state_file( const mesh_t &mesh,
 
 
 
+// -------------------------------------------------------
+// This function write outs the data to a VTK file
+//--------------------------------------------------------
+//
+//  vtkLagrangeHexahedron::PointIndexFromIJK(int i, int j, int k, const int* order)
+//
+void VTKHexN(const mesh_t &mesh,
+             const node_t &node)
+{
+    // ---------------------------------------------------------------------
+    //   t=tval vtk and state output
+    // ---------------------------------------------------------------------
+    // add other vars here
+    //node_coords.update_host();
+    //Kokkos::fence();
+    
+    
+    FILE *out[20];   // the output files that are written to
+    char name[100];  // char string
+    
+    
+    
+
+    struct stat st;
+    
+    if(stat("vtk",&st) != 0)
+        system("mkdir vtk");
+    
+    
+    
+    /*
+     ---------------------------------------------------------------------------
+     Write the Geometry file
+     ---------------------------------------------------------------------------
+     */
+    
+    
+    sprintf(name,"vtk/meshHexN.vtk");  // mesh file
+    
+    
+    out[0]=fopen(name,"w");
+    
+    
+    fprintf(out[0],"# vtk DataFile Version 2.0\n");  // part 2
+    fprintf(out[0],"Mesh for Fierro\n");             // part 2
+    fprintf(out[0],"ASCII \n");                      // part 3
+    fprintf(out[0],"DATASET UNSTRUCTURED_GRID\n\n"); // part 4
+    
+    fprintf(out[0],"POINTS %d float\n", mesh.num_nodes);
+
+    
+    // write all components of the point coordinates
+    for (size_t node_gid=0; node_gid<mesh.num_nodes; node_gid++){
+        fprintf(out[0],
+                "%f %f %f\n",
+                node.coords(0, node_gid, 0),
+                node.coords(0, node_gid, 1),
+                node.coords(0, node_gid, 2));
+    } // end for
+    // WARNING update to (1, node_gid, ...)  WARNING needs to be rk=1 for outputs
+    
+    /*
+     ---------------------------------------------------------------------------
+     Write the elems
+     ---------------------------------------------------------------------------
+     */
+    fprintf(out[0],"\n");
+    fprintf(out[0],"CELLS %lu %lu\n", mesh.num_elems, mesh.num_elems+mesh.num_elems*mesh.num_nodes_in_elem);  // size=all printed values
+    
+    // write all global point numbers for this elem
+    for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++) {
+        
+        fprintf(out[0], "%lu ", mesh.num_nodes_in_elem); // num points in this elem
+        
+        for (size_t vtk_index=0; vtk_index<mesh.num_nodes_in_elem; vtk_index++){
+            
+            // get the Fierro node_lid
+            size_t node_lid = mesh.convert_vtk_to_fierro(vtk_index);
+            
+            fprintf(out[0],"%lu ", mesh.nodes_in_elem.host(elem_gid, node_lid));
+        
+        }
+        fprintf(out[0],"\n");
+        
+    } // end for
+    
+    fprintf(out[0],"\n");
+    fprintf(out[0],"CELL_TYPES %d \n", mesh.num_elems);
+    // VTK_LAGRANGE_HEXAHEDRON: 72,
+    // VTK_HIGHER_ORDER_HEXAHEDRON: 67
+    // VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON = 33
+    // element types: https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html
+    // element types: https://kitware.github.io/vtk-js/api/Common_DataModel_CellTypes.html
+    // vtk format: https://www.kitware.com//modeling-arbitrary-order-lagrange-finite-elements-in-the-visualization-toolkit/
+    for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++) {
+        fprintf(out[0],"%d \n", 72);
+    }
+    
+    
+    /*
+     ---------------------------------------------------------------------------
+     Write the nodal variable file
+     ---------------------------------------------------------------------------
+     */
+    /*
+    fprintf(out[0],"\n");
+    fprintf(out[0],"POINT_DATA %d \n", mesh.num_nodes);
+    fprintf(out[0],"SCALARS point_var float 1\n"); // the 1 is number of scalar components [1:4]
+    fprintf(out[0],"LOOKUP_TABLE default\n");
+    for (size_t node_gid=0; node_gid<mesh.num_nodes; node_gid++) {
+        double var=2;
+        fprintf(out[0],"%f\n",var);
+    }
+     */
+    
+    /*
+     ---------------------------------------------------------------------------
+     Write the vector variables to file
+     ---------------------------------------------------------------------------
+     */
+    /*
+    fprintf(out[0],"\n");
+    fprintf(out[0],"VECTORS point_vec float\n");
+    for (size_t node_gid=0; node_gid<mesh.num_nodes; node_gid++) {
+        double var1=0;
+        double var2=1;
+        double var3=2;
+        fprintf(out[0],"%f %f %f\n",var1, var2, var3);
+    }
+    */
+    
+    
+    /*
+     ---------------------------------------------------------------------------
+     Write the scalar elem variable to file
+     ---------------------------------------------------------------------------
+     */
+    /*
+    fprintf(out[0],"\n");
+    fprintf(out[0],"CELL_DATA %d \n", mesh.num_elems);
+    fprintf(out[0],"SCALARS elem_var float 1\n"); // the 1 is number of scalar components [1:4]
+    fprintf(out[0],"LOOKUP_TABLE default\n");
+    for (size_t elem_id=0; elem_id<mesh.num_elems; elem_id++) {
+        double var=1;
+        fprintf(out[0],"%f\n",var);
+    }
+    
+    fprintf(out[0],"\n");
+    fprintf(out[0],"SCALARS elem_var2 float 1\n"); // the 1 is number of scalar components [1:4]
+    fprintf(out[0],"LOOKUP_TABLE default\n");
+    for (size_t elem_id=0; elem_id<mesh.num_elems; elem_id++) {
+        double var=10;
+        fprintf(out[0],"%f\n",var);
+    }
+     */
+    
+    fclose(out[0]);
+
+} // end write vtk high-order
 
 
 
