@@ -296,7 +296,7 @@ void readVTKPn(char* MESH,
     }
     
     // intialize elem mesh
-    mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem);
+    mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_dims);
     elem.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
     
     
@@ -424,6 +424,18 @@ void readVTKPn(char* MESH,
     found=false;
     
     in.close();
+    
+    
+    // save the node coords to the current RK value
+    for (size_t node_gid=0; node_gid<num_nodes; node_gid++){
+        
+        for(int rk=1; rk<rk_num_bins; rk++){
+            for (int dim = 0; dim < num_dims; dim++){
+                node.coords(rk, node_gid, dim) = node.coords(0, node_gid, dim);
+            } // end for dim
+        } // end for rk
+        
+    } // end parallel for
     
 }
 

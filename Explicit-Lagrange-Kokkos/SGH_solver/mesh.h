@@ -211,8 +211,9 @@ struct mesh_t {
     }; // end method
     
     // initialization method
-    void initialize_elems_Pn(const size_t num_elems_inp, const size_t num_nodes_in_elem_inp)
+    void initialize_elems_Pn(const size_t num_elems_inp, const size_t num_nodes_in_elem_inp, const size_t num_dims_inp)
     {
+        num_dims = num_dims_inp;
         num_elems = num_elems_inp;
         num_nodes_in_elem = num_nodes_in_elem_inp;
         
@@ -420,7 +421,7 @@ struct mesh_t {
         
         DCArrayKokkos <size_t> node_ordering_in_elem; // dimensions will be (num_patches_in_elem,num_nodes_in_patch);
         
-        
+        printf("num_dims = %d \n", num_dims);
         
         if(num_dims == 3) {
             
@@ -430,7 +431,11 @@ struct mesh_t {
             num_patches_in_elem = num_patches_in_surf*num_surfs_in_elem;
             
             // nodes in a patch in the element
-            node_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem,num_nodes_in_patch);
+            node_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_nodes_in_patch);
+            
+            printf("num_patches_in_elem = %d \n", num_patches_in_elem);
+            printf("num_nodes_in_patch = %d \n", num_nodes_in_patch);
+            printf("num_surfaces = %d \n", num_surfs_in_elem);
             
         } else {
             num_patches_in_surf = Pn;
@@ -501,8 +506,9 @@ struct mesh_t {
         // -----
         else if (elem_kind == mesh_init::arbitrary_tensor_element) {
             
-            size_t temp_node_lids[num_nodes_in_patch*num_surfs_in_elem];
+            size_t temp_node_lids[num_nodes_in_patch*num_patches_in_surf*num_surfs_in_elem];
             
+            printf("arb-ten-elem \n");
             
             // arbitrary-order node ordering in patches of an element
             if(num_dims == 3) {
@@ -558,9 +564,13 @@ struct mesh_t {
                     } // end for k
                 } // end for j
                 
+                printf("i-minus\n");
                 
                 // i-plus-dir patches
-                i_patch=num_1D-1;
+                i_patch = num_1D-1;
+                printf("num_1D = %d \n", num_1D);
+                printf("i_patch = %d \n", i_patch);
+                printf("num_nodes_in_elem %d \n", num_nodes_in_elem);
                 for (int k=0; k<num_1D-1; k++){
                     for (int j=0; j<num_1D-1; j++){
                         
@@ -584,10 +594,10 @@ struct mesh_t {
                         temp_node_lids[count] = i_patch + j*num_1D + (k+1)*num_1D*num_1D;//node_rid(i_patch, j, k+1, num_1D);
                         count ++;
                         
-                    } // end for k
-                } // end for j
+                    } // end for j
+                } // end for k
                 
-                
+                printf("i-plus\n");
                 
                 /*
                     
@@ -630,6 +640,8 @@ struct mesh_t {
                     } // end for i
                 } // end for k
                 
+                printf("j-minus\n");
+                
                 j_patch=num_1D-1;
                 for (int k=0; k<num_1D-1; k++){
                     for (int i=0; i<num_1D-1; i++){
@@ -653,7 +665,7 @@ struct mesh_t {
                     } // end for i
                 } // end for k
                 
-                
+                printf("j-plus\n");
                 
                 
                 
@@ -674,6 +686,8 @@ struct mesh_t {
                     (i,j) o--o (i+1,j)
                     
                     */
+                
+                
                 
                 k_patch=0;
                 for (int j=0; j<num_1D-1; j++){
@@ -697,7 +711,7 @@ struct mesh_t {
                         
                     } // end for i
                 } // end for j
-                
+                printf("k-minus\n");
                 
                 k_patch=num_1D-1;
                 for (int j=0; j<num_1D-1; j++){
@@ -722,6 +736,10 @@ struct mesh_t {
                     } // end for i
                 } // end for j
                 
+                
+                printf("k-plus\n");
+                
+                
                 count = 0;
                 int elem_patch_lid = 0;
                 for (size_t surf_lid=0; surf_lid<6; surf_lid++){
@@ -733,6 +751,7 @@ struct mesh_t {
                         elem_patch_lid++;
                     } // end for patch_lid in a surface
                 } // end for i
+                
                 
             }  // end if 3D
             //
@@ -815,12 +834,14 @@ struct mesh_t {
         else {
             printf("\nERROR: mesh type is not known \n");
         } // end if
-            
+        
+        
+        
         // update the device
-        Kokkos::fence();
         node_ordering_in_elem.update_device();
         Kokkos::fence();
         
+        printf("done building node ordering \n");
         
         
         // for saviong the hash keys of the patches and then the nighboring elem_gid

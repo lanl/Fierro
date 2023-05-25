@@ -545,7 +545,44 @@ void tag_bdys(const CArrayKokkos <boundary_t> &boundary,
     //    exit(0);
     //} // end if
     
+    
+//    // TESTING
+//    // testing boundary patches
+//    for (size_t bdy_patch_lid=0; bdy_patch_lid<mesh.num_bdy_patches; bdy_patch_lid++) {
+//        printf("bdy = %d, bdy patch = %d \n", bdy_patch_lid, mesh.bdy_patches(bdy_patch_lid));
+//        
+//        size_t patch_gid = mesh.bdy_patches(bdy_patch_lid);
+//        printf("nodes gids in patch = \n");
+//        for (size_t node_lid=0; node_lid<4; node_lid++){
+//            printf(" %d, ", mesh.nodes_in_patch(patch_gid, node_lid));
+//        }
+//        printf("\n");
+//        printf("x_surf for nodes in patch = \n");
+//        for (size_t node_lid=0; node_lid<4; node_lid++){
+//            //printf(" %d, ", nodes_in_patch(patch_gid, node_lid));
+//            size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+//            printf(" %f, ", node_coords(0, node_gid, 0));
+//        }
+//        printf("\n");
+//        printf("y_surf for nodes in patch = \n");
+//        for (size_t node_lid=0; node_lid<4; node_lid++){
+//            //printf(" %d, ", nodes_in_patch(patch_gid, node_lid));
+//            size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+//            printf(" %f, ", node_coords(0, node_gid, 1));
+//        }
+//        printf("\n");
+//        printf("z_surf for nodes in patch = \n");
+//        for (size_t node_lid=0; node_lid<4; node_lid++){
+//            //printf(" %d, ", nodes_in_patch(patch_gid, node_lid));
+//            size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+//            printf(" %f, ", node_coords(0, node_gid, 2));
+//        }
+//        printf("\n");
+//    } // end for
+    
+    
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
+        
         
         // tag boundaries
         int bc_tag_id = boundary(bdy_set).surface;
