@@ -6,19 +6,19 @@ solver_options:
     mesh_file_format: ensight
     mesh_file_name: /vast/home/cyenusah/github/Fierro/EVPFFT/input_files/mesh_single_element.geo
     time_variables:
-        time_final: 1.0  #[s]
-        dt_min: 1.e-14  #[s]
-        dt_max: 1.e-3  #[s]
-        dt_start: 1.e-11  #[s]
-        dt_cfl: 0.4e+3
-        cycle_stop: 2000000
+        time_final: 1.0e+8
+        dt_min: 1.e-11
+        dt_max: 1.e-3 
+        dt_start: 1.e-11
+        dt_cfl: 0.4e-3
+        cycle_stop: 200000000
 
 output_options:
-  graphics_step: 1.e-2  #[s]
+  graphics_step: 1.0e+0
 
 material_options:
     num_materials: 1
-    max_num_state_var: 0
+    max_num_state_var: 5
     max_num_global_var: 0
     material_1:
         #eos model is required
@@ -32,7 +32,7 @@ material_options:
         q1ex: 1.0
         q2ex: 0.0
 
-        num_state_vars: 0
+        num_state_vars: 5
         num_global_vars: 0
 
 region_options:
@@ -41,13 +41,13 @@ region_options:
     mat_fill_1:
         volume: global
         mat_id: 0
-        den: 8.96e-9  #[tonne/mm3]
-        sie: 1.0e-17  #[mJ]
+        den: 16.640e-3
+        sie: 1.0e-9 
             
         velocity: cartesian
-        u: 0.0  #[mm/s]
-        v: 0.0  #[mm/s]
-        w: 0.0  #[mm/s]
+        u: 0.0
+        v: 0.0
+        w: 0.0
     
 boundary_condition_options:
     num_bcs: 2
@@ -62,7 +62,7 @@ boundary_condition_options:
         surface: z_plane
         value: 1.0
         condition_type: velocity
-        u: 0.0  #[mm/s]
-        v: 0.0  #[mm/s]
-        w: 1.0  #[mm/s]
+        u: 0.0
+        v: 0.0
+        w: 0.1
 

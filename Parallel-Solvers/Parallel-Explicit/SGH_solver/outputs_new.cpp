@@ -122,9 +122,9 @@ Explicit_Solver_SGH::write_outputs_new()
   //cell_data_scalars_int["elem_switch"] = elem_switch->pointer();
 
   // element "elem_statev" //uncomment if needed (works fine)
-  //sgh_module->elem_statev.update_host();
-  //cell_data_fields_double["elem_statev"] = std::make_pair(&sgh_module->elem_statev.host(0,0), 
-  //                                                        sgh_module->elem_statev.dims(1));
+  sgh_module->elem_statev.update_host();
+  cell_data_fields_double["elem_statev"] = std::make_pair(&sgh_module->elem_statev.host(0,0), 
+                                                          sgh_module->elem_statev.dims(1));
 
   switch (output_file_format)
   {
@@ -403,6 +403,7 @@ mpi_get_file_position_shared(
   MPI_Offset position;
 
   MPI_Barrier(comm);
+  MPI_File_sync(file_parallel);
   MPI_File_seek_shared(file_parallel, 0, MPI_SEEK_END);
   MPI_File_get_position_shared(file_parallel, &position);
   MPI_Barrier(comm);

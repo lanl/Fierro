@@ -58,8 +58,8 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
     
                 node_vel(1, bdy_node_gid, 0) = boundary(bdy_set).u;
                 node_vel(1, bdy_node_gid, 1) = boundary(bdy_set).v;
-                if (mesh.num_dims == 3) node_vel(1, bdy_node_gid, 2) = boundary(bdy_set).w;
-                //if (mesh.num_dims == 3) node_vel(1, bdy_node_gid, 2) = boundary(bdy_set).w * node_coords(1, bdy_node_gid, 2); 
+                //if (mesh.num_dims == 3) node_vel(1, bdy_node_gid, 2) = boundary(bdy_set).w;
+                if (mesh.num_dims == 3) node_vel(1, bdy_node_gid, 2) = boundary(bdy_set).w * node_coords(1, bdy_node_gid, 2); 
  
             }// end if
             

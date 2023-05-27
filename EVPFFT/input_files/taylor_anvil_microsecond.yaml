@@ -6,15 +6,15 @@ solver_options:
     mesh_file_format: ensight
     mesh_file_name: /vast/home/cyenusah/github/Fierro/Explicit-Lagrange/meshes/mesh_z_taylorAnvil.geo
     time_variables:
-        time_final: 1.0  #[ms]
-        dt_min: 1.e-11  #[ms]
-        dt_max: 1.e-3  #[ms]
-        dt_start: 1.e-6  #[ms]
+        time_final: 10000  #[microsecond]
+        dt_min: 1.e-8  #[microsecond]
+        dt_max: 1.e+1  #[microsecond]
+        dt_start: 1.e-5  #[microsecond]
         dt_cfl: 0.4
         cycle_stop: 200000000
 
 output_options:
-  graphics_step: 1.0e-2  #[ms]
+  graphics_step: 100.0  #[microsecond]
 
 material_options:
     num_materials: 1
@@ -41,13 +41,13 @@ region_options:
     mat_fill_1:
         volume: global
         mat_id: 0
-        den: 16.640e-3  #[g/mm3]
-        sie: 1.0e-9  #[N-mm]
+        den: 8.93 #[g/cm3]
+        sie: 1.0e-9
             
         velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: -175.0  #[ms/mm]
+        u: 0.0  #[cm/microsecond]
+        v: 0.0  #[cm/microsecond]
+        w: -0.0175 #[cm/microsecond]
     
 boundary_condition_options:
     num_bcs: 3

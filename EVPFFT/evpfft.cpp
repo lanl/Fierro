@@ -2,6 +2,10 @@
 #include "utilities.h"
 #include <math.h>
 
+//#ifndef NDEBUG
+#include <fenv.h> // for debugging floating point exceptions
+//#endif
+
 EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const real_t time_scale_)
 //-------------------------------------------------
 // Data Members needed for EVPFFT Calculations
@@ -460,6 +464,13 @@ void EVPFFT::evolve()
 
 void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid)
 {
+#if 0
+//#ifndef NDEBUG
+    feenableexcept (FE_DIVBYZERO); 
+    feenableexcept (FE_INVALID);
+    feenableexcept (FE_OVERFLOW);
+//#endif 
+#endif
 
   //ViewMatrixTypeReal vel_grad_view(vel_grad,3,3);
   ViewCMatrix <real_t> vel_grad_view(vel_grad,3,3);
@@ -495,7 +506,7 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
 
   if (ddnorm > 1.0e-16) {
 
-    //if (fierro_cycle%100 == 0) print_vel_grad();
+    //if (fierro_cycle%1000 == 0) print_vel_grad();
     
     // calculate strain-rate and rotation-rate
     decompose_vel_grad(udot.host_pointer());
@@ -539,8 +550,8 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   } // end for j
 
   //if (evm >= 0.5) {
-  //  write_texture();
-  //  exit(0);
+    //write_texture();
+    //exit(0);
   //}
 }
 

@@ -14,7 +14,7 @@ void init_user_strength_model(const DCArrayKokkos <double> &file_state_vars,
     /*
     User material model should be initialized here.
     */
-#if 0
+
     // initialize to zero
     for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
         for(size_t var=0; var<num_state_vars; var++){
@@ -26,7 +26,7 @@ void init_user_strength_model(const DCArrayKokkos <double> &file_state_vars,
     for (size_t var = 0; var < num_global_vars; var++) {
       global_vars.host(mat_id,var) = 0.0;
     }
-#endif
+
 
 #ifdef BUILD_EVPFFT
     // initialization of evpfft
@@ -128,7 +128,7 @@ void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
              calculate pressure
     */
     elem_pres(elem_gid) = 0.0;  // pressure
-    elem_sspd(elem_gid) = 2270000;  // [mm/s] // sound speed
+    elem_sspd(elem_gid) = 2400.0; //[mm/ms] //0.227;//[cm/microsecond]  2270000;// [mm/s] // sound speed
 #endif
 
 #if 0    

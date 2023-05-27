@@ -2314,12 +2314,12 @@ void FEA_Module_SGH::sgh_solve(){
 
         if (cycle==0){
             if(myrank==0)
-              printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+              printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
         }
         // print time step every 10 cycles
         else if (cycle%20==0){
             if(myrank==0)
-              printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+              printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
         } // end if
         
         
