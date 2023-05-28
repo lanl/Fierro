@@ -168,7 +168,6 @@ construct_file_name(
 void
 Explicit_Solver_SGH::parallel_vtk_writer_new()
 {
-
   int num_dim = simparam->num_dim;
   std::stringstream str_stream;
   MPI_Offset current_offset;
@@ -213,10 +212,10 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
   /*************** write header of the vtk file ***************/
   str_stream.str("");
-  str_stream << "# vtk DataFile Version 2.0\n";
-  str_stream << "Mesh for Fierro\n";
-  str_stream << "ASCII\n";
-  str_stream << "DATASET UNSTRUCTURED_GRID\n";
+  str_stream << "# vtk DataFile Version 2.0" << std::endl;
+  str_stream << "Mesh for Fierro" << std::endl;
+  str_stream << "ASCII" << std::endl;
+  str_stream << "DATASET UNSTRUCTURED_GRID" << std::endl;
   current_offset = mpi_get_file_position_shared(world, myfile_parallel);
   if (myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -225,7 +224,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
   /*************** write POINTS ***************/
   str_stream.str("");
-  str_stream << "\n" << "POINTS " << num_nodes << " float\n";
+  str_stream << std::endl << "POINTS " << num_nodes << " float" << std::endl;
   current_offset = mpi_get_file_position_shared(world, myfile_parallel);
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -237,7 +236,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
   /*************** write CELLS ***************/
   str_stream.str("");
-  str_stream << "\n" << "CELLS " << num_elem << " " << num_elem*(max_nodes_per_element+1) << "\n";
+  str_stream << std::endl << "CELLS " << num_elem << " " << num_elem*(max_nodes_per_element+1) << std::endl;
   current_offset = mpi_get_file_position_shared(world, myfile_parallel);
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -258,7 +257,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
   /*************** write CELL_TYPES ***************/
   str_stream.str("");
-	str_stream << "\n" << "CELL_TYPES " << num_elem << "\n";
+	str_stream << std::endl << "CELL_TYPES " << num_elem << std::endl;
   current_offset = mpi_get_file_position_shared(world, myfile_parallel);
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -273,7 +272,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
   /*************** write POINT_DATA ***************/
   str_stream.str("");
-	str_stream << "\n" << "POINT_DATA " << num_nodes;
+	str_stream << std::endl << "POINT_DATA " << num_nodes;
   current_offset = mpi_get_file_position_shared(world, myfile_parallel);
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
@@ -283,8 +282,8 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   //SCALARS float
   for (auto it = point_data_scalars_double.begin(); it != point_data_scalars_double.end(); it++) {
     str_stream.str("");
-    str_stream << "\n" << "SCALARS " << it->first << " float 1" << "\n";
-    str_stream << "LOOKUP_TABLE default" << "\n";
+    str_stream << std::endl << "SCALARS " << it->first << " float 1" << std::endl;
+    str_stream << "LOOKUP_TABLE default" << std::endl;
     current_offset = mpi_get_file_position_shared(world, myfile_parallel);
     if(myrank == 0) {
       MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
@@ -297,7 +296,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   //VECTORS float
   for (auto it = point_data_vectors_double.begin(); it != point_data_vectors_double.end(); it++) {
     str_stream.str("");
-    str_stream << "\n" << "VECTORS " << it->first << " float" << "\n";
+    str_stream << std::endl << "VECTORS " << it->first << " float" << std::endl;
     current_offset = mpi_get_file_position_shared(world, myfile_parallel);
     if(myrank == 0) {
       MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
@@ -310,7 +309,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
   /*************** write CELL_DATA ***************/
   str_stream.str("");
-	str_stream << "\n" << "CELL_DATA " << num_elem;
+	str_stream << std::endl << "CELL_DATA " << num_elem;
   current_offset = mpi_get_file_position_shared(world, myfile_parallel);
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
@@ -320,8 +319,8 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   //SCALARS float
   for (auto it = cell_data_scalars_double.begin(); it != cell_data_scalars_double.end(); it++) {
     str_stream.str("");
-    str_stream << "\n" << "SCALARS " << it->first << " float 1" << "\n";
-    str_stream << "LOOKUP_TABLE default" << "\n";
+    str_stream << std::endl << "SCALARS " << it->first << " float 1" << std::endl;
+    str_stream << "LOOKUP_TABLE default" << std::endl;
     current_offset = mpi_get_file_position_shared(world, myfile_parallel);
     if(myrank == 0) {
       MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
@@ -334,8 +333,8 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   //SCALARS int
   for (auto it = cell_data_scalars_int.begin(); it != cell_data_scalars_int.end(); it++) {
     str_stream.str("");
-    str_stream << "\n" << "SCALARS " << it->first << " int 1" << "\n";
-    str_stream << "LOOKUP_TABLE default" << "\n";
+    str_stream << std::endl << "SCALARS " << it->first << " int 1" << std::endl;
+    str_stream << "LOOKUP_TABLE default" << std::endl;
     current_offset = mpi_get_file_position_shared(world, myfile_parallel);
     if(myrank == 0) {
       MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
@@ -347,7 +346,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
   //FIELD
   str_stream.str("");
-  str_stream << "\n" << "FIELD FieldData " << cell_data_fields_double.size() << "\n";
+  str_stream << std::endl << "FIELD FieldData " << cell_data_fields_double.size() << std::endl;
   current_offset = mpi_get_file_position_shared(world, myfile_parallel);
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
@@ -355,7 +354,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   }
   for (auto it = cell_data_fields_double.begin(); it != cell_data_fields_double.end(); it++) {
     str_stream.str("");
-    str_stream << it->first << " " << it->second.second << " " << num_elem << " float" << "\n";
+    str_stream << it->first << " " << it->second.second << " " << num_elem << " float" << std::endl;
     current_offset = mpi_get_file_position_shared(world, myfile_parallel);
     if(myrank == 0) {
       MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
@@ -365,6 +364,10 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
       it->second.first, all_element_map, it->second.second, num_elem, world, myfile_parallel);
   }
   
+  MPI_Barrier(world);
+  MPI_File_sync(myfile_parallel);
+  MPI_File_close(&myfile_parallel);
+
 
   /*************** write .vtk.series file ***************/
   simparam->graphics_times(simparam->graphics_id) = simparam->time_value;
@@ -389,9 +392,6 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   
   simparam->graphics_id++;
 
-  MPI_Barrier(world);
-  MPI_File_sync(myfile_parallel);
-  MPI_File_close(&myfile_parallel);
 }
 
 
@@ -403,7 +403,6 @@ mpi_get_file_position_shared(
   MPI_Offset position;
 
   MPI_Barrier(comm);
-  MPI_File_sync(file_parallel);
   MPI_File_seek_shared(file_parallel, 0, MPI_SEEK_END);
   MPI_File_get_position_shared(file_parallel, &position);
   MPI_Barrier(comm);
@@ -473,7 +472,7 @@ void write_data_to_string_stream(
     for (size_t j = 0; j < dim1; j++) {
       str_stream << std::left << std::setw(w) << data_view(i,j) << " ";
     }
-    str_stream << "\n";
+    str_stream << std::endl;
   }
 
   return;
