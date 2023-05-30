@@ -435,6 +435,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         
       // allocate elem_statev
     elem.statev = CArray <double> (num_elems, max_num_state_vars);
+    std::fill_n(elem.statev.pointer(), elem.statev.size(), 0); // to avoid writing random number in output
 
         // --- make dual views of data on CPU and GPU ---
         //  Notes:

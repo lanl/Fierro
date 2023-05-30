@@ -144,7 +144,8 @@ Explicit_Solver_SGH::write_outputs_new()
 void
 Explicit_Solver_SGH::parallel_vtu_writer_new()
 {
-/* to be added... */
+  /* to be added... */
+  throw std::runtime_error("parallel_vtu_writer_new() not yet implemented. use parallel_vtk_writer_new()");
 }
 
 std::string
