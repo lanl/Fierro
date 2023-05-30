@@ -47,7 +47,7 @@ region_options:
         velocity: cartesian
         u: 0.0
         v: 0.0
-        w: -175.0  #[ms/mm]
+        w: -175.0  #[mm/ms]
     
 boundary_condition_options:
     num_bcs: 3
