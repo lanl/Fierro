@@ -61,6 +61,8 @@ void lu_inverse(real_t *a_, int n)
 
   ludcmp(a_,n,n,indx_,d,isingular);
   if (isingular) {
+    delete [] y_;
+    delete [] indx_;
     return;
   }
 

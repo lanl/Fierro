@@ -51,7 +51,7 @@ sort_and_write_data_to_file_mpi_all(
   MPI_File file_parallel);
 
 Teuchos::RCP<CArray<int>>
-get_cell_data(
+get_cell_nodes(
   const CArray <size_t>& nodes_in_elem,
   size_t num_dim,
   Solver::node_ordering_convention active_node_ordering_convention);
@@ -251,7 +251,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
       }
     }
   } //end view scope
-  auto cell_data = get_cell_data(nodes_in_elem, num_dim, active_node_ordering_convention);
+  auto cell_data = get_cell_nodes(nodes_in_elem, num_dim, active_node_ordering_convention);
   sort_and_write_data_to_file_mpi_all <CArrayLayout,int,LO,GO,node_type> (
     cell_data->pointer(), all_element_map, cell_data->dims(1), num_elem, world, myfile_parallel);
 
@@ -547,7 +547,7 @@ sort_and_write_data_to_file_mpi_all(
 }
 
 Teuchos::RCP<CArray<int>>
-get_cell_data(
+get_cell_nodes(
   const CArray <size_t>& nodes_in_elem,
   size_t num_dim,
   Solver::node_ordering_convention active_node_ordering_convention)
