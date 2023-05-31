@@ -321,10 +321,12 @@ void EVPFFT::evpal(int imicro)
           } // end for ii
 
 #ifdef LU_MATRIX_INVERSE
-          lu_inverse(xjacobinv.pointer(), 6);
+          int isingular = lu_inverse(xjacobinv.pointer(), 6);
 #elif GJE_MATRIX_INVERSE
           inverse_gj(xjacobinv.pointer(), 6);
 #endif
+
+          if (isingular) break;
 
           // TODO: optimize indexing of this loop
           for (int ii = 1; ii <= 6; ii++) {
