@@ -18,7 +18,6 @@ mpi_get_file_position_shared(
 void 
 write_string_stream_to_file_mpi_all(
   const std::stringstream& str_stream,
-  size_t num_lines, 
   MPI_Offset rank_offset_multiplier,
   const MPI_File file_parallel,
   const MPI_Comm comm);
@@ -413,21 +412,22 @@ mpi_get_file_position_shared(
 void
 write_string_stream_to_file_mpi_all(
   const std::stringstream& str_stream,
-  size_t num_lines,
   MPI_Offset rank_offset_multiplier,
   const MPI_File file_parallel,
   const MPI_Comm comm)
 {
- /* `str_stream`: must have the same line length and a total of `num_lines` lines 
- *  `num_lines`: number of lines in `str_stream` a line is identified by the first instance of `\n`
+ /* `str_stream`: must have the same line length 
  *  `rank_offset_multiplier`: should be the index of the first node or element in the rank
  *  `file_parallel`: the parallel mpi file to write to
  *  `comm`: MPI_Comm that should do the write
  * */
 
   MPI_Offset current_offset, file_offset;
-  current_offset = mpi_get_file_position_shared(comm, file_parallel); 
-  file_offset = (str_stream.str().length()/num_lines) * rank_offset_multiplier + current_offset;
+  current_offset = mpi_get_file_position_shared(comm, file_parallel);
+  std::string line;
+  std::getline(const_cast<std::stringstream&>(str_stream), line);
+  auto line_length = line.length() + 1; // the +1 is for end of line character
+  file_offset = line_length * rank_offset_multiplier + current_offset;
   MPI_Barrier(comm);
   MPI_File_write_at_all(file_parallel, file_offset, str_stream.str().c_str(),
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -541,8 +541,7 @@ sort_and_write_data_to_file_mpi_all(
     auto const_host_view = sorted_data->getLocalViewHost(Tpetra::Access::ReadOnly);
     std::stringstream str_stream;
     write_data_to_string_stream <TpetraHostViewLayout,SC> (const_host_view.data(), sorted_data->getMap()->getLocalNumElements(), dim1, str_stream);
-    write_string_stream_to_file_mpi_all(str_stream, sorted_data->getMap()->getLocalNumElements(), 
-      sorted_data->getMap()->getGlobalElement(0), file_parallel, comm);
+    write_string_stream_to_file_mpi_all(str_stream, sorted_data->getMap()->getGlobalElement(0), file_parallel, comm);
   } //end view scope
 }
 
