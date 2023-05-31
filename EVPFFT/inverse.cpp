@@ -60,24 +60,22 @@ void lu_inverse(real_t *a_, int n)
   }
 
   ludcmp(a_,n,n,indx_,d,isingular);
-  if (isingular) {
-    delete [] y_;
-    delete [] indx_;
-    return;
-  }
 
-  for (int j = 1; j <= n; j++) {
-    lubksb(a_,n,n,indx_,&y(1,j));
-  }
-
-  for (int i = 1; i <= n; i++) {
+  if (!isingular) {
     for (int j = 1; j <= n; j++) {
-      a(i,j) = y(i,j);
+      lubksb(a_,n,n,indx_,&y(1,j));
+    }
+
+    for (int i = 1; i <= n; i++) {
+      for (int j = 1; j <= n; j++) {
+        a(i,j) = y(i,j);
+      }
     }
   }
 
   delete [] y_;
   delete [] indx_;
+  return;
 }
 
 //
