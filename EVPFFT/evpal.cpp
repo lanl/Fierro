@@ -56,6 +56,7 @@ void EVPFFT::evpal(int imicro)
     int itmaxal;
     int iter1;
     int isign;
+    int isingular;
 
     real_t sgnorm;
     real_t dgnorm;
@@ -321,7 +322,7 @@ void EVPFFT::evpal(int imicro)
           } // end for ii
 
 #ifdef LU_MATRIX_INVERSE
-          int isingular = lu_inverse(xjacobinv.pointer(), 6);
+          isingular = lu_inverse(xjacobinv.pointer(), 6);
 #elif GJE_MATRIX_INVERSE
           inverse_gj(xjacobinv.pointer(), 6);
 #endif
@@ -352,19 +353,21 @@ void EVPFFT::evpal(int imicro)
       //} // end for counter
       } // end while (iter1 < itmaxal && erral > erroral)
 
-      cb.chg_basis_1(sg6.pointer(), sgaux.pointer(), 1, 6, cb.B_basis_device_pointer());
-      cb.chg_basis_1(edotp6.pointer(), edotpaux.pointer(), 1, 6, cb.B_basis_device_pointer());
+      if (isingular != 0) {
+        cb.chg_basis_1(sg6.pointer(), sgaux.pointer(), 1, 6, cb.B_basis_device_pointer());
+        cb.chg_basis_1(edotp6.pointer(), edotpaux.pointer(), 1, 6, cb.B_basis_device_pointer());
 
-      // TODO: optimize indexing of this loop
-      for (int ii = 1; ii <= 3; ii++) {
-        for (int jj = 1; jj <= 3; jj++) {
-          sg(ii,jj,i,j,k)    = sgaux(ii,jj);
-          edotp(ii,jj,i,j,k) = edotpaux(ii,jj);
-        } // end for jj
-      } // end for ii
+        // TODO: optimize indexing of this loop
+        for (int ii = 1; ii <= 3; ii++) {
+          for (int jj = 1; jj <= 3; jj++) {
+            sg(ii,jj,i,j,k)    = sgaux(ii,jj);
+            edotp(ii,jj,i,j,k) = edotpaux(ii,jj);
+          } // end for jj
+        } // end for ii
 
-      loc_reduce.array[0] += dsgnorm2*wgt;
-      loc_reduce.array[1] += ddgnorm*wgt;
+        loc_reduce.array[0] += dsgnorm2*wgt;
+        loc_reduce.array[1] += ddgnorm*wgt;
+      } // end if
 
     } else { // else for if (igas(jph) == 0)
 
