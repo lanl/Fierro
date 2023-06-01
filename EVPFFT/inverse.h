@@ -8,7 +8,7 @@ KOKKOS_FUNCTION
 void inverse_gj(real_t *a_, int n);
 
 KOKKOS_FUNCTION
-int lu_inverse(real_t *a_, int n);
+void lu_inverse(real_t *a_, int n);
 KOKKOS_FUNCTION
 void ludcmp(real_t *a_, int n, int np, int *indx_, real_t d, int &isingular);
 KOKKOS_FUNCTION

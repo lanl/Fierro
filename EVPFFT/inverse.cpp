@@ -42,7 +42,7 @@ void inverse_gj(real_t *a_, int n)
 //  lu_inverse
 //
 KOKKOS_FUNCTION
-int lu_inverse(real_t *a_, int n)
+void lu_inverse(real_t *a_, int n)
 {
   real_t              *y_ = new real_t[n*n];
   int                 *indx_ = new int[n];
@@ -61,7 +61,7 @@ int lu_inverse(real_t *a_, int n)
 
   ludcmp(a_,n,n,indx_,d,isingular);
 
-  if (!isingular) {
+  if (isingular == 0) {
     for (int j = 1; j <= n; j++) {
       lubksb(a_,n,n,indx_,&y(1,j));
     }
@@ -76,7 +76,7 @@ int lu_inverse(real_t *a_, int n)
   delete [] y_;
   delete [] indx_;
 
-  return isingular;
+  return;
 }
 
 //
