@@ -1,0 +1,66 @@
+SLIP SYSTEMS FOR CUBIC CRYSTAL
+CUBIC             icryst
+   1.   1.   1.   crystal axes (cdim(i))
+   3                nmodesx (total # of modes listed in the file)
+   2                 nmodes  (# of modes to be used in the calculation)
+   1  2              mode(i) (label of the modes to be used)
+   {110}<111> SLIP
+  1   12   14   1.0   0.0  0         modex,nsmx,nrsx,gamd0x,twshx,isectwx
+  125.0  125.0   30.   110.  5.         tau0xf,tau0xb,tau1x,thet0,thet1
+  1.0  1.2  1.2  1.2                         hselfx,hlatex
+    0    1    1     1    1   -1       slip (n-b)
+    1    0    1     1    1   -1
+    1   -1    0     1    1   -1
+    0    1   -1     1   -1   -1
+    1    0    1     1   -1   -1 
+    1    1    0     1   -1   -1
+    0    1    1     1   -1    1
+    1    0   -1     1   -1    1
+    1    1    0     1   -1    1
+    0    1   -1     1    1    1
+    1    0   -1     1    1    1
+    1   -1    0     1    1    1
+   {112}<111> SLIP
+  2   12   14   1.0   0.0  0         modex,nsmx,nrsx,gamd0x,twshx,isectwx
+  125.0  125.0   30.   110.  5.         tau0xf,tau0xb,tau1x,thet0,thet1
+  1.0  1.2  1.2  1.2                      hselfx,hlatex
+   -2    1   -1    -1   -1    1       slip (n-b)
+    1   -2   -1    -1   -1    1
+    1    1    2    -1   -1    1
+   -2   -1   -1    -1    1    1
+    1    2   -1    -1    1    1
+    1   -1    2    -1    1    1
+    2    1   -1     1   -1    1
+   -1   -2   -1     1   -1    1
+   -1    1    2     1   -1    1
+    2   -1   -1     1    1    1
+   -1    2   -1     1    1    1
+   -1   -1    2     1    1    1
+    {123}<111> SLIP
+  3   24   14   1.0   0.0  0         modex,nsmx,nrsx,gamd0x,twshx,isectwx
+  125.0  125.0   50.   115.  5.         tau0xf,tau0xb,tau1x,thet0,thet1
+  1.0  1.2  1.2  1.2                      hselfx,hlatex
+    1    2    3     1    1   -1       slip (n-b)
+   -1    3    2     1    1   -1
+    2    1    3     1    1   -1
+   -2    3    1     1    1   -1
+    3   -1    2     1    1   -1
+    3   -2    1     1    1   -1
+   -1    2   -3     1   -1   -1
+    1    3   -2     1   -1   -1
+    2   -1    3     1   -1   -1
+    2    3   -1     1   -1   -1
+    3    1    2     1   -1   -1
+    3    2    1     1   -1   -1
+    1   -2   -3     1   -1    1
+    1    3    2     1   -1    1
+    2   -1   -3     1   -1    1
+    2    3    1     1   -1    1
+    3    1   -2     1   -1    1
+    3    2   -1     1   -1    1
+    1    2   -3     1    1    1
+    1   -3    2     1    1    1
+    2    1   -3     1    1    1
+    2   -3    1     1    1    1
+   -3    1    2     1    1    1
+   -3    2    1     1    1    1 

@@ -1,12 +1,21 @@
 cmake_minimum_required(VERSION 3.8)
 
+# CMAKE_BUILD_TYPE:
+# 1. Release: `-O3 -DNDEBUG`
+# 2. Debug: `-O0 -g`
+# 3. RelWithDebInfo: `-O2 -g -DNDEBUG`
+# 4. MinSizeRel: `-Os -DNDEBUG`
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif(NOT CMAKE_BUILD_TYPE)
+
 set (TWO_SIGN_SLIP_SYSTEMS OFF)
 set (NON_SCHMID_EFFECTS OFF)
 
 # MAXIMUM # OF PHASES
 set (NPHMX 1)
 # MAXIMUM # OF ACTIVE SL+TW MODES IN ANY PHASE
-set (NMODMX 1)
+set (NMODMX 2)
 # MAXIMUM # OF ACTIVE TWIN MODES IN ANY PHASE
 set (NTWMMX 1)
 
@@ -14,7 +23,8 @@ set (NTWMMX 1)
 if(TWO_SIGN_SLIP_SYSTEMS)
   set (NSYSMX 24)
 else()
-  set (NSYSMX 12)
+  #set (NSYSMX 12)
+  set (NSYSMX 24)
 endif()
 
 # chose matrix_inverse routine to use. Default is GJE_MATRIX_INVERSE
@@ -33,7 +43,7 @@ set (MAX_ITER_NR 512)
 
 # AbsoluteNoOutput supresses all outputs.
 # Usefull for profiling or scaling studies
-set (AbsoluteNoOutput OFF)
+set (AbsoluteNoOutput ON)
 
 # Specify whether or not to profile each function in EVPFFT
 # Note: this will increase simulation time
