@@ -109,7 +109,7 @@ Explicit_Solver_SGH::write_outputs_new()
   cell_data_scalars_double["sspd"] = &sgh_module->elem_sspd.host(0);
 
   // element "speed"
-  auto elem_speed = calculate_elem_speed(node_velocities_distributed, nodes_in_elem_distributed);
+  auto elem_speed = calculate_elem_speed(all_node_velocities_distributed, nodes_in_elem_distributed);
   cell_data_scalars_double["speed"] = elem_speed->pointer();
 
   // element "mat_id" //uncomment if needed (works fine)
@@ -585,32 +585,32 @@ get_cell_nodes(
 
 Teuchos::RCP<CArray<double>>
 calculate_elem_speed(
-  const Teuchos::RCP<Solver::MV> node_vel_distributed,
+  const Teuchos::RCP<Solver::MV> all_node_vel_distributed,
   const Teuchos::RCP<Solver::MCONN> nodes_in_elem_distributed)
 {
 
   size_t rnum_elems = nodes_in_elem_distributed->getLocalLength();
   size_t num_nodes_in_elem = nodes_in_elem_distributed->getNumVectors();
-  size_t num_dims = node_vel_distributed->getNumVectors();
+  size_t num_dims = all_node_vel_distributed->getNumVectors();
 
   Teuchos::RCP<CArray<double>> elem_speed = 
     Teuchos::rcp(new CArray<double>(rnum_elems));
 
   auto nodes_in_elem_hview = nodes_in_elem_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
-  auto node_vel_hview = node_vel_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
+  auto all_node_vel_hview = all_node_vel_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
 
   for (size_t elem_gid = 0; elem_gid < rnum_elems; elem_gid++) { 
-    double elem_vel[3]; // note:initialization with a list won't work
+    double elem_vel[3];
     elem_vel[0] = 0.0;
     elem_vel[1] = 0.0;
     elem_vel[2] = 0.0;
     // get the coordinates of the element center
     for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-      size_t inode = node_vel_distributed->getMap()->getLocalElement(nodes_in_elem_hview(elem_gid, node_lid));
-      elem_vel[0] += node_vel_hview(inode, 0);
-      elem_vel[1] += node_vel_hview(inode, 1);
+      size_t inode = all_node_vel_distributed->getMap()->getLocalElement(nodes_in_elem_hview(elem_gid, node_lid));
+      elem_vel[0] += all_node_vel_hview(inode, 0);
+      elem_vel[1] += all_node_vel_hview(inode, 1);
       if (num_dims == 3){
-        elem_vel[2] += node_vel_hview(inode, 2);
+        elem_vel[2] += all_node_vel_hview(inode, 2);
       }
       else {
         elem_vel[2] = 0.0;
@@ -630,6 +630,7 @@ calculate_elem_speed(
   } // end for
 
   return elem_speed;
+
 }
 
 
