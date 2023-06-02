@@ -3001,7 +3001,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
 
 
 /* ------------------------------------------------------------------------------
-   Adjoint vector for the kinetic energy minimization problem
+  Coupled adjoint problem for the kinetic energy minimization problem
 --------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
@@ -3112,7 +3112,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
 
 
 /* ----------------------------------------------------------------------------
-   Adjoint vector for the kinetic energy minimization problem
+   Gradient calculation for the kinetic energy minimization problem
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients){
@@ -3334,7 +3334,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
 }
 
 /* ----------------------------------------------------------------------------
-   Adjoint vector for the kinetic energy minimization problem
+   Gradient for the (unsimplified) kinetic energy minimization problem
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array design_variables, vec_array design_gradients){
@@ -3345,6 +3345,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
   const int num_dim = simparam->num_dim;
   int num_corners = rnum_elem*num_nodes_in_elem;
   real_t global_dt;
+  bool element_constant_density = true;
   size_t current_data_index, next_data_index;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
@@ -3440,7 +3441,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
   }); // end parallel for
   Kokkos::fence();
 
-  //gradient contribution from adjoint \dot{lambda}Mv product.
+  //gradient contribution from time derivative of adjoint \dot{lambda}Mv product.
   for (int cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
@@ -3568,7 +3569,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
     
   } //end view scope
 
-  //gradient contribution from Force vector.
+  //gradient contribution from gradient of Force vector with respect to design variable.
   for (int cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
@@ -3592,7 +3593,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
         const_vec_array next_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         //const_vec_array current_coord_vector = forward_solve_coordinate_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         //const_vec_array final_coordinates = forward_solve_coordinate_data[last_time_step+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        
+        CArrayKokkos<real_t> inner_products(num_nodes_in_elem);
         FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
           size_t node_id;
           size_t corner_id;
@@ -3607,19 +3608,41 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
             current_element_adjoint(inode,2) = (current_adjoint_vector(node_id,2)+next_adjoint_vector(node_id,2))/2;
           }
 
-          inner_product = 0;
-          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-            node_id = nodes_in_elem(elem_id, ifill);
-            for(int idim=0; idim < num_dim; idim++){
-              inner_product += 0.0001*current_element_adjoint(ifill,idim);
-              //inner_product += 0.0001;
+          if(element_constant_density){
+            inner_product = 0;
+            for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+              node_id = nodes_in_elem(elem_id, ifill);
+              for(int idim=0; idim < num_dim; idim++){
+                //inner_product += 0.0001*current_element_adjoint(ifill,idim);
+                inner_product += corner_force_design_gradient(ifill,idim,ifill)*current_element_adjoint(ifill,idim);
+                //inner_product += 0.0001;
+              }
+            }
+
+            for (int inode = 0; inode < num_nodes_in_elem; inode++){
+              //compute gradient of local element contribution to v^t*M*v product
+              corner_id = elem_id*num_nodes_in_elem + inode;
+              corner_value_storage(corner_id) = -inner_product*global_dt;
             }
           }
+          else{
+            for(int idesign=0; idesign < num_nodes_in_elem; idesign++){
+              inner_products(idesign) = 0;
+              for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+                node_id = nodes_in_elem(elem_id, ifill);
+                for(int idim=0; idim < num_dim; idim++){
+                  //inner_product += 0.0001*current_element_adjoint(ifill,idim);
+                  inner_products(idesign) += corner_force_design_gradient(ifill,idim,idesign)*current_element_adjoint(ifill,idim);
+                  //inner_product += 0.0001;
+                }
+              }
+            }
 
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            //compute gradient of local element contribution to v^t*M*v product
-            corner_id = elem_id*num_nodes_in_elem + inode;
-            corner_value_storage(corner_id) = -inner_product*global_dt/(double)num_nodes_in_elem;
+            for (int inode = 0; inode < num_nodes_in_elem; inode++){
+              //compute gradient of local element contribution to v^t*M*v product
+              corner_id = elem_id*num_nodes_in_elem + inode;
+              corner_value_storage(corner_id) = -inner_products(inode)*global_dt;
+            }
           }
           
         }); // end parallel for

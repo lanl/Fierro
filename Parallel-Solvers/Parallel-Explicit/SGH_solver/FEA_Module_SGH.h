@@ -132,6 +132,8 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
+  real_t corner_force_design_gradient(size_t local_node_index, size_t idim, size_t local_node_design_index);
+
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
