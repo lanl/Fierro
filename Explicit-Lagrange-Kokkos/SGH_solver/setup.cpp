@@ -50,6 +50,7 @@ std::string rtrim(const std::string &s);
  
 std::string trim(const std::string &s);
 
+KOKKOS_FUNCTION
 int get_id(int i, int j, int k, int num_i, int num_j);
 
 
@@ -156,6 +157,18 @@ void setup(const CArrayKokkos <material_t> &material,
     double orig_x, orig_y, orig_z;                 // origin of voxel elem centers
     size_t voxel_num_i, voxel_num_j, voxel_num_k;  // voxel elements in each direction
     
+    // check to see if readVoxelFile
+    DCArrayKokkos <size_t> read_voxel_file(num_fills);
+    FOR_ALL(f_id, 0, num_fills, {
+        if (mat_fill(f_id).volume == region::readVoxelFile){ 
+            read_voxel_file(f_id) = 1; 
+        }    
+        else {
+            read_voxel_file(f_id) = 0; 
+        }    
+    }); // end parallel for
+    read_voxel_file.update_host(); // copy to CPU if code is to read from a file
+    Kokkos::fence();
     
     //--- apply the fill instructions over the Elements---//
     
@@ -164,7 +177,7 @@ void setup(const CArrayKokkos <material_t> &material,
         
         
         // voxel mesh setup
-        if (mat_fill(f_id).volume == region::readVoxelFile){
+        if (read_voxel_file.host(f_id) == 1){
             // read voxel mesh
             user_voxel_init(voxel_elem_values,
                             voxel_dx, voxel_dy, voxel_dz,
@@ -1165,6 +1178,7 @@ std::string trim(const std::string &s) {
 //--------------------------------------------------------
 //
 // Returns a global id for a given i,j,k
+KOKKOS_FUNCTION
 int get_id(int i, int j, int k, int num_i, int num_j)
 {
     return i + j*num_i + k*num_i*num_j;

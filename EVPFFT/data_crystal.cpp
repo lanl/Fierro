@@ -60,10 +60,11 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
   //
   //     START READING DEFORMATION MODES FROM FILECRYS
   //
-  nm = 0;
-  label_100: {
-    do {
+  //nm = 0;
+  //label_100: {
+  //  do {
       nm++;
+  for (int nm = 1; nm <= nmodesx; nm++) {
 
       ur1 >> prosa; CLEAR_LINE(ur1);
       ur1 >> modex >> nsmx >> nrsx >> gamd0x >> twshx >> isectwx; CLEAR_LINE(ur1);
@@ -87,7 +88,8 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
         for (int iz = 1; iz <= nsmx; iz++) {
           CLEAR_LINE(ur1);
         } 
-        goto label_100;
+        //goto label_100;
+        continue;
       }
 
       if (thet0x < thet1x) {
@@ -271,8 +273,9 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
       } // end for js
 
       kount++;
-    } while (nm < nmodesx); // end of do/while loop
-  } // end of label_100 scope
+    //} while (nm < nmodesx); // end of do/while loop
+  //} // end of label_100 scope
+  } // end for (nm)
  
   //     INITIALIZE SELF & LATENT HARDENING COEFS FOR EACH SYSTEM OF THE PHASE.
   //     ABSOLUTE UNITS ARE ACCOUNTED FOR BY MODULATING FACTOR IN HARDENING LAW.

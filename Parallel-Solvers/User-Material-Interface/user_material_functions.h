@@ -5,12 +5,16 @@
 using namespace mtr;
 
 void init_user_strength_model(const DCArrayKokkos <double> &file_state_vars,
+                              const DCArrayKokkos <double> &global_vars,
                               const size_t num_state_vars,
+                              const size_t num_global_vars,
                               const size_t mat_id,
                               const size_t num_elems);
 
 void destroy_user_strength_model(const DCArrayKokkos <double> &file_state_vars,
+                                 const DCArrayKokkos <double> &global_vars,
                                  const size_t num_state_vars,
+                                 const size_t num_global_vars,
                                  const size_t mat_id,
                                  const size_t num_elems);
 
@@ -20,6 +24,7 @@ void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                          const size_t elem_gid,
                          const size_t mat_id,
                          const DViewCArrayKokkos <double> &elem_state_vars,
+                         const DCArrayKokkos <double> &global_vars,
                          const DViewCArrayKokkos <double> &elem_sspd,
                          const double den,
                          const double sie,
@@ -38,6 +43,7 @@ void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
                     const size_t elem_gid,
                     const size_t mat_id,
                     const DViewCArrayKokkos <double> &elem_state_vars,
+                    const DCArrayKokkos <double> &global_vars,
                     const DViewCArrayKokkos <double> &elem_sspd,
                     const double den,
                     const double sie);

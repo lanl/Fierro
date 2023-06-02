@@ -14,7 +14,7 @@ void init_evpfft(const DCArrayKokkos <double> &file_state_vars,
         throw std::runtime_error("evpfft-fierro-link is not implemented for multiple materials yet.");
     }
 
-    real_t stress_scale = 1.0; // 1.0e-5; // used to convert MPa to MBar
+    real_t stress_scale = 1.0; // 1.0e-5; // used to convert MPa to MegaBar
     real_t time_scale = 1.0; // 1.0e+6; // used to convert second to microsecond
 
     CommandLineArgs cmd;
@@ -59,6 +59,14 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                            const double rk_alpha,
                            const size_t cycle)
 {
-    real_t dt_rk = dt*rk_alpha;
+    real_t dt_rk = dt*0.5;
     elem_evpfft[elem_gid]->solve(&vel_grad(0,0), &elem_stress.host(1,elem_gid,0,0), dt_rk, cycle, elem_gid);
+
+    // write into elem_state_vars for output
+    // evm,evmp,dvm,dvmp,svm
+    elem_state_vars.host(elem_gid,0) = elem_evpfft[elem_gid]->evm;
+    elem_state_vars.host(elem_gid,1) = elem_evpfft[elem_gid]->evmp;
+    elem_state_vars.host(elem_gid,2) = elem_evpfft[elem_gid]->dvm;
+    elem_state_vars.host(elem_gid,3) = elem_evpfft[elem_gid]->dvmp;
+    elem_state_vars.host(elem_gid,4) = elem_evpfft[elem_gid]->svm;
 }

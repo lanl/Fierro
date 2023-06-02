@@ -67,7 +67,6 @@ void EVPFFT::harden(int imicro)
                       thet1/fact*expini*(expdel*((gamtotx+deltgam)*fact+1.0)-(gamtotx*fact+1.0));
           } // end if (ABS(tau1) > tiny)
         } // end if (ABS(thet0) > tiny)
-
         crss(is,1,ii,jj,kk) += dtau*voce/deltgam;
         crss(is,2,ii,jj,kk) += dtau*voce/deltgam;
 

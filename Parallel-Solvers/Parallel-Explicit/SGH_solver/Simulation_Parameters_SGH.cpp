@@ -794,13 +794,20 @@ void Simulation_Parameters_SGH::apply_settings(){
     }
 
     current_option = "material_options:max_num_state_var";
-    //obtain max number of stave vars for set of materials
+    //obtain max number of state vars for set of materials
     if(set_options.find(current_option)!=set_options.end()){
         max_num_state_vars = std::stoi(set_options[current_option]);
         set_options.erase(current_option);
         state_vars = DCArrayKokkos <double> (num_materials, max_num_state_vars);
     }
 
+    current_option = "material_options:max_num_global_var";
+    //obtain max number of global vars for set of materials
+    if(set_options.find(current_option)!=set_options.end()){
+        max_num_global_vars = std::stoi(set_options[current_option]);
+        set_options.erase(current_option);
+    }
+    
     std::string material_base = "material_options:material_";
     std::string state_var_base = ":state_vars_";
     std::string index, inner_index;
@@ -920,6 +927,12 @@ void Simulation_Parameters_SGH::apply_settings(){
             }
         }
 
+        //read global variables for materials
+        current_option = material_name+":num_global_vars";
+        if(set_options.find(current_option)!=set_options.end()){
+           material.host(imat).num_global_vars = std::stoi(set_options[current_option]);
+           set_options.erase(current_option);
+        }
     }
     
 

@@ -134,7 +134,8 @@ void Solver::read_mesh_ensight(const char *MESH){
   if(myrank==0){
     std::cout << " NUM DIM is " << num_dim << std::endl;
     in = new std::ifstream();
-    in->open(MESH);  
+    in->open(MESH);
+    if (!(*in)) throw std::runtime_error(std::string("Can't open ") + MESH); 
     //skip 8 lines
     for (int j = 1; j <= 8; j++) {
       getline(*in, skip_line);
