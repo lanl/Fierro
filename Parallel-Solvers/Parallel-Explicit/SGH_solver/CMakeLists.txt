@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.1.3)
 set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
 set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
-set(SRC_Files Explicit_Solver_SGH.cpp geometry.cpp boundary.cpp eos.cpp  outputs.cpp time_integration.cpp momentum.cpp force_sgh.cpp
-energy_sgh.cpp properties.cpp user_mat.cpp user_mat_init.cpp)
+set(SRC_Files Explicit_Solver_SGH.cpp geometry.cpp boundary.cpp eos.cpp  outputs.cpp outputs_new.cpp time_integration.cpp momentum.cpp force_sgh.cpp
+energy_sgh.cpp properties.cpp)
 set(Simulation_Param_SRC Simulation_Parameters_SGH.cpp)
 set(FEA_Module_SRC FEA_Module_SGH.cpp )
 
@@ -14,6 +14,7 @@ LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 include_directories(..)
 include_directories(../..)
 include_directories(${CMAKE_SOURCE_DIR}/Parallel-Explicit)
+include_directories(${CMAKE_SOURCE_DIR}/User-Material-Interface)
 add_library(parallel_sgh_solver OBJECT ${SRC_Files} ${Simulation_Param_SRC} ${FEA_Module_SRC})
 
 

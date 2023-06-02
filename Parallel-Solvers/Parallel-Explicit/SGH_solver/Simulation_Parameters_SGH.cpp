@@ -38,6 +38,7 @@
 #include "utilities.h"
 #include "matar.h"
 #include "Simulation_Parameters_SGH.h"
+#include "user_material_functions.h"
 
 using namespace utils;
 
@@ -195,6 +196,7 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
             material(0).eos_model = ideal_gas; // EOS model is required
             
             material(0).strength_type = model::none;
+            material(0).strength_setup = model_init::input; // not need, the input is the default
             material(0).strength_model = NULL;  // not needed, but illistrates the syntax
             
             material(0).q1        = 1.0;       // accoustic coefficient
@@ -203,7 +205,6 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            material(0).read_state_vars = 0; // no, state_vars declared here
             state_vars(0,0) = 5.0/3.0; // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
@@ -287,6 +288,7 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
             material(0).eos_model = ideal_gas; // EOS model is required
             
             material(0).strength_type = model::none;
+            material(0).strength_setup = model_init::input; // not need, the input is the default
             material(0).strength_model = NULL;  // not needed, but illistrates the syntax
             
             material(0).q1        = 1.0;       // accoustic coefficient
@@ -295,7 +297,6 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            material(0).read_state_vars = 0; // no, state_vars declared here
             state_vars(0,0) = 5.0/3.0; // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
@@ -479,6 +480,7 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
             material(0).eos_model = ideal_gas; // EOS model is required
             
             material(0).strength_type = model::none;
+            material(0).strength_setup = model_init::input; // not need, the input is the default
             material(0).strength_model = NULL;  // not needed, but illistrates the syntax
             
             material(0).q1        = 1.0;       // accoustic coefficient
@@ -487,7 +489,6 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            material(0).read_state_vars = 0; // no, state_vars declared here
             state_vars(0,0) = 1.4; // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
@@ -568,6 +569,7 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
             material(0).eos_model = ideal_gas; // EOS model is required
             
             material(0).strength_type = model::none;
+            material(0).strength_setup = model_init::input; // not need, the input is the default
             material(0).strength_model = NULL;  // not needed, but illistrates the syntax
             
             material(0).q1        = 1.0;       // accoustic coefficient
@@ -576,7 +578,6 @@ void Simulation_Parameters_SGH::select_problem(Simulation_Parameters_SGH::setup 
             material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
             
             material(0).num_state_vars = 3;  // actual num_state_vars
-            material(0).read_state_vars = 0; // no, state_vars declared here
             state_vars(0,0) = 5.0/3.0; // gamma value
             state_vars(0,1) = 1.0E-14; // minimum sound speed
             state_vars(0,2) = 1.0;     // specific heat
@@ -763,6 +764,13 @@ void Simulation_Parameters_SGH::apply_settings(){
        dt_start = std::stod(set_options[current_option]);
        set_options.erase(current_option);
     }
+    dt = dt_start;
+
+    current_option = "solver_options:time_variables:dt_cfl";
+    if(set_options.find(current_option)!=set_options.end()){
+       dt_cfl = std::stod(set_options[current_option]);
+       set_options.erase(current_option);
+    }
 
     current_option = "solver_options:time_variables:cycle_stop";
     if(set_options.find(current_option)!=set_options.end()){
@@ -772,9 +780,10 @@ void Simulation_Parameters_SGH::apply_settings(){
     
     current_option = "output_options:graphics_step";
     if(set_options.find(current_option)!=set_options.end()){
-       graphics_time = std::stod(set_options[current_option]);
+       graphics_dt_ival = std::stod(set_options[current_option]);
        set_options.erase(current_option);
     }
+    graphics_time = graphics_dt_ival;
 
     current_option = "material_options:num_materials";   
     //obtain number of materials
@@ -785,13 +794,20 @@ void Simulation_Parameters_SGH::apply_settings(){
     }
 
     current_option = "material_options:max_num_state_var";
-    //obtain max number of stave vars for set of materials
+    //obtain max number of state vars for set of materials
     if(set_options.find(current_option)!=set_options.end()){
         max_num_state_vars = std::stoi(set_options[current_option]);
         set_options.erase(current_option);
         state_vars = DCArrayKokkos <double> (num_materials, max_num_state_vars);
     }
 
+    current_option = "material_options:max_num_global_var";
+    //obtain max number of global vars for set of materials
+    if(set_options.find(current_option)!=set_options.end()){
+        max_num_global_vars = std::stoi(set_options[current_option]);
+        set_options.erase(current_option);
+    }
+    
     std::string material_base = "material_options:material_";
     std::string state_var_base = ":state_vars_";
     std::string index, inner_index;
@@ -809,16 +825,68 @@ void Simulation_Parameters_SGH::apply_settings(){
                 material.host(imat).eos_model = ideal_gas;
                 set_options.erase(current_option);
             }
+            else if(set_options[current_option]=="user_eos_model"){
+                material.host(imat).eos_model = user_eos_model;
+                set_options.erase(current_option);
+            }
         }
 
         //strength model
         current_option = material_name+":strength_model";
         if(set_options.find(current_option)!=set_options.end()){
             if(set_options[current_option]=="none"){
-                material.host(imat).strength_type = model::none;
+                material.host(imat).strength_model = NULL;
+                set_options.erase(current_option);
+            }
+            else if(set_options[current_option]=="user_strength_model"){
+                material.host(imat).strength_model = user_strength_model;
                 set_options.erase(current_option);
             }
         }
+
+        //strength_type
+        current_option = material_name+":strength_type";
+        if(set_options.find(current_option)!=set_options.end()){
+            if(set_options[current_option]=="none"){
+                material.host(imat).strength_type = model::none;
+                set_options.erase(current_option);
+            }
+            else if(set_options[current_option]=="hypo"){
+                material.host(imat).strength_type = model::hypo;
+                set_options.erase(current_option);
+            }
+            else if(set_options[current_option]=="hyper"){
+                material.host(imat).strength_type = model::hyper;
+                set_options.erase(current_option);
+            }
+        }
+
+        //strength_setup
+        current_option = material_name+":strength_setup";
+        if(set_options.find(current_option)!=set_options.end()){
+            if(set_options[current_option]=="input"){
+                material.host(imat).strength_setup = model_init::input;
+                set_options.erase(current_option);
+            }
+            else if(set_options[current_option]=="user_init"){
+                material.host(imat).strength_setup = model_init::user_init;
+                set_options.erase(current_option);
+            }
+        }
+      
+        //strength_run_location
+        current_option = material_name+":strength_run_location";
+        if(set_options.find(current_option)!=set_options.end()){
+            if(set_options[current_option]=="device"){
+                material.host(imat).strength_run_location = model_run_location::device;
+                set_options.erase(current_option);
+            }
+            else if(set_options[current_option]=="host"){
+                material.host(imat).strength_run_location = model_run_location::host;
+                set_options.erase(current_option);
+            }
+        }
+
 
         //coefficients
         current_option = material_name+":q1";
@@ -842,7 +910,6 @@ void Simulation_Parameters_SGH::apply_settings(){
            set_options.erase(current_option);
         }
 
-        material.host(imat).read_state_vars = 0;
 
         //read state variables for materials
         current_option = material_name+":num_state_vars";
@@ -860,6 +927,12 @@ void Simulation_Parameters_SGH::apply_settings(){
             }
         }
 
+        //read global variables for materials
+        current_option = material_name+":num_global_vars";
+        if(set_options.find(current_option)!=set_options.end()){
+           material.host(imat).num_global_vars = std::stoi(set_options[current_option]);
+           set_options.erase(current_option);
+        }
     }
     
 
@@ -1008,6 +1081,19 @@ void Simulation_Parameters_SGH::apply_settings(){
                 }
                 else if(set_options[bc_name+":condition_type"]=="velocity"){
                     boundary.host(ibc).hydro_bc = bdy::velocity;
+                    //read in u,v,w velocity components
+                    if(set_options.find(bc_name+":u")!=set_options.end()){
+                        boundary.host(ibc).u = std::stod(set_options[bc_name+":u"]);
+                        set_options.erase(bc_name+":u");
+                    }
+                    if(set_options.find(bc_name+":v")!=set_options.end()){
+                        boundary.host(ibc).v = std::stod(set_options[bc_name+":v"]);
+                        set_options.erase(bc_name+":v");
+                    }
+                    if(set_options.find(bc_name+":w")!=set_options.end()){
+                        boundary.host(ibc).w = std::stod(set_options[bc_name+":w"]);
+                        set_options.erase(bc_name+":w");
+                    }
                     set_options.erase(bc_name+":condition_type");
                 }
                 else if(set_options[bc_name+":condition_type"]=="pressure"){

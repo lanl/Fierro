@@ -2,12 +2,12 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function evolves the velocity at the nodes of the mesh
 //------------------------------------------------------------------------------
 void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
-                         double dt,
                          const mesh_t &mesh,
                          DViewCArrayKokkos <double> &node_vel,
                          const DViewCArrayKokkos <double> &node_mass,

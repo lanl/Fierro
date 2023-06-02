@@ -52,6 +52,7 @@ Simulation_Parameters::Simulation_Parameters(){
   zero_index_base = false;
   nfea_modules = 0;
   element_type = "Hex8";
+  filtered_density = false;
 
   //MPI info
   world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
@@ -422,14 +423,14 @@ void Simulation_Parameters::yaml_FEA_module_setup(){
   
   // --- set of user requested FEA modules ---
   while(set_options.find(fea_module_name+":type")!=set_options.end()){
-    std::cout << "WHILE LOOP ENTERED " << index << std::endl;
+    //std::cout << "WHILE LOOP ENTERED " << index << std::endl;
     if(set_options[fea_module_name+":type"]=="elasticity"){
-        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
+        //std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
         FEA_Module_List[nfea_modules] = "Elasticity";
         set_options.erase(fea_module_name+":type");
     }
     else if(set_options[fea_module_name+":type"]=="steady_heat"){
-        std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
+        //std::cout << "read FEA module " << fea_module_name+":type" << std::endl;
         FEA_Module_List[nfea_modules] = "Heat_Conduction";
         set_options.erase(fea_module_name+":type");
     }

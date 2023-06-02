@@ -123,6 +123,30 @@ namespace model
 } // end of namespace
 
 
+namespace model_run_location
+{
+    // strength model run location
+    enum run_location
+    {   
+        device = 0,
+        host = 1,
+    };  
+} // end of namespace
+
+
+namespace model_init
+{
+
+    // strength model setup
+    enum strength_setup_tag
+    {
+        input = 0,
+        user_init = 1,
+    };
+
+} // end of namespace
+
+
 // material model parameters
 struct material_t {
 
@@ -139,6 +163,7 @@ struct material_t {
                        const size_t elem_gid,
                        const size_t mat_id,
                        const DViewCArrayKokkos <double> &elem_state_vars,
+                       const DCArrayKokkos <double> &global_vars,
                        const DViewCArrayKokkos <double> &elem_sspd,
                        const double den,
                        const double sie) = NULL;
@@ -149,6 +174,7 @@ struct material_t {
                             const size_t elem_gid,
                             const size_t mat_id,
                             const DViewCArrayKokkos <double> &elem_state_vars,
+                            const DCArrayKokkos <double> &global_vars,
                             const DViewCArrayKokkos <double> &elem_sspd,
                             const double den,
                             const double sie,
@@ -158,13 +184,20 @@ struct material_t {
                             const DViewCArrayKokkos <double> &node_vel,
                             const double vol,
                             const double dt,
-                            const double alpha) = NULL;
+                            const double alpha,
+                            const size_t cycle) = NULL;
     
     // hypo or hyper elastic plastic model
     model::strength_tag strength_type;
-    
+
+    // strength model run location (device or host)
+    model_run_location::run_location strength_run_location;
+
+    // setup the strength model via the input file for via a user_setup
+    model_init::strength_setup_tag strength_setup=model_init::input;
+
     size_t num_state_vars;
-    size_t read_state_vars=0;
+    size_t num_global_vars=0;
     
     double q1;    // acoustic coefficient in Riemann solver for compresion
     double q1ex;  // acoustic coefficient in Riemann solver for expansion

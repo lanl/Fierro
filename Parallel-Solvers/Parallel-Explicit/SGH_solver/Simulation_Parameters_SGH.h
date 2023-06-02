@@ -103,6 +103,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
 
   size_t num_materials;
   size_t max_num_state_vars;
+  size_t max_num_global_vars=0;
 
   size_t num_fills;
   size_t num_bcs;
@@ -213,6 +214,7 @@ void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
                const size_t elem_gid,
                const size_t mat_id,
                const DViewCArrayKokkos <double> &elem_state_vars,
+               const DCArrayKokkos <double> &global_vars,
                const DViewCArrayKokkos <double> &elem_sspd,
                const double den,
                const double sie);

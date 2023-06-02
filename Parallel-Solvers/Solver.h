@@ -176,6 +176,7 @@ public:
   CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits> Element_Types;
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_vector_storage;
   size_t max_nodes_per_element, max_nodes_per_patch;
   elements::element_selector *element_select;
   elements::Element3D *elem;
@@ -210,8 +211,10 @@ public:
   Teuchos::RCP<MV> initial_node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
+  Teuchos::RCP<MV> filtered_node_densities_distributed;
   Teuchos::RCP<const MV> test_node_densities_distributed;
   Teuchos::RCP<MV> all_node_densities_distributed;
+  Teuchos::RCP<MV> all_filtered_node_densities_distributed;
   Teuchos::RCP<MV> lower_bound_node_densities_distributed;
   Teuchos::RCP<MV> upper_bound_node_densities_distributed;
   Teuchos::RCP<MV> Global_Element_Densities_Upper_Bound;

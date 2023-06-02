@@ -51,11 +51,13 @@ Simulation_Parameters_Topology_Optimization::Simulation_Parameters_Topology_Opti
   report_runtime_flag = false;
   nodal_density_flag = true;
   thick_condition_boundary = true;
-  topology_optimization_on = shape_optimization_on = false;
-  optimization_output_freq = 20;
+  topology_optimization_on = shape_optimization_on = helmholtz_filter = false;
+  optimization_output_freq = 2000;
   penalty_power = 3;
+  density_epsilon = 0.0001;
   nTO_modules = 0;
   multi_objective_structure = "linear";
+  mma_on = false;
 }
 
 Simulation_Parameters_Topology_Optimization::~Simulation_Parameters_Topology_Optimization(){
@@ -159,6 +161,7 @@ void Simulation_Parameters_Topology_Optimization::input(){
 
   //Topology Optimization parameters
   penalty_power = 3;
+  density_epsilon = 0.0001;
 
   // ---- boundary conditions ---- //
   NB = 6; // number of boundaries
@@ -185,6 +188,34 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
       shape_optimization_on = true;
       set_options.erase(current_option);
     }
+  }
+
+  //read in TO parameters
+  if(topology_optimization_on){
+    current_option = "optimization_options:simp_penalty_power";
+    if(set_options.find(current_option)!=set_options.end()){
+      //std::cout << "FOUND TO SETTING" << std::endl;
+      penalty_power = std::stod(set_options[current_option]);
+      set_options.erase(current_option);
+    }
+
+    current_option = "optimization_options:density_epsilon";
+    if(set_options.find(current_option)!=set_options.end()){
+      //std::cout << "FOUND TO SETTING" << std::endl;
+      density_epsilon = std::stod(set_options[current_option]);
+      set_options.erase(current_option);
+    }
+
+    current_option = "optimization_options:density_filter";
+    if(set_options.find(current_option)!=set_options.end()){
+      if(set_options[current_option]=="helmholtz_filter"){
+        //std::cout << "FOUND TO SETTING" << std::endl;
+        filtered_density = helmholtz_filter = true;
+        set_options.erase(current_option);
+        solver_pointer_->simparam->filtered_density = filtered_density;
+      }
+    }
+
   }
   nTO_modules = 0;
   current_option = "optimization_options:optimization_objective";
@@ -292,6 +323,7 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
         Function_Arguments.resize(buffer_size);
         TO_Module_My_FEA_Module.resize(buffer_size);
       }
+      Function_Arguments[nTO_modules].clear();
 
       //constraint request
       //function arguments for constraint; constraint value is the first

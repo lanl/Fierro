@@ -435,6 +435,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
         
       // allocate elem_statev
     elem.statev = CArray <double> (num_elems, max_num_state_vars);
+    std::fill_n(elem.statev.pointer(), elem.statev.size(), 0); // to avoid writing random number in output
 
         // --- make dual views of data on CPU and GPU ---
         //  Notes:
@@ -531,10 +532,11 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     
     // ---------------------------------------------------------------------
     //  Calculate the SGH solution
-    // ---------------------------------------------------------------------
-        
+    // ---------------------------------------------------------------------  
     sgh_module->sgh_solve();
-         
+
+    // cleanup user strength model if any
+    sgh_module->cleanup_user_strength_model(); 
 
     //printf("Finished\n");
     
@@ -550,7 +552,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
               << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
 
-    parallel_vtk_writer();
+    //parallel_vtk_writer();
     
     //test forward solve call
     int ntests = 0;
@@ -612,6 +614,7 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(const char *MESH){
   if(myrank==0){
     in = new std::ifstream();
     in->open(MESH);
+    if (!(*in)) throw std::runtime_error(std::string("Can't open ") + MESH);
   }
 
   //ANSYS dat file doesn't specify total number of nodes, which is needed for the node map.
@@ -1239,6 +1242,7 @@ void Explicit_Solver_SGH::init_state_vectors(){
   }
   if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
     corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element);
+    corner_vector_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element,num_dim);
   }
   all_node_densities_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   Global_Element_Densities = Teuchos::rcp(new MV(all_element_map, 1));

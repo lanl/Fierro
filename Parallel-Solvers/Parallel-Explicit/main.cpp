@@ -55,7 +55,7 @@ int main(int argc, char *argv[]){
   
   //initialize MPI
   MPI_Init(&argc,&argv);
-  
+
   Kokkos::initialize();
   solver_setup(argc, argv);
   

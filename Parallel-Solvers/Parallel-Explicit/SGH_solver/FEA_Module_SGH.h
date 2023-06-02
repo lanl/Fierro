@@ -62,9 +62,29 @@ public:
 
   void setup();
 
+  // to allow the user strngth model interface to do all neccesary cleanup
+  void cleanup_user_strength_model();
+
   void sgh_solve();
 
   void get_force_sgh(const DCArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_sie,
+                     const DViewCArrayKokkos <double> &elem_pres,
+                     DViewCArrayKokkos <double> &elem_stress,
+                     const DViewCArrayKokkos <double> &elem_sspd,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     DViewCArrayKokkos <double> &corner_force,
+                     const DViewCArrayKokkos <double> &elem_statev,
+                     const double rk_alpha,
+                     const size_t cycle);
+
+  void get_force_vgradient_sgh(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -76,12 +96,42 @@ public:
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     DViewCArrayKokkos <double> &corner_force,
-                     const double fuzz,
-                     const double small,
                      const DViewCArrayKokkos <double> &elem_statev,
-                     const double dt,
-                     const double rk_alpha);
+                     const double rk_alpha,
+                     const size_t cycle);
+
+  void get_force_ugradient_sgh(const DCArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_sie,
+                     const DViewCArrayKokkos <double> &elem_pres,
+                     const DViewCArrayKokkos <double> &elem_stress,
+                     const DViewCArrayKokkos <double> &elem_sspd,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     const DViewCArrayKokkos <double> &elem_statev,
+                     const double rk_alpha,
+                     const size_t cycle);
+
+  void get_force_dgradient_sgh(const DCArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_sie,
+                     const DViewCArrayKokkos <double> &elem_pres,
+                     const DViewCArrayKokkos <double> &elem_stress,
+                     const DViewCArrayKokkos <double> &elem_sspd,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     const DViewCArrayKokkos <double> &elem_statev,
+                     const double rk_alpha,
+                     const size_t cycle);
+
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
@@ -96,15 +146,11 @@ public:
                        const DViewCArrayKokkos <double> &elem_div,
                        const DViewCArrayKokkos <size_t> &elem_mat_id,
                        DViewCArrayKokkos <double> &corner_force,
-                       const double fuzz,
-                       const double small,
                        const DViewCArrayKokkos <double> &elem_statev,
-                       const double dt,
-                       const double rk_alpha);
+                       const double rk_alpha,
+                       const size_t cycle);
   
   void update_position_sgh(double rk_alpha,
-                           double dt,
-                           const size_t num_dims,
                            const size_t num_nodes,
                            DViewCArrayKokkos <double> &node_coords,
                            const DViewCArrayKokkos <double> &node_vel);
@@ -205,7 +251,6 @@ public:
 
 
   void update_velocity_sgh(double rk_alpha,
-                           double dt,
                            const mesh_t &mesh,
                            DViewCArrayKokkos <double> &node_vel,
                            const DViewCArrayKokkos <double> &node_mass,
@@ -231,7 +276,6 @@ public:
                DViewCArrayKokkos <double> &node_vel,
                DViewCArrayKokkos <double> &elem_sie,
                DViewCArrayKokkos <double> &elem_stress,
-               const size_t num_dims,
                const size_t num_elems,
                const size_t num_nodes);
 
@@ -240,33 +284,16 @@ public:
                     DViewCArrayKokkos <double> &node_coords,
                     DViewCArrayKokkos <double> &node_vel,
                     DViewCArrayKokkos <double> &elem_sspd,
-                    DViewCArrayKokkos <double> &elem_vol,
-                    double time_value,
-                    const double graphics_time,
-                    const double time_final,
-                    const double dt_max,
-                    const double dt_min,
-                    const double dt_cfl,
-                    double &dt,
-                    const double fuzz);
+                    DViewCArrayKokkos <double> &elem_vol);
 
 
   void get_timestep2D(mesh_t &mesh,
                       DViewCArrayKokkos <double> &node_coords,
                       DViewCArrayKokkos <double> &node_vel,
                       DViewCArrayKokkos <double> &elem_sspd,
-                      DViewCArrayKokkos <double> &elem_vol,
-                      double time_value,
-                      const double graphics_time,
-                      const double time_final,
-                      const double dt_max,
-                      const double dt_min,
-                      const double dt_cfl,
-                      double &dt,
-                      const double fuzz);
+                      DViewCArrayKokkos <double> &elem_vol);
   
   void update_energy_sgh(double rk_alpha,
-                         double dt,
                          const mesh_t &mesh,
                          const DViewCArrayKokkos <double> &node_vel,
                          const DViewCArrayKokkos <double> &node_coords,
@@ -287,8 +314,8 @@ public:
                     const DViewCArrayKokkos <double> &elem_mass,
                     const DViewCArrayKokkos <size_t> &elem_mat_id,
                     const DViewCArrayKokkos <double> &elem_statev,
-                    const double dt,
-                    const double rk_alpha);
+                    const double rk_alpha,
+                    const size_t cycle);
 
 
   void update_state2D(const DCArrayKokkos <material_t> &material,
@@ -304,8 +331,8 @@ public:
                       const DViewCArrayKokkos <double> &elem_mass,
                       const DViewCArrayKokkos <size_t> &elem_mat_id,
                       const DViewCArrayKokkos <double> &elem_statev,
-                      const double dt,
-                      const double rk_alpha);
+                      const double rk_alpha,
+                      const size_t cycle);
 
   KOKKOS_INLINE_FUNCTION
   void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
@@ -332,7 +359,6 @@ public:
                            const DViewCArrayKokkos <double> &node_coords,
                            const DViewCArrayKokkos <double> &node_vel,
                            const double vol,
-                           const double dt,
                            const double rk_alpha) const;
 
 
@@ -350,7 +376,6 @@ public:
                               const DViewCArrayKokkos <double> &node_coords,
                               const DViewCArrayKokkos <double> &node_vel,
                               const double vol,
-                              const double dt,
                               const double rk_alpha) const;
 
 
@@ -371,6 +396,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   virtual void update_forward_solve(Teuchos::RCP<const MV> zp);
 
   void comm_node_masses();
+
+  void comm_adjoint_vectors(int cycle);
 
   void comm_variables(Teuchos::RCP<const MV> zp);
 
@@ -401,10 +428,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                       DViewCArrayKokkos <double> &elem_sie,
                       DViewCArrayKokkos <double> &elem_vol,
                       DViewCArrayKokkos <double> &elem_mass,
-                      DViewCArrayKokkos <size_t> &elem_mat_id,
-                      CArray <double> &graphics_times,
-                      size_t &graphics_id,
-                      const double time_value);
+                      DViewCArrayKokkos <size_t> &elem_mat_id);
 
 
   void ensight(const mesh_t &mesh,
@@ -418,10 +442,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                const DViewCArrayKokkos <double> &elem_sie,
                const DViewCArrayKokkos <double> &elem_vol,
                const DViewCArrayKokkos <double> &elem_mass,
-               const DViewCArrayKokkos <size_t> &elem_mat_id,
-               CArray <double> &graphics_times,
-               size_t &graphics_id,
-               const double time_value);
+               const DViewCArrayKokkos <size_t> &elem_mat_id);
 
 
   void state_file(const mesh_t &mesh,
@@ -435,8 +456,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                   const DViewCArrayKokkos <double> &elem_sie,
                   const DViewCArrayKokkos <double> &elem_vol,
                   const DViewCArrayKokkos <double> &elem_mass,
-                  const DViewCArrayKokkos <size_t> &elem_mat_id,
-                  const double time_value );
+                  const DViewCArrayKokkos <size_t> &elem_mat_id);
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
@@ -445,6 +465,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   void compute_topology_optimization_adjoint_full(); //Force depends on node coords and velocity
 
   void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
+
+  void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
   
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
@@ -510,12 +532,15 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
   Teuchos::RCP<MV> node_masses_distributed;
   Teuchos::RCP<MV> ghost_node_masses_distributed;
+  Teuchos::RCP<MV> adjoint_vector_distributed;
+  Teuchos::RCP<MV> phi_adjoint_vector_distributed;
   std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
   std::vector<Teuchos::RCP<MV>> forward_solve_coordinate_data;
   std::vector<Teuchos::RCP<MV>> adjoint_vector_data;
   std::vector<Teuchos::RCP<MV>> phi_adjoint_vector_data;
-  std::vector<Teuchos::RCP<MV>> force_gradient_position;
-  std::vector<Teuchos::RCP<MV>> force_gradient_velocity;
+  Teuchos::RCP<MV> force_gradient_design;
+  Teuchos::RCP<MV> force_gradient_position;
+  Teuchos::RCP<MV> force_gradient_velocity;
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
 
@@ -536,6 +561,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DViewCArrayKokkos <double> elem_mass;
   DViewCArrayKokkos <size_t> elem_mat_id;
   DViewCArrayKokkos <double> elem_statev;
+
+  // for storing global variables used in user material model
+  DCArrayKokkos <double> global_vars;
         
   // Dual Views of the corner struct variables
   DViewCArrayKokkos <double> corner_force;
@@ -557,6 +585,13 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DCArrayKokkos <size_t>read_from_file;
   DCArrayKokkos <double>file_state_vars;
   DCArrayKokkos <size_t>mat_num_state_vars; // actual number of state_vars
+  DCArrayKokkos <size_t>mat_num_global_vars; // actual number of global_vars
+
+  //parameters
+  double time_value, time_final, dt, dt_max, dt_min, dt_cfl, graphics_time, graphics_dt_ival;
+  size_t graphics_cyc_ival, cycle_stop, rk_num_stages, graphics_id;
+  double fuzz, tiny, small;
+  CArray <double> graphics_times;
 
   //optimization flags
   bool kinetic_energy_objective;

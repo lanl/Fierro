@@ -20,8 +20,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                   const DViewCArrayKokkos <double> &elem_mass,
                   const DViewCArrayKokkos <size_t> &elem_mat_id,
                   const DViewCArrayKokkos <double> &elem_statev,
-                  const double dt,
-                  const double rk_alpha
+                  const double rk_alpha,
+                  const size_t cycle
                   ){
 
 
@@ -41,6 +41,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
         
         size_t mat_id = elem_mat_id(elem_gid);
         
+        //initialize elem pressure
+        elem_pres(elem_gid) = 0;
         
         // --- Stress ---
         // hyper elastic plastic model
@@ -82,6 +84,7 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                                             elem_gid,
                                             mat_id,
                                             elem_statev,
+                                            global_vars,
                                             elem_sspd,
                                             elem_den(elem_gid),
                                             elem_sie(elem_gid),
@@ -91,7 +94,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                                             node_vel,
                                             elem_vol(elem_gid),
                                             dt,
-                                            rk_alpha);
+                                            rk_alpha,
+                                            cycle);
             
         } // end logical on hyper strength model
         
@@ -102,6 +106,7 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                                    elem_gid,
                                    elem_mat_id(elem_gid),
                                    elem_statev,
+                                   global_vars,
                                    elem_sspd,
                                    elem_den(elem_gid),
                                    elem_sie(1,elem_gid));
@@ -129,8 +134,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                     const DViewCArrayKokkos <double> &elem_mass,
                     const DViewCArrayKokkos <size_t> &elem_mat_id,
                     const DViewCArrayKokkos <double> &elem_statev,
-                    const double dt,
-                    const double rk_alpha
+                    const double rk_alpha,
+                    const size_t cycle
                     ){
     
     int num_dims = simparam->num_dim;
@@ -148,7 +153,9 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
         elem_den(elem_gid) = elem_mass(elem_gid)/elem_vol(elem_gid);
         
         size_t mat_id = elem_mat_id(elem_gid);
-        
+
+        //initialize elem pressure
+        elem_pres(elem_gid) = 0;
         
         // --- Stress ---
         // hyper elastic plastic model
@@ -190,6 +197,7 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                                             elem_gid,
                                             mat_id,
                                             elem_statev,
+                                            global_vars,
                                             elem_sspd,
                                             elem_den(elem_gid),
                                             elem_sie(elem_gid),
@@ -199,7 +207,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                                             node_vel,
                                             elem_vol(elem_gid),
                                             dt,
-                                            rk_alpha);
+                                            rk_alpha,
+                                            cycle);
             
         } // end logical on hyper strength model
         
@@ -210,6 +219,7 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                                    elem_gid,
                                    elem_mat_id(elem_gid),
                                    elem_statev,
+                                   global_vars,
                                    elem_sspd,
                                    elem_den(elem_gid),
                                    elem_sie(1,elem_gid));

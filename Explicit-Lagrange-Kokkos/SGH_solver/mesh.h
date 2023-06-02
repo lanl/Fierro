@@ -76,10 +76,13 @@ struct mesh_t {
     size_t num_elems;
     size_t num_nodes_in_elem;
     size_t num_patches_in_elem;
+    size_t num_surfs_in_elem;
+    size_t num_patches_in_surf;  // high-order mesh class
 
     size_t num_corners;
     
     size_t num_patches;
+    size_t num_surfs;           // high_order mesh class
     
     size_t num_bdy_patches;
     size_t num_bdy_nodes;
@@ -116,14 +119,29 @@ struct mesh_t {
     // patch ids in elem
     CArrayKokkos <size_t> patches_in_elem;
     
+    // surface ids in elem
+    CArrayKokkos <size_t> surfs_in_elem;  // high-order mesh class
     
-    // ---- patches ----
+    // surface ids in elem
+    CArrayKokkos <size_t> zones_in_elem;     // high-order mesh class
+    
+    
+    
+    // ---- patches / surfaces ----
     
     // node ids in a patch
     CArrayKokkos <size_t> nodes_in_patch;
     
     // element ids in a patch
     CArrayKokkos <size_t> elems_in_patch;
+    
+    // the two element ids sharing a surface
+    CArrayKokkos <size_t> elems_in_surf;
+    
+    // patch ids in a surface
+    CArrayKokkos <size_t> patches_in_surf;  // high-order mesh class
+    
+    CArrayKokkos <size_t> surf_in_patch;       // high-order mesh class
     
     
     // ---- bdy ----
@@ -343,11 +361,14 @@ struct mesh_t {
     // build the patches
     void build_patch_connectivity(){
         
+        size_t high_order = 0;
+        
         // building patches
         DViewCArrayKokkos <size_t> node_ordering_in_elem;  // node lids in a patch
         
         num_nodes_in_patch = 2*(num_dims-1);  // 2 (2D) or 4 (3D)
         num_patches_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
+        
         
         size_t node_lids_in_patch_in_elem[24];
         
@@ -387,13 +408,18 @@ struct mesh_t {
         
         
         // for saviong the hash keys of the patches and then the nighboring elem_gid
-        CArrayKokkos <long long int> hash_keys_in_elem (num_elems, num_patches_in_elem);
+        CArrayKokkos <int> hash_keys_in_elem (num_elems, num_patches_in_elem, num_nodes_in_patch); // always 4 ids in 3D
+        
+        
         
         // for saving the adjacient patch_lid, which is the slide_lid
         //CArrayKokkos <size_t> neighboring_side_lids (num_elems, num_patches_in_elem);
         
+
+        
         // allocate memory for the patches in the elem
         patches_in_elem = CArrayKokkos <size_t> (num_elems, num_patches_in_elem);
+        
         
         // a temporary storaage for the patch_gids that are on the mesh boundary
         CArrayKokkos <size_t> temp_bdy_patches(num_elems*num_patches_in_elem);
@@ -419,38 +445,38 @@ struct mesh_t {
                 // sort nodes from smallest to largest
                 bubble_sort(sorted_patch_nodes, num_nodes_in_patch);
                 
-                long long int hash_key;
-                if(num_dims==2) {
-                    hash_key = (sorted_patch_nodes[0] + num_nodes*sorted_patch_nodes[1]);
-                }
-                else {
-                    hash_key = (sorted_patch_nodes[1] + num_nodes*sorted_patch_nodes[2] +
-                                num_nodes*num_nodes*sorted_patch_nodes[3]);  // 3 largest node values
-                } // end if on dims
-                
                 // save hash_keys in the this elem
-                hash_keys_in_elem(elem_gid, patch_lid) = -hash_key;  // negative values are keys
+                for (size_t key_lid=0; key_lid<num_nodes_in_patch; key_lid++){
+                    hash_keys_in_elem(elem_gid, patch_lid, key_lid) = sorted_patch_nodes[key_lid];  // 4 node values are keys
+                } // for
                 
             } // end for patch_lid
             
         }); // end FOR_ALL elem_gid
         
         DCArrayKokkos <size_t> num_values(2);
-	
+        
+    // 8x8x8 mesh
+    // num_patches = 8*8*9*3 = 1728
+	// bdy_patches = 8*8*6 = 384
+    //
+        
         // step 2: walk around the elements and save the elem pairs that have the same hash_key
         RUN_CLASS({
             // serial execution on GPU
             
             size_t patch_gid = 0;
             size_t bdy_patch_gid = 0;
+            
             for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
                 
+                // loop over the patches in this elem
                 for (size_t patch_lid = 0; patch_lid<num_patches_in_elem; patch_lid++) {
-                
-                    long long int hash_key = hash_keys_in_elem(elem_gid,patch_lid);
+                    
                     size_t exit = 0;
                     
-                    if (hash_key<0){
+                    // negative values mean the patch has not been saved
+                    if (hash_keys_in_elem(elem_gid, patch_lid, 0)>=0){
                         
                         // find the nighboring patch with the same hash_key
                         
@@ -461,16 +487,25 @@ struct mesh_t {
                             size_t neighbor_elem_gid = elems_in_elem(elem_gid, neighbor_elem_lid);
                             
                             for (size_t neighbor_patch_lid=0; neighbor_patch_lid<num_patches_in_elem; neighbor_patch_lid++){
-                    
-                                // this hash is from the nodes on the patch
-                                long long int neighbor_hash_key = hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid);
                                 
+                                size_t save_it = 0;
+                                for (size_t key_lid=0; key_lid<num_nodes_in_patch; key_lid++){
+                                    
+                                    if (hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid, key_lid) == hash_keys_in_elem(elem_gid, patch_lid, key_lid)){
+                                        save_it ++; // if save_it == num_nodes after this loop, then it is a match
+                                    }
+                                    
+                                } // end key loop
+                                
+                                
+                                
+                                // this hash is from the nodes on the patch
+                                if (save_it == num_nodes_in_patch){
                     
-                                if (neighbor_hash_key == hash_keys_in_elem(elem_gid,patch_lid)){
-                    
-                                    // save the respective elem_gid's as they are patch neighbors
-                                    hash_keys_in_elem(elem_gid, patch_lid) = neighbor_elem_gid;
-                                    hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid) = elem_gid;
+                                    
+                                    // make it negative, because we saved it
+                                    hash_keys_in_elem(elem_gid, patch_lid, 0) = -1;
+                                    hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid, 0) = -1;
                                     
                                     // save the patch_lids for the adjacient sides
                                     //neighboring_side_lids(elem_gid, patch_lid) = neighbor_patch_lid;
@@ -494,18 +529,18 @@ struct mesh_t {
                     
                     
                     } // end if hash<0
-                    
-                
-                    
     
                 } // end for patch_lid
                 
-                // remaining negative hash key values are the boundary patches
+                
+                // loop over the patches in this element again
+                // remaining postive hash key values are the boundary patches
                 for (size_t patch_lid=0; patch_lid<num_patches_in_elem; patch_lid++) {
                 
-                    if( hash_keys_in_elem(elem_gid,patch_lid)<0 ){
+                    if( hash_keys_in_elem(elem_gid, patch_lid, 0)>=0 ){
                 
-                        hash_keys_in_elem(elem_gid,patch_lid) = elem_gid;
+                        hash_keys_in_elem(elem_gid, patch_lid, 0) = -1;  // make it negative, because we saved it
+                        
                         //neighboring_side_lids(elem_gid, patch_lid) = patch_lid;
                         
                         patches_in_elem(elem_gid, patch_lid) = patch_gid;
@@ -522,7 +557,7 @@ struct mesh_t {
             }  // end for over elem_gid
             
 	    
-	    // the num_values is because the values passed in are const, so a const pointer is needed
+            // the num_values is because the values passed in are const, so a const pointer is needed
             num_values(0) = patch_gid;     // num_patches = patch_gid;
             num_values(1) = bdy_patch_gid; // num_bdy_patches = bdy_patch_gid;
 	    
@@ -581,6 +616,74 @@ struct mesh_t {
             }); // end FOR_ALL patch_lid
             
         } // end for
+        
+        
+        
+        // Surfaces and patches in surface
+        if(high_order==1) {
+            
+            num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
+            num_patches_in_surf = 1;  // =Pn_order, must update for high-order mesh class
+        
+            // allocate memory for the surfaces in the elem
+            surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
+
+            
+            // allocate memory for surface data structures
+            num_surfs = num_patches/num_patches_in_surf;
+            
+            patches_in_surf = CArrayKokkos <size_t> (num_surfs, num_patches_in_surf);
+            elems_in_surf = CArrayKokkos <size_t> (num_surfs, 2);
+            surf_in_patch = CArrayKokkos <size_t> (num_patches);
+            
+            FOR_ALL_CLASS(surf_gid, 0, num_surfs, {
+                
+                // loop over the patches in this surface
+                for(size_t patch_lid = 0; patch_lid < num_patches_in_surf; patch_lid++){
+                    
+                    // get patch_gid
+                    size_t patch_gid = patch_lid + surf_gid*num_patches_in_surf;
+                    
+                    // save the patch_gids
+                    patches_in_surf(surf_gid, patch_lid) = patch_gid;
+                    
+                    // save the surface this patch belongs to
+                    surf_in_patch(patch_gid) = surf_gid;
+                    
+                } // end for
+                
+                
+                // get first patch in the surface, and populate elem surface structures
+                size_t this_patch_gid = surf_gid*num_patches_in_surf;
+  
+                elems_in_surf(surf_gid,0) = elems_in_patch(this_patch_gid,0);  // elem_gid0
+                elems_in_surf(surf_gid,1) = elems_in_patch(this_patch_gid,1);  // elem_gid1
+                
+            }); // end FOR_ALL over surfaces
+            
+            
+            // save surfaces in elem
+            FOR_ALL_CLASS(elem_gid, 0, num_elems, {
+                
+                for(size_t surf_lid = 0; surf_lid < num_surfs_in_elem; surf_lid++){
+                    
+                    // get the local patch_lid
+                    size_t patch_lid = surf_lid*num_patches_in_surf;
+                    
+                    // get the patch_gids in this element
+                    size_t patch_gid = patches_in_elem(elem_gid, patch_lid);
+                    
+                    // save the surface gid
+                    surfs_in_elem(elem_gid,surf_lid) = surf_in_patch(patch_gid);
+
+                } // end surf_lid
+                
+            });
+            
+        
+        } // end of high-order mesh objects
+                          
+        // ----------------
         
         
         // allocate memory for boundary patches
@@ -825,10 +928,11 @@ namespace region
     // for tagging boundary faces
     enum vol_tag
     {
-        global = 0,     // tag every cell in the mesh
-        box = 1,        // tag all cells inside a box
-        cylinder = 2,   // tag all cells inside a cylinder
-        sphere = 3      // tag all cells inside a sphere
+        global = 0,     // tag every elements in the mesh
+        box = 1,        // tag all elements inside a box
+        cylinder = 2,   // tag all elements inside a cylinder
+        sphere = 3,     // tag all elements inside a sphere
+        readVoxelFile = 4       // tag all elements in a voxel mesh input
     };
 
 } // end of namespace
@@ -934,6 +1038,13 @@ struct boundary_t {
     // BC type
     bdy::bdy_hydro_conds hydro_bc;
     
+    // velocity
+    // if t_end > time > t_start
+    // v(t) = v0 exp(-v1*(time - time_start) )
+    double hydro_bc_vel_0;
+    double hydro_bc_vel_1;
+    double hydro_bc_vel_t_start;
+    double hydro_bc_vel_t_end;
 };
 
 
@@ -1098,7 +1209,8 @@ void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,
 
 void boundary_velocity(const mesh_t &mesh,
                        const CArrayKokkos <boundary_t> &boundary,
-                       DViewCArrayKokkos <double> &node_vel);
+                       DViewCArrayKokkos <double> &node_vel,
+                       const double time_value);
 
 
 KOKKOS_FUNCTION
