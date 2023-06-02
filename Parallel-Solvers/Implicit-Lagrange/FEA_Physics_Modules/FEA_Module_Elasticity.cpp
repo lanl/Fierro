@@ -506,11 +506,11 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
           //all nodes of the patch must belong to the local + ghost set of nodes
           for(int inode = 0; inode < nodes_per_patch; inode++){
             node_gid = read_buffer_indices(scan_loop, inode);
-            if(all_node_map->isNodeGlobalElement(node_gid)){
+            if(map->isNodeGlobalElement(node_gid)){
               belong_count++;
             }
           }
-          if(belong_count == nodes_per_patch){
+          if(belong_count){
             //construct patch object and look for patch index; the assign patch index to the new loading condition set
             Surface_Nodes = CArray<GO>(nodes_per_patch);
             for(int inode = 0; inode < nodes_per_patch; inode++){

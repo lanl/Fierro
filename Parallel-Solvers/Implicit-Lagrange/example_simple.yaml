@@ -49,6 +49,7 @@ fea_module_2:
 
 optimization_options:
     optimization_process: topology_optimization
+    method_of_moving_asymptotes: disabled
     density_epsilon: 0.00001
     simp_penalty_power: 4
     optimization_objective: multi-objective
@@ -64,12 +65,12 @@ optimization_options:
     constraint_1:
         type: mass
         relation: equality
-        value: 0.15
+        value: 0.25
     constraint_2:
         type: moment_of_inertia
         relation: equality
         component: yy
-        value: 0.20
+        value: 0.35
     constraint_3:
         type: moment_of_inertia
         relation: equality

@@ -62,7 +62,7 @@
 
       <!-- ===========  DESCENT ALGORITHM SPECIFICATION  =========== -->
       <ParameterList name="Descent Method">
-        <Parameter name="Type"              type="string" value="Steepest Descent" />
+        <Parameter name="Type"              type="string" value="Quasi-Newton Method" />
         <Parameter name="Nonlinear CG Type" type="string" value="Hestenes-Stiefel" />
       </ParameterList>
 
@@ -119,6 +119,16 @@
           <Parameter name="Maximum Number of Steps" type="int"    value="1"   />
         </ParameterList>
       </ParameterList>
+      <ParameterList name="SPG">
+        <Parameter name="Use Nonmonotone Trust Region" type="bool" value="false" />
+        <Parameter name="Maximum Storage Size"         type="int"  value="10"    />
+        <ParameterList name="Solver">
+          <Parameter name="Iteration Limit"            type="int"    value="25"    />
+          <Parameter name="Minimum Spectral Step Size" type="double" value="1e-12" />
+          <Parameter name="Maximum Spectral Step Size" type="double" value="1e12"  />
+          <Parameter name="Use Smallest Model Iterate" type="bool"   value="false" />
+        </ParameterList>
+      </ParameterList>
       <!-- ===========  CONTROLS FOR INEXACTNESS  =========== -->
       <ParameterList name="Inexact">
         <!-- ===========  INEXACT OBJECTIVE VALUE UPDATE  =========== -->
@@ -135,6 +145,11 @@
           <Parameter name="Relative Tolerance" type="double" value="2.0"   />
         </ParameterList>
       </ParameterList>
+    </ParameterList>
+
+    <ParameterList name="Spectral Gradient">
+      <Parameter name="Minimum Spectral Step Size" type="double" value="1e-12" />
+      <Parameter name="Maximum Spectral Step Size" type="double" value="1e12"  />
     </ParameterList>
 
     <!-- ===========  PRIMAL DUAL ACTIVE SET  =========== -->
@@ -169,7 +184,7 @@
       <Parameter name="Constraint Scaling"                      type="double" value="1.e0"         />
       <!-- ===========  PENALTY PARAMETER UPDATE  =========== -->
       <Parameter name="Use Default Initial Penalty Parameter"   type="bool"   value="false"         />
-      <Parameter name="Initial Penalty Parameter"               type="double" value="1.e1"         />
+      <Parameter name="Initial Penalty Parameter"               type="double" value="2e2"         />
       <Parameter name="Penalty Parameter Growth Factor"         type="double" value="1.e1"         />
       <Parameter name="Minimum Penalty Parameter Reciprocal"    type="double" value="0.1"          />
       <!-- ===========  OPTIMALITY TOLERANCE UPDATE  =========== -->
@@ -227,8 +242,8 @@
   <ParameterList name="Status Test">
     <Parameter name="Gradient Tolerance"      type="double" value="1.e-5"   />
     <Parameter name="Constraint Tolerance"    type="double" value="1.e-5"   />
-    <Parameter name="Step Tolerance"          type="double" value="1.e-8"  />
-    <Parameter name="Iteration Limit"         type="int"    value="5"     />
+    <Parameter name="Step Tolerance"          type="double" value="1.e-5"  />
+    <Parameter name="Iteration Limit"         type="int"    value="100"     />
     <Parameter name="Use Relative Tolerances" type="bool"   value="true"    />
   </ParameterList>
 </ParameterList>

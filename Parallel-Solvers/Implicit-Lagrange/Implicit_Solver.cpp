@@ -196,7 +196,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
       simparam_TO->Simulation_Parameters::operator=(*simparam);
       simparam_TO->input();
       simparam_TO->apply_settings();
-      simparam->set_options = simparam_TO->set_options;
+      *simparam = *simparam_TO;
 
       // ---- Read intial mesh, refine, and build connectivity ---- //
       if(simparam->mesh_file_format=="tecplot")
@@ -205,6 +205,10 @@ void Implicit_Solver::run(int argc, char *argv[]){
         read_mesh_ansys_dat(simparam->mesh_file_name.c_str());
       else if(simparam->mesh_file_format=="ensight")
         read_mesh_ensight(simparam->mesh_file_name.c_str());
+      else{
+        *fos << "YAML input requested an unrecognized mesh file format." << std::endl;
+        exit_solver(0);
+      }
 
       //assign map with read in options removed from inheritors to the base class
       simparam_TO->FEA_module_setup();
@@ -873,9 +877,9 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
   //flag elasticity fea module for boundary/loading conditions readin that remains
   if(!No_Conditions){
     //look for elasticity module in Simulation Parameters data; if not declared add the module
-    int nfea_modules = simparam_TO->nfea_modules;
+    int nfea_modules = simparam->nfea_modules;
     bool elasticity_found = false;
-    std::vector<std::string> FEA_Module_List = simparam_TO->FEA_Module_List;
+    std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       if(FEA_Module_List[imodule]=="Elasticity"){ 
         elasticity_found = true;
@@ -1246,7 +1250,7 @@ void Implicit_Solver::setup_optimization_problem(){
       //mma_upper_bound_node_densities_distributed->assign(*upper_bound_node_densities_distributed);
       
       mma_lower_bound_node_densities_distributed->putScalar(-0.1);
-      mma_upper_bound_node_densities_distributed->putScalar(1.1);
+      mma_upper_bound_node_densities_distributed->putScalar(0.1);
       mma_lower_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_lower_bound_node_densities_distributed);
       mma_upper_bounds = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(mma_upper_bound_node_densities_distributed);
       

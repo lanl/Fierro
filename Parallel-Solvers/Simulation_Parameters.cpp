@@ -53,6 +53,10 @@ Simulation_Parameters::Simulation_Parameters(){
   nfea_modules = 0;
   element_type = "Hex8";
   filtered_density = false;
+  enable_inertia_center.push_back(false);
+  enable_inertia_center.push_back(false);
+  enable_inertia_center.push_back(false);
+  moment_of_inertia_center = std::vector<double>(3);
 
   //MPI info
   world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
