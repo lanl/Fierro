@@ -1,7 +1,7 @@
 1                      number of phases (nph)                         
 1.  1.  1.             RVE dimensions (delt)
 * name and path of microstructure file (filetext)                                
-/vast/home/cyenusah/github/Fierro/EVPFFT/input_files/txfft_8x8x8.txt
+/vast/home/cyenusah/github/Fierro/EVPFFT/input_files/txfft_8x8x8_rolled.txt
 *INFORMATION ABOUT PHASE #1
 0                          igas(iph)
 * name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)  
