@@ -43,14 +43,19 @@ set (MAX_ITER_NR 512)
 
 # AbsoluteNoOutput supresses all outputs.
 # Usefull for profiling or scaling studies
-set (AbsoluteNoOutput ON)
+if (AbsoluteNoOutput)
+  set (AbsoluteNoOutput ON)
+else ()
+  set (AbsoluteNoOutput OFF)
+endif()
 
 # Specify whether or not to profile each function in EVPFFT
 # Note: this will increase simulation time
-set (ENABLE_PROFILE OFF)
-
-# Specify whether to output only the Von Mises stresses and strains fields
-set (Output_VonMises_Only ON)
+if (ENABLE_PROFILE)
+  set (ENABLE_PROFILE ON)
+else ()
+  set (ENABLE_PROFILE OFF)
+endif()
 
 
 ######################################################################
@@ -91,7 +96,6 @@ endif()
 
 #define project
 set(This evpfft)
-#project (${This})
 
 #if (KOKKOS)
   add_definitions(-DHAVE_KOKKOS=1)
@@ -130,8 +134,13 @@ set(This evpfft)
        write_texture.cpp
        evpfft_fierro_link.cpp)
 
-  #add_executable(${This} ${Sources})
-  add_library(${This} STATIC ${Sources})
+  if (BUILD_EVPFFT_FIERRO)
+    add_library(${This} STATIC ${Sources})
+  else ()
+    project (${This})
+    add_executable(${This} ${Sources})
+  endif ()
+
   target_link_libraries(${This} matar ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 
   if (USE_FFTW)

@@ -1,5 +1,7 @@
 #pragma once
 
+#if BUILD_EVPFFT_FIERRO
+
 #include "matar.h"
 
 using namespace mtr;
@@ -31,3 +33,5 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                            const double rk_alpha,
                            const size_t cycle);
 
+// endif BUILD_EVPFFT_FIERRO
+#endif

@@ -101,6 +101,7 @@ void EVPFFT::vpsc_input()
   nrs.update_device();
   tau.update_device();
   thet.update_device();
+  tau0_mode.update_device();
   dnca.update_device();
   dbca.update_device();
   schca.update_device();
@@ -191,35 +192,16 @@ void EVPFFT::vpsc_input()
   ur0 >> isave;   CLEAR_LINE(ur0);
   ur0 >> iupdate; CLEAR_LINE(ur0);
   ur0 >> iuphard; CLEAR_LINE(ur0);
+  ur0 >> itemphard; CLEAR_LINE(ur0);
   ur0 >> iwtex;   CLEAR_LINE(ur0);
   ur0 >> iwfields >> iwstep; CLEAR_LINE(ur0);
 
-  for (int kk = 1; kk <= npts3; kk++) {
-    for (int jj = 1; jj <= npts2; jj++) {
-      for (int ii = 1; ii <= npts1; ii++) {
-
-        gacumgr.host(ii,jj,kk) = 0.0;
-        iph = jphase.host(ii,jj,kk);
-
-        if (igas.host(iph) == 0) {
-          for (int i = 1; i <= nsyst.host(iph); i++) {
-            crss.host(i,1,ii,jj,kk) = tau.host(i,1,iph);
-            crss.host(i,2,ii,jj,kk) = tau.host(i,2,iph);
-            //trialtau.host(i,1,ii,jj,kk)  = tau.host(i,1,iph);
-            //trialtau.host(i,2,ii,jj,kk)  = tau.host(i,2,iph);
-            xkin.host(i,ii,jj,kk)   = 0.0;
-          }
-        } // end if (igas.host(iph) == 0)
-
-      }  // end for ii
-    }  // end for jj
-  } // end for kk
-
-  // update device
-  gacumgr.update_device();
-  crss.update_device();
-  xkin.update_device();
-  Kokkos::fence();
+  init_crss_voce();
+  if (itemphard == 1) {
+    temp = temp_ini;
+    tempold = temp;
+    init_crss_temp();
+  }
 
   ur0 >> ithermo; CLEAR_LINE(ur0);
   if (ithermo == 1) {
@@ -342,4 +324,56 @@ void EVPFFT::check_mixed_bc()
       exit(1);
     }
   }
+}
+
+void EVPFFT::init_crss_voce()
+{
+  for (int kk = 1; kk <= npts3; kk++) {
+    for (int jj = 1; jj <= npts2; jj++) {
+      for (int ii = 1; ii <= npts1; ii++) {
+
+        int iph = jphase.host(ii,jj,kk);
+
+        if (igas.host(iph) == 0) {
+          for (int i = 1; i <= nsyst.host(iph); i++) {
+            crss.host(i,1,ii,jj,kk) = tau.host(i,1,iph);
+            crss.host(i,2,ii,jj,kk) = tau.host(i,2,iph);
+            //trialtau.host(i,1,ii,jj,kk)  = tau.host(i,1,iph);
+            //trialtau.host(i,2,ii,jj,kk)  = tau.host(i,2,iph);
+          }
+        } // end if (igas.host(iph) == 0)
+
+      }  // end for ii
+    }  // end for jj
+  } // end for kk
+
+  crss.update_device();
+}
+
+void EVPFFT::init_crss_temp()
+{
+
+  real_t tau0;
+
+  for (int kk = 1; kk <= npts3; kk++) {
+    for (int jj = 1; jj <= npts2; jj++) {
+      for (int ii = 1; ii <= npts1; ii++) {
+
+        int iph = jphase.host(ii,jj,kk);
+
+        if (igas.host(iph) == 0) {
+          for (int i = 1; i <= nsyst.host(iph); i++) {
+            tau0 = tau0_mode(i,1,iph) * exp(-(temp - tau0_mode(i,3,iph)) / tau0_mode(i,2,iph));
+            crss.host(i,1,ii,jj,kk) = tau0;
+            crss.host(i,2,ii,jj,kk) = tau0;
+            //trialtau.host(i,1,ii,jj,kk)  = tau0;
+            //trialtau.host(i,2,ii,jj,kk)  = tau0;
+          }
+        } // end if (igas.host(iph) == 0)
+
+      }  // end for ii
+    }  // end for jj
+  } // end for kk
+
+  crss.update_device();
 }
