@@ -2302,7 +2302,7 @@ void Solver::Get_Boundary_Patches(){
       //all nodes were remote
       //if(remote_count == num_nodes_in_patch) my_rank_flag = false;
 
-      //if all nodes were not local
+      //if at least one node was local
       if(my_rank_flag){
         Boundary_Patches(nboundary_patches++) = Patch_Nodes(ipatch);
         boundary_patch_to_index[Patch_Nodes(ipatch)] = nboundary_patches-1;
