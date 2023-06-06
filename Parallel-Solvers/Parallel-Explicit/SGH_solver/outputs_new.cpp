@@ -64,6 +64,11 @@ Teuchos::RCP<CArray<int>>
 calculate_elem_switch(
   Teuchos::RCP<Tpetra::Map<Solver::LO,Solver::GO,Solver::node_type>> all_element_map);
 
+Teuchos::RCP<CArray<int>>
+get_elem_proc_id(
+  Teuchos::RCP<Tpetra::Map<Solver::LO,Solver::GO,Solver::node_type>> all_element_map,
+  size_t myrank);
+
 Teuchos::RCP<CArray<double>>
 get_design_density(
   size_t rnum_nodes,
@@ -119,6 +124,10 @@ Explicit_Solver_SGH::write_outputs_new()
   // element "elem_switch" //uncomment if needed (works fine)
   //auto elem_switch = calculate_elem_switch(all_element_map);
   //cell_data_scalars_int["elem_switch"] = elem_switch->pointer();
+
+  // element "proc_id" //uncomment if needed (works fine)
+  //auto elem_proc_id = get_elem_proc_id(all_element_map, myrank);
+  //cell_data_scalars_int["proc_id"] = elem_proc_id->pointer();
 
   // element "elem_statev" //uncomment if needed (works fine)
   sgh_module->elem_statev.update_host();
@@ -647,6 +656,19 @@ calculate_elem_switch(
   return elem_switch;
 }
 
+Teuchos::RCP<CArray<int>>
+get_elem_proc_id(
+  Teuchos::RCP<Tpetra::Map<Solver::LO,Solver::GO,Solver::node_type>> all_element_map,
+  size_t myrank)
+{
+  Teuchos::RCP<CArray<int>> elem_proc_id = 
+    Teuchos::rcp(new CArray<int>(all_element_map->getLocalNumElements()));
+
+  for (size_t ielem = 0; ielem < elem_proc_id->dims(0); ielem++) {
+    (*elem_proc_id)(ielem) = myrank;
+  }
+  return elem_proc_id;
+}
 
 Teuchos::RCP<CArray<double>>
 get_design_density(

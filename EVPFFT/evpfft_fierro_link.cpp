@@ -2,6 +2,8 @@
 #include "evpfft.h"
 #include <vector>
 
+#if BUILD_EVPFFT_FIERRO
+
 // each element will have it own evpfft model
 std::vector<EVPFFT*> elem_evpfft;
 
@@ -70,3 +72,5 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
     elem_state_vars.host(elem_gid,3) = elem_evpfft[elem_gid]->dvmp;
     elem_state_vars.host(elem_gid,4) = elem_evpfft[elem_gid]->svm;
 }
+
+#endif

@@ -29,6 +29,7 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
   int nmodesx,kount,nm,modex,nsmx,nrsx;
   int isectwx,nsysx;
   real_t covera,gamd0x,twshx,tau0xf,tau0xb,tau1x,thet0x,thet1x;
+  real_t tau0_mode_a, tau0_mode_b, tau0_mode_c;
   real_t snor,qnor,prod;
 
   ur1 >> prosa; CLEAR_LINE(ur1);
@@ -63,7 +64,7 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
   //nm = 0;
   //label_100: {
   //  do {
-      nm++;
+  //    nm++;
   for (int nm = 1; nm <= nmodesx; nm++) {
 
       ur1 >> prosa; CLEAR_LINE(ur1);
@@ -75,6 +76,8 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
       }
       CLEAR_LINE(ur1);
 
+      ur1 >> tau0_mode_a >> tau0_mode_b >> tau0_mode_c >> temp_ini >> temp_fact; CLEAR_LINE(ur1);
+
       // scale variables
       gamd0x /= time_scale;
       tau0xf  *= stress_scale;
@@ -82,6 +85,7 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
       tau1x *= stress_scale;
       thet0x *= stress_scale;
       thet1x *= stress_scale;
+      tau0_mode_a *= stress_scale;
  
       //     SKIPS nsmx LINES IF THE MODE IS NOT IN THE LIST.
       if (modex != mode(kount)) {
@@ -181,6 +185,9 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
         tau.host(nsysx,3,iph)  = tau1x;
         thet.host(nsysx,1,iph) = thet0x;
         thet.host(nsysx,2,iph) = thet1x;
+        tau0_mode(nsysx,1,iph) = tau0_mode_a;
+        tau0_mode(nsysx,2,iph) = tau0_mode_b;
+        tau0_mode(nsysx,3,iph) = tau0_mode_c;
 
         //
         isectw(nsysx,iph) = isectwx;
