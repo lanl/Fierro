@@ -49,6 +49,7 @@ public:
   MatrixTypeRealDual dbca;
   MatrixTypeRealDual schca;
   MatrixTypeRealDual tau;
+  MatrixTypeRealDual tau0_mode;
   MatrixTypeRealDual hard;
   MatrixTypeRealDual thet;
   MatrixTypeIntDual  nrs;
@@ -93,6 +94,7 @@ public:
   real_t erre2;
   int iupdate;
   int iuphard;
+  int itemphard;
   MatrixTypeIntDual igas;
   int iwfields;
   int iwstep;
@@ -154,6 +156,13 @@ public:
   MatrixTypeRealHost disgradmacrot;
   MatrixTypeRealHost velgradmacro;
 
+  real_t temp_ini;
+  real_t temp;
+  real_t tempold;
+  real_t temp_fact;
+  real_t evmpold;
+  real_t wplastic;
+
   bool active;
   size_t fierro_cycle;
   const real_t stress_scale;
@@ -169,7 +178,7 @@ public:
 //-----------------------------------------------
 // EVPFFT Functions
 //-----------------------------------------------
-  EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const real_t time_scale_);
+  EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_=1.0, const real_t time_scale_=1.0);
   //~EVPFFT();
   void vpsc_input();
   void check_iudot();
@@ -212,4 +221,10 @@ public:
   void write_macro_state();
   void write_micro_state(int imicro);
   void write_texture();
+
+  void init_crss_voce();
+  void init_crss_temp();
+  void update_crss_voce();
+  void update_crss_temp();
+  void update_temperature();
 };
