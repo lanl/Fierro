@@ -4,6 +4,7 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include <map>
 #include <fstream>
+#include <sys/stat.h>
 
 typedef Kokkos::LayoutRight CArrayLayout;
 typedef Kokkos::LayoutLeft FArrayLayout;

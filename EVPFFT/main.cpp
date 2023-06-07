@@ -50,25 +50,10 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   // nsteps should be set to 1 either in the input file or here
   nsteps = 1;
 
-  //ViewMatrixTypeReal vel_grad_view(vel_grad,3,3);
-  ViewCMatrix <real_t> vel_grad_view(vel_grad,3,3);
-
-  // is udot = vel_grad ???
-  for (int j = 1; j <= 3; j++) {
-    for (int i = 1; i <= 3; i++) {
-      udot.host(i,j) = vel_grad_view(i,j);
-    } // end for i
-  } // end for j
-
-#if 0
-  // or udot = 0.5 * (vel_grad + vel_grad^T) ???
-  for (int j = 1; j <= 3; j++) {
-    for (int i = 1; i <= 3; i++) {
-      udot.host(i,j) = 0.5 * (vel_grad_view(i,j) + vel_grad_view(j,i));
-    } // end for i
-  } // end for j
-#endif
-
+  // copy vel_grad into udot
+  for (int i = 0; i < 9; i++) {
+    udot.host_pointer()[i] = vel_grad[i];
+  } 
   // update device
   udot.update_device();
 
@@ -113,23 +98,10 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
 
   } // end if ddnorm
 
-  // Update crystal orientation. Always done because no deformation does not mean no rotation 
-  if (iupdate == 1 && (ithermo != 1 || imicro > 1)) {
-    step_texture_rve_update();
+  // copy scauav into stress
+  for (int i = 0; i < 9; i++) {
+    stress[i] = scauav.pointer()[i];
   }
 
-  // update stress
-  //ViewMatrixTypeReal stress_view(stress,3,3);
-  ViewCMatrix <real_t> stress_view(stress,3,3);
-  for (int j = 1; j <= 3; j++) {
-    for (int i = 1; i <= 3; i++) {
-      stress_view(i,j) = scauav(i,j);
-    } // end for i
-  } // end for j
-
-  //if (evm >= 0.5) {
-    //write_texture();
-    //exit(0);
-  //}
 }
 #endif
