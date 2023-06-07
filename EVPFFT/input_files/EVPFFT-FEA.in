@@ -5,8 +5,8 @@
 *INFORMATION ABOUT PHASE #1
 0                          igas(iph)
 * name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)  
-/vast/home/cyenusah/github/Fierro/EVPFFT/input_files/cupl1.sx
-/vast/home/cyenusah/github/Fierro/EVPFFT/input_files/cuel1.sx
+/vast/home/cyenusah/github/Fierro/EVPFFT/input_files/ta_pl.sx
+/vast/home/cyenusah/github/Fierro/EVPFFT/input_files/ta_el.sx
 *INFORMATION ABOUT TEST CONDITIONS                                                            
 * boundary conditions                                                     
     1       1       1           iudot     |    flag for vel.grad. 
