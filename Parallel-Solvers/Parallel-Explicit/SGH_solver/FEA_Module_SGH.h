@@ -132,7 +132,8 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
-  real_t corner_force_design_gradient(size_t local_node_index, size_t idim, size_t local_node_design_index);
+  KOKKOS_FUNCTION
+  real_t corner_force_design_gradient(size_t local_node_index, size_t idim, size_t local_node_design_index) const;
 
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
@@ -543,6 +544,8 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> force_gradient_design;
   Teuchos::RCP<MV> force_gradient_position;
   Teuchos::RCP<MV> force_gradient_velocity;
+  Teuchos::RCP<MAT> force_gradient_positions;
+  Teuchos::RCP<MAT> force_gradient_velocities;
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
 
