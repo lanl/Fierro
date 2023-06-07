@@ -746,6 +746,12 @@ void Simulation_Parameters_SGH::apply_settings(){
        set_options.erase(current_option);
     }
     //std::cout<< "FINAL TIME IS: " << time_final << std::endl;
+
+    current_option = "solver_options:rk_num_stages";
+    if(set_options.find(current_option)!=set_options.end()){
+       rk_num_stages = std::stoi(set_options[current_option]);
+       set_options.erase(current_option);
+    }
     
     current_option = "solver_options:time_variables:dt_min";
     if(set_options.find(current_option)!=set_options.end()){

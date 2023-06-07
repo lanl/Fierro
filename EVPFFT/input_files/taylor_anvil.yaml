@@ -3,6 +3,7 @@ solver_type: SGH
 
 solver_options:
     num_dims: 3
+    rk_num_stages: 1
     mesh_file_format: ensight
     mesh_file_name: /vast/home/cyenusah/github/Fierro/Explicit-Lagrange/meshes/mesh_z_taylorAnvil.geo
     time_variables:
