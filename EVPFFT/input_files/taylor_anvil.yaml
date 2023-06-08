@@ -36,7 +36,7 @@ material_options:
         num_state_vars: 5
 
         num_global_vars: 1
-        global_vars_1: 2400.0 #[m/s] ref sound speed
+        global_vars_1: 2400000 #[mm/s] ref sound speed
 
 region_options:
     num_fills: 1
@@ -50,7 +50,7 @@ region_options:
         velocity: cartesian
         u: 0.0 
         v: 0.0 
-        w: -175000.0  #[m/s]
+        w: -175000.0  #[mm/s]
     
 boundary_condition_options:
     num_bcs: 3
