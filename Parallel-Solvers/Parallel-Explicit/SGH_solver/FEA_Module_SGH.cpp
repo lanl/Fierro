@@ -1270,6 +1270,7 @@ void FEA_Module_SGH::setup(){
     const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
     const DCArrayKokkos <material_t> material = simparam->material;
     const DCArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
+    global_vars = simparam->global_vars;
     
     //--- calculate bdy sets ---//
     mesh.num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
@@ -1344,32 +1345,13 @@ void FEA_Module_SGH::setup(){
  
     // make memory to store state_vars from an external file
     file_state_vars = DCArrayKokkos <double>(num_materials,rnum_elem,num_state_vars);
-    mat_num_state_vars = DCArrayKokkos <size_t>(num_materials); // actual number of state_vars
-    FOR_ALL_CLASS(mat_id, 0, num_materials, {
-        
-        mat_num_state_vars(mat_id) = material(mat_id).num_state_vars;
-        
-    }); // end parallel for
-    Kokkos::fence();
     
-    // copy actual number of state_vars to host
-    mat_num_state_vars.update_host();
-    Kokkos::fence();
-    
-    // make memory for global_vars
-    global_vars = DCArrayKokkos <double> (num_materials,simparam->max_num_global_vars);
-    mat_num_global_vars = DCArrayKokkos <size_t> (num_materials);
-    FOR_ALL_CLASS(mat_id, 0, num_materials, {
-      mat_num_global_vars(mat_id) = material(mat_id).num_global_vars;
-    });
-    mat_num_global_vars.update_host();
-
     for (size_t mat_id=0; mat_id<num_materials; mat_id++){
         
         if (read_from_file.host(mat_id) == model_init::user_init){
             
-            size_t num_vars = mat_num_state_vars.host(mat_id);
-            size_t num_gvars = mat_num_global_vars.host(mat_id);
+            size_t num_vars = material.host(mat_id).num_state_vars;
+            size_t num_gvars = material.host(mat_id).num_global_vars;
  
             init_user_strength_model(file_state_vars,
                                      global_vars,
@@ -1751,13 +1733,14 @@ void FEA_Module_SGH::cleanup_user_strength_model() {
 */
 
     size_t num_materials = simparam->num_materials;
+    const DCArrayKokkos <material_t> & material = simparam->material;
 
     for (size_t mat_id=0; mat_id<num_materials; mat_id++){
      
         if (read_from_file.host(mat_id) == 1){
      
-            size_t num_vars = mat_num_state_vars.host(mat_id);
-            size_t num_gvars = mat_num_global_vars.host(mat_id);
+            size_t num_vars = material.host(mat_id).num_state_vars;
+            size_t num_gvars = material.host(mat_id).num_global_vars;
 
             destroy_user_strength_model(file_state_vars,
                                         global_vars,
