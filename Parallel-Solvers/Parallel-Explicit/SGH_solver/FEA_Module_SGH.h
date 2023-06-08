@@ -160,6 +160,8 @@ public:
 
   void get_vol();
 
+  void init_assembly();
+
   KOKKOS_INLINE_FUNCTION
   void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                    const size_t elem_gid,
@@ -544,8 +546,23 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> force_gradient_design;
   Teuchos::RCP<MV> force_gradient_position;
   Teuchos::RCP<MV> force_gradient_velocity;
-  Teuchos::RCP<MAT> force_gradient_positions;
-  Teuchos::RCP<MAT> force_gradient_velocities;
+
+  //Local FEA data
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Gradient_Matrix_Assembly_Map;
+  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
+  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Positions;
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Velocities;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Gradient_Matrix_Strides;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
+  RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Gradient_Entries;
+  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Gradient_Entry_Indices;
+  CArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Gradient_Entries_Strides;
+
+  //distributed matrices
+  Teuchos::RCP<MAT> distributed_force_gradient_positions;
+  Teuchos::RCP<MAT> distributed_force_gradient_velocities;
+
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
 
