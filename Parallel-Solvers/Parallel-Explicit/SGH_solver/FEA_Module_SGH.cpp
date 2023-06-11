@@ -1738,6 +1738,11 @@ void FEA_Module_SGH::setup(){
       Kokkos::fence();
     } //endif
     
+    //initialize if topology optimization is used
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      init_assembly();
+    }
+
     return;
     
 } // end of setup
