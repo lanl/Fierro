@@ -113,8 +113,8 @@ struct mesh_t {
 
     // mesh index converting
     CArray <size_t> convert_vtk_to_fierro;
-    CArray <size_t> convert_fierro_to_vtk;
-    
+    CArray <size_t> convert_fierro_to_vtk;    
+
     // ---- nodes ----
     
     // corner ids in node
@@ -1482,7 +1482,6 @@ struct boundary_t {
     double hydro_bc_vel_t_end;
 };
 
-
 void read_mesh_ensight(char* MESH,
                        mesh_t &mesh,
                        node_t &node,
@@ -1494,7 +1493,6 @@ void read_mesh_ensight(char* MESH,
 // for string delimiter parsing
 std::vector<std::string> split (std::string s, std::string delimiter);
 
-
 void readVTKPn(char* MESH,
                  mesh_t &mesh,
                  node_t &node,
@@ -1502,7 +1500,6 @@ void readVTKPn(char* MESH,
                  corner_t &corner,
                  const size_t num_dims,
                const size_t rk_num_bins);
-
 
 void input(CArrayKokkos <material_t> &material,
            CArrayKokkos <mat_fill_t> &mat_fill,
@@ -1600,7 +1597,7 @@ void write_outputs (const mesh_t &mesh,
                     DViewCArrayKokkos <double> &elem_vol,
                     DViewCArrayKokkos <double> &elem_mass,
                     DViewCArrayKokkos <size_t> &elem_mat_id,
-                    CArray <double> &graphics_times,
+                    CArray <double> &graphics_times, 
                     size_t &graphics_id,
                     const double time_value);
 
@@ -1952,7 +1949,6 @@ void update_state(const CArrayKokkos <material_t> &material,
                   const DViewCArrayKokkos <double> &elem_statev,
                   const double dt,
                   const double rk_alpha);
-
 
 void update_state2D(const CArrayKokkos <material_t> &material,
                     const mesh_t &mesh,

@@ -288,9 +288,13 @@ void setup(const CArrayKokkos <material_t> &material,
                     
                 // density
                 elem_den(elem_gid) = mat_fill(f_id).den;
+                //printf( "density in elem %d is %f \n", elem_gid, elem_den(elem_gid) ); 
+                //printf( "volume in elem %d is %f \n", elem_gid, elem_vol(elem_gid) ); 
                 
                 // mass
-                elem_mass(elem_gid) = elem_den(elem_gid)*elem_vol(elem_gid);
+		elem_mass(elem_gid) = elem_den(elem_gid)*1.0/mesh.num_elems;//elem_vol(elem_gid);
+                //printf( "mass in elem %d is %f \n", elem_gid, elem_mass(elem_gid) ); 
+
                 
                 // specific internal energy
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
@@ -711,7 +715,6 @@ size_t check_bdy(const size_t patch_gid,
     return is_on_bdy;
     
 } // end method to check bdy
-
 
 
 void build_boundry_node_sets(const CArrayKokkos <boundary_t> &boundary,

@@ -62,7 +62,16 @@ struct elem_t {
     
     // state variables
     CArray <double> statev;
+
+    CArray <double> gauss_lobatto_jacobian;
+    CArray <double> gauss_legendre_jacobian;
+   
+    CArray <double> gauss_lobatto_jacobian_inverse;
+    CArray <double> gauss_legendre_jacobian_inverse;
     
+    CArray <double> gauss_lobatto_det_j;
+    CArray <double> gauss_legendre_det_j;
+
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
     {
@@ -75,6 +84,34 @@ struct elem_t {
         this->div    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
+
+    }; // end method
+
+    // initialization method (num_rk_storage_bins, num_cells, num_dims)
+    void initialize_Pn(size_t num_rk, size_t num_elems, size_t num_dims, size_t p_order)
+    {
+	int num_leg_pts = std::pow( num_elems*(2*p_order), 3 );
+	int num_lob_pts = std::pow( num_elems*(2*p_order+1), 3 );
+
+        this->den    = CArray <double> (num_elems);
+        this->pres   = CArray <double> (num_elems);
+        this->stress = CArray <double> (num_rk, num_elems, num_dims, num_dims);
+        this->sspd   = CArray <double> (num_elems);
+        this->sie    = CArray <double> (num_rk, num_elems);
+        this->vol    = CArray <double> (num_elems);
+        this->div    = CArray <double> (num_elems);
+        this->mass   = CArray <double> (num_elems);
+        this->mat_id = CArray <size_t> (num_elems);
+
+	this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);
+	this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
+	
+	this->gauss_lobatto_jacobian_inverse = CArray <double> (num_lob_pts, num_dims, num_dims);
+	this->gauss_legendre_jacobian_inverse = CArray <double> (num_leg_pts, num_dims, num_dims);
+	
+	this->gauss_lobatto_det_j = CArray <double> (num_lob_pts);
+	this->gauss_legendre_det_j = CArray <double> (num_leg_pts);
+
     }; // end method
 
 }; // end elem_t

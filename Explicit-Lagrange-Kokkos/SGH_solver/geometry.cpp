@@ -4,7 +4,7 @@
 #include "matar.h"
 #include "mesh.h"
 #include "state.h"
-
+#include "ref_elem.h"
 
 void update_position_sgh(double rk_alpha,
                          double dt,
@@ -256,7 +256,7 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
             
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
-            get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);
+            elem_vol(elem_gid) = 1.0/mesh.num_elems;//get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);
             
         });
         Kokkos::fence();
@@ -304,7 +304,7 @@ void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
          x(0)*(y(2)*( z(1) - z(3)) + y(7)*( z(3) - z(4)) + y(5)*(-z(1) + z(4)) + y(1)*(-z(2) - z(3) + z(4) + z(5)) + y(3)*(z(1) + z(2) - z(4) - z(7)) + y(4)*(-z(1) + z(3) - z(5) + z(7))) +
          x(2)*(y(0)*(-z(1) + z(3)) + y(5)*( z(1) - z(6)) + y(1)*(z(0) + z(3) - z(5) - z(6)) + y(7)*(-z(3) + z(6)) + y(6)*(z(1) - z(3) + z(5) - z(7)) + y(3)*(-z(0) - z(1) + z(6) + z(7))) +
          x(4)*(y(1)*(-z(0) + z(5)) + y(7)*( z(0) + z(3)  - z(5) - z(6)) + y(3)*(z(0) - z(7)) + y(0)*(z(1) - z(3) + z(5) - z(7)) + y(6)*(-z(5) + z(7)) + y(5)*(-z(0) - z(1) + z(6) + z(7))))*twelth;
-
+    
     return;
     
 } // end subroutine
@@ -545,4 +545,3 @@ void get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
     return;
     
 } // end subroutine
-

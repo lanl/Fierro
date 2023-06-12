@@ -186,17 +186,17 @@ void input(CArrayKokkos <material_t> &material,
             
             // Tag X plane
             boundary(3).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
-            boundary(3).value = 1.2;
+            boundary(3).value = 1.0;
             boundary(3).hydro_bc = bdy::reflected;
             
             // Tag Y plane
             boundary(4).surface = bdy::y_plane;
-            boundary(4).value = 1.2;
+            boundary(4).value = 1.0;
             boundary(4).hydro_bc = bdy::reflected;
             
             // Tag Z plane
             boundary(5).surface = bdy::z_plane;
-            boundary(5).value = 1.2;
+            boundary(5).value = 1.0;
             boundary(5).hydro_bc = bdy::reflected;
             
         });  // end RUN

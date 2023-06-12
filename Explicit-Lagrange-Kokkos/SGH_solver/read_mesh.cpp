@@ -297,7 +297,7 @@ void readVTKPn(char* MESH,
     
     // intialize elem mesh
     mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_dims);
-    elem.initialize(rk_num_bins, num_elems, 3); // always 3D here, even for 2D
+    elem.initialize_Pn(rk_num_bins, num_elems, 3, std::cbrt(num_nodes_in_elem)-1); // always 3D here, even for 2D
     
     
     // intialize corner variables
