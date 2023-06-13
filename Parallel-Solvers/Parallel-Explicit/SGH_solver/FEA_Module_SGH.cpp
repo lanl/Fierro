@@ -1747,6 +1747,9 @@ void FEA_Module_SGH::setup(){
     
 } // end of setup
 
+/* ----------------------------------------------------------------------------
+    supporting destructor for the user strength model interface
+------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::cleanup_user_strength_model() {
 /*
@@ -3678,77 +3681,90 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
 void FEA_Module_SGH::init_assembly(){
   int num_dim = simparam->num_dim;
   const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  Gradient_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Gradient_Matrix_Strides");
+  Gradient_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Gradient_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
-  int current_row_n_nodes_scanned;
   int local_node_index, global_node_index, current_column_index;
-  int max_stride = 0;
+  size_t max_stride = 0;
   size_t nodes_per_element;
   
   //allocate stride arrays
   CArrayKokkos <size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
-  Graph_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes, "Graph_Matrix_Strides");
+  DCArrayKokkos <size_t, array_layout, device_type, memory_traits> Dual_Graph_Matrix_Strides_initial(nlocal_nodes, "Host_Graph_Matrix_Strides_initial");
+  Graph_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes, "Graph_Matrix_Strides");
 
   //allocate storage for the sparse stiffness matrix map used in the assembly process
-  Global_Gradient_Matrix_Assembly_Map = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
+  Global_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
                                          max_nodes_per_element,max_nodes_per_element, "Global_Gradient_Matrix_Assembly_Map");
 
   //allocate array used to determine global node repeats in the sparse graph later
-  CArrayKokkos <int, array_layout, device_type, memory_traits> node_indices_used(nall_nodes, "node_indices_used");
+  DCArrayKokkos <int, array_layout, device_type, memory_traits> node_indices_used(nall_nodes, "node_indices_used");
 
   /*allocate array that stores which column the node index occured on for the current row
     when removing repeats*/
-  CArrayKokkos <size_t, array_layout, device_type, memory_traits> column_index(nall_nodes, "column_index");
+  DCArrayKokkos <size_t, array_layout, device_type, memory_traits> column_index(nall_nodes, "column_index");
   
   //initialize nlocal arrays
-  for(int inode = 0; inode < nlocal_nodes; inode++){
+  FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
     Graph_Matrix_Strides_initial(inode) = 0;
     Graph_Matrix_Strides(inode) = 0;
     Graph_Fill(inode) = 0;
-  }
+  }); // end parallel for
+  Kokkos::fence();
 
   //initialize nall arrays
-  for(int inode = 0; inode < nall_nodes; inode++){
+  //initialize nlocal arrays
+  FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
     node_indices_used(inode) = 0;
     column_index(inode) = 0;
-  }
+  }); // end parallel for
+  Kokkos::fence();
   
   //count upper bound of strides for Sparse Pattern Graph by allowing repeats due to connectivity
-  if(num_dim == 2)
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
-    nodes_per_element = elem2D->num_nodes();
-    for (int lnode = 0; lnode < nodes_per_element; lnode++){
-      global_node_index = nodes_in_elem(ielem, lnode);
-      if(map->isNodeGlobalElement(global_node_index)){
-        local_node_index = map->getLocalElement(global_node_index);
-        Graph_Matrix_Strides_initial(local_node_index) += nodes_per_element;
+    if(num_dim == 2)
+    for (int ielem = 0; ielem < rnum_elem; ielem++){
+      element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
+      nodes_per_element = elem2D->num_nodes();
+      for (int lnode = 0; lnode < nodes_per_element; lnode++){
+        global_node_index = nodes_in_elem(ielem, lnode);
+        if(map->isNodeGlobalElement(global_node_index)){
+          local_node_index = map->getLocalElement(global_node_index);
+          Dual_Graph_Matrix_Strides_initial.host(local_node_index) += nodes_per_element;
+        }
       }
     }
-  }
 
-  if(num_dim == 3)
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_3Delem_type(Element_Types(ielem), elem);
-    nodes_per_element = elem->num_nodes();
-    for (int lnode = 0; lnode < nodes_per_element; lnode++){
-      global_node_index = nodes_in_elem(ielem, lnode);
-      if(map->isNodeGlobalElement(global_node_index)){
-        local_node_index = map->getLocalElement(global_node_index);
-        Graph_Matrix_Strides_initial(local_node_index) += nodes_per_element;
+    if(num_dim == 3)
+    for (int ielem = 0; ielem < rnum_elem; ielem++){
+      element_select->choose_3Delem_type(Element_Types(ielem), elem);
+      nodes_per_element = elem->num_nodes();
+      for (int lnode = 0; lnode < nodes_per_element; lnode++){
+        global_node_index = nodes_in_elem(ielem, lnode);
+        if(map->isNodeGlobalElement(global_node_index)){
+          local_node_index = map->getLocalElement(global_node_index);
+          Dual_Graph_Matrix_Strides_initial.host(local_node_index) += nodes_per_element;
+        }
       }
     }
-  }
   
+  Dual_Graph_Matrix_Strides_initial.update_device();
+
   //equate strides for later
-  for(int inode = 0; inode < nlocal_nodes; inode++)
-    Graph_Matrix_Strides(inode) = Graph_Matrix_Strides_initial(inode);
+  FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
+    Graph_Matrix_Strides(inode) = Graph_Matrix_Strides_initial(inode) = Dual_Graph_Matrix_Strides_initial(inode);
+  }); // end parallel for
   
+  //for (int inode = 0; inode < nlocal_nodes; inode++)
+    //std::cout << Graph_Matrix_Strides_initial(inode) << std::endl;
+
   //compute maximum stride
-  for(int inode = 0; inode < nlocal_nodes; inode++)
-    if(Graph_Matrix_Strides_initial(inode) > max_stride) max_stride = Graph_Matrix_Strides_initial(inode);
+  size_t update = 0;
+  REDUCE_MAX_CLASS(inode, 0, nlocal_nodes, update, {
+      if(update < Graph_Matrix_Strides_initial(inode))
+        update = Graph_Matrix_Strides_initial(inode);
+  }, max_stride);
   
+  //std::cout << "THE MAX STRIDE" << max_stride << std::endl;
   //allocate array used in the repeat removal process
   current_row_nodes_scanned = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_stride, "current_row_nodes_scanned");
 
@@ -3757,125 +3773,139 @@ void FEA_Module_SGH::init_assembly(){
   RaggedRightArrayofVectorsKokkos<size_t, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial,num_dim);
   
   //Fill the initial Graph with repeats
-  if(num_dim == 2)
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
-    nodes_per_element = elem2D->num_nodes();
-    for (int lnode = 0; lnode < nodes_per_element; lnode++){
-      global_node_index = nodes_in_elem(ielem, lnode);
-      if(map->isNodeGlobalElement(global_node_index)){
-        local_node_index = map->getLocalElement(global_node_index);
-        for (int jnode = 0; jnode < nodes_per_element; jnode++){
-          current_column_index = Graph_Fill(local_node_index)+jnode;
-          Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem,jnode);
+  if(num_dim == 2){
+    for (int ielem = 0; ielem < rnum_elem; ielem++){
+      element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
+      nodes_per_element = elem2D->num_nodes();
+      for (int lnode = 0; lnode < nodes_per_element; lnode++){
+        global_node_index = nodes_in_elem(ielem, lnode);
+        if(map->isNodeGlobalElement(global_node_index)){
+          local_node_index = map->getLocalElement(global_node_index);
+          for (int jnode = 0; jnode < nodes_per_element; jnode++){
+            current_column_index = Graph_Fill(local_node_index)+jnode;
+            Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem,jnode);
 
-          //fill inverse map
-          Element_local_indices(local_node_index,current_column_index,0) = ielem;
-          Element_local_indices(local_node_index,current_column_index,1) = lnode;
-          Element_local_indices(local_node_index,current_column_index,2) = jnode;
+            //fill inverse map
+            Element_local_indices(local_node_index,current_column_index,0) = ielem;
+            Element_local_indices(local_node_index,current_column_index,1) = lnode;
+            Element_local_indices(local_node_index,current_column_index,2) = jnode;
 
-          //fill forward map
-          Global_Gradient_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+            //fill forward map
+            Global_Gradient_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+          }
+          Graph_Fill(local_node_index) += nodes_per_element;
         }
-        Graph_Fill(local_node_index) += nodes_per_element;
       }
     }
   }
   
-  if(num_dim == 3)
-  for (int ielem = 0; ielem < rnum_elem; ielem++){
-    element_select->choose_3Delem_type(Element_Types(ielem), elem);
-    nodes_per_element = elem->num_nodes();
-    for (int lnode = 0; lnode < nodes_per_element; lnode++){
-      global_node_index = nodes_in_elem(ielem, lnode);
-      if(map->isNodeGlobalElement(global_node_index)){
-        local_node_index = map->getLocalElement(global_node_index);
-        for (int jnode = 0; jnode < nodes_per_element; jnode++){
-          current_column_index = Graph_Fill(local_node_index)+jnode;
-          Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem,jnode);
+  if(num_dim == 3){
+    for (int ielem = 0; ielem < rnum_elem; ielem++){
+      element_select->choose_3Delem_type(Element_Types(ielem), elem);
+      nodes_per_element = elem->num_nodes();
+      for (int lnode = 0; lnode < nodes_per_element; lnode++){
+        global_node_index = nodes_in_elem(ielem, lnode);
+        if(map->isNodeGlobalElement(global_node_index)){
+          local_node_index = map->getLocalElement(global_node_index);
+          for (int jnode = 0; jnode < nodes_per_element; jnode++){
+            current_column_index = Graph_Fill(local_node_index)+jnode;
+            Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem,jnode);
 
-          //fill inverse map
-          Element_local_indices(local_node_index,current_column_index,0) = ielem;
-          Element_local_indices(local_node_index,current_column_index,1) = lnode;
-          Element_local_indices(local_node_index,current_column_index,2) = jnode;
+            //fill inverse map
+            Element_local_indices(local_node_index,current_column_index,0) = ielem;
+            Element_local_indices(local_node_index,current_column_index,1) = lnode;
+            Element_local_indices(local_node_index,current_column_index,2) = jnode;
 
-          //fill forward map
-          Global_Gradient_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+            //fill forward map
+            Global_Gradient_Matrix_Assembly_Map(ielem,lnode,jnode) = current_column_index;
+          }
+          Graph_Fill(local_node_index) += nodes_per_element;
         }
-        Graph_Fill(local_node_index) += nodes_per_element;
       }
     }
   }
-  
+    
   //debug statement
   //std::cout << "started run" << std::endl;
   //std::cout << "Graph Matrix Strides Repeat on task " << myrank << std::endl;
   //for (int inode = 0; inode < nlocal_nodes; inode++)
     //std::cout << Graph_Matrix_Strides(inode) << std::endl;
-  
+  RUN_CLASS({
   //remove repeats from the inital graph setup
-  int current_node, current_element_index, element_row_index, element_column_index, current_stride;
-  for (int inode = 0; inode < nlocal_nodes; inode++){
-    current_row_n_nodes_scanned = 0;
-    for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
-      //convert global index in graph to its local index for the flagging array
-      current_node = all_node_map->getLocalElement(Repeat_Graph_Matrix(inode,istride));
-      //debug
-      //if(current_node==-1)
-      //std::cout << "Graph Matrix node access on task " << myrank << std::endl;
-      //std::cout << Repeat_Graph_Matrix(inode,istride) << std::endl;
-      if(node_indices_used(current_node)){
-        //set global assembly map index to the location in the graph matrix where this global node was first found
-        current_element_index = Element_local_indices(inode,istride,0);
-        element_row_index = Element_local_indices(inode,istride,1);
-        element_column_index = Element_local_indices(inode,istride,2);
-        Global_Gradient_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
-            = column_index(current_node);   
+    int current_node;
+    //remove repeats from the inital graph setup
+    int current_element_index;
+    int element_row_index;
+    int element_column_index;
+    int current_stride;
+    int current_row_n_nodes_scanned;
+    for (int inode = 0; inode < nlocal_nodes; inode++){
+      current_row_n_nodes_scanned = 0;
+      for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
+        //convert global index in graph to its local index for the flagging array
+        current_node = all_node_map->getLocalElement(Repeat_Graph_Matrix(inode,istride));
+        //debug
+        //if(current_node==-1)
+        //std::cout << "Graph Matrix node access on task " << myrank << std::endl;
+        //std::cout << Repeat_Graph_Matrix(inode,istride) << std::endl;
+        if(node_indices_used(current_node)){
+          //set global assembly map index to the location in the graph matrix where this global node was first found
+          current_element_index = Element_local_indices(inode,istride,0);
+          element_row_index = Element_local_indices(inode,istride,1);
+          element_column_index = Element_local_indices(inode,istride,2);
+          Global_Gradient_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
+              = column_index(current_node);   
 
-        
-        //swap current node with the end of the current row and shorten the stride of the row
-        //first swap information about the inverse and forward maps
+          
+          //swap current node with the end of the current row and shorten the stride of the row
+          //first swap information about the inverse and forward maps
 
-        current_stride = Graph_Matrix_Strides(inode);
-        if(istride!=current_stride-1){
-        Element_local_indices(inode,istride,0) = Element_local_indices(inode,current_stride-1,0);
-        Element_local_indices(inode,istride,1) = Element_local_indices(inode,current_stride-1,1);
-        Element_local_indices(inode,istride,2) = Element_local_indices(inode,current_stride-1,2);
-        current_element_index = Element_local_indices(inode,istride,0);
-        element_row_index = Element_local_indices(inode,istride,1);
-        element_column_index = Element_local_indices(inode,istride,2);
+          current_stride = Graph_Matrix_Strides(inode);
+          if(istride!=current_stride-1){
+          Element_local_indices(inode,istride,0) = Element_local_indices(inode,current_stride-1,0);
+          Element_local_indices(inode,istride,1) = Element_local_indices(inode,current_stride-1,1);
+          Element_local_indices(inode,istride,2) = Element_local_indices(inode,current_stride-1,2);
+          current_element_index = Element_local_indices(inode,istride,0);
+          element_row_index = Element_local_indices(inode,istride,1);
+          element_column_index = Element_local_indices(inode,istride,2);
 
-        Global_Gradient_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
-            = istride;
+          Global_Gradient_Matrix_Assembly_Map(current_element_index,element_row_index, element_column_index) 
+              = istride;
 
-        //now that the element map information has been copied, copy the global node index and delete the last index
+          //now that the element map information has been copied, copy the global node index and delete the last index
 
-        Repeat_Graph_Matrix(inode,istride) = Repeat_Graph_Matrix(inode,current_stride-1);
+          Repeat_Graph_Matrix(inode,istride) = Repeat_Graph_Matrix(inode,current_stride-1);
+          }
+          istride--;
+          Graph_Matrix_Strides(inode)--;
         }
-        istride--;
-        Graph_Matrix_Strides(inode)--;
+        else{
+          /*this node hasn't shown up in the row before; add it to the list of nodes
+            that have been scanned uniquely. Use this list to reset the flag array
+            afterwards without having to loop over all the nodes in the system*/
+          node_indices_used(current_node) = 1;
+          column_index(current_node) = istride;
+          current_row_nodes_scanned(current_row_n_nodes_scanned) = current_node;
+          current_row_n_nodes_scanned++;
+        }
       }
-      else{
-        /*this node hasn't shown up in the row before; add it to the list of nodes
-          that have been scanned uniquely. Use this list to reset the flag array
-          afterwards without having to loop over all the nodes in the system*/
-        node_indices_used(current_node) = 1;
-        column_index(current_node) = istride;
-        current_row_nodes_scanned(current_row_n_nodes_scanned) = current_node;
-        current_row_n_nodes_scanned++;
-      }
+      //reset nodes used list for the next row of the sparse list
+      for(int node_reset = 0; node_reset < current_row_n_nodes_scanned; node_reset++)
+        node_indices_used(current_row_nodes_scanned(node_reset)) = 0;
+
     }
-    //reset nodes used list for the next row of the sparse list
-    for(int node_reset = 0; node_reset < current_row_n_nodes_scanned; node_reset++)
-      node_indices_used(current_row_nodes_scanned(node_reset)) = 0;
-
-  }
-
+  });
+  Kokkos::fence();  
+    
+  
   //copy reduced content to non_repeat storage
   Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
-  for(int inode = 0; inode < nlocal_nodes; inode++)
-    for(int istride = 0; istride < Graph_Matrix_Strides(inode); istride++)
+
+  FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
+    for(int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
       Graph_Matrix(inode,istride) = Repeat_Graph_Matrix(inode,istride);
+    }
+  }); // end parallel for
 
   //deallocate repeat matrix
   
@@ -3884,10 +3914,9 @@ void FEA_Module_SGH::init_assembly(){
     is used to loop over each element's local stiffness matrix in the assembly process.*/
   
   //expand strides for stiffness matrix by multipling by dim
-  for(int inode = 0; inode < nlocal_nodes; inode++){
-    for (int idim = 0; idim < num_dim; idim++)
-    Gradient_Matrix_Strides(num_dim*inode + idim) = num_dim*Graph_Matrix_Strides(inode);
-  }
+  FOR_ALL_CLASS(idof, 0, num_dim*nlocal_nodes, {
+    Gradient_Matrix_Strides(idof) = num_dim*Graph_Matrix_Strides(idof/num_dim);
+  }); // end parallel for
 
   Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   Force_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
@@ -3896,16 +3925,13 @@ void FEA_Module_SGH::init_assembly(){
   //set stiffness Matrix Graph
   //debug print
     //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
-  for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+  FOR_ALL_CLASS(idof, 0, num_dim*nlocal_nodes, {
     for (int istride = 0; istride < Gradient_Matrix_Strides(idof); istride++){
       DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof/num_dim,istride/num_dim)*num_dim + istride%num_dim;
-      //debug print
-      //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
     }
-    //debug print
-    //std::cout << std::endl;
-  }
-
+  }); // end parallel for
+  
+  /*
   //construct distributed gradient matrix from local kokkos data
   //build column map for the global gradient matrix
   Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > colmap;
@@ -3935,7 +3961,8 @@ void FEA_Module_SGH::init_assembly(){
       entrycount++;
     }
   }
-
+  
+  
   //sort values and indices
   Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, gradient_local_indices.get_kokkos_view(), Force_Gradient_Positions.get_kokkos_view());
   Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, gradient_local_indices.get_kokkos_view(), Force_Gradient_Velocities.get_kokkos_view());
@@ -3946,5 +3973,7 @@ void FEA_Module_SGH::init_assembly(){
   distributed_force_gradient_positions->fillComplete();
   distributed_force_gradient_velocities = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, gradient_local_indices.get_kokkos_view(), Force_Gradient_Velocities.get_kokkos_view()));
   distributed_force_gradient_velocities->fillComplete();
-  
+  */
+  //distributed_force_gradient_positions->describe(*fos,Teuchos::VERB_EXTREME);
+  //distributed_force_gradient_velocities->describe(*fos,Teuchos::VERB_EXTREME);
 }
