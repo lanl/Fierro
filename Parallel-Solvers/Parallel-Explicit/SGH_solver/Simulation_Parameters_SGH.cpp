@@ -814,12 +814,14 @@ void Simulation_Parameters_SGH::apply_settings(){
     if(set_options.find(current_option)!=set_options.end()){
         max_num_global_vars = std::stoi(set_options[current_option]);
         set_options.erase(current_option);
+        global_vars = DCArrayKokkos <double> (num_materials, max_num_global_vars);
     }
     
     std::string material_base = "material_options:material_";
     std::string state_var_base = ":state_vars_";
+    std::string global_var_base = ":global_vars_";
     std::string index, inner_index;
-    std::string material_name, state_var_name;
+    std::string material_name, state_var_name, global_var_name;
     // --- set of material specifications ---
     for(int imat = 0; imat < num_materials; imat++){
         //readin material data
@@ -940,6 +942,15 @@ void Simulation_Parameters_SGH::apply_settings(){
         if(set_options.find(current_option)!=set_options.end()){
            material.host(imat).num_global_vars = std::stoi(set_options[current_option]);
            set_options.erase(current_option);
+        }
+
+        for(int igvar = 0; igvar < material.host(imat).num_global_vars; igvar++){
+            inner_index = std::to_string(igvar+1);
+            global_var_name = material_name + global_var_base + inner_index;
+            if(set_options.find(global_var_name)!=set_options.end()){
+                global_vars.host(imat,igvar) = std::stod(set_options[global_var_name]);
+                set_options.erase(global_var_name);
+            }
         }
     }
     
@@ -1135,6 +1146,7 @@ void Simulation_Parameters_SGH::apply_settings(){
     boundary.update_device();
     material.update_device();
     state_vars.update_device();
+    global_vars.update_device();
 
     //set eos pointer
     // --- set of material specifications ---

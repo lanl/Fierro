@@ -586,7 +586,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
 
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;
-        
+
   // Dual Views of the corner struct variables
   DViewCArrayKokkos <double> corner_force;
   DViewCArrayKokkos <double> corner_mass;
@@ -606,8 +606,6 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   //file parameters
   DCArrayKokkos <size_t>read_from_file;
   DCArrayKokkos <double>file_state_vars;
-  DCArrayKokkos <size_t>mat_num_state_vars; // actual number of state_vars
-  DCArrayKokkos <size_t>mat_num_global_vars; // actual number of global_vars
 
   //parameters
   double time_value, time_final, dt, dt_max, dt_min, dt_cfl, graphics_time, graphics_dt_ival;
