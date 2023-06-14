@@ -3149,12 +3149,26 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
 
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         real_t rate_of_change;
+        real_t matrix_contribution;
+        size_t dof_id;
         for (int idim = 0; idim < num_dim; idim++){
+          matrix_contribution = 0;
+          //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
+            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim%num_dim,idof);
+          }
           rate_of_change = previous_velocity_vector(node_gid,idim)- 
-                            previous_adjoint_vector(node_gid,idim)*previous_force_gradient_velocity(node_gid,idim)/node_mass(node_gid)-
+                            matrix_contribution/node_mass(node_gid)-
                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
-          rate_of_change = -previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim);
+          matrix_contribution = 0;
+          //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
+            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
+          }
+          rate_of_change = -matrix_contribution;
           phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
@@ -3887,7 +3901,7 @@ void FEA_Module_SGH::init_assembly(){
       current_row_n_nodes_scanned = 0;
       for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
         //convert global index in graph to its local index for the flagging array
-        current_node = Repeat_Graph_Matrix(inode,istride)
+        current_node = Repeat_Graph_Matrix(inode,istride);
         //debug
         //if(current_node==-1)
         //std::cout << "Graph Matrix node access on task " << myrank << std::endl;
