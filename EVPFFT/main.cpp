@@ -51,9 +51,12 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   nsteps = 1;
 
   // copy vel_grad into udot
-  for (int i = 0; i < 9; i++) {
-    udot.host_pointer()[i] = vel_grad[i];
-  } 
+  ViewCMatrix vel_grad_view (vel_grad,3,3); // fierro uses C-layout
+  for (int i = 1; i <= 3; i++) {
+    for (int j = 1; j <= 3; j++) {
+        udot.host(i,j) = vel_grad_view(i,j);
+    }   
+  }
   // update device
   udot.update_device();
 
@@ -99,9 +102,11 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   } // end if ddnorm
 
   // copy scauav into stress
-  for (int i = 0; i < 9; i++) {
-    stress[i] = scauav.pointer()[i];
+  ViewCMatrix stress_view (stress,3,3); // fierro uses C-layout
+  for (int i = 1; i <= 3; i++) {
+    for (int j = 1; j <= 3; j++) {
+        stress_view(i,j) = scauav(i,j);
+    }
   }
-
 }
 #endif
