@@ -144,6 +144,8 @@ if(BUILD_EXPLICIT_SOLVER)
   add_subdirectory(Explicit-Lagrange)
 endif()
 
+add_subdirectory(CLI)
+
 # Add uninstall target
 if(NOT TARGET uninstall)
   configure_file(

@@ -12,9 +12,9 @@ include_directories(User-Material-Interface)
 add_subdirectory(User-Material-Interface)
 
 if(BUILD_IMPLICIT_SOLVER)
-add_subdirectory(Implicit-Lagrange)
+    add_subdirectory(Implicit-Lagrange)
 endif()
 
 if(BUILD_PARALLEL_EXPLICIT_SOLVER)
-add_subdirectory(Parallel-Explicit)
+    add_subdirectory(Parallel-Explicit)
 endif()
