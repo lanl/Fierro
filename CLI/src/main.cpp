@@ -1,4 +1,5 @@
 #include "argparse/argparse.hpp"
+#include <filesystem>
 #include <fstream>
 #include <stdlib.h>
 
@@ -27,6 +28,35 @@ std::optional<std::string> validate_arguments(const argparse::ArgumentParser& pa
     return std::nullopt;
 }
 
+
+template<typename T> 
+T with_curdir(std::string dir, std::function<T()> f) {
+    T val;
+    with_curdir<void>(dir, [&]() -> void { val = f(); });
+    return val;
+}
+
+template<>
+void with_curdir<void>(std::string dir, std::function<void()> f) {
+    auto old_path = std::filesystem::current_path();
+    
+    dir = std::filesystem::absolute(dir);
+    if (!std::filesystem::exists(dir)) std::filesystem::create_directories(dir);
+
+    std::filesystem::current_path(dir);
+    f();
+    std::filesystem::current_path(old_path);
+}
+
+template<typename T>
+void other_fun(T f) {
+    f();
+}
+
+void fun(){
+    other_fun([&]() { 1; });
+}
+
 int main(int argc, char** argv) {
     argparse::ArgumentParser parser("fierro");
 
@@ -50,6 +80,10 @@ int main(int argc, char** argv) {
         .help("Number of processes to run. If set, we will invoke `mpirun -np {v}`")
         .default_value("1"); // This is an int, but were just going to put it back into a str anyway.
 
+    parser.add_argument("-o")
+        .help("Output folder. ")
+        .default_value(".");
+
     try {
         parser.parse_args(argc, argv);
     } catch(const std::runtime_error& e) {
@@ -64,7 +98,8 @@ int main(int argc, char** argv) {
         std::exit(1);
     }
 
-    std::string mesh_file = parser.get("mesh_file");
+    // We might cd later, so make this an absolute file path first.
+    std::string mesh_file = std::filesystem::absolute(parser.get("mesh_file"));
     std::string command = "";
     
     if (parser.get<bool>("explicit")) {
@@ -75,13 +110,18 @@ int main(int argc, char** argv) {
     }
 
     // If the user gives us a number of processes,
-    // we should set some things and invoke mpi.
+    // we should set up a couple of environment variables and invoke mpi.
     if (parser.is_used("np")) {
-        command = "mpirun -np " + parser.get<std::string>("np") + " --bind-to core " + command;
         system("export OMP_PROC_BIND=spread");
-        system("export OMP_NUM_THREADS=1");
-        system("export OMP_PLACES=threads");
+        system("export OMP_NUM_THREADS=1   ");
+        system("export OMP_PLACES=threads  ");
+        command = "mpirun -np " + parser.get<std::string>("np") + " --bind-to core " + command;
     }
 
-    return system(command.c_str());    
+    return with_curdir<int>(
+        parser.get<std::string>("o"),
+        [&]() {
+            return system(command.c_str());
+        }
+    );
 }
