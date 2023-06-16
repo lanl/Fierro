@@ -3,11 +3,26 @@
 #include <fstream>
 #include <stdlib.h>
 
+/**
+ * Check to see if a file exists on the system.
+ * Technically this will return false if it exists but you don't have permission.
+*/
 bool file_exists(std::string fname) {
     std::fstream f(fname.c_str());
     return f.good();
 }
 
+/**
+ * Check that the arguments of the CLI are valid and make sense.
+ * 
+ * Checks for explicit/implicit logical consistency.
+ * Checks that the mesh file is real and readable.
+ *      Does not check that it is correctly formatted.
+ * 
+ * @param parser ArgumentParser *after* you have called `parser.parse_args(...).`
+ * @return An optional error. If the empty, the arguments are valid.
+ * 
+*/
 std::optional<std::string> validate_arguments(const argparse::ArgumentParser& parser) {
     std::string msg = "";
 
@@ -29,6 +44,16 @@ std::optional<std::string> validate_arguments(const argparse::ArgumentParser& pa
 }
 
 
+/**
+ * Execute a function with a particular working directory.
+ * 
+ * @param dir The working directory to execute the function in.
+ *              If the directoy doesn't exist, it will be created.
+ *              Will also create parent directories if necessary.
+ * @param f   The function to execute.
+ * 
+ * @return The return value of `f` if there is one. Else void.
+*/
 template<typename T> 
 T with_curdir(std::string dir, std::function<T()> f) {
     T val;
@@ -36,6 +61,9 @@ T with_curdir(std::string dir, std::function<T()> f) {
     return val;
 }
 
+/**
+ * `with_curdir` template specialization for void functions.
+*/
 template<>
 void with_curdir<void>(std::string dir, std::function<void()> f) {
     auto old_path = std::filesystem::current_path();
@@ -46,15 +74,6 @@ void with_curdir<void>(std::string dir, std::function<void()> f) {
     std::filesystem::current_path(dir);
     f();
     std::filesystem::current_path(old_path);
-}
-
-template<typename T>
-void other_fun(T f) {
-    f();
-}
-
-void fun(){
-    other_fun([&]() { 1; });
 }
 
 int main(int argc, char** argv) {
