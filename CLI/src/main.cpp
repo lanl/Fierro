@@ -12,7 +12,19 @@ bool file_exists(std::string fname) {
     return f.good();
 }
 
-/**
+class ArgumentException: public std::exception {
+private:
+    std::string message;
+public:
+    ArgumentException(std::string msg) : message(msg) {
+        this->message = msg;
+    }
+    char* what() {
+        return (char*)("Argument Error: " + this->message).c_str();
+    }
+};
+
+/** 
  * Check that the arguments of the CLI are valid and make sense.
  * 
  * Checks for explicit/implicit logical consistency.
@@ -26,15 +38,17 @@ bool file_exists(std::string fname) {
 std::optional<std::string> validate_arguments(const argparse::ArgumentParser& parser) {
     std::string msg = "";
 
-    bool use_explicit = parser.get<bool>("explicit");
-    bool use_implicit = parser.get<bool>("implicit");
-
-    if (use_explicit && use_implicit) {
-        msg = "Only set one of `--explicit` or `--implicit`";
-    } else if (!(use_explicit || use_implicit)) {
-        msg = "Requires one of `--explicit` or `--implicit` to be set";
-    } else if (!file_exists(parser.get<std::string>("mesh_file"))) {
+    if (parser.is_used("mesh_file") && !file_exists(parser.get<std::string>("mesh_file"))) {
         msg = "Unable to find mesh file: " + parser.get<std::string>("mesh_file");
+    } else if (parser.is_used("config") && !file_exists(parser.get<std::string>("config"))) {
+        msg = "Unable to find configuration: " + parser.get<std::string>("config");
+    } else if (parser.is_used("config") == parser.is_used("mesh_file")) {
+        msg = "Use exactly one of `--config` or `--mesh_file.`";
+    }
+    
+    std::string solver_mode = parser.get<std::string>("solver_mode");
+    if (solver_mode.compare("explicit") != 0 && solver_mode.compare("implicit") != 0) {
+        msg = "Invalid choice of solver mode, " + solver_mode + ". Use either `explicit` or `implicit.`";
     }
 
     if (msg.length() > 0) {
@@ -42,7 +56,6 @@ std::optional<std::string> validate_arguments(const argparse::ArgumentParser& pa
     }
     return std::nullopt;
 }
-
 
 /**
  * Execute a function with a particular working directory.
@@ -76,30 +89,27 @@ void with_curdir<void>(std::string dir, std::function<void()> f) {
     std::filesystem::current_path(old_path);
 }
 
+
 int main(int argc, char** argv) {
     argparse::ArgumentParser parser("fierro");
 
     parser.add_description("");
 
-    parser.add_argument("mesh_file")
-        .help("The `.geo` file to run fierro on.")
-        .required();
+    parser.add_argument("-m", "--mesh_file")
+        .help("The `.geo` file to run fierro with. Mutually exclusive with `--config.`");
 
-    parser.add_argument("-e", "--explicit")
-        .help("Use an explicit solution scheme to step the system.")
-        .default_value(false)
-        .implicit_value(true);
-        
-    parser.add_argument("-i", "--implicit")
-        .help("Use an implicit solution scheme to step the system.")
-        .default_value(false)
-        .implicit_value(true);
-    
+    parser.add_argument("-c", "--config")
+        .help("The `.yaml` configuration to run fierro with. Mutually exclusive with `--mesh_file.`");
+
+    parser.add_argument("-s", "--solver_mode")
+        .help("The the scheme used to step the system. Either `explicit` or `implicit`.")
+        .default_value("explicit");
+
     parser.add_argument("-np")
         .help("Number of processes to run. If set, we will invoke `mpirun -np {v}`")
         .default_value("1"); // This is an int, but were just going to put it back into a str anyway.
 
-    parser.add_argument("-o")
+    parser.add_argument("-o", "--output")
         .help("Output folder. ")
         .default_value(".");
 
@@ -114,18 +124,26 @@ int main(int argc, char** argv) {
     auto err = validate_arguments(parser);
     if (err.has_value()) {
         std::cerr << "Argument Error: " << err.value() << std::endl;
+        std::cerr << parser;
         std::exit(1);
     }
 
-    // We might cd later, so make this an absolute file path first.
-    std::string mesh_file = std::filesystem::absolute(parser.get("mesh_file"));
-    std::string command = "";
-    
-    if (parser.get<bool>("explicit")) {
-        command = "fierro-parallel-explicit " + mesh_file;
+    std::string input_file;
+    if (parser.is_used("config")) {
+        input_file = parser.get<std::string>("config");
+    } else {
+        input_file = parser.get("mesh_file");
     }
-    if (parser.get<bool>("implicit")) {
-        command = "fierro-parallel-implicit " + mesh_file;
+    // We might cd later, so make this an absolute file path first.
+    input_file = std::filesystem::absolute(input_file);
+
+    std::string command = "";
+    std::string solver_mode = parser.get<std::string>("solver_mode");
+    if (solver_mode.compare("explicit") == 0) {
+        command = "fierro-parallel-explicit " + input_file;
+    }
+    if (solver_mode.compare("implicit") == 0) {
+        command = "fierro-parallel-implicit " + input_file;
     }
 
     // If the user gives us a number of processes,
@@ -138,7 +156,7 @@ int main(int argc, char** argv) {
     }
 
     return with_curdir<int>(
-        parser.get<std::string>("o"),
+        parser.get<std::string>("output"),
         [&]() {
             return system(command.c_str());
         }
