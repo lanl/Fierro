@@ -57,7 +57,15 @@ int main(int argc, char *argv[]){
   MPI_Init(&argc,&argv);
   
   Kokkos::initialize();
-  solver_setup(argc, argv);
+  if(argc<2){
+    int myrank;
+    MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+    if(myrank==0)
+      std::cout << "Fierro requires a yaml setup file as a command line argument" << std::endl;
+  }
+  else{
+    solver_setup(argc, argv);
+  }
 
   MPI_Barrier(MPI_COMM_WORLD);
 
