@@ -27,5 +27,7 @@ add_subdirectory(SGH_solver)
 
 target_include_directories(fierro-parallel-explicit PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options (fierro-parallel-explicit PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
-target_link_libraries (fierro-parallel-explicit parallel_base_src user_material_interface parallel_sgh_solver)
-install(TARGETS fierro-parallel-explicit)
+target_link_libraries (fierro-parallel-explicit parallel_base_src user_material_interface parallel_sgh_solver ${MPI_CXX_LIBRARIES})
+install(
+  TARGETS fierro-parallel-explicit
+)

@@ -9,6 +9,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mod
 message(${CMAKE_MODULE_PATH})
 include(cmake/Modules/TargetDistclean.cmake OPTIONAL)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
  # set(CMAKE_BUILD_TYPE Release)
@@ -94,12 +96,14 @@ if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)
 endif()
 
-set(ELEMENTS_DIRS matar/src elements swage common geometry slam)
-foreach(DIR ${ELEMENTS_DIRS})
-  include_directories(Elements/${DIR})
-endforeach()
 
 if(BUILD_ELEMENTS)
+  set(ELEMENTS_DIRS matar/src elements swage common geometry slam)
+
+  foreach(DIR ${ELEMENTS_DIRS})
+    include_directories(Elements/${DIR})
+  endforeach()
+
   foreach(DIR ${ELEMENTS_DIRS})
     add_subdirectory(Elements/${DIR})
   endforeach()
@@ -122,17 +126,13 @@ if(BUILD_1D_KOKKOS_SGH)
   include_directories(Explicit-Lagrange-Kokkos/1D_SGH_solver)
 
   message("\nbuilding 1D SGH!  Here are the details: ")
-  if(NOT BUILD_ELEMENTS)
-    add_subdirectory(Elements/matar)
-  endif()
+
   add_subdirectory(Explicit-Lagrange-Kokkos/1D_SGH_solver)
 endif()
 
 if(BUILD_KOKKOS_SGH)
   message("\nbuilding SGH!  Here are the details: ")
-  if(NOT BUILD_ELEMENTS)
-    add_subdirectory(Elements/matar)
-  endif()
+
   add_subdirectory(Explicit-Lagrange-Kokkos/SGH_solver)
 endif()
 

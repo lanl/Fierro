@@ -55,5 +55,8 @@ target_compile_options (fea_modules PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
 target_link_libraries (fierro-parallel-implicit parallel_base_src ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 target_link_libraries (fea_modules parallel_base_src ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 target_link_libraries (fierro-parallel-implicit fea_modules)
-install(TARGETS fierro-parallel-implicit)
 
+
+install(
+  TARGETS fierro-parallel-implicit
+)
