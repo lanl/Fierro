@@ -611,21 +611,21 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
 
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
-      {
-        const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-    
-        const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+    {
+      const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+  
+      const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
-        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
-          for (int idim = 0; idim < num_dim; idim++){
-            //cancellation of half from midpoint and 2 from adjoint equation already done
-            current_adjoint_vector(node_gid,idim) = -0.5*(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
-          } 
-        }); // end parallel for
-        Kokkos::fence();
-      } //end view scope
+      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+        for (int idim = 0; idim < num_dim; idim++){
+          //cancellation of half from midpoint and 2 from adjoint equation already done
+          current_adjoint_vector(node_gid,idim) = -0.5*(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
+        } 
+      }); // end parallel for
+      Kokkos::fence();
+    } //end view scope
     
   }
 }
@@ -1324,7 +1324,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
               node_id = nodes_in_elem(elem_id, ifill);
               for(int idim=0; idim < num_dim; idim++){
                 //inner_product += 0.0001*current_element_adjoint(ifill,idim);
-                inner_product += corner_force_design_gradient(ifill,idim,ifill)*current_element_adjoint(ifill,idim);
+                inner_product += corner_force_design_gradient(elem_id,ifill,idim,ifill)*current_element_adjoint(ifill,idim);
                 //inner_product += 0.0001;
               }
             }
@@ -1342,7 +1342,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
                 node_id = nodes_in_elem(elem_id, ifill);
                 for(int idim=0; idim < num_dim; idim++){
                   //inner_product += 0.0001*current_element_adjoint(ifill,idim);
-                  inner_products(idesign) += corner_force_design_gradient(ifill,idim,idesign)*current_element_adjoint(ifill,idim);
+                  inner_products(idesign) += corner_force_design_gradient(elem_id,ifill,idim,idesign)*current_element_adjoint(ifill,idim);
                   //inner_product += 0.0001;
                 }
               }
@@ -1371,8 +1371,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
         
       } //end view scope
 
-      
-    
   }
 
 }

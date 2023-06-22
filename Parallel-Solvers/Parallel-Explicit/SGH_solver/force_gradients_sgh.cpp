@@ -380,16 +380,24 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
     }); // end parallel for loop over elements
 
     //accumulate node values from corner storage
-    force_gradient_velocity->putScalar(0);
+    //force_gradient_velocity->putScalar(0);
+    //force_gradient_position->putScalar(0);
+    //set back to zero
+    FOR_ALL_CLASS(idof, 0, nlocal_nodes*num_dims, {
+        for(int jdof = 0; jdof < Gradient_Matrix_Strides(idof); jdof++){
+            Force_Gradient_Velocities(idof,jdof) = 0;
+        }
+    }); // end parallel for
+    Kokkos::fence();
     
-    vec_array force_gradient_velocity_view = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+    //vec_array force_gradient_velocity_view = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         size_t corner_id;
         for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
             corner_id = corners_in_node(node_id,icorner);
-            force_gradient_velocity_view(node_id,0) += corner_vector_storage(corner_id, 0);
-            force_gradient_velocity_view(node_id,1) += corner_vector_storage(corner_id, 1);
-            force_gradient_velocity_view(node_id,2) += corner_vector_storage(corner_id, 2);
+            Force_Gradient_Velocities(node_id*num_dims,0) += corner_vector_storage(corner_id, 0);
+            Force_Gradient_Velocities(node_id*num_dims+1,0) += corner_vector_storage(corner_id, 1);
+            Force_Gradient_Velocities(node_id*num_dims+2,0) += corner_vector_storage(corner_id, 2);
         }
     }); // end parallel for
     Kokkos::fence();
@@ -755,16 +763,23 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
     }); // end parallel for loop over elements
 
     //accumulate node values from corner storage
-    force_gradient_position->putScalar(0);
+    //force_gradient_position->putScalar(0);
+    //set back to zero
+    FOR_ALL_CLASS(idof, 0, nlocal_nodes*num_dims, {
+        for(int jdof = 0; jdof < Gradient_Matrix_Strides(idof); jdof++){
+            Force_Gradient_Positions(idof,jdof) = 0;
+        }
+    }); // end parallel for
+    Kokkos::fence();
     
-    vec_array force_gradient_position_view = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+    //vec_array force_gradient_position_view = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         size_t corner_id;
         for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
             corner_id = corners_in_node(node_id,icorner);
-            force_gradient_position_view(node_id,0) += corner_vector_storage(corner_id, 0);
-            force_gradient_position_view(node_id,1) += corner_vector_storage(corner_id, 1);
-            force_gradient_position_view(node_id,2) += corner_vector_storage(corner_id, 2);
+            Force_Gradient_Positions(node_id*num_dims,0) += corner_vector_storage(corner_id, 0);
+            Force_Gradient_Positions(node_id*num_dims+1,0) += corner_vector_storage(corner_id, 1);
+            Force_Gradient_Positions(node_id*num_dims+2,0) += corner_vector_storage(corner_id, 2);
         }
     }); // end parallel for
     Kokkos::fence();
@@ -778,7 +793,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
 // Computes corner contribution of gradient of force with respect to the design variable
 //---------------------------------------------------------------------------------------
 
-KOKKOS_FUNCTION real_t FEA_Module_SGH::corner_force_design_gradient(size_t local_node_index, size_t idim, size_t local_node_design_index)
+KOKKOS_FUNCTION real_t FEA_Module_SGH::corner_force_design_gradient(size_t local_elem_index, size_t local_node_index, size_t idim, size_t local_node_design_index)
 const {
     return 0.0001/(double)num_nodes_in_elem;
 
