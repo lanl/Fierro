@@ -132,6 +132,9 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
+  KOKKOS_FUNCTION
+  real_t corner_force_design_gradient(size_t local_node_index, size_t idim, size_t local_node_design_index) const;
+
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
@@ -156,6 +159,8 @@ public:
                            const DViewCArrayKokkos <double> &node_vel);
 
   void get_vol();
+
+  void init_assembly();
 
   KOKKOS_INLINE_FUNCTION
   void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
@@ -541,6 +546,23 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> force_gradient_design;
   Teuchos::RCP<MV> force_gradient_position;
   Teuchos::RCP<MV> force_gradient_velocity;
+
+  //Local FEA data
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Gradient_Matrix_Assembly_Map;
+  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
+  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Positions;
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Velocities;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Gradient_Matrix_Strides;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
+  RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Gradient_Entries;
+  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Gradient_Entry_Indices;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Gradient_Entries_Strides;
+
+  //distributed matrices
+  Teuchos::RCP<MAT> distributed_force_gradient_positions;
+  Teuchos::RCP<MAT> distributed_force_gradient_velocities;
+
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
 

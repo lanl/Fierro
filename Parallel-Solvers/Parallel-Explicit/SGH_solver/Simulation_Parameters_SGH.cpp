@@ -57,6 +57,8 @@ Simulation_Parameters_SGH::Simulation_Parameters_SGH() : Simulation_Parameters()
   unit_scaling = 1;
   strain_max_flag = false;
   gravity_flag = false;
+  max_num_global_vars = 0;
+
   // ---- boundary conditions ---- //
   NB = 0; 
   NBSF = 0; 
