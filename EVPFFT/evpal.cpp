@@ -46,11 +46,18 @@ void EVPFFT::evpal(int imicro)
   // Note: errs = all_reduce[0]
   //       erre = all_reduce[1]
   //
-  ArrayType <real_t, 2> all_reduce;
+#if BUILD_EVPFFT_FIERRO
+  // create space to perform reduction for dsde.
+  const size_t n = 2+36; // 2 for errs, erre. 36 for M66
+  ArrayType <real_t, n> all_reduce;
+#else
+  const size_t n = 2; // 2 for errs, erre
+  ArrayType <real_t, n> all_reduce;
+#endif
 
   Kokkos::parallel_reduce(
     Kokkos::MDRangePolicy<Kokkos::Rank<3,LOOP_ORDER,LOOP_ORDER>>({1,1,1}, {npts3+1,npts2+1,npts1+1}),
-    KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, ArrayType <real_t,2> & loc_reduce) {
+    KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, ArrayType <real_t,n> & loc_reduce) {
 
     int jph;
     int itmaxal;
@@ -376,6 +383,31 @@ void EVPFFT::evpal(int imicro)
 
     } // end if (igas(jph) == 0)
 
+#if BUILD_EVPFFT_FIERRO
+    real_t dsde_[36];
+    ViewMatrixTypeReal dsde(dsde_,6,6);
+    if (igas(jph) == 0) {
+      for (int ii = 1; ii <= 6; ii++) {
+        for (int jj = 1; jj <= 6; jj++) {
+          dsde(ii,jj) = sg66(ii,jj) + dedotp66(ii,jj)*tdot;
+        }
+      }
+#ifdef LU_MATRIX_INVERSE
+      lu_inverse(dsde.pointer(), 6);
+#elif GJE_MATRIX_INVERSE
+      inverse_gj(dsde.pointer(), 6);
+#endif
+      ViewMatrixTypeReal dsde_avg(&loc_reduce.array[2],6,6);
+      for (int ii = 1; ii <= 6; ii++) {
+        for (int jj = 1; jj <= 6; jj++) {
+          dsde_avg(ii,jj) += dsde(ii,jj) * wgt;
+        }
+      }
+    //} else { // else for if (igas(jph) == 0)
+    } // end if (igas(jph) == 0)
+#endif
+
+
   }, all_reduce);
   Kokkos::fence(); // needed to prevent race condition
 
@@ -384,5 +416,12 @@ void EVPFFT::evpal(int imicro)
 
   errs = all_reduce.array[0];
   erre = all_reduce.array[1];
+
+#if BUILD_EVPFFT_FIERRO
+  // copy dsde_avg to M66
+  for (int i = 0; i < 36; i++) {
+    M66.pointer()[i] = (&all_reduce.array[2])[i];
+  }
+#endif
 
 }

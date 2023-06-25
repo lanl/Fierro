@@ -167,6 +167,9 @@ public:
   size_t fierro_cycle;
   const real_t stress_scale;
   const real_t time_scale;
+  MatrixTypeRealHost M66;
+  MatrixTypeRealHost udotAcc; 
+  double dtAcc;
 
   // For file management
   OutputFileManager ofile_mgr;

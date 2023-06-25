@@ -121,6 +121,9 @@ EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const rea
   , active(false)
   , stress_scale(stress_scale_)
   , time_scale(time_scale_)
+  , M66 (6,6)
+  , udotAcc(3,3)
+  , dtAcc(0.0)
 
   , ofile_mgr ()
 //-----------------------------------------------
@@ -184,10 +187,10 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
   sg.update_host();
   gacumgr.update_host();
 
-  // macroscopic stress
   for (int jj = 1; jj <= 3; jj++) {
     for (int ii = 1; ii <= 3; ii++) {
-      scauav(ii,jj) = 0.0;
+      scauav(ii,jj) = 0.0;  // macroscopic stress
+      udotAcc(ii,jj) = 0.0;
     }
   }
 }
