@@ -73,7 +73,9 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
         Fstress(i,j) = elem_stress.host(1,elem_gid,i,j);
       }
     }
+
     elem_evpfft[elem_gid]->solve(Fvel_grad.pointer(), Fstress.pointer(), dt_rk, cycle, elem_gid);
+
     // Transpose stress. Not needed, stress is symmetric. But why not.
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {

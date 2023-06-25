@@ -1,4 +1,6 @@
 #include "evpfft.h"
+#include "utilities.h"
+#include "vm.h"
 
 #ifndef BUILD_EVPFFT_FIERRO
 int main(int argc, char *argv[])
@@ -52,6 +54,14 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   ViewFMatrix vel_grad_view (vel_grad,3,3);
   ViewFMatrix stress_view (stress,3,3);
 
+//static std::ofstream myfile;
+//static MatrixTypeRealHost strain(3,3);
+//if (cycle == 0) {
+//  myfile.open("stress.txt");
+//  for (int i = 0; i < 9; i++) strain.pointer()[i] = 0.0;
+//}
+
+
   // calculate L2 norm of vel_grad
   real_t L2norm = 0.0;
   for (int i = 1; i <= 3; i++) {
@@ -81,24 +91,28 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
     }
   }
   // Calculate VonMises of udotAccSymm
-  double udotAccVm = 0.0;
+  double udotAccVm = vm(udotAccSymm.pointer());
+
+  // calculate strain increament
+  MatrixTypeRealHost dstran(3,3);
   for (int i = 1; i <= 3; i++) {
     for (int j = 1; j <= 3; j++) {
-      udotAccVm += udotAccSymm(i,j) * udotAccSymm(i,j);
+      dstran(i,j) = 0.5*(vel_grad_view(i,j) + vel_grad_view(j,i)) * dt;
     }
   }
-  udotAccVm = sqrt(2.0/3.0 * udotAccVm);
+
+// update strain
+//for (int i = 1; i <= 3; i++) {
+//  for (int j = 1; j <= 3; j++) {
+//    strain(i,j) += dstran(i,j);
+//  }
+//}  
+
+//myfile << vm(strain.pointer());
 
   // Linear extrapolation
-  double udotAccTh = 0.01;
+  double udotAccTh = 0.0001;
   if (active == true and udotAccVm < udotAccTh) {
-    MatrixTypeRealHost dstran(3,3);
-    for (int i = 1; i <= 3; i++) {
-      for (int j = 1; j <= 3; j++) {
-        dstran(i,j) = 0.5*(vel_grad_view(i,j) + vel_grad_view(j,i)) * dt;
-      }
-    }
-
     MatrixTypeRealHost M3333(3,3,3,3);
     cb.chg_basis_3(M66.pointer(), M3333.pointer(), 3, 6, cb.B_basis_host_pointer());
     MatrixTypeRealHost dstress(3,3);
@@ -113,6 +127,7 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
         stress_view(ii,jj) += dstress(ii,jj);
       }
     }
+//myfile << "," << vm_stress(stress_view.pointer()) << "\n";
     return;
   }
 
@@ -136,8 +151,6 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   // nsteps should be set to 1 either in the input file or here
   nsteps = 1;
 
-  print_vel_grad();
-    
   // calculate strain-rate and rotation-rate
   decompose_vel_grad(udot.host_pointer());
 
@@ -156,6 +169,9 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   }
   active = true;
 
+  //print_vel_grad();
+  //PAUSE;
+
   //--------------------------------
   // EVPFFT evolve
   evolve();
@@ -169,7 +185,6 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
       stress_view(i,j) = scauav(i,j);
     }
   }
-
-
+//myfile << "," << vm_stress(stress_view.pointer()) << "\n";
 }
 #endif

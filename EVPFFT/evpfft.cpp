@@ -39,6 +39,7 @@ EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const rea
   , iudot (3,3)
   , idsim (6)
   , iscau (6)
+  , nsteps (0)
 
   , dnca (3,NSYSMX,NPHMX)
   , dbca (3,NSYSMX,NPHMX)
@@ -473,7 +474,7 @@ void EVPFFT::check_macrostress()
   } // end for j
 
   if (nan_stress == true) {
-    printf("NaN stress at elem %d cycle %d\n", elem_id, fierro_cycle);
+    printf("NaN stress at elem %d, cycle %d, dt %24.14E \n", elem_id, fierro_cycle, tdot);
     print_vel_grad();
     exit(1);
   }
@@ -482,7 +483,7 @@ void EVPFFT::check_macrostress()
 
 void EVPFFT::print_vel_grad()
 {
-    printf("vel_grad at elem_gid %d cycle %d is :\n", elem_id, fierro_cycle);
+    printf("vel_grad at elem_gid %d, cycle %d, dt %24.14E is :\n", elem_id, fierro_cycle, tdot);
 
     for (int j = 1; j <= 3; j++) {
       for (int i = 1; i <= 3; i++) {
