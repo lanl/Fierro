@@ -178,7 +178,7 @@ void EVPFFT::evpal(int imicro)
 
       erroral = 0.0000001;
       erral   = 2.0*erroral;
-      itmaxal = MAX_ITER_NR; //100
+      itmaxal = itmax;
       iter1 = 0;
 
       while (iter1 < itmaxal && erral > erroral) {

@@ -28,8 +28,8 @@ else()
 endif()
 
 # chose matrix_inverse routine to use. Default is GJE_MATRIX_INVERSE
-set (LU_MATRIX_INVERSE ON)
-set (GJE_MATRIX_INVERSE OFF)
+set (LU_MATRIX_INVERSE OFF)
+set (GJE_MATRIX_INVERSE ON)
 
 #===Max NR iterations allowed per voxel
 #==Note: it may happen that for higher 
