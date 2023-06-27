@@ -795,7 +795,8 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
 
 KOKKOS_FUNCTION real_t FEA_Module_SGH::corner_force_design_gradient(size_t local_elem_index, size_t local_node_index, size_t idim, size_t local_node_design_index)
 const {
-    return 0.0001/(double)num_nodes_in_elem;
+    //simple example to test
+    return 0.0001;
 
 }
 // -----------------------------------------------------------------------------

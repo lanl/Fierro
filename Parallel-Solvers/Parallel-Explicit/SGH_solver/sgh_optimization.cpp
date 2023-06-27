@@ -1332,7 +1332,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
             for (int inode = 0; inode < num_nodes_in_elem; inode++){
               //compute gradient of local element contribution to v^t*M*v product
               corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = -inner_product*global_dt;
+              corner_value_storage(corner_id) = -inner_product*global_dt/(double)num_nodes_in_elem;
             }
           }
           else{
