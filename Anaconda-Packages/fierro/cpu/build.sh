@@ -30,4 +30,4 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D DISTRIBUTION=True \
       $SRC_DIR
 
-make -j install
+make -j 10 install

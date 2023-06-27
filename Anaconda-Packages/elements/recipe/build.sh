@@ -24,4 +24,4 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D CMAKE_CXX_STANDARD:STRING=17 \
     $SRC_DIR
 
-make install
+make -j 10 install
