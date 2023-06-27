@@ -27,34 +27,31 @@ include_directories(Topology_Optimization)
 include_directories(Simulation_Parameters)
 include_directories(FEA_Physics_Modules)
 
-INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
-LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
+# INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
+# LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 add_library(fea_modules OBJECT ${FEA_Module_SRC})
 add_executable(fierro-parallel-implicit main.cpp ${Implicit_Solver_SRC} ${Simulation_Param_SRC})
-if(BUILD_ELEMENTS)
-    target_link_libraries (fierro-parallel-implicit swage)
-    target_link_libraries (fierro-parallel-implicit elements)
-    target_link_libraries (fierro-parallel-implicit matar)
-    target_link_libraries (fea_modules swage)
-    target_link_libraries (fea_modules elements)
-    target_link_libraries (fea_modules matar)
-else()
-    target_link_libraries (fierro-parallel-implicit ${CMAKE_SOURCE_DIR}/Elements/build/swage/libswage.a)
-    target_link_libraries (fierro-parallel-implicit ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
-    target_link_libraries (fierro-parallel-implicit ${CMAKE_SOURCE_DIR}/Elements/build/matar/src/libmatar.a)
-    target_link_libraries (fea_modules ${CMAKE_SOURCE_DIR}/Elements/build/swage/libswage.a)
-    target_link_libraries (fea_modules ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
-    target_link_libraries (fea_modules ${CMAKE_SOURCE_DIR}/Elements/build/matar/src/libmatar.a)
-endif()
+
+target_link_libraries (fierro-parallel-implicit swage)
+target_link_libraries (fierro-parallel-implicit elements)
+target_link_libraries (fea_modules swage)
+target_link_libraries (fea_modules elements)
+
 
 target_include_directories(fierro-parallel-implicit PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(fea_modules PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options (fierro-parallel-implicit PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
 target_compile_options (fea_modules PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
-target_link_libraries (fierro-parallel-implicit parallel_base_src ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
-target_link_libraries (fea_modules parallel_base_src ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
-target_link_libraries (fierro-parallel-implicit fea_modules)
+target_link_libraries (fierro-parallel-implicit parallel_base_src ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS})
+target_link_libraries (fea_modules 
+  parallel_base_src
+  ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
+)
+target_link_libraries (fierro-parallel-implicit 
+  fea_modules
+  ${Trilinos_LIBRARIES}
+)
 
 
 install(

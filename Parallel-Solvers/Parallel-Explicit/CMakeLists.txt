@@ -4,9 +4,6 @@ set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
 set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
 
-INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
-LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
-
 include_directories(SGH_solver)
 include_directories(Topology_Optimization)
 include_directories(..)
@@ -25,9 +22,18 @@ endif()
 
 add_subdirectory(SGH_solver)
 
-target_include_directories(fierro-parallel-explicit PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(fierro-parallel-explicit PRIVATE 
+  ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} 
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
 target_compile_options (fierro-parallel-explicit PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
-target_link_libraries (fierro-parallel-explicit parallel_base_src user_material_interface parallel_sgh_solver ${MPI_CXX_LIBRARIES})
+target_link_libraries (fierro-parallel-explicit 
+  parallel_base_src 
+  user_material_interface
+  parallel_sgh_solver
+  ${Trilinos_LIBRARIES}
+  ${MPI_CXX_LIBRARIES}
+)
 install(
   TARGETS fierro-parallel-explicit
 )
