@@ -2,6 +2,8 @@
 #include "evpfft.h"
 #include <vector>
 
+#if BUILD_EVPFFT_FIERRO
+
 // each element will have it own evpfft model
 std::vector<EVPFFT*> elem_evpfft;
 
@@ -59,7 +61,7 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                            const double rk_alpha,
                            const size_t cycle)
 {
-    real_t dt_rk = dt*0.5;
+    real_t dt_rk = dt; // since using rk_num_stages = 1
     elem_evpfft[elem_gid]->solve(&vel_grad(0,0), &elem_stress.host(1,elem_gid,0,0), dt_rk, cycle, elem_gid);
 
     // write into elem_state_vars for output
@@ -70,3 +72,5 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
     elem_state_vars.host(elem_gid,3) = elem_evpfft[elem_gid]->dvmp;
     elem_state_vars.host(elem_gid,4) = elem_evpfft[elem_gid]->svm;
 }
+
+#endif

@@ -94,6 +94,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
 
   DCArrayKokkos <material_t> material;
   DCArrayKokkos <double> state_vars; // array to hold init model variables
+  DCArrayKokkos <double> global_vars; // array to hold global varibles for user material model
 
   DCArrayKokkos <mat_fill_t> mat_fill;
   DCArrayKokkos <boundary_t> boundary;
@@ -103,7 +104,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
 
   size_t num_materials;
   size_t max_num_state_vars;
-  size_t max_num_global_vars=0;
+  size_t max_num_global_vars;
 
   size_t num_fills;
   size_t num_bcs;

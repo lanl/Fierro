@@ -83,6 +83,10 @@ class Simulation_Parameters
 
   //debug and performance reporting flags
   int report_runtime_flag;
+
+  //inertial settings
+  std::vector<bool> enable_inertia_center;
+  std::vector<double> moment_of_inertia_center;
  
   //necessary FEA modules
   std::vector<std::string> FEA_Module_List;

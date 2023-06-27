@@ -257,17 +257,23 @@ public:
     //debug print
     if(FEM_->myrank==0){
       if(inertia_component_ == 0)
-      std::cout << "INITIAL MOMENT OF INERTIA XX: " << initial_moment_of_inertia << std::endl;
+        std::cout << "INITIAL MOMENT OF INERTIA XX: " << initial_moment_of_inertia << std::endl;
       if(inertia_component_ == 1)
-      std::cout << "INITIAL MOMENT OF INERTIA YY: " << initial_moment_of_inertia << std::endl;
+        std::cout << "INITIAL MOMENT OF INERTIA YY: " << initial_moment_of_inertia << std::endl;
       if(inertia_component_ == 2)
-      std::cout << "INITIAL MOMENT OF INERTIA ZZ: " << initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 3)
-      std::cout << "INITIAL MOMENT OF INERTIA XY: " << initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 4)
-      std::cout << "INITIAL MOMENT OF INERTIA XZ: " << initial_moment_of_inertia << std::endl;
-      if(inertia_component_ == 5)
-      std::cout << "INITIAL MOMENT OF INERTIA YZ: " << initial_moment_of_inertia << std::endl;
+        std::cout << "INITIAL MOMENT OF INERTIA ZZ: " << initial_moment_of_inertia << std::endl;
+      if(inertia_component_ == 3){
+        std::cout << "INITIAL MOMENT OF INERTIA XY: " << initial_moment_of_inertia << std::endl;
+        std::cout << "INITIAL MOMENT OF INERTIA XX: " << initial_Mxx << std::endl;
+      }
+      if(inertia_component_ == 4){
+        std::cout << "INITIAL MOMENT OF INERTIA XZ: " << initial_moment_of_inertia << std::endl;
+        std::cout << "INITIAL MOMENT OF INERTIA XX: " << initial_Mxx << std::endl;
+      }
+      if(inertia_component_ == 5){
+        std::cout << "INITIAL MOMENT OF INERTIA YZ: " << initial_moment_of_inertia << std::endl;
+        std::cout << "INITIAL MOMENT OF INERTIA ZZ: " << initial_Mzz << std::endl;
+      }
     }
     constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
   }

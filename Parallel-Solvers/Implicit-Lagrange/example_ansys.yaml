@@ -1,0 +1,34 @@
+# input file
+solver_type: Implicit
+
+solver_options:
+    num_dims: 3
+    mesh_file_format: ansys_dat
+    mesh_file_name: ANSYS_Bunny_Most_Loads.dat
+
+output_options:
+  graphics_step_frequency: 2000
+    
+fea_module_1:
+    type: elasticity
+
+optimization_options:
+    optimization_process: topology_optimization
+    method_of_moving_asymptotes: disabled
+    density_epsilon: 0.00001
+    simp_penalty_power: 3
+    optimization_objective: minimize_compliance
+    num_optimization_constraint: 2
+    constraint_1:
+        type: mass
+        relation: equality
+        value: 0.4
+    constraint_2:
+        type: moment_of_inertia
+        relation: equality
+        component: yy
+        value: 0.4
+        inertia_center_x: 0
+        inertia_center_y: 0
+        inertia_center_z: 0
+    

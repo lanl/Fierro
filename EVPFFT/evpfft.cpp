@@ -44,6 +44,7 @@ EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const rea
   , dbca (3,NSYSMX,NPHMX)
   , schca (5,NSYSMX,NPHMX)
   , tau (NSYSMX,3,NPHMX)
+  , tau0_mode (NSYSMX,3,NPHMX)
   , hard (NSYSMX,NSYSMX,NPHMX)
   , thet (NSYSMX,2,NPHMX)
   , nrs (NSYSMX,NPHMX)
@@ -128,15 +129,10 @@ EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const rea
 
 {
   fft.make_plan(data.host_pointer(), data_cmplx.host_pointer());
-//PRINT_LINE;
   set_some_voxels_arrays_to_zero();
-//PRINT_LINE;
   // Read input parameters and do some setup
   vpsc_input();
-//PRINT_LINE;
   init_after_reading_input_data();
-//PRINT_LINE;
-//exit(1);
 }
 
 //EVPFFT::~EVPFFT(){}
@@ -172,6 +168,9 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
         sg(ii,jj,i,j,k) = 0.0;
       }
     }
+
+    gacumgr(i,j,k) = 0.0;
+
   }); // end FOR_ALL_CLASS
   Kokkos::fence();
 
@@ -183,6 +182,7 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
   disgrad.update_host();
   edotp.update_host();
   sg.update_host();
+  gacumgr.update_host();
 
   // macroscopic stress
   for (int jj = 1; jj <= 3; jj++) {
@@ -354,11 +354,11 @@ void EVPFFT::evolve()
 
     //for (imicro = 1; imicro <= nsteps; imicro++) {
 #ifndef AbsoluteNoOutput
-      //printf(" ***************************************************\n");
-      //printf("       Current  Time  STEP = %d\n", imicro);
-      //if (nsteps != 1) {
+      printf(" ***************************************************\n");
+      printf("       Current  Time  STEP = %d\n", imicro);
+      if (nsteps != 1) {
         fprintf(ofile_mgr.err_file.get(), "STEP = %d\n", imicro);
-      //}
+      }
       fprintf(ofile_mgr.conv_file.get(), "STEP = %d\n", imicro);
 #endif
 
@@ -379,10 +379,10 @@ void EVPFFT::evolve()
         iter += 1;
 
 #ifndef AbsoluteNoOutput
-        //printf(" --------------------\n");
-        //printf(" STEP = %d\n", imicro);
-        //printf(" ITER = %d\n", iter);
-        //printf(" DIRECT FFT OF STRESS FIELD\n");
+        printf(" --------------------\n");
+        printf(" STEP = %d\n", imicro);
+        printf(" ITER = %d\n", iter);
+        printf(" DIRECT FFT OF STRESS FIELD\n");
         fprintf(ofile_mgr.conv_file.get(), "ITER = %d\n", iter);
 #endif
 
@@ -390,7 +390,7 @@ void EVPFFT::evolve()
         forward_fft();
 
 #ifndef AbsoluteNoOutput
-        //printf(" CALCULATING G^pq,ij : SG^ij ...\n");
+        printf(" CALCULATING G^pq,ij : SG^ij ...\n");
 #endif
 
         // nr_lu_minval takes local part of work,
@@ -398,7 +398,7 @@ void EVPFFT::evolve()
         inverse_the_greens();
 
 #ifndef AbsoluteNoOutput
-        //printf(" INVERSE FFT TO GET STRAIN FIELD\n");
+        printf(" INVERSE FFT TO GET STRAIN FIELD\n");
 #endif
 
         // backward fft of work/workim
@@ -407,7 +407,7 @@ void EVPFFT::evolve()
         initialize_disgrad();
 
 #ifndef AbsoluteNoOutput
-        //printf(" UPDATE STRESS FIELD\n\n");
+        printf(" UPDATE STRESS FIELD\n\n");
 #endif
 
         // Newton-Raphson iteration
@@ -421,8 +421,8 @@ void EVPFFT::evolve()
         if (svm > 0.0) errs = errs / svm;
 
 #ifndef AbsoluteNoOutput
-        //printf(" STRAIN FIELD ERROR = %24.14E\n", erre);
-        //printf(" STRESS FIELD ERROR = %24.14E\n", errs);
+        printf(" STRAIN FIELD ERROR = %24.14E\n", erre);
+        printf(" STRESS FIELD ERROR = %24.14E\n", errs);
         fprintf(ofile_mgr.err_file.get(), "%d,%10.4E,%10.4E,%10.4E\n", 
                 iter, erre, errs, svm);
 #endif
@@ -436,124 +436,26 @@ void EVPFFT::evolve()
       step_update_velgrad_etc();
 
       step_vm_calc();
-#if 0
+
       if (iupdate == 1 && (ithermo != 1 || imicro > 1)) {
         step_texture_rve_update();
       }
-#endif
+
       if (iuphard == 1 && (ithermo != 1 || imicro > 2)) {
         harden(imicro);
       }
 
-#if 0
-      if (iupdate == 1 && (ithermo != 1 || imicro > 1)) {
-        step_texture_rve_update();
-      }
-#endif
-
 #ifndef AbsoluteNoOutput
       write_macro_state();
-      //write_micro_state(imicro);
+      write_micro_state(imicro);
 #endif
     //} // end for imicro
 
 #ifndef AbsoluteNoOutput
-  //write_texture();
+  if (imicro == nsteps) write_texture();
 #endif
 }
 
-void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid)
-{
-#if 0
-//#ifndef NDEBUG
-    feenableexcept (FE_DIVBYZERO); 
-    feenableexcept (FE_INVALID);
-    feenableexcept (FE_OVERFLOW);
-//#endif 
-#endif
-
-  //ViewMatrixTypeReal vel_grad_view(vel_grad,3,3);
-  ViewCMatrix <real_t> vel_grad_view(vel_grad,3,3);
-
-  // is udot = vel_grad ???
-  for (int j = 1; j <= 3; j++) {
-    for (int i = 1; i <= 3; i++) {
-      udot.host(i,j) = vel_grad_view(i,j);
-    } // end for i
-  } // end for j
-
-#if 0
-  // or udot = 0.5 * (vel_grad + vel_grad^T) ???
-  for (int j = 1; j <= 3; j++) {
-    for (int i = 1; i <= 3; i++) {
-      udot.host(i,j) = 0.5 * (vel_grad_view(i,j) + vel_grad_view(j,i));
-    } // end for i
-  } // end for j
-#endif
-
-  // update device
-  udot.update_device();
-
-  // calculate L2 norm of udot
-  real_t ddnorm = 0.0;
-  for (int i = 1; i <= 3; i++) {
-    for (int j = 1; j <= 3; j++) {
-      ddnorm += udot.host(i,j)*udot.host(i,j);
-    }
-  }
-  ddnorm = sqrt(ddnorm);
-
-
-  if (ddnorm > 1.0e-16) {
-
-    //if (fierro_cycle%1000 == 0) print_vel_grad();
-    
-    // calculate strain-rate and rotation-rate
-    decompose_vel_grad(udot.host_pointer());
-
-    // assign recieved variables to evpfft global variables
-    tdot = dt;
-    imicro += 1; // imicro starts at 1 while cycle starts at 0 in fierro.
-    elem_id = elem_gid;
-    fierro_cycle = cycle;
-
-    // do some initialization if first load step
-    if (active == false) {
-      init_dvm();
-      init_evm();
-      init_disgradmacro();
-      init_sg();
-    }
-    active = true;
-
-    //--------------------------------
-    // EVPFFT evolve
-    evolve();
-
-    // Update crystal orientation. Always done because no deformation does not mean no rotation 
-    //if (iupdate == 1 && (ithermo != 1 || imicro > 1)) {
-      step_texture_rve_update();
-    //}
-
-    // check macrostress for NaN
-    check_macrostress();
-
-  } // end if ddnorm
-
-  // update stress
-  //ViewMatrixTypeReal stress_view(stress,3,3);
-  ViewCMatrix <real_t> stress_view(stress,3,3);
-  for (int j = 1; j <= 3; j++) {
-    for (int i = 1; i <= 3; i++) {
-      stress_view(i,j) = scauav(i,j);
-    } // end for i
-  } // end for j
-
-  //if (evm >= 0.5) {
-    //write_texture();
-    //exit(0);
-  //}
-}
 
 void EVPFFT::check_macrostress()
 {

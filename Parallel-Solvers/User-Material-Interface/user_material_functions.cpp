@@ -1,6 +1,6 @@
 #include "user_material_functions.h"
 
-#ifdef BUILD_EVPFFT
+#ifdef BUILD_EVPFFT_FIERRO
   #include "evpfft_fierro_link.h"
 #endif
 
@@ -22,13 +22,7 @@ void init_user_strength_model(const DCArrayKokkos <double> &file_state_vars,
         }   
     }
 
-    // initialize to zero
-    for (size_t var = 0; var < num_global_vars; var++) {
-      global_vars.host(mat_id,var) = 0.0;
-    }
-
-
-#ifdef BUILD_EVPFFT
+#ifdef BUILD_EVPFFT_FIERRO
     // initialization of evpfft
     init_evpfft(file_state_vars,
                 num_state_vars,
@@ -49,7 +43,7 @@ void destroy_user_strength_model(const DCArrayKokkos <double> &file_state_vars,
     All memory cleanup related to the user material model should be done in this fuction.
     Fierro calls `destroy_user_mat_model()` at the end of a simulation.
     */
-#ifdef BUILD_EVPFFT
+#ifdef BUILD_EVPFFT_FIERRO
     // cleanup of evpfft
     destroy_evpfft(file_state_vars,
                    num_state_vars,
@@ -83,7 +77,7 @@ void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
     If using a user material model, this function must be provided to avoid error.
     */
 
-#ifdef BUILD_EVPFFT
+#ifdef BUILD_EVPFFT_FIERRO
             evpfft_strength_model(elem_pres,
                                   elem_stress,
                                   elem_gid,
@@ -123,12 +117,16 @@ void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
   
     const size_t num_dims = 3;
 
-#if BUILD_EVPFFT
+#if BUILD_EVPFFT_FIERRO
     /* Note: since evpfft is a coupled model, no need to 
              calculate pressure
     */
+
+    // read variables from global_vars
+    double sspd_ref = global_vars(mat_id,0); // sound speed
+
     elem_pres(elem_gid) = 0.0;  // pressure
-    elem_sspd(elem_gid) = 2400.0; //[mm/ms] //0.227;//[cm/microsecond]  2270000;// [mm/s] // sound speed
+    elem_sspd(elem_gid) = sspd_ref; // sound speed
 #endif
 
 #if 0    

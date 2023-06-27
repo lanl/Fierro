@@ -190,6 +190,19 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
     }
   }
 
+  current_option = "optimization_options:method_of_moving_asymptotes";
+  if(set_options.find(current_option)!=set_options.end()){
+    if(set_options[current_option]=="enabled"){
+      //std::cout << "FOUND TO SETTING" << std::endl;
+      mma_on = true;
+      set_options.erase(current_option);
+    }
+    else if(set_options[current_option]=="disabled"){
+      mma_on = false;
+      set_options.erase(current_option);
+    }
+  }
+
   //read in TO parameters
   if(topology_optimization_on){
     current_option = "optimization_options:simp_penalty_power";
@@ -306,10 +319,11 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
   std::string index;
   std::string constraint_name;
   double constraint_value;
+  int num_con_read_in = 0;
 
-  // --- set of material specifications ---
+  // --- set of constraint specifications ---
   for(int icon = 0; icon < num_constraints; icon++){
-      //readin material data
+      //readin constraint data
       index = std::to_string(icon+1);
       constraint_name = constraint_base + index;
 
@@ -332,6 +346,7 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
           constraint_value = std::stod(set_options[current_option]);
           Function_Arguments[nTO_modules].push_back(constraint_value); 
           set_options.erase(current_option);
+          num_con_read_in++;
       }
 
       //constraint type; some may have additional arguments that follow the value
@@ -372,6 +387,23 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
                 set_options.erase(constraint_name+":component");
               }
             }
+
+            if(set_options.find(constraint_name+":inertia_center_x")!=set_options.end()){
+              moment_of_inertia_center[0] = std::stod(set_options[constraint_name+":inertia_center_x"]);
+              enable_inertia_center[0] = true;
+              set_options.erase(constraint_name+":inertia_center_x");
+            }
+            if(set_options.find(constraint_name+":inertia_center_y")!=set_options.end()){
+              moment_of_inertia_center[1] = std::stod(set_options[constraint_name+":inertia_center_y"]);
+              enable_inertia_center[1] = true;
+              set_options.erase(constraint_name+":inertia_center_y");
+            }
+            if(set_options.find(constraint_name+":inertia_center_z")!=set_options.end()){
+              moment_of_inertia_center[2] = std::stod(set_options[constraint_name+":inertia_center_z"]);
+              enable_inertia_center[2] = true;
+              set_options.erase(constraint_name+":inertia_center_z");
+            }
+            
             set_options.erase(current_option);
           }
       }
@@ -384,6 +416,11 @@ void Simulation_Parameters_Topology_Optimization::apply_settings(){
           set_options.erase(constraint_name+":relation");
       }
       nTO_modules++;
+  }
+  
+  if(num_constraints!=num_con_read_in){
+    *(solver_pointer_->fos) << "PROGRAM IS ENDING DUE TO ERROR; NUMBER OF CONSTRAINTS READ IN IS LESS THAN DECLARED NUMBER" << std::endl;
+    solver_pointer_->exit_solver(0);
   }
 }
 

@@ -3,23 +3,24 @@ solver_type: SGH
 
 solver_options:
     num_dims: 3
+    rk_num_stages: 1
     mesh_file_format: ensight
     mesh_file_name: /vast/home/cyenusah/github/Fierro/Explicit-Lagrange/meshes/mesh_z_taylorAnvil.geo
     time_variables:
-        time_final: 1.0  #[ms]
-        dt_min: 1.e-11  #[ms]
-        dt_max: 1.e-3  #[ms]
-        dt_start: 1.e-6  #[ms]
-        dt_cfl: 0.4
+        time_final: 1.5e-04  #[s]
+        dt_min: 1.e-11  #[s]
+        dt_max: 1.e-3  #[s]
+        dt_start: 1.e-10  #[s]
+        dt_cfl: 0.4 
         cycle_stop: 200000000
 
 output_options:
-  graphics_step: 1.0e-2  #[ms]
+  graphics_step: 1.0e-05  #[s]
 
 material_options:
     num_materials: 1
     max_num_state_var: 5
-    max_num_global_var: 0
+    max_num_global_var: 1
     material_1:
         #eos model is required
         eos_model: user_eos_model
@@ -27,13 +28,15 @@ material_options:
         strength_type: hypo
         strength_setup: user_init
         strength_run_location: host
-        q1: 1.0
-        q2: 1.3333
-        q1ex: 1.0
-        q2ex: 0.0
+        q1: 0.01 # 0.01 to 0.1 
+        q2: 0.5 # 0.5  q2/4
+        q1ex: 0.01 # 0.01 to 0.1
+        q2ex: 0.0  
 
         num_state_vars: 5
-        num_global_vars: 0
+
+        num_global_vars: 1
+        global_vars_1: 2400000 #[mm/s] ref sound speed
 
 region_options:
     num_fills: 1
@@ -41,22 +44,22 @@ region_options:
     mat_fill_1:
         volume: global
         mat_id: 0
-        den: 16.640e-3  #[g/mm3]
-        sie: 1.0e-9  #[N-mm]
-            
+        den: 1.669e-8 #[tonne/mm3]
+        sie: 1.0e-11  #[mJ]
+    
         velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: -175.0  #[mm/ms]
+        u: 0.0 
+        v: 0.0 
+        w: -175000.0  #[mm/s]
     
 boundary_condition_options:
     num_bcs: 3
     # Tag X plane
     boundary_condition_1:
         surface: x_plane
-        value: 0.0
+        value: 0.0 
         condition_type: reflected
-            
+    
     # Tag Y plane
     boundary_condition_2:
         surface: y_plane
