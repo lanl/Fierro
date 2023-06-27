@@ -1,60 +1,25 @@
+#include "backend.hpp"
+#include "FierroParallelBackends.hpp"
 #include "argparse/argparse.hpp"
+#include "argument_exception.hpp"
 #include <filesystem>
 #include <fstream>
 #include <stdlib.h>
+#include <vector>
+#include <string>
 
-/**
- * Check to see if a file exists on the system.
- * Technically this will return false if it exists but you don't have permission.
-*/
-bool file_exists(std::string fname) {
-    std::fstream f(fname.c_str());
-    return f.good();
-}
-
-class ArgumentException: public std::exception {
-private:
-    std::string message;
-public:
-    ArgumentException(std::string msg) : message(msg) {
-        this->message = msg;
-    }
-    char* what() {
-        return (char*)("Argument Error: " + this->message).c_str();
-    }
+std::vector<std::shared_ptr<FierroBackend>> BACKENDS {
+    std::shared_ptr<FierroBackend>(new ParallelExplicit()),
+    std::shared_ptr<FierroBackend>(new ParallelImplicit())
 };
 
-/** 
- * Check that the arguments of the CLI are valid and make sense.
- * 
- * Checks for explicit/implicit logical consistency.
- * Checks that the mesh file is real and readable.
- *      Does not check that it is correctly formatted.
- * 
- * @param parser ArgumentParser *after* you have called `parser.parse_args(...).`
- * @return An optional error. If the empty, the arguments are valid.
- * 
-*/
-std::optional<std::string> validate_arguments(const argparse::ArgumentParser& parser) {
-    std::string msg = "";
-
-    if (parser.is_used("mesh_file") && !file_exists(parser.get<std::string>("mesh_file"))) {
-        msg = "Unable to find mesh file: " + parser.get<std::string>("mesh_file");
-    } else if (parser.is_used("config") && !file_exists(parser.get<std::string>("config"))) {
-        msg = "Unable to find configuration: " + parser.get<std::string>("config");
-    } else if (parser.is_used("config") == parser.is_used("mesh_file")) {
-        msg = "Use exactly one of `--config` or `--mesh_file.`";
-    }
-    
-    std::string solver_mode = parser.get<std::string>("solver_mode");
-    if (solver_mode.compare("explicit") != 0 && solver_mode.compare("implicit") != 0) {
-        msg = "Invalid choice of solver mode, " + solver_mode + ". Use either `explicit` or `implicit.`";
+std::vector<std::shared_ptr<FierroBackend>> find_fierro_backends() {
+    auto found = std::vector<std::shared_ptr<FierroBackend>>();
+    for(auto backend : BACKENDS) {
+        if(backend->exists()) found.push_back(backend);
     }
 
-    if (msg.length() > 0) {
-        return std::optional(msg);
-    }
-    return std::nullopt;
+    return found;
 }
 
 /**
@@ -89,29 +54,17 @@ void with_curdir<void>(std::string dir, std::function<void()> f) {
     std::filesystem::current_path(old_path);
 }
 
-
 int main(int argc, char** argv) {
     argparse::ArgumentParser parser("fierro");
-
     parser.add_description("");
-
-    parser.add_argument("-m", "--mesh_file")
-        .help("The `.geo` file to run fierro with. Mutually exclusive with `--config.`");
-
-    parser.add_argument("-c", "--config")
-        .help("The `.yaml` configuration to run fierro with. Mutually exclusive with `--mesh_file.`");
-
-    parser.add_argument("-s", "--solver_mode")
-        .help("The the scheme used to step the system. Either `explicit` or `implicit`.")
-        .default_value("explicit");
-
-    parser.add_argument("-np")
-        .help("Number of processes to run. If set, we will invoke `mpirun -np {v}`")
-        .default_value("1"); // This is an int, but were just going to put it back into a str anyway.
-
     parser.add_argument("-o", "--output")
-        .help("Output folder. ")
+        .help("output directory for the program")
         .default_value(".");
+
+    auto backends = find_fierro_backends();
+    for(auto backend : backends) {
+        parser.add_subparser(*backend->command);
+    }
 
     try {
         parser.parse_args(argc, argv);
@@ -121,44 +74,23 @@ int main(int argc, char** argv) {
         std::exit(1);
     }
 
-    auto err = validate_arguments(parser);
-    if (err.has_value()) {
-        std::cerr << "Argument Error: " << err.value() << std::endl;
-        std::cerr << parser;
-        std::exit(1);
-    }
-
-    std::string input_file;
-    if (parser.is_used("config")) {
-        input_file = parser.get<std::string>("config");
-    } else {
-        input_file = parser.get("mesh_file");
-    }
-    // We might cd later, so make this an absolute file path first.
-    input_file = std::filesystem::absolute(input_file);
-
-    std::string command = "";
-    std::string solver_mode = parser.get<std::string>("solver_mode");
-    if (solver_mode.compare("explicit") == 0) {
-        command = "fierro-parallel-explicit " + input_file;
-    }
-    if (solver_mode.compare("implicit") == 0) {
-        command = "fierro-parallel-implicit " + input_file;
-    }
-
-    // If the user gives us a number of processes,
-    // we should set up a couple of environment variables and invoke mpi.
-    if (parser.is_used("np")) {
-        system("export OMP_PROC_BIND=spread");
-        system("export OMP_NUM_THREADS=1   ");
-        system("export OMP_PLACES=threads  ");
-        command = "mpirun -np " + parser.get<std::string>("np") + " --bind-to core " + command;
-    }
-
-    return with_curdir<int>(
-        parser.get<std::string>("output"),
-        [&]() {
-            return system(command.c_str());
+    for(auto backend : backends) {
+        if (parser.is_subcommand_used(*backend->command)) {
+            return with_curdir<int>(
+                parser.get<std::string>("output"),
+                [&]() {
+                    try {
+                        return backend->invoke();
+                    } catch (ArgumentException& e) {
+                        std::cerr << e.what() << std::endl;
+                        std::cerr << parser;
+                        std::exit(1);
+                    }
+                }
+            );
         }
-    );
+    }
+
+    // If they didn't select anything, give them some help.
+    std::cout << parser << std::endl;
 }
