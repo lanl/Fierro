@@ -39,6 +39,7 @@ struct EvpalReduce
 };
 #endif
 
+
 void EVPFFT::evpal(int imicro)
 {
 
@@ -244,11 +245,11 @@ void EVPFFT::evpal(int imicro)
 #endif
 
 #ifdef TWO_SIGN_SLIP_SYSTEMS
-              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(POW(rss(is),(nrsx(is)-1))) / taux(is,isign);
-              rss2(is) = gamd0(is,jph) * ABS(POW(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
+              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(optimizedPow(rss(is),(nrsx(is)-1))) / taux(is,isign);
+              rss2(is) = gamd0(is,jph) * ABS(optimizedPow(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
 #else
-              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(POW(rss(is),(nrsx(is)-1))) / taux(is,isign);
-              rss2(is) = gamd0(is,jph) * ABS(POW(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
+              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(optimizedPow(rss(is),(nrsx(is)-1))) / taux(is,isign);
+              rss2(is) = gamd0(is,jph) * ABS(optimizedPow(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
 #endif
 
               gamdot(is,i,j,k) = rss2(is);

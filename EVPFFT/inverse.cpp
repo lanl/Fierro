@@ -1,10 +1,35 @@
 #include <stdio.h>
 #include "inverse.h"
 
+//
+// Optimized pow for integer exponents only
+//
+KOKKOS_FUNCTION
+double optimizedPow(double base, int exponent) {
+    if (exponent == 0)
+        return 1.0;
+    else if (exponent == 1)
+        return base;
+
+    double result = 1.0;
+    bool negativeExponent = (exponent < 0);
+    exponent = abs(exponent);
+
+    while (exponent > 0) {
+        if (exponent & 1)
+            result *= base;
+        base *= base;
+        exponent >>= 1;
+    }
+
+    return negativeExponent ? 1.0 / result : result;
+}
+
 
 //
 // New Gauss-Jordan elimination matrix inverse functions 
 //
+KOKKOS_FUNCTION
 void swap_rows(double *matrix, int row1, int row2, int n) {
     for (int i = 0; i < n; i++) {
         double temp = *(matrix + row1 * n + i);
@@ -13,18 +38,21 @@ void swap_rows(double *matrix, int row1, int row2, int n) {
     }
 }
 
+KOKKOS_FUNCTION
 void scale_row(double *matrix, int row, double factor, int n) {
     for (int i = 0; i < n; i++) {
         *(matrix + row * n + i) *= factor;
     }
 }
 
+KOKKOS_FUNCTION
 void add_rows(double *matrix, int src_row, int dest_row, double factor, int n) {
     for (int i = 0; i < n; i++) {
         *(matrix + dest_row * n + i) += *(matrix + src_row * n + i) * factor;
     }
 }
 
+KOKKOS_FUNCTION
 int invert_matrix(double *matrix, int n) {
     double *identity = new double[n*n];
     if (identity == NULL) {
