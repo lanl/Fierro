@@ -44,11 +44,11 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                    const double rk_alpha,
                    const size_t cycle
                    ){
-    
+    const size_t num_dims = simparam->num_dim;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
-        const size_t num_dims = 3;
+        
         const size_t num_nodes_in_elem = 8;
         
         // total Cauchy stress
@@ -426,11 +426,11 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                    const double rk_alpha,
                    const size_t cycle
                    ){
-    
+    const size_t num_dims = simparam->num_dim;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
-        const size_t num_dims = 3;
+        
         const size_t num_nodes_in_elem = 8;
         
         // total Cauchy stress
@@ -818,11 +818,10 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
                    const double rk_alpha,
                    const size_t cycle
                    ) {
-    
+    const size_t num_dims = simparam->num_dim;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
-        const size_t num_dims = 3;
         const size_t num_nodes_in_elem = 8;
         
         // total Cauchy stress
