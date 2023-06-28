@@ -91,7 +91,11 @@ struct ParallelBackend: public FierroBackend {
             .action(absolute_fp);
 
         this->command->add_argument("-np")
-            .help("Number of processes to run. If set, we will invoke `mpirun -np {v}`")
+            .help("Number of processes to run. Passed to `mpirun <executable> -np {v}`.")
+            .default_value("1"); // This is an int, but were just going to put it back into a str anyway.
+        
+        this->command->add_argument("-np")
+            .help("Number of processes to run. Passed to `mpirun <executable> -np {v}`.")
             .default_value("1"); // This is an int, but were just going to put it back into a str anyway.
     }
 };
@@ -102,14 +106,14 @@ struct ParallelExplicit: public ParallelBackend {
             new argparse::ArgumentParser("parallel-explicit")
         );
         this->add_common_options();
-        this->command->add_description("");
+        this->command->add_description("Use an explicit solution scheme to step the system.");
     }
 };
 
 struct ParallelImplicit: public ParallelBackend {
     ParallelImplicit() : ParallelBackend("fierro-parallel-implicit") {
         this->command = std::shared_ptr<argparse::ArgumentParser>(
-            new argparse::ArgumentParser("parallel-implicit"));
+            new argparse::ArgumentParser("Use an implicit solution scheme to step the system."));
         this->add_common_options();
         this->command->add_description("");
     }

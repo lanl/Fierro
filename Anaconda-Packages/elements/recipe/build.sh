@@ -16,7 +16,7 @@ fi
 CMAKE_PLATFORM_FLAGS+=(-DCMAKE_TOOLCHAIN_FILE="${RECIPE_DIR}/../../cross-linux.cmake")
 # These flag variables are set by anaconda.
 x86_64_flags=" -fno-visibility-inlines-hidden -march=x86-64 -mtune=generic -fno-tree-vectorize "
-CXXFLAGS+=$x86_64_flags 
+CXXFLAGS+=$x86_64_flags
 CFLAGS+=$x86_64_flags
 FFLAGS+=$x86_64_flags
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \

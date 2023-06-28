@@ -12,10 +12,33 @@
 ## Temporal discretization methods 
 **Fierro** supports a range of published multi-step time integration methods.  The code has an explicit multi-step Runge Kutta time integration method.  Implicit time integration methods can be implemented in **Fierro**.
 
-## Material models  
-The classical ideal gas model is the only material model implemented in the code, and it is useful for verification tests of the software and simple gas dynamic simulations.  The linear Lagrangian finite element methods for explicit material dynamics have an interface to user developed material models.  The interface is to enable **Fierro** to be used for model research and development that has historically been done with commercial explicit finite element codes. 
 
-## Cloning the code
+# Usage
+## Anaconda
+The recommended way to use **Fierro** is through the provided Anaconda package and command line utility. To use the anaconda package, follow the steps for your platform to install [anaconda](https://docs.anaconda.com/free/anaconda/install/index.html)/[miniconda](https://docs.conda.io/en/latest/miniconda.html)/[mamba](https://mamba.readthedocs.io/en/latest/installation.html). Then run the following command in your desired Anaconda environment:
+
+```
+conda install fierro-cpu -c kwelsh-lanl -c conda-forge
+```
+
+This will give you access to the **Fierro** command line interface. You can run the following to check that the package was installed correctly:
+```
+fierro -h
+```
+
+## Material models  
+The classical ideal gas model is the only material model implemented in the code, and it is useful for verification tests of the software and simple gas dynamic simulations. The linear Lagrangian finite element methods for explicit material dynamics have an interface to user developed material models. The interface is to enable **Fierro** to be used for model research and development that has historically been done with commercial explicit finite element codes. 
+
+To include your own custom material models, you need to implement them under `Fierro/Parallel-Solvers/User-Material-Interface` and re-build the project.
+Steps:
+1. Create an anaconda environment for your build
+2. Install **Fierro** anaconda dependencies with `conda install elements fierro-trilinos-cpu elements -c kwelsh-lanl`
+3. [Clone the code](#cloning-the-code)
+4. [Build the code](#building-the-code)
+
+Now, if all went correctly, you should be able to run your custom **Fierro** build by calling the executable located at `Fierro/build/bin/fierro`. 
+
+# Cloning the code
 If the user has set up ssh keys with GitHub, type
 ```
 git clone --recursive ssh://git@github.com/lanl/Fierro.git
@@ -25,27 +48,22 @@ The code can also be cloned using
 git clone --recursive https://github.com/lanl/Fierro.git
 ```
 
-## Building the code
-The user should create a new directory where the compiled code will reside.  
+# Building the code
+Building the code from source allows you to compile with more targeted hardware optimizations that could offer a significantly faster executable. 
+The user should create a new directory where the compiled code will reside. 
 ```
-mkdir bin
-```
-Next, go to the folder and, for a default build, type
-```
-cmake ..
-```
-To compile the code type
-```
+mkdir build
+cd build
+cmake .. -DBUILD_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON
 make -j
 ```
-The fierro executable will be in the bin/test folder. The following are the possible cmake build variables with their default values shown
-```
-BUILD_ELEMENTS=ON (Tells cmake whether to build the Elements libraries. Otherwise the user must compile them in Elements/build as instructed by the Elements readme)
 
-BUILD_EXPLICIT_SOLVER=ON (Tells cmake whether to build the explicit solver components of Fierro)
+You are welcome to only compile one solver or the other, and the one(s) that you did compile will be available through the CLI.
 
-BUILD_IMPLICIT_SOLVER=OFF (Tells cmake whether to build the implicit solver components of Fierro. This requires the user to build Trilinos in the folder Fierro/Trilinos/build)
-```
+## Building dependencies
+**Fierro** depends on both ELEMENTS and Trilinos. If you are building **Fierro** for hardware optimizations, you should also also build ELEMENTS from source. ELEMENTS is included in the **Fierro** source distribution and building ELEMENTS is enabled by default.
+
+As for Trilinos, we recommend installing the Anaconda package for the desired build into a new Anaconda environment to satisfy **Fierro**'s dependency rather than building it from source. If you do wish to build it from source, however, sample build scripts for Trilinos can be found in `Fierro/Trilinos-Build-Scripts`. 
 
 ## Building the explicit Lagrangian methods with Kokkos
 Explicit Lagrangian codes are being added to the repository that are written using MATAR+Kokkos and run with fine-grained parallellism on multi-core CPUs and GPUs.  Build scripts are provided for each Lagrangian code, and those scripts follow those used in the [MATAR](https://github.com/lanl/MATAR/) GitHub repository. The scripts to build the Lagrangian codes (that use MATAR+Kokkos) are in the scripts folder.  The user must update the modules loaded by the build scripts (for the compiler etc.), and then type
@@ -53,19 +71,10 @@ Explicit Lagrangian codes are being added to the repository that are written usi
 source build-it.sh
 ```
 The build-it.sh script sources the other scripts in the folder.  The compiled code will be in a folder (named after the explicit Lagrangian method) in the Fierro directory.  A range of scripts are provided for many architectures; however, they might not be correctly configured for the user's hardware.  The CPU architecture information needs to be listed if running with the Kokkos serial, OpenMP, and pthreads backends; GPU architecture information must be listed if using a Kokkos GPU backend. We refer the user to Kokkos compiling page to see the large list of compilation options,
-```
+``` 
 https://github.com/kokkos/kokkos/wiki/Compiling
 ```
-If the scripts fail to build a Lagrangian code, then carefully review the modules used and the computer architecture settings.  A more lenghtly discussion of the build scripts is provided in the MATAR GitHub repository.  
-
-
-
-## Trilinos Dependencies to Install
-OpenMPI
-g++
-gfortran
-BLAS
-LAPACK
+If the scripts fail to build a Lagrangian code, then carefully review the modules used and the computer architecture settings.  A more lenghtly discussion of the build scripts is provided in the MATAR GitHub repository. 
 
 
 ## Running the Fierro code using explicit Lagrangian methods 
