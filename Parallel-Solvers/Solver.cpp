@@ -2065,14 +2065,14 @@ void Solver::init_maps(){
   dual_nodes_in_elem.sync_device();
   dual_nodes_in_elem.modify_device();
   //construct distributed element connectivity multivector
-  nodes_in_elem_distributed = Teuchos::rcp(new MCONN(all_element_map, dual_nodes_in_elem));
+  global_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(all_element_map, dual_nodes_in_elem));
 
   //debug print
   //std::ostream &out = std::cout;
   //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   //if(myrank==0)
   //*fos << "Element Connectivity :" << std::endl;
-  //nodes_in_elem_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  //global_nodes_in_elem_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   //std::fflush(stdout);
 
@@ -2115,7 +2115,7 @@ void Solver::Get_Boundary_Patches(){
   int local_node_id;
   int num_dim = simparam->num_dim;
   CArray<GO> Surface_Nodes;
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //Surface_Nodes = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(4, "Surface_Nodes");
   
   std::set<Node_Combination> my_patches;

@@ -86,7 +86,7 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   all_dof_map = Solver_Pointer->all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
 
   //obtain mesh coordinates, densities, and element connectivity
-  nodes_in_elem_distributed = Solver_Pointer->nodes_in_elem_distributed; //element to node connectivity table
+  global_nodes_in_elem_distributed = Solver_Pointer->global_nodes_in_elem_distributed; //element to node connectivity table
   node_nconn_distributed = Solver_Pointer->node_nconn_distributed; //how many elements a node is connected to
   node_coords_distributed = Solver_Pointer->node_coords_distributed;
   all_node_coords_distributed = Solver_Pointer->all_node_coords_distributed;

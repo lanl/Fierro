@@ -278,7 +278,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     //CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(rnum_elem, num_nodes_in_elem);
     //view scope
     {
-      host_elem_conn_array interface_nodes_in_elem = Explicit_Solver_Pointer_->nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+      host_elem_conn_array interface_nodes_in_elem = Explicit_Solver_Pointer_->global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //save node data to node.coords
       //std::cout << "ELEMENT CONNECTIVITY ON RANK " << myrank << std::endl;
       for(int ielem = 0; ielem < rnum_elem; ielem++){
