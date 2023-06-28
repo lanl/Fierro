@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.1.3)
 project (1DSGH)
 
 
-add_executable(fierro1D 1D_SGH.cpp)
+add_executable(fierro1D_SGH 1D_SGH.cpp)
+add_executable(fierro1D_CCH 1D_CCH.cpp)
 
 add_definitions(-DHAVE_KOKKOS=1)
 
@@ -17,8 +18,8 @@ elseif (THREADS)
   add_definitions(-DHAVE_THREADS=1)
 endif()
 
-target_link_libraries(fierro1D matar Kokkos::kokkos)
-
+target_link_libraries(fierro1D_SGH matar Kokkos::kokkos)
+target_link_libraries(fierro1D_CCH matar Kokkos::kokkos)
 
 
 

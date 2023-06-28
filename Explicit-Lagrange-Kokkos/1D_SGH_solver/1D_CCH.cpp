@@ -1,10 +1,11 @@
 // -----------------------------------------------------------------------------
 //
-//    This is a 1D c++ finite element code for material dynamics written using
-//    MATAR+Kokkos for performance portabilityover CPUs and GPUs
+//    This is a 1D c++ cell-centered finite volume code for material dynamics
+//    written using MATAR+Kokkos for performance portabilityover CPUs and GPUs.
+//    The code structure is designed to immulate the 3D high-order DG code
 //
 //    Written by: Nathaniel Morgan
-//      Mar 8, 2022
+//      June 27, 2023
 //
 //    To run the code with e.g., 4 threads, type
 //      ./hydro --kokkos-threads=4
@@ -51,6 +52,29 @@ int get_corners_in_cell(int,int);
 
 KOKKOS_INLINE_FUNCTION
 int get_corners_in_node(int,int);
+
+KOKKOS_INLINE_FUNCTION
+double limiter(double, double, double, double, double);
+
+KOKKOS_FUNCTION
+void Riemann_solve(DCArrayKokkos <double> &node_coords,
+                   DCArrayKokkos <double> &cell_coords,
+                   DCArrayKokkos <double> &cell_vel,
+                   DCArrayKokkos <double> &cell_vel_n,
+                   DCArrayKokkos <double> &node_vel,
+                   DCArrayKokkos <double> &cell_pres,
+                   DCArrayKokkos <double> &cell_den,
+                   DCArrayKokkos <double> &cell_sspd,
+                   DCArrayKokkos <double> &corner_vel,
+                   DCArrayKokkos <double> &corner_pres,
+                   DCArrayKokkos <double> &corner_imp,
+                   DCArrayKokkos <double> &corner_force,
+                   DCArrayKokkos <double> &cell_dpres_dx,
+                   DCArrayKokkos <double> &cell_dvel_dx,
+                   const double integral_grad_basis[2],
+                   const int num_cells,
+                   const int num_nodes);
+
 
 
 // -----------------------------------------------------------------------------
@@ -127,20 +151,26 @@ int main(int argc, char* argv[]){
         DCArrayKokkos <double> cell_pres(num_cells);  // pressure
         DCArrayKokkos <double> cell_sspd(num_cells);  // sound speed
         DCArrayKokkos <double> cell_sie(num_cells);   // specific internal energy
-        DCArrayKokkos <double> cell_sie_n(num_cells); // specific internal energy at t_n
+        DCArrayKokkos <double> cell_tau(num_cells);   // specific total energy
+        DCArrayKokkos <double> cell_tau_n(num_cells); // specific total energy at t_n
         DCArrayKokkos <double> cell_mass(num_cells);  // mass in the cell
+        DCArrayKokkos <double> cell_vel(num_cells);   // velocity
+        DCArrayKokkos <double> cell_vel_n(num_cells); // velocity at t_n
+        
+        DCArrayKokkos <double> cell_dpres_dx(num_cells);  // pressure gradient
+        DCArrayKokkos <double> cell_dvel_dx(num_cells);   // velocity gradient
         
         DCArrayKokkos <double> cell_gamma(num_cells);  // gamma law gas
         
         // nodal variables
         DCArrayKokkos <double> node_vel(num_nodes);    // velocity
         DCArrayKokkos <double> node_vel_n(num_nodes);  // the velocity at t_n
-        DCArrayKokkos <double> node_mass(num_nodes);   // mass of node
         
         // corner variables
         DCArrayKokkos <double> corner_force(num_corners); // force from cell to node
-        DCArrayKokkos <double> corner_mass(num_corners);  // mass in cell corner
+        DCArrayKokkos <double> corner_pres(num_corners);  // pres in cell corner
         DCArrayKokkos <double> corner_vel(num_corners);   // velocity in cell corner
+        DCArrayKokkos <double> corner_imp(num_corners);   // accoustic impedance in cell corner
         
         // mesh variables
         DCArrayKokkos <double> cell_coords(num_cells);   // coordinates of cell
@@ -193,17 +223,10 @@ int main(int argc, char* argv[]){
                    
                    cell_mass(cell_id)  = ics[reg].den*cell_vol(cell_id);
                    
-                   // get the corners id's
-                   int corner_id_0 = get_corners_in_cell(cell_id, 0); // left
-                   int corner_id_1 = get_corners_in_cell(cell_id, 1); // right
+                   cell_vel(cell_id) = ics[reg].vel;
+                   double ke         = 0.5*cell_vel(cell_id)*cell_vel(cell_id);
+                   cell_tau(cell_id) = cell_sie(cell_id) + ke;
                    
-                   // scatter mass to the cell corners
-                   corner_mass(corner_id_0) = 0.5*cell_mass(cell_id);
-                   corner_mass(corner_id_1) = 0.5*cell_mass(cell_id);
-                   
-                   // scatter velocity to the cell corners
-                   corner_vel(corner_id_0) = ics[reg].vel;
-                   corner_vel(corner_id_1) = ics[reg].vel;
                    
                } // end if
                   
@@ -212,29 +235,26 @@ int main(int argc, char* argv[]){
         }); // end parallel for on device
         
         
-        // intialize the nodal state that is internal to the mesh
-        FOR_ALL (node_id, 1, num_nodes-1, {
-            node_mass(node_id) = 0.0;
-            node_vel(node_id) = 0.0;
-            for (int corner_lid=0; corner_lid<2; corner_lid++){
-                // get the global index for the corner
-                int corner_gid = get_corners_in_node(node_id, corner_lid);
-                
-                node_mass(node_id) += corner_mass(corner_gid); // tally mass
-                node_vel(node_id) += 0.5*corner_vel(corner_gid); // average
-            } // end for
-        }); // end parallel for on device
-
+       
         
-        // calculate boundary nodal masses and set boundary velocities
-        RUN ({
-            node_mass(0) = corner_mass(0);
-            node_mass(num_nodes-1) = corner_mass(num_corners-1);
-            
-            node_vel(0) = 0.0;
-            node_vel(num_nodes-1) = 0.0;
-        }); // end run once on the device
-        
+        // calculate intial Riemann velocity and cooresponding corner forces
+        Riemann_solve(node_coords,
+                      cell_coords,
+                      cell_vel,
+                      cell_vel_n,
+                      node_vel,
+                      cell_pres,
+                      cell_den,
+                      cell_sspd,
+                      corner_vel,
+                      corner_pres,
+                      corner_imp,
+                      corner_force,
+                      cell_dpres_dx,
+                      cell_dvel_dx,
+                      integral_grad_basis,
+                      num_cells,
+                      num_nodes);
         
         
         // -------------------------------
@@ -246,6 +266,8 @@ int main(int argc, char* argv[]){
         cell_den.update_host();
         cell_pres.update_host();
         cell_sie.update_host();
+        cell_tau.update_host();
+        cell_vel.update_host();
         node_vel.update_host();
         
         // write out the intial conditions to a file on the host
@@ -259,7 +281,7 @@ int main(int argc, char* argv[]){
                  cell_den.host(cell_id),
                  cell_pres.host(cell_id),
                  cell_sie.host(cell_id),
-                 0.5*(node_vel.host(cell_id)+node_vel.host(cell_id+1)) );
+                 cell_vel.host(cell_id) );
         }
         fclose(myfile);
         
@@ -267,9 +289,8 @@ int main(int argc, char* argv[]){
         double total_e = 0.0;
         double e_lcl = 0.0;
         REDUCE_SUM(cell_id, 0, num_cells, e_lcl, {
-               e_lcl += cell_mass(cell_id)*cell_sie(cell_id) +
-                        0.5*cell_mass(cell_id)*0.5*pow(node_vel(cell_id), 2) +
-                        0.5*cell_mass(cell_id)*0.5*pow(node_vel(cell_id+1), 2);
+            double ke = 0.5*cell_vel(cell_id)*cell_vel(cell_id);
+            e_lcl += cell_mass(cell_id)*(cell_sie(cell_id) + ke);
         }, total_e);
         
         
@@ -279,6 +300,8 @@ int main(int argc, char* argv[]){
         // Solve equations until time=time_max
         // -------------------------------------
         for (int cycle = 0; cycle<max_cycles; cycle++){
+            
+            printf("time %f \n", time);
            
             
             // get the new time step
@@ -319,8 +342,7 @@ int main(int argc, char* argv[]){
             for (int rk_stage=0; rk_stage<num_rk_stages; rk_stage++ ){
                
                 // rk coefficient on dt
-                double rk_alpha = 1.0/
-                                     (double(num_rk_stages) - double(rk_stage));
+                double rk_alpha = 1.0/(double(num_rk_stages) - double(rk_stage));
             
                 
                 // save the state at t_n
@@ -335,154 +357,82 @@ int main(int argc, char* argv[]){
                     
                     // cell state
                     FOR_ALL (cell_id, 0, num_cells, {
-                          cell_sie_n(cell_id) = cell_sie(cell_id);
+                        cell_vel_n(cell_id) = cell_vel(cell_id);
+                        cell_tau_n(cell_id) = cell_tau(cell_id);
                     }); // end parallel for on device
-
+                    Kokkos::fence();
+                    
                 } // end if
                 
                 
+                // --- Evolve mesh positions ---
                 
-                // --- Calculate corner forces ---
-                
-                // force is calculated with a single point quadrature approach
-                FOR_ALL (cell_id, 0, num_cells, {
-                
-                    double visc;
-                    double visc_HO;
-                    
-                    // solve Riemann problem in compression
-                    double dvel = node_vel(cell_id+1) - node_vel(cell_id);
-                    if (dvel < 0.0){
-                       
-                        // first-order dissipation from Riemann problem
-                        visc =
-                           1.0/2.0*cell_den(cell_id)*
-                                   cell_sspd(cell_id)*fabs(dvel) +
-                           1.2/4.0*cell_den(cell_id)*pow(dvel, 2.0);
-                       
-                        // higher-order dissipation, can be Order(h^N)
-                        visc_HO = 0.0;
-                        
-                    }
-                    else {
-                        
-                        // dissipation from Riemann problem Order h^2
-                        visc = -1.2/4.0*cell_den(cell_id)*pow(dvel, 2.0);
-                       
-                        // higher-order dissipation, can be Order(h^N)
-                        visc_HO = 0.0;
-                        
-                    } // end if
-                    
-                    // apply the viscosity only in regions near a shock
-                    // visc_limited = alpha*visc where alpha=0 is smooth flow
-                    // and alpha=1 is a shock
-                    // alpha = coef*abs(delta vel)/sound_speed
-                    //      set coeff < 1 (but > 0) to bias limiter towards
-                    //      high-order dissipation
-                    //      set coeff > 1 to bias limiter towards low-order
-                    //      dissipation
-                    double ratio = 20.0*fabs(dvel)/(cell_sspd(cell_id)+fuzz);
-                    double alpha = fmax(0.0, fmin(1.0, ratio));
-                    
-                    // apply shock detector to viscosity
-                    visc = alpha*visc + (1.0-alpha)*visc_HO;
-                    
-                    // get the corners id's
-                    int corner_id_0 = get_corners_in_cell(cell_id, 0); // left
-                    int corner_id_1 = get_corners_in_cell(cell_id, 1); // right
-                    
-                    
-                    // left corner force
-                    corner_force(corner_id_0) =
-                             integral_grad_basis[0]*(-cell_pres(cell_id)-visc);
-                    
-                    // right corner force
-                    corner_force(corner_id_1) =
-                             integral_grad_basis[1]*(-cell_pres(cell_id)-visc);
-                    
-                }); // end parallel for on device
-                
-                
-                
-                // --- Calculate new velocity ---
-                
-                // v_new = v_n + alpha*dt/mass*Sum(forces)
-                FOR_ALL (node_id, 1, num_nodes-1, {
-                    
-                    // get the global indices for the corners of this node
-                    int corner_id_0 = get_corners_in_node(node_id, 0); // left
-                    int corner_id_1 = get_corners_in_node(node_id, 1); // right
-                    
-                    double force_tally = corner_force(corner_id_0) +
-                                         corner_force(corner_id_1);
-                    
-                    // update velocity
-                    node_vel(node_id) = node_vel_n(node_id) +
-                                rk_alpha*dt/node_mass(node_id)*force_tally;
-                    
-                }); // end parallel for on device
-
-                
-                // applying a wall BC on velocity
-                RUN ({
-                    node_vel(0) = 0.0;
-                    node_vel(num_nodes-1) = 0.0;
-                });  // end run once on the device
-
-                
-                // Warning: free surface BC requires including node_vel calc,
-                //   node_vel(node_id) = node_vel_n(node_id) +
-                //       rk_alpha*dt/node_mass(node_id)*corner_force(0 or last);
-                
-                
-                // --- Calculate new mesh positions ---
-                
-                // x_new = x_n + alpha*dt*vel_half
+                // x_new = x_n + alpha*dt*vel
                 FOR_ALL (node_id, 0, num_nodes, {
                     
-                    // velocity at t+1/2
-                    double half_vel = 0.5*(node_vel_n(node_id) +
-                                           node_vel(node_id));
-                    
-                    // update velocity
+                    // update node coords
                     node_coords(node_id) = node_coords_n(node_id) +
-                                           rk_alpha*dt*half_vel;
+                                           rk_alpha*dt*node_vel(node_id);
                     
                 }); // end parallel for on device
                 
+
                 
+                // --- Evolve specific total energy and velocity ---
                 
-                // --- Calculate new internal energy ---
-                
-                // e_new = e_n + alpha*dt/mass*Sum(forces*vel_half)
                 FOR_ALL (cell_id, 0, num_cells, {
+                    
+                    int node_id_0 = cell_id;     // left node
+                    int node_id_1 = cell_id+1;   // right node
                     
                     // get the global indices for the corners of this cell
                     int corner_id_0 = get_corners_in_cell(cell_id, 0); // left
                     int corner_id_1 = get_corners_in_cell(cell_id, 1); // right
+
+                    double force_tally = corner_force(corner_id_0) +
+                                         corner_force(corner_id_1);
                     
-                    double half_vel_0 = 0.5*(node_vel_n(cell_id) +
-                                             node_vel(cell_id));
-                    double half_vel_1 = 0.5*(node_vel_n(cell_id+1) +
-                                             node_vel(cell_id+1));
-                    
-                    double power_tally = corner_force(corner_id_0)*half_vel_0 +
-                                         corner_force(corner_id_1)*half_vel_1;
-                    
-                    // update specific interal energy
-                    cell_sie(cell_id) = cell_sie_n(cell_id) -
-                                    rk_alpha*dt/cell_mass(cell_id)*power_tally;
+                    // update velocity
+                    // v_new = v_n + alpha*dt/mass*Sum(forces)
+                    cell_vel(cell_id) = cell_vel_n(cell_id) +
+                                        rk_alpha*dt/cell_mass(cell_id)*force_tally;
                     
                     
-                    // --- Update the state on the mesh ---
+                    double power_tally = corner_force(corner_id_0)*node_vel(node_id_0) +
+                                         corner_force(corner_id_1)*node_vel(node_id_1);
+                    
+                    // update specific total energy
+                    // tau_new = tau_n + alpha*dt/mass*Sum(forces*vel^*)
+                    cell_tau(cell_id) = cell_tau_n(cell_id) +
+                                        rk_alpha*dt/cell_mass(cell_id)*power_tally;
+                    
+                    
+                }); // end parallel for on device
+                Kokkos::fence();
+                
+                
+                
+                
+                // --- Update the state on the mesh ---
+                
+                // Calculate the ke and ie at the mat_pnts using the limited fields
+                FOR_ALL (cell_id, 0, num_cells, {
+                    
+                    int node_id_0 = cell_id;     // left node
+                    int node_id_1 = cell_id+1;   // right node
+                    
+                    // specific ke
+                    double ke = 0.5*cell_vel(cell_id)*cell_vel(cell_id);
+                    
+                    // specific interal energy
+                    cell_sie(cell_id) = cell_tau(cell_id) - ke;
+                    
+                    
                     // update vol
-                    cell_vol(cell_id)  = node_coords(cell_id+1) -
-                                         node_coords(cell_id);
+                    cell_vol(cell_id)  = node_coords(node_id_1) - node_coords(node_id_0);
                     
                     // update coordinates
-                    cell_coords(cell_id) = 0.5*(node_coords(cell_id) +
-                                                node_coords(cell_id+1));
+                    cell_coords(cell_id) = 0.5*(node_coords(node_id_1) + node_coords(node_id_0));
                     
                     // update density
                     cell_den(cell_id) = cell_mass(cell_id)/cell_vol(cell_id);
@@ -499,6 +449,27 @@ int main(int argc, char* argv[]){
                 }); // end parallel for on device
                 Kokkos::fence();
                 
+                
+                
+                
+                // calculate the Riemann velocity and cooresponding corner forces
+                Riemann_solve(node_coords,
+                              cell_coords,
+                              cell_vel,
+                              cell_vel_n,
+                              node_vel,
+                              cell_pres,
+                              cell_den,
+                              cell_sspd,
+                              corner_vel,
+                              corner_pres,
+                              corner_imp,
+                              corner_force,
+                              cell_dpres_dx,
+                              cell_dvel_dx,
+                              integral_grad_basis,
+                              num_cells,
+                              num_nodes);
                 
             } // end rk loop
 
@@ -526,6 +497,8 @@ int main(int argc, char* argv[]){
         cell_den.update_host();
         cell_pres.update_host();
         cell_sie.update_host();
+        cell_tau.update_host();
+        cell_vel.update_host();
         node_vel.update_host();
         
         // write out the intial conditions to a file on the host
@@ -539,7 +512,7 @@ int main(int argc, char* argv[]){
                     cell_den.host(cell_id),
                     cell_pres.host(cell_id),
                     cell_sie.host(cell_id),
-                    0.5*(node_vel.host(cell_id)+node_vel.host(cell_id+1)) );
+                    cell_vel.host(cell_id) );
         }
         fclose(myfile);
         
@@ -548,9 +521,8 @@ int main(int argc, char* argv[]){
         double total_e_final = 0.0;
         double ef_lcl = 0.0;
         REDUCE_SUM(cell_id, 0, num_cells, ef_lcl, {
-               ef_lcl += cell_mass(cell_id)*cell_sie(cell_id) +
-                         0.5*cell_mass(cell_id)*0.5*pow(node_vel(cell_id), 2) +
-                         0.5*cell_mass(cell_id)*0.5*pow(node_vel(cell_id+1), 2);
+            double ke = 0.5*cell_vel(cell_id)*cell_vel(cell_id);
+            ef_lcl += cell_mass(cell_id)*(cell_sie(cell_id) + ke);
         }, total_e_final);
         Kokkos::fence();
         
@@ -584,7 +556,190 @@ int get_corners_in_node(int node_gid, int corner_lid){
     return (2*node_gid - 1 + corner_lid);
 }
 
+KOKKOS_INLINE_FUNCTION
+double limiter(double var, double var_avg, double var_n, double max_var, double min_var){
+    
+    double ratio;
+    double half_vel = 0.5*(var + var_n);
+    
+    if (var > var_avg+fuzz){
+        ratio = (max_var - half_vel)/(0.5*(var - var_avg));
+    }
+    else if (var < var_avg-fuzz){
+        ratio = (min_var - half_vel)/(0.5*(var - var_avg));
+    }
+    else {
+        ratio = 1.0;
+    }
+    
+    return fmax(0.0, fmin(1.0, ratio));
+    
+}
 
 
 
+KOKKOS_FUNCTION
+void Riemann_solve(DCArrayKokkos <double> &node_coords,
+                   DCArrayKokkos <double> &cell_coords,
+                   DCArrayKokkos <double> &cell_vel,
+                   DCArrayKokkos <double> &cell_vel_n,
+                   DCArrayKokkos <double> &node_vel,
+                   DCArrayKokkos <double> &cell_pres,
+                   DCArrayKokkos <double> &cell_den,
+                   DCArrayKokkos <double> &cell_sspd,
+                   DCArrayKokkos <double> &corner_vel,
+                   DCArrayKokkos <double> &corner_pres,
+                   DCArrayKokkos <double> &corner_imp,
+                   DCArrayKokkos <double> &corner_force,
+                   DCArrayKokkos <double> &cell_dpres_dx,
+                   DCArrayKokkos <double> &cell_dvel_dx,
+                   const double integral_grad_basis[2],
+                   const int num_cells,
+                   const int num_nodes){
+    
+    
+    // --- calculate the gradients ---
+    
+    FOR_ALL (cell_id, 1, num_cells-1, {
+        
+        double dx = cell_coords(cell_id+1) - cell_coords(cell_id-1);
+        
+        cell_dpres_dx(cell_id) = (cell_pres(cell_id+1) - cell_pres(cell_id-1))/dx;
+        cell_dvel_dx(cell_id)  = (cell_vel(cell_id+1) - cell_vel(cell_id-1))/dx;
+        
+        //cell_dpres_dx(cell_id) = 0.0;  // WARNING WARNING WARING P0 reconstructions
+        //cell_dvel_dx(cell_id)  = 0.0;
+        
+    });
+    RUN({
+        cell_dpres_dx(0) = 0.;
+        cell_dpres_dx(num_cells-1) = 0.;
+        
+        cell_dvel_dx(0) = 0.;
+        cell_dvel_dx(num_cells-1) = 0.;
+        
+    });
+    Kokkos::fence();
+    
+    
+    
+    // --- Calculate corner velocity, forces, and impedance ---
+    
+    FOR_ALL (cell_id, 0, num_cells, {
+        
+        int node_id_0 = cell_id;   // global id for node on the left
+        int node_id_1 = cell_id+1; // global id for node on the right
+        
+        // calculate the velocity and pressure in the cell corners
+        
+        // get the corners id's
+        int corner_id_0 = get_corners_in_cell(cell_id, 0); // left
+        int corner_id_1 = get_corners_in_cell(cell_id, 1); // right
+        
+        // calculate the distance to the nodes
+        double dx_0 = node_coords(node_id_0) - cell_coords(cell_id);
+        double dx_1 = node_coords(node_id_1) - cell_coords(cell_id);
+        
+        
+        // calculate the corner velocities on the left and right side
+        corner_vel(corner_id_0) = cell_vel(cell_id) + dx_0*cell_dvel_dx(cell_id);
+        corner_vel(corner_id_1) = cell_vel(cell_id) + dx_1*cell_dvel_dx(cell_id);
+        
+        corner_pres(corner_id_0) = cell_pres(cell_id) + dx_0*cell_dpres_dx(cell_id);
+        corner_pres(corner_id_1) = cell_pres(cell_id) + dx_1*cell_dpres_dx(cell_id);
+        
+        
+        // limit the velocity to be in bounds of the Riemann velocity
+        
+        // velocity bounds based on node_vel, the Riemann velocity
+        double max_vel = fmax(node_vel(cell_id), node_vel(cell_id+1));
+        double min_vel = fmin(node_vel(cell_id), node_vel(cell_id+1));
+        
+        // limiter value for the left side
+        double phi_0 = limiter(corner_vel(corner_id_0),
+                               cell_vel(cell_id),
+                               cell_vel_n(cell_id),
+                               max_vel,
+                               min_vel);
+        
+        // limiter value for the right side
+        double phi_1 = limiter(corner_vel(corner_id_1),
+                               cell_vel(cell_id),
+                               cell_vel_n(cell_id),
+                               max_vel,
+                               min_vel);
+        
+        
+        // limit the velocity reconstruction to left and right side
+        double phi = fmin(phi_0,phi_1);
+        corner_vel(corner_id_0) = cell_vel(cell_id) + phi*(corner_vel(corner_id_0) - cell_vel(cell_id));
+        corner_vel(corner_id_1) = cell_vel(cell_id) + phi*(corner_vel(corner_id_1) - cell_vel(cell_id));
+        
+        
+        // left and right corner impedance
+        corner_imp(corner_id_0) = cell_den(cell_id)*cell_sspd(cell_id);
+        corner_imp(corner_id_1) = cell_den(cell_id)*cell_sspd(cell_id);
+        
+        // left outward corner force, must add mu*(u^* - u)
+        corner_force(corner_id_0) =
+                 -integral_grad_basis[0]*(-corner_pres(corner_id_0));
+        
+        // right outward corner force, must add mu*(u^* - u)
+        corner_force(corner_id_1) =
+                 -integral_grad_basis[1]*(-corner_pres(corner_id_1));
+        
+    }); // end parallel for on device
+    Kokkos::fence();
+    
+    
+    
+    // --- solve for Riemann velocity, the node vel ---
+    FOR_ALL (node_id, 1, num_nodes-1, {
+        
+        
+        double top = 0.0;
+        double bottom = 0.0;
+        
+        for (int corner_lid=0; corner_lid<2; corner_lid++){
+            
+            // get the global index for the corner
+            int corner_gid = get_corners_in_node(node_id, corner_lid);
+            
+            top += corner_imp(corner_gid)*corner_vel(corner_gid) - corner_force(corner_gid);
+            bottom += corner_imp(corner_gid);
+        } // end for
+        
+        node_vel(node_id) = top/bottom;
+        
+    }); // end parallel for on device
+    
+    // applying a wall BC on velocity
+    RUN ({
+        node_vel(0) = 0.0;
+        node_vel(num_nodes-1) = 0.0;
+    });  // end run once on the device
+    // Warning: free surface BC requires including node_vel calc,
+    Kokkos::fence();
+    
+    // calculate corner forces
+    FOR_ALL (node_id, 0, num_nodes, {
+        
+        double conservation_check = 0;
+        for (int corner_lid=0; corner_lid<2; corner_lid++){
+            
+            // get the global index for the corner
+            int corner_gid = get_corners_in_node(node_id, corner_lid);
+            
+            corner_force(corner_gid) += corner_imp(corner_gid)*
+                                        (node_vel(node_id)-corner_vel(corner_gid));
+            
+            conservation_check += corner_force(corner_gid);
 
+        } // end for
+        
+        if(node_id>0 && node_id<num_nodes-1){
+            if (fabs(conservation_check)>1e-13) printf("conservation error = %f\n", conservation_check);
+        }
+    }); // end parallel for on device
+    Kokkos::fence();
+}
