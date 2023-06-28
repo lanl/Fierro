@@ -1380,7 +1380,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
 ------------------------------------------------------------------------- */
 void FEA_Module_SGH::init_assembly(){
   int num_dim = simparam->num_dim;
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   Gradient_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Gradient_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
@@ -1414,7 +1414,7 @@ void FEA_Module_SGH::init_assembly(){
 
   //initialize nall arrays
   //initialize nlocal arrays
-  FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
+  FOR_ALL_CLASS(inode, 0, nall_nodes, {
     node_indices_used(inode) = 0;
     column_index(inode) = 0;
   }); // end parallel for
