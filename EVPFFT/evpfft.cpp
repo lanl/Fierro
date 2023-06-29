@@ -1,6 +1,7 @@
 #include "evpfft.h"
 #include "utilities.h"
 #include <math.h>
+#include <algorithm>
 
 //#ifndef NDEBUG
 #include <fenv.h> // for debugging floating point exceptions
@@ -177,6 +178,8 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
 
   }); // end FOR_ALL_CLASS
   Kokkos::fence();
+
+
 
   // update host
   cg66.update_host();

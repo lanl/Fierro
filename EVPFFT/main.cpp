@@ -54,12 +54,16 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   ViewFMatrix vel_grad_view (vel_grad,3,3);
   ViewFMatrix stress_view (stress,3,3);
 
-//static std::ofstream myfile;
-//static MatrixTypeRealHost strain(3,3);
-//if (cycle == 0) {
-//  myfile.open("stress.txt");
-//  for (int i = 0; i < 9; i++) strain.pointer()[i] = 0.0;
-//}
+//print_array(vel_grad_view.pointer(), 3,3);
+//exit(1);
+
+
+static std::ofstream myfile;
+static MatrixTypeRealHost strain(3,3);
+if (cycle == 0) {
+  myfile.open("stress.txt");
+  for (int i = 0; i < 9; i++) strain.pointer()[i] = 0.0;
+}
 
 
   // calculate L2 norm of vel_grad
@@ -102,16 +106,16 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   }
 
 // update strain
-//for (int i = 1; i <= 3; i++) {
-//  for (int j = 1; j <= 3; j++) {
-//    strain(i,j) += dstran(i,j);
-//  }
-//}  
+for (int i = 1; i <= 3; i++) {
+  for (int j = 1; j <= 3; j++) {
+    strain(i,j) += dstran(i,j);
+  }
+}  
 
-//myfile << vm(strain.pointer());
+myfile << vm(strain.pointer());
 
   // Linear extrapolation
-  double udotAccTh = 0.0001;
+  double udotAccTh = 0.001;
   if (active == true and udotAccVm < udotAccTh) {
     MatrixTypeRealHost M3333(3,3,3,3);
     cb.chg_basis_3(M66.pointer(), M3333.pointer(), 3, 6, cb.B_basis_host_pointer());
@@ -127,7 +131,10 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
         stress_view(ii,jj) += dstress(ii,jj);
       }
     }
-//myfile << "," << vm_stress(stress_view.pointer()) << "\n";
+print_array(M66.pointer(),6,6);
+printf("dtAcc=%12.5E\n", dtAcc);
+//exit(1);
+myfile << "," << vm_stress(stress_view.pointer()) << std::endl;
     return;
   }
 
@@ -185,6 +192,6 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
       stress_view(i,j) = scauav(i,j);
     }
   }
-//myfile << "," << vm_stress(stress_view.pointer()) << "\n";
+myfile << "," << vm_stress(stress_view.pointer()) << std::endl;
 }
 #endif
