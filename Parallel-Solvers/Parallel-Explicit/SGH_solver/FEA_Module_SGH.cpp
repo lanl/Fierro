@@ -97,6 +97,7 @@
 #define STRAIN_EPSILON 0.000000001
 #define DENSITY_EPSILON 0.0001
 #define BC_EPSILON 1.0e-6
+#define BUFFER_GROW 100
 
 using namespace utils;
 
@@ -156,7 +157,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
 
   //optimization flags
   kinetic_energy_objective = false;
-  max_time_steps = 100;
+  max_time_steps = BUFFER_GROW;
 
   //set parameters
   time_value = simparam->time_value;
@@ -1545,7 +1546,6 @@ void FEA_Module_SGH::sgh_solve(){
     int old_max_forward_buffer;
     size_t cycle;
     const int num_dim = simparam->num_dim;
-    time_value = simparam->time_value;
     real_t objective_accumulation, global_objective_accumulation;
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
@@ -2157,13 +2157,13 @@ void FEA_Module_SGH::sgh_solve(){
 
         if(max_time_steps + 1 > forward_solve_velocity_data.size()){
           old_max_forward_buffer = forward_solve_velocity_data.size();
-          time_data.resize(max_time_steps + 101);
-          forward_solve_velocity_data.resize(max_time_steps + 101);
-          forward_solve_coordinate_data.resize(max_time_steps + 101);
-          adjoint_vector_data.resize(max_time_steps + 101);
-          phi_adjoint_vector_data.resize(max_time_steps + 101);
+          time_data.resize(max_time_steps + BUFFER_GROW +1);
+          forward_solve_velocity_data.resize(max_time_steps + BUFFER_GROW +1);
+          forward_solve_coordinate_data.resize(max_time_steps + BUFFER_GROW +1);
+          adjoint_vector_data.resize(max_time_steps + BUFFER_GROW +1);
+          phi_adjoint_vector_data.resize(max_time_steps + BUFFER_GROW +1);
           //assign a multivector of corresponding size to each new timestep in the buffer
-          for(int istep = old_max_forward_buffer; istep < max_time_steps + 101; istep++){
+          for(int istep = old_max_forward_buffer; istep < max_time_steps + BUFFER_GROW +1; istep++){
             forward_solve_velocity_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
             forward_solve_coordinate_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
             adjoint_vector_data[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
