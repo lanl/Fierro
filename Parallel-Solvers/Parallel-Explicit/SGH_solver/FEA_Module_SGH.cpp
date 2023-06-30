@@ -669,10 +669,10 @@ void FEA_Module_SGH::comm_node_masses(){
 
   //communicate design densities
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, ghost_node_map);
+  //Tpetra::Import<LO, GO> importer(map, ghost_node_map);
   
   //comms to get ghosts
-  ghost_node_masses_distributed->doImport(*node_masses_distributed, importer, Tpetra::INSERT);
+  ghost_node_masses_distributed->doImport(*node_masses_distributed, *ghost_importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   
@@ -700,11 +700,11 @@ void FEA_Module_SGH::comm_adjoint_vectors(int cycle){
 
   //communicate design densities
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  //Tpetra::Import<LO, GO> importer(map, all_node_map);
   
   //comms to get ghosts
-  (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, importer, Tpetra::INSERT);
-  (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, importer, Tpetra::INSERT);
+  (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   
@@ -736,10 +736,10 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
 
   //communicate design densities
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  //Tpetra::Import<LO, GO> importer(map, all_node_map);
 
   //comms to get ghosts
-  all_node_densities_distributed->doImport(*test_node_densities_distributed, importer, Tpetra::INSERT);
+  all_node_densities_distributed->doImport(*test_node_densities_distributed, *importer, Tpetra::INSERT);
   }
   else if(simparam_dynamic_opt->shape_optimization_on){
     //clause to communicate boundary node data if the boundary nodes are ghosts on this rank

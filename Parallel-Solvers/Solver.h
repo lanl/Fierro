@@ -55,6 +55,7 @@
 #include <Tpetra_CrsMatrix.hpp>
 #include <Kokkos_Core.hpp>
 #include "Tpetra_Details_DefaultTypes.hpp"
+#include "Tpetra_Import.hpp"
 #include <map>
 
 using namespace mtr;
@@ -140,6 +141,8 @@ public:
 
   virtual void repartition_nodes();
 
+  virtual void comm_importer_setup();
+
   virtual void comm_coordinates();
 
   virtual void tecplot_writer() {}
@@ -162,6 +165,9 @@ public:
   int myrank; //index of this mpi rank in the world communicator
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
+  Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
 
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters *simparam;

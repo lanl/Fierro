@@ -61,7 +61,6 @@
 #include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Details_FixedHashTable.hpp"
-#include "Tpetra_Import.hpp"
 
 #include "elements.h"
 #include "matar.h"
@@ -2056,10 +2055,10 @@ void Solver::init_maps(){
   //std::fflush(stdout);
 
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  comm_importer_setup();
 
   //comms to get ghosts
-  all_node_coords_distributed->doImport(*node_coords_distributed, importer, Tpetra::INSERT);
+  all_node_coords_distributed->doImport(*node_coords_distributed, *importer, Tpetra::INSERT);
   //all_node_nconn_distributed->doImport(*node_nconn_distributed, importer, Tpetra::INSERT);
   
   dual_nodes_in_elem.sync_device();
@@ -2100,7 +2099,7 @@ void Solver::init_maps(){
     //std::cout << "node "<<all_node_map->getGlobalElement(inode) << " } " ;
     //std::cout << dual_all_node_coords.view_host()(inode,0) << " " << dual_all_node_coords.view_host()(inode,1) << " " << dual_all_node_coords.view_host()(inode,2) << " " << std::endl;
   //}
-     
+
   //std::cout << "number of patches = " << mesh->num_patches() << std::endl;
   if(myrank == 0)
   std::cout << "End of map setup " << std::endl;
@@ -2325,16 +2324,32 @@ void Solver::Get_Boundary_Patches(){
 }
 
 /* ----------------------------------------------------------------------
+  Setup Tpetra importers for comms
+------------------------------------------------------------------------- */
+
+void Solver::comm_importer_setup(){
+  
+  //create import object using local node indices map and ghost indices map
+  importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(map, all_node_map));
+  ghost_importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(map, ghost_node_map));
+  
+  //output map and importers
+  sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  node_sorting_importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(map, sorted_map));
+
+}
+
+/* ----------------------------------------------------------------------
   Communicate updated nodal coordinates to ghost nodes
 ------------------------------------------------------------------------- */
 
 void Solver::comm_coordinates(){
 
   //create import object using local node indices map and ghost indices map
-  Tpetra::Import<LO, GO> importer(map, ghost_node_map);
+  //Tpetra::Import<LO, GO> importer(map, ghost_node_map);
   
   //comms to get ghosts
-  ghost_node_coords_distributed->doImport(*node_coords_distributed, importer, Tpetra::INSERT);
+  ghost_node_coords_distributed->doImport(*node_coords_distributed, *ghost_importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_coords_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 }

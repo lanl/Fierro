@@ -3890,11 +3890,11 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
   MPI_Allreduce(&local_direction_vec_reduce,&direction_vec_reduce,1,MPI_DOUBLE,MPI_SUM,world);
 
   //comms to get ghost components of direction vector needed for matrix inner products
-  Tpetra::Import<LO, GO> node_importer(map, all_node_map);
+  //Tpetra::Import<LO, GO> node_importer(map, all_node_map);
   
   Teuchos::RCP<MV> all_direction_vec_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   //comms to get ghosts
-  all_direction_vec_distributed->doImport(*direction_vec_distributed, node_importer, Tpetra::INSERT);
+  all_direction_vec_distributed->doImport(*direction_vec_distributed, *importer, Tpetra::INSERT);
   
   const_host_vec_array all_direction_vec = all_direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 

@@ -74,6 +74,9 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   myrank = Solver_Pointer->myrank;
   nranks = Solver_Pointer->nranks;
   world = Solver_Pointer->world;
+  importer = Solver_Pointer->importer;
+  ghost_importer = Solver_Pointer->ghost_importer;
+  node_sorting_importer = Solver_Pointer->node_sorting_importer;
 
   //obtain node and element maps
   comm = Solver_Pointer->comm;
