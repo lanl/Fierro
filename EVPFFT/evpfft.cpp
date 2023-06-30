@@ -124,6 +124,10 @@ EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const rea
   , stress_scale(stress_scale_)
   , time_scale(time_scale_)
   , M66 (6,6)
+  , edotp_avg (3,3)
+  , dedotp66_avg (6,6)
+  , cg66_avg (6,6)
+  , sg66_avg (6,6)
   , udotAcc(3,3)
   , dtAcc(0.0)
 

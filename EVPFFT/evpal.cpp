@@ -49,7 +49,7 @@ void EVPFFT::evpal(int imicro)
   //
 #if BUILD_EVPFFT_FIERRO
   // create space to perform reduction for dsde and cg66.
-  const size_t n = 2+36+36; // 2 for errs, erre. 36 for dsde_avg. 36 for cg66_avg
+  const size_t n = 2+36+36+9; // 2 for errs, erre. 36 for dsde_avg. 36 for cg66_avg. 9 edotp_avg
   ArrayType <real_t, n> all_reduce;
 #else
   const size_t n = 2; // 2 for errs, erre
@@ -386,24 +386,21 @@ void EVPFFT::evpal(int imicro)
 
 #if BUILD_EVPFFT_FIERRO
     ViewMatrixTypeReal cg66_avg(&loc_reduce.array[2],6,6);
+    ViewMatrixTypeReal dedotp66_avg(&loc_reduce.array[38],6,6);
     for (int ii = 1; ii <= 6; ii++) {
       for (int jj = 1; jj <= 6; jj++) {
         cg66_avg(ii,jj) += cg66(ii,jj,i,j,k) * wgt;
+        dedotp66_avg(ii,jj) += dedotp66(ii,jj) * wgt;
       }
     }
 
-
-    ViewMatrixTypeReal dedotp66_avg(&loc_reduce.array[38],6,6);
-    if (igas(jph) == 0) {
-      for (int ii = 1; ii <= 6; ii++) {
-        for (int jj = 1; jj <= 6; jj++) {
-          dedotp66_avg(ii,jj) += dedotp66(ii,jj) * wgt;
-        }
+    ViewMatrixTypeReal edotp_avg_loc(&loc_reduce.array[74],3,3);
+    for (int ii = 1; ii <= 3; ii++) {
+      for (int jj = 1; jj <= 3; jj++) {
+        edotp_avg_loc(ii,jj) += edotp(ii,jj,i,j,k) * wgt;
       }
-    //} else { // else for if (igas(jph) == 0)
-    } // end if (igas(jph) == 0)
+    }
 #endif
-
 
   }, all_reduce);
   Kokkos::fence(); // needed to prevent race condition
@@ -415,13 +412,15 @@ void EVPFFT::evpal(int imicro)
   erre = all_reduce.array[1];
 
 #if BUILD_EVPFFT_FIERRO
-  ViewMatrixTypeReal cg66_avg (&all_reduce.array[2],6,6);
-  ViewMatrixTypeReal dedotp66_avg (&all_reduce.array[38],6,6);
-  
-  MatrixTypeRealHost sg66_avg (6,6);
+  ViewMatrixTypeReal cg66_avg_view (&all_reduce.array[2],6,6);
+  ViewMatrixTypeReal dedotp66_avg_view (&all_reduce.array[38],6,6);
+  ViewMatrixTypeReal edotp_avg_view (&all_reduce.array[74],3,3); 
+
   for (int ii = 1; ii <= 6; ii++) {
     for (int jj = 1; jj <= 6; jj++) {
-      sg66_avg(ii,jj) = cg66_avg(ii,jj);
+      cg66_avg(ii,jj) = cg66_avg_view(ii,jj);
+      sg66_avg(ii,jj) = cg66_avg_view(ii,jj);
+      dedotp66_avg(ii,jj) = dedotp66_avg_view(ii,jj);
     }
   }
 #ifdef LU_MATRIX_INVERSE
@@ -430,17 +429,12 @@ void EVPFFT::evpal(int imicro)
   inverse_gj(sg66_avg.pointer(), 6);
 #endif
 
-  // calculate M66
-  for (int ii = 1; ii <= 6; ii++) {
-    for (int jj = 1; jj <= 6; jj++) {
-      M66(ii,jj) = sg66_avg(ii,jj) + dedotp66_avg(ii,jj); //dedotp66_avg(ii,jj) * tdot;
+  // copy edotp_avg_view into edotp_avg
+  for (int ii = 1; ii <= 3; ii++) {
+    for (int jj = 1; jj <= 3; jj++) {
+      edotp_avg(ii,jj) = edotp_avg_view(ii,jj);
     }
   }
-#ifdef LU_MATRIX_INVERSE
-  lu_inverse(M66.pointer(), 6);
-#elif GJE_MATRIX_INVERSE
-  inverse_gj(M66.pointer(), 6);
-#endif
 
 // endif for if BUILD_EVPFFT_FIERRO
 #endif

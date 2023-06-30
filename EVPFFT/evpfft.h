@@ -168,6 +168,10 @@ public:
   const real_t stress_scale;
   const real_t time_scale;
   MatrixTypeRealHost M66;
+  MatrixTypeRealHost edotp_avg;
+  MatrixTypeRealHost dedotp66_avg;
+  MatrixTypeRealHost cg66_avg;
+  MatrixTypeRealHost sg66_avg;
   MatrixTypeRealHost udotAcc; 
   double dtAcc;
 

@@ -1,6 +1,7 @@
 #include "evpfft.h"
 #include "utilities.h"
 #include "vm.h"
+#include "inverse.h"
 
 #ifndef BUILD_EVPFFT_FIERRO
 int main(int argc, char *argv[])
@@ -54,16 +55,13 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
   ViewFMatrix vel_grad_view (vel_grad,3,3);
   ViewFMatrix stress_view (stress,3,3);
 
-//print_array(vel_grad_view.pointer(), 3,3);
-//exit(1);
 
-
-static std::ofstream myfile;
-static MatrixTypeRealHost strain(3,3);
-if (cycle == 0) {
-  myfile.open("stress.txt");
-  for (int i = 0; i < 9; i++) strain.pointer()[i] = 0.0;
-}
+//static std::ofstream myfile;
+//static MatrixTypeRealHost strain(3,3);
+//if (cycle == 0) {
+//  myfile.open("stress.txt");
+//  for (int i = 0; i < 9; i++) strain.pointer()[i] = 0.0;
+//}
 
 
   // calculate L2 norm of vel_grad
@@ -106,17 +104,29 @@ if (cycle == 0) {
   }
 
 // update strain
-for (int i = 1; i <= 3; i++) {
-  for (int j = 1; j <= 3; j++) {
-    strain(i,j) += dstran(i,j);
-  }
-}  
-
-myfile << vm(strain.pointer());
+//for (int i = 1; i <= 3; i++) {
+//  for (int j = 1; j <= 3; j++) {
+//    strain(i,j) += dstran(i,j);
+//  }
+//}  
+//myfile << vm(strain.pointer());
 
   // Linear extrapolation
   double udotAccTh = 0.001;
   if (active == true and udotAccVm < udotAccTh) {
+
+    // calculate M66
+    for (int ii = 1; ii <= 6; ii++) {
+      for (int jj = 1; jj <= 6; jj++) {
+        M66(ii,jj) = sg66_avg(ii,jj) + dedotp66_avg(ii,jj) * dt;
+      }
+    }
+#ifdef LU_MATRIX_INVERSE
+    lu_inverse(M66.pointer(), 6);
+#elif GJE_MATRIX_INVERSE
+    inverse_gj(M66.pointer(), 6);
+#endif
+
     MatrixTypeRealHost M3333(3,3,3,3);
     cb.chg_basis_3(M66.pointer(), M3333.pointer(), 3, 6, cb.B_basis_host_pointer());
     MatrixTypeRealHost dstress(3,3);
@@ -125,16 +135,13 @@ myfile << vm(strain.pointer());
         dstress(ii,jj) = 0.0;
         for (int kk = 1; kk <= 3; kk++) {
           for (int ll = 1; ll <= 3; ll++) {
-            dstress(ii,jj) += M3333(ii,jj,kk,ll) * dstran(kk,ll);
+            dstress(ii,jj) += M3333(ii,jj,kk,ll) * (dstran(kk,ll) - edotp_avg(kk,ll)*dt);
           }
         }
         stress_view(ii,jj) += dstress(ii,jj);
       }
     }
-print_array(M66.pointer(),6,6);
-printf("dtAcc=%12.5E\n", dtAcc);
-//exit(1);
-myfile << "," << vm_stress(stress_view.pointer()) << std::endl;
+//myfile << "," << vm_stress(stress_view.pointer()) << std::endl;
     return;
   }
 
@@ -176,9 +183,6 @@ myfile << "," << vm_stress(stress_view.pointer()) << std::endl;
   }
   active = true;
 
-  //print_vel_grad();
-  //PAUSE;
-
   //--------------------------------
   // EVPFFT evolve
   evolve();
@@ -192,6 +196,6 @@ myfile << "," << vm_stress(stress_view.pointer()) << std::endl;
       stress_view(i,j) = scauav(i,j);
     }
   }
-myfile << "," << vm_stress(stress_view.pointer()) << std::endl;
+//myfile << "," << vm_stress(stress_view.pointer()) << std::endl;
 }
 #endif

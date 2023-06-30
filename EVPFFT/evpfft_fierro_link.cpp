@@ -69,15 +69,10 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
     // Transpose vel_grad
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
-        Fvel_grad(i,j) = 0.0; //vel_grad(i,j);
+        Fvel_grad(i,j) = vel_grad(i,j);
         Fstress(i,j) = elem_stress.host(1,elem_gid,i,j);
       }
     }
-
-Fvel_grad(0,0) = 4000;
-Fvel_grad(0,2) = -2000;
-Fvel_grad(1,1) = 6000;
-Fvel_grad(2,2) = -10000;
 
     elem_evpfft[elem_gid]->solve(Fvel_grad.pointer(), Fstress.pointer(), dt_rk, cycle, elem_gid);
 
