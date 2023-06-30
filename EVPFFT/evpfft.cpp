@@ -1,6 +1,7 @@
 #include "evpfft.h"
 #include "utilities.h"
 #include <math.h>
+#include <algorithm>
 
 //#ifndef NDEBUG
 #include <fenv.h> // for debugging floating point exceptions
@@ -39,6 +40,7 @@ EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const rea
   , iudot (3,3)
   , idsim (6)
   , iscau (6)
+  , nsteps (0)
 
   , dnca (3,NSYSMX,NPHMX)
   , dbca (3,NSYSMX,NPHMX)
@@ -121,6 +123,13 @@ EVPFFT::EVPFFT(const CommandLineArgs cmd_, const real_t stress_scale_, const rea
   , active(false)
   , stress_scale(stress_scale_)
   , time_scale(time_scale_)
+  , M66 (6,6)
+  , edotp_avg (3,3)
+  , dedotp66_avg (6,6)
+  , cg66_avg (6,6)
+  , sg66_avg (6,6)
+  , udotAcc(3,3)
+  , dtAcc(0.0)
 
   , ofile_mgr ()
 //-----------------------------------------------
@@ -174,6 +183,8 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
   }); // end FOR_ALL_CLASS
   Kokkos::fence();
 
+
+
   // update host
   cg66.update_host();
   ag.update_host();
@@ -184,10 +195,10 @@ void EVPFFT::set_some_voxels_arrays_to_zero()
   sg.update_host();
   gacumgr.update_host();
 
-  // macroscopic stress
   for (int jj = 1; jj <= 3; jj++) {
     for (int ii = 1; ii <= 3; ii++) {
-      scauav(ii,jj) = 0.0;
+      scauav(ii,jj) = 0.0;  // macroscopic stress
+      udotAcc(ii,jj) = 0.0;
     }
   }
 }
@@ -470,7 +481,7 @@ void EVPFFT::check_macrostress()
   } // end for j
 
   if (nan_stress == true) {
-    printf("NaN stress at elem %d cycle %d\n", elem_id, fierro_cycle);
+    printf("NaN stress at elem %d, cycle %d, dt %24.14E \n", elem_id, fierro_cycle, tdot);
     print_vel_grad();
     exit(1);
   }
@@ -479,7 +490,7 @@ void EVPFFT::check_macrostress()
 
 void EVPFFT::print_vel_grad()
 {
-    printf("vel_grad at elem_gid %d cycle %d is :\n", elem_id, fierro_cycle);
+    printf("vel_grad at elem_gid %d, cycle %d, dt %24.14E is :\n", elem_id, fierro_cycle, tdot);
 
     for (int j = 1; j <= 3; j++) {
       for (int i = 1; i <= 3; i++) {

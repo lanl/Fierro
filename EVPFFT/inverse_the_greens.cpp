@@ -107,7 +107,7 @@ void EVPFFT::inverse_the_greens()
     } // end if ( kxx == 1 && kyy == 1 && kzz == 1 )
 
     for (int j = 1; j <= 3; j++) {
-      for (int i = 1; i <= 3; i++) { 
+      for (int i = 1; i <= 3; i++) {
         work(i,j,kxx,kyy,kzz)   = ddisgrad(i,j);
         workim(i,j,kxx,kyy,kzz) = ddisgradim(i,j);
       }
