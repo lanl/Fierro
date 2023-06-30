@@ -216,7 +216,7 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_element_map; //overlapping map of elements connected to the local nodes in each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
-  Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
+  Teuchos::RCP<MCONN> global_nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
@@ -259,6 +259,9 @@ public:
   int myrank; //index of this mpi rank in the world communicator
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
+  Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
 
   //! mapping used to get local ghost index from the global ID.
   //typedef ::Tpetra::Details::FixedHashTable<GO, LO, Kokkos::HostSpace::device_type>

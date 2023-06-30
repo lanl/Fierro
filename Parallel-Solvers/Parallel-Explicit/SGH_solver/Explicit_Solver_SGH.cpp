@@ -1327,7 +1327,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   int local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
@@ -1847,17 +1847,17 @@ int Explicit_Solver_SGH::check_boundary(Node_Combination &Patch_Nodes, int bc_ta
 
 void Explicit_Solver_SGH::sort_information(){
   int num_dim = simparam->num_dim;
-  sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  //sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
 
   //importer from local node distribution to sorted distribution
-  Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
+  //Tpetra::Import<LO, GO> node_sorting_importer(map, sorted_map);
 
   sorted_node_coords_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
   sorted_node_velocities_distributed = Teuchos::rcp(new MV(sorted_map, num_dim));
 
   //comms to sort
-  sorted_node_coords_distributed->doImport(*node_coords_distributed, node_sorting_importer, Tpetra::INSERT);
-  sorted_node_velocities_distributed->doImport(*node_velocities_distributed, node_sorting_importer, Tpetra::INSERT);
+  sorted_node_coords_distributed->doImport(*node_coords_distributed, *node_sorting_importer, Tpetra::INSERT);
+  sorted_node_velocities_distributed->doImport(*node_velocities_distributed, *node_sorting_importer, Tpetra::INSERT);
 
   //comms to sort FEA module related vector data
   /*
@@ -1870,7 +1870,7 @@ void Explicit_Solver_SGH::sort_information(){
   //sorted nodal density information
   if(simparam_dynamic_opt->topology_optimization_on){
     sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
-    sorted_node_densities_distributed->doImport(*design_node_densities_distributed, node_sorting_importer, Tpetra::INSERT);
+    sorted_node_densities_distributed->doImport(*design_node_densities_distributed, *node_sorting_importer, Tpetra::INSERT);
   }
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
@@ -1894,7 +1894,7 @@ void Explicit_Solver_SGH::sort_information(){
   sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
 
   //comms
-  sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
+  sorted_nodes_in_elem_distributed->doImport(*global_nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
   sorted_element_densities_distributed->doImport(*Global_Element_Densities, element_sorting_importer, Tpetra::INSERT);
   
 }
@@ -1948,7 +1948,7 @@ void Explicit_Solver_SGH::collect_information(){
   collected_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(global_reduce_element_map, max_nodes_per_element));
 
   //comms to collect
-  collected_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_collection_importer, Tpetra::INSERT);
+  collected_nodes_in_elem_distributed->doImport(*global_nodes_in_elem_distributed, element_collection_importer, Tpetra::INSERT);
 
   //collect element type data
 
@@ -1974,7 +1974,7 @@ void Explicit_Solver_SGH::comm_velocities(){
   Tpetra::Import<LO, GO> importer(map, ghost_node_map);
   
   //comms to get ghosts
-  ghost_node_velocities_distributed->doImport(*node_velocities_distributed, importer, Tpetra::INSERT);
+  ghost_node_velocities_distributed->doImport(*node_velocities_distributed, *ghost_importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   
@@ -2002,14 +2002,14 @@ void Explicit_Solver_SGH::comm_densities(){
 
   //communicate design densities
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  //Tpetra::Import<LO, GO> importer(map, all_node_map);
   
   //active view scope
   {
     const_host_vec_array node_densities_host = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   //comms to get ghosts
-  all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
+  all_node_densities_distributed->doImport(*design_node_densities_distributed, *importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   
@@ -2946,7 +2946,7 @@ void Explicit_Solver_SGH::tecplot_writer(){
 void Explicit_Solver_SGH::vtk_writer(){
     //local variable for host view in the dual view
     host_vec_array node_coords = dual_node_coords.view_host();
-    const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     int graphics_id = simparam->graphics_id;
     int num_dim = simparam->num_dim;
 
@@ -3154,7 +3154,7 @@ void Explicit_Solver_SGH::vtk_writer(){
 void Explicit_Solver_SGH::ensight_writer(){
     //local variable for host view in the dual view
     host_vec_array node_coords = dual_node_coords.view_host();
-    const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     mat_pt_t *mat_pt = simparam->mat_pt;
     int &graphics_id = simparam->graphics_id;
     real_t *graphics_times = simparam->graphics_times;

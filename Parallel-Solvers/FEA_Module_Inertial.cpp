@@ -138,7 +138,7 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
@@ -325,7 +325,7 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   const_host_vec_array all_node_densities;
   //bool nodal_density_flag = simparam->nodal_density_flag;
@@ -508,7 +508,7 @@ void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_de
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
@@ -702,7 +702,7 @@ void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_v
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   const_host_vec_array all_node_densities;
   //bool nodal_density_flag = simparam->nodal_density_flag;
@@ -896,7 +896,7 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   double inertia_center[3];
   if(simparam->enable_inertia_center[0]){
@@ -1143,7 +1143,7 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam->num_dim;
   double inertia_center[3];
   if(simparam->enable_inertia_center[0]){
@@ -1373,7 +1373,7 @@ void FEA_Module_Inertial::compute_element_volumes(){
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   int num_dim = simparam->num_dim;
   int nodes_per_elem = elem->num_basis();

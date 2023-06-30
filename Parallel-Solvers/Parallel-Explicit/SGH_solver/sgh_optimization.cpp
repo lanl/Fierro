@@ -550,6 +550,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
     Kokkos::fence();
     
     //execute solve
+    simparam->time_value = 0;
     sgh_solve();
 
 }
@@ -583,7 +584,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   size_t current_data_index, next_data_index;
   Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
   //initialize first adjoint vector at last_time_step to 0 as the terminal value
-  adjoint_vector_data[last_time_step+1]->putScalar(0);
+  (*adjoint_vector_data)[last_time_step+1]->putScalar(0);
 
   //solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
   //A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
@@ -611,21 +612,21 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
 
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
-      {
-        const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-    
-        const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+    {
+      const_vec_array previous_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+  
+      const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
-        FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
-          for (int idim = 0; idim < num_dim; idim++){
-            //cancellation of half from midpoint and 2 from adjoint equation already done
-            current_adjoint_vector(node_gid,idim) = -0.5*(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
-          } 
-        }); // end parallel for
-        Kokkos::fence();
-      } //end view scope
+      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
+        for (int idim = 0; idim < num_dim; idim++){
+          //cancellation of half from midpoint and 2 from adjoint equation already done
+          current_adjoint_vector(node_gid,idim) = -0.5*(current_velocity_vector(node_gid,idim)+previous_velocity_vector(node_gid,idim))*global_dt + previous_adjoint_vector(node_gid,idim);
+        } 
+      }); // end parallel for
+      Kokkos::fence();
+    } //end view scope
     
   }
 }
@@ -646,8 +647,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
   Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
   Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, current_phi_adjoint_vector_distributed;
   //initialize first adjoint vector at last_time_step to 0 as the terminal value
-  adjoint_vector_data[last_time_step+1]->putScalar(0);
-  phi_adjoint_vector_data[last_time_step+1]->putScalar(0);
+  (*adjoint_vector_data)[last_time_step+1]->putScalar(0);
+  (*phi_adjoint_vector_data)[last_time_step+1]->putScalar(0);
 
   //solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
   //A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
@@ -677,8 +678,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
     //view scope
     /*
     {
-      const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array previous_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
       get_force_vgradient_sgh(material,
                               mesh,
@@ -719,9 +720,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       //const_vec_array current_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       //compute gradient of force with respect to velocity
   
-      const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      const_vec_array phi_previous_adjoint_vector =  phi_adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -740,8 +741,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
     */
     //view scope
     {
-      const_vec_array previous_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array previous_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
       get_force_vgradient_sgh(material,
                               mesh,
@@ -782,9 +783,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       //const_vec_array current_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       //compute gradient of force with respect to velocity
   
-      const_vec_array previous_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      const_vec_array phi_previous_adjoint_vector =  phi_adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -867,10 +868,10 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
       {
-        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         
         FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
           size_t node_id;
@@ -979,9 +980,9 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
       {
-        //const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        //const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         //const_vec_array current_coord_vector = forward_solve_coordinate_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         //const_vec_array final_coordinates = forward_solve_coordinate_data[last_time_step+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         
@@ -1090,10 +1091,10 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
       {
-        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         
         FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
           size_t node_id;
@@ -1169,10 +1170,10 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
       {
-        const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_velocity_vector = forward_solve_velocity_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         
         FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
           real_t lambda_dot;
@@ -1230,8 +1231,8 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
   //compute adjoint vector for this data point; use velocity midpoint
   //view scope
   {
-    const_vec_array current_velocity_vector = forward_solve_velocity_data[0]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-    const_vec_array current_adjoint_vector = adjoint_vector_data[0]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+    const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[0]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+    const_vec_array current_adjoint_vector = (*adjoint_vector_data)[0]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
     
     FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
       real_t lambda_dot;
@@ -1298,9 +1299,9 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
       {
-        //const_vec_array current_velocity_vector = forward_solve_velocity_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_adjoint_vector = adjoint_vector_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_adjoint_vector = adjoint_vector_data[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        //const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         //const_vec_array current_coord_vector = forward_solve_coordinate_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         //const_vec_array final_coordinates = forward_solve_coordinate_data[last_time_step+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         CArrayKokkos<real_t> inner_products(num_nodes_in_elem);
@@ -1324,7 +1325,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
               node_id = nodes_in_elem(elem_id, ifill);
               for(int idim=0; idim < num_dim; idim++){
                 //inner_product += 0.0001*current_element_adjoint(ifill,idim);
-                inner_product += corner_force_design_gradient(ifill,idim,ifill)*current_element_adjoint(ifill,idim);
+                inner_product += corner_force_design_gradient(elem_id,ifill,idim,ifill)*current_element_adjoint(ifill,idim);
                 //inner_product += 0.0001;
               }
             }
@@ -1332,7 +1333,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
             for (int inode = 0; inode < num_nodes_in_elem; inode++){
               //compute gradient of local element contribution to v^t*M*v product
               corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = -inner_product*global_dt;
+              corner_value_storage(corner_id) = -inner_product*global_dt/(double)num_nodes_in_elem;
             }
           }
           else{
@@ -1342,7 +1343,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
                 node_id = nodes_in_elem(elem_id, ifill);
                 for(int idim=0; idim < num_dim; idim++){
                   //inner_product += 0.0001*current_element_adjoint(ifill,idim);
-                  inner_products(idesign) += corner_force_design_gradient(ifill,idim,idesign)*current_element_adjoint(ifill,idim);
+                  inner_products(idesign) += corner_force_design_gradient(elem_id,ifill,idim,idesign)*current_element_adjoint(ifill,idim);
                   //inner_product += 0.0001;
                 }
               }
@@ -1371,8 +1372,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
         
       } //end view scope
 
-      
-    
   }
 
 }
@@ -1382,7 +1381,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
 ------------------------------------------------------------------------- */
 void FEA_Module_SGH::init_assembly(){
   int num_dim = simparam->num_dim;
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  //const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   Gradient_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Gradient_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
@@ -1416,7 +1415,7 @@ void FEA_Module_SGH::init_assembly(){
 
   //initialize nall arrays
   //initialize nlocal arrays
-  FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
+  FOR_ALL_CLASS(inode, 0, nall_nodes, {
     node_indices_used(inode) = 0;
     column_index(inode) = 0;
   }); // end parallel for

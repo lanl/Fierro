@@ -55,6 +55,7 @@
 #include <Tpetra_CrsMatrix.hpp>
 #include <Kokkos_Core.hpp>
 #include "Tpetra_Details_DefaultTypes.hpp"
+#include "Tpetra_Import.hpp"
 #include <map>
 
 using namespace mtr;
@@ -140,6 +141,8 @@ public:
 
   virtual void repartition_nodes();
 
+  virtual void comm_importer_setup();
+
   virtual void comm_coordinates();
 
   virtual void tecplot_writer() {}
@@ -162,6 +165,9 @@ public:
   int myrank; //index of this mpi rank in the world communicator
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
+  Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
 
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters *simparam;
@@ -204,7 +210,7 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_element_map; //sorted contiguous map of element indices owned by each rank used in parallel IO
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
-  Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
+  Teuchos::RCP<MCONN> global_nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> ghost_node_coords_distributed;
