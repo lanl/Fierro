@@ -539,10 +539,10 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> ghost_node_masses_distributed;
   Teuchos::RCP<MV> adjoint_vector_distributed;
   Teuchos::RCP<MV> phi_adjoint_vector_distributed;
-  std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
-  std::vector<Teuchos::RCP<MV>> forward_solve_coordinate_data;
-  std::vector<Teuchos::RCP<MV>> adjoint_vector_data;
-  std::vector<Teuchos::RCP<MV>> phi_adjoint_vector_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> adjoint_vector_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> phi_adjoint_vector_data;
   Teuchos::RCP<MV> force_gradient_design;
   Teuchos::RCP<MV> force_gradient_position;
   Teuchos::RCP<MV> force_gradient_velocity;
