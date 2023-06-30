@@ -74,7 +74,8 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
       }
     }
 
-    elem_evpfft[elem_gid]->solve(Fvel_grad.pointer(), Fstress.pointer(), dt_rk, cycle, elem_gid);
+    double udotAccTh = 0.0005; // Linear Aprox. Threshold
+    elem_evpfft[elem_gid]->solve(Fvel_grad.pointer(), Fstress.pointer(), dt_rk, cycle, elem_gid, udotAccTh);
 
     // Transpose stress. Not needed, stress is symmetric. But why not.
     for (int i = 0; i < 3; i++) {

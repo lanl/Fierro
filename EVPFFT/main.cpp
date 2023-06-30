@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
 
 #if BUILD_EVPFFT_FIERRO
-void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid)
+void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid, real_t udotAccThIn)
 {
 #if 0
 //#ifndef NDEBUG
@@ -54,6 +54,7 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
 
   ViewFMatrix vel_grad_view (vel_grad,3,3);
   ViewFMatrix stress_view (stress,3,3);
+  double udotAccTh = udotAccThIn;
 
 
 //static std::ofstream myfile;
@@ -112,7 +113,6 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
 //myfile << vm(strain.pointer());
 
   // Linear extrapolation
-  double udotAccTh = 0.0005;
   if (active == true and udotAccVm < udotAccTh) {
 
     // calculate M66
