@@ -112,7 +112,7 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
 //myfile << vm(strain.pointer());
 
   // Linear extrapolation
-  double udotAccTh = 0.001;
+  double udotAccTh = 0.0005;
   if (active == true and udotAccVm < udotAccTh) {
 
     // calculate M66
