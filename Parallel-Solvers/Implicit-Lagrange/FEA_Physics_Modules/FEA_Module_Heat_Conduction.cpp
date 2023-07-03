@@ -2615,10 +2615,10 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   lambda->scale(1/direction_vec_reduce);
   
   //import for displacement of ghosts
-  Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+  //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
 
   //comms to get temperatures on all node map
-  all_adjoint_temperatures_distributed->doImport(*adjoint_temperatures_distributed, ghost_displacement_importer, Tpetra::INSERT);
+  all_adjoint_temperatures_distributed->doImport(*adjoint_temperatures_distributed, *importer, Tpetra::INSERT);
   host_vec_array all_adjoint = all_adjoint_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //*fos << "ALL ADJOINT" << std::endl;
   //all_adjoint_distributed->describe(*fos,Teuchos::VERB_EXTREME);
@@ -3687,7 +3687,7 @@ int FEA_Module_Heat_Conduction::solve(){
   Tpetra::Import<LO, GO> ghost_temperature_importer(local_dof_map, all_dof_map);
 
   //comms to get temperatures on all node map
-  all_node_temperatures_distributed->doImport(*node_temperatures_distributed, ghost_temperature_importer, Tpetra::INSERT);
+  all_node_temperatures_distributed->doImport(*node_temperatures_distributed, *importer, Tpetra::INSERT);
 
   //reinsert global conductivity values corresponding to BC indices to facilitate heat potential calculation
   if(matrix_bc_reduced){

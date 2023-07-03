@@ -4111,10 +4111,10 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   lambda->scale(1/direction_vec_reduce);
   
   //import for displacement of ghosts
-  Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+  //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
 
   //comms to get displacements on all node map
-  all_adjoint_displacements_distributed->doImport(*adjoint_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
+  all_adjoint_displacements_distributed->doImport(*adjoint_displacements_distributed, *dof_importer, Tpetra::INSERT);
   host_vec_array all_adjoint = all_adjoint_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //*fos << "ALL ADJOINT" << std::endl;
   //all_adjoint_distributed->describe(*fos,Teuchos::VERB_EXTREME);
@@ -5533,10 +5533,10 @@ int FEA_Module_Elasticity::solve(){
   //*fos << std::endl;
   
   //import for displacement of ghosts
-  Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+  //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
 
   //comms to get displacements on all node map
-  all_node_displacements_distributed->doImport(*node_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
+  all_node_displacements_distributed->doImport(*node_displacements_distributed, *dof_importer, Tpetra::INSERT);
 
   //reinsert global stiffness values corresponding to BC indices to facilitate strain energy calculation
   if(matrix_bc_reduced){

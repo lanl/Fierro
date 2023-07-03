@@ -3059,10 +3059,10 @@ void Implicit_Solver::init_design(){
 
     //communicate ghost information to the all vector
     //create import object using local node indices map and all indices map
-    Tpetra::Import<LO, GO> importer(map, all_node_map);
+    //Tpetra::Import<LO, GO> importer(map, all_node_map);
 
     //comms to get ghosts
-    all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
+    all_node_densities_distributed->doImport(*design_node_densities_distributed, *importer, Tpetra::INSERT);
 
     //debug print
     //std::ostream &out = std::cout;
