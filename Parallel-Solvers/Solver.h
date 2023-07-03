@@ -168,6 +168,7 @@ public:
   Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
   Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
   Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> dof_importer; //ghost dof comms
 
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters *simparam;

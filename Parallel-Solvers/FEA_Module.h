@@ -262,6 +262,7 @@ public:
   Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
   Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
   Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> dof_importer; //ghost dof comms
 
   //! mapping used to get local ghost index from the global ID.
   //typedef ::Tpetra::Details::FixedHashTable<GO, LO, Kokkos::HostSpace::device_type>
