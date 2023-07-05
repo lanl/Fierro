@@ -26,6 +26,7 @@ struct FierroBackend {
         auto result = std::vector<std::filesystem::path>();
 
         size_t i = 0;
+        // Windows uses ";" as a delimeter, but we don't support windows yet.
         while ((i = path.find(":")) != std::string::npos) {
             result.push_back(std::filesystem::path(path.substr(0, i)));
             path.erase(0, i + 1);
