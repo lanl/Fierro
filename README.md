@@ -1,5 +1,4 @@
 # Fierro
-
 **Fierro** (LANL code number C21030) is a modern C++ code designed to simulate quasi-static solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, which have meshes with constant mass elements that move with the material, or with Eulerian methods, which have stationary meshes.  **Fierro** is designed to aid a) material model research that has historically been done using commercial implicit and explicit finite element codes, b) numerical methods research, and c) computer science research.  The linear Lagrangian finite element methods in **Fierro** supports user developed material models.  **Fierro** is built on the **ELEMENTS** library that supports a diverse suite of element types, including high-order elements, and quadrature rules. The mesh class within the **ELEMENTS** library is designed for efficient calculations on unstructured meshes and to minimize memory usage.  **Fierro** is designed to readily accommodate a range of numerical methods including continuous finite element, finite volume, and discontinuous Galerkin methods.  **Fierro** is designed to support explicit and implicit time integration methods as well as implicit optimization methods.  
 
 
@@ -10,8 +9,7 @@
 **Fierro** has an established conservative low-order Lagrangian finite element method, a low-order Lagrangian cell-centered finite volume method, and an arbitrary-order Lagrangian Discontinuous Galerkin method for solving the governing equations (e.g., mass, momentum, and energy evolution equations) for compressible material dynamics using unstructured hexahedral meshes.  These methods are combined with a multidirectional approximate Riemann solver (MARS) for improved accuracy on smooth flows and stable solutions near velocity discontinuities and large gradients in a flow. **Fierro** is designed for both low and high-order Lagrangian methods research and development but other types of numerical methods can be readily added to the code.  Likewise, other high-order methods can be studied within the code because it is built upon the **ELEMENTS** library that supports high-order elements and high-order quadrature rules.  Numerical methods are being added to **Fierro** to simulate quasi-static solid mechanics problems.  Likewise, direct Eulerian hydrodynamic methods can be investigated using **Fierro**.
 
 ## Temporal discretization methods 
-**Fierro** supports a range of published multi-step time integration methods.  The code has an explicit multi-step Runge Kutta time integration method.  Implicit time integration methods can be implemented in **Fierro**.
-
+**Fierro** supports a range of published multi-step time integration methods. The code has an explicit multi-step Runge Kutta time integration method. Implicit time integration methods can be implemented in **Fierro**.
 
 # Usage
 ## Anaconda
@@ -36,7 +34,7 @@ Steps:
 3. [Clone the code](#cloning-the-code)
 4. [Build the code](#building-the-code)
 
-Now, if all went correctly, you should be able to run your custom **Fierro** build by calling the executable located at `Fierro/build/bin/fierro`. 
+Now, if all went correctly, you should be able to run your custom **Fierro** build by calling the executable located at `Fierro/build/bin/fierro`. The executables can be installed into your system directories with the `make install` command as well.
 
 # Cloning the code
 If the user has set up ssh keys with GitHub, type
@@ -49,23 +47,26 @@ git clone --recursive https://github.com/lanl/Fierro.git
 ```
 
 # Building the code
-Building the code from source allows you to compile with more targeted hardware optimizations that could offer a significantly faster executable. 
-The user should create a new directory where the compiled code will reside. 
+Building the code from source allows you to compile with more targeted hardware optimizations that could offer a potentially faster executable. 
+To build it yourself, run the following from the root directory. The native CPU architecture will automatically be taken into account. 
 ```
 mkdir build
 cd build
-cmake .. -DBUILD_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON
+cmake .. -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON
 make -j
 ```
 
+GPU hardware will be leveraged according to the distribution of Trilinos that **Fierro** is built against.
 You are welcome to only compile one solver or the other, and the one(s) that you did compile will be available through the CLI.
 
 ## Building dependencies
-**Fierro** depends on both ELEMENTS and Trilinos. If you are building **Fierro** for hardware optimizations, you should also also build ELEMENTS from source. ELEMENTS is included in the **Fierro** source distribution and building ELEMENTS is enabled by default.
+**Fierro** depends on both ELEMENTS and Trilinos. If you are building **Fierro** for hardware optimizations, you should also also build ELEMENTS from source. ELEMENTS is included in the **Fierro** source distribution and building ELEMENTS is enabled by default when building **Fierro**.
 
-As for Trilinos, we recommend installing the Anaconda package for the desired build into a new Anaconda environment to satisfy **Fierro**'s dependency rather than building it from source. If you do wish to build it from source, however, sample build scripts for Trilinos can be found in `Fierro/Trilinos-Build-Scripts`. 
+As for Trilinos, we recommend installing the Anaconda package for the desired build into a new Anaconda environment to satisfy **Fierro**'s dependency rather than building it from source. If you do wish to build it from source, however, sample build scripts for Trilinos can be found in `Fierro/Trilinos-Build-Scripts`. Build scripts for all Anaconda packages can be found in `Fierro/Anaconda-Packages/`.
 
-## Building the explicit Lagrangian methods with Kokkos
+## Alternative Build Workflows
+In addition to the primary build workflow described above, there are build scripts for a variety of alternative workflows. These scripts can be found under `Fierro/scripts`.
+### Building the explicit Lagrangian methods with Kokkos
 Explicit Lagrangian codes are being added to the repository that are written using MATAR+Kokkos and run with fine-grained parallellism on multi-core CPUs and GPUs.  Build scripts are provided for each Lagrangian code, and those scripts follow those used in the [MATAR](https://github.com/lanl/MATAR/) GitHub repository. The scripts to build the Lagrangian codes (that use MATAR+Kokkos) are in the scripts folder.  The user must update the modules loaded by the build scripts (for the compiler etc.), and then type
 ```
 source build-it.sh
@@ -77,15 +78,7 @@ https://github.com/kokkos/kokkos/wiki/Compiling
 If the scripts fail to build a Lagrangian code, then carefully review the modules used and the computer architecture settings.  A more lenghtly discussion of the build scripts is provided in the MATAR GitHub repository. 
 
 
-## Running the Fierro code using explicit Lagrangian methods 
-To run the fierro exectuable (see subsection above here to make the executable) go to bin/test and type
-```
-./fierro my_mesh.geo
-```
-The user must supply a mesh when executing the code, a range of meshes are provided in the meshes/ folder in the repository.
-
-
-## Updating submodules
+### Updating submodules
 The ELEMENTS library and MATAR library can be updated to the newest release using
 ```
 git submodule update --remote --merge

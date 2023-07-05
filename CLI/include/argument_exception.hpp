@@ -6,13 +6,10 @@
 
 class ArgumentException: public std::exception {
 private:
-    std::string message;
 public:
+    std::string message;
     ArgumentException(std::string msg) : message(msg) {
         this->message = msg;
-    }
-    char* what() {
-        return (char*)("Argument Error: " + this->message).c_str();
     }
 };
 #endif

@@ -36,12 +36,8 @@ struct ParallelBackend: public FierroBackend {
         std::string msg = "";
         auto parser = this->command;
 
-        if (parser->is_used("mesh_file") && !file_exists(parser->get<std::string>("mesh_file"))) {
-            msg = "Unable to find mesh file: " + parser->get<std::string>("mesh_file");
-        } else if (parser->is_used("config") && !file_exists(parser->get<std::string>("config"))) {
+        if (!file_exists(parser->get<std::string>("config"))) {
             msg = "Unable to find configuration: " + parser->get<std::string>("config");
-        } else if (parser->is_used("config") == parser->is_used("mesh_file")) {
-            msg = "Use exactly one of `--config` or `--mesh_file.`";
         }
         
         if (msg.length() > 0) {
@@ -58,41 +54,18 @@ struct ParallelBackend: public FierroBackend {
     */
     int invoke() {
         auto err = this->validate_arguments();
-        if (err.has_value()) throw new ArgumentException(err.value());
+        if (err.has_value()) throw ArgumentException(err.value());
 
-        std::string input_file;
-        if (this->command->is_used("config")) {
-            input_file = this->command->get<std::string>("config");
-        } else {
-            input_file = this->command->get("mesh_file");
-        }
-        
+        std::string input_file = this->command->get<std::string>("config");
         std::string sys_command = this->name + " " + input_file;
-
-        // If the user gives us a number of processes,
-        // we should set up a couple of environment variables and invoke mpi.
-        if (this->command->is_used("np")) {
-            system("export OMP_PROC_BIND=spread");
-            system("export OMP_NUM_THREADS=1   ");
-            system("export OMP_PLACES=threads  ");
-            sys_command = "mpirun -np " + this->command->get<std::string>("np") + " --bind-to core " + sys_command;
-        }
 
         return system(sys_command.c_str());
     }
 
     void add_common_options() {
-        this->command->add_argument("-m", "--mesh_file")
-            .help("The `.geo` file to run fierro with. Mutually exclusive with `--config.`")
+        this->command->add_argument("config")
+            .help("The `.yaml` configuration to run fierro with.`")
             .action(absolute_fp);
-
-        this->command->add_argument("-c", "--config")
-            .help("The `.yaml` configuration to run fierro with. Mutually exclusive with `--mesh_file.`")
-            .action(absolute_fp);
-
-        this->command->add_argument("-np")
-            .help("Number of processes to run. Passed to `mpirun <executable> -np {v}`.")
-            .default_value("1"); // This is an int, but were just going to put it back into a str anyway.
     }
 };
 

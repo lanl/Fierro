@@ -81,8 +81,8 @@ int main(int argc, char** argv) {
                 [&]() {
                     try {
                         return backend->invoke();
-                    } catch (ArgumentException& e) {
-                        std::cerr << e.what() << std::endl;
+                    } catch (ArgumentException e) {
+                        std::cerr << e.message << std::endl;
                         std::cerr << parser;
                         std::exit(1);
                     }
