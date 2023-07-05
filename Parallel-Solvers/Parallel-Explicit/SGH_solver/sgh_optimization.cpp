@@ -741,9 +741,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
     */
     //view scope
     {
+      
+      //set velocity and position for this timestep
       const_vec_array previous_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-
+      
       const_vec_array previous_coordinate_vector = (*forward_solve_coordinate_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       const_vec_array current_coordinate_vector = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
@@ -756,8 +758,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         }
       });
       Kokkos::fence();
-
-      //set velocity and position for this timestep
 
       get_force_vgradient_sgh(material,
                               mesh,
