@@ -11,16 +11,19 @@ source:
   path: ../../.. # Back to Fierro/
 
 build:
-  number: 10
+  number: 1
+  script_env:
+    - PLATFORM={{ target_platform }}
 
 requirements:
   build:
     - cmake >=3.10.0
     - {{ compiler('c') }} ={{ compiler_version }}
     - {{ compiler('cxx') }} ={{ compiler_version }}
+    - openmpi
   host:
     - _openmp_mutex
-    - openmpi  # [unix]
+    - openmpi
     - fierro-trilinos-cpu
     - elements
   run:

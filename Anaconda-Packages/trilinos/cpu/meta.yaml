@@ -10,7 +10,9 @@ source:
   md5: 24d973894e2e334c6ac9436d8b16f7cc
 
 build:
-  number: 9
+  number: 1
+  script_env:
+    - PLATFORM={{ target_platform }}
 
 requirements:
   build:
@@ -18,6 +20,7 @@ requirements:
     - {{ compiler('c') }} ={{ compiler_version }}
     - {{ compiler('cxx') }} ={{ compiler_version }}
     - {{ compiler('fortran') }} ={{ compiler_version }}
+    - openmpi
   host:
     - _openmp_mutex
     - libblas
@@ -31,8 +34,6 @@ requirements:
     - libblas
     - {{ compiler('c') }} ={{ compiler_version }}
     - {{ compiler('cxx') }} ={{ compiler_version }}
-  
-#TODO: Add tests
 
 about:
   home: https://trilinos.org

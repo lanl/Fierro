@@ -1,11 +1,6 @@
 export SRC_DIR=$(pwd)
-echo $SRC_DIR
 mkdir -p build
 cd build
-
-if [ $(uname) == Darwin ]; then
-    export CXXFLAGS="$CXXFLAGS -stdlib=libc++"
-fi
 
 export MPI_FLAGS="--allow-run-as-root"
 
@@ -13,7 +8,6 @@ if [ $(uname) == Linux ]; then
     export MPI_FLAGS="$MPI_FLAGS;-mca;plm;isolated"
 fi
 
-CMAKE_PLATFORM_FLAGS+=(-DCMAKE_TOOLCHAIN_FILE="${RECIPE_DIR}/../../cross-linux.cmake")
 # Disable LIBDL because it installs into _h_env/[sysroot].
 # This doesn't technically contain the CMAKE_INSTALL_PREFIX, so it doesn't get patched when installing.
 # Should be fine, since libdl is now just a placeholder for modern C compilers.
@@ -22,13 +16,7 @@ CMAKE_PLATFORM_FLAGS+=(-DCMAKE_TOOLCHAIN_FILE="${RECIPE_DIR}/../../cross-linux.c
 # To compile for shared libs, ensure that -fno-visibility-inlines-hidden is set.
 # The default "-fvisibility-inlines-hidden" will not-export class-inlined functions. 
 # This causes certain Kokkos symbols to not be loaded correctly.
-# Also set the architecture to something more generic than -march=[native|nocona].
-
-# These flag variables are set by anaconda.
-x86_64_flags=" -fno-visibility-inlines-hidden -march=x86-64 -mtune=generic -fno-tree-vectorize "
-CXXFLAGS+=$x86_64_flags 
-CFLAGS+=$x86_64_flags
-FFLAGS+=$x86_64_flags
+source "${RECIPE_DIR}/../../add-compiler-flags.sh"
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
@@ -50,6 +38,19 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D Trilinos_ENABLE_ALL_PACKAGES=OFF \
       -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF \
       -D Trilinos_ENABLE_TESTS=OFF \
-      $SRC_DIR
+      -D MPI_C_COMPILER="${BUILD_PREFIX}/bin/mpicc" \
+      -D MPI_CXX_COMPILER="${BUILD_PREFIX}/bin/mpicxx" \
+      $CMAKE_ARGS \
+      $SRC_DIR \
+      -D HAVE_TEUCHOS_LAPACKLARND=0 \
+      -D HAVE_TEUCHOS_BLASFLOAT=0 \
+      -D HAVE_GCC_ABI_DEMANGLE=0 \
+      -D KOKKOSKERNELS_TPL_BLAS_RETURN_COMPLEX_EXITCODE=0 \
+      -D VECTOR_ARCH_FLAGS="${VECTOR_ARCH_FLAGS}"
+
+
+# These *=0 variables are set to override the 
+# exit codes of certain environment-probing binaries.
+# This is necessary when cross-compiling, and essentially ignores those tests.
 
 make -j 10 install
