@@ -99,3 +99,13 @@ boundary_condition_options:
         surface: z_plane
         value: 1.2
         condition_type: reflected
+
+optimization_options:
+    optimization_process: topology_optimization
+    optimization_objective: minimize_kinetic_energy
+    num_optimization_constraint: 1
+    constraint_1:
+        type: mass
+        relation: equality
+        value: 0.15
+    
