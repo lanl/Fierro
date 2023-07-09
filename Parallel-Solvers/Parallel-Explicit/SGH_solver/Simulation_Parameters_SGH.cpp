@@ -828,29 +828,25 @@ void Simulation_Parameters_SGH::apply_settings(){
         index = std::to_string(imat+1);
         material_name = material_base + index;
 
-        //eos model
+        //eos model; option not erased on readin here for device setting later
         current_option = material_name+":eos_model";
         if(set_options.find(current_option)!=set_options.end()){
             if(set_options[current_option]=="ideal_gas"){
                 material.host(imat).eos_model = ideal_gas;
-                set_options.erase(current_option);
             }
             else if(set_options[current_option]=="user_eos_model"){
                 material.host(imat).eos_model = user_eos_model;
-                set_options.erase(current_option);
             }
         }
 
-        //strength model
+        //strength model; option not erased on readin here for device setting later
         current_option = material_name+":strength_model";
         if(set_options.find(current_option)!=set_options.end()){
             if(set_options[current_option]=="none"){
                 material.host(imat).strength_model = NULL;
-                set_options.erase(current_option);
             }
             else if(set_options[current_option]=="user_strength_model"){
                 material.host(imat).strength_model = user_strength_model;
-                set_options.erase(current_option);
             }
         }
 
@@ -1148,7 +1144,7 @@ void Simulation_Parameters_SGH::apply_settings(){
     state_vars.update_device();
     global_vars.update_device();
 
-    //set eos pointer
+    //set eos and strength pointers; THIS IS HERE BECAUSE UPDATE DEVICE WOULD CORRUPT WITHOUT OPERATOR OVERLOADS ON MATERIAL_T!
     // --- set of material specifications ---
     for(int imat = 0; imat < num_materials; imat++){
         //readin material data
@@ -1162,6 +1158,30 @@ void Simulation_Parameters_SGH::apply_settings(){
                 RUN_CLASS({
                     material(imat).eos_model = ideal_gas;
                 });
+                set_options.erase(current_option);
+            }
+            else if(set_options[current_option]=="user_eos_model"){
+                RUN_CLASS({
+                    material(imat).eos_model = user_eos_model;
+                });
+                set_options.erase(current_option);
+            }
+        }
+
+        //strength model; option not erased on readin here for device setting later
+        current_option = material_name+":strength_model";
+        if(set_options.find(current_option)!=set_options.end()){
+            if(set_options[current_option]=="none"){
+                RUN_CLASS({
+                    material(imat).strength_model = NULL;
+                });
+                set_options.erase(current_option);
+            }
+            else if(set_options[current_option]=="user_strength_model"){
+                RUN_CLASS({
+                    material(imat).strength_model = user_strength_model;
+                });
+                set_options.erase(current_option);
             }
         }
     }
