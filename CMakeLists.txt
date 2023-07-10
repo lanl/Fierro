@@ -67,12 +67,14 @@ if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   find_package(MPI REQUIRED)
   find_package(Trilinos REQUIRED)
 
-  if(NOT DISTRIBUTION)
-    # Make sure to use same compilers and flags as Trilinos
+  # Assume if the CXX compiler exists, the rest do too.
+  if (EXISTS ${Trilinos_CXX_COMPILER})
     set(CMAKE_CXX_COMPILER ${Trilinos_CXX_COMPILER})
     set(CMAKE_C_COMPILER ${Trilinos_C_COMPILER})
     set(CMAKE_Fortran_COMPILER ${Trilinos_Fortran_COMPILER})
-
+  endif()
+  if(NOT DISTRIBUTION)
+    # Make sure to use same compilers and flags as Trilinos
     set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
     set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
     set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
