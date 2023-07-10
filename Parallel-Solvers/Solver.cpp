@@ -2332,6 +2332,7 @@ void Solver::comm_importer_setup(){
   //create import object using local node indices map and ghost indices map
   importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(map, all_node_map));
   ghost_importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(map, ghost_node_map));
+  dof_importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(local_dof_map, all_dof_map));
   
   //output map and importers
   sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
