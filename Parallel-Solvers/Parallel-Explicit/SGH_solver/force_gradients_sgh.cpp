@@ -363,6 +363,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
             for (int dim = 0; dim < num_dims; dim++){
 
                 corner_vector_storage(corner_gid, dim) = -0.00001;
+                //corner_vector_storage(corner_gid, dim) = 0;
 
             } // end loop over dimension
 
@@ -746,6 +747,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
             for (int dim = 0; dim < num_dims; dim++){
 
                 corner_vector_storage(corner_gid, dim) = -0.0001;
+                //corner_vector_storage(corner_gid, dim) = 0;
 
             } // end loop over dimension
 
