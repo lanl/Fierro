@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.17)
 
 # CMAKE_BUILD_TYPE:
 # 1. Release: `-O3 -DNDEBUG`
@@ -28,8 +28,8 @@ else()
 endif()
 
 # chose matrix_inverse routine to use. Default is GJE_MATRIX_INVERSE
-set (LU_MATRIX_INVERSE ON)
-set (GJE_MATRIX_INVERSE OFF)
+set (LU_MATRIX_INVERSE OFF)
+set (GJE_MATRIX_INVERSE ON)
 
 #===Max NR iterations allowed per voxel
 #==Note: it may happen that for higher 
@@ -100,7 +100,9 @@ set(This evpfft)
 #if (KOKKOS)
   add_definitions(-DHAVE_KOKKOS=1)
 
-  #find_package(Kokkos REQUIRED)
+  if (NOT BUILD_EVPFFT_FIERRO)
+    find_package(Kokkos REQUIRED)
+  endif()
 
 
   set( Sources
@@ -136,12 +138,12 @@ set(This evpfft)
 
   if (BUILD_EVPFFT_FIERRO)
     add_library(${This} STATIC ${Sources})
+    target_link_libraries(${This} matar ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
   else ()
     project (${This})
     add_executable(${This} ${Sources})
+    target_link_libraries(${This} Kokkos::kokkos)
   endif ()
-
-  target_link_libraries(${This} matar ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 
   if (USE_FFTW)
     add_definitions(-DUSE_FFTW=1)

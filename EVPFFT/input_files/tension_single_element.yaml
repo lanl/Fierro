@@ -3,6 +3,7 @@ solver_type: SGH
 
 solver_options:
     num_dims: 3
+    rk_num_stages: 1
     mesh_file_format: ensight
     mesh_file_name: /vast/home/cyenusah/github/Fierro/EVPFFT/input_files/mesh_single_element.geo
     time_variables:
@@ -14,7 +15,7 @@ solver_options:
         cycle_stop: 200000000
 
 output_options:
-  graphics_step: 1.0e+3  #[s]
+  graphics_step: 1.0e+3  #[ms]
 
 material_options:
     num_materials: 1

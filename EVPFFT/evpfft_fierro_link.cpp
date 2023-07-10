@@ -62,7 +62,27 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                            const size_t cycle)
 {
     real_t dt_rk = dt; // since using rk_num_stages = 1
-    elem_evpfft[elem_gid]->solve(&vel_grad(0,0), &elem_stress.host(1,elem_gid,0,0), dt_rk, cycle, elem_gid);
+
+    // Note EVPFFT uses F-layout while Fierro uses C-layout
+    FArray <double> Fvel_grad(3,3);
+    FArray <double> Fstress(3,3);
+    // Transpose vel_grad
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        Fvel_grad(i,j) = vel_grad(i,j);
+        Fstress(i,j) = elem_stress.host(1,elem_gid,i,j);
+      }
+    }
+
+    double udotAccTh = 0.001; // Linear Aprox. Threshold
+    elem_evpfft[elem_gid]->solve(Fvel_grad.pointer(), Fstress.pointer(), dt_rk, cycle, elem_gid, udotAccTh);
+
+    // Transpose stress. Not needed, stress is symmetric. But why not.
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        elem_stress.host(1,elem_gid,i,j) = Fstress(i,j);
+      }
+    }
 
     // write into elem_state_vars for output
     // evm,evmp,dvm,dvmp,svm
