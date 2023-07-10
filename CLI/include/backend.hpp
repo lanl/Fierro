@@ -24,6 +24,8 @@ struct FierroBackend {
     bool exists() {
         std::string path = std::getenv("PATH");
         auto result = std::vector<std::filesystem::path>();
+        result.push_back(std::filesystem::canonical("/proc/self/exe").parent_path());
+        result.push_back(std::filesystem::path("."));
 
         size_t i = 0;
         // Windows uses ";" as a delimeter, but we don't support windows yet.
