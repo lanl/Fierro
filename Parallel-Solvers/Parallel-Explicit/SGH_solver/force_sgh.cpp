@@ -414,15 +414,15 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
     for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
 
         const size_t num_dims = 3;
-        size_t mat_id = elem_mat_id(elem_gid);
+        size_t mat_id = elem_mat_id.host(elem_gid);
 
         // hypo elastic plastic model
-        if(material(mat_id).strength_type == model::hypo){
+        if(material.host(mat_id).strength_type == model::hypo){
 
-            if(material(mat_id).strength_run_location == model_run_location::host){
+            if(material.host(mat_id).strength_run_location == model_run_location::host){
 
                 // cut out the node_gids for this element
-                ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
+                ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem.host(elem_gid, 0), 8);
 
                 // cut out vel_grad 
                 ViewCArrayKokkos <double> vel_grad(&elem_vel_grad.host(elem_gid,0,0), num_dims, num_dims);
