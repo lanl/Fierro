@@ -155,6 +155,8 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
 
 Explicit_Solver_SGH::~Explicit_Solver_SGH(){
    delete simparam;
+   delete simparam_dynamic_opt;
+   delete mesh;
    delete ref_elem;
    delete element_select;
    if(myrank==0)
