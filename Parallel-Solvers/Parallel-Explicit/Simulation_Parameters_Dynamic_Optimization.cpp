@@ -180,7 +180,7 @@ void Simulation_Parameters_Dynamic_Optimization::apply_settings(){
        set_options.erase("optimization_options:optimization_objective");
     }
     
-    int num_constraints;
+    int num_constraints = 0;
     if(set_options.find("optimization_options:num_optimization_constraint")!=set_options.end()){
        num_constraints = std::stoi(set_options["optimization_options:num_optimization_constraint"]);
        set_options.erase("optimization_options:num_optimization_constraint");
