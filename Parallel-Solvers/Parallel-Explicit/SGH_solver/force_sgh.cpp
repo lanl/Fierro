@@ -2,7 +2,6 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
-#include "Simulation_Parameters_Elasticity.h"
 
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
