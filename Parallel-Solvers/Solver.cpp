@@ -92,6 +92,10 @@ Solver::Solver(){
   setup_flag = finalize_flag = 0;
   communication_time = dev2host_time = host2dev_time = 0;
   last_print_step = -1;
+
+  //FEA module data init
+  nfea_modules = 0;
+  displacement_module = -1;
 }
 
 void Solver::exit_solver(int status){
@@ -101,7 +105,14 @@ void Solver::exit_solver(int status){
   exit(status);
 }
 
-Solver::~Solver(){}
+Solver::~Solver(){
+  
+  delete simparam;
+  //destroy FEA modules
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    delete fea_modules[imodule];
+  }
+}
 
 /* ----------------------------------------------------------------------
    Read Ensight format mesh file

@@ -145,16 +145,11 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   (*fos).setOutputToRootOnly(0);
 
-  //FEA module data init
-  nfea_modules = 0;
-  displacement_module = -1;
-
   //file readin parameter
   active_node_ordering_convention = ENSIGHT;
 }
 
 Explicit_Solver_SGH::~Explicit_Solver_SGH(){
-   delete simparam;
    delete simparam_dynamic_opt;
    delete mesh;
    delete ref_elem;
