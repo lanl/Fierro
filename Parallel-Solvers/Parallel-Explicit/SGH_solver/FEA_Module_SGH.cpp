@@ -887,7 +887,7 @@ void FEA_Module_SGH::setup(){
         // parallel loop over elements in mesh
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
 
-            const size_t rk_level = 1;
+            const size_t rk_level = rk_num_stages - 1;
 
             // calculate the coordinates and radius of the element
             double elem_coords[3]; // note:initialization with a list won't work
@@ -1007,7 +1007,7 @@ void FEA_Module_SGH::setup(){
                                            global_vars,
                                            elem_sspd,
                                            elem_den(elem_gid),
-                                           elem_sie(1,elem_gid));
+                                           elem_sie(rk_level,elem_gid));
 					    
                 
                 // loop over the nodes of this element and apply velocity
