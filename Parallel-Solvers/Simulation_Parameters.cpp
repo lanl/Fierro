@@ -57,6 +57,8 @@ Simulation_Parameters::Simulation_Parameters(){
   enable_inertia_center.push_back(false);
   enable_inertia_center.push_back(false);
   moment_of_inertia_center = std::vector<double>(3);
+  output_file_format = "vtk";
+  timer_output_level = "standard";
 
   //MPI info
   world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
@@ -353,6 +355,20 @@ void Simulation_Parameters::apply_settings(){
   if(set_options.find(current_option)!=set_options.end()){
       //set parameter here
       mesh_file_format = set_options[current_option];
+      set_options.erase(current_option);
+  }
+
+  current_option = "solver_options:output_file_format"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      output_file_format = set_options[current_option];
+      set_options.erase(current_option);
+  }
+
+  current_option = "solver_options:timer_output_level"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      timer_output_level = set_options[current_option];
       set_options.erase(current_option);
   }
 

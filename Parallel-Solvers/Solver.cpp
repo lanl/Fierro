@@ -90,7 +90,7 @@
 Solver::Solver(){
   //default flags assume optional routines are off
   setup_flag = finalize_flag = 0;
-  communication_time = dev2host_time = host2dev_time = 0;
+  communication_time = dev2host_time = host2dev_time = output_time = 0;
   last_print_step = -1;
 
   //FEA module data init

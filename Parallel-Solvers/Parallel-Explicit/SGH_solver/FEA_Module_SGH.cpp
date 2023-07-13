@@ -1617,9 +1617,16 @@ void FEA_Module_SGH::sgh_solve(){
       nTO_modules = simparam_dynamic_opt->nTO_modules;
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if(myrank==0)
+    if(simparam->output_file_format=="vtk")
+    {
+      if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
-    Explicit_Solver_Pointer_->write_outputs_new();
+
+      double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
+      Explicit_Solver_Pointer_->write_outputs_new();
+      double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+      Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
+    }
     /*
     write_outputs(mesh,
                   Explicit_Solver_Pointer_,
@@ -2342,11 +2349,17 @@ void FEA_Module_SGH::sgh_solve(){
                 }
               }); // end parallel for
             } //end view scope
-
-            if(myrank==0){
+            if(simparam->output_file_format=="vtk"){
+              if(myrank==0){
               printf("Writing outputs to file at %f \n", graphics_time);
+              }
+
+              double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
+              Explicit_Solver_Pointer_->write_outputs_new();
+
+              double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+              Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
             }
-            Explicit_Solver_Pointer_->write_outputs_new();
             //Explicit_Solver_Pointer_->parallel_vtk_writer();
             //Explicit_Solver_Pointer_->parallel_vtk_writer_new();
             //Explicit_Solver_Pointer_->parallel_tecplot_writer();

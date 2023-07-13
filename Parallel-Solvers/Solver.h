@@ -270,7 +270,7 @@ public:
   //debug and system functions/variables
   double CPU_Time();
   void init_clock();
-  double initial_CPU_time, communication_time, dev2host_time, host2dev_time;
+  double initial_CPU_time, communication_time, dev2host_time, host2dev_time, output_time;
 
   //Pointer to ROL Problem for optimization solves
   Teuchos::RCP<ROL::Problem<real_t>> problem;

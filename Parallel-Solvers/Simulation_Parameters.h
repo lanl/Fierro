@@ -79,7 +79,7 @@ class Simulation_Parameters
   bool restart_file;
   bool tecplot_input, ansys_dat_input, vtk_input, zero_index_base;
   std::string element_type;
-  std::string solver_type, mesh_file_name, mesh_file_format;
+  std::string solver_type, mesh_file_name, mesh_file_format, output_file_format, timer_output_level;
 
   //debug and performance reporting flags
   int report_runtime_flag;
