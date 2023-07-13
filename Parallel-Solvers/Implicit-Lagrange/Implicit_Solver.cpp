@@ -142,7 +142,6 @@ Implicit_Solver::Implicit_Solver() : Solver(){
 }
 
 Implicit_Solver::~Implicit_Solver(){
-   delete simparam;
    delete simparam_TO;
    delete ref_elem;
    delete element_select;

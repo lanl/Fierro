@@ -1884,6 +1884,25 @@ void FEA_Module_SGH::sgh_solve(){
                                 cycle);
             }
             else {
+              if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+                get_force_elastic(material,
+                              mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              elem_statev,
+                              rk_alpha,
+                              cycle);
+              }
+              else{
                 get_force_sgh(material,
                               mesh,
                               node_coords,
@@ -1900,6 +1919,7 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_statev,
                               rk_alpha,
                               cycle);
+              }
             }
 
             /*

@@ -119,7 +119,9 @@ FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fe
   Global_Element_Moments_of_Inertia_yz = Teuchos::rcp(new MV(element_map, 1));
 }
 
-FEA_Module_Inertial::~FEA_Module_Inertial(){}
+FEA_Module_Inertial::~FEA_Module_Inertial(){
+  delete simparam;
+}
 
 /* ----------------------------------------------------------------------
    Compute the mass of each element; estimated with quadrature

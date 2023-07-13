@@ -83,6 +83,23 @@ public:
                      const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
+  
+  void get_force_elastic(const DCArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_sie,
+                     const DViewCArrayKokkos <double> &elem_pres,
+                     DViewCArrayKokkos <double> &elem_stress,
+                     const DViewCArrayKokkos <double> &elem_sspd,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     DViewCArrayKokkos <double> &corner_force,
+                     const DViewCArrayKokkos <double> &elem_statev,
+                     const double rk_alpha,
+                     const size_t cycle);
 
   void get_force_vgradient_sgh(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,

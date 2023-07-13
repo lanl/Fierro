@@ -72,11 +72,12 @@ namespace elements{
   class ref_element;
 }
 
-//forward declarations
 namespace ROL{
   template<class datatype>
   class Problem;
 }
+
+class FEA_Module;
 
 class Solver{
 
@@ -119,7 +120,7 @@ public:
   typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
 
   Solver();
-  ~Solver();
+  virtual ~Solver();
   
   virtual void setup() {}
 
@@ -172,6 +173,13 @@ public:
 
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters *simparam;
+
+  //set of enabled FEA modules
+  std::vector<std::string> fea_module_types;
+  std::vector<FEA_Module*> fea_modules;
+  std::vector<bool> fea_module_must_read;
+  int nfea_modules;
+  int displacement_module;
 
   //Local FEA data
   size_t nlocal_nodes;

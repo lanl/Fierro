@@ -71,7 +71,7 @@ class FEA_Module{
 
 public:
   FEA_Module(Solver *Solver_Pointer);
-  ~FEA_Module();
+  virtual ~FEA_Module();
 
   //Trilinos type definitions
   typedef Tpetra::Map<>::local_ordinal_type LO;
