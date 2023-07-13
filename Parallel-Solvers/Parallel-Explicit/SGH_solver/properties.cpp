@@ -24,7 +24,7 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                   const size_t cycle
                   ){
 
-
+    const size_t rk_level = simparam->rk_num_bins - 1;
     int num_dims = simparam->num_dim;
     
     // loop over all the elements in the mesh
@@ -109,7 +109,7 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                                    global_vars,
                                    elem_sspd,
                                    elem_den(elem_gid),
-                                   elem_sie(1,elem_gid));
+                                   elem_sie(rk_level,elem_gid));
         
         
     }); // end parallel for
@@ -137,7 +137,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                     const double rk_alpha,
                     const size_t cycle
                     ){
-    
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
     int num_dims = simparam->num_dim;
     
     // loop over all the elements in the mesh
@@ -222,7 +223,7 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                                    global_vars,
                                    elem_sspd,
                                    elem_den(elem_gid),
-                                   elem_sie(1,elem_gid));
+                                   elem_sie(rk_level,elem_gid));
         
         
     }); // end parallel for

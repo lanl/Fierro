@@ -233,7 +233,6 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
                        elem_t &elem,
                        corner_t &corner){
 
-    const size_t rk_level = 0;
     const size_t num_dim = simparam->num_dim;
     const size_t rk_num_bins = simparam->rk_num_bins;
 
@@ -760,7 +759,8 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::setup(){
-    
+
+    const size_t rk_level = simparam->rk_num_bins - 1;   
     const size_t num_fills = simparam->num_fills;
     const size_t rk_num_bins = simparam->rk_num_bins;
     const size_t num_bcs = simparam->num_bcs;
@@ -886,8 +886,6 @@ void FEA_Module_SGH::setup(){
             
         // parallel loop over elements in mesh
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
-
-            const size_t rk_level = rk_num_stages - 1;
 
             // calculate the coordinates and radius of the element
             double elem_coords[3]; // note:initialization with a list won't work
@@ -1133,7 +1131,8 @@ void FEA_Module_SGH::setup(){
         
   
     } // end for loop over fills
-    
+   
+
     // apply BC's to velocity
     FEA_Module_SGH::boundary_velocity(mesh, boundary, node_vel);
     
@@ -1187,7 +1186,7 @@ void FEA_Module_SGH::setup(){
                 size_t corner_gid = corners_in_node(node_gid, corner_lid);
                 node_mass(node_gid) += corner_mass(corner_gid);  // sans the radius so it is areal node mass
                 
-                corner_mass(corner_gid) *= node_coords(1,node_gid,1); // true corner mass now
+                corner_mass(corner_gid) *= node_coords(rk_level,node_gid,1); // true corner mass now
             } // end for elem_lid
             
         } // end else
@@ -1226,6 +1225,16 @@ void FEA_Module_SGH::setup(){
     if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
       init_assembly();
     }
+
+    // update host copies of arrays modified in this function
+    elem_mat_id.update_host();
+    elem_den.update_host();
+    elem_mass.update_host();
+    elem_sie.update_host();
+    elem_statev.update_host();
+    elem_stress.update_host();
+    elem_pres.update_host();
+    elem_sspd.update_host(); 
 
     return;
     
@@ -1360,7 +1369,9 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
                  const int this_bc_tag,
                  const double val,
                  const DViewCArrayKokkos <double> &node_coords) const {
-    
+   
+    const size_t rk_level = simparam->rk_num_bins - 1;
+  
     // default bool is not on the boundary
     size_t is_on_bdy = 0;
     
@@ -1375,7 +1386,7 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
         size_t node_gid = Local_Index_Boundary_Patches(patch_gid, patch_node_lid);
 
         for (size_t dim = 0; dim < num_dim; dim++){
-            these_patch_coords[dim] = node_coords(1, node_gid, dim);  // (rk, node_gid, dim)
+            these_patch_coords[dim] = node_coords(rk_level, node_gid, dim);  // (rk, node_gid, dim)
         } // end for dim
         
         
@@ -1538,7 +1549,8 @@ void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &b
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::sgh_solve(){
-    
+   
+    const size_t rk_level = simparam->rk_num_bins - 1; 
     time_value = simparam->time_value;
     time_final = simparam->time_final;
     dt_max = simparam->dt_max;
@@ -1659,7 +1671,7 @@ void FEA_Module_SGH::sgh_solve(){
     
     // extensive IE
     REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
-        IE_loc_sum += elem_mass(elem_gid)*elem_sie(1,elem_gid);
+        IE_loc_sum += elem_mass(elem_gid)*elem_sie(rk_level,elem_gid);
         
     }, IE_sum);
     IE_t0 = IE_sum;
@@ -1671,11 +1683,11 @@ void FEA_Module_SGH::sgh_solve(){
         
         double ke = 0;
         for (size_t dim=0; dim<num_dim; dim++){
-            ke += node_vel(1,node_gid,dim)*node_vel(1,node_gid,dim); // 1/2 at end
+            ke += node_vel(rk_level,node_gid,dim)*node_vel(rk_level,node_gid,dim); // 1/2 at end
         } // end for
         
         if(num_dim==2){
-            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
+            KE_loc_sum += node_mass(node_gid)*node_coords(rk_level,node_gid,1)*ke;
         }
         else{
             KE_loc_sum += node_mass(node_gid)*ke;
@@ -1699,7 +1711,7 @@ void FEA_Module_SGH::sgh_solve(){
         
         double radius = 1.0;
         if(num_dim == 2){
-            radius = node_coords(1,node_gid,1);
+            radius = node_coords(rk_level,node_gid,1);
         }
         node_extensive_mass(node_gid) = node_mass(node_gid)*radius;
         
@@ -1721,8 +1733,8 @@ void FEA_Module_SGH::sgh_solve(){
       vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         for (int idim = 0; idim < num_dim; idim++){
-          node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
-          node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
+          node_velocities_interface(node_gid,idim) = node_vel(rk_level,node_gid,idim);
+          node_coords_interface(node_gid,idim) = node_coords(rk_level,node_gid,idim);
         }
       });
     } //end view scope
@@ -1921,7 +1933,7 @@ void FEA_Module_SGH::sgh_solve(){
             /*
             if(myrank==0)
              for(int i = 0; i < nall_nodes; i++){
-               std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(1,i,0) << " " << node_vel(1,i,1) << " " << node_vel(1,i,2) << std::endl;
+               std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(rk_level,i,0) << " " << node_vel(rk_level,i,1) << " " << node_vel(rk_level,i,2) << std::endl;
              }
             */
 
@@ -1943,7 +1955,7 @@ void FEA_Module_SGH::sgh_solve(){
               vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
               FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                 for (int idim = 0; idim < num_dim; idim++){
-                  node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
+                  node_velocities_interface(node_gid,idim) = node_vel(rk_level,node_gid,idim);
                 }
               }); // end parallel for
             } //end view scope
@@ -1966,7 +1978,7 @@ void FEA_Module_SGH::sgh_solve(){
 
               FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
                 for (int idim = 0; idim < num_dim; idim++){
-                  node_vel(1,node_gid,idim) = ghost_node_velocities_interface(node_gid-nlocal_nodes,idim);
+                  node_vel(rk_level,node_gid,idim) = ghost_node_velocities_interface(node_gid-nlocal_nodes,idim);
                 }
         
               }); // end parallel for
@@ -1980,7 +1992,7 @@ void FEA_Module_SGH::sgh_solve(){
             /*
             if(myrank==0)
              for(int i = 0; i < nall_nodes; i++){
-               std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(1,i,0) << " " << node_vel(1,i,1) << " " << node_vel(1,i,2) << std::endl;
+               std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(rk_level,i,0) << " " << node_vel(rk_level,i,1) << " " << node_vel(rk_level,i,2) << std::endl;
              }
             */ 
             // ---- Update specific internal energy in the elements ----
@@ -2055,11 +2067,11 @@ void FEA_Module_SGH::sgh_solve(){
                     
                     node_mass(node_gid) = 0.0;
                     
-                    if (node_coords(1,node_gid,1) > tiny){
-                        node_mass(node_gid) = node_extensive_mass(node_gid)/node_coords(1,node_gid,1);
+                    if (node_coords(rk_level,node_gid,1) > tiny){
+                        node_mass(node_gid) = node_extensive_mass(node_gid)/node_coords(rk_level,node_gid,1);
                     }
                     //if(cycle==0&&node_gid==1&&myrank==0)
-                      //std::cout << "index " << node_gid << " on rank " << myrank << " node vel " << node_vel(1,node_gid,0) << "  " << node_mass(node_gid) << std::endl << std::flush;
+                      //std::cout << "index " << node_gid << " on rank " << myrank << " node vel " << node_vel(rk_level,node_gid,0) << "  " << node_mass(node_gid) << std::endl << std::flush;
 
                 }); // end parallel for over node_gid
                 Kokkos::fence();
@@ -2109,7 +2121,7 @@ void FEA_Module_SGH::sgh_solve(){
                         size_t node_plus_gid;
                         
                         
-                        if (node_coords(1,node_gid,1) < tiny){
+                        if (node_coords(rk_level,node_gid,1) < tiny){
                             // node is on the axis
                             
                             // minus node
@@ -2140,7 +2152,7 @@ void FEA_Module_SGH::sgh_solve(){
                 //FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {    
                     size_t node_gid = bdy_nodes(node_bdy_gid);
                     
-                    if (node_coords(1,node_gid,1) < tiny){
+                    if (node_coords(rk_level,node_gid,1) < tiny){
                         // node is on the axis
                         
                         for(size_t node_lid=0; node_lid < num_nodes_in_node(node_gid); node_lid++){
@@ -2148,7 +2160,7 @@ void FEA_Module_SGH::sgh_solve(){
                             size_t node_neighbor_gid = nodes_in_node(node_gid, node_lid);
                             
                             // if the node is off the axis, use it's areal mass on the boundary
-                            if (node_coords(1,node_neighbor_gid,1) > tiny){
+                            if (node_coords(rk_level,node_neighbor_gid,1) > tiny){
                                 node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid)/2.0);
                             }
 
@@ -2198,8 +2210,8 @@ void FEA_Module_SGH::sgh_solve(){
           vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
           FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
             for (int idim = 0; idim < num_dim; idim++){
-              node_velocities_interface(node_gid,idim) = node_vel(1,node_gid,idim);
-              node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
+              node_velocities_interface(node_gid,idim) = node_vel(rk_level,node_gid,idim);
+              node_coords_interface(node_gid,idim) = node_coords(rk_level,node_gid,idim);
             }
           });
         } //end view scope
@@ -2271,7 +2283,7 @@ void FEA_Module_SGH::sgh_solve(){
           } // end for
         
           if(num_dim==2){
-            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
+            KE_loc_sum += node_mass(node_gid)*node_coords(rk_level,node_gid,1)*ke;
           }
           else{
             KE_loc_sum += node_mass(node_gid)*ke;
@@ -2306,7 +2318,7 @@ void FEA_Module_SGH::sgh_solve(){
               vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
               FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                 for (int idim = 0; idim < num_dim; idim++){
-                  node_coords_interface(node_gid,idim) = node_coords(1,node_gid,idim);
+                  node_coords_interface(node_gid,idim) = node_coords(rk_level,node_gid,idim);
                 }
               }); // end parallel for
             } //end view scope
@@ -2376,7 +2388,7 @@ void FEA_Module_SGH::sgh_solve(){
     // extensive IE
     REDUCE_SUM_CLASS(elem_gid, 0, nlocal_elem_non_overlapping, IE_loc_sum, {
         
-        IE_loc_sum += elem_mass(elem_gid)*elem_sie(1,elem_gid);
+        IE_loc_sum += elem_mass(elem_gid)*elem_sie(rk_level,elem_gid);
         
     }, IE_sum);
     IE_tend = IE_sum;
@@ -2389,11 +2401,11 @@ void FEA_Module_SGH::sgh_solve(){
         
         double ke = 0;
         for (size_t dim=0; dim<num_dim; dim++){
-            ke += node_vel(1,node_gid,dim)*node_vel(1,node_gid,dim); // 1/2 at end
+            ke += node_vel(rk_level,node_gid,dim)*node_vel(rk_level,node_gid,dim); // 1/2 at end
         } // end for
         
         if(num_dim==2){
-            KE_loc_sum += node_mass(node_gid)*node_coords(1,node_gid,1)*ke;
+            KE_loc_sum += node_mass(node_gid)*node_coords(rk_level,node_gid,1)*ke;
         }
         else{
             KE_loc_sum += node_mass(node_gid)*ke;

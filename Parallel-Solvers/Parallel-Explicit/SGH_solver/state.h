@@ -188,16 +188,16 @@ struct material_t {
                             const size_t cycle) = NULL;
     
     // hypo or hyper elastic plastic model
-    model::strength_tag strength_type;
+    model::strength_tag strength_type = model::none;
 
     // strength model run location (device or host)
-    model_run_location::run_location strength_run_location;
+    model_run_location::run_location strength_run_location = model_run_location::device;
 
     // setup the strength model via the input file for via a user_setup
-    model_init::strength_setup_tag strength_setup=model_init::input;
+    model_init::strength_setup_tag strength_setup = model_init::input;
 
-    size_t num_state_vars;
-    size_t num_global_vars=0;
+    size_t num_state_vars = 0;
+    size_t num_global_vars = 0;
     
     double q1;    // acoustic coefficient in Riemann solver for compresion
     double q1ex;  // acoustic coefficient in Riemann solver for expansion

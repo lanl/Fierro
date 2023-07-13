@@ -14,7 +14,7 @@ void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
                          const DViewCArrayKokkos <double> &corner_force
                          ){
 
-    
+    const size_t rk_level = simparam->rk_num_bins - 1;    
     const size_t num_dims = mesh.num_dims;
     
     // walk over the nodes to update the velocity
@@ -40,7 +40,7 @@ void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
         
         // update the velocity
         for (int dim = 0; dim < num_dims; dim++){
-            node_vel(1, node_gid, dim) = node_vel(0, node_gid, dim) +
+            node_vel(rk_level, node_gid, dim) = node_vel(0, node_gid, dim) +
                                          rk_alpha * dt*node_force[dim]/node_mass(node_gid);
         } // end for dim
         
@@ -63,7 +63,7 @@ void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos <double> &vel_grad,
                  const size_t elem_gid
                  ) const {
     
-
+    const size_t rk_level = simparam->rk_num_bins - 1;
     const size_t num_nodes_in_elem = 8;
     
     double u_array[num_nodes_in_elem];
@@ -79,9 +79,9 @@ void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos <double> &vel_grad,
         // Get node gid
         size_t node_gid = elem_node_gids(node_lid);
 
-        u(node_lid) = node_vel(1, node_gid, 0);
-        v(node_lid) = node_vel(1, node_gid, 1);
-        w(node_lid) = node_vel(1, node_gid, 2);
+        u(node_lid) = node_vel(rk_level, node_gid, 0);
+        v(node_lid) = node_vel(rk_level, node_gid, 1);
+        w(node_lid) = node_vel(rk_level, node_gid, 2);
         
     } // end for
 
@@ -155,7 +155,7 @@ void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
                    const size_t elem_gid
                    ) const {
     
-
+    const size_t rk_level = simparam->rk_num_bins - 1;
     const size_t num_nodes_in_elem = 4;
     
     double u_array[num_nodes_in_elem];
@@ -169,8 +169,8 @@ void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
         // Get node gid
         size_t node_gid = elem_node_gids(node_lid);
 
-        u(node_lid) = node_vel(1, node_gid, 0); // x-comp
-        v(node_lid) = node_vel(1, node_gid, 1); // y-comp
+        u(node_lid) = node_vel(rk_level, node_gid, 0); // x-comp
+        v(node_lid) = node_vel(rk_level, node_gid, 1); // y-comp
         
     } // end for
     
@@ -222,7 +222,9 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
                     const DViewCArrayKokkos <double> &node_vel,
                     const DViewCArrayKokkos <double> &elem_vol
                     ){
-    
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
     
@@ -253,9 +255,9 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
     
-            u(node_lid) = node_vel(1, node_gid, 0);
-            v(node_lid) = node_vel(1, node_gid, 1);
-            w(node_lid) = node_vel(1, node_gid, 2);
+            u(node_lid) = node_vel(rk_level, node_gid, 0);
+            v(node_lid) = node_vel(rk_level, node_gid, 1);
+            w(node_lid) = node_vel(rk_level, node_gid, 2);
         
         } // end for
     
@@ -299,7 +301,9 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos <double> &elem_div,
                       const DViewCArrayKokkos <double> &node_vel,
                       const DViewCArrayKokkos <double> &elem_vol
                       ){
-    
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
     
@@ -339,10 +343,10 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos <double> &elem_div,
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
     
-            u(node_lid) = node_vel(1, node_gid, 0);
-            v(node_lid) = node_vel(1, node_gid, 1);
+            u(node_lid) = node_vel(rk_level, node_gid, 0);
+            v(node_lid) = node_vel(rk_level, node_gid, 1);
             
-            //r(node_lid) = node_coords(1, node_gid, 1); // true volume RZ
+            //r(node_lid) = node_coords(rk_level, node_gid, 1); // true volume RZ
             
         } // end for
     

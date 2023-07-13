@@ -58,6 +58,7 @@
 ------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
+  const size_t rk_level = simparam->rk_num_bins - 1;
   //local variable for host view in the dual view
   int num_dim = simparam->num_dim;
   int nodes_per_elem = max_nodes_per_element;
@@ -72,7 +73,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t num_bcs = simparam->num_bcs;
   const size_t num_materials = simparam->num_materials;
   const size_t num_state_vars = simparam->max_num_state_vars;
-  const size_t rk_level = 0;
   real_t objective_accumulation;
 
   // --- Read in the nodes in the mesh ---
@@ -211,8 +211,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
         // parallel loop over elements in mesh
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
 
-            const size_t rk_level = 1;
-
             // calculate the coordinates and radius of the element
             double elem_coords[3]; // note:initialization with a list won't work
             elem_coords[0] = 0.0;
@@ -334,7 +332,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                                            global_vars,
                                            elem_sspd,
                                            elem_den(elem_gid),
-                                           elem_sie(1,elem_gid));
+                                           elem_sie(rk_level,elem_gid));
 					    
                 
                 // loop over the nodes of this element and apply velocity
@@ -517,7 +515,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 size_t corner_gid = corners_in_node(node_gid, corner_lid);
                 node_mass(node_gid) += corner_mass(corner_gid);  // sans the radius so it is areal node mass
                 
-                corner_mass(corner_gid) *= node_coords(1,node_gid,1); // true corner mass now
+                corner_mass(corner_gid) *= node_coords(rk_level,node_gid,1); // true corner mass now
             } // end for elem_lid
             
         } // end else
@@ -637,7 +635,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
 --------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
-
+  const size_t rk_level = simparam->rk_num_bins - 1;
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;
@@ -753,8 +751,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
 
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes+nghost_nodes, {
         for (int idim = 0; idim < num_dim; idim++){
-          node_vel(1,node_gid,idim) = previous_velocity_vector(node_gid,idim);
-          node_coords(1,node_gid,idim) = previous_coordinate_vector(node_gid,idim);
+          node_vel(rk_level,node_gid,idim) = previous_velocity_vector(node_gid,idim);
+          node_coords(rk_level,node_gid,idim) = previous_coordinate_vector(node_gid,idim);
         }
       });
       Kokkos::fence();

@@ -367,27 +367,10 @@ public:
                            const double rk_alpha) const;
 
 
-  KOKKOS_INLINE_FUNCTION
-  void user_strength_model_vpsc(const DViewCArrayKokkos <double> &elem_pres,
-                              const DViewCArrayKokkos <double> &elem_stress,
-                              const size_t elem_gid,
-                              const size_t mat_id,
-                              const DViewCArrayKokkos <double> &elem_state_vars,
-                              const DViewCArrayKokkos <double> &elem_sspd,
-                              const double den,
-                              const double sie,
-                              const ViewCArrayKokkos <double> &vel_grad,
-                              const ViewCArrayKokkos <size_t> &elem_node_gids,
-                              const DViewCArrayKokkos <double> &node_coords,
-                              const DViewCArrayKokkos <double> &node_vel,
-                              const double vol,
-                              const double rk_alpha) const;
-
-
-void user_model_init(const DCArrayKokkos <double> &file_state_vars,
-                     const size_t num_state_vars,
-                     const size_t mat_id,
-                     const size_t num_elems);
+  void user_model_init(const DCArrayKokkos <double> &file_state_vars,
+                       const size_t num_state_vars,
+                       const size_t mat_id,
+                       const size_t num_elems);
 
   void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
   
@@ -583,6 +566,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DViewCArrayKokkos <double> elem_mass;
   DViewCArrayKokkos <size_t> elem_mat_id;
   DViewCArrayKokkos <double> elem_statev;
+
+  // Element velocity gradient 
+  DCArrayKokkos <double> elem_vel_grad;
 
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;
