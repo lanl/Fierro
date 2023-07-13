@@ -455,7 +455,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
         
         
-      // create Dual Views of the individual elem struct variables
+    // create Dual Views of the individual elem struct variables
     sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
                                             num_elems);
 
@@ -488,11 +488,11 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
                                                num_elems);
 
-    sgh_module->elem_statev = DViewCArrayKokkos<double>(&elem.statev(0,0),
+    sgh_module->elem_statev = DViewCArrayKokkos<double>(elem.statev.pointer(),
                                                num_elems,
                                                max_num_state_vars );
         
-      // create Dual Views of the corner struct variables
+    // create Dual Views of the corner struct variables
     sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
                                                 num_corners, 
                                                 num_dim);
@@ -500,7 +500,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
                                                num_corners);
         
-        
+    // allocate elem_vel_grad
+    sgh_module->elem_vel_grad = DCArrayKokkos <double> (num_elems,3,3);
+
+    
       // ---------------------------------------------------------------------
       //   calculate geometry
       // ---------------------------------------------------------------------

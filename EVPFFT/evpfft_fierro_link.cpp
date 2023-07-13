@@ -27,6 +27,7 @@ void init_evpfft(const DCArrayKokkos <double> &file_state_vars,
 
     elem_evpfft = std::vector<EVPFFT*>(num_elems);
 
+    printf("Initializing EVPFFT for each element...\n");
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++)
     {
       elem_evpfft[elem_gid] = new EVPFFT(cmd,stress_scale,time_scale);

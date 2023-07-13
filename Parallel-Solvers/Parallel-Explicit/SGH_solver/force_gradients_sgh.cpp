@@ -44,6 +44,8 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                    const double rk_alpha,
                    const size_t cycle
                    ){
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
     const size_t num_dims = simparam->num_dim;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -89,7 +91,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
         double vol = elem_vol(elem_gid);
         
         // create a view of the stress_matrix
-        ViewCArrayKokkos <double> stress(&elem_stress(1, elem_gid, 0,0), 3, 3);
+        ViewCArrayKokkos <double> stress(&elem_stress(rk_level, elem_gid, 0,0), 3, 3);
         
         
         // cut out the node_gids for this element
@@ -169,7 +171,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
             // Get node gloabl index and create view of nodal velocity
             int node_gid = nodes_in_elem(elem_gid, node_lid);
             
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
             
             vel_star(0) += 0.125*vel(0);
             vel_star(1) += 0.125*vel(1);
@@ -194,7 +196,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // Create view of nodal velocity
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) )*(vel(0) - vel_star(0) )
@@ -427,6 +429,8 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                    const double rk_alpha,
                    const size_t cycle
                    ){
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
     const size_t num_dims = simparam->num_dim;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -472,7 +476,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
         double vol = elem_vol(elem_gid);
         
         // create a view of the stress_matrix
-        ViewCArrayKokkos <double> stress(&elem_stress(1, elem_gid, 0,0), 3, 3);
+        ViewCArrayKokkos <double> stress(&elem_stress(rk_level, elem_gid, 0,0), 3, 3);
         
         
         // cut out the node_gids for this element
@@ -553,7 +557,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
             int node_gid = nodes_in_elem(elem_gid, node_lid);
 
             
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
             
             vel_star(0) += 0.125*vel(0);
             vel_star(1) += 0.125*vel(1);
@@ -578,7 +582,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // Create view of nodal velocity
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) )*(vel(0) - vel_star(0) )
@@ -820,6 +824,8 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
                    const double rk_alpha,
                    const size_t cycle
                    ) {
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
     const size_t num_dims = simparam->num_dim;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -864,7 +870,7 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
         double vol = elem_vol(elem_gid);
         
         // create a view of the stress_matrix
-        ViewCArrayKokkos <double> stress(&elem_stress(1, elem_gid, 0,0), 3, 3);
+        ViewCArrayKokkos <double> stress(&elem_stress(rk_level, elem_gid, 0,0), 3, 3);
         
         
         // cut out the node_gids for this element
@@ -945,7 +951,7 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
             int node_gid = nodes_in_elem(elem_gid, node_lid);
 
             
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
             
             vel_star(0) += 0.125*vel(0);
             vel_star(1) += 0.125*vel(1);
@@ -970,7 +976,7 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // Create view of nodal velocity
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) )*(vel(0) - vel_star(0) )

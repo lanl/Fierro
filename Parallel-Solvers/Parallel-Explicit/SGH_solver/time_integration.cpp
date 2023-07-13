@@ -13,6 +13,8 @@ void FEA_Module_SGH::rk_init(DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &elem_stress,
              const size_t num_elems,
              const size_t num_nodes){
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
     int num_dims = simparam->num_dim;
     // save elem quantities
     FOR_ALL_CLASS(elem_gid, 0, num_elems, {
@@ -20,11 +22,11 @@ void FEA_Module_SGH::rk_init(DViewCArrayKokkos <double> &node_coords,
         // stress is always 3D even with 2D-RZ
         for(size_t i=0; i<3; i++){
             for(size_t j=0; j<3; j++){
-                elem_stress(0,elem_gid,i,j) = elem_stress(1,elem_gid,i,j);
+                elem_stress(0,elem_gid,i,j) = elem_stress(rk_level,elem_gid,i,j);
             }
         }  // end for
 
-        elem_sie(0,elem_gid) = elem_sie(1,elem_gid);
+        elem_sie(0,elem_gid) = elem_sie(rk_level,elem_gid);
 
     }); // end parallel for
     
@@ -33,8 +35,8 @@ void FEA_Module_SGH::rk_init(DViewCArrayKokkos <double> &node_coords,
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
         
         for(size_t i=0; i<num_dims; i++){
-            node_coords(0,node_gid,i) = node_coords(1,node_gid,i);
-            node_vel(0,node_gid,i) = node_vel(1,node_gid,i);
+            node_coords(0,node_gid,i) = node_coords(rk_level,node_gid,i);
+            node_vel(0,node_gid,i) = node_vel(rk_level,node_gid,i);
         }
     }); // end parallel for
     Kokkos::fence();
@@ -58,6 +60,8 @@ void FEA_Module_SGH::get_timestep(mesh_t &mesh,
                   DViewCArrayKokkos <double> &elem_vol){
 
     
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
     int num_dims = simparam->num_dim;
@@ -76,7 +80,7 @@ void FEA_Module_SGH::get_timestep(mesh_t &mesh,
         for(size_t node_lid = 0; node_lid < 8; node_lid++){
 
             for (size_t dim = 0; dim < num_dims; dim++){
-                coords(node_lid, dim) = node_coords(1,  nodes_in_elem(elem_gid, node_lid), dim);
+                coords(node_lid, dim) = node_coords(rk_level,  nodes_in_elem(elem_gid, node_lid), dim);
             } // end for dim
             
         } // end for loop over node_lid
@@ -156,7 +160,8 @@ void FEA_Module_SGH::get_timestep2D(mesh_t &mesh,
                     DViewCArrayKokkos <double> &elem_sspd,
                     DViewCArrayKokkos <double> &elem_vol){
 
-    
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
     int num_dims = simparam->num_dim;
@@ -176,7 +181,7 @@ void FEA_Module_SGH::get_timestep2D(mesh_t &mesh,
         for(size_t node_lid = 0; node_lid < 4; node_lid++){
 
             for (size_t dim = 0; dim < num_dims; dim++){
-                coords(node_lid, dim) = node_coords(1,  nodes_in_elem(elem_gid, node_lid), dim);
+                coords(node_lid, dim) = node_coords(rk_level,  nodes_in_elem(elem_gid, node_lid), dim);
             } // end for dim
             
         } // end for loop over node_lid
