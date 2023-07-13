@@ -754,6 +754,7 @@ void Simulation_Parameters_SGH::apply_settings(){
        rk_num_stages = std::stoi(set_options[current_option]);
        set_options.erase(current_option);
     }
+    rk_num_bins = rk_num_stages;
     
     current_option = "solver_options:time_variables:dt_min";
     if(set_options.find(current_option)!=set_options.end()){
