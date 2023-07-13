@@ -185,9 +185,9 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
         tau.host(nsysx,3,iph)  = tau1x;
         thet.host(nsysx,1,iph) = thet0x;
         thet.host(nsysx,2,iph) = thet1x;
-        tau0_mode(nsysx,1,iph) = tau0_mode_a;
-        tau0_mode(nsysx,2,iph) = tau0_mode_b;
-        tau0_mode(nsysx,3,iph) = tau0_mode_c;
+        tau0_mode.host(nsysx,1,iph) = tau0_mode_a;
+        tau0_mode.host(nsysx,2,iph) = tau0_mode_b;
+        tau0_mode.host(nsysx,3,iph) = tau0_mode_c;
 
         //
         isectw(nsysx,iph) = isectwx;

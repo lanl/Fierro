@@ -2,6 +2,7 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
@@ -24,11 +25,18 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                    const size_t cycle
                    ){
 
-    // elem_vel_grad is added for the new UserMatModel interface
-    // which allows user strength model to be called from the host
-    DCArrayKokkos <double> elem_vel_grad(mesh.num_elems,3,3);
     const_vec_array initial_node_coords = initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-    
+   
+    // check to see if any material model will be run on the host
+    bool any_host_material_model_run = false;
+    for(int imat = 0; imat < material.size(); imat++){
+        if(material.host(imat).strength_run_location == model_run_location::host){
+            any_host_material_model_run = true;
+        }
+    } 
+ 
+    const size_t rk_level = simparam->rk_num_bins - 1;
+ 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
@@ -73,7 +81,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         double vol = elem_vol(elem_gid);
         
         // create a view of the stress_matrix
-        ViewCArrayKokkos <double> stress(&elem_stress(1, elem_gid, 0,0), 3, 3);
+        ViewCArrayKokkos <double> stress(&elem_stress(rk_level, elem_gid, 0,0), 3, 3);
         
         
         // cut out the node_gids for this element
@@ -161,7 +169,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
             // Get node gloabl index and create view of nodal velocity
             int node_gid = nodes_in_elem(elem_gid, node_lid);
             
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
             
             vel_star(0) += 0.125*vel(0);
             vel_star(1) += 0.125*vel(1);
@@ -186,7 +194,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // Create view of nodal velocity
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) )*(vel(0) - vel_star(0) )
@@ -357,10 +365,10 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                           area_normal(node_lid, 0)*tau(0, dim)
                         + area_normal(node_lid, 1)*tau(1, dim)
                         + area_normal(node_lid, 2)*tau(2, dim)
-                        + phi*muc(node_lid)*(vel_star(dim) - node_vel(1, node_gid, dim));
+                        + phi*muc(node_lid)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
                 //test clause
-                //corner_force(corner_gid, dim) = -0.00001*node_vel(1, node_gid, dim) - 0.0001*(node_coords(1, node_gid, dim)-initial_node_coords(node_gid,dim)) + 0.0001*relative_element_densities(elem_gid);  
-                //corner_force(corner_gid, dim) = 0.0001*relative_element_densities(elem_gid)-0.00001*node_vel(1, node_gid, dim);
+                //corner_force(corner_gid, dim) = -0.00001*node_vel(rk_level, node_gid, dim) - 0.0001*(node_coords(rk_level, node_gid, dim)-initial_node_coords(node_gid,dim)) + 0.0001*relative_element_densities(elem_gid);  
+                //corner_force(corner_gid, dim) = 0.0001*relative_element_densities(elem_gid)-0.00001*node_vel(rk_level, node_gid, dim);
 
             } // end loop over dimension
 
@@ -407,52 +415,65 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
 
     }); // end parallel for loop over elements
 
-    // update host
-    elem_vel_grad.update_host();
 
-    // calling user strength model on host
-    for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
+    if (any_host_material_model_run == true) {
+        // update host
+        elem_vel_grad.update_host();
+        // below host updates are commented out to save time because they are not used for
+        // the current user model. if a user model uses any of them, please uncomment it
+        //elem_pres.update_host();
+        //elem_statev.update_host;
+        //elem_den.upsate_host();
+        //elem_sie.update_host();
+        //node_coords.update_host();
+        //node_vel.update_host();
+        //elem_vol.update_host();
 
-        const size_t num_dims = 3;
-        size_t mat_id = elem_mat_id.host(elem_gid);
+        // calling user strength model on host
+        for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
 
-        // hypo elastic plastic model
-        if(material.host(mat_id).strength_type == model::hypo){
+            const size_t num_dims = 3;
+            size_t mat_id = elem_mat_id.host(elem_gid);
 
-            if(material.host(mat_id).strength_run_location == model_run_location::host){
+            // hypo elastic plastic model
+            if(material.host(mat_id).strength_type == model::hypo){
 
-                // cut out the node_gids for this element
-                ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem.host(elem_gid, 0), 8);
+                if(material.host(mat_id).strength_run_location == model_run_location::host){
 
-                // cut out vel_grad 
-                ViewCArrayKokkos <double> vel_grad(&elem_vel_grad.host(elem_gid,0,0), num_dims, num_dims);
+                    // cut out the node_gids for this element
+                    ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem.host(elem_gid, 0), 8);
 
-                // --- call strength model ---
-                material(mat_id).strength_model(elem_pres,
-                                                elem_stress,
-                                                elem_gid,
-                                                mat_id,
-                                                elem_statev,
-                                                global_vars,
-                                                elem_sspd,
-                                                elem_den(elem_gid),
-                                                elem_sie(elem_gid),
-                                                vel_grad,
-                                                elem_node_gids,
-                                                node_coords,
-                                                node_vel,
-                                                elem_vol(elem_gid),
-                                                dt,
-                                                rk_alpha,
-                                                cycle);
-            } // end logical for strength run location
+                    // cut out vel_grad 
+                    ViewCArrayKokkos <double> vel_grad(&elem_vel_grad.host(elem_gid,0,0), num_dims, num_dims);
 
-        } // end logical on hypo strength model
+                    // --- call strength model ---
+                    material.host(mat_id).strength_model(elem_pres,
+                                                    elem_stress,
+                                                    elem_gid,
+                                                    mat_id,
+                                                    elem_statev,
+                                                    global_vars,
+                                                    elem_sspd,
+                                                    elem_den.host(elem_gid),
+                                                    elem_sie.host(elem_gid),
+                                                    vel_grad,
+                                                    elem_node_gids,
+                                                    node_coords,
+                                                    node_vel,
+                                                    elem_vol.host(elem_gid),
+                                                    dt,
+                                                    rk_alpha,
+                                                    cycle);
+                } // end logical for strength run location
 
-    } // end for loop over elements    
+            } // end logical on hypo strength model
 
-    // update device
-    elem_stress.update_device();
+        } // end for loop over elements    
+
+        // update device
+        elem_stress.update_device();
+
+    } // end for if host_material_model_run == true
 
     return;
     
@@ -479,7 +500,9 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                      const double rk_alpha,
                      const size_t cycle
                      ){
-    
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
@@ -519,7 +542,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
 
     
         // create a view of the stress_matrix
-        ViewCArrayKokkos <double> stress(&elem_stress(1, elem_gid, 0,0), 3, 3);
+        ViewCArrayKokkos <double> stress(&elem_stress(rk_level, elem_gid, 0,0), 3, 3);
         
         
         // cut out the node_gids for this element
@@ -598,7 +621,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
             // Get node gloabl index and create view of nodal velocity
             int node_gid = nodes_in_elem(elem_gid, node_lid);
             
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
             
             vel_star(0) += 0.25*vel(0);
             vel_star(1) += 0.25*vel(1);
@@ -622,7 +645,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // Create view of nodal velocity
-            ViewCArrayKokkos <double> vel(&node_vel(1, node_gid, 0), num_dims);
+            ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) )*(vel(0) - vel_star(0) )
@@ -787,14 +810,14 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                 corner_force(corner_gid, dim) =
                           area_normal(node_lid, 0)*tau(0, dim)
                         + area_normal(node_lid, 1)*tau(1, dim)
-                        + phi*muc(node_lid)*(vel_star(dim) - node_vel(1, node_gid, dim));
+                        + phi*muc(node_lid)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
 
             } // end loop over dimension
             
             
             // ---- add hoop stress terms ----
             
-            double node_radius = node_coords(1,node_gid,1);
+            double node_radius = node_coords(rk_level,node_gid,1);
             
             if(node_radius>1e-14){
                 // sigma_RZ / R_p

@@ -16,7 +16,8 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
     //DCArrayKokkos<bool> print_flag(1, "print_flag");
     //print_flag.host(0) = false;
     //print_flag.update_device();
-    
+   
+    const size_t rk_level = simparam->rk_num_bins - 1; 
     int num_dims = simparam->num_dim;
     // Loop over boundary sets
     for (size_t bdy_set=0; bdy_set<num_bdy_sets; bdy_set++){
@@ -36,7 +37,7 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                     
                 // Set velocity to zero in that directdion
-                node_vel(1, bdy_node_gid, direction) = 0.0;
+                node_vel(rk_level, bdy_node_gid, direction) = 0.0;
                         
             }
             else if (boundary(bdy_set).hydro_bc == bdy::fixed){
@@ -48,7 +49,7 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
 
                 for(size_t dim=0; dim < num_dims; dim++){
                     // Set velocity to zero
-                    node_vel(1, bdy_node_gid, dim) = 0.0;
+                    node_vel(rk_level, bdy_node_gid, dim) = 0.0;
                 }
                 
             }
@@ -56,10 +57,10 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
     
                 size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
     
-                node_vel(1, bdy_node_gid, 0) = boundary(bdy_set).u;
-                node_vel(1, bdy_node_gid, 1) = boundary(bdy_set).v;
-                if (mesh.num_dims == 3) node_vel(1, bdy_node_gid, 2) = boundary(bdy_set).w;
-                //if (mesh.num_dims == 3) node_vel(1, bdy_node_gid, 2) = boundary(bdy_set).w * node_coords(1, bdy_node_gid, 2); 
+                node_vel(rk_level, bdy_node_gid, 0) = boundary(bdy_set).u;
+                node_vel(rk_level, bdy_node_gid, 1) = boundary(bdy_set).v;
+                if (mesh.num_dims == 3) node_vel(rk_level, bdy_node_gid, 2) = boundary(bdy_set).w;
+                //if (mesh.num_dims == 3) node_vel(rk_level, bdy_node_gid, 2) = boundary(bdy_set).w * node_coords(rk_level, bdy_node_gid, 2); 
  
             }// end if
             

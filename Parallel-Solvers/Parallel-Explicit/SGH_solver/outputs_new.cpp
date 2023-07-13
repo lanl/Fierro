@@ -81,6 +81,8 @@ void
 Explicit_Solver_SGH::write_outputs_new()
 {
 
+  const size_t rk_level = simparam->rk_num_bins - 1;
+
   // node "design_density"
   auto design_density = get_design_density(map->getLocalNumElements(),
     simparam_dynamic_opt->topology_optimization_on, design_node_densities_distributed);
@@ -88,7 +90,7 @@ Explicit_Solver_SGH::write_outputs_new()
 
   // node "velocity"
   sgh_module->node_vel.update_host();
-  point_data_vectors_double["velocity"] = &sgh_module->node_vel.host(1,0,0);
+  point_data_vectors_double["velocity"] = &sgh_module->node_vel.host(rk_level,0,0);
 
   // element "element_density"
   sgh_module->elem_den.update_host();
@@ -100,7 +102,7 @@ Explicit_Solver_SGH::write_outputs_new()
 
   // element "sie"
   sgh_module->elem_sie.update_host();
-  cell_data_scalars_double["sie"] = &sgh_module->elem_sie.host(1,0);
+  cell_data_scalars_double["sie"] = &sgh_module->elem_sie.host(rk_level,0);
 
   // element "vol"
   sgh_module->elem_vol.update_host();
@@ -178,6 +180,8 @@ construct_file_name(
 void
 Explicit_Solver_SGH::parallel_vtk_writer_new()
 {
+  const size_t rk_level = simparam->rk_num_bins - 1;
+
   int num_dim = simparam->num_dim;
   std::stringstream str_stream;
   MPI_Offset current_offset;
@@ -241,7 +245,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   }
   sgh_module->node_coords.update_host();
   sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-    &sgh_module->node_coords.host(1,0,0), map, num_dim, num_nodes, world, myfile_parallel);
+    &sgh_module->node_coords.host(rk_level,0,0), map, num_dim, num_nodes, world, myfile_parallel);
 
 
   /*************** write CELLS ***************/
