@@ -551,6 +551,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
     std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
               << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
+    
+    if(simparam->timer_output_level=="thorough"){
+      std::cout << " OUTPUT TIME OF CODE ON TASK " << myrank << " is "<< output_time << std::endl;
+    }
 
     //parallel_vtk_writer();
     

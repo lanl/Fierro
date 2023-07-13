@@ -6,13 +6,15 @@ solver_type: SGH
 solver_options:
     num_dims: 3
     mesh_file_format: ensight
+    output_file_format: vtk
     mesh_file_name: mesh_Sedov_32.geo
     time_variables:
-        time_final: 1.0
+        time_final: 0.1
         dt_min: 1.e-8
-        dt_max: 1.e-2
+        dt_max: 1.e-4
         dt_start: 1.e-5
         cycle_stop: 2000000
+    timer_output_level: thorough
 
 output_options:
   graphics_step: 0.25
@@ -45,9 +47,9 @@ region_options:
         sie: 1.e-10
             
         velocity: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
+        u: 0.1
+        v: 0.2
+        w: 0.3
     # energy source initial conditions
     mat_fill_2:
         volume: sphere
