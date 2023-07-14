@@ -773,7 +773,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               1,
                               cycle);
 
-      get_force_ugradient_sgh(material,
+     /* get_force_ugradient_sgh(material,
                               mesh,
                               node_coords,
                               node_vel,
@@ -788,6 +788,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_statev,
                               1,
                               cycle);
+      */
+      assemble_matrix();
 
       //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
       const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
