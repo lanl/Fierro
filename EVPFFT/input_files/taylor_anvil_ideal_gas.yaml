@@ -6,6 +6,7 @@ solver_type: SGH
 solver_options:
     num_dims: 3
     mesh_file_format: ensight
+    output_file_format: vtk
     mesh_file_name: /vast/home/cyenusah/github/Fierro/Explicit-Lagrange/meshes/mesh_z_taylorAnvil.geo
     time_variables:
         time_final: 25.0
@@ -14,6 +15,7 @@ solver_options:
         dt_start: 1.e-5
         dt_cfl: 0.4
         cycle_stop: 2000000
+    timer_output_level: thorough
 
 output_options:
   graphics_step: 1.0
