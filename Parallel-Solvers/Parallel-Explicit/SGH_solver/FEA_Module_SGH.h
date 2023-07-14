@@ -49,6 +49,7 @@
 class Explicit_Solver_SGH;
 class Simulation_Parameters_SGH;
 class Simulation_Parameters_Dynamic_Optimization;
+class Simulation_Parameters_Elasticity;
 
 class FEA_Module_SGH: public FEA_Module{
 
@@ -472,8 +473,22 @@ public:
   void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
 
   void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
+
+  //elastic TO stuff
+  void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+
+  void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
+  
+  void assemble_matrix();
+  
+  
+  Teuchos::RCP<MAT> Global_Stiffness_Matrix;
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   
   Simulation_Parameters_SGH *simparam;
+  Simulation_Parameters_Elasticity *simparam_elasticity;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
   Explicit_Solver_SGH *Explicit_Solver_Pointer_;
 

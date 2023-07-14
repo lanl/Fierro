@@ -73,6 +73,7 @@
 #include "node_combination.h"
 #include "Simulation_Parameters_SGH.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters_Elasticity.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 #include "user_material_functions.h"
@@ -1223,6 +1224,8 @@ void FEA_Module_SGH::setup(){
     
     //initialize if topology optimization is used
     if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      //create parameter object
+      simparam_elasticity = new Simulation_Parameters_Elasticity();
       init_assembly();
     }
 
