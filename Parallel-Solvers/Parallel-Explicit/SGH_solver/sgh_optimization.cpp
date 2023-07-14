@@ -546,6 +546,11 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
       }); // end parallel for
     } //end view scope
     Kokkos::fence();
+
+    //update stiffness matrix
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      assemble_matrix();
+    }
     
     //execute solve
     simparam->time_value = 0;
@@ -789,7 +794,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               1,
                               cycle);
       */
-      assemble_matrix();
 
       //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
       const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
