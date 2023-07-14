@@ -1227,6 +1227,7 @@ void FEA_Module_SGH::setup(){
       //create parameter object
       simparam_elasticity = new Simulation_Parameters_Elasticity();
       init_assembly();
+      assemble_matrix();
     }
 
     // update host copies of arrays modified in this function
