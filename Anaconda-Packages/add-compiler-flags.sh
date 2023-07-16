@@ -1,6 +1,7 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 CMAKE_PLATFORM_FLAGS+=(-DCMAKE_TOOLCHAIN_FILE="${SCRIPT_DIR}/cross-linux.cmake")
+# -fno-visibility-inlines-hidden is required to compile trilinos shared libraries
 compatability_flags=" -fno-visibility-inlines-hidden -fno-tree-vectorize "
 if [ "$PLATFORM" == "linux-64" ]; then
     compatability_flags+=" -march=x86-64 -mtune=generic"
@@ -21,7 +22,6 @@ fi
 
 # These flag variables are set by anaconda.
 CXXFLAGS+=$compatability_flags
-FFLAGS+=$compatability_flags
 
 # Make sure the MPI wrappers find the right compilers
 export OMPI_CC=$GCC
