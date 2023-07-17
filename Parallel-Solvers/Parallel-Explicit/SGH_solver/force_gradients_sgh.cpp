@@ -103,7 +103,8 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
         get_bmatrix(area_normal,
                     elem_gid,
                     node_coords,
-                    elem_node_gids);
+                    elem_node_gids,
+                    rk_level);
     
         
         // --- Calculate the velocity gradient ---
@@ -112,7 +113,8 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                     node_vel,
                     area_normal,
                     vol,
-                    elem_gid);
+                    elem_gid,
+                    rk_level);
         
         
         // the -1 is for the inward surface area normal,
@@ -488,7 +490,8 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
         get_bmatrix(area_normal,
                     elem_gid,
                     node_coords,
-                    elem_node_gids);
+                    elem_node_gids,
+                    rk_level);
     
         
         // --- Calculate the velocity gradient ---
@@ -497,7 +500,8 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                     node_vel,
                     area_normal,
                     vol,
-                    elem_gid);
+                    elem_gid,
+                    rk_level);
         
         
         // the -1 is for the inward surface area normal,
@@ -882,7 +886,8 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
         get_bmatrix(area_normal,
                     elem_gid,
                     node_coords,
-                    elem_node_gids);
+                    elem_node_gids,
+                    rk_level);
     
         
         // --- Calculate the velocity gradient ---
@@ -891,7 +896,8 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
                     node_vel,
                     area_normal,
                     vol,
-                    elem_gid);
+                    elem_gid,
+                    rk_level);
         
         
         // the -1 is for the inward surface area normal,

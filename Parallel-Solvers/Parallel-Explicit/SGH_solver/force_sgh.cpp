@@ -93,7 +93,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         get_bmatrix(area_normal,
                     elem_gid,
                     node_coords,
-                    elem_node_gids);
+                    elem_node_gids,
+                    rk_level);
     
         
         // --- Calculate the velocity gradient ---
@@ -102,7 +103,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                     node_vel,
                     area_normal,
                     vol,
-                    elem_gid);
+                    elem_gid,
+                    rk_level);
         
          // save vel_grad in elem_vel_grad 
         for (size_t i = 0; i < 3; i++) {
@@ -552,11 +554,12 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
         get_bmatrix2D(area_normal,
                       elem_gid,
                       node_coords,
-                      elem_node_gids);
+                      elem_node_gids,
+                      rk_level);
         // NOTE: I added a minux in bmatrix2D, it should be outward pointing now?
         
         // facial area of the element
-        double elem_area = get_area_quad(elem_gid, node_coords, elem_node_gids);
+        double elem_area = get_area_quad(elem_gid, node_coords, elem_node_gids, rk_level);
         
         
         // --- Calculate the velocity gradient ---
@@ -566,7 +569,8 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                       area_normal,
                       elem_vol(elem_gid),
                       elem_area,
-                      elem_gid);
+                      elem_gid,
+                      rk_level);
         
         
         // the -1 is for the inward surface area normal,

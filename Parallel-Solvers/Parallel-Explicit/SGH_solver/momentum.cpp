@@ -60,10 +60,10 @@ void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos <double> &vel_grad,
                  const DViewCArrayKokkos <double> &node_vel,
                  const ViewCArrayKokkos <double> &b_matrix,
                  const double elem_vol,
-                 const size_t elem_gid
+                 const size_t elem_gid,
+                 const size_t rk_level
                  ) const {
     
-    const size_t rk_level = simparam->rk_num_bins - 1;
     const size_t num_nodes_in_elem = 8;
     
     double u_array[num_nodes_in_elem];
@@ -152,10 +152,10 @@ void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
                    const ViewCArrayKokkos <double> &b_matrix,
                    const double elem_vol,
                    const double elem_area,
-                   const size_t elem_gid
+                   const size_t elem_gid,
+                   const size_t rk_level
                    ) const {
     
-    const size_t rk_level = simparam->rk_num_bins - 1;
     const size_t num_nodes_in_elem = 4;
     
     double u_array[num_nodes_in_elem];
@@ -247,7 +247,8 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
         get_bmatrix(b_matrix,
                     elem_gid,
                     node_coords,
-                    elem_node_gids);
+                    elem_node_gids,
+                    rk_level);
         
         // get the vertex velocities for the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
@@ -330,10 +331,11 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos <double> &elem_div,
         get_bmatrix2D(b_matrix,
                       elem_gid,
                       node_coords,
-                      elem_node_gids);
+                      elem_node_gids,
+                      rk_level);
         
         // calculate the area of the quad
-        double elem_area = get_area_quad(elem_gid, node_coords, elem_node_gids);
+        double elem_area = get_area_quad(elem_gid, node_coords, elem_node_gids, rk_level);
         // true volume uses the elem_vol
         
         
