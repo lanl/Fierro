@@ -16,11 +16,8 @@ void FEA_Module_SGH::get_force_elastic(const DCArrayKokkos <material_t> &materia
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
+                   const DViewCArrayKokkos <double> &node_mass,
                    const DViewCArrayKokkos <double> &elem_den,
-                   const DViewCArrayKokkos <double> &elem_sie,
-                   const DViewCArrayKokkos <double> &elem_pres,
-                   DViewCArrayKokkos <double> &elem_stress,
-                   const DViewCArrayKokkos <double> &elem_sspd,
                    const DViewCArrayKokkos <double> &elem_vol,
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
@@ -30,77 +27,42 @@ void FEA_Module_SGH::get_force_elastic(const DCArrayKokkos <material_t> &materia
                    const size_t cycle
                    ){
 
-    // elem_vel_grad is added for the new UserMatModel interface
-    // which allows user strength model to be called from the host
-    DCArrayKokkos <double> elem_vel_grad(mesh.num_elems,3,3);
+    const size_t rk_level = simparam->rk_num_bins - 1;    
+    const size_t num_dim = mesh.num_dims;
     const_vec_array initial_node_coords = initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
     
-    // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
+    // walk over the nodes to update the velocity
+    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         
-        const size_t num_dims = 3;
-        const size_t num_nodes_in_elem = 8;
+        size_t dof_id;
+        double node_force[3];
+        for (size_t dim = 0; dim < num_dim; dim++){
+            node_force[dim] = 0.0;
+        } // end for dim
         
-        // total Cauchy stress
-        double tau_array[9];
+        // loop over all corners around the node and calculate the nodal force
+        for (size_t corner_lid=0; corner_lid<num_corners_in_node(node_gid); corner_lid++){
         
-        // the sums in the Riemann solver
-        double sum_array[4];
-        
-        // corner shock impeadance x |corner area normal dot shock_dir|
-        double muc_array[8];
-        
-        // Riemann velocity
-        double vel_star_array[3];
-        
-        // velocity gradient
-        double vel_grad_array[9];
-        
-        // --- Create views of arrays to aid the force calculation ---
-    
-        ViewCArrayKokkos <double> tau(tau_array, num_dims, num_dims);
-        ViewCArrayKokkos <double> sum(sum_array, 4);
-
-        
-        // --- abviatations of variables ---
-        
-        // element volume
-        double vol = elem_vol(elem_gid);
-        
-        // create a view of the stress_matrix
-        ViewCArrayKokkos <double> stress(&elem_stress(1, elem_gid, 0,0), 3, 3);
-        
-        // cut out the node_gids for this element
-        ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
-        
-
-        // ---- Calculate the force on each node ----
-
-        // loop over the each node in the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-            
-            size_t corner_lid = node_lid;
-
             // Get corner gid
-            size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
+            size_t corner_gid = corners_in_node(node_gid, corner_lid);
             
-            // Get node gid
-            size_t node_gid = nodes_in_elem(elem_gid, node_lid);
-   
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++){
-                corner_force(corner_gid, dim) = -0.00001*node_vel(1, node_gid, dim) - 0.0001*(node_coords(1, node_gid, dim)-initial_node_coords(node_gid,dim)) + 0.0001*relative_element_densities(elem_gid);  
-                //corner_force(corner_gid, dim) = 0.0001*relative_element_densities(elem_gid)-0.00001*node_vel(1, node_gid, dim);
-
-            } // end loop over dimension
-
-        } // end for loop over nodes in elem
+            for (size_t idim = 0; idim < num_dim; idim++){
+                for(int idof = 0; idof < Stiffness_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
+                  dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
+                  node_force[idim] += (node_coords(rk_level, dof_id/num_dim, dof_id%num_dim)-initial_node_coords(dof_id/num_dim, dof_id%num_dim))*Stiffness_Matrix(node_gid*num_dim+idim%num_dim,idof);
+                }
+            } // end for dim
+            
+        } // end for corner_lid
         
-
-    }); // end parallel for loop over elements
-
-    // update device
-    elem_stress.update_device();
+        // update the velocity
+        for (int dim = 0; dim < num_dim; dim++){
+            node_vel(rk_level, node_gid, dim) = node_vel(0, node_gid, dim) +
+                                         rk_alpha * dt*node_force[dim]/node_mass(node_gid);
+        } // end for dim
+        
+    }); // end for parallel for over nodes
 
     return;
     
