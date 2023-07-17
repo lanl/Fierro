@@ -11,13 +11,16 @@ void FEA_Module_SGH::update_position_sgh(double rk_alpha,
                          const size_t num_nodes,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
     int num_dims = simparam->num_dim;
+
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
 
         for (int dim = 0; dim < num_dims; dim++){
-            double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
-            node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha*dt*half_vel;
+            double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
+            node_coords(rk_level, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha*dt*half_vel;
         }
         
     }); // end parallel for over nodes
@@ -42,6 +45,8 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const DViewCArrayKokkos <double> &node_coords,
                  const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     const size_t num_nodes = 8;
 
     double x_array[8];
@@ -55,9 +60,9 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-        z(node_lid) = node_coords(1, elem_node_gids(node_lid), 2);
+        x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
+        z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
     } // end for
 
     double twelth = 1./12.;
@@ -274,6 +279,8 @@ void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const DViewCArrayKokkos <double> &node_coords,
                  const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     const size_t num_nodes = 8;
 
     double x_array[8];
@@ -287,9 +294,9 @@ void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
     
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
-        z(node_lid) = node_coords(1, elem_node_gids(node_lid), 2);
+        x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
+        z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
     } // end for
 
     double twelth = 1./12.;
@@ -317,6 +324,8 @@ void FEA_Module_SGH::get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
                    const DViewCArrayKokkos <double> &node_coords,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     const size_t num_nodes = 4;
 
     double x_array[4];
@@ -328,8 +337,8 @@ void FEA_Module_SGH::get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
 
     /* ensight node order   0 1 2 3
@@ -385,7 +394,8 @@ void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                   const DViewCArrayKokkos <double> &node_coords,
                   const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
-    
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     // --- testing here ---
     /*
     double test_vol = 0.0;
@@ -400,7 +410,7 @@ void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
 
     
     for(size_t node_lid=0; node_lid<4; node_lid++){
-        double y = node_coords(1, elem_node_gids(node_lid), 1);  // node radius
+        double y = node_coords(rk_level, elem_node_gids(node_lid), 1);  // node radius
         test_vol += corner_areas(node_lid)*y;
     } // end for
      
@@ -422,8 +432,8 @@ void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
      
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
 
     /* ensight node order   0 1 2 3
@@ -444,6 +454,8 @@ double FEA_Module_SGH::get_area_quad(const size_t elem_gid,
                      const DViewCArrayKokkos <double> &node_coords,
                      const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     double elem_area=0.0;
     
     const size_t num_nodes = 4;
@@ -457,8 +469,8 @@ double FEA_Module_SGH::get_area_quad(const size_t elem_gid,
      
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
 
     /* ensight node order   0 1 2 3
@@ -505,6 +517,8 @@ void FEA_Module_SGH::get_area_weights2D(const ViewCArrayKokkos <double> &corner_
                         const DViewCArrayKokkos <double> &node_coords,
                         const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
+    const size_t rk_level = simparam->rk_num_bins - 1;
+
     const size_t num_nodes = 4;
 
     double x_array[4];
@@ -520,8 +534,8 @@ void FEA_Module_SGH::get_area_weights2D(const ViewCArrayKokkos <double> &corner_
     // get the coordinates of the nodes(rk,elem,node) in this element
     rc=zc=0.0;
     for (int node_lid = 0; node_lid < num_nodes; node_lid++){
-        x(node_lid) = node_coords(1, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(1, elem_node_gids(node_lid), 1);
+        x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
+        y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     rc+=0.25*y(node_lid);
     zc+=0.25*x(node_lid);
     } // end for

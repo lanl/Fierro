@@ -55,6 +55,7 @@
 #include <Tpetra_CrsMatrix.hpp>
 #include <Kokkos_Core.hpp>
 #include "Tpetra_Details_DefaultTypes.hpp"
+#include "Tpetra_Import.hpp"
 #include <map>
 
 using namespace mtr;
@@ -71,11 +72,12 @@ namespace elements{
   class ref_element;
 }
 
-//forward declarations
 namespace ROL{
   template<class datatype>
   class Problem;
 }
+
+class FEA_Module;
 
 class Solver{
 
@@ -118,7 +120,7 @@ public:
   typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
 
   Solver();
-  ~Solver();
+  virtual ~Solver();
   
   virtual void setup() {}
 
@@ -139,6 +141,8 @@ public:
   virtual void read_mesh_vtk(const char *MESH);
 
   virtual void repartition_nodes();
+
+  virtual void comm_importer_setup();
 
   virtual void comm_coordinates();
 
@@ -162,9 +166,20 @@ public:
   int myrank; //index of this mpi rank in the world communicator
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
+  Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> dof_importer; //ghost dof comms
 
   //class Simulation_Parameters *simparam;
   class Simulation_Parameters *simparam;
+
+  //set of enabled FEA modules
+  std::vector<std::string> fea_module_types;
+  std::vector<FEA_Module*> fea_modules;
+  std::vector<bool> fea_module_must_read;
+  int nfea_modules;
+  int displacement_module;
 
   //Local FEA data
   size_t nlocal_nodes;
@@ -204,7 +219,7 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_element_map; //sorted contiguous map of element indices owned by each rank used in parallel IO
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
-  Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
+  Teuchos::RCP<MCONN> global_nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> ghost_node_coords_distributed;
@@ -255,7 +270,7 @@ public:
   //debug and system functions/variables
   double CPU_Time();
   void init_clock();
-  double initial_CPU_time, communication_time, dev2host_time, host2dev_time;
+  double initial_CPU_time, communication_time, dev2host_time, host2dev_time, output_time;
 
   //Pointer to ROL Problem for optimization solves
   Teuchos::RCP<ROL::Problem<real_t>> problem;

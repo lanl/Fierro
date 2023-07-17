@@ -104,7 +104,7 @@ class Simulation_Parameters_SGH : public Simulation_Parameters
 
   size_t num_materials;
   size_t max_num_state_vars;
-  size_t max_num_global_vars=0;
+  size_t max_num_global_vars;
 
   size_t num_fills;
   size_t num_bcs;

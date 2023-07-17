@@ -81,6 +81,8 @@ void
 Explicit_Solver_SGH::write_outputs_new()
 {
 
+  const size_t rk_level = simparam->rk_num_bins - 1;
+
   // node "design_density"
   auto design_density = get_design_density(map->getLocalNumElements(),
     simparam_dynamic_opt->topology_optimization_on, design_node_densities_distributed);
@@ -88,7 +90,7 @@ Explicit_Solver_SGH::write_outputs_new()
 
   // node "velocity"
   sgh_module->node_vel.update_host();
-  point_data_vectors_double["velocity"] = &sgh_module->node_vel.host(1,0,0);
+  point_data_vectors_double["velocity"] = &sgh_module->node_vel.host(rk_level,0,0);
 
   // element "element_density"
   sgh_module->elem_den.update_host();
@@ -100,7 +102,7 @@ Explicit_Solver_SGH::write_outputs_new()
 
   // element "sie"
   sgh_module->elem_sie.update_host();
-  cell_data_scalars_double["sie"] = &sgh_module->elem_sie.host(1,0);
+  cell_data_scalars_double["sie"] = &sgh_module->elem_sie.host(rk_level,0);
 
   // element "vol"
   sgh_module->elem_vol.update_host();
@@ -115,7 +117,7 @@ Explicit_Solver_SGH::write_outputs_new()
   cell_data_scalars_double["sspd"] = &sgh_module->elem_sspd.host(0);
 
   // element "speed"
-  auto elem_speed = calculate_elem_speed(all_node_velocities_distributed, nodes_in_elem_distributed);
+  auto elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
   cell_data_scalars_double["speed"] = elem_speed->pointer();
 
   // element "mat_id" //uncomment if needed (works fine)
@@ -178,6 +180,8 @@ construct_file_name(
 void
 Explicit_Solver_SGH::parallel_vtk_writer_new()
 {
+  const size_t rk_level = simparam->rk_num_bins - 1;
+
   int num_dim = simparam->num_dim;
   std::stringstream str_stream;
   MPI_Offset current_offset;
@@ -241,7 +245,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   }
   sgh_module->node_coords.update_host();
   sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-    &sgh_module->node_coords.host(1,0,0), map, num_dim, num_nodes, world, myfile_parallel);
+    &sgh_module->node_coords.host(rk_level,0,0), map, num_dim, num_nodes, world, myfile_parallel);
 
 
   /*************** write CELLS ***************/
@@ -253,7 +257,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   }
   CArray <size_t> nodes_in_elem (sgh_module->nodes_in_elem.dims(0), sgh_module->nodes_in_elem.dims(1));
   { //view scope
-    auto host_view = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    auto host_view = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     for (size_t ielem = 0; ielem < nodes_in_elem.dims(0); ielem++) {
       for (size_t inode = 0; inode < nodes_in_elem.dims(1); inode++) {
         nodes_in_elem(ielem, inode) = host_view(ielem, inode);
@@ -596,17 +600,17 @@ get_cell_nodes(
 Teuchos::RCP<CArray<double>>
 calculate_elem_speed(
   const Teuchos::RCP<Solver::MV> all_node_vel_distributed,
-  const Teuchos::RCP<Solver::MCONN> nodes_in_elem_distributed)
+  const Teuchos::RCP<Solver::MCONN> global_nodes_in_elem_distributed)
 {
 
-  size_t rnum_elems = nodes_in_elem_distributed->getLocalLength();
-  size_t num_nodes_in_elem = nodes_in_elem_distributed->getNumVectors();
+  size_t rnum_elems = global_nodes_in_elem_distributed->getLocalLength();
+  size_t num_nodes_in_elem = global_nodes_in_elem_distributed->getNumVectors();
   size_t num_dims = all_node_vel_distributed->getNumVectors();
 
   Teuchos::RCP<CArray<double>> elem_speed = 
     Teuchos::rcp(new CArray<double>(rnum_elems));
 
-  auto nodes_in_elem_hview = nodes_in_elem_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
+  auto nodes_in_elem_hview = global_nodes_in_elem_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
   auto all_node_vel_hview = all_node_vel_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
 
   for (size_t elem_gid = 0; elem_gid < rnum_elems; elem_gid++) { 

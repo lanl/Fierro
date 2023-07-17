@@ -363,7 +363,7 @@ void EVPFFT::init_crss_temp()
 
         if (igas.host(iph) == 0) {
           for (int i = 1; i <= nsyst.host(iph); i++) {
-            tau0 = tau0_mode(i,1,iph) * exp(-(temp - tau0_mode(i,3,iph)) / tau0_mode(i,2,iph));
+            tau0 = tau0_mode.host(i,1,iph) * exp(-(temp - tau0_mode.host(i,3,iph)) / tau0_mode.host(i,2,iph));
             crss.host(i,1,ii,jj,kk) = tau0;
             crss.host(i,2,ii,jj,kk) = tau0;
             //trialtau.host(i,1,ii,jj,kk)  = tau0;

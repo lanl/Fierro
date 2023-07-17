@@ -142,7 +142,6 @@ Implicit_Solver::Implicit_Solver() : Solver(){
 }
 
 Implicit_Solver::~Implicit_Solver(){
-   delete simparam;
    delete simparam_TO;
    delete ref_elem;
    delete element_select;
@@ -1209,7 +1208,7 @@ void Implicit_Solver::setup_optimization_problem(){
   int local_surface_id;
   const_host_vec_array design_densities;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,node_type> ROL_MV;
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   // fill parameter list with desired algorithmic options or leave as default
   // Read optimization input parameter list.
@@ -1808,7 +1807,7 @@ void Implicit_Solver::collect_information(){
   collected_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(global_reduce_element_map, max_nodes_per_element));
 
   //comms to collect
-  collected_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_collection_importer, Tpetra::INSERT);
+  collected_nodes_in_elem_distributed->doImport(*global_nodes_in_elem_distributed, element_collection_importer, Tpetra::INSERT);
 
   //collect element type data
 
@@ -1854,7 +1853,7 @@ void Implicit_Solver::sort_information(){
   sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
 
   //comms
-  sorted_nodes_in_elem_distributed->doImport(*nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
+  sorted_nodes_in_elem_distributed->doImport(*global_nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
 
 }
 
@@ -2498,7 +2497,7 @@ void Implicit_Solver::tecplot_writer(){
 void Implicit_Solver::vtk_writer(){
     //local variable for host view in the dual view
     host_vec_array node_coords = dual_node_coords.view_host();
-    const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     int graphics_id = simparam->graphics_id;
     int num_dim = simparam->num_dim;
 
@@ -2706,7 +2705,7 @@ void Implicit_Solver::vtk_writer(){
 void Implicit_Solver::ensight_writer(){
     //local variable for host view in the dual view
     host_vec_array node_coords = dual_node_coords.view_host();
-    const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     mat_pt_t *mat_pt = simparam->mat_pt;
     int &graphics_id = simparam->graphics_id;
     real_t *graphics_times = simparam->graphics_times;
@@ -3059,10 +3058,10 @@ void Implicit_Solver::init_design(){
 
     //communicate ghost information to the all vector
     //create import object using local node indices map and all indices map
-    Tpetra::Import<LO, GO> importer(map, all_node_map);
+    //Tpetra::Import<LO, GO> importer(map, all_node_map);
 
     //comms to get ghosts
-    all_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
+    all_node_densities_distributed->doImport(*design_node_densities_distributed, *importer, Tpetra::INSERT);
 
     //debug print
     //std::ostream &out = std::cout;

@@ -167,6 +167,13 @@ public:
   size_t fierro_cycle;
   const real_t stress_scale;
   const real_t time_scale;
+  MatrixTypeRealHost M66;
+  MatrixTypeRealHost edotp_avg;
+  MatrixTypeRealHost dedotp66_avg;
+  MatrixTypeRealHost cg66_avg;
+  MatrixTypeRealHost sg66_avg;
+  MatrixTypeRealHost udotAcc; 
+  double dtAcc;
 
   // For file management
   OutputFileManager ofile_mgr;
@@ -186,7 +193,7 @@ public:
   void init_dvm();
   void check_mixed_bc();
   void init_after_reading_input_data();
-  void solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid);
+  void solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid, real_t udotAccThIn);
   void evolve();
   void check_macrostress();
   void print_vel_grad();

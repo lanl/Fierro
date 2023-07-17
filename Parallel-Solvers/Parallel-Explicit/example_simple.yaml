@@ -6,6 +6,7 @@ solver_type: SGH
 solver_options:
     num_dims: 3
     mesh_file_format: ensight
+    output_file_format: vtk
     mesh_file_name: mesh_Sedov_32.geo
     time_variables:
         time_final: 1.0
@@ -13,6 +14,7 @@ solver_options:
         dt_max: 1.e-2
         dt_start: 1.e-5
         cycle_stop: 2000000
+    timer_output_level: thorough
 
 output_options:
   graphics_step: 0.25
@@ -99,13 +101,3 @@ boundary_condition_options:
         surface: z_plane
         value: 1.2
         condition_type: reflected
-
-optimization_options:
-    optimization_process: topology_optimization
-    optimization_objective: minimize_kinetic_energy
-    num_optimization_constraint: 1
-    constraint_1:
-        type: mass
-        relation: equality
-        value: 0.15
-    

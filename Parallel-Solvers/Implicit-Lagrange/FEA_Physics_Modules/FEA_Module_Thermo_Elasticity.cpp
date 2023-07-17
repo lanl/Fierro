@@ -1083,7 +1083,7 @@ void FEA_Module_Thermo_Elasticity::generate_applied_loads(){
 ------------------------------------------------------------------------- */
 void FEA_Module_Thermo_Elasticity::init_assembly(){
   int num_dim = simparam->num_dim;
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   Stiffness_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Stiffness_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
@@ -1431,7 +1431,7 @@ void FEA_Module_Thermo_Elasticity::init_assembly(){
 
 void FEA_Module_Thermo_Elasticity::assemble_matrix(){
   int num_dim = simparam->num_dim;
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_element;
   int current_row_n_nodes_scanned;
   int local_dof_index, global_node_index, current_row, current_column;
@@ -1601,7 +1601,7 @@ void FEA_Module_Thermo_Elasticity::assemble_matrix(){
 void FEA_Module_Thermo_Elasticity::assemble_vector(){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
   //host_vec_array Nodal_Forces = Global_Nodal_Forces->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
@@ -2466,7 +2466,7 @@ void FEA_Module_Thermo_Elasticity::Concavity_Element_Material_Properties(size_t 
 void FEA_Module_Thermo_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
   //bool nodal_density_flag = simparam->nodal_density_flag;
@@ -2856,7 +2856,7 @@ void FEA_Module_Thermo_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, 
 void FEA_Module_Thermo_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
   //bool nodal_density_flag = simparam->nodal_density_flag;
@@ -3394,7 +3394,7 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_gradients(const_host_vec_arra
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
@@ -3787,7 +3787,7 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
   real_t current_cpu_time = Implicit_Solver_Pointer_->CPU_Time();
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
@@ -3890,11 +3890,11 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
   MPI_Allreduce(&local_direction_vec_reduce,&direction_vec_reduce,1,MPI_DOUBLE,MPI_SUM,world);
 
   //comms to get ghost components of direction vector needed for matrix inner products
-  Tpetra::Import<LO, GO> node_importer(map, all_node_map);
+  //Tpetra::Import<LO, GO> node_importer(map, all_node_map);
   
   Teuchos::RCP<MV> all_direction_vec_distributed = Teuchos::rcp(new MV(all_node_map, 1));
   //comms to get ghosts
-  all_direction_vec_distributed->doImport(*direction_vec_distributed, node_importer, Tpetra::INSERT);
+  all_direction_vec_distributed->doImport(*direction_vec_distributed, *importer, Tpetra::INSERT);
   
   const_host_vec_array all_direction_vec = all_direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
@@ -4259,10 +4259,10 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
   lambda->scale(1/direction_vec_reduce);
   
   //import for displacement of ghosts
-  Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+  //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
 
   //comms to get displacements on all node map
-  all_adjoint_displacements_distributed->doImport(*adjoint_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
+  all_adjoint_displacements_distributed->doImport(*adjoint_displacements_distributed,*dof_importer, Tpetra::INSERT);
   host_vec_array all_adjoint = all_adjoint_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //*fos << "ALL ADJOINT" << std::endl;
   //all_adjoint_distributed->describe(*fos,Teuchos::VERB_EXTREME);
@@ -4845,7 +4845,7 @@ void FEA_Module_Thermo_Elasticity::compute_nodal_strains(){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   host_vec_array all_node_strains = all_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   host_vec_array node_strains = node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -5681,10 +5681,10 @@ int FEA_Module_Thermo_Elasticity::solve(){
   //*fos << std::endl;
   
   //import for displacement of ghosts
-  Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+  //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
 
   //comms to get displacements on all node map
-  all_node_displacements_distributed->doImport(*node_displacements_distributed, ghost_displacement_importer, Tpetra::INSERT);
+  all_node_displacements_distributed->doImport(*node_displacements_distributed, *dof_importer, Tpetra::INSERT);
 
   //reinsert global stiffness values corresponding to BC indices to facilitate strain energy calculation
   if(matrix_bc_reduced){

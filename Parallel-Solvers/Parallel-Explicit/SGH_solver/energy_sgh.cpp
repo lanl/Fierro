@@ -11,7 +11,8 @@ void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
                        DViewCArrayKokkos <double> &elem_sie,
                        const DViewCArrayKokkos <double> &elem_mass,
                        const DViewCArrayKokkos <double> &corner_force){
-    
+   
+    const size_t rk_level = simparam->rk_num_bins - 1; 
     int num_dims = simparam->num_dim;
 
     // loop over all the elements in the mesh
@@ -34,13 +35,13 @@ void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
             
             double node_radius = 1;
             if(num_dims==2){
-                node_radius = node_coords(1,node_gid,1);
+                node_radius = node_coords(rk_level,node_gid,1);
             }
 
             // calculate the Power=F dot V for this corner
             for (size_t dim=0; dim<num_dims; dim++){
                 
-                double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
+                double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
                 elem_power += corner_force(corner_gid, dim)*node_radius*half_vel;
                 
             } // end for dim
@@ -48,7 +49,7 @@ void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
         } // end for node_lid
 
         // update the specific energy
-        elem_sie(1, elem_gid) = elem_sie(0, elem_gid) -
+        elem_sie(rk_level, elem_gid) = elem_sie(0, elem_gid) -
                                 rk_alpha*dt/elem_mass(elem_gid) * elem_power;
 
     }); // end parallel loop over the elements

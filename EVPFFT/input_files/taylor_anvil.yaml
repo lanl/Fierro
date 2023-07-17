@@ -11,11 +11,11 @@ solver_options:
         dt_min: 1.e-11  #[s]
         dt_max: 1.e-3  #[s]
         dt_start: 1.e-10  #[s]
-        dt_cfl: 0.4 
+        dt_cfl: 0.01 
         cycle_stop: 200000000
 
 output_options:
-  graphics_step: 1.0e-05  #[s]
+  graphics_step: 6.0e-07  #[s]
 
 material_options:
     num_materials: 1
@@ -28,10 +28,10 @@ material_options:
         strength_type: hypo
         strength_setup: user_init
         strength_run_location: host
-        q1: 1.0 
-        q2: 1.3333
-        q1ex: 1.0 
-        q2ex: 0.0 
+        q1: 0.01 # 0.01 to 0.1 
+        q2: 0.5 # 0.5  q2/4
+        q1ex: 0.01 # 0.01 to 0.1
+        q2ex: 0.0  
 
         num_state_vars: 5
 

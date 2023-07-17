@@ -83,6 +83,23 @@ public:
                      const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
+  
+  void get_force_elastic(const DCArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_sie,
+                     const DViewCArrayKokkos <double> &elem_pres,
+                     DViewCArrayKokkos <double> &elem_stress,
+                     const DViewCArrayKokkos <double> &elem_sspd,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     DViewCArrayKokkos <double> &corner_force,
+                     const DViewCArrayKokkos <double> &elem_statev,
+                     const double rk_alpha,
+                     const size_t cycle);
 
   void get_force_vgradient_sgh(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
@@ -132,6 +149,9 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
+  KOKKOS_FUNCTION
+  real_t corner_force_design_gradient(size_t local_elem_index, size_t local_node_index, size_t idim, size_t local_node_design_index) const;
+
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                        const mesh_t &mesh,
@@ -156,6 +176,8 @@ public:
                            const DViewCArrayKokkos <double> &node_vel);
 
   void get_vol();
+
+  void init_assembly();
 
   KOKKOS_INLINE_FUNCTION
   void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
@@ -362,27 +384,10 @@ public:
                            const double rk_alpha) const;
 
 
-  KOKKOS_INLINE_FUNCTION
-  void user_strength_model_vpsc(const DViewCArrayKokkos <double> &elem_pres,
-                              const DViewCArrayKokkos <double> &elem_stress,
-                              const size_t elem_gid,
-                              const size_t mat_id,
-                              const DViewCArrayKokkos <double> &elem_state_vars,
-                              const DViewCArrayKokkos <double> &elem_sspd,
-                              const double den,
-                              const double sie,
-                              const ViewCArrayKokkos <double> &vel_grad,
-                              const ViewCArrayKokkos <size_t> &elem_node_gids,
-                              const DViewCArrayKokkos <double> &node_coords,
-                              const DViewCArrayKokkos <double> &node_vel,
-                              const double vol,
-                              const double rk_alpha) const;
-
-
-void user_model_init(const DCArrayKokkos <double> &file_state_vars,
-                     const size_t num_state_vars,
-                     const size_t mat_id,
-                     const size_t num_elems);
+  void user_model_init(const DCArrayKokkos <double> &file_state_vars,
+                       const size_t num_state_vars,
+                       const size_t mat_id,
+                       const size_t num_elems);
 
   void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
   
@@ -534,13 +539,30 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   Teuchos::RCP<MV> ghost_node_masses_distributed;
   Teuchos::RCP<MV> adjoint_vector_distributed;
   Teuchos::RCP<MV> phi_adjoint_vector_distributed;
-  std::vector<Teuchos::RCP<MV>> forward_solve_velocity_data;
-  std::vector<Teuchos::RCP<MV>> forward_solve_coordinate_data;
-  std::vector<Teuchos::RCP<MV>> adjoint_vector_data;
-  std::vector<Teuchos::RCP<MV>> phi_adjoint_vector_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> adjoint_vector_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> phi_adjoint_vector_data;
   Teuchos::RCP<MV> force_gradient_design;
   Teuchos::RCP<MV> force_gradient_position;
   Teuchos::RCP<MV> force_gradient_velocity;
+
+  //Local FEA data
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Gradient_Matrix_Assembly_Map;
+  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
+  RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Positions;
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Velocities;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Gradient_Matrix_Strides;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
+  RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Gradient_Entries;
+  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Gradient_Entry_Indices;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Gradient_Entries_Strides;
+
+  //distributed matrices
+  Teuchos::RCP<MAT> distributed_force_gradient_positions;
+  Teuchos::RCP<MAT> distributed_force_gradient_velocities;
+
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
 
@@ -561,6 +583,9 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
   DViewCArrayKokkos <double> elem_mass;
   DViewCArrayKokkos <size_t> elem_mat_id;
   DViewCArrayKokkos <double> elem_statev;
+
+  // Element velocity gradient 
+  DCArrayKokkos <double> elem_vel_grad;
 
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;

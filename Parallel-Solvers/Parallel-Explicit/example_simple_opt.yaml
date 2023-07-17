@@ -1,0 +1,113 @@
+# input file
+solver_type: SGH
+    #test:
+     #   dt_cfl: 0.2
+
+solver_options:
+    num_dims: 3
+    mesh_file_format: ensight
+    output_file_format: vtk
+    mesh_file_name: mesh_Sedov_32.geo
+    time_variables:
+        time_final: 0.1
+        dt_min: 1.e-8
+        dt_max: 1.e-4
+        dt_start: 1.e-5
+        cycle_stop: 2000000
+    timer_output_level: thorough
+
+output_options:
+  graphics_step: 0.25
+
+material_options:
+    num_materials: 1
+    max_num_state_var: 6
+    material_1:
+        #eos model is required
+        eos_model: ideal_gas
+        strength_model: none
+        q1: 1.0
+        q2: 0
+        q1ex: 1.0
+        q2ex: 0.0
+            
+        num_state_vars: 3
+        state_vars_1: 1.666666666666667
+        state_vars_2: 1.0E-14
+        state_vars_3: 1.0
+    
+
+region_options:
+    num_fills: 2
+    #global initial conditions
+    mat_fill_1:
+        volume: global
+        mat_id: 0
+        den: 1.0
+        sie: 1.e-10
+            
+        velocity: cartesian
+        u: 0.1
+        v: 0.2
+        w: 0.3
+    # energy source initial conditions
+    mat_fill_2:
+        volume: sphere
+        mat_id: 0
+        radius1: 0.0
+        radius2: 0.0375
+        den: 1.0
+            
+        velocity: cartesian
+        u: 0.0
+        v: 0.0
+        w: 0.0
+    
+boundary_condition_options:
+    num_bcs: 6
+    # Tag X plane
+    boundary_condition_1:
+        surface: x_plane
+        value: 0.0
+        condition_type: reflected
+            
+    # Tag Y plane
+    boundary_condition_2:
+        surface: y_plane
+        value: 0.0
+        condition_type: reflected
+            
+    # Tag Z plane
+    boundary_condition_3:
+        surface: z_plane
+        value: 0.0
+        condition_type: reflected
+            
+            
+    # Tag X plane
+    boundary_condition_4:
+        surface: x_plane
+        value: 1.2
+        condition_type: reflected
+            
+    # Tag Y plane
+    boundary_condition_5:
+        surface: y_plane
+        value: 1.2
+        condition_type: reflected
+            
+    # Tag Z plane
+    boundary_condition_6:
+        surface: z_plane
+        value: 1.2
+        condition_type: reflected
+
+optimization_options:
+    optimization_process: topology_optimization
+    optimization_objective: minimize_kinetic_energy
+    num_optimization_constraint: 1
+    constraint_1:
+        type: mass
+        relation: equality
+        value: 0.15
+    

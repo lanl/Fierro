@@ -20,25 +20,6 @@ void check_that_file_is_open(FILE *file_ptr, const char* filename)
   }
 }
 
-void print_array(real_t *ptr, int N)
-{
-  for (int i = 0; i < N; i++) {
-    printf("%24.14E", ptr[i]);
-    if ((i+1)%3 == 0) printf("\n");
-  }
-  printf("\n");
-
-}
-
-void print_array(int *ptr, int N)
-{
-  for (int i = 0; i < N; i++) {
-    printf("%13d", ptr[i]);
-    if ((i+1)%6 == 0) printf("\n");
-  }
-  printf("\n");
-
-}
 
 void print_array_to_file(real_t *ptr, int N, int my_rank, const char* filename)
 {
