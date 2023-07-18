@@ -6,7 +6,7 @@ if(BUILD_ELEMENTS)
     target_link_libraries (fierro-test swage)
     target_link_libraries (fierro-test geometry)
     target_link_libraries (fierro-test slam)
-else()
+endif()
 
 # General use libraries
 target_link_libraries (fierro-test Hydro)
