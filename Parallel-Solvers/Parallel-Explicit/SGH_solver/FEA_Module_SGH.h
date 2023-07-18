@@ -147,8 +147,7 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
-  KOKKOS_FUNCTION
-  real_t corner_force_design_gradient(size_t local_elem_index, size_t local_node_index, size_t idim, size_t local_node_design_index) const;
+  void force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
 
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,

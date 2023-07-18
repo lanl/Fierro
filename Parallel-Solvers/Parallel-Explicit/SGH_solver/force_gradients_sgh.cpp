@@ -799,12 +799,114 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
 // Computes corner contribution of gradient of force with respect to the design variable
 //---------------------------------------------------------------------------------------
 
-KOKKOS_FUNCTION real_t FEA_Module_SGH::corner_force_design_gradient(size_t local_elem_index, size_t local_node_index, size_t idim, size_t local_node_design_index)
-const {
-    //simple example to test
-    return 0.0001;
+void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
+
+  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
+  const DCArrayKokkos <material_t> material = simparam->material;
+  const int num_dim = simparam->num_dim;
+  int num_corners = rnum_elem*num_nodes_in_elem;
+  real_t global_dt;
+  bool element_constant_density = true;
+  size_t current_data_index, next_data_index;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
+
+  //gradient contribution from gradient of Force vector with respect to design variable.
+  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    //compute timestep from time data
+    global_dt = time_data[cycle+1] - time_data[cycle];
+    
+    //print
+    if (cycle==0){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    }
+        // print time step every 10 cycles
+    else if (cycle%20==0){
+      if(myrank==0)
+        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    } // end if
+
+    //compute adjoint vector for this data point; use velocity midpoint
+      //view scope
+      {
+        //const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        //const_vec_array current_coord_vector = forward_solve_coordinate_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        //const_vec_array final_coordinates = forward_solve_coordinate_data[last_time_step+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        CArrayKokkos<real_t> inner_products(num_nodes_in_elem);
+        FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+          size_t node_id;
+          size_t corner_id;
+          real_t inner_product;
+          //std::cout << elem_mass(elem_id) <<std::endl;
+          //current_nodal_velocities
+          for (int inode = 0; inode < num_nodes_in_elem; inode++){
+            node_id = nodes_in_elem(elem_id, inode);
+            current_element_adjoint(inode,0) = (current_adjoint_vector(node_id,0)+next_adjoint_vector(node_id,0))/2;
+            current_element_adjoint(inode,1) = (current_adjoint_vector(node_id,1)+next_adjoint_vector(node_id,1))/2;
+            if(num_dim==3)
+            current_element_adjoint(inode,2) = (current_adjoint_vector(node_id,2)+next_adjoint_vector(node_id,2))/2;
+          }
+
+          if(element_constant_density){
+            inner_product = 0;
+            for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+              node_id = nodes_in_elem(elem_id, ifill);
+              for(int idim=0; idim < num_dim; idim++){
+                //inner_product += 0.0001*current_element_adjoint(ifill,idim);
+                inner_product += 0.0001*current_element_adjoint(ifill,idim);
+                //inner_product += 0.0001;
+              }
+            }
+
+            for (int inode = 0; inode < num_nodes_in_elem; inode++){
+              //compute gradient of local element contribution to v^t*M*v product
+              corner_id = elem_id*num_nodes_in_elem + inode;
+              corner_value_storage(corner_id) = -inner_product*global_dt/(double)num_nodes_in_elem;
+            }
+          }
+          else{
+            for(int idesign=0; idesign < num_nodes_in_elem; idesign++){
+              inner_products(idesign) = 0;
+              for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+                node_id = nodes_in_elem(elem_id, ifill);
+                for(int idim=0; idim < num_dim; idim++){
+                  //inner_product += 0.0001*current_element_adjoint(ifill,idim);
+                  inner_products(idesign) += 0.0001*current_element_adjoint(ifill,idim);
+                  //inner_product += 0.0001;
+                }
+              }
+            }
+
+            for (int inode = 0; inode < num_nodes_in_elem; inode++){
+              //compute gradient of local element contribution to v^t*M*v product
+              corner_id = elem_id*num_nodes_in_elem + inode;
+              corner_value_storage(corner_id) = -inner_products(inode)*global_dt;
+            }
+          }
+          
+        }); // end parallel for
+        Kokkos::fence();
+        
+        //accumulate node values from corner storage
+        //multiply
+        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+          size_t corner_id;
+          for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
+            corner_id = corners_in_node(node_id,icorner);
+            design_gradients(node_id,0) += corner_value_storage(corner_id);
+          }
+        }); // end parallel for
+        Kokkos::fence();
+        
+      } //end view scope
+
+  }
 
 }
+
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
