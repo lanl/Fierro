@@ -1,7 +1,9 @@
 ensight
 state
 CMakeFiles
-Fierro_Parallel_Explicit
+fierro-parallel-explicit
+fierro-parallel-implicit
+fierro
 cmake_install
 Makefile
 
