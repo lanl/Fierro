@@ -80,7 +80,7 @@ void FEA_Module_SGH::get_force_elastic(const DCArrayKokkos <material_t> &materia
 void FEA_Module_SGH::assemble_matrix(){
   int num_dim = simparam->num_dim;
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int nodes_per_element;
+  int nodes_per_elem;
   int current_row_n_nodes_scanned;
   int local_dof_index, global_node_index, current_row, current_column;
   int max_stride = 0;
@@ -116,17 +116,17 @@ void FEA_Module_SGH::assemble_matrix(){
   if(num_dim==2)
   for (int ielem = 0; ielem < rnum_elem; ielem++){
     element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
-    nodes_per_element = elem2D->num_nodes();
+    nodes_per_elem = elem2D->num_nodes();
     //construct local stiffness matrix for this element
     local_matrix_multiply(ielem, Local_Stiffness_Matrix);
     //assign entries of this local matrix to the sparse global matrix storage;
-    for (int inode = 0; inode < nodes_per_element; inode++){
+    for (int inode = 0; inode < nodes_per_elem; inode++){
       //see if this node is local
       global_node_index = nodes_in_elem(ielem,inode);
       if(!map->isNodeGlobalElement(global_node_index)) continue;
       //set dof row start index
       current_row = num_dim*map->getLocalElement(global_node_index);
-      for(int jnode = 0; jnode < nodes_per_element; jnode++){
+      for(int jnode = 0; jnode < nodes_per_elem; jnode++){
         
         current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
         for (int idim = 0; idim < num_dim; idim++){
@@ -148,17 +148,17 @@ void FEA_Module_SGH::assemble_matrix(){
   if(num_dim==3)
   for (int ielem = 0; ielem < rnum_elem; ielem++){
     element_select->choose_3Delem_type(Element_Types(ielem), elem);
-    nodes_per_element = elem->num_nodes();
+    nodes_per_elem = elem->num_nodes();
     //construct local stiffness matrix for this element
     local_matrix_multiply(ielem, Local_Stiffness_Matrix);
     //assign entries of this local matrix to the sparse global matrix storage;
-    for (int inode = 0; inode < nodes_per_element; inode++){
+    for (int inode = 0; inode < nodes_per_elem; inode++){
       //see if this node is local
       global_node_index = nodes_in_elem(ielem,inode);
       if(!map->isNodeGlobalElement(global_node_index)) continue;
       //set dof row start index
       current_row = num_dim*map->getLocalElement(global_node_index);
-      for(int jnode = 0; jnode < nodes_per_element; jnode++){
+      for(int jnode = 0; jnode < nodes_per_elem; jnode++){
         
         current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
         for (int idim = 0; idim < num_dim; idim++){
@@ -367,15 +367,7 @@ void FEA_Module_SGH::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array
     elem->basis(basis_values,quad_coordinate);
     
     //compute density
-    current_density = 0;
-    if(nodal_density_flag)
-    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      current_density += nodal_density(node_loop)*basis_values(node_loop);
-    }
-    //default constant element density
-    else{
-      current_density = Element_Densities(ielem,0);
-    }
+    current_density = relative_element_densities.host(ielem);
 
     //debug print
     //std::cout << "Current Density " << current_density << std::endl;
@@ -838,15 +830,7 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_var
       invJacobian = 1/Jacobian;
 
       //compute density
-      current_density = 0;
-      if(nodal_density_flag)
-      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-        current_density += nodal_density(node_loop)*basis_values(node_loop);
-      }
-      //default constant element density
-      else{
-        current_density = Element_Densities(ielem,0);
-      }
+      current_density = relative_element_densities.host(ielem);
 
       //debug print
       //std::cout << "Current Density " << current_density << std::endl;
@@ -1026,7 +1010,7 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_var
         
         //debug print
         //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-        design_gradients(local_node_id,0) += inner_product*basis_values(igradient)*weight_multiply*Jacobian*global_dt;
+        design_gradients(local_node_id,0) += inner_product*weight_multiply*Jacobian*global_dt/nodes_per_elem;
         }
       }
       }
