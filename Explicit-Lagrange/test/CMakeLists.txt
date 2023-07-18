@@ -7,12 +7,6 @@ if(BUILD_ELEMENTS)
     target_link_libraries (fierro-test geometry)
     target_link_libraries (fierro-test slam)
 else()
-    target_link_libraries (fierro-test ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
-    target_link_libraries (fierro-test ${CMAKE_SOURCE_DIR}/Elements/build/swage/libswage.a)
-    target_link_libraries (fierro-test ${CMAKE_SOURCE_DIR}/Elements/build/geometry/libgeometry.a)
-    target_link_libraries (fierro-test ${CMAKE_SOURCE_DIR}/Elements/build/slam/libslam.a)
-endif()
-
 
 # General use libraries
 target_link_libraries (fierro-test Hydro)
