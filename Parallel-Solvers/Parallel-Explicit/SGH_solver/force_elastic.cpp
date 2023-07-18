@@ -1011,7 +1011,7 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_var
             
             //debug print
             //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-            design_gradients(local_node_id,0) -= inner_product*Elastic_Constant*weight_multiply*0.5*invJacobian/nodes_per_elem;
+            design_gradients(local_node_id,0) -= inner_product*Elastic_Constant*weight_multiply*0.5*invJacobian*global_dt/nodes_per_elem;
           }
 
           //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
