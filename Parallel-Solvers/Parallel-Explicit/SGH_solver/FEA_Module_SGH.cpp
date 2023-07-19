@@ -73,6 +73,7 @@
 #include "node_combination.h"
 #include "Simulation_Parameters_SGH.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters_Elasticity.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 #include "user_material_functions.h"
@@ -1224,7 +1225,10 @@ void FEA_Module_SGH::setup(){
     
     //initialize if topology optimization is used
     if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      //create parameter object
+      simparam_elasticity = new Simulation_Parameters_Elasticity();
       init_assembly();
+      assemble_matrix();
     }
 
     // update host copies of arrays modified in this function
@@ -1893,25 +1897,6 @@ void FEA_Module_SGH::sgh_solve(){
                                 cycle);
             }
             else {
-              if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
-                get_force_elastic(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              elem_statev,
-                              rk_alpha,
-                              cycle);
-              }
-              else{
                 get_force_sgh(material,
                               mesh,
                               node_coords,
@@ -1928,7 +1913,6 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_statev,
                               rk_alpha,
                               cycle);
-              }
             }
 
             /*
@@ -1967,11 +1951,28 @@ void FEA_Module_SGH::sgh_solve(){
             */
 
             // ---- Update nodal velocities ---- //
-            update_velocity_sgh(rk_alpha,
+            if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+              get_force_elastic(material,
+                              mesh,
+                              node_coords,
+                              node_vel,
+                              node_mass,
+                              elem_den,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              elem_statev,
+                              rk_alpha,
+                              cycle);
+            }
+            else{
+              update_velocity_sgh(rk_alpha,
                                 mesh,
                                 node_vel,
                                 node_mass,
                                 corner_force);
+            }
             
             // ---- apply force boundary conditions to the boundary patches----
             boundary_velocity(mesh, boundary, node_vel);

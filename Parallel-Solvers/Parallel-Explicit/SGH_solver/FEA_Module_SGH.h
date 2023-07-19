@@ -49,6 +49,7 @@
 class Explicit_Solver_SGH;
 class Simulation_Parameters_SGH;
 class Simulation_Parameters_Dynamic_Optimization;
+class Simulation_Parameters_Elasticity;
 
 class FEA_Module_SGH: public FEA_Module{
 
@@ -88,11 +89,8 @@ public:
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &node_mass,
                      const DViewCArrayKokkos <double> &elem_den,
-                     const DViewCArrayKokkos <double> &elem_sie,
-                     const DViewCArrayKokkos <double> &elem_pres,
-                     DViewCArrayKokkos <double> &elem_stress,
-                     const DViewCArrayKokkos <double> &elem_sspd,
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
@@ -149,8 +147,7 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
-  KOKKOS_FUNCTION
-  real_t corner_force_design_gradient(size_t local_elem_index, size_t local_node_index, size_t idim, size_t local_node_design_index) const;
+  void force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
 
 
   void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
@@ -481,8 +478,28 @@ public:
   void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
 
   void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
+
+  //elastic TO stuff
+  void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+
+  void compute_stiffness_gradients(const_host_vec_array design_densities, host_vec_array gradients);
+
+  void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+
+  void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
+  
+  void assemble_matrix();
+  
+  bool nodal_density_flag;
+  real_t penalty_power;
+  Teuchos::RCP<MAT> Global_Stiffness_Matrix;
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
+  //end elastic TO data
   
   Simulation_Parameters_SGH *simparam;
+  Simulation_Parameters_Elasticity *simparam_elasticity;
   Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
   Explicit_Solver_SGH *Explicit_Solver_Pointer_;
 

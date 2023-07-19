@@ -68,6 +68,7 @@
 #include "node_combination.h"
 #include "Simulation_Parameters.h"
 #include "Solver.h"
+#include "FEA_Module.h"
 
 //Repartition Package
 #include <Zoltan2_XpetraMultiVectorAdapter.hpp>

@@ -547,6 +547,11 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
       }); // end parallel for
     } //end view scope
     Kokkos::fence();
+
+    //update stiffness matrix
+    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      assemble_matrix();
+    }
     
     //execute solve
     simparam->time_value = 0;
@@ -774,7 +779,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               1,
                               cycle);
 
-      get_force_ugradient_sgh(material,
+     /* get_force_ugradient_sgh(material,
                               mesh,
                               node_coords,
                               node_vel,
@@ -789,6 +794,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_statev,
                               1,
                               cycle);
+      */
 
       //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
       const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
@@ -1241,8 +1247,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
   }
 
   //compute initial condition contribution
-
-  //compute adjoint vector for this data point; use velocity midpoint
   //view scope
   {
     const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[0]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
@@ -1293,100 +1297,9 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
     Kokkos::fence();
     
   } //end view scope
-
-  //gradient contribution from gradient of Force vector with respect to design variable.
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
-    //compute timestep from time data
-    global_dt = time_data[cycle+1] - time_data[cycle];
-    
-    //print
-    if (cycle==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-    }
-        // print time step every 10 cycles
-    else if (cycle%20==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-    } // end if
-
-    //compute adjoint vector for this data point; use velocity midpoint
-      //view scope
-      {
-        //const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        //const_vec_array current_coord_vector = forward_solve_coordinate_data[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        //const_vec_array final_coordinates = forward_solve_coordinate_data[last_time_step+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        CArrayKokkos<real_t> inner_products(num_nodes_in_elem);
-        FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
-          size_t node_id;
-          size_t corner_id;
-          real_t inner_product;
-          //std::cout << elem_mass(elem_id) <<std::endl;
-          //current_nodal_velocities
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            current_element_adjoint(inode,0) = (current_adjoint_vector(node_id,0)+next_adjoint_vector(node_id,0))/2;
-            current_element_adjoint(inode,1) = (current_adjoint_vector(node_id,1)+next_adjoint_vector(node_id,1))/2;
-            if(num_dim==3)
-            current_element_adjoint(inode,2) = (current_adjoint_vector(node_id,2)+next_adjoint_vector(node_id,2))/2;
-          }
-
-          if(element_constant_density){
-            inner_product = 0;
-            for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-              node_id = nodes_in_elem(elem_id, ifill);
-              for(int idim=0; idim < num_dim; idim++){
-                //inner_product += 0.0001*current_element_adjoint(ifill,idim);
-                inner_product += corner_force_design_gradient(elem_id,ifill,idim,ifill)*current_element_adjoint(ifill,idim);
-                //inner_product += 0.0001;
-              }
-            }
-
-            for (int inode = 0; inode < num_nodes_in_elem; inode++){
-              //compute gradient of local element contribution to v^t*M*v product
-              corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = -inner_product*global_dt/(double)num_nodes_in_elem;
-            }
-          }
-          else{
-            for(int idesign=0; idesign < num_nodes_in_elem; idesign++){
-              inner_products(idesign) = 0;
-              for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-                node_id = nodes_in_elem(elem_id, ifill);
-                for(int idim=0; idim < num_dim; idim++){
-                  //inner_product += 0.0001*current_element_adjoint(ifill,idim);
-                  inner_products(idesign) += corner_force_design_gradient(elem_id,ifill,idim,idesign)*current_element_adjoint(ifill,idim);
-                  //inner_product += 0.0001;
-                }
-              }
-            }
-
-            for (int inode = 0; inode < num_nodes_in_elem; inode++){
-              //compute gradient of local element contribution to v^t*M*v product
-              corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = -inner_products(inode)*global_dt;
-            }
-          }
-          
-        }); // end parallel for
-        Kokkos::fence();
-        
-        //accumulate node values from corner storage
-        //multiply
-        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-          size_t corner_id;
-          for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
-            corner_id = corners_in_node(node_id,icorner);
-            design_gradients(node_id,0) += corner_value_storage(corner_id);
-          }
-        }); // end parallel for
-        Kokkos::fence();
-        
-      } //end view scope
-
-  }
+  
+  //force_design_gradient_term(design_variables, design_gradients);
+  compute_stiffness_gradients(design_variables, design_gradients);
 
 }
 
@@ -1402,6 +1315,8 @@ void FEA_Module_SGH::init_assembly(){
   int local_node_index, current_column_index;
   size_t max_stride = 0;
   size_t nodes_per_element;
+  nodal_density_flag = simparam_dynamic_opt->nodal_density_flag;
+  penalty_power = simparam_dynamic_opt->penalty_power;
   
   //allocate stride arrays
   CArrayKokkos <size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
@@ -1409,7 +1324,7 @@ void FEA_Module_SGH::init_assembly(){
   Graph_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes, "Graph_Matrix_Strides");
 
   //allocate storage for the sparse stiffness matrix map used in the assembly process
-  Global_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
+  Global_Stiffness_Matrix_Assembly_Map = Global_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
                                          max_nodes_per_element,max_nodes_per_element, "Global_Gradient_Matrix_Assembly_Map");
 
   //allocate array used to determine global node repeats in the sparse graph later
@@ -1629,7 +1544,7 @@ void FEA_Module_SGH::init_assembly(){
     Gradient_Matrix_Strides(idof) = num_dim*Graph_Matrix_Strides(idof/num_dim);
   }); // end parallel for
 
-  Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
+  Stiffness_Matrix = Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   Force_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Gradient_Matrix_Strides);
 
@@ -1641,6 +1556,8 @@ void FEA_Module_SGH::init_assembly(){
       DOF_Graph_Matrix(idof,istride) = Graph_Matrix(idof/num_dim,istride/num_dim)*num_dim + istride%num_dim;
     }
   }); // end parallel for
+
+  Stiffness_Matrix_Strides = Gradient_Matrix_Strides;
   
   /*
   //construct distributed gradient matrix from local kokkos data
