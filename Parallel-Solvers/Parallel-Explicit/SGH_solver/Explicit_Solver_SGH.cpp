@@ -124,6 +124,7 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   simparam = new Simulation_Parameters_SGH();
   simparam_dynamic_opt = new Simulation_Parameters_Dynamic_Optimization(this);
   Solver::simparam = simparam;
+
   //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->Simulation_Parameters::input();
@@ -147,6 +148,9 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
 
   //file readin parameter
   active_node_ordering_convention = ENSIGHT;
+  //default simulation parameters
+  simparam->input();
+  simparam_dynamic_opt->input();
 }
 
 Explicit_Solver_SGH::~Explicit_Solver_SGH(){
@@ -184,11 +188,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
     //initialize Trilinos communicator class
     comm = Tpetra::getDefaultComm();
-
-    //default simulation parameters
-    
-    simparam->input();
-    simparam_dynamic_opt->input();
     int num_dim = simparam->num_dim;
 
     //error handle for file input name

@@ -101,6 +101,7 @@ void solver_setup(int argc, char *argv[]){
       }
 
       //use map of set options to set member variables of the class
+      simparam->input();
       simparam->apply_settings();
       if(simparam->solver_type=="Implicit"){
         solver = new Implicit_Solver();
