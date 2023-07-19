@@ -180,40 +180,46 @@ public:
   void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
-                   const ViewCArrayKokkos <size_t>  &elem_node_gids) const;
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                   const size_t rk_level) const;
 
 
   KOKKOS_INLINE_FUNCTION
   void get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                     const size_t elem_gid,
                     const DViewCArrayKokkos <double> &node_coords,
-                    const ViewCArrayKokkos <size_t>  &elem_node_gids) const;
+                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                    const size_t rk_level) const;
 
 
   KOKKOS_FUNCTION
   double get_area_quad(const size_t elem_gid,
                        const DViewCArrayKokkos <double> &node_coords,
-                       const ViewCArrayKokkos <size_t>  &elem_node_gids) const;
+                       const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                       const size_t rk_level) const;
 
 
   KOKKOS_FUNCTION
   void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
-                   const ViewCArrayKokkos <size_t>  &elem_node_gids) const;
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                   const size_t rk_level) const;
 
 
   KOKKOS_FUNCTION
   void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
                      const size_t elem_gid,
                      const DViewCArrayKokkos <double> &node_coords,
-                     const ViewCArrayKokkos <size_t>  &elem_node_gids) const;
+                     const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                     const size_t rk_level) const;
 
   KOKKOS_FUNCTION
   void get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
                           const size_t elem_gid,
                           const DViewCArrayKokkos <double> &node_coords,
-                          const ViewCArrayKokkos <size_t>  &elem_node_gids) const;
+                          const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                          const size_t rk_level) const;
 
 
   KOKKOS_INLINE_FUNCTION
@@ -246,7 +252,8 @@ public:
                    const DViewCArrayKokkos <double> &node_vel,
                    const ViewCArrayKokkos <double> &b_matrix,
                    const double elem_vol,
-                   const size_t elem_gid) const;
+                   const size_t elem_gid,
+                   const size_t rk_level) const;
 
 
   KOKKOS_FUNCTION
@@ -256,7 +263,8 @@ public:
                      const ViewCArrayKokkos <double> &b_matrix,
                      const double elem_vol,
                      const double elem_area,
-                     const size_t elem_gid) const;
+                     const size_t elem_gid,
+                     const size_t rk_level) const;
 
   KOKKOS_INLINE_FUNCTION
   void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
@@ -289,7 +297,8 @@ public:
                    const int num_nodes_in_patch,
                    const int this_bc_tag,
                    const double val,
-                   const DViewCArrayKokkos <double> &node_coords) const;
+                   const DViewCArrayKokkos <double> &node_coords,
+                   const size_t rk_level) const;
 
   void rk_init(DViewCArrayKokkos <double> &node_coords,
                DViewCArrayKokkos <double> &node_vel,

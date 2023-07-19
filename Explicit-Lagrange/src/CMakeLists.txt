@@ -10,12 +10,6 @@ DG_solver/limit_vel.cpp DG_solver/limit_energy.cpp DG_solver/dg_hydro.cpp DG_sol
 
 Common/boundary.cpp Common/eos.cpp Common/input.cpp Common/outputs.cpp Common/read_mesh_ensight.cpp Common/time_integration.cpp Common/timestep.cpp Common/run_info.cpp)
 
-if(BUILD_ELEMENTS)
 target_link_libraries (Hydro geometry)
 target_link_libraries (Hydro elements)
 target_link_libraries (Hydro slam)
-else()
-target_link_libraries (Hydro ${CMAKE_SOURCE_DIR}/Elements/build/geometry/libgeometry.a)
-target_link_libraries (Hydro ${CMAKE_SOURCE_DIR}/Elements/build/slam/libslam.a)
-target_link_libraries (Hydro ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
-endif()

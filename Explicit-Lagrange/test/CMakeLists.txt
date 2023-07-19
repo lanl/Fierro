@@ -1,24 +1,16 @@
-add_executable(fierro driver.cpp)
+add_executable(fierro-test driver.cpp)
 
 # ELEMENTS
-if(BUILD_ELEMENTS)
-target_link_libraries (fierro elements)
-target_link_libraries (fierro swage)
-target_link_libraries (fierro geometry)
-target_link_libraries (fierro slam)
-else()
-target_link_libraries (fierro ${CMAKE_SOURCE_DIR}/Elements/build/elements/libelements.a)
-target_link_libraries (fierro ${CMAKE_SOURCE_DIR}/Elements/build/swage/libswage.a)
-target_link_libraries (fierro ${CMAKE_SOURCE_DIR}/Elements/build/geometry/libgeometry.a)
-target_link_libraries (fierro ${CMAKE_SOURCE_DIR}/Elements/build/slam/libslam.a)
-endif()
-
+target_link_libraries (fierro-test elements)
+target_link_libraries (fierro-test swage)
+target_link_libraries (fierro-test geometry)
+target_link_libraries (fierro-test slam)
 
 # General use libraries
-target_link_libraries (fierro Hydro)
+target_link_libraries (fierro-test Hydro)
 
 # CCH coding
-#target_link_libraries (fierro CCH_Hydro)
+#target_link_libraries (fierro-test CCH_Hydro)
 
 # SGH coding
-#target_link_libraries (fierro SGH_Hydro)
+#target_link_libraries (fierro-test SGH_Hydro)

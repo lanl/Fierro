@@ -1,0 +1,51 @@
+{% set version = "1.0.0" %}
+{% set compiler_version = "10.4.0" %}
+
+package:
+  name: fierro-cpu
+  version: {{ version }}
+
+source:
+  # Assume this recipe is in
+  # Fierro/Anaconda-Packages/fierro/{build_type}
+  path: ../../.. # Back to Fierro/
+
+build:
+  number: 1
+  script_env:
+    - PLATFORM={{ target_platform }}
+
+requirements:
+  build:
+    - cmake >=3.10.0
+    - {{ compiler('c') }} ={{ compiler_version }}
+    - {{ compiler('cxx') }} ={{ compiler_version }}
+    - openmpi
+  host:
+    - _openmp_mutex
+    - openmpi
+    - fierro-trilinos-cpu
+    - elements
+  run:
+    - fierro-trilinos-cpu
+    - mpi
+
+#TODO: Add tests
+
+about:
+  home: https://github.com/lanl/Fierro
+  license: BSD-3-Clause
+  license_family: BSD
+  license_file: LICENSE
+  summary:
+    LANL's software for simulating quasi-static solid mechanics.
+  description:
+    Fierro (LANL code number C21030) is a modern C++ code designed to simulate quasi-static 
+    solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, 
+    which have meshes with constant mass elements that move with the material, 
+    or with Eulerian methods, which have stationary meshes. 
+  dev_url: https://github.com/lanl/Fierro
+
+extra:
+  recipe-maintainers:
+    - kwelsh-lanl
