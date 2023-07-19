@@ -331,6 +331,20 @@ size_t Simulation_Parameters::unapplied_settings(){
 //    Communicate user settings from YAML file and apply to class members
 //==============================================================================
 
+bool convert_string_to_bool(const std::string input) {
+    bool result;
+    // Convert the input string to a bool
+    if (input == "true" || input == "True" || input == "1") {
+        result = true;
+    } else if (input == "false" || input == "False" || input == "0") {
+        result = false;
+    } else {
+        throw std::runtime_error("Invalid input. Please enter 'true' or 'false', '1' or '0'.");
+    }
+  
+    return result;
+}
+
 void Simulation_Parameters::apply_settings(){
   std::string current_option;
 
@@ -355,6 +369,13 @@ void Simulation_Parameters::apply_settings(){
   if(set_options.find(current_option)!=set_options.end()){
       //set parameter here
       mesh_file_format = set_options[current_option];
+      set_options.erase(current_option);
+  }
+
+  current_option = "solver_options:zero_index_base"; //string for the parameter to find
+  if(set_options.find(current_option)!=set_options.end()){
+      //set parameter here
+      zero_index_base = convert_string_to_bool(set_options[current_option]);
       set_options.erase(current_option);
   }
 
