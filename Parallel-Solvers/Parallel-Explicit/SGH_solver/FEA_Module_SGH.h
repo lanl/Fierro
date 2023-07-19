@@ -481,11 +481,13 @@ public:
   
   void assemble_matrix();
   
-  
+  bool nodal_density_flag;
+  real_t penalty_power;
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
+  //end elastic TO data
   
   Simulation_Parameters_SGH *simparam;
   Simulation_Parameters_Elasticity *simparam_elasticity;

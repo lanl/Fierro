@@ -1314,6 +1314,8 @@ void FEA_Module_SGH::init_assembly(){
   int local_node_index, current_column_index;
   size_t max_stride = 0;
   size_t nodes_per_element;
+  nodal_density_flag = simparam_dynamic_opt->nodal_density_flag;
+  penalty_power = simparam_dynamic_opt->penalty_power;
   
   //allocate stride arrays
   CArrayKokkos <size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
@@ -1321,7 +1323,7 @@ void FEA_Module_SGH::init_assembly(){
   Graph_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes, "Graph_Matrix_Strides");
 
   //allocate storage for the sparse stiffness matrix map used in the assembly process
-  Global_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
+  Global_Stiffness_Matrix_Assembly_Map = Global_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
                                          max_nodes_per_element,max_nodes_per_element, "Global_Gradient_Matrix_Assembly_Map");
 
   //allocate array used to determine global node repeats in the sparse graph later

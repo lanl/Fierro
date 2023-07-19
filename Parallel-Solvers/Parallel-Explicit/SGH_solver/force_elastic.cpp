@@ -124,7 +124,7 @@ void FEA_Module_SGH::assemble_matrix(){
       local_node_index = nodes_in_elem.host(ielem,inode);
       if(!map->isNodeLocalElement(local_node_index)) continue;
       //set dof row start index
-      current_row = num_dim*map->getLocalElement(global_node_index);
+      current_row = num_dim*local_node_index;
       for(int jnode = 0; jnode < nodes_per_elem; jnode++){
         
         current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
@@ -154,9 +154,9 @@ void FEA_Module_SGH::assemble_matrix(){
     for (int inode = 0; inode < nodes_per_elem; inode++){
       //see if this node is local
       local_node_index = nodes_in_elem.host(ielem,inode);
-      if(!map->isNodeLocalElement(global_node_index)) continue;
+      if(!map->isNodeLocalElement(local_node_index)) continue;
       //set dof row start index
-      current_row = num_dim*map->getLocalElement(global_node_index);
+      current_row = num_dim*local_node_index;
       for(int jnode = 0; jnode < nodes_per_elem; jnode++){
         
         current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
@@ -243,7 +243,7 @@ void FEA_Module_SGH::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam->nodal_density_flag;
+  
   const_host_vec_array all_node_densities;
   if(nodal_density_flag){
     if(simparam_dynamic_opt->helmholtz_filter)
@@ -638,7 +638,6 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_var
   const_vec_array initial_node_coords = initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -752,13 +751,13 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_var
           nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
           current_nodal_displacements(node_loop*num_dim) = node_coords(1, local_node_id, 0)-initial_node_coords(local_node_id,0);
           current_nodal_displacements(node_loop*num_dim+1) = node_coords(1, local_node_id, 1)-initial_node_coords(local_node_id,1);
-          current_element_adjoint(node_loop*num_dim+) = (current_adjoint_vector(node_id,0)+next_adjoint_vector(node_id,0))/2;
-          current_element_adjoint(node_loop*num_dim+1) = (current_adjoint_vector(node_id,1)+next_adjoint_vector(node_id,1))/2;
+          current_element_adjoint(node_loop*num_dim) = (current_adjoint_vector(local_node_id,0)+next_adjoint_vector(local_node_id,0))/2;
+          current_element_adjoint(node_loop*num_dim+1) = (current_adjoint_vector(local_node_id,1)+next_adjoint_vector(local_node_id,1))/2;
 
           if(num_dim==3){
           nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
           current_nodal_displacements(node_loop*num_dim+2) = node_coords(1, local_node_id, 2)-initial_node_coords(local_node_id,2);
-          current_element_adjoint(node_loop*num_dim+2) = (current_adjoint_vector(node_id,2)+next_adjoint_vector(node_id,2))/2;
+          current_element_adjoint(node_loop*num_dim+2) = (current_adjoint_vector(local_node_id,2)+next_adjoint_vector(local_node_id,2))/2;
           }
 
           if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
