@@ -737,27 +737,41 @@ void Solver::read_mesh_vtk(const char *MESH){
   // abaqus_format(MESH);
   // vtk_format(MESH)
 
-  //task 0 reads file
+  // --- Read the number of nodes in the mesh --- //
+  num_nodes = 0;
   if(myrank==0){
     std::cout << " NUM DIM is " << num_dim << std::endl;
     in = new std::ifstream();
-    in->open(MESH);  
-    //skip 8 lines
-    for (int j = 1; j <= 5; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    } //for
-  }
+    in->open(MESH);
 
-  // --- Read the number of nodes in the mesh --- //
-  if(myrank==0){
-    getline(*in, read_line);
-    line_parse.str(read_line);
-    line_parse >> substring;
-    line_parse >> num_nodes;
-    std::cout << "declared node count: " << num_nodes << std::endl;
-  }
-  
+    int i = 0;
+    bool found = false;
+    while (found==false) {
+        std::getline(*in, read_line);
+        line_parse.str("");
+        line_parse.clear();
+        line_parse << read_line;
+        line_parse >> substring;
+        
+        // looking for the following text:
+        //      POINTS %d float
+        if(substring == "POINTS"){
+            line_parse >> num_nodes;
+            std::cout << "declared node count: " << num_nodes << std::endl;
+            if(num_nodes <= 0) throw std::runtime_error("ERROR, NO NODES IN MESH");
+            found=true;
+        } // end if
+        
+        
+        if (i>1000){
+            throw std::runtime_error("ERROR: Failed to find POINTS");
+            break;
+        } // end if
+        
+        i++;
+    } // end while
+  } // end if(myrank==0)
+
   //broadcast number of nodes
   MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
   
@@ -914,24 +928,37 @@ void Solver::read_mesh_vtk(const char *MESH){
   rnum_elem = 0;
   CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(elem_words_per_line);
 
-  if(myrank==0){
-  //skip element type name line
-    getline(*in, skip_line);
-    std::cout << skip_line << std::endl;
-  }
-    
   // --- read the number of cells in the mesh ---
   // --- Read the number of vertices in the mesh --- //
   if(myrank==0){
-    getline(*in, read_line);
-    line_parse.clear();
-    line_parse.str(read_line);
-    line_parse >> substring;
-    line_parse >> num_elem;
-    std::cout << "declared element count: " << num_elem << std::endl;
-    if(num_elem <= 0) std::cout << "ERROR, NO ELEMENTS IN MESH" << std::endl;
-  }
-  
+    bool found = false;
+    int i = 0;
+    while (found==false) {
+        std::getline(*in, read_line);
+        line_parse.str("");
+        line_parse.clear();
+        line_parse << read_line;
+        line_parse >> substring;
+        
+        // looking for the following text:
+        //      CELLS num_cells size
+        if(substring == "CELLS"){
+            line_parse >> num_elem;
+            std::cout << "declared element count: " << num_elem << std::endl;
+            if(num_elem <= 0) throw std::runtime_error("ERROR, NO ELEMENTS IN MESH"); 
+            found=true;
+        } // end if
+        
+        
+        if (i>1000){
+            throw std::runtime_error("ERROR: Failed to find CELLS");
+            break;
+        } // end if
+        
+        i++;
+    } // end while
+  } // end if(myrank==0)
+    
   //broadcast number of elements
   MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
   
@@ -969,11 +996,11 @@ void Solver::read_mesh_vtk(const char *MESH){
         //read portions of the line into the substring variable
         line_parse >> substring;
         //debug print
-        std::cout<<" "<< substring;
+        //std::cout<<" "<< substring;
         //assign the substring variable as a word of the read buffer
         strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
         }
-        std::cout <<std::endl;
+        //std::cout <<std::endl;
       }
     }
     else if(myrank==0){
@@ -987,11 +1014,11 @@ void Solver::read_mesh_vtk(const char *MESH){
         //read portions of the line into the substring variable
         line_parse >> substring;
         //debug print
-        std::cout<<" "<< substring;
+        //std::cout<<" "<< substring;
         //assign the substring variable as a word of the read buffer
         strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
         }
-        std::cout <<std::endl;
+        //std::cout <<std::endl;
         buffer_loop++;
         //std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
       }
@@ -1209,7 +1236,6 @@ void Solver::read_mesh_vtk(const char *MESH){
     std::cout << std::endl;
   }
   */  
- 
 } // end read_mesh
 
 /* ----------------------------------------------------------------------
