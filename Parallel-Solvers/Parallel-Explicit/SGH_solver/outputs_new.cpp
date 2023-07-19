@@ -133,12 +133,12 @@ Explicit_Solver_SGH::write_outputs_new()
   //cell_data_scalars_int["elem_switch"] = elem_switch->pointer();
 
   // element "proc_id" //uncomment if needed (works fine)
-  //auto elem_proc_id = get_elem_proc_id(all_element_map, myrank);
-  //cell_data_scalars_int["proc_id"] = elem_proc_id->pointer();
+  auto elem_proc_id = get_elem_proc_id(all_element_map, myrank);
+  cell_data_scalars_int["proc_id"] = elem_proc_id->pointer();
 
   // element "elem_gid" //uncomment if needed (works fine)
-  //auto elem_gid = get_elem_gid(all_element_map);
-  //cell_data_scalars_int["elem_gid"] = elem_gid->pointer();
+  auto elem_gid = get_elem_gid(all_element_map);
+  cell_data_scalars_int["elem_gid"] = elem_gid->pointer();
 
   // element "elem_statev" //uncomment if needed (works fine)
   sgh_module->elem_statev.update_host();
