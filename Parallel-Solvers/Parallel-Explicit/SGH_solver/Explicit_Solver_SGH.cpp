@@ -1974,7 +1974,7 @@ void Explicit_Solver_SGH::comm_velocities(){
 
   //communicate design densities
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, ghost_node_map);
+  //Tpetra::Import<LO, GO> importer(map, ghost_node_map);
   
   //comms to get ghosts
   ghost_node_velocities_distributed->doImport(*node_velocities_distributed, *ghost_importer, Tpetra::INSERT);

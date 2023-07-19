@@ -1152,7 +1152,8 @@ void FEA_Module_SGH::setup(){
             get_area_weights2D(corner_areas,
                                elem_gid,
                                node_coords,
-                               elem_node_gids);
+                               elem_node_gids,
+                               rk_level);
             
             // loop over the corners of the element and calculate the mass
             for (size_t corner_lid=0; corner_lid<4; corner_lid++){
@@ -1291,6 +1292,7 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
               mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords){
 
+    const size_t rk_level = simparam->rk_num_bins - 1;
     size_t num_dim = simparam->num_dim;
     //int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
     int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
@@ -1326,7 +1328,8 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
                                          num_nodes_in_patch,
                                          bc_tag_id,
                                          val,
-                                         node_coords); // no=0, yes=1
+                                         node_coords,
+                                         rk_level); // no=0, yes=1
             
             //debug check
             /*
@@ -1372,10 +1375,9 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
                  const int num_nodes_in_patch,
                  const int this_bc_tag,
                  const double val,
-                 const DViewCArrayKokkos <double> &node_coords) const {
+                 const DViewCArrayKokkos <double> &node_coords,
+                 const size_t rk_level) const {
    
-    const size_t rk_level = simparam->rk_num_bins - 1;
-  
     // default bool is not on the boundary
     size_t is_on_bdy = 0;
     

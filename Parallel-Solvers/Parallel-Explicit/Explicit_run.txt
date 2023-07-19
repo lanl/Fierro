@@ -1,6 +1,6 @@
 export OMP_PROC_BIND=spread
 export OMP_NUM_THREADS=1
 export OMP_PLACES=threads
-mpirun -np 8 --bind-to core Fierro_Parallel_Explicit example_simple.yaml
+mpirun -np 8 --bind-to core fierro-parallel-explicit example_simple.yaml
 
 

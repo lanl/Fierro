@@ -54,6 +54,7 @@ void add_rows(double *matrix, int src_row, int dest_row, double factor, int n) {
 
 KOKKOS_FUNCTION
 int invert_matrix(double *matrix, int n) {
+    int error_flag=0;
     double *identity = new double[n*n];
     if (identity == NULL) {
         printf("Error: Failed to allocate memory for identity matrix.\n");
@@ -72,7 +73,7 @@ int invert_matrix(double *matrix, int n) {
         if (*(matrix + i * n + i) == 0) {
             //printf("Error: Matrix is not invertible.\n");
             delete [] identity;
-            return 0;
+            return error_flag;
         }
 
         double pivot = *(matrix + i * n + i);
@@ -96,7 +97,8 @@ int invert_matrix(double *matrix, int n) {
     }
 
     delete [] identity;
-    return 1;
+    error_flag = 1;
+    return error_flag;
 }
 // End New Gauss-Jordan elimination matrix inverse functions
 

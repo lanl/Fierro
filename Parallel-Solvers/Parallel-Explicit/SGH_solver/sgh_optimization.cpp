@@ -480,7 +480,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
             get_area_weights2D(corner_areas,
                                elem_gid,
                                node_coords,
-                               elem_node_gids);
+                               elem_node_gids,
+                               rk_level);
             
             // loop over the corners of the element and calculate the mass
             for (size_t corner_lid=0; corner_lid<4; corner_lid++){

@@ -43,9 +43,8 @@ KOKKOS_FUNCTION
 void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
-                 const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
-
-    const size_t rk_level = simparam->rk_num_bins - 1;
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                 const size_t rk_level) const {
 
     const size_t num_nodes = 8;
 
@@ -243,15 +242,17 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::get_vol(){
+
+    const size_t rk_level = simparam->rk_num_bins - 1;
     const mesh_t& mesh = FEA_Module_SGH::mesh;
     const size_t num_dims = mesh.num_dims;
-    
+
     if (num_dims == 2){
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
-            get_vol_quad(elem_vol, elem_gid, node_coords, elem_node_gids);
+            get_vol_quad(elem_vol, elem_gid, node_coords, elem_node_gids, rk_level);
             
         });
         Kokkos::fence();
@@ -261,7 +262,7 @@ void FEA_Module_SGH::get_vol(){
             
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
-            get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);
+            get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids, rk_level);
             
         });
         Kokkos::fence();
@@ -277,9 +278,8 @@ KOKKOS_INLINE_FUNCTION
 void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
-                 const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
-
-    const size_t rk_level = simparam->rk_num_bins - 1;
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                 const size_t rk_level) const {
 
     const size_t num_nodes = 8;
 
@@ -322,9 +322,8 @@ KOKKOS_FUNCTION
 void FEA_Module_SGH::get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
-                   const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
-
-    const size_t rk_level = simparam->rk_num_bins - 1;
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                   const size_t rk_level) const {
 
     const size_t num_nodes = 4;
 
@@ -392,9 +391,8 @@ KOKKOS_INLINE_FUNCTION
 void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                   const size_t elem_gid,
                   const DViewCArrayKokkos <double> &node_coords,
-                  const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
-
-    const size_t rk_level = simparam->rk_num_bins - 1;
+                  const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                  const size_t rk_level) const {
 
     // --- testing here ---
     /*
@@ -406,7 +404,8 @@ void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
     get_area_weights2D(corner_areas,
                        elem_gid,
                        node_coords,
-                       elem_node_gids);
+                       elem_node_gids,
+                       rk_level);
 
     
     for(size_t node_lid=0; node_lid<4; node_lid++){
@@ -452,9 +451,8 @@ void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
 KOKKOS_FUNCTION
 double FEA_Module_SGH::get_area_quad(const size_t elem_gid,
                      const DViewCArrayKokkos <double> &node_coords,
-                     const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
-
-    const size_t rk_level = simparam->rk_num_bins - 1;
+                     const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                     const size_t rk_level) const {
 
     double elem_area=0.0;
     
@@ -515,9 +513,8 @@ KOKKOS_FUNCTION
 void FEA_Module_SGH::get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
                         const size_t elem_gid,
                         const DViewCArrayKokkos <double> &node_coords,
-                        const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
-
-    const size_t rk_level = simparam->rk_num_bins - 1;
+                        const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                        const size_t rk_level) const {
 
     const size_t num_nodes = 4;
 
