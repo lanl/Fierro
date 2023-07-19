@@ -100,7 +100,7 @@ Simulation_Parameters_SGH::~Simulation_Parameters_SGH(){
 
 void Simulation_Parameters_SGH::input(){
   
-  //Simulation_Parameters::input();
+  Simulation_Parameters::input();
 
   //output settings
   output_velocity_flag = true;

@@ -64,9 +64,6 @@ Simulation_Parameters::Simulation_Parameters(){
   world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
   MPI_Comm_rank(world,&myrank);
   MPI_Comm_size(world,&nranks);
-
-  // set hard coded input variables
-  input();
 }
 
 Simulation_Parameters::~Simulation_Parameters(){
