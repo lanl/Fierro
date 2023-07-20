@@ -173,7 +173,7 @@ namespace {
                 v.insert(item);
             }
         }
-        static void serialize(std::vector<T>& v, Yaml::Node& node) {
+        static void serialize(std::set<T>& v, Yaml::Node& node) {
             node.Clear();
             for(auto item : v)
                 Yaml::serialize(item, node.PushBack());
