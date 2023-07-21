@@ -2,13 +2,15 @@
 #define YAML_SERIALIZABLE_H
 
 #include "Yaml.hpp"
-#include "configuration-validation.h"
 #include "map-macro.h"
-#include <vector>
+#include "configuration-validation.h"
 #include <set>
-#include <iostream>
+#include <vector>
 #include <string>
+#include <sstream>
+#include <iostream>
 #include <optional>
+
 
 namespace Yaml {
     /**
@@ -82,6 +84,18 @@ namespace Yaml {
         Serialize(node, out);
         return out;
     }
+    
+    /**
+     * For convenience, implement a from_string method for serilizable objects.
+    */
+    template<typename T>
+    T from_string(std::string s) {
+        Node node;
+        Parse(node, s);
+        T v;
+        deserialize(v, node);
+        return v;
+    }
 
     /**
      * Convenience method. Takes the contents of a file and returns the deserializable
@@ -107,7 +121,9 @@ namespace {
                 v = node.As<T>();
         }
         static void serialize(T& v, Yaml::Node& node) {
-            node = std::to_string(v);
+            std::sstream ss;
+            ss << v;
+            node = ss.str();
         }
     };
 
@@ -210,7 +226,8 @@ namespace Yaml {
     enum class CLASS_TYPE {                                                     \
         __VA_ARGS__                                                             \
     };                                                                          \
-    std::string to_string(CLASS_TYPE v) {                                       \
+    template<>                                                                  \
+    std::string to_string<CLASS_TYPE>(CLASS_TYPE v) {                           \
         const std::vector<std::string> map VECTOR_INITIALIZER(__VA_ARGS__)      \
         return map[(int)v];                                                     \
     }                                                                           \
@@ -234,6 +251,9 @@ namespace Yaml {
      * 
      * The end goal here is to detect if __VA_ARGS__ is empty and insert a NOOP
      * otherwise we want to actually call the serialization/deserialization macro.
+     * 
+     * Some of this is taken from/inspired by a blog post Jens Gustedt.
+     * https://gustedt.wordpress.com/2010/06/08/detect-empty-macro-arguments/
     */
     #define NOOP(...)
     #define _TRIGGER_PARENTHESIS_(...) ,
@@ -251,7 +271,6 @@ namespace Yaml {
             HAS_COMMA(_TRIGGER_PARENTHESIS_ __VA_ARGS__ (/*empty*/)) \
             )
 
-
     /**
      * This swap works by building a macro from the output of some macros.
      * That is unforuntately meta.
@@ -260,7 +279,7 @@ namespace Yaml {
      * ARG_0. If its 1 we get ARG_1.
      * 
      * This lets us conditionally resolve to only one of the two arguments
-     * in the following parantheses.
+     * in the subsequent parantheses.
     */
     #define ARG_0(A, B) A
     #define ARG_1(A, B) B
@@ -271,7 +290,9 @@ namespace Yaml {
 
     /**
      * Here we are actually doing the conditional swap.
-     * 
+     * This is the only real way to avoid things like `Yaml::serialize(obj., node[""]);`,
+     * which aren't syntactically valid and causes a problem even if we put 
+     * conditional compilation guards around it.
     */
     #define YAML_SERIALIZE_IMPL(FIELD) Yaml::serialize(obj.FIELD, node[#FIELD]);
     #define YAML_DESERIALIZE_IMPL(FIELD) Yaml::deserialize(obj.FIELD, node[#FIELD]);
