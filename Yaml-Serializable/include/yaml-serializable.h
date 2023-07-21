@@ -121,7 +121,7 @@ namespace {
                 v = node.As<T>();
         }
         static void serialize(T& v, Yaml::Node& node) {
-            std::sstream ss;
+            std::stringstream ss;
             ss << v;
             node = ss.str();
         }
@@ -226,8 +226,7 @@ namespace Yaml {
     enum class CLASS_TYPE {                                                     \
         __VA_ARGS__                                                             \
     };                                                                          \
-    template<>                                                                  \
-    std::string to_string<CLASS_TYPE>(CLASS_TYPE v) {                           \
+    std::string to_string(CLASS_TYPE v) {                                       \
         const std::vector<std::string> map VECTOR_INITIALIZER(__VA_ARGS__)      \
         return map[(int)v];                                                     \
     }                                                                           \
