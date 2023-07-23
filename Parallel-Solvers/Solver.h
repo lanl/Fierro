@@ -42,6 +42,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
+#include "Simulation_Parameters.h"
 #include <string>
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
@@ -172,12 +173,12 @@ public:
   Teuchos::RCP<Tpetra::Import<LO, GO>> dof_importer; //ghost dof comms
 
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters *simparam;
+  Simulation_Parameters simparam;
 
   //set of enabled FEA modules
   std::vector<std::string> fea_module_types;
   std::vector<FEA_Module*> fea_modules;
-  std::vector<bool> fea_module_must_read;
+  std::set<FEA_MODULE_TYPE> fea_module_must_read;
   int nfea_modules;
   int displacement_module;
 

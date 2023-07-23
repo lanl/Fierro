@@ -35,38 +35,38 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#include "utilities.h"
-#include "Simulation_Parameters_Inertial.h"
+// #include "utilities.h"
+// #include "Simulation_Parameters_Inertial.h"
 
-using namespace utils;
+// using namespace utils;
 
-Simulation_Parameters_Inertial::Simulation_Parameters_Inertial() : Simulation_Parameters(){
+// Simulation_Parameters_Inertial::Simulation_Parameters_Inertial() : Simulation_Parameters(){
 
-  //initialize data and flags to defaults
-  report_runtime_flag = false;
-  unit_scaling = 1;
-}
+//   //initialize data and flags to defaults
+//   report_runtime_flag = false;
+//   unit_scaling = 1;
+// }
 
-Simulation_Parameters_Inertial::~Simulation_Parameters_Inertial(){
-}
+// Simulation_Parameters_Inertial::~Simulation_Parameters_Inertial(){
+// }
 
-void Simulation_Parameters_Inertial::input(){
+// void Simulation_Parameters_Inertial::input(){
   
-  Simulation_Parameters::input();
+//   Simulation_Parameters::input();
 
-  nodal_density_flag = true;
+//   nodal_density_flag = true;
 
-  //simulation spatial dimension
-  num_dim = 3;
-  unit_scaling = 1;
+//   //simulation spatial dimension
+//   num_dim = 3;
+//   unit_scaling = 1;
 
-  //polynomial interpolation order
-  p_order = 0;
+//   //polynomial interpolation order
+//   p_order = 0;
   
-  //Gauss-Legendre integration order
-  num_gauss_points = 2;
+//   //Gauss-Legendre integration order
+//   num_gauss_points = 2;
 
-  //debug and performance report flags
-  report_runtime_flag = true;
+//   //debug and performance report flags
+//   report_runtime_flag = true;
 
-}
+// }

@@ -106,8 +106,6 @@ void Solver::exit_solver(int status){
 }
 
 Solver::~Solver(){
-  
-  delete simparam;
   //destroy FEA modules
   for(int imodule = 0; imodule < nfea_modules; imodule++){
     delete fea_modules[imodule];
@@ -121,9 +119,9 @@ Solver::~Solver(){
 void Solver::read_mesh_ensight(const char *MESH){
 
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -201,8 +199,8 @@ void Solver::read_mesh_ensight(const char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam->words_per_line;
-  elem_words_per_line = simparam->elem_words_per_line;
+  words_per_line = simparam.input_options.words_per_line;
+  elem_words_per_line = simparam.input_options.elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
@@ -553,16 +551,16 @@ void Solver::read_mesh_ensight(const char *MESH){
   
   elements::elem_types::elem_type mesh_element_type;
 
-  if(simparam->num_dim==2){
-    if(simparam->element_type == "Quad4"){
+  if(simparam.num_dims == 2){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::quad4){
       mesh_element_type = elements::elem_types::Quad4;
       max_nodes_per_patch = 2;
     }
-    else if(simparam->element_type == "Quad8"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad8){
       mesh_element_type = elements::elem_types::Quad8;
       max_nodes_per_patch = 3;
     }
-    else if(simparam->element_type == "Quad12"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad12){
       mesh_element_type = elements::elem_types::Quad12;
       max_nodes_per_patch = 4;
     }
@@ -576,16 +574,16 @@ void Solver::read_mesh_ensight(const char *MESH){
     max_nodes_per_element = elem2D->num_nodes();
   }
 
-  if(simparam->num_dim==3){
-    if(simparam->element_type == "Hex8"){
+  if(simparam.num_dims == 3){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::hex8){
       mesh_element_type = elements::elem_types::Hex8;
       max_nodes_per_patch = 4;
     }
-    else if(simparam->element_type == "Hex20"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex20){
       mesh_element_type = elements::elem_types::Hex20;
       max_nodes_per_patch = 8;
     }
-    else if(simparam->element_type == "Hex32"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex32){
       mesh_element_type = elements::elem_types::Hex32;
       max_nodes_per_patch = 12;
     }
@@ -717,9 +715,9 @@ void Solver::read_mesh_ensight(const char *MESH){
 void Solver::read_mesh_vtk(const char *MESH){
 
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -729,7 +727,7 @@ void Solver::read_mesh_vtk(const char *MESH){
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
-  bool zero_index_base = simparam->zero_index_base;
+  bool zero_index_base = simparam.input_options.zero_index_base;
   //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
   //read the mesh
@@ -798,8 +796,8 @@ void Solver::read_mesh_vtk(const char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam->vtk_words_per_line;
-  elem_words_per_line = simparam->elem_words_per_line;
+  words_per_line = simparam.input_options.words_per_line;
+  elem_words_per_line = simparam.input_options.elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
@@ -1055,16 +1053,16 @@ void Solver::read_mesh_vtk(const char *MESH){
   
   elements::elem_types::elem_type mesh_element_type;
 
-  if(simparam->num_dim==2){
-    if(simparam->element_type == "Quad4"){
+  if(simparam.num_dims == 2){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::quad4){
       mesh_element_type = elements::elem_types::Quad4;
       max_nodes_per_patch = 2;
     }
-    else if(simparam->element_type == "Quad8"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad8){
       mesh_element_type = elements::elem_types::Quad8;
       max_nodes_per_patch = 3;
     }
-    else if(simparam->element_type == "Quad12"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad12){
       mesh_element_type = elements::elem_types::Quad12;
       max_nodes_per_patch = 4;
     }
@@ -1078,16 +1076,16 @@ void Solver::read_mesh_vtk(const char *MESH){
     max_nodes_per_element = elem2D->num_nodes();
   }
 
-  if(simparam->num_dim==3){
-    if(simparam->element_type == "Hex8"){
+  if(simparam.num_dims == 3){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::hex8){
       mesh_element_type = elements::elem_types::Hex8;
       max_nodes_per_patch = 4;
     }
-    else if(simparam->element_type == "Hex20"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex20){
       mesh_element_type = elements::elem_types::Hex20;
       max_nodes_per_patch = 8;
     }
-    else if(simparam->element_type == "Hex32"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex32){
       mesh_element_type = elements::elem_types::Hex32;
       max_nodes_per_patch = 12;
     }
@@ -1218,10 +1216,10 @@ void Solver::read_mesh_vtk(const char *MESH){
 void Solver::read_mesh_tecplot(const char *MESH){
 
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
-  bool restart_file = simparam->restart_file;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
+  bool restart_file = simparam.restart_file;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -1318,9 +1316,9 @@ void Solver::read_mesh_tecplot(const char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam->tecplot_words_per_line;
+  words_per_line = simparam.input_options.words_per_line;
   if(restart_file) words_per_line++;
-  elem_words_per_line = simparam->elem_words_per_line;
+  elem_words_per_line = simparam.input_options.elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
@@ -1549,16 +1547,16 @@ void Solver::read_mesh_tecplot(const char *MESH){
   
   elements::elem_types::elem_type mesh_element_type;
 
-  if(simparam->num_dim==2){
-    if(simparam->element_type == "Quad4"){
+  if(simparam.num_dims == 2){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::quad4){
       mesh_element_type = elements::elem_types::Quad4;
       max_nodes_per_patch = 2;
     }
-    else if(simparam->element_type == "Quad8"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad8){
       mesh_element_type = elements::elem_types::Quad8;
       max_nodes_per_patch = 3;
     }
-    else if(simparam->element_type == "Quad12"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad12){
       mesh_element_type = elements::elem_types::Quad12;
       max_nodes_per_patch = 4;
     }
@@ -1572,16 +1570,16 @@ void Solver::read_mesh_tecplot(const char *MESH){
     max_nodes_per_element = elem2D->num_nodes();
   }
 
-  if(simparam->num_dim==3){
-    if(simparam->element_type == "Hex8"){
+  if(simparam.num_dims == 3){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::hex8){
       mesh_element_type = elements::elem_types::Hex8;
       max_nodes_per_patch = 4;
     }
-    else if(simparam->element_type == "Hex20"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex20){
       mesh_element_type = elements::elem_types::Hex20;
       max_nodes_per_patch = 8;
     }
-    else if(simparam->element_type == "Hex32"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex32){
       mesh_element_type = elements::elem_types::Hex32;
       max_nodes_per_patch = 12;
     }
@@ -1696,9 +1694,9 @@ void Solver::read_mesh_tecplot(const char *MESH){
 
 void Solver::repartition_nodes(){
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::stringstream line_parse;
@@ -1774,7 +1772,7 @@ void Solver::repartition_nodes(){
   partitioned_map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*partitioned_map_one_to_one));
 
   //migrate density vector if this is a restart file read
-  if(simparam->restart_file){
+  if(simparam.restart_file){
     Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(partitioned_map, 1));
 
     //create import object using local node indices map and all indices map
@@ -1797,9 +1795,9 @@ void Solver::repartition_nodes(){
 
 void Solver::init_maps(){
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   int nodes_per_element;
   GO node_gid;
@@ -2123,7 +2121,7 @@ void Solver::init_maps(){
 void Solver::Get_Boundary_Patches(){
   size_t npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
   int local_node_id;
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
   CArray<GO> Surface_Nodes;
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //Surface_Nodes = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(4, "Surface_Nodes");

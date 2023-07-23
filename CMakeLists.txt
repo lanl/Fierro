@@ -47,6 +47,8 @@ if(NOT DEFINED PARALLEL_DIRECT_SOLVER)
   set(PARALLEL_DIRECT_SOLVER OFF)
 endif()
 
+add_subdirectory(Yaml-Serializable)
+
 if(BUILD_EXPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   find_package(Vector)
   if (CMAKE_VECTOR_NOVEC)
@@ -98,7 +100,6 @@ if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
   add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)
 endif()
-
 
 if(BUILD_ELEMENTS)
   set(ELEMENTS_DIRS matar/src elements swage common geometry slam)

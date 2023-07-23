@@ -1,11 +1,19 @@
 
-set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp Simulation_Parameters_Inertial.cpp FEA_Module_Inertial.cpp Solver.cpp Simulation_Parameters.cpp Yaml.cpp)
+set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp Simulation_Parameters_Inertial.cpp FEA_Module_Inertial.cpp Solver.cpp Simulation_Parameters.cpp)
 add_library(parallel_base_src OBJECT ${Parallel_Base_SRC})
 
 include_directories(Optimization_Modules)
-target_include_directories(parallel_base_src PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(
+    parallel_base_src PUBLIC 
+    ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}
+    $<TARGET_PROPERTY:yaml_serializable,INCLUDE_DIRECTORIES>
+)
 target_compile_options (parallel_base_src PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
-target_link_libraries (parallel_base_src ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS})
+target_link_libraries (
+    parallel_base_src PUBLIC
+    yaml_serializable
+    ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
+)
 
 # New User Material Interface
 include_directories(User-Material-Interface)

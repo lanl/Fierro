@@ -40,6 +40,7 @@
 
 #include "utilities.h"
 #include "Explicit_Solver.h"
+#include "Simulation_Parameters_SGH.h"
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
@@ -147,7 +148,7 @@ public:
   mesh_t *mesh;
   
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters_SGH *simparam;
+  Simulation_Parameters_SGH simparam;
 
   //FEA simulations
   class FEA_Module_SGH *sgh_module;

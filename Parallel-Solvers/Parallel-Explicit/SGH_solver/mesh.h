@@ -929,22 +929,22 @@ namespace bdy
 } // end of bdy namespace
 
 
-// tag mesh points on bdy's and set the BC type
-struct boundary_t {
+// // tag mesh points on bdy's and set the BC type
+// struct boundary_t {
 
-    // tag surface type
-    bdy::bdy_tag surface;    // 0=xplane, 1=yplane, 2=zplane, 3=cylinder, 4=sphere, 5=read file
+//     // tag surface type
+//     bdy::bdy_tag surface;    // 0=xplane, 1=yplane, 2=zplane, 3=cylinder, 4=sphere, 5=read file
     
-    // tag surface value or radius
-    real_t value;
+//     // tag surface value or radius
+//     real_t value;
 
-    // velocity coefficients by component
-    double u,v,w;
+//     // velocity coefficients by component
+//     double u,v,w;
    
-    // BC type
-    bdy::bdy_hydro_conds hydro_bc;
+//     // BC type
+//     bdy::bdy_hydro_conds hydro_bc;
     
-};
+// };
 
 
 #endif 

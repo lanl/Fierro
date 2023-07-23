@@ -45,6 +45,7 @@
 #include "node_combination.h"
 #include "Solver.h"
 #include "FEA_Module.h"
+#include "Simulation_Parameters.h"
 
 class Explicit_Solver_SGH;
 class Simulation_Parameters_SGH;
@@ -473,8 +474,8 @@ public:
 
   void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
   
-  Simulation_Parameters_SGH *simparam;
-  Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
+  Simulation_Parameters_SGH simparam;
+  Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
   Explicit_Solver_SGH *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;
@@ -607,7 +608,7 @@ public:
   int output_velocity_index, output_strain_index, output_stress_index;
   
   //file parameters
-  DCArrayKokkos <size_t>read_from_file;
+  DCArrayKokkos <STRENGTH_SETUP> read_from_file;
   DCArrayKokkos <double>file_state_vars;
 
   //parameters
