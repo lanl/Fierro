@@ -40,7 +40,7 @@ SERIALIZABLE_ENUM(TEST_ENUM,
 
 TEST(YamlSerialization, IntSerialization) {
     EXPECT_EQ(Yaml::from_string<int>("1"),          1);
-    EXPECT_EQ(Yaml::from_string<int>("-1"),         -1);
+    EXPECT_EQ(Yaml::from_string<int>("-1"),        -1);
     EXPECT_EQ(Yaml::from_string<int>("0"),          0);
     EXPECT_EQ(Yaml::from_string<int>("1e4"),        1);
     EXPECT_EQ(Yaml::from_string<int>("192837123"),  192837123);
@@ -134,7 +134,6 @@ TEST(YamlSerialization, StructSerialization) {
 
     auto deserialized = Yaml::from_string<Serializable>(Yaml::to_string(obj));
 
-    //EXPECT_TRUE(obj == deserialized);
     EXPECT_TRUE(obj.a == deserialized.a);
     EXPECT_TRUE(is_close(obj.b, deserialized.b));
     EXPECT_TRUE(is_close(obj.c, deserialized.c));
