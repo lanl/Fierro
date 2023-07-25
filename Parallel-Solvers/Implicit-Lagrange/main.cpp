@@ -142,4 +142,36 @@ void solver_setup(int argc, char *argv[]){
   }
   
   delete solver;
+
+  
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+
+  Simulation_Parameters simparam = Simulation_Parameters();
+  std::string filename = std::string(argv[1]);
+  Yaml::Node node;
+
+  if (filename.find(".yaml") != std::string::npos) {
+    Yaml::Parse(node, filename.c_str());
+    Yaml::deserialize(simparam, node);
+  }
+  
+  std::shared_ptr<Solver> solver;
+  switch (simparam.solver_type) {
+    case SOLVER_TYPE::SGH:
+      solver = std::make_shared<Implicit_Solver>(Implicit_Solver());
+      if (!node.IsNone())
+        Yaml::deserialize(solver->simparam, node);
+      break;
+    default:
+      if (myrank == 0)
+        std::cerr << "Invalid solver type" << std::endl;
+      exit(1);
+  }
+  //checks for optional solver routines
+  if(solver->setup_flag) solver->solver_setup();
+  // invoke solver's run function (should perform most of the computation)
+  solver->run(argc, argv);
+  //invoke optional finalize function
+  if(solver->finalize_flag) solver->solver_finalize();
 }

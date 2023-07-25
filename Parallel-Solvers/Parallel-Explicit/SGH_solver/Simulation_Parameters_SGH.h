@@ -367,6 +367,7 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
   int NBV  = 2; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
 
   //Non-serialized fields
+  int num_gauss_points = 2;
   size_t max_num_state_vars;
   size_t max_num_global_vars;
   size_t rk_num_bins;

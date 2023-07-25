@@ -96,7 +96,9 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
   double penalty_power = 3.0;
 
   
-  //Non-serialized fields
+  // Non-serialized fields
+  bool helmholtz_filter  = false;
+  double density_epsilon = 0.0001;
   //list of TO functions needed by problem
   std::vector<TO_MODULE_TYPE> TO_Module_List {
     TO_MODULE_TYPE::Kinetic_Energy_Minimize

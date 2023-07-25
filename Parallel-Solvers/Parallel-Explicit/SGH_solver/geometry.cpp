@@ -243,7 +243,7 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 
 void FEA_Module_SGH::get_vol(){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
     const mesh_t& mesh = FEA_Module_SGH::mesh;
     const size_t num_dims = mesh.num_dims;
 

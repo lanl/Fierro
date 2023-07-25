@@ -148,8 +148,8 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //file readin parameter
   active_node_ordering_convention = ENSIGHT;
   //default simulation parameters
-  simparam->input();
-  simparam_dynamic_opt->input();
+//   simparam->input();
+//   simparam_dynamic_opt->input();
 }
 
 Explicit_Solver_SGH::~Explicit_Solver_SGH(){
