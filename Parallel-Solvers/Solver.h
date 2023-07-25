@@ -224,6 +224,7 @@ public:
   Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> ghost_node_coords_distributed;
   Teuchos::RCP<MV> initial_node_coords_distributed;
+  Teuchos::RCP<MV> all_initial_node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
   Teuchos::RCP<MV> filtered_node_densities_distributed;

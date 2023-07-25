@@ -29,7 +29,7 @@ void FEA_Module_SGH::get_force_elastic(const DCArrayKokkos <material_t> &materia
 
     const size_t rk_level = simparam->rk_num_bins - 1;    
     const size_t num_dim = mesh.num_dims;
-    const_vec_array initial_node_coords = initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
     // walk over the nodes to update the velocity
     FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -57,7 +57,8 @@ void FEA_Module_SGH::get_force_elastic(const DCArrayKokkos <material_t> &materia
         for (size_t idim = 0; idim < num_dim; idim++){
             for(int idof = 0; idof < Stiffness_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
               dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-              node_force[idim] += (node_coords(rk_level, dof_id/num_dim, dof_id%num_dim)-initial_node_coords(dof_id/num_dim, dof_id%num_dim))*Stiffness_Matrix(node_gid*num_dim+idim%num_dim,idof);
+              node_force[idim] += -(node_coords(rk_level, dof_id/num_dim, dof_id%num_dim)-all_initial_node_coords(dof_id/num_dim, dof_id%num_dim))*Stiffness_Matrix(node_gid*num_dim+idim%num_dim,idof);
+              //node_force[idim] += (node_coords(rk_level, dof_id/num_dim, dof_id%num_dim))*Stiffness_Matrix(node_gid*num_dim+idim%num_dim,idof);
             }
         } // end for dim
         
