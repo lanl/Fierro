@@ -186,7 +186,7 @@ public:
     }
 
     //decide to output current optimization state
-    if(current_step%FEM_->simparam_dynamic_opt->optimization_output_freq==0)
+    if(current_step%FEM_->simparam_dynamic_opt.optimization_output_freq==0)
       FEM_->Explicit_Solver_Pointer_->parallel_tecplot_writer();
   }
 

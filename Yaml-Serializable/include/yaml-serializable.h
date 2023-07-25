@@ -439,12 +439,12 @@ namespace Yaml {
  * YAML_ADD_REQUIRED_FIELDS_FOR(MyStruct, my_field)
  * IMPL_YAML_SERIALIZABLE_WITH_BASE(MyStruct, MyBase, my_field)
 */
-#define YAML_ADD_REQUIRED_FIELDS_FOR(CLASS_NAME, ...)                  \
-    namespace Yaml {                                                   \
-        template<>                                                     \
-        void validate_required_fields<CLASS_NAME>(Yaml::Node& node) {  \
-            MAP(YAML_VALIDATE_REQUIRED, __VA_ARGS__)                   \
-        }                                                              \
-    }                                                                  \
+#define YAML_ADD_REQUIRED_FIELDS_FOR(CLASS_NAME, ...)                         \
+    namespace Yaml {                                                          \
+        template<>                                                            \
+        inline void validate_required_fields<CLASS_NAME>(Yaml::Node& node) {  \
+            MAP(YAML_VALIDATE_REQUIRED, __VA_ARGS__)                          \
+        }                                                                     \
+    }                                                                         \
 
 #endif

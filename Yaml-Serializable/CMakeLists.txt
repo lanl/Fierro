@@ -1,15 +1,15 @@
 add_library(yaml_serializable src/Yaml.cpp)
 target_include_directories(yaml_serializable PUBLIC include)
 
-add_executable(tests test/test.cpp)
+add_executable(yaml-serializable-tests test/test.cpp)
 target_link_libraries(
-    tests
+    yaml-serializable-tests
     GTest::gtest_main
     yaml_serializable
 )
 
 include(GoogleTest)
-gtest_discover_tests(tests)
+gtest_discover_tests(yaml-serializable-tests)
 
 install(
   TARGETS yaml_serializable

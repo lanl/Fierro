@@ -38,16 +38,19 @@
 #ifndef SIMULATION_PARAMETERS_SGH_H
 #define SIMULATION_PARAMETERS_SGH_H
 
-//#include "utilities.h"
-#include "state.h"
-// #include "matar.h"
-#include "mesh.h"
+#include "matar.h"
 #include <cmath>
-#include "Simulation_Parameters.h"
-#include "yaml-serializable.h"
-#include "user_material_functions.h"
-//using namespace utils;
+#include <stdexcept>
+#include <Kokkos_Core.hpp>
+#include <Kokkos_Macros.hpp>
 
+#include "mesh.h"
+#include "state.h"
+#include "yaml-serializable.h"
+#include "Simulation_Parameters.h"
+#include "user_material_functions.h"
+
+using namespace mtr;
 
 // TODO: This should be in some header or something.
 //eos forward declaration
@@ -81,6 +84,7 @@ typedef void strength_function_type(
   const double dt,
   const double alpha,
   const size_t cycle);
+KOKKOS_FUNCTION strength_function_type user_strength_model;
 
 
 SERIALIZABLE_ENUM(VOLUME_TAG,
@@ -135,11 +139,11 @@ IMPL_YAML_SERIALIZABLE_FOR(Time_Variables,
 )
 
 struct material_t : Yaml::DerivedFields {
-  EOS_MODEL eos_model_type;
-  STRENGTH_MODEL strength_model_type;
-  STRENGTH_TYPE strength_type;
-  STRENGTH_SETUP strength_setup;
-  RUN_LOCATION strength_run_location;
+  EOS_MODEL eos_model_type           = EOS_MODEL::ideal_gas;
+  STRENGTH_TYPE strength_type        = STRENGTH_TYPE::hypo;
+  STRENGTH_SETUP strength_setup      = STRENGTH_SETUP::user_input;
+  STRENGTH_MODEL strength_model_type = STRENGTH_MODEL::user_strength_model;
+  RUN_LOCATION strength_run_location = RUN_LOCATION::host;
 
   double q1;
   double q2;
@@ -189,11 +193,11 @@ IMPL_YAML_SERIALIZABLE_FOR(material_t,
 )
 
 struct mat_fill_t : Yaml::DerivedFields, Yaml::ValidatedYaml {
-    VOLUME_TAG volume;
+    VOLUME_TAG volume = VOLUME_TAG::sphere;
     size_t mat_id;
     double den;
     std::optional<double> sie;
-    VELOCITY_TYPE velocity;
+    VELOCITY_TYPE velocity = VELOCITY_TYPE::cartesian;
     std::optional<double> u;
     std::optional<double> v;
     std::optional<double> w;
@@ -239,29 +243,34 @@ struct mat_fill_t : Yaml::DerivedFields, Yaml::ValidatedYaml {
     }
 
     bool contains(const double* elem_coords) { 
+      double radius;
+
       switch(volume)
       {
-          case VOLUME_TAG::global:
-            return true;
+        case VOLUME_TAG::global:
+          return true;
 
-          case VOLUME_TAG::box:
-            return ( elem_coords[0] >= x1 && elem_coords[0] <= x2
-              && elem_coords[1] >= y1 && elem_coords[1] <= y2
-              && elem_coords[2] >= z1 && elem_coords[2] <= z2 );
+        case VOLUME_TAG::box:
+          return ( elem_coords[0] >= x1 && elem_coords[0] <= x2
+                && elem_coords[1] >= y1 && elem_coords[1] <= y2
+                && elem_coords[2] >= z1 && elem_coords[2] <= z2 );
 
-          case VOLUME_TAG::cylinder:
-            double radius = sqrt( elem_coords[0]*elem_coords[0] +
-                                  elem_coords[1]*elem_coords[1] ); 
-            return ( radius >= radius1.value()
-                  && radius <= radius2.value() );
+        case VOLUME_TAG::cylinder:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] ); 
+          return ( radius >= radius1.value()
+                && radius <= radius2.value() );
 
-          case VOLUME_TAG::sphere:
-            double radius = sqrt( elem_coords[0]*elem_coords[0] +
-                                  elem_coords[1]*elem_coords[1] +
-                                  elem_coords[2]*elem_coords[2] );
-            return ( radius >= radius1.value()
-                  && radius <= radius2.value() );
-      } // end of switch
+        case VOLUME_TAG::sphere:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] +
+                         elem_coords[2]*elem_coords[2] );
+          return ( radius >= radius1.value()
+                && radius <= radius2.value() );
+        
+        default:
+          throw std::runtime_error("Unsupported volume type: " + to_string(volume));
+      }
     }
 };
 IMPL_YAML_SERIALIZABLE_FOR(
@@ -272,9 +281,9 @@ IMPL_YAML_SERIALIZABLE_FOR(
 
 struct boundary_t : Yaml::ValidatedYaml {
     std::string id;
-    BOUNDARY_TAG surface;
+    BOUNDARY_TAG surface = BOUNDARY_TAG::sphere;
     double value;
-    BOUNDARY_HYDRO_CONDITION condition_type;
+    BOUNDARY_HYDRO_CONDITION condition_type = BOUNDARY_HYDRO_CONDITION::fixed;
     std::optional<double> u;
     std::optional<double> v;
     std::optional<double> w;
@@ -282,8 +291,35 @@ struct boundary_t : Yaml::ValidatedYaml {
     void validate() {
       if ( (u.has_value() || v.has_value() || w.has_value())
           && condition_type != BOUNDARY_HYDRO_CONDITION::velocity) {
-          std::cerr << "Warning: velocity values (u, v, w) ignored for boundary condition type " << to_string(condition_type) << "." << std::endl;
+        std::cerr << "Warning: velocity values (u, v, w) ignored for boundary condition type " << to_string(condition_type) << "." << std::endl;
+      }
+
+      if (condition_type == BOUNDARY_HYDRO_CONDITION::reflected) {
+        switch (surface) {
+          case BOUNDARY_TAG::x_plane:
+          case BOUNDARY_TAG::y_plane:
+          case BOUNDARY_TAG::z_plane:
+            break;
+          default:
+            throw Yaml::ConfigurationException(
+              "Invalid surface type `" + to_string(surface) + 
+              "` with boundary condition type of `" + to_string(condition_type) + "`."
+            );
         }
+      }
+    }
+
+    size_t planar_surface_index() {
+      switch (surface) {
+        case BOUNDARY_TAG::x_plane:
+          return 0;
+        case BOUNDARY_TAG::y_plane:
+          return 1;
+        case BOUNDARY_TAG::z_plane:
+          return 2;
+        default:
+          throw std::runtime_error("Attempted to get surface index with invalid boundary type");
+      }
     }
 };
 IMPL_YAML_SERIALIZABLE_FOR(boundary_t, id, surface, value, condition_type, u, v, w)
@@ -305,8 +341,8 @@ struct Graphics_Options : Yaml::DerivedFields {
   CArray <double> graphics_times;
 
   void derive() {
-    graphics_time  = graphics_dt_ival;
-    graphics_times = CArray<double>(2000);
+    graphics_time     = graphics_dt_ival;
+    graphics_times    = CArray<double>(2000);
     graphics_times(0) = 0.0;
   }
 };
@@ -322,8 +358,8 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
   std::vector<boundary_t> boundary_conditions;
   Graphics_Options graphics_options;
 
-  bool gravity_flag = false;
-  bool report_runtime = false;
+  bool gravity_flag   = false;
+  bool report_runtime = true;
 
   size_t rk_num_stages = 2;
   int NB   = 6; // number of boundaries
@@ -396,8 +432,7 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
 
     rk_num_bins = rk_num_stages;
 
-    if (std::find(FEA_Modules_List.begin(), FEA_Modules_List.end(), FEA_MODULE_TYPE::SGH) == FEA_Modules_List.end())
-      FEA_Modules_List.push_back(FEA_MODULE_TYPE::SGH);
+    ensure_module(FEA_MODULE_TYPE::SGH);
   }
   void validate() { }
 };

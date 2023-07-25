@@ -129,12 +129,12 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //simparam->Simulation_Parameters::input();
 
   //create ref element object
-  ref_elem = new elements::ref_element();
+  ref_elem = std::make_shared<elements::ref_element>(elements::ref_element());
   //create mesh objects
   //init_mesh = new swage::mesh_t(simparam);
   mesh = new mesh_t;
 
-  element_select = new elements::element_selector();
+  element_select = std::make_shared<elements::element_selector>(elements::element_selector());
   num_nodes = 0;
 
   //boundary condition data
@@ -150,11 +150,8 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
 }
 
 Explicit_Solver_SGH::~Explicit_Solver_SGH(){
-   delete mesh;
-   delete ref_elem;
-   delete element_select;
-   if(myrank==0)
-   delete in;
+   if (myrank == 0 && in != NULL)
+    delete in;
 }
 
 //==============================================================================
@@ -195,11 +192,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   //yaml file reader for simulation parameters
   std::string filename = std::string(argv[1]);
   if(filename.find(".yaml") != std::string::npos){
-    std::string yaml_error;
-    bool yaml_exit_flag = false;
-    Yaml::Node node;
-    Yaml::Parse(node, filename.c_str());
-    Yaml::deserialize(simparam_dynamic_opt, node);
+    simparam_dynamic_opt = Yaml::from_file<Simulation_Parameters_Dynamic_Optimization>(filename);
+    simparam = Yaml::from_file<Simulation_Parameters_SGH>(filename);
   
     //check for user error in providing yaml options (flags unsupported options)
     //yaml_error = simparam->yaml_input(filename);
@@ -245,6 +239,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
   
   //initialize timing
+  // TODO: If this is false, we just get bad numbers. Not 
+  // no numbers.
   if(simparam.report_runtime)
     init_clock();
 
@@ -1272,7 +1268,7 @@ void Explicit_Solver_SGH::FEA_module_setup(){
     fea_module_must_read = simparam.fea_module_must_read;
   }
   //allocate lists to size
-  fea_module_types = std::vector<std::string>(nfea_modules);
+  fea_module_types = std::vector<FEA_MODULE_TYPE>(nfea_modules);
   fea_modules = std::vector<FEA_Module*>(nfea_modules);
   bool module_found = false;
   
@@ -1284,15 +1280,15 @@ void Explicit_Solver_SGH::FEA_module_setup(){
     if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::SGH){
       // TODO: Theres no way this works, right?
       // fea_module_types is a potentially sparse list.
-      fea_module_types[imodule] = "SGH";
+      fea_module_types[imodule] = FEA_MODULE_TYPE::SGH;
       fea_modules[imodule] = sgh_module = new FEA_Module_SGH(this, *mesh);
       module_found = true;
       //debug print
       *fos << " SGH MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
-    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::SGH){
-      fea_module_types[imodule] = "Inertial";
+    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Inertial){
+      fea_module_types[imodule] = FEA_MODULE_TYPE::Inertial;
       fea_modules[imodule] = new FEA_Module_Inertial(this);
       module_found = true;
       //debug print

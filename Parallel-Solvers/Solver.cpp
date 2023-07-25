@@ -542,8 +542,7 @@ void Solver::read_mesh_ensight(const char *MESH){
   }
 
   // Close mesh input file
-  if(myrank==0)
-  in->close();
+  if(myrank==0) in->close();
   
   //std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
   

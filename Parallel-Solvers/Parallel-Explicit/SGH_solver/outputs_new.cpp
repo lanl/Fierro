@@ -81,11 +81,11 @@ void
 Explicit_Solver_SGH::write_outputs_new()
 {
 
-  const size_t rk_level = simparam->rk_num_bins - 1;
+  const size_t rk_level = simparam.rk_num_bins - 1;
 
   // node "design_density"
   auto design_density = get_design_density(map->getLocalNumElements(),
-    simparam_dynamic_opt->topology_optimization_on, design_node_densities_distributed);
+    simparam_dynamic_opt.topology_optimization_on, design_node_densities_distributed);
   point_data_scalars_double["design_density"] = design_density->pointer();  
 
   // node "velocity"
@@ -180,9 +180,9 @@ construct_file_name(
 void
 Explicit_Solver_SGH::parallel_vtk_writer_new()
 {
-  const size_t rk_level = simparam->rk_num_bins - 1;
+  const size_t rk_level = simparam.rk_num_bins - 1;
 
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
   std::stringstream str_stream;
   MPI_Offset current_offset;
   MPI_File myfile_parallel;
@@ -208,7 +208,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   MPI_Barrier(world);
 
   //construct file name
-  std::string current_file_name = construct_file_name(simparam->graphics_id, displacement_module);
+  std::string current_file_name = construct_file_name(simparam.graphics_options.graphics_id, displacement_module);
   std::string file_path = vtk_data_dir + current_file_name;
   //open mpi file
   int err = MPI_File_open(MPI_COMM_WORLD, file_path.c_str(), 
@@ -384,7 +384,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
 
   /*************** write .vtk.series file ***************/
-  simparam->graphics_times(simparam->graphics_id) = simparam->time_value;
+  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = simparam.time_value;
   if (myrank == 0) {
     FILE *myfile;
     std::string filename = vtk_dir + "outputs.vtk.series";
@@ -393,10 +393,10 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
     fprintf(myfile, "{\n");
     fprintf(myfile, "  \"file-series-version\" : \"1.0\",\n");
     fprintf(myfile, "  \"files\" : [\n");
-    for (int i = 0; i <= simparam->graphics_id; i++) {
+    for (int i = 0; i <= simparam.graphics_options.graphics_id; i++) {
       std::string vtk_filename = construct_file_name(i, displacement_module);
       fprintf(myfile, "    { \"name\" : \"data/%s\", \"time\" : %12.5e },\n",
-        vtk_filename.c_str(), simparam->graphics_times(i));
+        vtk_filename.c_str(), simparam.graphics_options.graphics_times(i));
     }
     fprintf(myfile, "  ]\n");
     fprintf(myfile, "}\n");
@@ -404,7 +404,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
     fclose(myfile);
   }
   
-  simparam->graphics_id++;
+  simparam.graphics_options.graphics_id++;
 
 }
 

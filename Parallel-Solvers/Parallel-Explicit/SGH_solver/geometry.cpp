@@ -12,8 +12,8 @@ void FEA_Module_SGH::update_position_sgh(double rk_alpha,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    int num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    int num_dims = simparam.num_dims;
 
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
@@ -45,7 +45,7 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const DViewCArrayKokkos <double> &node_coords,
                  const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
 
     const size_t num_nodes = 8;
 
@@ -279,7 +279,7 @@ void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const DViewCArrayKokkos <double> &node_coords,
                  const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
 
     const size_t num_nodes = 8;
 
@@ -324,7 +324,7 @@ void FEA_Module_SGH::get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
                    const DViewCArrayKokkos <double> &node_coords,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
 
     const size_t num_nodes = 4;
 
@@ -394,7 +394,7 @@ void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                   const DViewCArrayKokkos <double> &node_coords,
                   const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
 
     // --- testing here ---
     /*
@@ -454,7 +454,7 @@ double FEA_Module_SGH::get_area_quad(const size_t elem_gid,
                      const DViewCArrayKokkos <double> &node_coords,
                      const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
 
     double elem_area=0.0;
     
@@ -517,7 +517,7 @@ void FEA_Module_SGH::get_area_weights2D(const ViewCArrayKokkos <double> &corner_
                         const DViewCArrayKokkos <double> &node_coords,
                         const ViewCArrayKokkos <size_t>  &elem_node_gids) const {
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
 
     const size_t num_nodes = 4;
 

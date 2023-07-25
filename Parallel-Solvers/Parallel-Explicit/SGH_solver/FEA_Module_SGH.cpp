@@ -1248,7 +1248,6 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
               const DViewCArrayKokkos <double> &node_coords){
 
     size_t num_dim = simparam.num_dims;
-    //int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
     int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
     int num_nodes_in_patch = mesh.num_nodes_in_patch;
     
@@ -1262,6 +1261,7 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
     //DCArrayKokkos<bool> print_flag(1, "print_flag");
     //print_flag.host(0) = false;
     //print_flag.update_device();
+    
     
     FOR_ALL_CLASS(bdy_set, 0, num_bdy_sets, {
         

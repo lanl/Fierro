@@ -59,21 +59,6 @@
 //#include <Xpetra_Operator.hpp>
 //#include <MueLu.hpp>
 
-//forward declarations
-/*
-namespace swage{
-  class mesh_t;
-}
-*/
-class mesh_t;
-
-namespace elements{
-  class element_selector;
-  class Element3D;
-  class Element2D;
-  class ref_element;
-}
-
 class Explicit_Solver_SGH: public Explicit_Solver{
 
 public:

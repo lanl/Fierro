@@ -45,8 +45,8 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    const size_t num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t num_dims = simparam.num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
@@ -430,8 +430,8 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    const size_t num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t num_dims = simparam.num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
@@ -825,8 +825,8 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ) {
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    const size_t num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t num_dims = simparam.num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         

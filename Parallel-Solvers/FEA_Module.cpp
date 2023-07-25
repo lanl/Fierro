@@ -235,7 +235,7 @@ int FEA_Module::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, real_t
 
   //Nodes on the Patch
   auto node_list = Patch_Nodes.node_set;
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
   size_t nnodes = node_list.size();
   size_t node_rid;
   real_t node_coord[num_dim];

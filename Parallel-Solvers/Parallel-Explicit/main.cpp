@@ -105,7 +105,7 @@ void solver_setup(int argc, char *argv[]){
   //checks for optional solver routines
   if(solver->setup_flag) solver->solver_setup();
   // invoke solver's run function (should perform most of the computation)
-  solver->run(argc,argv);
+  solver->run(argc, argv);
   //invoke optional finalize function
   if(solver->finalize_flag) solver->solver_finalize();
 }

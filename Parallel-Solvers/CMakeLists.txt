@@ -6,13 +6,12 @@ include_directories(Optimization_Modules)
 target_include_directories(
     parallel_base_src PUBLIC 
     ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}
-    $<TARGET_PROPERTY:yaml_serializable,INCLUDE_DIRECTORIES>
 )
 target_compile_options (parallel_base_src PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
 target_link_libraries (
     parallel_base_src PUBLIC
-    yaml_serializable
     ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
+    yaml_serializable
 )
 
 # New User Material Interface

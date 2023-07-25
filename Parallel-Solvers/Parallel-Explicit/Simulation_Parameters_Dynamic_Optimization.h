@@ -93,7 +93,7 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
   int optimization_output_freq;
 
   //Topology Optimization parameters
-  real_t penalty_power = 3.0;
+  double penalty_power = 3.0;
 
   
   //Non-serialized fields
@@ -106,28 +106,23 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
   };
   std::vector<int> TO_Module_My_FEA_Module;
   std::vector<std::vector<int>> FEA_Module_My_TO_Modules;
-  std::vector<std::vector<real_t>> Function_Arguments;
+  std::vector<std::vector<double>> Function_Arguments;
 
   // TODO: Implement a real structure here.
   // Then we can support this stuff.
   // std::vector<int> Multi_Objective_Modules;
   // std::vector<real_t> Multi_Objective_Weights;
-  int nTO_modules, nmulti_objective_modules;
+  // int nmulti_objective_modules = 0;
 
   //Topology Optimization flags
   bool topology_optimization_on = false;
-  bool shape_optimization_on = false;
-  bool nodal_density_flag;;
+  bool shape_optimization_on    = false;
+  bool nodal_density_flag       = true;
 
   void derive() {
     shape_optimization_on = optimization_options.optimization_process == OPTIMIZATION_PROCESS::shape_optimization;
     topology_optimization_on = optimization_options.optimization_process == OPTIMIZATION_PROCESS::topology_optimization;
 
-    if (optimization_options.constraints.size() > 0) {
-      TO_Module_List.push_back(TO_MODULE_TYPE::Kinetic_Energy_Minimize);
-      TO_Function_Type.push_back(FUNCTION_TYPE::OBJECTIVE);
-      Function_Arguments.push_back({});
-    }
     TO_Module_List.resize(optimization_options.constraints.size());
     TO_Function_Type.resize(optimization_options.constraints.size());
     Function_Arguments.resize(optimization_options.constraints.size());
@@ -145,6 +140,11 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
         TO_Function_Type[i] = FUNCTION_TYPE::EQUALITY_CONSTRAINT;
       if (constraint.value.has_value())
         Function_Arguments[i] = { constraint.value.value() };
+    }
+    
+    // Add this TO module if we added any.
+    if (optimization_options.constraints.size() > 0) {
+      ensure_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
     }
   
     // Take a pass first to ensure that all necessary modules are loaded.
@@ -169,6 +169,15 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
   }
   void validate() { }
 
+  void ensure_TO_module(TO_MODULE_TYPE type, FUNCTION_TYPE function_type, std::vector<double> arguments) {
+    if (std::find(TO_Module_List.begin(), TO_Module_List.end(), type) != TO_Module_List.end())
+      return; // Already have it.
+    
+    TO_Module_List.push_back(type);
+    TO_Function_Type.push_back(function_type);
+    Function_Arguments.push_back(arguments);
+    ensure_module(get_TO_module_dependency(type)); 
+  }
   FEA_MODULE_TYPE get_TO_module_dependency(TO_MODULE_TYPE type) {
     switch (type) {
       case TO_MODULE_TYPE::Kinetic_Energy_Minimize:

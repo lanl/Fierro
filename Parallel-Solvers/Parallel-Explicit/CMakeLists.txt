@@ -28,7 +28,7 @@ target_include_directories(fierro-parallel-explicit PRIVATE
 )
 target_compile_options (fierro-parallel-explicit PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
 target_link_libraries (fierro-parallel-explicit PRIVATE
-  yaml_serailizable
+  yaml_serializable
   parallel_base_src 
   user_material_interface
   parallel_sgh_solver

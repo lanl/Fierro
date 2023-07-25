@@ -55,6 +55,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
+#include "Simulation_Parameters.h"
 
 using namespace mtr;
 
@@ -90,7 +91,7 @@ public:
   using execution_space = typename traits::execution_space;
   using device_type     = typename traits::device_type;
   using memory_traits   = typename traits::memory_traits;
-  using global_size_t = Tpetra::global_size_t;
+  using global_size_t   = Tpetra::global_size_t;
   
   typedef Kokkos::View<real_t*, Kokkos::LayoutRight, device_type, memory_traits> values_array;
   typedef Kokkos::View<GO*, array_layout, device_type, memory_traits> global_indices_array;
@@ -177,12 +178,12 @@ public:
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   
-  elements::element_selector *element_select;
+  std::shared_ptr<elements::element_selector> element_select;
   elements::Element3D *elem;
   elements::Element2D *elem2D;
   
 
-  class Simulation_Parameters *simparam;
+  Simulation_Parameters simparam;
   Solver *Solver_Pointer_;
   int my_fea_module_index_;
   

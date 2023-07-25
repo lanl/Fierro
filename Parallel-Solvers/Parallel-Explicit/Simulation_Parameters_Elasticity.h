@@ -38,45 +38,50 @@
 #ifndef SIMULATION_PARAMETERS_ELASTICITY_H
 #define SIMULATION_PARAMETERS_ELASTICITY_H
 
-#include "utilities.h"
+//#include "utilities.h"
 #include "Simulation_Parameters.h"
-using namespace utils;
+#include "yaml-serializable.h"
+//using namespace utils;
 
-class Simulation_Parameters_Elasticity : public Simulation_Parameters
+struct Simulation_Parameters_Elasticity : public Simulation_Parameters
 {
  public:
-  Simulation_Parameters_Elasticity();
-  virtual ~Simulation_Parameters_Elasticity();
-  virtual void input();
-  virtual void apply_settings() {}
   //==============================================================================
   //   Mesh Variables
   //==============================================================================
 
   // --- Mesh regions and material fills ---
-  int NB; // number of boundary patch sets to tag
-  int NBSF; //number of surface force density boundary conditions
-  int NBD; //number of displacement boundary conditions
-
+  int NB   = 6; // number of boundary patch sets to tag
+  int NBSF = 4; //number of surface force density boundary conditions
+  int NBD  = 2; //number of displacement boundary conditions
 
   // --- Graphics output variables ---
-  bool output_displacement_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
+  bool output_displacement_flag = true;
+  bool displaced_mesh_flag      = true;
+  bool output_strain_flag       = true;
+  bool output_stress_flag       = false;
+  bool strain_max_flag          = false;
 
   // --- Isotropic Elastic Parameters
-  real_t Elastic_Modulus, Poisson_Ratio;
+  double Elastic_Modulus = 200000000000;
+  double Poisson_Ratio   = 0.3;
 
   // -- Integration rule
-  int num_gauss_points;
+  int num_gauss_points = 2;
 
   //debug and performance reporting flags
-  bool report_runtime_flag;
+  bool report_runtime = true;
 
   //Body force parameters
-  bool gravity_flag;
-  real_t gravity_vector[3];
+  bool gravity_flag = false;
+  std::vector<double> gravity_vector = { 9.81, 0.0, 0.0 };
 
   //Linear Solver Flags
-  bool direct_solver_flag, multigrid_timers, equilibrate_matrix_flag;
+  bool direct_solver_flag      = false;
+  bool multigrid_timers        = false;
+  bool equilibrate_matrix_flag = false;
 };
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Elasticity, Simulation_Parameters)
+
 
 #endif // end HEADER_H

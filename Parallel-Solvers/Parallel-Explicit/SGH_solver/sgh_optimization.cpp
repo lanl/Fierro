@@ -58,9 +58,9 @@
 ------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
-  const size_t rk_level = simparam->rk_num_bins - 1;
+  const size_t rk_level = simparam.rk_num_bins - 1;
   //local variable for host view in the dual view
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
   int max_stride = 0;
@@ -68,24 +68,24 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   size_t access_index, row_access_index, row_counter;
   GO global_index, global_dof_index;
   LO local_dof_index;
-  const size_t num_fills = simparam->num_fills;
-  const size_t rk_num_bins = simparam->rk_num_bins;
-  const size_t num_bcs = simparam->num_bcs;
-  const size_t num_materials = simparam->num_materials;
-  const size_t num_state_vars = simparam->max_num_state_vars;
+  const size_t num_fills = simparam.region_options.size();
+  const size_t rk_num_bins = simparam.rk_num_bins;
+  const size_t num_bcs = simparam.boundary_conditions.size();
+  const size_t num_materials = simparam.material_options.size();
+  const size_t num_state_vars = simparam.max_num_state_vars;
   real_t objective_accumulation;
 
   // --- Read in the nodes in the mesh ---
   int myrank = Explicit_Solver_Pointer_->myrank;
   int nranks = Explicit_Solver_Pointer_->nranks;
 
-  const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const DCArrayKokkos <material_t> material = simparam->material;
-  const DCArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
+  const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
+  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <material_t> material = simparam.material;
+  const DCArrayKokkos <double> state_vars = simparam.state_vars; // array to hold init model variables
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
-  std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
+  std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt.FEA_Module_My_TO_Modules;
   problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
   ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
@@ -232,52 +232,11 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
             elem_coords[1] = elem_coords[1]/num_nodes_in_elem;
             elem_coords[2] = elem_coords[2]/num_nodes_in_elem;
                 
-            
-            // spherical radius
-            double radius = sqrt( elem_coords[0]*elem_coords[0] +
-                                  elem_coords[1]*elem_coords[1] +
-                                  elem_coords[2]*elem_coords[2] );
-                
-            // cylinderical radius
-            double radius_cyl = sqrt( elem_coords[0]*elem_coords[0] +
-                                      elem_coords[1]*elem_coords[1] );   
-            
             // default is not to fill the element
-            size_t fill_this = 0;
-           
-            // check to see if this element should be filled
-            switch(mat_fill(f_id).volume)
-            {
-                case region::global:
-                {
-                    fill_this = 1;
-                    break;
-                }
-                case region::box:
-                {
-                    if ( elem_coords[0] >= mat_fill(f_id).x1 && elem_coords[0] <= mat_fill(f_id).x2
-                      && elem_coords[1] >= mat_fill(f_id).y1 && elem_coords[1] <= mat_fill(f_id).y2
-                      && elem_coords[2] >= mat_fill(f_id).z1 && elem_coords[2] <= mat_fill(f_id).z2 )
-                        fill_this = 1;
-                    break;
-                }
-                case region::cylinder:
-                {
-                    if ( radius_cyl >= mat_fill(f_id).radius1
-                      && radius_cyl <= mat_fill(f_id).radius2 ) fill_this = 1;
-                    break;
-                }
-                case region::sphere:
-                {
-                    if ( radius >= mat_fill(f_id).radius1
-                      && radius <= mat_fill(f_id).radius2 ) fill_this = 1;
-                    break;
-                }
-            } // end of switch
-
+            bool fill_this = mat_fill(f_id).contains(elem_coords);
                  
             // paint the material state on the element
-            if (fill_this == 1){
+            if (fill_this){
                     
                 // density
                 elem_den(elem_gid) = mat_fill(f_id).den;
@@ -289,14 +248,14 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 elem_mass(elem_gid) = elem_den(elem_gid)*elem_vol(elem_gid);
                 
                 // specific internal energy
-                elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
+                elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie.value();
 		
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
                 
                 
                 // get state_vars from the input file or read them in
-                if (material(mat_id).strength_setup == model_init::user_init){
+                if (material(mat_id).strength_setup == STRENGTH_SETUP::user_input){
                     
                     // use the values read from a file to get elem state vars
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
@@ -345,17 +304,17 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                     // --- Velocity ---
                     switch(mat_fill(f_id).velocity)
                     {
-                        case init_conds::cartesian:
+                        case VELOCITY_TYPE::cartesian:
                         {
                         
-                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).u;
-                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).v;
-                            if (num_dim == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).w;
+                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).u.value();
+                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).v.value();
+                            if (num_dim == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).w.value();
                             
                         
                             break;
                         }
-                        case init_conds::radial:
+                        case VELOCITY_TYPE::radial:
                         {
                             // Setting up cylindrical
                             double dir[2]; 
@@ -385,7 +344,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                             
                             break;
                         }
-                        case init_conds::spherical:
+                        case VELOCITY_TYPE::spherical:
                         {
                             
                             // Setting up spherical
@@ -416,17 +375,17 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
 
                             break;
                         }
-                        case init_conds::radial_linear:
+                        case VELOCITY_TYPE::radial_linear:
                         {
                         
                             break;
                         }
-                        case init_conds::spherical_linear:
+                        case VELOCITY_TYPE::spherical_linear:
                         {
                         
                             break;
                         }
-                        case init_conds::tg_vortex:
+                        case VELOCITY_TYPE::tg_vortex:
                         {
                         
                             node_vel(rk_level, node_gid, 0) = sin(PI * node_coords(rk_level,node_gid, 0)) * cos(PI * node_coords(rk_level,node_gid, 1)); 
@@ -440,7 +399,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 }// end loop over nodes of element
                 
                 
-                if(mat_fill(f_id).velocity == init_conds::tg_vortex)
+                if(mat_fill(f_id).velocity == VELOCITY_TYPE::tg_vortex)
                 {
                     elem_pres(elem_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;
                 
@@ -548,7 +507,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
     Kokkos::fence();
     
     //execute solve
-    simparam->time_value = 0;
+    simparam.time_value = 0;
     sgh_solve();
 
 }
@@ -575,9 +534,9 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
 void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const DCArrayKokkos <material_t> material = simparam->material;
-  const int num_dim = simparam->num_dim;
+  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <material_t> material = simparam.material;
+  const int num_dim = simparam.num_dims;
   real_t global_dt;
   size_t current_data_index, next_data_index;
   Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
@@ -635,11 +594,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
 --------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
-  const size_t rk_level = simparam->rk_num_bins - 1;
+  const size_t rk_level = simparam.rk_num_bins - 1;
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const DCArrayKokkos <material_t> material = simparam->material;
-  const int num_dim = simparam->num_dim;
+  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <material_t> material = simparam.material;
+  const int num_dim = simparam.num_dims;
   real_t global_dt;
   size_t current_data_index, next_data_index;
   Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
@@ -842,9 +801,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
 void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const DCArrayKokkos <material_t> material = simparam->material;
-  const int num_dim = simparam->num_dim;
+  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <material_t> material = simparam.material;
+  const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
   real_t global_dt;
   size_t current_data_index, next_data_index;
@@ -1064,9 +1023,9 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
 void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const DCArrayKokkos <material_t> material = simparam->material;
-  const int num_dim = simparam->num_dim;
+  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <material_t> material = simparam.material;
+  const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
   real_t global_dt;
   bool element_constant_density = true;
@@ -1393,7 +1352,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
    Initialize global vectors and array maps needed for matrix assembly
 ------------------------------------------------------------------------- */
 void FEA_Module_SGH::init_assembly(){
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
   //const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   Gradient_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Gradient_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");

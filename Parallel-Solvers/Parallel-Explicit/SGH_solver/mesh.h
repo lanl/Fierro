@@ -2,6 +2,7 @@
 #define MESH_H
 
 
+#include <Kokkos_Macros.hpp>
 #include "matar.h"
 #include "state.h"
 
@@ -809,7 +810,7 @@ struct mesh_t {
     
     
     void init_bdy_sets (size_t num_bcs){
-        
+        // TODO: This default just causes errors.
         if(num_bcs == 0){
             printf("ERROR: number of boundary sets = 0, set it = 1");
             num_bcs = 1;
@@ -863,40 +864,40 @@ namespace init_conds
 } // end of initial conditions namespace
 
 
-// fill instructions
-struct mat_fill_t {
+// // fill instructions
+// struct mat_fill_t {
     
-    // type
-    region::vol_tag volume; // 1 is global, 2 are planes, 3 is a sphere
+//     // type
+//     region::vol_tag volume; // 1 is global, 2 are planes, 3 is a sphere
     
-    // material id
-    size_t mat_id;
+//     // material id
+//     size_t mat_id;
     
-    // planes
-    double x1;
-    double x2;
-    double y1;
-    double y2;
-    double z1;
-    double z2;
+//     // planes
+//     double x1;
+//     double x2;
+//     double y1;
+//     double y2;
+//     double z1;
+//     double z2;
     
-    // radius
-    double radius1;
-    double radius2;
+//     // radius
+//     double radius1;
+//     double radius2;
 
     
-    // initial conditions
-    init_conds::init_velocity_conds velocity;
+//     // initial conditions
+//     init_conds::init_velocity_conds velocity;
     
-    // velocity coefficients by component
-    double u,v,w;
+//     // velocity coefficients by component
+//     double u,v,w;
     
-    // velocity magnitude for radial velocity initialization
-    double speed;
+//     // velocity magnitude for radial velocity initialization
+//     double speed;
     
-    double sie;  // specific internal energy
-    double den;  // density
-};
+//     double sie;  // specific internal energy
+//     double den;  // density
+// };
 
 
 namespace bdy

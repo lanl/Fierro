@@ -45,11 +45,21 @@ using namespace utils;
 struct Simulation_Parameters_Inertial : Simulation_Parameters {
   int num_gauss_points = 2;
   bool nodal_density = true;
+  std::vector<bool> enable_inertia_center = { false, false, false };
+  std::vector<double> moment_of_inertia_center = { 0.0, 0.0, 0.0};
+
+  Simulation_Parameters_Inertial& operator=(const Simulation_Parameters& rhs) {
+    *(Simulation_Parameters*)this = rhs;
+    return *this;
+  }
 
   void derive() { }
   void validate() { }
 };
-IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Inertial, Simulation_Parameters)
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Inertial, Simulation_Parameters, 
+  num_gauss_points, nodal_density,
+  enable_inertia_center, moment_of_inertia_center
+)
 
 // class Simulation_Parameters_Inertial : public Simulation_Parameters
 // {

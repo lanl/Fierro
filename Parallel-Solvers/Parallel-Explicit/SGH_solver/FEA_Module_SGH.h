@@ -46,10 +46,10 @@
 #include "Solver.h"
 #include "FEA_Module.h"
 #include "Simulation_Parameters.h"
+#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Dynamic_Optimization.h"
 
 class Explicit_Solver_SGH;
-class Simulation_Parameters_SGH;
-class Simulation_Parameters_Dynamic_Optimization;
 
 class FEA_Module_SGH: public FEA_Module{
 

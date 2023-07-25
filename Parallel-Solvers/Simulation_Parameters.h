@@ -39,12 +39,14 @@
 #define SIMULATION_PARAMETERS_H
 
 #include "yaml-serializable.h"
+#include "configuration-validation.h"
 #include <set>
 #include <vector>
 #include <string>
 #include <stdio.h>
 #include <optional>
 #include <algorithm>
+#include <filesystem>
 
 SERIALIZABLE_ENUM(SOLVER_TYPE, SGH)
 SERIALIZABLE_ENUM(MESH_FORMAT,
@@ -100,17 +102,22 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
       switch (element_type) {
         case ELEMENT_TYPE::hex8:
           elem_words_per_line = 8;
+          break;
         case ELEMENT_TYPE::quad4:
           elem_words_per_line = 4;
+          break;
         // TODO: Implement handling for other element types
         default:
           throw Yaml::ConfigurationException("Unsupported element type `" + to_string(element_type) + "`.");
           break;
       }
     }
+
+    mesh_file_name = std::filesystem::absolute(mesh_file_name).string();
   }
   
   void validate() {
+    Yaml::validate_filepath(mesh_file_name);
   }
 };
 IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base)
@@ -290,7 +297,7 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
   size_t ensure_module(FEA_Module_Spec default_spec) {
     for (size_t i = 0; i < fea_modules.size(); i++) {
       if (fea_modules[i].type == default_spec.type) 
-        return;
+        return i;
     }
 
     fea_modules.push_back(default_spec);
@@ -318,6 +325,10 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
     return i;
   }
 };
+YAML_ADD_REQUIRED_FIELDS_FOR(Simulation_Parameters,
+  solver_type, num_dims, input_options,
+  boundary_conditions
+)
 IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters, 
   solver_type, restart_file, input_options, timer_output_level,
   num_dims, output_options, fea_modules,
