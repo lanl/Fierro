@@ -73,6 +73,7 @@
 #include "node_combination.h"
 #include "Simulation_Parameters_SGH.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters_Elasticity.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
 #include "user_material_functions.h"
@@ -1111,7 +1112,8 @@ void FEA_Module_SGH::setup(){
             get_area_weights2D(corner_areas,
                                elem_gid,
                                node_coords,
-                               elem_node_gids);
+                               elem_node_gids,
+                               rk_level);
             
             // loop over the corners of the element and calculate the mass
             for (size_t corner_lid=0; corner_lid<4; corner_lid++){
@@ -1183,7 +1185,10 @@ void FEA_Module_SGH::setup(){
     
     //initialize if topology optimization is used
     if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
+      //create parameter object
+      simparam_elasticity = Simulation_Parameters_Elasticity();
       init_assembly();
+      assemble_matrix();
     }
 
     // update host copies of arrays modified in this function
@@ -1247,6 +1252,7 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
               mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords){
 
+    const size_t rk_level = simparam.rk_num_bins - 1;
     size_t num_dim = simparam.num_dims;
     int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
     int num_nodes_in_patch = mesh.num_nodes_in_patch;
@@ -1282,7 +1288,8 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
                                          num_nodes_in_patch,
                                          (int)bc_tag_id,
                                          val,
-                                         node_coords); // no=0, yes=1
+                                         node_coords,
+                                         rk_level); // no=0, yes=1
             
             //debug check
             /*
@@ -1328,10 +1335,9 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
                  const int num_nodes_in_patch,
                  const int this_bc_tag,
                  const double val,
-                 const DViewCArrayKokkos <double> &node_coords) const {
+                 const DViewCArrayKokkos <double> &node_coords,
+                 const size_t rk_level) const {
    
-    const size_t rk_level = simparam.rk_num_bins - 1;
-  
     // default bool is not on the boundary
     size_t is_on_bdy = 0;
     
@@ -1852,25 +1858,6 @@ void FEA_Module_SGH::sgh_solve(){
                                 cycle);
             }
             else {
-              if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
-                get_force_elastic(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              elem_statev,
-                              rk_alpha,
-                              cycle);
-              }
-              else{
                 get_force_sgh(material,
                               mesh,
                               node_coords,
@@ -1887,7 +1874,6 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_statev,
                               rk_alpha,
                               cycle);
-              }
             }
 
             /*
@@ -1926,11 +1912,28 @@ void FEA_Module_SGH::sgh_solve(){
             */
 
             // ---- Update nodal velocities ---- //
-            update_velocity_sgh(rk_alpha,
+            if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
+              get_force_elastic(material,
+                              mesh,
+                              node_coords,
+                              node_vel,
+                              node_mass,
+                              elem_den,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              elem_statev,
+                              rk_alpha,
+                              cycle);
+            }
+            else{
+              update_velocity_sgh(rk_alpha,
                                 mesh,
                                 node_vel,
                                 node_mass,
                                 corner_force);
+            }
             
             // ---- apply force boundary conditions to the boundary patches----
             boundary_velocity(mesh, boundary, node_vel);

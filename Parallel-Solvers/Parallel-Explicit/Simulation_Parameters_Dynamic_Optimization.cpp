@@ -48,10 +48,13 @@
 //   report_runtime = false;
 //   nodal_density_flag = true;
 //   thick_condition_boundary = true;
-//   topology_optimization_on = shape_optimization_on = false;
-//   optimization_output_freq = 20;
+//   topology_optimization_on = shape_optimization_on = helmholtz_filter = false;
+//   optimization_output_freq = 2000;
 //   penalty_power = 3;
+//  density_epsilon = 0.0001;
 //   nTO_modules = 0;
+//  multi_objective_structure = "linear";
+//  mma_on = false;
   
 //   int buffer_size = 10;
 //   TO_Module_List.resize(buffer_size);

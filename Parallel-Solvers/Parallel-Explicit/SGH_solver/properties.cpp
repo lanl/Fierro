@@ -66,7 +66,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
             get_bmatrix(area,
                         elem_gid,
                         node_coords,
-                        elem_node_gids);
+                        elem_node_gids,
+                        rk_level);
         
             
             // --- Calculate the velocity gradient ---
@@ -75,7 +76,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                         node_vel,
                         area,
                         elem_vol(elem_gid),
-                        elem_gid);
+                        elem_gid,
+                        rk_level);
             
             
             // --- call strength model ---
@@ -180,7 +182,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
             get_bmatrix(area,
                         elem_gid,
                         node_coords,
-                        elem_node_gids);
+                        elem_node_gids,
+                        rk_level);
         
             
             // --- Calculate the velocity gradient ---
@@ -189,7 +192,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                         node_vel,
                         area,
                         elem_vol(elem_gid),
-                        elem_gid);
+                        elem_gid,
+                        rk_level);
             
             
             // --- call strength model ---

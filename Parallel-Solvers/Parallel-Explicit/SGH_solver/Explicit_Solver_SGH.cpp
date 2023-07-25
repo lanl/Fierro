@@ -147,6 +147,9 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
 
   //file readin parameter
   active_node_ordering_convention = ENSIGHT;
+  //default simulation parameters
+  simparam->input();
+  simparam_dynamic_opt->input();
 }
 
 Explicit_Solver_SGH::~Explicit_Solver_SGH(){
@@ -178,14 +181,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     }
   }
 
-  //initialize Trilinos communicator class
-  comm = Tpetra::getDefaultComm();
-
-  //default simulation parameters
-  
-  // simparam->input();
-  // simparam_dynamic_opt->input();
-  int num_dim = simparam.num_dims;
+    //initialize Trilinos communicator class
+    comm = Tpetra::getDefaultComm();
+    int num_dim = simparam.num_dims;
 
   //error handle for file input name
   //if(argc < 2)
@@ -1986,7 +1984,7 @@ void Explicit_Solver_SGH::comm_velocities(){
 
   //communicate design densities
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, ghost_node_map);
+  //Tpetra::Import<LO, GO> importer(map, ghost_node_map);
   
   //comms to get ghosts
   ghost_node_velocities_distributed->doImport(*node_velocities_distributed, *ghost_importer, Tpetra::INSERT);
