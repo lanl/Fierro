@@ -1,16 +1,27 @@
 #ifndef CONFIGURATION_VALIDATION_H
 #define CONFIGURATION_VALIDATION_H
 
-#include <string>
 #include <set>
+#include <string>
 #include <filesystem>
 
 namespace Yaml {
     struct ConfigurationException : std::runtime_error {
-        ConfigurationException(std::string err) : std::runtime_error(err) {}
+        std::string _field_name = "";
+        std::string msg         = "";
+
+        ConfigurationException(std::string err) : std::runtime_error(err), msg(err) {}
+
+        ConfigurationException(std::string err, std::string field_name) 
+            : std::runtime_error("Error in field " + field_name + ": " + err), _field_name(field_name), msg(err) {}
+
+        ConfigurationException(ConfigurationException err, std::string field_name) 
+            : ConfigurationException(err.msg,
+                                     field_name + ((err._field_name.length() > 0) ? ("." + err._field_name) : "")) {}
+        
     };
 
-    std::string _to_string(const std::set<std::string>& input) {
+    inline std::string _to_string(const std::set<std::string>& input) {
         std::string s;
         size_t i = 0;
         s += "{";
@@ -33,9 +44,9 @@ namespace Yaml {
         return _to_string(set);
     }
 
-    std::string validate_value(std::string value, const std::set<std::string>& allowed_values, const std::string field_name="value") {
+    inline std::string validate_value(std::string value, const std::set<std::string>& allowed_values, const std::string field_name="value") {
         if (allowed_values.find(value) == allowed_values.end())
-            throw ConfigurationException("Provided " + field_name +  " was not of allowed types: " + _to_string(allowed_values));
+            throw ConfigurationException("Provided " + field_name + " was not of allowed types: " + _to_string(allowed_values));
         return value;
     }
 
@@ -50,11 +61,11 @@ namespace Yaml {
     /**
      * Validate that a filepath exists.
     */
-    std::string validate_filepath(std::string fp) {
+    inline std::string validate_filepath(std::string fp) {
         auto path = std::filesystem::path(fp);
         std::string abs_path = std::filesystem::absolute(path).string();
         if(!std::filesystem::exists(path))
-            throw ConfigurationException("Could not find mesh file: " + abs_path);
+            throw ConfigurationException("Could not find file: " + abs_path);
         return abs_path;
     }
 }

@@ -114,6 +114,13 @@ namespace Yaml {
 }
 
 namespace {
+
+    inline void set_node_to_empty_sequence(Yaml::Node& node) {
+        node.Clear();
+        node.PushBack();
+        node.Erase(0);
+    }
+
     template<typename T>
     struct Impl {
         static void deserialize(T& v, Yaml::Node& node) {
@@ -144,7 +151,7 @@ namespace {
             }
         }
         static void serialize(std::vector<T>& v, Yaml::Node& node) {
-            node.Clear();
+            set_node_to_empty_sequence(node);
             for(auto item : v)
                 Yaml::serialize(item, node.PushBack());
         }
@@ -190,7 +197,7 @@ namespace {
             }
         }
         static void serialize(std::set<T>& v, Yaml::Node& node) {
-            node.Clear();
+            set_node_to_empty_sequence(node);
             for(auto item : v)
                 Yaml::serialize(item, node.PushBack());
         }
@@ -233,6 +240,7 @@ namespace Yaml {
     namespace Yaml {                                                            \
         template<>                                                              \
         inline void deserialize<CLASS_TYPE>(CLASS_TYPE& v, Yaml::Node& node) {  \
+            if (node.IsNone()) return;                                          \
             using class_name = CLASS_TYPE;                                      \
             std::map<std::string, CLASS_TYPE> map MAP_INITIALIZER(__VA_ARGS__)  \
             v = validate_map(node.As<std::string>(), map);                      \
@@ -286,7 +294,6 @@ namespace Yaml {
     #define PASTE2(_0, _1) _0 ## _1
     #define SWITCH(_0) PASTE2(ARG_, _0)
 
-
     /**
      * Here we are actually doing the conditional swap.
      * This is the only real way to avoid things like `Yaml::serialize(obj., node[""]);`,
@@ -294,7 +301,16 @@ namespace Yaml {
      * conditional compilation guards around it.
     */
     #define YAML_SERIALIZE_IMPL(FIELD) Yaml::serialize(obj.FIELD, node[#FIELD]);
-    #define YAML_DESERIALIZE_IMPL(FIELD) Yaml::deserialize(obj.FIELD, node[#FIELD]);
+    // Implement special exception handling for deserialization.
+    // This means that the exception contains the path to the node.
+    // TODO: Probably should have another constructor here that keeps track of the
+    // nested fields. Then we can give a pretty slick error message.
+    #define YAML_DESERIALIZE_IMPL(FIELD)                                                                          \
+        try {                                                                                                     \
+            Yaml::deserialize(obj.FIELD, node[#FIELD]);                                                           \
+        } catch (const Yaml::ConfigurationException& e) {                                                         \
+            throw Yaml::ConfigurationException(e, #FIELD);                                                        \
+        }                                                                                                         \
     
     #define YAML_SERIALIZE(...) SWITCH(ISEMPTY(__VA_ARGS__))(YAML_SERIALIZE_IMPL, NOOP)(__VA_ARGS__)
     #define YAML_DESERIALIZE(...) SWITCH(ISEMPTY(__VA_ARGS__))(YAML_DESERIALIZE_IMPL, NOOP)(__VA_ARGS__)
