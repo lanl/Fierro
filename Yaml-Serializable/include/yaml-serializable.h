@@ -111,6 +111,10 @@ namespace Yaml {
         deserialize(v, node);
         return v;
     }
+
+
+    template<typename T>
+    void validate_required_fields(Yaml::Node& node) { }
 }
 
 namespace {
@@ -314,6 +318,12 @@ namespace Yaml {
     
     #define YAML_SERIALIZE(...) SWITCH(ISEMPTY(__VA_ARGS__))(YAML_SERIALIZE_IMPL, NOOP)(__VA_ARGS__)
     #define YAML_DESERIALIZE(...) SWITCH(ISEMPTY(__VA_ARGS__))(YAML_DESERIALIZE_IMPL, NOOP)(__VA_ARGS__)
+
+    #define YAML_VALIDATE_REQUIRED(FIELD)                                              \
+        if (node[#FIELD].IsNone()) {                                                   \
+            throw Yaml::ConfigurationException("Missing required field `" #FIELD "`"); \
+        }                                                                              \
+    
 }
 
 /**
@@ -326,12 +336,11 @@ namespace Yaml {
  * 
  * The struct must support a default constructor.
  * 
- * Warning: Do not place this inside of a class namespace.
+ * WARNING: Do not place this inside of a class namespace.
  * This macro expands to include a namespace, and you cannot put a namespace inside of a class.
  * 
  * 
  * EXAMPLE:
- * 
  * struct MyStruct {
  *  double my_field;
  * };
@@ -345,6 +354,7 @@ namespace Yaml {
         }                                                                        \
         template<>                                                               \
         inline void deserialize<CLASS_NAME>(CLASS_NAME& obj, Yaml::Node& node) { \
+            validate_required_fields<CLASS_NAME>(node);                          \
             MAP(YAML_DESERIALIZE, __VA_ARGS__)                                   \
             if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {   \
                 derive(obj);                                                     \
@@ -365,11 +375,10 @@ namespace Yaml {
  * 
  * The struct must support a default constructor.
  * 
- * Warning: Do not place this inside of a class namespace.
+ * WARNING: Do not place this inside of a class namespace.
  * This macro expands to include a namespace, and you cannot put a namespace inside of a class.
  * 
  * EXAMPLE:
- * 
  * struct MyBase {
  *  std::vector<int> my_base_field;
  * };
@@ -390,6 +399,7 @@ namespace Yaml {
         template<>                                                               \
         inline void deserialize<CLASS_NAME>(CLASS_NAME& obj, Yaml::Node& node) { \
             deserialize<BASE_CLASS>(*(BASE_CLASS*)&obj, node);                   \
+            validate_required_fields<CLASS_NAME>(node);                          \
             MAP(YAML_DESERIALIZE, __VA_ARGS__)                                   \
             if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {   \
                 derive(obj);                                                     \
@@ -399,5 +409,42 @@ namespace Yaml {
             }                                                                    \
         }                                                                        \
     }                                                                            \
+
+
+/**
+ * Optional macro for adding required field validation to a serializable object.
+ * 
+ * NOTE: This macro must come before the associated IMPL_YAML_SERIALIZABLE* macro.
+ * 
+ * The first argument should be the name of the class/struct, while the remaining 
+ * arguments should be the required fields. Upon deserializing Yaml text to 
+ * an instance of the class, the fields listed here will be checked for presence.
+ * 
+ * Will throw a Yaml::ConfigurationException containing the missing field name
+ * during deserialization if any of the fields are missing.
+ * 
+ * WARNING: Do not place this inside of a class namespace.
+ * This macro expands to include a namespace, and you cannot put a namespace inside of a class.
+ * 
+ * EXAMPLE:
+ * struct MyBase {
+ *  std::vector<int> my_base_field;
+ * };
+ * YAML_ADD_REQUIRED_FIELDS_FOR(MyStruct, my_base_field)
+ * IMPL_YAML_SERIALIABLE_FOR(MyBase, my_base_field)
+ * 
+ * struct MyStruct : MyBase {
+ *  double my_field;
+ * };
+ * YAML_ADD_REQUIRED_FIELDS_FOR(MyStruct, my_field)
+ * IMPL_YAML_SERIALIZABLE_WITH_BASE(MyStruct, MyBase, my_field)
+*/
+#define YAML_ADD_REQUIRED_FIELDS_FOR(CLASS_NAME, ...)                  \
+    namespace Yaml {                                                   \
+        template<>                                                     \
+        void validate_required_fields<CLASS_NAME>(Yaml::Node& node) {  \
+            MAP(YAML_VALIDATE_REQUIRED, __VA_ARGS__)                   \
+        }                                                              \
+    }                                                                  \
 
 #endif
