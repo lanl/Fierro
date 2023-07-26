@@ -1523,7 +1523,7 @@ void FEA_Module_SGH::init_assembly(){
   });
   Kokkos::fence();  
     
-  
+  Graph_Matrix_Strides.update_host();
   //copy reduced content to non_repeat storage
   Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
 
