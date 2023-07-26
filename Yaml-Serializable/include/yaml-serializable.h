@@ -250,6 +250,7 @@ namespace Yaml {
         template<>                                                              \
         inline void deserialize<CLASS_TYPE>(CLASS_TYPE& v, Yaml::Node& node) {  \
             if (node.IsNone()) return;                                          \
+            from_string(node.As<std::string>(), v);                             \
         }                                                                       \
         template<>                                                              \
         inline void serialize<CLASS_TYPE>(CLASS_TYPE& v, Yaml::Node& node) {    \
@@ -265,6 +266,7 @@ namespace Yaml {
         from_string(s, v);                                                      \
         return is;                                                              \
     }                                                                           \
+
 
 namespace Yaml {
     /**
@@ -376,6 +378,7 @@ namespace Yaml {
         }                                                                        \
     }                                                                            \
 
+
 /**
  * Macro for automatically implementing serialization and deserialization
  * to and from Yaml::Node objects for objects that have serializable base classes.
@@ -457,5 +460,6 @@ namespace Yaml {
             MAP(YAML_VALIDATE_REQUIRED, __VA_ARGS__)                          \
         }                                                                     \
     }                                                                         \
+
 
 #endif
