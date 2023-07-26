@@ -243,6 +243,11 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     init_maps();
 
     init_state_vectors();
+        
+    //set initial saved coordinates
+    //initial_node_coords_distributed->assign(*node_coords_distributed);
+    all_initial_node_coords_distributed->assign(*all_node_coords_distributed);
+    initial_node_coords_distributed = Teuchos::rcp(new MV(*all_initial_node_coords_distributed, map));
     
     std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
     
@@ -508,9 +513,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       // ---------------------------------------------------------------------
     sgh_module->node_coords.update_device();
     Kokkos::fence();
-        
-      //set initial saved coordinates
-    initial_node_coords_distributed->assign(*node_coords_distributed);
 
     sgh_module->get_vol();
 
@@ -1235,10 +1237,12 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(const char *MESH){
 void Explicit_Solver_SGH::init_state_vectors(){
   int num_dim = simparam->num_dim;
   //allocate node_velocities
-  node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   initial_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  all_initial_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  node_velocities_distributed = Teuchos::rcp(new MV(*all_node_velocities_distributed, map));
   ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
   if(simparam_dynamic_opt->topology_optimization_on){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
@@ -1608,7 +1612,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   //directions(4,0) = -0.3;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  //obj->checkGradient(*rol_x, *rol_d);
+  obj->checkGradient(*rol_x, *rol_d);
   //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
