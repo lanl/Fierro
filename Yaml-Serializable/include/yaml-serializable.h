@@ -89,7 +89,7 @@ namespace Yaml {
      * For convenience, implement a from_string method for serilizable objects.
     */
     template<typename T>
-    T from_string(std::string s) {
+    T from_string(const std::string& s) {
         Node node;
         Parse(node, s);
         T v;
@@ -237,7 +237,12 @@ namespace Yaml {
     enum class CLASS_TYPE {                                                     \
         __VA_ARGS__                                                             \
     };                                                                          \
-    inline std::string to_string(CLASS_TYPE v) {                                \
+    inline void from_string(const std::string& s, CLASS_TYPE& v) {              \
+        using class_name = CLASS_TYPE;                                          \
+        std::map<std::string, CLASS_TYPE> map MAP_INITIALIZER(__VA_ARGS__)      \
+        v = Yaml::validate_map(s, map);                                         \
+    }                                                                           \
+    inline std::string to_string(const CLASS_TYPE& v) {                         \
         const std::vector<std::string> map VECTOR_INITIALIZER(__VA_ARGS__)      \
         return map[(int)v];                                                     \
     }                                                                           \
@@ -245,14 +250,20 @@ namespace Yaml {
         template<>                                                              \
         inline void deserialize<CLASS_TYPE>(CLASS_TYPE& v, Yaml::Node& node) {  \
             if (node.IsNone()) return;                                          \
-            using class_name = CLASS_TYPE;                                      \
-            std::map<std::string, CLASS_TYPE> map MAP_INITIALIZER(__VA_ARGS__)  \
-            v = validate_map(node.As<std::string>(), map);                      \
         }                                                                       \
         template<>                                                              \
         inline void serialize<CLASS_TYPE>(CLASS_TYPE& v, Yaml::Node& node) {    \
             node = to_string(v);                                                \
         }                                                                       \
+    }                                                                           \
+    inline std::ostream& operator<<(std::ostream & os, const CLASS_TYPE& v) {   \
+        return os << to_string(v);                                              \
+    }                                                                           \
+    inline std::istream& operator>>(std::istream & is, CLASS_TYPE& v) {         \
+        std::string s;                                                          \
+        is >> s;                                                                \
+        from_string(s, v);                                                      \
+        return is;                                                              \
     }                                                                           \
 
 namespace Yaml {

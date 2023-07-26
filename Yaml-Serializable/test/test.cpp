@@ -69,6 +69,15 @@ TEST(YamlSerialization, EnumSerialization) {
     EXPECT_EQ("VALUE_1\n",  Yaml::to_string(TEST_ENUM::VALUE_1));
     EXPECT_EQ("VALUE_2\n",  Yaml::to_string(TEST_ENUM::VALUE_2));
     EXPECT_EQ("VALUE_3\n",  Yaml::to_string(TEST_ENUM::VALUE_3));
+
+
+    TEST_ENUM v = TEST_ENUM::VALUE_3;
+    std::stringstream ss;
+    ss << v;
+    EXPECT_EQ(ss.str(), "VALUE_3");
+    v = TEST_ENUM::VALUE_1; // Change this value to make sure we are actually testing deserialization.
+    ss >> v;
+    EXPECT_EQ(v, TEST_ENUM::VALUE_3);
 }
 
 TEST(YamlSerialization, VectorSerialization) {
