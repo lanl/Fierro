@@ -154,7 +154,7 @@ struct Simulation_Parameters_Topology_Optimization : public Simulation_Parameter
   bool thick_condition_boundary = true;
 
   //file output parameters
-  int optimization_output_freq;
+  int optimization_output_freq = 2000;
 
   // Non-serialized fields
   //list of TO functions needed by problem
@@ -263,7 +263,11 @@ struct Simulation_Parameters_Topology_Optimization : public Simulation_Parameter
     // instead of this vector stuff.
     for (size_t to_index = 0; to_index < TO_Module_List.size(); to_index++) {
       auto to_module = TO_Module_List[to_index];
-      size_t fea_index = find_module(get_TO_module_dependency(to_module));
+      auto fea_module = get_TO_module_dependency(to_module);
+      if (!fea_module.has_value())
+        continue;
+
+      size_t fea_index = find_module(fea_module.value());
 
       TO_Module_My_FEA_Module[to_index] = fea_index;
       FEA_Module_My_TO_Modules[fea_index].push_back(to_index);
@@ -279,12 +283,13 @@ struct Simulation_Parameters_Topology_Optimization : public Simulation_Parameter
     TO_Module_List.push_back(type);
     TO_Function_Type.push_back(function_type);
     Function_Arguments.push_back(arguments);
-    ensure_module(get_TO_module_dependency(type));
+    
+    auto fea_module = get_TO_module_dependency(type);
+    if (fea_module.has_value())
+      ensure_module(fea_module.value());
   }
-  FEA_MODULE_TYPE get_TO_module_dependency(TO_MODULE_TYPE type) {
+  std::optional<FEA_MODULE_TYPE> get_TO_module_dependency(TO_MODULE_TYPE type) {
     switch (type) {
-      // case TO_MODULE_TYPE::Kinetic_Energy_Minimize:
-      //   return FEA_MODULE_TYPE::SGH;
       case TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize:
         return FEA_MODULE_TYPE::Heat_Conduction;
       case TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint:
@@ -300,9 +305,7 @@ struct Simulation_Parameters_Topology_Optimization : public Simulation_Parameter
       case TO_MODULE_TYPE::Strain_Energy_Constraint:
         return FEA_MODULE_TYPE::Elasticity;
       default:
-        throw Yaml::ConfigurationException(
-          "Unsupported optimization module type " + to_string(type)
-        );
+        return {};
     }
   }
 };

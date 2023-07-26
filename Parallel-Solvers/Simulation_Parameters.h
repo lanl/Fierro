@@ -160,13 +160,13 @@ SERIALIZABLE_ENUM(LOADING_SPECIFICATION, normal, coordinated)
 struct Loading_Condition : Yaml::ValidatedYaml {
   std::string id;
   BOUNDARY_TAG surface;
-  std::optional<double> plane_position;
   LOADING_CONDITION_TYPE condition_type;
-  std::optional<double> flux_value;
-  std::optional<double> component_x;
-  std::optional<double> component_y;
-  std::optional<double> component_z;
-  std::optional<LOADING_SPECIFICATION> specification;
+  std::optional<double> plane_position {};
+  std::optional<double> flux_value {};
+  std::optional<double> component_x {};
+  std::optional<double> component_y {};
+  std::optional<double> component_z {};
+  std::optional<LOADING_SPECIFICATION> specification {};
 
   void validate_surface_heat_flux() {
     std::string type_name = to_string(LOADING_CONDITION_TYPE::surface_heat_flux);
@@ -206,6 +206,7 @@ struct Loading_Condition : Yaml::ValidatedYaml {
     }
   }
 };
+YAML_ADD_REQUIRED_FIELDS_FOR(Loading_Condition, condition_type)
 IMPL_YAML_SERIALIZABLE_FOR(Loading_Condition, 
   id, surface, plane_position, condition_type,
   flux_value, component_x, component_y, component_z,
@@ -217,7 +218,7 @@ struct FEA_Boundary_Condition : Yaml::ValidatedYaml {
     BOUNDARY_TAG surface;
     double value;
     BOUNDARY_FEA_CONDITION condition_type;
-    // TODO: these should both just be value
+    // TODO: these should probably just be value
     std::optional<double> temperature_value;
     std::optional<double> displacement_value;
     std::optional<double> plane_position;
@@ -249,7 +250,7 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
 
   // Non-serialized fields
   int p_order = 0;
-  double unit_scaling = 1.0; // real_t is not guaranteed to be serializable.
+  double unit_scaling = 1.0;
   std::vector<FEA_MODULE_TYPE> FEA_Modules_List;
   std::set<FEA_MODULE_TYPE> fea_module_must_read;
 
@@ -336,8 +337,7 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
   }
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Simulation_Parameters,
-  solver_type, num_dims, input_options,
-  boundary_conditions
+  solver_type, num_dims, input_options
 )
 IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters, 
   solver_type, restart_file, input_options, timer_output_level,
