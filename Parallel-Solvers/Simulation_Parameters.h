@@ -48,7 +48,20 @@
 #include <algorithm>
 #include <filesystem>
 
-SERIALIZABLE_ENUM(SOLVER_TYPE, SGH)
+template<typename T>
+inline void validate_unique_vector(const std::vector<T>& vec, std::string err_msg) {
+  std::set<T> seen;
+  for (auto v : vec) {
+    if (seen.find(v) != seen.end()) {
+      throw Yaml::ConfigurationException(
+        err_msg + to_string(v)
+      );
+      seen.insert(v);
+    }
+  }
+}
+
+SERIALIZABLE_ENUM(SOLVER_TYPE, SGH, Implicit)
 SERIALIZABLE_ENUM(MESH_FORMAT,
     ensight,
     tecplot,
@@ -63,7 +76,8 @@ SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
   Elasticity,
   Heat_Conduction,
   SGH,
-  Inertial
+  Inertial,
+  Thermo_Elasticity
 )
 
 SERIALIZABLE_ENUM(ELEMENT_TYPE, 
@@ -146,7 +160,7 @@ SERIALIZABLE_ENUM(LOADING_SPECIFICATION, normal, coordinated)
 struct Loading_Condition : Yaml::ValidatedYaml {
   std::string id;
   BOUNDARY_TAG surface;
-  double plane_position;
+  std::optional<double> plane_position;
   LOADING_CONDITION_TYPE condition_type;
   std::optional<double> flux_value;
   std::optional<double> component_x;
@@ -203,15 +217,22 @@ struct FEA_Boundary_Condition : Yaml::ValidatedYaml {
     BOUNDARY_TAG surface;
     double value;
     BOUNDARY_FEA_CONDITION condition_type;
+    // TODO: these should both just be value
+    std::optional<double> temperature_value;
+    std::optional<double> displacement_value;
+    std::optional<double> plane_position;
 };
-IMPL_YAML_SERIALIZABLE_FOR(FEA_Boundary_Condition, id, surface, value, condition_type)
+IMPL_YAML_SERIALIZABLE_FOR(FEA_Boundary_Condition, 
+  id, surface, value, condition_type, 
+  temperature_value, plane_position, displacement_value
+)
 
-struct FEA_Module_Spec {
+struct FEA_Module_Config {
   FEA_MODULE_TYPE type;
   std::vector<FEA_Boundary_Condition> boundary_conditions;
   std::vector<Loading_Condition> loading_conditions;
 };
-IMPL_YAML_SERIALIZABLE_FOR(FEA_Module_Spec, type, boundary_conditions, loading_conditions)
+IMPL_YAML_SERIALIZABLE_FOR(FEA_Module_Config, type, boundary_conditions, loading_conditions)
 
 struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
   SOLVER_TYPE solver_type;
@@ -224,7 +245,7 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
 
   // fea_modules holds configuration for a subset of
   // the modules listed in FEA_Modules_List
-  std::vector<FEA_Module_Spec> fea_modules;
+  std::vector<FEA_Module_Config> fea_modules;
 
   // Non-serialized fields
   int p_order = 0;
@@ -238,17 +259,6 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
     }
   }
 
-  void validate_unique_fea_modules() {
-    std::set<FEA_MODULE_TYPE> seen_modules;
-    for (auto fea_type : FEA_Modules_List) {
-      if (seen_modules.find(fea_type) != seen_modules.end()) {
-        throw Yaml::ConfigurationException(
-          "Duplicate FEA Module type found " + to_string(fea_type)
-        );
-        seen_modules.insert(fea_type);
-      }
-    }
-  }
   void validate_element_type() {
     auto et = input_options.element_type;
     bool invalid_et = (et == ELEMENT_TYPE::quad4 || et == ELEMENT_TYPE::quad8 || et == ELEMENT_TYPE::quad12) && num_dims == 3;
@@ -262,14 +272,14 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
   }
   void validate() {
     validate_element_type();
-    validate_unique_fea_modules();
+    validate_unique_vector(FEA_Modules_List, "Duplicate FEA Module Found: ");
   }
 
   /**
    * Given a module type, return the optionally present
    * configuration associated with it.
   */
-  std::optional<FEA_Module_Spec> get_module_config(FEA_MODULE_TYPE type) {
+  std::optional<FEA_Module_Config> get_module_config(FEA_MODULE_TYPE type) {
     for (auto spec : fea_modules) 
       if (spec.type == type) return spec;
     return {};
@@ -294,7 +304,7 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
    * 
    * If there is one present already, don't do anything.
   */
-  size_t ensure_module(FEA_Module_Spec default_spec) {
+  size_t ensure_module(FEA_Module_Config default_spec) {
     for (size_t i = 0; i < fea_modules.size(); i++) {
       if (fea_modules[i].type == default_spec.type) 
         return i;

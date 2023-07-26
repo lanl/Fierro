@@ -39,6 +39,8 @@
 #define FEA_MODULE_THERMO_ELASTICITY_H
 
 #include "FEA_Module.h"
+#include "Simulation_Parameters_Thermo_Elasticity.h"
+#include "Simulation_Parameters_Topology_Optimization.h"
 
 //forward declare
 namespace MueLu{
@@ -58,8 +60,6 @@ namespace Xpetra{
 }
 
 class Implicit_Solver;
-class Simulation_Parameters_Thermo_Elasticity;
-class Simulation_Parameters_Topology_Optimization;
 class FEA_Module_Heat_Conduction;
 
 class FEA_Module_Thermo_Elasticity: public FEA_Module{
@@ -134,8 +134,8 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  Simulation_Parameters_Thermo_Elasticity *simparam;
-  Simulation_Parameters_Topology_Optimization *simparam_TO;
+  Simulation_Parameters_Thermo_Elasticity simparam;
+  Simulation_Parameters_Topology_Optimization simparam_TO;
   Implicit_Solver *Implicit_Solver_Pointer_;
   FEA_Module_Heat_Conduction *Heat_Conduction_Module_Pointer_;
   

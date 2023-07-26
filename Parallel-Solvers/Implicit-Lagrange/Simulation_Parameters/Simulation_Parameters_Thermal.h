@@ -39,46 +39,82 @@
 #define SIMULATION_PARAMETERS_THERMAL_H
 
 #include "utilities.h"
+#include "yaml-serializable.h"
 #include "Simulation_Parameters.h"
 using namespace utils;
 
-class Simulation_Parameters_Thermal: public Simulation_Parameters
-{
- public:
-  Simulation_Parameters_Thermal();
-  virtual ~Simulation_Parameters_Thermal();
-  virtual void input();
-  virtual void apply_settings() {}
-  //==============================================================================
-  //   Thermal FEA problem parameters
-  //==============================================================================
-
+struct Simulation_Parameters_Thermal: public Simulation_Parameters {
   // --- Boundary Conditions ---
-  int NB; // number of boundary patch sets to tag
-  int NBSF; //number of surface heat flux boundary conditions
-  int NBT; //number of temperature boundary conditions
+  int NB   = 6; // number of boundary patch sets to tag
+  int NBSF = 4; //number of surface heat flux boundary conditions
+  int NBT  = 2; //number of temperature boundary conditions
 
   // --- Graphics output variables ---
-  bool output_temperature_flag, output_temperature_gradient_flag, output_heat_flux_flag, flux_max_flag;
+  bool output_temperature_flag     = true; 
+  bool output_heat_flux_flag       = true;
+  bool output_temperature_gradient_flag = false;
+  bool flux_max_flag = false;
 
   // --- Constitutive Parameters ---
-  real_t Thermal_Conductivity;
+  double Thermal_Conductivity = 10;
 
   // --- Integration Scheme
-  int num_gauss_points;
+  int num_gauss_points = 2;
 
   //debug and performance reporting flags
-  bool multigrid_timers, direct_solver_flag;
+  bool multigrid_timers = false;
+  bool direct_solver_flag = false;
 
   //Body flux parameters
-  bool thermal_flag, electric_flag;
-  real_t specific_internal_energy_rate;
+  bool thermal_flag = false;
+  //bool electric_flag;
+  double specific_internal_energy_rate = 1;
 
   //Linear Solver Flags
-  bool equilibrate_matrix_flag;
+  bool equilibrate_matrix_flag = false;
 
   //Topology Optimization parameters
-  real_t maximum_strain, maximum_strain_energy;
+  //double maximum_strain, maximum_strain_energy;
 };
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Thermal, Simulation_Parameters)
+
+// class Simulation_Parameters_Thermal: public Simulation_Parameters
+// {
+//  public:
+//   Simulation_Parameters_Thermal();
+//   virtual ~Simulation_Parameters_Thermal();
+//   virtual void input();
+//   virtual void apply_settings() {}
+//   //==============================================================================
+//   //   Thermal FEA problem parameters
+//   //==============================================================================
+
+//   // --- Boundary Conditions ---
+//   int NB; // number of boundary patch sets to tag
+//   int NBSF; //number of surface heat flux boundary conditions
+//   int NBT; //number of temperature boundary conditions
+
+//   // --- Graphics output variables ---
+//   bool output_temperature_flag, output_temperature_gradient_flag, output_heat_flux_flag, flux_max_flag;
+
+//   // --- Constitutive Parameters ---
+//   real_t Thermal_Conductivity;
+
+//   // --- Integration Scheme
+//   int num_gauss_points;
+
+//   //debug and performance reporting flags
+//   bool multigrid_timers, direct_solver_flag;
+
+//   //Body flux parameters
+//   bool thermal_flag, electric_flag;
+//   real_t specific_internal_energy_rate;
+
+//   //Linear Solver Flags
+//   bool equilibrate_matrix_flag;
+
+//   //Topology Optimization parameters
+//   real_t maximum_strain, maximum_strain_energy;
+// };
 
 #endif // end HEADER_H

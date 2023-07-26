@@ -46,6 +46,9 @@
 struct Simulation_Parameters_Elasticity : public Simulation_Parameters
 {
  public:
+
+  // Non-Serialized fields
+  
   //==============================================================================
   //   Mesh Variables
   //==============================================================================
@@ -68,9 +71,6 @@ struct Simulation_Parameters_Elasticity : public Simulation_Parameters
 
   // -- Integration rule
   int num_gauss_points = 2;
-
-  //debug and performance reporting flags
-  bool report_runtime = true;
 
   //Body force parameters
   bool gravity_flag = false;
