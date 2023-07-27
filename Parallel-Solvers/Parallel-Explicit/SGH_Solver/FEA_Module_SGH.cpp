@@ -912,10 +912,10 @@ void FEA_Module_SGH::setup(){
             elem_coords[2] = elem_coords[2]/num_nodes_in_elem;
 
             // default is not to fill the element
-            size_t fill_this = mat_fill(f_id).contains(elem_coords);
+            bool fill_this = mat_fill(f_id).contains(elem_coords);
 
             // paint the material state on the element
-            if (fill_this == 1){
+            if (fill_this){
                     
                 // density
                 elem_den(elem_gid) = mat_fill(f_id).den;

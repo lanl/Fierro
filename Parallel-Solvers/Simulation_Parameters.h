@@ -77,7 +77,8 @@ SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
   Heat_Conduction,
   SGH,
   Inertial,
-  Thermo_Elasticity
+  Thermo_Elasticity,
+  Eulerian
 )
 
 SERIALIZABLE_ENUM(ELEMENT_TYPE, 
@@ -90,7 +91,7 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   MESH_FORMAT mesh_file_format;
 
   ELEMENT_TYPE element_type = ELEMENT_TYPE::hex8;
-  bool zero_index_base;
+  bool zero_index_base = false;
 
   // Non-serialized fields
   int words_per_line;

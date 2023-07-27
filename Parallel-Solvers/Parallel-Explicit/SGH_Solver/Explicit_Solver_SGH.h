@@ -130,7 +130,7 @@ public:
   int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
   
   mesh_t *init_mesh;
-  mesh_t *mesh;
+  std::shared_ptr<mesh_t> mesh;
   
   //class Simulation_Parameters *simparam;
   Simulation_Parameters_SGH simparam;

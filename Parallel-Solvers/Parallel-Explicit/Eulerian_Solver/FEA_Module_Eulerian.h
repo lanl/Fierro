@@ -45,11 +45,11 @@
 #include "node_combination.h"
 #include "Solver.h"
 #include "FEA_Module.h"
+#include "Simulation_Parameters_Eulerian.h"
+#include "Simulation_Parameters_Elasticity.h"
+#include "Simulation_Parameters_Dynamic_Optimization.h"
 
 class Explicit_Solver_Eulerian;
-class Simulation_Parameters_Eulerian;
-class Simulation_Parameters_Dynamic_Optimization;
-class Simulation_Parameters_Elasticity;
 
 class FEA_Module_Eulerian: public FEA_Module{
 
@@ -146,9 +146,9 @@ public:
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   //end elastic TO data
   
-  Simulation_Parameters_Eulerian *simparam;
-  Simulation_Parameters_Elasticity *simparam_elasticity;
-  Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
+  Simulation_Parameters_Eulerian simparam;
+  Simulation_Parameters_Elasticity simparam_elasticity;
+  Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
   Explicit_Solver_Eulerian *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;

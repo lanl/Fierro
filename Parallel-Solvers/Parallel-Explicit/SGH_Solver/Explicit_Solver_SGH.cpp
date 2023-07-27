@@ -123,18 +123,17 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //create parameter objects
   simparam = Simulation_Parameters_SGH();
   simparam_dynamic_opt = Simulation_Parameters_Dynamic_Optimization();
-  // Solver::simparam = simparam;
   //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->Simulation_Parameters::input();
 
   //create ref element object
-  ref_elem = std::make_shared<elements::ref_element>(elements::ref_element());
+  ref_elem = std::make_shared<elements::ref_element>();
   //create mesh objects
   //init_mesh = new swage::mesh_t(simparam);
-  mesh = new mesh_t;
+  mesh = std::make_shared<mesh_t>();
 
-  element_select = std::make_shared<elements::element_selector>(elements::element_selector());
+  element_select = std::make_shared<elements::element_selector>();
   num_nodes = 0;
 
   //boundary condition data
@@ -148,12 +147,10 @@ Explicit_Solver_SGH::Explicit_Solver_SGH() : Explicit_Solver(){
   //file readin parameter
   active_node_ordering_convention = ENSIGHT;
   //default simulation parameters
-//   simparam->input();
-//   simparam_dynamic_opt->input();
 }
 
 Explicit_Solver_SGH::~Explicit_Solver_SGH(){
-   if (myrank == 0 && in != NULL)
+  if (myrank == 0 && in != NULL)
     delete in;
 }
 
@@ -181,9 +178,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     }
   }
 
-    //initialize Trilinos communicator class
-    comm = Tpetra::getDefaultComm();
-    int num_dim = simparam.num_dims;
+  //initialize Trilinos communicator class
+  comm = Tpetra::getDefaultComm();
+  int num_dim = simparam.num_dims;
 
   //error handle for file input name
   //if(argc < 2)
@@ -192,24 +189,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   if(filename.find(".yaml") != std::string::npos){
     simparam_dynamic_opt = Yaml::from_file<Simulation_Parameters_Dynamic_Optimization>(filename);
     simparam = Yaml::from_file<Simulation_Parameters_SGH>(filename);
-  
-    //check for user error in providing yaml options (flags unsupported options)
-    //yaml_error = simparam->yaml_input(filename);
-
-    //use map of set options to set member variables of the class
-    // simparam->apply_settings();
-    //assign base class data such as map of settings to TO simparam class
-    //simparam_dynamic_opt->Simulation_Parameters::operator=(*simparam);
-    //simparam_dynamic_opt->apply_settings();
-    //assign map with read in options removed from inheritors to the base class
-    // simparam->set_options = simparam_dynamic_opt->set_options;
-
-    //check for errors in the yaml input and exit if any found with an error message
-    // int map_size = simparam->unapplied_settings();
-    // if(map_size) {
-    //   *fos << "YAML input has encountered an error; please correct options that were not applied, or remove unnecessary options." << std::endl;
-    //   exit_solver(0);
-    // }
   }
 
   const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
@@ -234,10 +213,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
   init_state_vectors();
         
-    //set initial saved coordinates
-    //initial_node_coords_distributed->assign(*node_coords_distributed);
-    all_initial_node_coords_distributed->assign(*all_node_coords_distributed);
-    initial_node_coords_distributed = Teuchos::rcp(new MV(*all_initial_node_coords_distributed, map));
+  //set initial saved coordinates
+  //initial_node_coords_distributed->assign(*node_coords_distributed);
+  all_initial_node_coords_distributed->assign(*all_node_coords_distributed);
+  initial_node_coords_distributed = Teuchos::rcp(new MV(*all_initial_node_coords_distributed, map));
   
   std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
   
@@ -264,13 +243,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   //initialize TO design variable storage
   if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on)
     init_design();
-
-  //construct list of FEA modules requested
-  // if(simparam_dynamic_opt.topology_optimization_on)
-  //   simparam_dynamic_opt->FEA_module_setup();
-  // else
-  //   simparam->FEA_module_setup();
-
   //process process list of requested FEA modules to construct list of objects
   FEA_module_setup();
 
@@ -1100,32 +1072,6 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(const char *MESH){
     simparam.fea_module_must_read.insert(FEA_MODULE_TYPE::Elasticity);
     simparam.ensure_module(FEA_MODULE_TYPE::Elasticity);
     // TODO: What about simparam_dynamic_opt?
-
-    // int nfea_modules = simparam->nfea_modules;
-    // bool elasticity_found = false;
-    // std::vector<std::string> FEA_Module_List = simparam->FEA_Module_List;
-
-
-    // for(int imodule = 0; imodule < nfea_modules; imodule++){
-    //   if(FEA_Module_List[imodule]=="Elasticity"){ 
-    //     elasticity_found = true;
-    //     simparam->fea_module_must_read[imodule] = true;
-    //   }
-    // }
-    
-    // //add Elasticity module to requested modules in the Simulation Parameters data
-    // if(!elasticity_found){
-    //   if(nfea_modules==simparam->FEA_Module_List.capacity()){
-    //     simparam->FEA_Module_List.push_back("Elasticity");
-    //     simparam->fea_module_must_read.push_back(true);
-    //     simparam->nfea_modules++;
-    //   }
-    //   else{
-    //     simparam->FEA_Module_List[nfea_modules] = "Elasticity";
-    //     simparam->fea_module_must_read[nfea_modules]= true;
-    //     simparam->nfea_modules++;
-    //   }
-    // }
   }
 
   // Close mesh input file if no further readin is done by FEA modules for conditions
@@ -1256,6 +1202,7 @@ void Explicit_Solver_SGH::init_state_vectors(){
 ------------------------------------------------------------------------- */
 
 void Explicit_Solver_SGH::FEA_module_setup(){
+
   std::vector<FEA_MODULE_TYPE> FEA_Module_List;
   if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on){
     //nfea_modules = simparam_dynamic_opt->nfea_modules;
@@ -1280,8 +1227,6 @@ void Explicit_Solver_SGH::FEA_module_setup(){
     //decides which FEA module objects to setup based on string.
     //automate selection list later; use std::map maybe?
     if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::SGH){
-      // TODO: Theres no way this works, right?
-      // fea_module_types is a potentially sparse list.
       fea_module_types[imodule] = FEA_MODULE_TYPE::SGH;
       fea_modules[imodule] = sgh_module = new FEA_Module_SGH(this, *mesh);
       module_found = true;
@@ -1300,7 +1245,7 @@ void Explicit_Solver_SGH::FEA_module_setup(){
     else{
       // TODO: This should be validated earlier.
       *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" 
-            << to_string(FEA_Module_List[imodule]) <<"\"" << std::endl;
+            << FEA_Module_List[imodule] <<"\"" << std::endl;
       exit_solver(0);
     }
   }
@@ -1360,7 +1305,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       if(objective_declared){
         // TODO: Put this validation earlier.
         *fos << "PROGRAM IS ENDING DUE TO ERROR; ANOTHER OBJECTIVE FUNCTION WITH NAME \"" 
-              << to_string(TO_Module_List[imodule]) <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
+              << TO_Module_List[imodule] <<"\" ATTEMPTED TO REPLACE A PREVIOUS OBJECTIVE; THERE MUST BE ONE OBJECTIVE." << std::endl;
           exit_solver(0);
       }
       if(TO_Module_List[imodule] == TO_MODULE_TYPE::Kinetic_Energy_Minimize){
@@ -1401,7 +1346,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       else{
         // TODO: Put validation earlier
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED OBJECTIVE FUNCTION REQUESTED WITH NAME \"" 
-              << to_string(TO_Module_List[imodule]) <<"\"" << std::endl;
+              << TO_Module_List[imodule] << "\"" << std::endl;
         exit_solver(0);
       }
       objective_declared = true;
@@ -1453,7 +1398,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       else{
         // TODO: Put validation earlier
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED EQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" 
-              << to_string(TO_Module_List[imodule]) <<"\"" << std::endl;
+              << TO_Module_List[imodule] <<"\"" << std::endl;
         exit_solver(0);
       }
       *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
@@ -1479,7 +1424,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       else{
         // TODO: Put this validation earlier
         *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED INEQUALITY CONSTRAINT FUNCTION REQUESTED WITH NAME \"" 
-              << to_string(TO_Module_List[imodule]) <<"\"" << std::endl;
+              << TO_Module_List[imodule] << "\"" << std::endl;
         exit_solver(0);
       }
       *fos << " ADDING CONSTRAINT " << constraint_name << std::endl;
