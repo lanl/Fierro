@@ -132,6 +132,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   //set Tpetra vector pointers
   initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
   initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
+  all_initial_node_coords_distributed = Explicit_Solver_Pointer_->all_initial_node_coords_distributed;
   node_coords_distributed = Explicit_Solver_Pointer_->node_coords_distributed;
   node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
@@ -1226,6 +1227,7 @@ void FEA_Module_SGH::setup(){
     if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
       //create parameter object
       simparam_elasticity = new Simulation_Parameters_Elasticity();
+      simparam_elasticity->input();
       init_assembly();
       assemble_matrix();
     }

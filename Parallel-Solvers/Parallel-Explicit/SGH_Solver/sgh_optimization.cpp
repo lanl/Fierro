@@ -827,7 +827,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
           //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
           for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
             dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
+            matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
           }
           rate_of_change = -matrix_contribution;
           phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
