@@ -70,7 +70,8 @@ void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                          const double vol,
                          const double dt,
                          const double rk_alpha,
-                         const size_t cycle)
+                         const size_t cycle,
+                         const size_t rk_level)
 {
     /*
     This function is called to solve the user strength model specified herein. 
@@ -93,7 +94,8 @@ void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                                   vol,
                                   dt,
                                   rk_alpha,
-                                  cycle);
+                                  cycle,
+                                  rk_level);
 #endif
 } // end user_strength_model
 

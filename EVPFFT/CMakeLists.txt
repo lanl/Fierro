@@ -138,7 +138,7 @@ set(This evpfft)
 
   if (BUILD_EVPFFT_FIERRO)
     add_library(${This} STATIC ${Sources})
-    target_link_libraries(${This} matar ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
+    target_link_libraries(${This} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
   else ()
     project (${This})
     add_executable(${This} ${Sources})

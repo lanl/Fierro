@@ -82,7 +82,8 @@ typedef void strength_function_type(
   const double vol,
   const double dt,
   const double alpha,
-  const size_t cycle);
+  const size_t cycle,
+  const size_t rk_level);
 KOKKOS_FUNCTION strength_function_type user_strength_model;
 
 

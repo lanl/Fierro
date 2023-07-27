@@ -40,7 +40,7 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
         elem_den(elem_gid) = elem_mass(elem_gid)/elem_vol(elem_gid);
         
         size_t mat_id = elem_mat_id(elem_gid);
-        
+
         //initialize elem pressure
         elem_pres(elem_gid) = 0;
         
@@ -97,7 +97,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                                             elem_vol(elem_gid),
                                             dt,
                                             rk_alpha,
-                                            cycle);
+                                            cycle,
+                                            rk_level);
             
         } // end logical on hyper strength model
         
@@ -116,7 +117,7 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
         
     }); // end parallel for
     Kokkos::fence();
-    
+ 
     return;
     
 } // end method to update state
@@ -213,7 +214,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                                             elem_vol(elem_gid),
                                             dt,
                                             rk_alpha,
-                                            cycle);
+                                            cycle,
+                                            rk_level);
             
         } // end logical on hyper strength model
         

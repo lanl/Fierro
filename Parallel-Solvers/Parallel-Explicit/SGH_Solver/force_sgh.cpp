@@ -400,7 +400,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                                                 global_vars,
                                                 elem_sspd,
                                                 elem_den(elem_gid),
-                                                elem_sie(elem_gid),
+                                                elem_sie(rk_level,elem_gid),
                                                 vel_grad,
                                                 elem_node_gids,
                                                 node_coords,
@@ -408,7 +408,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                                                 elem_vol(elem_gid),
                                                 dt,
                                                 rk_alpha,
-                                                cycle);
+                                                cycle,
+                                                rk_level);
 
             } // end logical for strength run location
             
@@ -457,7 +458,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                                                     global_vars,
                                                     elem_sspd,
                                                     elem_den.host(elem_gid),
-                                                    elem_sie.host(elem_gid),
+                                                    elem_sie.host(rk_level,elem_gid),
                                                     vel_grad,
                                                     elem_node_gids,
                                                     node_coords,
@@ -465,7 +466,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                                                     elem_vol.host(elem_gid),
                                                     dt,
                                                     rk_alpha,
-                                                    cycle);
+                                                    cycle,
+                                                    rk_level);
                 } // end logical for strength run location
 
             } // end logical on hypo strength model
@@ -863,7 +865,8 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                                             elem_vol(elem_gid),
                                             dt,
                                             rk_alpha,
-                                            cycle);
+                                            cycle,
+                                            rk_level);
             
         } // end logical on hypo strength model
         
