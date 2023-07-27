@@ -132,6 +132,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   //set Tpetra vector pointers
   initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
   initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
+  all_initial_node_coords_distributed = Explicit_Solver_Pointer_->all_initial_node_coords_distributed;
   node_coords_distributed = Explicit_Solver_Pointer_->node_coords_distributed;
   node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;

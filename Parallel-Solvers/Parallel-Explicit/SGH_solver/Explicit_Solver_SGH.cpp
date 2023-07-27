@@ -233,6 +233,11 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   init_maps();
 
   init_state_vectors();
+        
+    //set initial saved coordinates
+    //initial_node_coords_distributed->assign(*node_coords_distributed);
+    all_initial_node_coords_distributed->assign(*all_node_coords_distributed);
+    initial_node_coords_distributed = Teuchos::rcp(new MV(*all_initial_node_coords_distributed, map));
   
   std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
   
@@ -494,15 +499,12 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   // allocate elem_vel_grad
   sgh_module->elem_vel_grad = DCArrayKokkos <double> (num_elems,3,3);
 
-  
-    // ---------------------------------------------------------------------
-    //   calculate geometry
-    // ---------------------------------------------------------------------
-  sgh_module->node_coords.update_device();
-  Kokkos::fence();
-      
-    //set initial saved coordinates
-  initial_node_coords_distributed->assign(*node_coords_distributed);
+    
+      // ---------------------------------------------------------------------
+      //   calculate geometry
+      // ---------------------------------------------------------------------
+    sgh_module->node_coords.update_device();
+    Kokkos::fence();
 
   sgh_module->get_vol();
 
@@ -1231,10 +1233,12 @@ void Explicit_Solver_SGH::read_mesh_ansys_dat(const char *MESH){
 void Explicit_Solver_SGH::init_state_vectors(){
   int num_dim = simparam.num_dims;
   //allocate node_velocities
-  node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
+  //node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   initial_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+  all_initial_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  node_velocities_distributed = Teuchos::rcp(new MV(*all_node_velocities_distributed, map));
   ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
   if(simparam_dynamic_opt.topology_optimization_on){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
