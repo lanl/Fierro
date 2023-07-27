@@ -636,7 +636,7 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_var
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
-  const_vec_array initial_node_coords = initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+  const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
   const_host_vec_array all_node_densities;
@@ -750,14 +750,14 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_var
 
           nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
           nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-          current_nodal_displacements(node_loop*num_dim) = node_coords(1, local_node_id, 0)-initial_node_coords(local_node_id,0);
-          current_nodal_displacements(node_loop*num_dim+1) = node_coords(1, local_node_id, 1)-initial_node_coords(local_node_id,1);
+          current_nodal_displacements(node_loop*num_dim) = node_coords(1, local_node_id, 0)-all_initial_node_coords(local_node_id,0);
+          current_nodal_displacements(node_loop*num_dim+1) = node_coords(1, local_node_id, 1)-all_initial_node_coords(local_node_id,1);
           current_element_adjoint(node_loop*num_dim) = (current_adjoint_vector(local_node_id,0)+next_adjoint_vector(local_node_id,0))/2;
           current_element_adjoint(node_loop*num_dim+1) = (current_adjoint_vector(local_node_id,1)+next_adjoint_vector(local_node_id,1))/2;
 
           if(num_dim==3){
           nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
-          current_nodal_displacements(node_loop*num_dim+2) = node_coords(1, local_node_id, 2)-initial_node_coords(local_node_id,2);
+          current_nodal_displacements(node_loop*num_dim+2) = node_coords(1, local_node_id, 2)-all_initial_node_coords(local_node_id,2);
           current_element_adjoint(node_loop*num_dim+2) = (current_adjoint_vector(local_node_id,2)+next_adjoint_vector(local_node_id,2))/2;
           }
 
@@ -1011,7 +1011,7 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_var
             
             //debug print
             //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-            design_gradients(local_node_id,0) -= inner_product*Elastic_Constant*weight_multiply*0.5*invJacobian*global_dt/nodes_per_elem;
+            design_gradients(local_node_id,0) -= inner_product*Elastic_Constant*weight_multiply*invJacobian*global_dt/nodes_per_elem;
           }
 
           //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
@@ -1030,7 +1030,7 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_var
               
               //debug print
               //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-              design_gradients(local_node_id,0) += -inner_product*weight_multiply*Jacobian*global_dt/nodes_per_elem;
+              design_gradients(local_node_id,0) += inner_product*weight_multiply*Jacobian*global_dt/nodes_per_elem;
             }
           }
         }
