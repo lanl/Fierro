@@ -760,7 +760,6 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::setup(){
-
     const size_t rk_level = simparam->rk_num_bins - 1;   
     const size_t num_fills = simparam->num_fills;
     const size_t rk_num_bins = simparam->rk_num_bins;

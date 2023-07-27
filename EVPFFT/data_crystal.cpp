@@ -42,6 +42,7 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
 
   ur1 >> nmodesx; CLEAR_LINE(ur1);
   ur1 >> nmodes(iph); CLEAR_LINE(ur1);
+  for (int i = 1; i <= mode.size(); i++) mode(i) = 0;
   for (int i = 1; i <= nmodes(iph); i++) {
     ur1 >> mode(i);
   }
@@ -86,7 +87,7 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
       thet0x *= stress_scale;
       thet1x *= stress_scale;
       tau0_mode_a *= stress_scale;
- 
+
       //     SKIPS nsmx LINES IF THE MODE IS NOT IN THE LIST.
       if (modex != mode(kount)) {
         for (int iz = 1; iz <= nsmx; iz++) {
@@ -283,7 +284,7 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
     //} while (nm < nmodesx); // end of do/while loop
   //} // end of label_100 scope
   } // end for (nm)
- 
+
   //     INITIALIZE SELF & LATENT HARDENING COEFS FOR EACH SYSTEM OF THE PHASE.
   //     ABSOLUTE UNITS ARE ACCOUNTED FOR BY MODULATING FACTOR IN HARDENING LAW.
 

@@ -185,7 +185,8 @@ struct material_t {
                             const double vol,
                             const double dt,
                             const double alpha,
-                            const size_t cycle) = NULL;
+                            const size_t cycle,
+                            const size_t rk_level) = NULL;
     
     // hypo or hyper elastic plastic model
     model::strength_tag strength_type = model::none;

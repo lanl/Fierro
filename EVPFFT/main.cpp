@@ -2,6 +2,9 @@
 #include "utilities.h"
 #include "vm.h"
 #include "inverse.h"
+#ifndef NDEBUG
+  #include <cfenv>
+#endif
 
 #ifndef BUILD_EVPFFT_FIERRO
 int main(int argc, char *argv[])
@@ -42,13 +45,11 @@ int main(int argc, char *argv[])
 #if BUILD_EVPFFT_FIERRO
 void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, size_t elem_gid, real_t udotAccThIn)
 {
-#if 0
-//#ifndef NDEBUG
+#ifndef NDEBUG
     feenableexcept (FE_DIVBYZERO); 
     feenableexcept (FE_INVALID);
     feenableexcept (FE_OVERFLOW);
-//#endif 
-#endif
+#endif 
 
   /* All tensors must come in in a F-layout */
 
