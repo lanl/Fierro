@@ -22,7 +22,6 @@ bool compare_set(std::set<T> a, std::set<T> b) {
     return true;
 }
 
-
 bool is_close(float a, float b) {
     const float tolerance = 1e-6 * (std::fabs(a) + std::fabs(b)) / 2.0;
     return std::fabs(a - b) <= tolerance;
