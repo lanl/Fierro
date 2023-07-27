@@ -1,5 +1,3 @@
-set(Simulation_Param_SRC Simulation_Parameters/Simulation_Parameters_Thermal.cpp Simulation_Parameters/Simulation_Parameters_Elasticity.cpp
-Simulation_Parameters/Simulation_Parameters_Thermo_Elasticity.cpp Simulation_Parameters/Simulation_Parameters_Topology_Optimization.cpp)
 set(Implicit_Solver_SRC Implicit_Solver.cpp)
 set(FEA_Module_SRC FEA_Physics_Modules/FEA_Module_Elasticity.cpp FEA_Physics_Modules/FEA_Module_Heat_Conduction.cpp FEA_Physics_Modules/FEA_Module_Thermo_Elasticity.cpp FEA_Physics_Modules/Matrix_Equilibration.cpp )
 
@@ -31,7 +29,7 @@ include_directories(FEA_Physics_Modules)
 # LINK_DIRECTORIES (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
 add_library(fea_modules OBJECT ${FEA_Module_SRC})
-add_executable(fierro-parallel-implicit main.cpp ${Implicit_Solver_SRC} ${Simulation_Param_SRC})
+add_executable(fierro-parallel-implicit main.cpp ${Implicit_Solver_SRC})
 
 target_link_libraries (fierro-parallel-implicit swage)
 target_link_libraries (fierro-parallel-implicit elements)

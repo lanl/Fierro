@@ -1,5 +1,5 @@
 
-set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp Simulation_Parameters_Inertial.cpp FEA_Module_Inertial.cpp Solver.cpp Simulation_Parameters.cpp)
+set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp FEA_Module_Inertial.cpp Solver.cpp)
 add_library(parallel_base_src OBJECT ${Parallel_Base_SRC})
 
 include_directories(Optimization_Modules)
