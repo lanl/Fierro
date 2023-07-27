@@ -108,48 +108,4 @@ struct corner_t {
 
 }; // end corner_t
 
-
-namespace model
-{
-
-    // strength model types
-    enum strength_tag
-    {
-        none = 0,
-        hypo = 1,     // hypoelastic plastic model
-        hyper = 2,    // hyperelastic plastic model
-    };
-
-} // end of namespace
-
-
-namespace model_run_location
-{
-    // strength model run location
-    enum run_location
-    {   
-        device = 0,
-        host = 1,
-    };  
-} // end of namespace
-
-
-namespace model_init
-{
-
-    // strength model setup
-    enum strength_setup_tag
-    {
-        input = 0,
-        user_init = 1,
-    };
-
-} // end of namespace
-
-
-
-
-
-
-
 #endif 

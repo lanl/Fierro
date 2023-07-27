@@ -53,8 +53,6 @@ public:
   Teuchos::RCP<MV> initial_node_coords_distributed;
   
   Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
-
-  //ROL::Problem<real_t> problem;
 };
 
 #endif // end Header Guard
