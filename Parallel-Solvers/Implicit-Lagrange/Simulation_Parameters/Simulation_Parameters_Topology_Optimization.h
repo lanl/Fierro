@@ -34,7 +34,7 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-
+#pragma once
 #ifndef SIMULATION_PARAMETERS_TOPOLOGY_OPTIMIZATION_H
 #define SIMULATION_PARAMETERS_TOPOLOGY_OPTIMIZATION_H
 
@@ -313,56 +313,5 @@ IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Topology_Optimization, Si
   optimization_options, nodal_density_flag, thick_condition_boundary,
   optimization_output_freq
 )
-
-
-// class Simulation_Parameters_Topology_Optimization : public Simulation_Parameters
-// {
-//  public:
-//   Simulation_Parameters_Topology_Optimization(Implicit_Solver *solver_pointer);
-//   virtual ~Simulation_Parameters_Topology_Optimization();
-//   virtual void input();
-//   virtual void FEA_module_setup();
-//   virtual void apply_settings();
-//   //==============================================================================
-//   //   Mesh Variables
-//   //==============================================================================
-
-//   // --- Mesh regions and material fills ---
-//   int NB; // number of boundary patch sets to tag
-//   int NBD; //number of density boundary conditions
-
-//   //Topology Optimization flags
-//   bool topology_optimization_on, shape_optimization_on, nodal_density_flag, helmholtz_filter;
-//   std::string multi_objective_structure;
-  
-//   //When on, all element nodes connected to a boundary condition patch will have their density constrained
-//   bool thick_condition_boundary;
-
-//   //method of moving asymptotes enabled for the optimization algorithm
-//   bool mma_on;
-
-//   //file output parameters
-//   int optimization_output_freq;
-
-//   //Topology Optimization parameters
-//   real_t penalty_power, density_epsilon;
-
-//   //pointer to Solver object (just used to consolidate error handling for now)
-//   Implicit_Solver *solver_pointer_;
-
-//   //volumes to hold density constant
-  
-//   //types of TO functions
-//   enum function_type {OBJECTIVE, MULTI_OBJECTIVE_TERM, EQUALITY_CONSTRAINT, INEQUALITY_CONSTRAINT, VECTOR_EQUALITY_CONSTRAINT, VECTOR_INEQUALITY_CONSTRAINT};
-
-//   //list of TO functions needed by problem
-//   std::vector<std::string> TO_Module_List;
-//   std::vector<function_type> TO_Function_Type;
-//   std::vector<int> TO_Module_My_FEA_Module;
-//   std::vector<int> Multi_Objective_Modules;
-//   std::vector<real_t> Multi_Objective_Weights;
-//   std::vector<std::vector<real_t>> Function_Arguments;
-//   int nTO_modules, nmulti_objective_modules;
-// };
 
 #endif // end HEADER_H

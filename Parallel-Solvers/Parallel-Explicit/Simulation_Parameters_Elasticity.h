@@ -34,14 +34,13 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
+#pragma once
 
 #ifndef SIMULATION_PARAMETERS_ELASTICITY_H
 #define SIMULATION_PARAMETERS_ELASTICITY_H
 
-//#include "utilities.h"
 #include "Simulation_Parameters.h"
 #include "yaml-serializable.h"
-//using namespace utils;
 
 struct Simulation_Parameters_Elasticity : public Simulation_Parameters
 {
@@ -82,6 +81,5 @@ struct Simulation_Parameters_Elasticity : public Simulation_Parameters
   bool equilibrate_matrix_flag = false;
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Elasticity, Simulation_Parameters)
-
 
 #endif // end HEADER_H

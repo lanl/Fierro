@@ -39,7 +39,6 @@
 #ifndef SIMULATION_PARAMETERS_BASE_H
 #define SIMULATION_PARAMETERS_BASE_H
 
-
 #include "matar.h"
 #include <cmath>
 #include <stdexcept>

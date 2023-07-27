@@ -34,7 +34,7 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-
+#pragma once
 #ifndef SIMULATION_PARAMETERS_INERTIAL_H
 #define SIMULATION_PARAMETERS_INERTIAL_H
 
@@ -60,24 +60,5 @@ IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Inertial, Simulation_Para
   num_gauss_points, nodal_density,
   enable_inertia_center, moment_of_inertia_center
 )
-
-// class Simulation_Parameters_Inertial : public Simulation_Parameters
-// {
-//  public:
-//   Simulation_Parameters_Inertial();
-//   virtual ~Simulation_Parameters_Inertial();
-//   virtual void input();
-//   virtual void apply_settings() {}
-  
-//   //==============================================================================
-//   //   Mesh Variables
-//   //==============================================================================
-
-//   // --- Graphics output variables ---
-//   bool output_flag, nodal_density_flag;
-
-//   // -- Integration rule
-//   int num_gauss_points;
-// };
 
 #endif // end HEADER_H

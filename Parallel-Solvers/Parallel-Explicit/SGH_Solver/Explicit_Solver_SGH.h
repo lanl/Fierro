@@ -132,7 +132,6 @@ public:
   mesh_t *init_mesh;
   std::shared_ptr<mesh_t> mesh;
   
-  //class Simulation_Parameters *simparam;
   Simulation_Parameters_SGH simparam;
 
   //FEA simulations

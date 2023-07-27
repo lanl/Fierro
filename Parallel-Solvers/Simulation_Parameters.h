@@ -34,7 +34,7 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-
+#pragma once
 #ifndef SIMULATION_PARAMETERS_H
 #define SIMULATION_PARAMETERS_H
 
@@ -97,6 +97,9 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   int words_per_line;
   int elem_words_per_line;
 
+  /**
+   * Determine a couple of file parsing parameters from the specified filetype.
+  */
   void derive() {
     if (mesh_file_format == MESH_FORMAT::ansys_dat) {
       words_per_line = 4;
@@ -131,6 +134,9 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
     mesh_file_name = std::filesystem::absolute(mesh_file_name).string();
   }
   
+  /**
+   * Ensures that the provided filepath is valid.
+  */
   void validate() {
     Yaml::validate_filepath(mesh_file_name);
   }
@@ -142,6 +148,7 @@ struct Output_Options {
   double graphics_step;
   OUTPUT_FORMAT output_file_format;
 };
+YAML_ADD_REQUIRED_FIELDS_FOR(Output_Options, output_file_format)
 IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format)
 
 
@@ -207,14 +214,14 @@ struct Loading_Condition : Yaml::ValidatedYaml {
     }
   }
 };
-YAML_ADD_REQUIRED_FIELDS_FOR(Loading_Condition, condition_type)
+YAML_ADD_REQUIRED_FIELDS_FOR(Loading_Condition, condition_type, surface)
 IMPL_YAML_SERIALIZABLE_FOR(Loading_Condition, 
   id, surface, plane_position, condition_type,
   flux_value, component_x, component_y, component_z,
   specification
 )
 
-struct FEA_Boundary_Condition : Yaml::ValidatedYaml {
+struct FEA_Boundary_Condition {
     std::string id;
     BOUNDARY_TAG surface;
     double value;
@@ -224,6 +231,7 @@ struct FEA_Boundary_Condition : Yaml::ValidatedYaml {
     std::optional<double> displacement_value;
     std::optional<double> plane_position;
 };
+YAML_ADD_REQUIRED_FIELDS_FOR(FEA_Boundary_Condition, surface, condition_type)
 IMPL_YAML_SERIALIZABLE_FOR(FEA_Boundary_Condition, 
   id, surface, value, condition_type, 
   temperature_value, plane_position, displacement_value
@@ -345,94 +353,4 @@ IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters,
   num_dims, output_options, fea_modules,
   report_runtime
 )
-
-// class Simulation_Parameters
-// {
-//  public:
-//   Simulation_Parameters();
-//   virtual ~Simulation_Parameters();
-//   virtual void input(); //typically sets default problem parameters
-//   virtual void apply_settings();
-//   virtual size_t unapplied_settings();
-//   virtual std::string yaml_input(std::string filename); //reads in user defined parameters
-//   virtual void FEA_module_setup();
-//   virtual void yaml_FEA_module_setup();
-
-//   //==============================================================================
-//   //   Mesh Variables
-//   //==============================================================================
-
-//   // --- Mesh regions and material fills ---
-//   int NR; // number of Regions
-//   int NC; // number of contours
-//   int NF; // number of fill
-//   int NB; // number of boundary patch sets to tag
-
-//   // --- Dimensional and mesh constants ---
-//   int num_dim;
-//   int p_order;
-  
-//   //file input parameters 
-//   int words_per_line, elem_words_per_line, tecplot_words_per_line, vtk_words_per_line, ansys_dat_node_words_per_line, ansys_dat_elem_words_per_line;
-//   char *format_specification;  //per line file format when reading dofs
-//   real_t unit_scaling;
-//   bool restart_file;
-//   bool tecplot_input, ansys_dat_input, vtk_input, zero_index_base;
-//   std::string element_type;
-//   std::string solver_type, mesh_file_name, mesh_file_format, output_file_format, timer_output_level;
-
-//   //debug and performance reporting flags
-//   int report_runtime_flag;
-
-//   //inertial settings
-//   std::vector<bool> enable_inertia_center;
-//   std::vector<double> moment_of_inertia_center;
- 
-//   //necessary FEA modules
-//   std::vector<std::string> FEA_Module_List;
-//   std::vector<bool> fea_module_must_read;
-//   int nfea_modules;
-
-//   //====================================================================================================
-//   //  possible values in dictionary of options (our yaml parser supports three nested levels of options)
-//   //====================================================================================================
-//   typedef std::multimap<std::string,std::string> options_multimap;
-
-//   typedef std::multimap<std::string,std::multimap<std::string,std::string>> nested_options_multimap;
-
-//   typedef std::multimap<std::string,std::multimap<std::string,std::multimap<std::string,std::string>>> doubly_nested_options_multimap;
-
-//   options_multimap possible_options;
-
-//   nested_options_multimap possible_options_nested2;
-
-//   doubly_nested_options_multimap possible_options_nested3;
-
-//   std::map<std::string,std::string> set_options;
-
-//   std::map<std::string,std::map<std::string,std::string>> set_options_nested2;
-
-//   std::map<std::string,std::map<std::string,std::map<std::string,std::string>>> set_options_nested3;
-
-//   typedef std::pair<std::string,std::string> option_setting_pair;
-
-//   typedef options_multimap::iterator multimap_iterator;
-
-//   typedef nested_options_multimap::iterator multimap_iterator_nested2;
-  
-//   typedef doubly_nested_options_multimap::iterator multimap_iterator_nested3;
-
-//   //MPI data
-//   int myrank; //index of this mpi rank in the world communicator
-//   int nranks; //number of mpi ranks in the world communicator
-//   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
-
-//   //output options
-//   int file_output_frequency;
-
-//   //flags
-//   bool filtered_density;
-
-// };
-
-#endif // end HEADER_H
+#endif
