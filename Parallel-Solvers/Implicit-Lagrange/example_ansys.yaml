@@ -14,7 +14,7 @@ fea_modules:
 
 optimization_options:
     optimization_process: topology_optimization
-    method_of_moving_asymptotes: disabled
+    method_of_moving_asymptotes: false
     density_epsilon: 0.00001
     simp_penalty_power: 3
     optimization_objective: minimize_compliance

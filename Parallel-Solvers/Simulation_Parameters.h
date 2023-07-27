@@ -148,7 +148,6 @@ struct Output_Options {
   double graphics_step;
   OUTPUT_FORMAT output_file_format;
 };
-YAML_ADD_REQUIRED_FIELDS_FOR(Output_Options, output_file_format)
 IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format)
 
 

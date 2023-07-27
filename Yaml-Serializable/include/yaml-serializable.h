@@ -5,6 +5,7 @@
 #include "map-macro.h"
 #include "configuration-validation.h"
 #include <set>
+#include <array>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -52,16 +53,6 @@ namespace Yaml {
 
     template<typename T> void serialize(T& v, Yaml::Node& node);
     template<typename T> void deserialize(T& v, Yaml::Node& node);
-
-    template<>
-    inline void deserialize<std::string>(std::string& v, Yaml::Node& node) {
-        if (!node.IsNone()) 
-            v = node.As<std::string>();
-    }
-    template<>
-    inline void serialize<std::string>(std::string& v, Yaml::Node& node) {
-        node = v;
-    }
 
     template<>
     inline void deserialize<bool>(bool& v, Yaml::Node& node) {
@@ -125,7 +116,7 @@ namespace {
         node.Erase(0);
     }
 
-    template<typename T>
+    template<typename T, int N = 0>
     struct Impl {
         static void deserialize(T& v, Yaml::Node& node) {
             if (!node.IsNone()) 
@@ -193,6 +184,7 @@ namespace {
     template<typename T>
     struct Impl<std::set<T>> {
         static void deserialize(std::set<T>& v, Yaml::Node& node) {
+            if (node.IsNone()) return;
             v.clear();
             for(size_t i = 0; i < node.Size(); i++) {
                 T item;

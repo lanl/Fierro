@@ -179,54 +179,6 @@ void Implicit_Solver::run(int argc, char *argv[]){
       simparam_TO = Yaml::from_file<Simulation_Parameters_Topology_Optimization>(filename);
       simparam = Yaml::from_file<Simulation_Parameters>(filename);
     }
-    // if(filename.find(".yaml") != std::string::npos){
-    //   std::string yaml_error;
-    //   bool yaml_exit_flag = false;
-    //   // default conditions //
-    //   simparam.input();
-    //   //check for user error in providing yaml options (flags unsupported options)
-    //   //yaml_error = simparam.yaml_input(filename);
-
-    //   //use map of set options to set member variables of the class
-    //   //simparam.apply_settings();
-    //   //construct list of FEA modules requested
-      
-    //   simparam.yaml_FEA_module_setup();
-    //   //assign base class data such as map of settings to TO simparam class
-    //   simparam_TO.Simulation_Parameters::operator=(*simparam);
-    //   simparam_TO.input();
-    //   simparam_TO.apply_settings();
-    //   *simparam = *simparam_TO;
-
-    //   // ---- Read intial mesh, refine, and build connectivity ---- //
-    //   if(simparam.mesh_file_format=="tecplot")
-    //     read_mesh_tecplot(simparam.mesh_file_name.c_str());
-    //   else if(simparam.mesh_file_format=="ansys_dat")
-    //     read_mesh_ansys_dat(simparam.mesh_file_name.c_str());
-    //   else if(simparam.mesh_file_format=="ensight")
-    //     read_mesh_ensight(simparam.mesh_file_name.c_str());
-    //   else{
-    //     *fos << "YAML input requested an unrecognized mesh file format." << std::endl;
-    //     exit_solver(0);
-    //   }
-
-    //   //assign map with read in options removed from inheritors to the base class
-    //   simparam_TO.FEA_module_setup();
-    // }
-    // else{
-    //   // default conditions //
-    //   simparam.input();
-    //   simparam_TO.input();
-    //   if(simparam.tecplot_input)
-    //     read_mesh_tecplot(argv[1]);
-    //   else if(simparam.ansys_dat_input)
-    //     read_mesh_ansys_dat(argv[1]);
-    //   else
-    //     read_mesh_ensight(argv[1]);
-
-    //   //construct list of FEA modules requested
-    //   simparam_TO.FEA_module_setup();
-    // }
     
     const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
     switch (simparam.input_options.mesh_file_format) {
