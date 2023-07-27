@@ -412,8 +412,8 @@ namespace Yaml {
         }                                                                        \
         template<>                                                               \
         inline void deserialize<CLASS_NAME>(CLASS_NAME& obj, Yaml::Node& node) { \
-            deserialize<BASE_CLASS>(*(BASE_CLASS*)&obj, node);                   \
             validate_required_fields<CLASS_NAME>(node);                          \
+            deserialize<BASE_CLASS>(*(BASE_CLASS*)&obj, node);                   \
             MAP(YAML_DESERIALIZE, __VA_ARGS__)                                   \
             if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {   \
                 derive(obj);                                                     \
