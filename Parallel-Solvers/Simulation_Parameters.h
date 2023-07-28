@@ -261,6 +261,9 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
   double unit_scaling = 1.0;
   std::vector<FEA_MODULE_TYPE> FEA_Modules_List;
   std::set<FEA_MODULE_TYPE> fea_module_must_read;
+  std::vector<bool> enable_inertia_center {false, false, false};
+  std::vector<double> moment_of_inertia_center {0.0, 0.0, 0.0};
+
 
   void derive() {
     for (auto& spec : fea_modules) {

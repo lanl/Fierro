@@ -94,20 +94,36 @@ SERIALIZABLE_ENUM(RELATION, equality)
 SERIALIZABLE_ENUM(DENSITY_FILTER, none, hemlholtz_filter)
 SERIALIZABLE_ENUM(MULTI_OBJECTIVE_STRUCTURE, linear)
 
-struct Optimization_Constraint : Yaml::ValidatedYaml {
+struct Optimization_Constraint : Yaml::ValidatedYaml, Yaml::DerivedFields {
   double value;
   CONSTRAINT_TYPE type;
   RELATION relation;
   std::optional<CONSTRAINT_COMPONENT> component;
-  bool inertia_center_x = false;
-  bool inertia_center_y = false;
-  bool inertia_center_z = false;
+  std::optional<double> inertia_center_x {};
+  std::optional<double> inertia_center_y {};
+  std::optional<double> inertia_center_z {};
 
+  // Non-serialized fields
+  std::vector<std::optional<double>> inertia_centers;
+
+  void derive() {
+    inertia_centers = {
+      inertia_center_x,
+      inertia_center_y,
+      inertia_center_z
+    };
+  }
   void validate() {
     if (type == CONSTRAINT_TYPE::moment_of_inertia) {
       if (!component.has_value())
         throw Yaml::ConfigurationException("`component` field required for constraint type " + to_string(type));
     }
+
+    bool has_inertia_center = false;
+    for (auto ic : inertia_centers)
+      has_inertia_center = has_inertia_center || ic.has_value();
+    if (has_inertia_center && type != CONSTRAINT_TYPE::moment_of_inertia)
+      throw Yaml::ConfigurationException("Do not specify inertia center for constraints of type " + to_string(type));
   }
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Optimization_Constraint, value, type)
@@ -243,7 +259,25 @@ struct Simulation_Parameters_Topology_Optimization : public Simulation_Parameter
       }
     }
   }
+
+  void derive_inertia_center() {
+    for (auto constraint : optimization_options.constraints) {
+      if (constraint.type != CONSTRAINT_TYPE::moment_of_inertia)
+        continue;
+      
+      for (size_t i = 0; i < 3; i++) {
+        auto ic = constraint.inertia_centers[i];
+        if (ic.has_value()) {
+          enable_inertia_center[i] = true;
+          moment_of_inertia_center[i] = ic.value();
+        }
+      }
+    }
+  }
+
   void derive() {
+    derive_inertia_center();
+
     if (optimization_options.density_filter == DENSITY_FILTER::hemlholtz_filter)
       helmholtz_filter = true;
 

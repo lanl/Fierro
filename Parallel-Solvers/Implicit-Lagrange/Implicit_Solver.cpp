@@ -177,7 +177,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     std::string filename = std::string(argv[1]);
     if(filename.find(".yaml") != std::string::npos) {
       simparam_TO = Yaml::from_file<Simulation_Parameters_Topology_Optimization>(filename);
-      simparam = Yaml::from_file<Simulation_Parameters>(filename);
+      simparam = *(Simulation_Parameters*)&simparam_TO;
     }
     
     const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
