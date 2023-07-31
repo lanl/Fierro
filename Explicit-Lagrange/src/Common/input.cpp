@@ -24,8 +24,8 @@ void input(){
 
     // ---- Method Choice ---- //
     CCH = false;
-    SGH = true;
-    DGH = false;
+    SGH = false;//true;
+    DGH = true;//false;
 
 
 
@@ -93,7 +93,7 @@ void input(){
     // 9 = Shockless Noh (fix boundary conditions)
 
     
-    int test_problem = 1;
+    int test_problem = 9;
 
     // SEDOV on a 30x30x30 mesh
     if (test_problem == 1){
@@ -258,15 +258,15 @@ void input(){
         // mat_fill[1].x2 = 8.0;           // 
         
         mat_fill[1].y1 = 0.0;          // 
-        mat_fill[1].y2 = 0.25;          // 
+        mat_fill[1].y2 = 0.5;          // 
         
         mat_fill[1].z1 = 0.0;          // 
-        mat_fill[1].z2 = 0.25;          // 
+        mat_fill[1].z2 = 0.5;          // 
         
         mat_fill[1].r = 0.125;            
         
         // 30x1x1 cells
-        mat_fill[1].ie = 2.5;
+        mat_fill[1].ie = 2.0;
         
         mat_fill[1].velocity = init_conds::cartesian;
         mat_fill[1].u = 0.0;              // initial x-dir velocity
@@ -302,12 +302,12 @@ void input(){
         
         // Tag Y = 1 plane
         boundary[4].surface = bdy::y_plane;
-        boundary[4].value = 0.1;
+        boundary[4].value = 0.5;
         boundary[4].hydro_bc = bdy::reflected;
         
         // Tag Z = 1 plane
         boundary[5].surface = bdy::z_plane;
-        boundary[5].value = 0.1;
+        boundary[5].value = 0.5;
         boundary[5].hydro_bc = bdy::reflected;
     
     }
@@ -748,7 +748,7 @@ void input(){
     if (test_problem == 8){
 
 
-        material[0].g        = 7.0/5.0;   // gamma value
+        material[0].g        = 5.0/3.0; ////7.0/5.0;   // gamma value
 
         NF = 1; // number of fills
         
@@ -797,7 +797,7 @@ void input(){
         
         // Tag Z = 1 plane
         boundary[5].surface = bdy::z_plane;
-        boundary[5].value = 0.1;
+        boundary[5].value = 0.33;
         boundary[5].hydro_bc = bdy::reflected;
         
 
