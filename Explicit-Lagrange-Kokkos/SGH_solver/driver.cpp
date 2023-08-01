@@ -358,6 +358,21 @@ int main(int argc, char *argv[]){
         // calculate total energy at time=t_end
         
         
+        VTKHexN(mesh,
+                node_coords,
+                node_vel,
+                node_mass,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
+                elem_vol,
+                elem_mass,
+                elem_mat_id,
+                graphics_times,
+                graphics_id,
+                time_value);
     } // end of kokkos scope
     Kokkos::finalize();
     

@@ -256,12 +256,23 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
             
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
-            elem_vol(elem_gid) = 1.0/mesh.num_elems;//get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);
+            elem_vol(elem_gid) = 1.0/mesh.num_elems;// get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);//  
             
         });
         Kokkos::fence();
     } // end if
     
+    return;
+    
+} // end subroutine
+
+// Exact volume for a hex element
+KOKKOS_FUNCTION
+void get_vol_jacobi(const DViewCArrayKokkos <double> &elem_vol,
+                 const size_t elem_gid,
+                 const DViewCArrayKokkos <double> &node_coords,
+                 const ViewCArrayKokkos <size_t>  &elem_node_gids){
+
     return;
     
 } // end subroutine

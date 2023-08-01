@@ -58,6 +58,21 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                   graphics_id,
                   time_value);
     
+        VTKHexN(mesh,
+                node_coords,
+                node_vel,
+                node_mass,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
+                elem_vol,
+                elem_mass,
+                elem_mat_id,
+                graphics_times,
+                graphics_id,
+                time_value);
     
     
     CArrayKokkos <double> node_extensive_mass(mesh.num_nodes);
@@ -624,6 +639,21 @@ void sgh_solve(CArrayKokkos <material_t> &material,
                           graphics_id,
                           time_value);
             
+        VTKHexN(mesh,
+                node_coords,
+                node_vel,
+                node_mass,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
+                elem_vol,
+                elem_mass,
+                elem_mat_id,
+                graphics_times,
+                graphics_id,
+                time_value);
             graphics_time = time_value + graphics_dt_ival;
         } // end if
         

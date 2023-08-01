@@ -12,13 +12,13 @@ export basedir=`pwd`
 
 export matardir=${basedir}/Elements/matar
 
-export srcdir=${basedir}/Explicit-Lagrange-Kokkos/SGH_solver
-export builddir=${basedir}/build-SGH-hip
+export srcdir=${basedir}/Explicit-Lagrange-Kokkos/RDH_solver
+export builddir=${basedir}/build-RDH-hip
 export installdir=${basedir}/build-kokkos/install-kokkos-hip
 
-export SGH_BASE_DIR=${basedir}
-export SGH_SOURCE_DIR=${srcdir}
-export SGH_BUILD_DIR=${builddir}
+export RDH_BASE_DIR=${basedir}
+export RDH_SOURCE_DIR=${srcdir}
+export RDH_BUILD_DIR=${builddir}
 
 export KOKKOS_SOURCE_DIR=${matardir}/src/Kokkos/kokkos
 export KOKKOS_BUILD_DIR=${builddir}/kokkos

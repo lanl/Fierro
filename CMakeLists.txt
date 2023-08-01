@@ -34,6 +34,10 @@ if(NOT DEFINED BUILD_1D_KOKKOS_SGH)
   set(BUILD_1D_KOKKOS_SGH OFF)
 endif()
 
+if(NOT DEFINED BUILD_KOKKOS_RDH)
+  set(BUILD_KOKKOS_RDH OFF)
+endif()
+
 if(NOT DEFINED PARALLEL_DIRECT_SOLVER)
   set(PARALLEL_DIRECT_SOLVER OFF)
 endif()
@@ -135,6 +139,13 @@ endif()
 include_directories(Explicit-Lagrange-Kokkos/SGH_solver)
 endif()
 
+if(BUILD_KOKKOS_RDH)
+if(NOT BUILD_IMPLICIT_SOLVER)
+find_package(Kokkos REQUIRED) #new
+add_definitions(-DHAVE_KOKKOS=1)
+endif()
+include_directories(Explicit-Lagrange-Kokkos/RDH_solver)
+endif()
 
 if(BUILD_ELEMENTS)
 add_subdirectory(Elements/elements)
@@ -163,6 +174,13 @@ endif()
 add_subdirectory(Explicit-Lagrange-Kokkos/SGH_solver)
 endif()
 
+if(BUILD_KOKKOS_RDH)
+  MESSAGE("\nbuilding RDH!  Here are the details: ")
+if(NOT BUILD_ELEMENTS)
+add_subdirectory(Elements/matar)
+endif()
+add_subdirectory(Explicit-Lagrange-Kokkos/RDH_solver)
+endif()
 
 if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
 add_subdirectory(Parallel-Solvers)

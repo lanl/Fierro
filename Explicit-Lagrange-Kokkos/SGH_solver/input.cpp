@@ -112,7 +112,7 @@ void input(CArrayKokkos <material_t> &material,
     
     // Sedov blast wave test case
     if (test_problem == test::Sedov3D){
-        time_final = 1.0;  // 1.0 for Sedov
+        time_final = 1.0;
         
         RUN({
             // gamma law model
@@ -154,10 +154,10 @@ void input(CArrayKokkos <material_t> &material,
             mat_fill(1).volume = region::sphere; // fill a sphere
             mat_fill(1).mat_id = 0;              // material id
             mat_fill(1).radius1 = 0.0;           // inner radius of fill region
-            mat_fill(1).radius2 = 1.2/8.0;       // outer radius of fill region
+            mat_fill(1).radius2 = 1.0/2.0;//1.2/8.0;       // outer radius of fill region
             mat_fill(1).den = 1.0;               // initial density
             mat_fill(1).sie = (963.652344*
-                               pow((1.2/30.0),3))/pow((mat_fill(1).radius2),3);
+                               pow((1.0/30.0),3))/pow((mat_fill(1).radius2),3);//(1.2/30.0),3))/pow((mat_fill(1).radius2),3);
             
             mat_fill(1).velocity = init_conds::cartesian;
             mat_fill(1).u = 0.0;   // initial x-dir velocity
@@ -186,17 +186,17 @@ void input(CArrayKokkos <material_t> &material,
             
             // Tag X plane
             boundary(3).surface = bdy::x_plane; // planes, cylinder, spheres, or a files
-            boundary(3).value = 1.0;
+            boundary(3).value = 1.0;//1.2;
             boundary(3).hydro_bc = bdy::reflected;
             
             // Tag Y plane
             boundary(4).surface = bdy::y_plane;
-            boundary(4).value = 1.0;
+            boundary(4).value = 1.0;//1.2;
             boundary(4).hydro_bc = bdy::reflected;
             
             // Tag Z plane
             boundary(5).surface = bdy::z_plane;
-            boundary(5).value = 1.0;
+            boundary(5).value = 1.0;//1.2;
             boundary(5).hydro_bc = bdy::reflected;
             
         });  // end RUN

@@ -1,0 +1,23 @@
+#!/bin/bash -e
+
+rm -rf ${RDH_BUILD_DIR}
+mkdir -p ${RDH_BUILD_DIR}
+cd ${RDH_BUILD_DIR}
+
+OPTIONS=(
+-D BUILD_KOKKOS_RDH=ON
+-D BUILD_ELEMENTS=OFF
+-D BUILD_EXPLICIT_SOLVER=OFF
+-D BUILD_IMPLICIT_SOLVER=OFF
+#-D CMAKE_BUILD_TYPE=Debug
+#-D BUILD_RDH=ON
+-D KOKKOS=ON
+#-D OPENMP=ON
+-D Kokkos_DIR=${KOKKOS_INSTALL_DIR}/lib/cmake/Kokkos
+)
+set -x
+cmake "${OPTIONS[@]}" "${RDH_BASE_DIR:-../}"
+set +x
+make #-j16 -l32
+
+cd $basedir
