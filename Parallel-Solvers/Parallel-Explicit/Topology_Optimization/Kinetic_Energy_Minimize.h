@@ -149,7 +149,7 @@ public:
     if (type == ROL::UpdateType::Initial)  {
       // This is the first call to update
       //first linear solve was done in FEA class run function already
-
+      FEM_->sgh_solve();
       //initial design density data was already communicated for ghost nodes in init_design()
     }
     else if (type == ROL::UpdateType::Accept) {

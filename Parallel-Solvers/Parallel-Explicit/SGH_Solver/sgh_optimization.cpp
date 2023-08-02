@@ -553,8 +553,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
       assemble_matrix();
     }
     
-    //execute solve
-    simparam->time_value = 0;
     sgh_solve();
 
 }

@@ -2209,7 +2209,6 @@ void FEA_Module_SGH::sgh_solve(){
 
 	    // increment the time
 	    time_value+=dt;
-      simparam->time_value = time_value;
 
       if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
         if(cycle >= max_time_steps)
