@@ -28,11 +28,9 @@ void init_evpfft(const DCArrayKokkos <double> &file_state_vars,
     elem_evpfft = std::vector<EVPFFT*>(num_elems);
 
     printf("Initializing EVPFFT for each element...\n");
-    for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++)
-    {
+    for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
       elem_evpfft[elem_gid] = new EVPFFT(cmd,stress_scale,time_scale);
     }
-
 }
 
 void destroy_evpfft(const DCArrayKokkos <double> &file_state_vars,
@@ -60,7 +58,8 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                            const double vol,
                            const double dt,
                            const double rk_alpha,
-                           const size_t cycle)
+                           const size_t cycle,
+                           const size_t rk_level)
 {
     real_t dt_rk = dt; // since using rk_num_stages = 1
 
@@ -71,7 +70,7 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
         Fvel_grad(i,j) = vel_grad(i,j);
-        Fstress(i,j) = elem_stress.host(1,elem_gid,i,j);
+        Fstress(i,j) = elem_stress.host(rk_level,elem_gid,i,j);
       }
     }
 
@@ -81,7 +80,7 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
     // Transpose stress. Not needed, stress is symmetric. But why not.
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
-        elem_stress.host(1,elem_gid,i,j) = Fstress(i,j);
+        elem_stress.host(rk_level,elem_gid,i,j) = Fstress(i,j);
       }
     }
 

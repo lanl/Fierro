@@ -39,6 +39,8 @@
 #define FEA_MODULE_ELASTICITY_H
 
 #include "FEA_Module.h"
+#include "Simulation_Parameters_Elasticity.h"
+#include "Simulation_Parameters_Topology_Optimization.h"
 
 //forward declare
 namespace MueLu{
@@ -58,8 +60,6 @@ namespace Xpetra{
 }
 
 class Implicit_Solver;
-class Simulation_Parameters_Elasticity;
-class Simulation_Parameters_Topology_Optimization;
 
 class FEA_Module_Elasticity: public FEA_Module{
 
@@ -133,8 +133,8 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  Simulation_Parameters_Elasticity *simparam;
-  Simulation_Parameters_Topology_Optimization *simparam_TO;
+  Simulation_Parameters_Elasticity simparam;
+  Simulation_Parameters_Topology_Optimization simparam_TO;
   Implicit_Solver *Implicit_Solver_Pointer_;
   
   //Local FEA data

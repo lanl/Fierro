@@ -12,8 +12,8 @@ void FEA_Module_SGH::update_position_sgh(double rk_alpha,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    int num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    int num_dims = simparam.num_dims;
 
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
@@ -243,7 +243,7 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 
 void FEA_Module_SGH::get_vol(){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
     const mesh_t& mesh = FEA_Module_SGH::mesh;
     const size_t num_dims = mesh.num_dims;
 

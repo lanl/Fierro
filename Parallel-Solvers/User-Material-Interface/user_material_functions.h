@@ -35,7 +35,8 @@ void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                          const double vol,
                          const double dt,
                          const double rk_alpha,
-                         const size_t cycle);
+                         const size_t cycle,
+                         const size_t rk_level);
 
 KOKKOS_FUNCTION
 void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,

@@ -40,6 +40,7 @@
 
 #include "utilities.h"
 #include "Explicit_Solver.h"
+#include "Simulation_Parameters_Eulerian.h"
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
@@ -144,10 +145,10 @@ public:
   int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
   
   mesh_t *init_mesh;
-  mesh_t *mesh;
+  std::shared_ptr<mesh_t> mesh;
   
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters_Eulerian *simparam;
+  class Simulation_Parameters_Eulerian simparam;
 
   //FEA simulations
   class FEA_Module_Eulerian *eulerian_module;

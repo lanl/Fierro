@@ -34,31 +34,26 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-
+#pragma once
 #ifndef SIMULATION_PARAMETERS_INERTIAL_H
 #define SIMULATION_PARAMETERS_INERTIAL_H
 
-#include "utilities.h"
 #include "Simulation_Parameters.h"
+#include "yaml-serializable.h"
 using namespace utils;
 
-class Simulation_Parameters_Inertial : public Simulation_Parameters
-{
- public:
-  Simulation_Parameters_Inertial();
-  virtual ~Simulation_Parameters_Inertial();
-  virtual void input();
-  virtual void apply_settings() {}
-  
-  //==============================================================================
-  //   Mesh Variables
-  //==============================================================================
+struct Simulation_Parameters_Inertial : Simulation_Parameters {
+  int num_gauss_points = 2;
+  bool nodal_density = true;
 
-  // --- Graphics output variables ---
-  bool output_flag, nodal_density_flag;
+  Simulation_Parameters_Inertial& operator=(const Simulation_Parameters& rhs) {
+    *(Simulation_Parameters*)this = rhs;
+    return *this;
+  }
 
-  // -- Integration rule
-  int num_gauss_points;
+  void derive() { }
+  void validate() { }
 };
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Inertial, Simulation_Parameters)
 
 #endif // end HEADER_H

@@ -120,7 +120,7 @@ public:
     inequality_flag_ = inequality_flag;
     constraint_value_ = constraint_value;
     constraint_component_ = constraint_component;
-    int num_dim = FEM_->simparam->num_dim;
+    int num_dim = FEM_->simparam.num_dims;
     ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
     if(constraint_component_ == 0)
     ROL_Element_Moments = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Moments_x);

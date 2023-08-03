@@ -45,8 +45,8 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    const size_t num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t num_dims = simparam.num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
@@ -432,8 +432,8 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    const size_t num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t num_dims = simparam.num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
@@ -806,9 +806,9 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
 void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
-  const DCArrayKokkos <material_t> material = simparam->material;
-  const int num_dim = simparam->num_dim;
+  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <material_t> material = simparam.material;
+  const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
   real_t global_dt;
   bool element_constant_density = true;
@@ -931,8 +931,8 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ) {
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    const size_t num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t num_dims = simparam.num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         

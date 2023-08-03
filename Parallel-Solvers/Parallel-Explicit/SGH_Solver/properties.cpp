@@ -24,8 +24,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                   const size_t cycle
                   ){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    int num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    int num_dims = simparam.num_dims;
     
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -40,13 +40,13 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
         elem_den(elem_gid) = elem_mass(elem_gid)/elem_vol(elem_gid);
         
         size_t mat_id = elem_mat_id(elem_gid);
-        
+
         //initialize elem pressure
         elem_pres(elem_gid) = 0;
         
         // --- Stress ---
         // hyper elastic plastic model
-        if(material(mat_id).strength_type == model::hyper){
+        if(material(mat_id).strength_type == STRENGTH_TYPE::hyper){
 
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
@@ -97,7 +97,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                                             elem_vol(elem_gid),
                                             dt,
                                             rk_alpha,
-                                            cycle);
+                                            cycle,
+                                            rk_level);
             
         } // end logical on hyper strength model
         
@@ -116,7 +117,7 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
         
     }); // end parallel for
     Kokkos::fence();
-    
+ 
     return;
     
 } // end method to update state
@@ -140,8 +141,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                     const size_t cycle
                     ){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    int num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    int num_dims = simparam.num_dims;
     
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -162,7 +163,7 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
         
         // --- Stress ---
         // hyper elastic plastic model
-        if(material(mat_id).strength_type == model::hyper){
+        if(material(mat_id).strength_type == STRENGTH_TYPE::hyper){
 
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
@@ -213,7 +214,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                                             elem_vol(elem_gid),
                                             dt,
                                             rk_alpha,
-                                            cycle);
+                                            cycle,
+                                            rk_level);
             
         } // end logical on hyper strength model
         

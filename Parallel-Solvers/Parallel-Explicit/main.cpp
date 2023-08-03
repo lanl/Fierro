@@ -44,6 +44,8 @@
 #include "Explicit_Solver.h"
 #include "Explicit_Solver_SGH.h"
 #include "Simulation_Parameters.h"
+#include "yaml-serializable.h"
+#include <memory>
 
 void solver_setup(int argc, char *argv[]);
 
@@ -76,80 +78,34 @@ int main(int argc, char *argv[]){
 }
 
 void solver_setup(int argc, char *argv[]){
-  /*General strategy: process initial input here to determine which solver
-    object to construct
-  */
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-  //base solver class pointer
-  //Solver *solver;
-  //read user solver settings
-  Simulation_Parameters *simparam;
-  Solver *solver;
+
+  Simulation_Parameters simparam = Simulation_Parameters();
   std::string filename = std::string(argv[1]);
-  if(filename.find(".yaml") != std::string::npos){
-      simparam = new Simulation_Parameters();
-      std::string yaml_error;
-      bool yaml_exit_flag = false;
-    
-      //check for user error in providing yaml options (flags unsupported options)
-      yaml_error = simparam->yaml_input(filename);
-      if(yaml_error!="success"){
-        std::cout << yaml_error << std::endl;
-        yaml_exit_flag = true;
-      } 
-    
-      if(yaml_exit_flag){
-        //exit_solver(0);
-      }
+  Yaml::Node node;
 
-      //use map of set options to set member variables of the class
-      simparam->input();
-      simparam->apply_settings();
-      if(simparam->solver_type=="SGH"){
-        solver = new Explicit_Solver_SGH();
-        //assign parameters read in by the base simulation parameters class to derived class in solver;
-        //this includes the map of all yaml options read in.
-        solver->simparam->Simulation_Parameters::operator=(*simparam);
-  
-        //solver = new Static_Solver();
-        //solver = new Pseudo_Laplacian();
-
-        //checks for optional solver routines
-        if(solver->setup_flag) solver->solver_setup();
-
-        // invoke solver's run function (should perform most of the computation)//
-        solver->run(argc,argv);
-  
-        //invoke optional finalize function
-        if(solver->finalize_flag) solver->solver_finalize();
-        delete solver;
-      }
-      else{
-        if(myrank==0){
-          std::cout << "Solver type undefined, please check yaml file for correctness" << std::endl;
-        }
-      }
-    delete simparam;
-  }
-  else{
-    solver = new Explicit_Solver_SGH();
-  
-    //solver = new Static_Solver();
-    //solver = new Pseudo_Laplacian();
-
-    //checks for optional solver routines
-    if(solver->setup_flag) solver->solver_setup();
-
-    // invoke solver's run function (should perform most of the computation)//
-    solver->run(argc,argv);
-  
-    //invoke optional finalize function
-    if(solver->finalize_flag) solver->solver_finalize();
+  if (filename.find(".yaml") != std::string::npos) {
+    Yaml::Parse(node, filename.c_str());
+    Yaml::deserialize(simparam, node);
   }
   
-  //allocate chosen solver
-  //solver = new Static_Solver_Parallel();
-  //Static_Solver_Parallel solver;
-  //delete solver;
+  std::shared_ptr<Solver> solver;
+  switch (simparam.solver_type) {
+    case SOLVER_TYPE::SGH:
+      solver = std::make_shared<Explicit_Solver_SGH>(Explicit_Solver_SGH());
+      if (!node.IsNone())
+        Yaml::deserialize(solver->simparam, node);
+      break;
+    default:
+      if (myrank == 0)
+        std::cerr << "Invalid solver type" << std::endl;
+      exit(1);
+  }
+  //checks for optional solver routines
+  if(solver->setup_flag) solver->solver_setup();
+  // invoke solver's run function (should perform most of the computation)
+  solver->run(argc, argv);
+  //invoke optional finalize function
+  if(solver->finalize_flag) solver->solver_finalize();
 }

@@ -112,7 +112,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver_SGH*>(Solver_Pointer);
 
   //create parameter object
-  simparam = dynamic_cast<Simulation_Parameters_SGH*>(Explicit_Solver_Pointer_->simparam);
+  simparam = Explicit_Solver_Pointer_->simparam;
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->input();
   
@@ -136,21 +136,21 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   node_coords_distributed = Explicit_Solver_Pointer_->node_coords_distributed;
   node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
-  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
-    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-    force_gradient_velocity = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-    force_gradient_position = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
+    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+    force_gradient_velocity = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+    force_gradient_position = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
     force_gradient_design = Teuchos::rcp(new MV(all_node_map, 1));
     corner_value_storage = Solver_Pointer->corner_value_storage;
     corner_vector_storage = Solver_Pointer->corner_vector_storage;
     relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
   }
 
-  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on||simparam->num_dim==2){
+  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on||simparam.num_dims==2){
     node_masses_distributed = Teuchos::rcp(new MV(map, 1));
     ghost_node_masses_distributed = Teuchos::rcp(new MV(ghost_node_map, 1));
-    adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam->num_dim));
-    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam->num_dim));
+    adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
+    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
   }
   
   //setup output
@@ -162,24 +162,25 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   
 
   //set parameters
-  time_value = simparam->time_value;
-  time_final = simparam->time_final;
-  dt_max = simparam->dt_max;
-  dt_min = simparam->dt_min;
-  dt_cfl = simparam->dt_cfl;
-  graphics_time = simparam->graphics_time;
-  graphics_cyc_ival = simparam->graphics_cyc_ival;
-  graphics_dt_ival = simparam->graphics_dt_ival;
-  cycle_stop = simparam->cycle_stop;
-  rk_num_stages = simparam->rk_num_stages;
-  dt = simparam->dt;
-  fuzz = simparam->fuzz;
-  tiny = simparam->tiny;
-  small = simparam->small;
-  graphics_times = simparam->graphics_times;
-  graphics_id = simparam->graphics_id;
+  Time_Variables tv = simparam.time_variables;
+  time_value = simparam.time_value;
+  time_final = tv.time_final;
+  dt_max = tv.dt_max;
+  dt_min = tv.dt_min;
+  dt_cfl = tv.dt_cfl;
+  graphics_time = simparam.graphics_options.graphics_time;
+  graphics_cyc_ival = simparam.graphics_options.graphics_cyc_ival;
+  graphics_dt_ival = simparam.graphics_options.graphics_dt_ival;
+  cycle_stop = tv.cycle_stop;
+  rk_num_stages = simparam.rk_num_stages;
+  dt = tv.dt;
+  fuzz = tv.fuzz;
+  tiny = tv.tiny;
+  small = tv.small;
+  graphics_times = simparam.graphics_options.graphics_times;
+  graphics_id = simparam.graphics_options.graphics_id;
 
-  if(simparam_dynamic_opt->topology_optimization_on){
+  if(simparam_dynamic_opt.topology_optimization_on){
     max_time_steps = BUFFER_GROW;
     forward_solve_velocity_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     time_data.resize(max_time_steps+1);
@@ -188,10 +189,10 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
     phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     //assign a multivector of corresponding size to each new timestep in the buffer
     for(int istep = 0; istep < max_time_steps+1; istep++){
-      (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-      (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-      (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-      (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+      (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
     }
     
   }
@@ -207,11 +208,11 @@ FEA_Module_SGH::~FEA_Module_SGH(){
 void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header){
 
   char ch;
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
   int buffer_lines = 1000;
   int max_word = 30;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring, token;
@@ -235,8 +236,8 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
                        elem_t &elem,
                        corner_t &corner){
 
-    const size_t num_dim = simparam->num_dim;
-    const size_t rk_num_bins = simparam->rk_num_bins;
+    const size_t num_dim = simparam.num_dims;
+    const size_t rk_num_bins = simparam.rk_num_bins;
 
     num_nodes_in_elem = 1;
     for (int dim=0; dim<num_dim; dim++){
@@ -430,8 +431,8 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::init_boundaries(){
-  max_boundary_sets = simparam->NB;
-  int num_dim = simparam->num_dim;
+  max_boundary_sets = simparam.NB;
+  int num_dim = simparam.num_dims;
   
   // set the number of boundary sets
   if(myrank == 0)
@@ -482,7 +483,7 @@ void FEA_Module_SGH::init_boundary_sets (int num_sets){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::grow_boundary_sets(int num_sets){
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
 
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions being set to 0";
@@ -544,11 +545,11 @@ void FEA_Module_SGH::Displacement_Boundary_Conditions(){
 
 void FEA_Module_SGH::init_output(){
   //check user parameters for output
-  bool output_velocity_flag = simparam->output_velocity_flag;
-  displaced_mesh_flag = simparam->displaced_mesh_flag;
-  bool output_strain_flag = simparam->output_strain_flag;
-  bool output_stress_flag = simparam->output_stress_flag;
-  int num_dim = simparam->num_dim;
+  bool output_velocity_flag = simparam.graphics_options.output_velocity_flag;
+  displaced_mesh_flag = simparam.graphics_options.displaced_mesh_flag;
+  bool output_strain_flag = simparam.graphics_options.output_strain_flag;
+  bool output_stress_flag = simparam.graphics_options.output_stress_flag;
+  int num_dim = simparam.num_dims;
   int Brows;
   if(num_dim==3) Brows = 6;
   else Brows = 3;
@@ -722,7 +723,7 @@ void FEA_Module_SGH::comm_adjoint_vectors(int cycle){
 
 void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
   
-  if(simparam_dynamic_opt->topology_optimization_on){
+  if(simparam_dynamic_opt.topology_optimization_on){
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
   
@@ -742,7 +743,7 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
   //comms to get ghosts
   all_node_densities_distributed->doImport(*test_node_densities_distributed, *importer, Tpetra::INSERT);
   }
-  else if(simparam_dynamic_opt->shape_optimization_on){
+  else if(simparam_dynamic_opt.shape_optimization_on){
     //clause to communicate boundary node data if the boundary nodes are ghosts on this rank
   }
 }
@@ -762,19 +763,19 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
 
 void FEA_Module_SGH::setup(){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;   
-    const size_t num_fills = simparam->num_fills;
-    const size_t rk_num_bins = simparam->rk_num_bins;
-    const size_t num_bcs = simparam->num_bcs;
-    const size_t num_materials = simparam->num_materials;
-    const size_t num_state_vars = simparam->max_num_state_vars;
-    const int num_dim = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;   
+    const size_t num_fills = simparam.region_options.size();
+    const size_t rk_num_bins = simparam.rk_num_bins;
+    const size_t num_bcs = simparam.boundary_conditions.size();
+    const size_t num_materials = simparam.material_options.size();
+    const size_t num_state_vars = simparam.max_num_state_vars;
+    const int num_dim = simparam.num_dims;
 
-    const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-    const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
-    const DCArrayKokkos <material_t> material = simparam->material;
-    const DCArrayKokkos <double> state_vars = simparam->state_vars; // array to hold init model variables
-    global_vars = simparam->global_vars;
+    const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
+    const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+    const DCArrayKokkos <material_t> material = simparam.material;
+    const DCArrayKokkos <double> state_vars = simparam.state_vars; // array to hold init model variables
+    global_vars = simparam.global_vars;
     
     //--- calculate bdy sets ---//
     mesh.num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
@@ -835,7 +836,7 @@ void FEA_Module_SGH::setup(){
     
     // ---- Read model values from a file ----
     // check to see if state_vars come from an external file
-    read_from_file = DCArrayKokkos <size_t>(num_materials, "read_from_file");
+    read_from_file = DCArrayKokkos <STRENGTH_SETUP>(num_materials, "read_from_file");
     FOR_ALL_CLASS(mat_id, 0, num_materials, {
         
         read_from_file(mat_id) = material(mat_id).strength_setup;
@@ -852,7 +853,7 @@ void FEA_Module_SGH::setup(){
     
     for (size_t mat_id=0; mat_id<num_materials; mat_id++){
         
-        if (read_from_file.host(mat_id) == model_init::user_init){
+        if (read_from_file.host(mat_id) == STRENGTH_SETUP::user_input){
             
             size_t num_vars = material.host(mat_id).num_state_vars;
             size_t num_gvars = material.host(mat_id).num_global_vars;
@@ -876,7 +877,7 @@ void FEA_Module_SGH::setup(){
     //--- apply the fill instructions over each of the Elements---//
     
     //initialize if topology optimization is used
-    if(simparam_dynamic_opt->topology_optimization_on){
+    if(simparam_dynamic_opt.topology_optimization_on){
       for(int elem_id = 0; elem_id < rnum_elem; elem_id++){
         relative_element_densities.host(elem_id) = 1;
       }//for
@@ -909,53 +910,12 @@ void FEA_Module_SGH::setup(){
             elem_coords[0] = elem_coords[0]/num_nodes_in_elem;
             elem_coords[1] = elem_coords[1]/num_nodes_in_elem;
             elem_coords[2] = elem_coords[2]/num_nodes_in_elem;
-                
-            
-            // spherical radius
-            double radius = sqrt( elem_coords[0]*elem_coords[0] +
-                                  elem_coords[1]*elem_coords[1] +
-                                  elem_coords[2]*elem_coords[2] );
-                
-            // cylinderical radius
-            double radius_cyl = sqrt( elem_coords[0]*elem_coords[0] +
-                                      elem_coords[1]*elem_coords[1] );   
-            
-            // default is not to fill the element
-            size_t fill_this = 0;
-           
-            // check to see if this element should be filled
-            switch(mat_fill(f_id).volume)
-            {
-                case region::global:
-                {
-                    fill_this = 1;
-                    break;
-                }
-                case region::box:
-                {
-                    if ( elem_coords[0] >= mat_fill(f_id).x1 && elem_coords[0] <= mat_fill(f_id).x2
-                      && elem_coords[1] >= mat_fill(f_id).y1 && elem_coords[1] <= mat_fill(f_id).y2
-                      && elem_coords[2] >= mat_fill(f_id).z1 && elem_coords[2] <= mat_fill(f_id).z2 )
-                        fill_this = 1;
-                    break;
-                }
-                case region::cylinder:
-                {
-                    if ( radius_cyl >= mat_fill(f_id).radius1
-                      && radius_cyl <= mat_fill(f_id).radius2 ) fill_this = 1;
-                    break;
-                }
-                case region::sphere:
-                {
-                    if ( radius >= mat_fill(f_id).radius1
-                      && radius <= mat_fill(f_id).radius2 ) fill_this = 1;
-                    break;
-                }
-            } // end of switch
 
-                 
+            // default is not to fill the element
+            bool fill_this = mat_fill(f_id).contains(elem_coords);
+
             // paint the material state on the element
-            if (fill_this == 1){
+            if (fill_this){
                     
                 // density
                 elem_den(elem_gid) = mat_fill(f_id).den;
@@ -971,7 +931,7 @@ void FEA_Module_SGH::setup(){
                 
                 
                 // get state_vars from the input file or read them in
-                if (material(mat_id).strength_setup == model_init::user_init){
+                if (material(mat_id).strength_setup == STRENGTH_SETUP::user_input){
                     
                     // use the values read from a file to get elem state vars
                     for (size_t var=0; var<material(mat_id).num_state_vars; var++){
@@ -1020,7 +980,7 @@ void FEA_Module_SGH::setup(){
                     // --- Velocity ---
                     switch(mat_fill(f_id).velocity)
                     {
-                        case init_conds::cartesian:
+                        case VELOCITY_TYPE::cartesian:
                         {
                         
                             node_vel(rk_level, node_gid, 0) = mat_fill(f_id).u;
@@ -1030,7 +990,7 @@ void FEA_Module_SGH::setup(){
                         
                             break;
                         }
-                        case init_conds::radial:
+                        case VELOCITY_TYPE::radial:
                         {
                             // Setting up cylindrical
                             double dir[2]; 
@@ -1060,7 +1020,7 @@ void FEA_Module_SGH::setup(){
                             
                             break;
                         }
-                        case init_conds::spherical:
+                        case VELOCITY_TYPE::spherical:
                         {
                             
                             // Setting up spherical
@@ -1091,17 +1051,17 @@ void FEA_Module_SGH::setup(){
 
                             break;
                         }
-                        case init_conds::radial_linear:
+                        case VELOCITY_TYPE::radial_linear:
                         {
                         
                             break;
                         }
-                        case init_conds::spherical_linear:
+                        case VELOCITY_TYPE::spherical_linear:
                         {
                         
                             break;
                         }
-                        case init_conds::tg_vortex:
+                        case VELOCITY_TYPE::tg_vortex:
                         {
                         
                             node_vel(rk_level, node_gid, 0) = sin(PI * node_coords(rk_level,node_gid, 0)) * cos(PI * node_coords(rk_level,node_gid, 1)); 
@@ -1115,7 +1075,7 @@ void FEA_Module_SGH::setup(){
                 }// end loop over nodes of element
                 
                 
-                if(mat_fill(f_id).velocity == init_conds::tg_vortex)
+                if(mat_fill(f_id).velocity == VELOCITY_TYPE::tg_vortex)
                 {
                     elem_pres(elem_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;
                 
@@ -1199,7 +1159,7 @@ void FEA_Module_SGH::setup(){
 
     //current interface has differing mass arrays; this equates them until we unify memory
     //view scope
-    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on||simparam->num_dim==2){
+    if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on||simparam.num_dims==2){
       {
         vec_array node_mass_interface = node_masses_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
@@ -1225,10 +1185,9 @@ void FEA_Module_SGH::setup(){
     } //endif
     
     //initialize if topology optimization is used
-    if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+    if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
       //create parameter object
-      simparam_elasticity = new Simulation_Parameters_Elasticity();
-      simparam_elasticity->input();
+      simparam_elasticity = Simulation_Parameters_Elasticity();
       init_assembly();
       assemble_matrix();
     }
@@ -1258,12 +1217,12 @@ void FEA_Module_SGH::cleanup_user_strength_model() {
   the call to `init_user_strength_model(...)`.
 */
 
-    size_t num_materials = simparam->num_materials;
-    const DCArrayKokkos <material_t> & material = simparam->material;
+    size_t num_materials = simparam.material_options.size();
+    const DCArrayKokkos <material_t> & material = simparam.material;
 
     for (size_t mat_id=0; mat_id<num_materials; mat_id++){
      
-        if (read_from_file.host(mat_id) == 1){
+        if (read_from_file.host(mat_id) == STRENGTH_SETUP::user_input){
      
             size_t num_vars = material.host(mat_id).num_state_vars;
             size_t num_gvars = material.host(mat_id).num_global_vars;
@@ -1294,9 +1253,8 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
               mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    size_t num_dim = simparam->num_dim;
-    //int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    size_t num_dim = simparam.num_dims;
     int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
     int num_nodes_in_patch = mesh.num_nodes_in_patch;
     
@@ -1311,10 +1269,11 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
     //print_flag.host(0) = false;
     //print_flag.update_device();
     
+    
     FOR_ALL_CLASS(bdy_set, 0, num_bdy_sets, {
         
         // tag boundaries
-        int bc_tag_id = boundary(bdy_set).surface;
+        BOUNDARY_TAG bc_tag_id = boundary(bdy_set).surface;
         double val = boundary(bdy_set).value;
         
         // save the boundary patches to this set that are on the plane, spheres, etc.
@@ -1328,7 +1287,7 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
             size_t is_on_bdy = check_bdy(bdy_patch_gid,
                                          num_dim,
                                          num_nodes_in_patch,
-                                         bc_tag_id,
+                                         (int)bc_tag_id,
                                          val,
                                          node_coords,
                                          rk_level); // no=0, yes=1
@@ -1557,33 +1516,34 @@ void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &b
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::sgh_solve(){
+    Time_Variables tv = simparam.time_variables;
    
-    const size_t rk_level = simparam->rk_num_bins - 1; 
-    time_value = simparam->time_value;
-    time_final = simparam->time_final;
-    dt_max = simparam->dt_max;
-    dt_min = simparam->dt_min;
-    dt_cfl = simparam->dt_cfl;
-    graphics_time = simparam->graphics_time;
-    graphics_cyc_ival = simparam->graphics_cyc_ival;
-    graphics_dt_ival = simparam->graphics_dt_ival;
-    cycle_stop = simparam->cycle_stop;
-    rk_num_stages = simparam->rk_num_stages;
-    dt = simparam->dt;
-    fuzz = simparam->fuzz;
-    tiny = simparam->tiny;
-    small = simparam->small;
-    graphics_times = simparam->graphics_times;
-    graphics_id = simparam->graphics_id;
+    const size_t rk_level = simparam.rk_num_bins - 1; 
+    time_value = simparam.time_value;
+    time_final = tv.time_final;
+    dt_max = tv.dt_max;
+    dt_min = tv.dt_min;
+    dt_cfl = tv.dt_cfl;
+    graphics_time = simparam.graphics_options.graphics_time;
+    graphics_cyc_ival = simparam.graphics_options.graphics_cyc_ival;
+    graphics_dt_ival = simparam.graphics_options.graphics_dt_ival;
+    cycle_stop = tv.cycle_stop;
+    rk_num_stages = simparam.rk_num_stages;
+    dt = tv.dt;
+    fuzz = tv.fuzz;
+    tiny = tv.tiny;
+    small = tv.small;
+    graphics_times = simparam.graphics_options.graphics_times;
+    graphics_id = simparam.graphics_options.graphics_id;
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
-    const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
-    const DCArrayKokkos <material_t> material = simparam->material;
+    const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+    const DCArrayKokkos <material_t> material = simparam.material;
     int nTO_modules;
     int old_max_forward_buffer;
     size_t cycle;
-    const int num_dim = simparam->num_dim;
+    const int num_dim = simparam.num_dims;
     real_t objective_accumulation, global_objective_accumulation;
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt->FEA_Module_My_TO_Modules;
+    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt.FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
@@ -1598,7 +1558,7 @@ void FEA_Module_SGH::sgh_solve(){
     }
     */
     //simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
-    if(simparam_dynamic_opt->topology_optimization_on){
+    if(simparam_dynamic_opt.topology_optimization_on){
       obj_pointer = problem->getObjective();
       KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
       kinetic_energy_minimize_function.objective_accumulation = 0;
@@ -1613,19 +1573,19 @@ void FEA_Module_SGH::sgh_solve(){
         phi_adjoint_vector_data->resize(max_time_steps+1);
         //assign a multivector of corresponding size to each new timestep in the buffer
         for(int istep = old_max_forward_buffer; istep < max_time_steps+1; istep++){
-          (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-          (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-          (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-          (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+          (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+          (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+          (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+          (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
         }
       }
     }
 
-    if(simparam_dynamic_opt->topology_optimization_on)
-      nTO_modules = simparam_dynamic_opt->nTO_modules;
+    if(simparam_dynamic_opt.topology_optimization_on)
+      nTO_modules = simparam_dynamic_opt.TO_Module_List.size();
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if(simparam->output_file_format=="vtk")
+    if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk)
     {
       if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
@@ -1739,7 +1699,7 @@ void FEA_Module_SGH::sgh_solve(){
     auto time_1 = std::chrono::high_resolution_clock::now();
 
   //save initial data
-  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
     time_data[0] = 0;
     //assign current velocity data to multivector
     //view scope
@@ -1953,7 +1913,7 @@ void FEA_Module_SGH::sgh_solve(){
             */
 
             // ---- Update nodal velocities ---- //
-            if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+            if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
               get_force_elastic(material,
                               mesh,
                               node_coords,
@@ -2210,7 +2170,7 @@ void FEA_Module_SGH::sgh_solve(){
 	    // increment the time
 	    time_value+=dt;
 
-      if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
         if(cycle >= max_time_steps)
           max_time_steps = cycle + 1;
 
@@ -2223,10 +2183,10 @@ void FEA_Module_SGH::sgh_solve(){
           phi_adjoint_vector_data->resize(max_time_steps + BUFFER_GROW +1);
           //assign a multivector of corresponding size to each new timestep in the buffer
           for(int istep = old_max_forward_buffer; istep < max_time_steps + BUFFER_GROW +1; istep++){
-            (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-            (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-            (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
-            (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dim));
+            (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+            (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+            (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+            (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
           }
         }
 
@@ -2353,7 +2313,7 @@ void FEA_Module_SGH::sgh_solve(){
                 }
               }); // end parallel for
             } //end view scope
-            if(simparam->output_file_format=="vtk"){
+            if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk){
               if(myrank==0){
               printf("Writing outputs to file at %f \n", graphics_time);
               }
@@ -2398,7 +2358,7 @@ void FEA_Module_SGH::sgh_solve(){
     last_time_step = cycle;
 
     //simple setup to just calculate KE minimize objective for now
-    if(simparam_dynamic_opt->topology_optimization_on){
+    if(simparam_dynamic_opt.topology_optimization_on){
       KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
 
       //collect local objective values

@@ -34,60 +34,64 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-
+#pragma once
 #ifndef SIMULATION_PARAMETERS_THERMO_ELASTICITY_H
 #define SIMULATION_PARAMETERS_THERMO_ELASTICITY_H
 
 #include "utilities.h"
 #include "Simulation_Parameters.h"
-using namespace utils;
 
-class Simulation_Parameters_Thermo_Elasticity : public Simulation_Parameters
-{
- public:
-  Simulation_Parameters_Thermo_Elasticity();
-  virtual ~Simulation_Parameters_Thermo_Elasticity();
-  virtual void input();
-  virtual void apply_settings() {}
-  //==============================================================================
-  //   Mesh Variables
-  //==============================================================================
-
+struct Simulation_Parameters_Thermo_Elasticity : public Simulation_Parameters {
+  
+  // Non-serialized Fields
   // --- Mesh regions and material fills ---
-  int NB; // number of boundary patch sets to tag
-  int NBSF; //number of surface force density boundary conditions
-  int NBD; //number of displacement boundary conditions
-  int NBSH; //number of surface heat flux boundary conditions
-  int NBT; //number of temperature boundary conditions
+  int NB   = 6; // number of boundary patch sets to tag
+  int NBSF = 4; //number of surface force density boundary conditions
+  int NBD  = 2; //number of displacement boundary conditions
+  int NBSH = 4; //number of surface heat flux boundary conditions
+  int NBT  = 2; //number of temperature boundary conditions
 
   // --- Graphics output variables ---
-  bool output_displacement_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
+  bool output_displacement_flag = true;
+  bool output_stress_flag       = false;
+  bool output_strain_flag       = true;
+  bool strain_max_flag          = false;
+  bool displaced_mesh_flag      = true;
+  bool output_temperature_flag  = true;
+  bool output_heat_flux_flag    = true; 
+  //bool flux_max_flag;
+  //bool output_temperature_gradient_flag; 
 
   // --- Isotropic Elastic Parameters
-  real_t Elastic_Modulus, Poisson_Ratio, Thermal_Conductivity, Expansion_Coefficients[6], Initial_Temperature;
+  double Elastic_Modulus = 200000000000;
+  double Poisson_Ratio = 0.3;
+  double Thermal_Conductivity = 10;
+  std::vector<double> Expansion_Coefficients { 12e-6, 12e-6, 12e-6, 0, 0, 0 }; 
+  double Initial_Temperature = 293;
 
   // -- Integration rule
-  int num_gauss_points;
+  int num_gauss_points = 2;
 
   //debug and performance reporting flags
-  bool report_runtime_flag;
+  bool report_runtime_flag = true;
 
   //Body force parameters
-  bool gravity_flag;
-  real_t gravity_vector[3];
+  bool gravity_flag = false;
+  std::vector<double> gravity_vector { 9.81, 0, 0 };
 
   //Linear Solver Flags
-  bool direct_solver_flag, multigrid_timers, equilibrate_matrix_flag;
-
-  // --- Graphics output variables ---
-  bool output_temperature_flag, output_temperature_gradient_flag, output_heat_flux_flag, flux_max_flag;
+  bool direct_solver_flag      = false;
+  bool multigrid_timers        = false;
+  bool equilibrate_matrix_flag = false;
 
   //Body flux parameters
-  bool thermal_flag, electric_flag;
-  real_t specific_internal_energy_rate;
+  bool thermal_flag = false;
+  //bool electric_flag;
+  double specific_internal_energy_rate = 1;
 
   //Topology Optimization parameters
-  real_t maximum_strain, maximum_strain_energy;
+  //double maximum_strain, maximum_strain_energy;
 };
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Thermo_Elasticity, Simulation_Parameters)
 
 #endif // end HEADER_H
