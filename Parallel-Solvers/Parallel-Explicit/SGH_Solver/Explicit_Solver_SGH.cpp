@@ -481,10 +481,20 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   sgh_module->get_vol();
 
 
+  //set initial saved velocities
+  initial_node_velocities_distributed->assign(*node_velocities_distributed);
+    
+  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+      //design_node_densities_distributed->randomize(1,1);
+      setup_optimization_problem();
+      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+  }
+  else{
     // ---------------------------------------------------------------------
-    //   setup the IC's and BC's
-    // ---------------------------------------------------------------------
-  sgh_module->setup();
+    //  Calculate the SGH solution
+    // ---------------------------------------------------------------------  
+      sgh_module->sgh_solve();
+  }
 
   //set initial saved velocities
   initial_node_velocities_distributed->assign(*node_velocities_distributed);
@@ -1558,7 +1568,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
   directions_distributed->putScalar(1);
-  //directions_distributed->randomize(-1,1);
+  //directions_distributed->randomize(-0.8,1);
   //real_t normd = directions_distributed->norm2();
   //directions_distributed->scale(normd);
   //set all but first component to 0 for debug
@@ -1567,7 +1577,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   //directions(4,0) = -0.3;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  obj->checkGradient(*rol_x, *rol_d);
+  //obj->checkGradient(*rol_x, *rol_d);
   //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
@@ -1580,7 +1590,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  //solver.solve(*fos);
+  solver.solve(*fos);
 
   //print final constraint satisfaction
   //fea_elasticity->compute_element_masses(design_densities,false);

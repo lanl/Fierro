@@ -397,6 +397,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
   /*************** write .vtk.series file ***************/
   simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = simparam.time_value;
+
   if (myrank == 0) {
     FILE *myfile;
     std::string filename = vtk_dir + "outputs.vtk.series";
