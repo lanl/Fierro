@@ -10,6 +10,23 @@ include(cmake/Modules/TargetDistclean.cmake OPTIONAL)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+option(TEST "Build tests" ON)
+
+if (TEST)
+  include(FetchContent)
+  FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP False
+  )
+  # For Windows: Prevent overriding the parent project's compiler/linker settings
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(googletest)
+  # FetchContent_MakeAvailable(googletest)
+  enable_testing()
+endif()
+
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
  # set(CMAKE_BUILD_TYPE Release)
@@ -47,6 +64,8 @@ if(NOT DEFINED PARALLEL_DIRECT_SOLVER)
   set(PARALLEL_DIRECT_SOLVER OFF)
 endif()
 
+add_subdirectory(Yaml-Serializable)
+
 if(BUILD_EXPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   find_package(Vector)
   if (CMAKE_VECTOR_NOVEC)
@@ -64,6 +83,7 @@ if(BUILD_EXPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
 endif()
 
 if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
+  set(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
   find_package(MPI REQUIRED)
   find_package(Trilinos REQUIRED)
 
@@ -98,7 +118,6 @@ if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
   add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)
 endif()
-
 
 if(BUILD_ELEMENTS)
   set(ELEMENTS_DIRS matar/src elements swage common geometry slam)

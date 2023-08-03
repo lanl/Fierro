@@ -40,6 +40,7 @@
 
 
 #include "Solver.h"
+#include "Simulation_Parameters_Dynamic_Optimization.h"
 
 class Explicit_Solver: public Solver{
 
@@ -51,9 +52,7 @@ public:
 
   Teuchos::RCP<MV> initial_node_coords_distributed;
   
-  class Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
-
-  //ROL::Problem<real_t> problem;
+  Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
 };
 
 #endif // end Header Guard

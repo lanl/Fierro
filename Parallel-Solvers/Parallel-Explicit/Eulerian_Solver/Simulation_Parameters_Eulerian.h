@@ -38,125 +38,109 @@
 #ifndef SIMULATION_PARAMETERS_EULERIAN_H
 #define SIMULATION_PARAMETERS_EULERIAN_H
 
-#include "utilities.h"
-#include "state.h"
 #include "matar.h"
+#include <cmath>
+#include <stdexcept>
+#include <Kokkos_Core.hpp>
+#include <Kokkos_Macros.hpp>
+
 #include "mesh.h"
+#include "state.h"
+#include "yaml-serializable.h"
 #include "Simulation_Parameters.h"
-using namespace utils;
+#include "Simulation_Parameters_Base.h"
+#include "user_material_functions.h"
 
-class Simulation_Parameters_Eulerian : public Simulation_Parameters
-{
- public:
-  Simulation_Parameters_Eulerian();
-  virtual ~Simulation_Parameters_Eulerian();
-  virtual void input();
-  virtual void apply_settings();
-  virtual void FEA_module_setup();
-    
-    // applying initial conditions
-  enum setup
-  {
-      none = 0,
-      Sedov3D = 1,
-      SedovRZ = 2,
-        
-      Noh3D = 3,
-      NohRZ = 4,
-        
-      SodZ = 5,
-      Sod3DX = 6,
-      Sod3DY = 7,
-      Sod3DZ = 8,
-        
-      TriplePoint = 9,
-      TaylorAnvil = 10,
-  };
+using namespace mtr;
 
-  void select_problem(setup problem_selector);
-    
-  // end of initial conditions enum
+struct Simulation_Parameters_Eulerian : Simulation_Parameters {
+  Time_Variables time_variables;
+  std::vector<MaterialFill> region_options;
+  std::vector<Material> material_options;
+  std::vector<Boundary> boundary_conditions;
+  Graphics_Options graphics_options;
 
-  setup test_problem;
+  bool gravity_flag   = false;
+  bool report_runtime = true;
 
-  //==============================================================================
-  //   Mesh Variables
-  //==============================================================================
+  size_t rk_num_stages = 2;
+  int NB   = 6; // number of boundaries
+  int NBSF = 4; //number of surface density force conditions
+  int NBV  = 2; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
 
-  // --- Mesh regions and material fills ---
-  int NB; // number of boundary patch sets to tag
-  int NBSF; //number of surface force density boundary conditions
-  int NBV; //number of velocity boundary conditions
-
-
-  // --- Graphics output variables ---
-  bool output_velocity_flag, output_stress_flag, output_strain_flag, strain_max_flag, displaced_mesh_flag;
-
-  DCArrayKokkos <material_t> material;
-  DCArrayKokkos <double> state_vars; // array to hold init model variables
-  DCArrayKokkos <double> global_vars; // array to hold global varibles for user material model
-
-  DCArrayKokkos <mat_fill_t> mat_fill;
-  DCArrayKokkos <boundary_t> boundary;
-
-  // --- num vars ----
-  size_t num_dims;
-
-  size_t num_materials;
+  //Non-serialized fields
+  int num_gauss_points = 2;
   size_t max_num_state_vars;
   size_t max_num_global_vars;
-
-  size_t num_fills;
-  size_t num_bcs;
-
-  // --- Graphics output variables ---
-  size_t graphics_id;
-  size_t graphics_cyc_ival;
-
-  CArray <double> graphics_times;
-  double graphics_dt_ival;
-  double graphics_time;  // the times for writing graphics dump
-
-
-  // --- Time and cycling variables ---
-  double time_value;
-  double time_final;
-  double dt;
-  double dt_max;
-  double dt_min;
-  double dt_cfl;
-  double dt_start;
-
-  size_t rk_num_stages;
   size_t rk_num_bins;
+  double time_value = 0.0;
+  DCArrayKokkos<double> state_vars;
+  DCArrayKokkos<double> global_vars;
 
-  size_t cycle;
-  size_t cycle_stop;
+  DCArrayKokkos<mat_fill_t> mat_fill;
+  DCArrayKokkos<material_t> material;
+  DCArrayKokkos<boundary_t> boundary; 
+  std::vector<double> gravity_vector {9.81, 0., 0.};
 
-  // --- Precision variables ---
-  double fuzz;  // machine precision
-  double tiny;  // very very small (between real_t and single)
-  double small;   // single precision
+  void init_material_variable_arrays(size_t nstate_vars, size_t nglobal_vars) {
+    state_vars = DCArrayKokkos <double> (material_options.size(), nstate_vars);
+    global_vars = DCArrayKokkos <double> (material_options.size(), nglobal_vars);
 
-  // -- Integration rule
-  int num_gauss_points;
+    for (size_t i = 0; i < material_options.size(); i++) {
+      auto mat = material_options[i];
 
-  //Body force parameters
-  bool gravity_flag;
-  real_t gravity_vector[3];
-  
+      for (size_t j = 0; j < mat.state_vars.size(); j++)
+        state_vars.host(i, j) = mat.state_vars[j];
+
+      for (size_t j = 0; j < mat.global_vars.size(); j++)
+        global_vars.host(i, j) = mat.global_vars[j];
+    }
+  }
+
+  template<typename T, typename K> void from_vector(DCArrayKokkos<T>& array, const std::vector<K>& vec) {
+    array = DCArrayKokkos<T>(vec.size());
+    for (size_t i = 0; i < vec.size(); i++)
+      array.host(i) = *(T*)&vec[i];
+  }
+  void derive_kokkos_arrays() {
+    max_num_state_vars = 0;
+    for (auto mo : material_options) 
+      max_num_state_vars = std::max(max_num_state_vars, mo.state_vars.size());
+
+    max_num_global_vars = 0;
+    for (auto mo : material_options) 
+      max_num_global_vars = std::max(max_num_global_vars, mo.global_vars.size());
+
+    init_material_variable_arrays(max_num_state_vars, max_num_global_vars);
+
+    from_vector(mat_fill, region_options);
+    from_vector(material, material_options);
+    from_vector(boundary, boundary_conditions);
+
+    // Send to device.
+    mat_fill.update_device();
+    boundary.update_device();
+    material.update_device();
+    state_vars.update_device();
+    global_vars.update_device();
+
+    // Re-derive function pointers after move to device.
+    for (size_t i = 0; i < material.size(); i++) {
+      RUN_CLASS({ material(i).derive_function_pointers_no_exec(); });
+    }
+  }
+
+  void derive() {
+    derive_kokkos_arrays();
+    rk_num_bins = rk_num_stages;
+    ensure_module(FEA_MODULE_TYPE::Eulerian);
+  }
+  void validate() { }
 };
-
-//eos forward declaration
-KOKKOS_FUNCTION
-void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
-               const DViewCArrayKokkos <double> &elem_stress,
-               const size_t elem_gid,
-               const size_t mat_id,
-               const DViewCArrayKokkos <double> &elem_state_vars,
-               const DCArrayKokkos <double> &global_vars,
-               const DViewCArrayKokkos <double> &elem_sspd,
-               const double den,
-               const double sie);
-
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Eulerian, Simulation_Parameters, 
+  time_variables, material_options, region_options, 
+  boundary_conditions, gravity_flag, report_runtime, rk_num_stages,
+  NB, NBSF, NBV,
+  graphics_options
+)
 #endif // end HEADER_H

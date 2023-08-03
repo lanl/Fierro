@@ -45,11 +45,12 @@
 #include "node_combination.h"
 #include "Solver.h"
 #include "FEA_Module.h"
+#include "Simulation_Parameters.h"
+#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Elasticity.h"
+#include "Simulation_Parameters_Dynamic_Optimization.h"
 
 class Explicit_Solver_SGH;
-class Simulation_Parameters_SGH;
-class Simulation_Parameters_Dynamic_Optimization;
-class Simulation_Parameters_Elasticity;
 
 class FEA_Module_SGH: public FEA_Module{
 
@@ -482,7 +483,7 @@ public:
   //elastic TO stuff
   void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
-  void compute_stiffness_gradients(const_host_vec_array design_densities, host_vec_array gradients);
+  void compute_stiffness_gradients(const_vec_array design_densities, vec_array gradients);
 
   void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
@@ -498,9 +499,9 @@ public:
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   //end elastic TO data
   
-  Simulation_Parameters_SGH *simparam;
-  Simulation_Parameters_Elasticity *simparam_elasticity;
-  Simulation_Parameters_Dynamic_Optimization *simparam_dynamic_opt;
+  Simulation_Parameters_SGH simparam;
+  Simulation_Parameters_Elasticity simparam_elasticity;
+  Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
   Explicit_Solver_SGH *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;
@@ -634,7 +635,7 @@ public:
   int output_velocity_index, output_strain_index, output_stress_index;
   
   //file parameters
-  DCArrayKokkos <size_t>read_from_file;
+  DCArrayKokkos <STRENGTH_SETUP> read_from_file;
   DCArrayKokkos <double>file_state_vars;
 
   //parameters

@@ -42,6 +42,8 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
+#include "Simulation_Parameters.h"
+#include "FEA_Module.h"
 #include <string>
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
@@ -57,6 +59,7 @@
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Import.hpp"
 #include <map>
+#include <memory>
 
 using namespace mtr;
 
@@ -65,19 +68,11 @@ namespace swage{
   class mesh_t;
 }
 
-namespace elements{
-  class element_selector;
-  class Element3D;
-  class Element2D;
-  class ref_element;
-}
-
 namespace ROL{
   template<class datatype>
   class Problem;
 }
 
-class FEA_Module;
 
 class Solver{
 
@@ -163,7 +158,7 @@ public:
   int setup_flag, finalize_flag;
 
   //MPI data
-  int myrank; //index of this mpi rank in the world communicator
+  int myrank = 0; //index of this mpi rank in the world communicator
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
   Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
@@ -172,12 +167,12 @@ public:
   Teuchos::RCP<Tpetra::Import<LO, GO>> dof_importer; //ghost dof comms
 
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters *simparam;
+  Simulation_Parameters simparam;
 
   //set of enabled FEA modules
-  std::vector<std::string> fea_module_types;
+  std::vector<FEA_MODULE_TYPE> fea_module_types;
   std::vector<FEA_Module*> fea_modules;
-  std::vector<bool> fea_module_must_read;
+  std::set<FEA_MODULE_TYPE> fea_module_must_read;
   int nfea_modules;
   int displacement_module;
 
@@ -193,10 +188,10 @@ public:
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_vector_storage;
   size_t max_nodes_per_element, max_nodes_per_patch;
-  elements::element_selector *element_select;
-  elements::Element3D *elem;
+  std::shared_ptr<elements::element_selector> element_select;
+  std::shared_ptr<elements::ref_element>  ref_elem;
   elements::Element2D *elem2D;
-  elements::ref_element  *ref_elem;
+  elements::Element3D *elem;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;
@@ -255,7 +250,7 @@ public:
   std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
   
   //file readin variables
-  std::ifstream *in;
+  std::ifstream *in = NULL;
   std::streampos before_condition_header;
   int words_per_line, elem_words_per_line;
   enum node_ordering_convention {IJK, ENSIGHT};

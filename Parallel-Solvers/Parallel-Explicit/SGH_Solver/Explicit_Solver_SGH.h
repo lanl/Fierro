@@ -40,6 +40,7 @@
 
 #include "utilities.h"
 #include "Explicit_Solver.h"
+#include "Simulation_Parameters_SGH.h"
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
@@ -57,21 +58,6 @@
 
 //#include <Xpetra_Operator.hpp>
 //#include <MueLu.hpp>
-
-//forward declarations
-/*
-namespace swage{
-  class mesh_t;
-}
-*/
-class mesh_t;
-
-namespace elements{
-  class element_selector;
-  class Element3D;
-  class Element2D;
-  class ref_element;
-}
 
 class Explicit_Solver_SGH: public Explicit_Solver{
 
@@ -144,10 +130,9 @@ public:
   int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
   
   mesh_t *init_mesh;
-  mesh_t *mesh;
+  std::shared_ptr<mesh_t> mesh;
   
-  //class Simulation_Parameters *simparam;
-  class Simulation_Parameters_SGH *simparam;
+  Simulation_Parameters_SGH simparam;
 
   //FEA simulations
   class FEA_Module_SGH *sgh_module;

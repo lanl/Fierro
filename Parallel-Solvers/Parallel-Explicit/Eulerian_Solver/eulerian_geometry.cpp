@@ -12,8 +12,8 @@ void FEA_Module_Eulerian::example_function(double rk_alpha,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    int num_dims = simparam->num_dim;
+    const size_t rk_level = simparam.rk_num_bins - 1;
+    int num_dims = simparam.num_dims;
 
     // example device loop
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {

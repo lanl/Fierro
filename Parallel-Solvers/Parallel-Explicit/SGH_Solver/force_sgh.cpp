@@ -30,12 +30,12 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
     // check to see if any material model will be run on the host
     bool any_host_material_model_run = false;
     for(int imat = 0; imat < material.size(); imat++){
-        if(material.host(imat).strength_run_location == model_run_location::host){
+        if(material.host(imat).strength_run_location == RUN_LOCATION::host){
             any_host_material_model_run = true;
         }
     } 
  
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
  
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -384,9 +384,9 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         size_t mat_id = elem_mat_id(elem_gid);
         
         // hypo elastic plastic model
-        if(material(mat_id).strength_type == model::hypo){
+        if(material(mat_id).strength_type == STRENGTH_TYPE::hypo){
 
-            if(material(mat_id).strength_run_location == model_run_location::device){
+            if(material(mat_id).strength_run_location == RUN_LOCATION::device){
 
                 // cut out the node_gids for this element
                 ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
@@ -439,9 +439,9 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
             size_t mat_id = elem_mat_id.host(elem_gid);
 
             // hypo elastic plastic model
-            if(material.host(mat_id).strength_type == model::hypo){
+            if(material.host(mat_id).strength_type == STRENGTH_TYPE::hypo){
 
-                if(material.host(mat_id).strength_run_location == model_run_location::host){
+                if(material.host(mat_id).strength_run_location == RUN_LOCATION::host){
 
                     // cut out the node_gids for this element
                     ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem.host(elem_gid, 0), 8);
@@ -505,7 +505,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                      const size_t cycle
                      ){
 
-    const size_t rk_level = simparam->rk_num_bins - 1;
+    const size_t rk_level = simparam.rk_num_bins - 1;
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -843,7 +843,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
         size_t mat_id = elem_mat_id(elem_gid);
         
         // hypo elastic plastic model
-        if(material(mat_id).strength_type == model::hypo){
+        if(material(mat_id).strength_type == STRENGTH_TYPE::hypo){
 
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);

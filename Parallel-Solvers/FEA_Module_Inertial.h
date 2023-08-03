@@ -39,9 +39,7 @@
 #define FEA_MODULE_INERTIAL_H
 
 #include "FEA_Module.h"
-
-//forward declare
-class Simulation_Parameters_Inertial;
+#include "Simulation_Parameters_Inertial.h"
 
 class FEA_Module_Inertial: public FEA_Module{
 
@@ -66,7 +64,7 @@ public:
   void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component);
   
   //forward declare
-  Simulation_Parameters_Inertial *simparam;
+  Simulation_Parameters_Inertial simparam;
   Solver *Solver_Pointer_;
 
   //Global FEA data
