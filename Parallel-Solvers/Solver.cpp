@@ -61,7 +61,6 @@
 #include "Tpetra_Details_makeColMap.hpp"
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Details_FixedHashTable.hpp"
-#include "Tpetra_Import.hpp"
 
 #include "elements.h"
 #include "matar.h"
@@ -69,6 +68,7 @@
 #include "node_combination.h"
 #include "Simulation_Parameters.h"
 #include "Solver.h"
+#include "FEA_Module.h"
 
 //Repartition Package
 #include <Zoltan2_XpetraMultiVectorAdapter.hpp>
@@ -91,8 +91,12 @@
 Solver::Solver(){
   //default flags assume optional routines are off
   setup_flag = finalize_flag = 0;
-  communication_time = dev2host_time = host2dev_time = 0;
+  communication_time = dev2host_time = host2dev_time = output_time = 0;
   last_print_step = -1;
+
+  //FEA module data init
+  nfea_modules = 0;
+  displacement_module = -1;
 }
 
 void Solver::exit_solver(int status){
@@ -102,7 +106,12 @@ void Solver::exit_solver(int status){
   exit(status);
 }
 
-Solver::~Solver(){}
+Solver::~Solver(){
+  //destroy FEA modules
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    delete fea_modules[imodule];
+  }
+}
 
 /* ----------------------------------------------------------------------
    Read Ensight format mesh file
@@ -111,9 +120,9 @@ Solver::~Solver(){}
 void Solver::read_mesh_ensight(const char *MESH){
 
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -191,8 +200,8 @@ void Solver::read_mesh_ensight(const char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam->words_per_line;
-  elem_words_per_line = simparam->elem_words_per_line;
+  words_per_line = simparam.input_options.words_per_line;
+  elem_words_per_line = simparam.input_options.elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
@@ -534,8 +543,7 @@ void Solver::read_mesh_ensight(const char *MESH){
   }
 
   // Close mesh input file
-  if(myrank==0)
-  in->close();
+  if(myrank==0) in->close();
   
   //std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
   
@@ -543,16 +551,16 @@ void Solver::read_mesh_ensight(const char *MESH){
   
   elements::elem_types::elem_type mesh_element_type;
 
-  if(simparam->num_dim==2){
-    if(simparam->element_type == "Quad4"){
+  if(simparam.num_dims == 2){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::quad4){
       mesh_element_type = elements::elem_types::Quad4;
       max_nodes_per_patch = 2;
     }
-    else if(simparam->element_type == "Quad8"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad8){
       mesh_element_type = elements::elem_types::Quad8;
       max_nodes_per_patch = 3;
     }
-    else if(simparam->element_type == "Quad12"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad12){
       mesh_element_type = elements::elem_types::Quad12;
       max_nodes_per_patch = 4;
     }
@@ -566,16 +574,16 @@ void Solver::read_mesh_ensight(const char *MESH){
     max_nodes_per_element = elem2D->num_nodes();
   }
 
-  if(simparam->num_dim==3){
-    if(simparam->element_type == "Hex8"){
+  if(simparam.num_dims == 3){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::hex8){
       mesh_element_type = elements::elem_types::Hex8;
       max_nodes_per_patch = 4;
     }
-    else if(simparam->element_type == "Hex20"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex20){
       mesh_element_type = elements::elem_types::Hex20;
       max_nodes_per_patch = 8;
     }
-    else if(simparam->element_type == "Hex32"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex32){
       mesh_element_type = elements::elem_types::Hex32;
       max_nodes_per_patch = 12;
     }
@@ -707,9 +715,9 @@ void Solver::read_mesh_ensight(const char *MESH){
 void Solver::read_mesh_vtk(const char *MESH){
 
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -719,7 +727,7 @@ void Solver::read_mesh_vtk(const char *MESH){
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
-  bool zero_index_base = simparam->zero_index_base;
+  bool zero_index_base = simparam.input_options.zero_index_base;
   //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
   //read the mesh
@@ -727,27 +735,41 @@ void Solver::read_mesh_vtk(const char *MESH){
   // abaqus_format(MESH);
   // vtk_format(MESH)
 
-  //task 0 reads file
+  // --- Read the number of nodes in the mesh --- //
+  num_nodes = 0;
   if(myrank==0){
     std::cout << " NUM DIM is " << num_dim << std::endl;
     in = new std::ifstream();
-    in->open(MESH);  
-    //skip 8 lines
-    for (int j = 1; j <= 5; j++) {
-      getline(*in, skip_line);
-      std::cout << skip_line << std::endl;
-    } //for
-  }
+    in->open(MESH);
 
-  // --- Read the number of nodes in the mesh --- //
-  if(myrank==0){
-    getline(*in, read_line);
-    line_parse.str(read_line);
-    line_parse >> substring;
-    line_parse >> num_nodes;
-    std::cout << "declared node count: " << num_nodes << std::endl;
-  }
-  
+    int i = 0;
+    bool found = false;
+    while (found==false) {
+        std::getline(*in, read_line);
+        line_parse.str("");
+        line_parse.clear();
+        line_parse << read_line;
+        line_parse >> substring;
+        
+        // looking for the following text:
+        //      POINTS %d float
+        if(substring == "POINTS"){
+            line_parse >> num_nodes;
+            std::cout << "declared node count: " << num_nodes << std::endl;
+            if(num_nodes <= 0) throw std::runtime_error("ERROR, NO NODES IN MESH");
+            found=true;
+        } // end if
+        
+        
+        if (i>1000){
+            throw std::runtime_error("ERROR: Failed to find POINTS");
+            break;
+        } // end if
+        
+        i++;
+    } // end while
+  } // end if(myrank==0)
+
   //broadcast number of nodes
   MPI_Bcast(&num_nodes,1,MPI_LONG_LONG_INT,0,world);
   
@@ -788,8 +810,8 @@ void Solver::read_mesh_vtk(const char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam->vtk_words_per_line;
-  elem_words_per_line = simparam->elem_words_per_line;
+  words_per_line = simparam.input_options.words_per_line;
+  elem_words_per_line = simparam.input_options.elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
@@ -904,24 +926,37 @@ void Solver::read_mesh_vtk(const char *MESH){
   rnum_elem = 0;
   CArrayKokkos<int, array_layout, HostSpace, memory_traits> node_store(elem_words_per_line);
 
-  if(myrank==0){
-  //skip element type name line
-    getline(*in, skip_line);
-    std::cout << skip_line << std::endl;
-  }
-    
   // --- read the number of cells in the mesh ---
   // --- Read the number of vertices in the mesh --- //
   if(myrank==0){
-    getline(*in, read_line);
-    line_parse.clear();
-    line_parse.str(read_line);
-    line_parse >> substring;
-    line_parse >> num_elem;
-    std::cout << "declared element count: " << num_elem << std::endl;
-    if(num_elem <= 0) std::cout << "ERROR, NO ELEMENTS IN MESH" << std::endl;
-  }
-  
+    bool found = false;
+    int i = 0;
+    while (found==false) {
+        std::getline(*in, read_line);
+        line_parse.str("");
+        line_parse.clear();
+        line_parse << read_line;
+        line_parse >> substring;
+        
+        // looking for the following text:
+        //      CELLS num_cells size
+        if(substring == "CELLS"){
+            line_parse >> num_elem;
+            std::cout << "declared element count: " << num_elem << std::endl;
+            if(num_elem <= 0) throw std::runtime_error("ERROR, NO ELEMENTS IN MESH"); 
+            found=true;
+        } // end if
+        
+        
+        if (i>1000){
+            throw std::runtime_error("ERROR: Failed to find CELLS");
+            break;
+        } // end if
+        
+        i++;
+    } // end while
+  } // end if(myrank==0)
+    
   //broadcast number of elements
   MPI_Bcast(&num_elem,1,MPI_LONG_LONG_INT,0,world);
   
@@ -959,11 +994,11 @@ void Solver::read_mesh_vtk(const char *MESH){
         //read portions of the line into the substring variable
         line_parse >> substring;
         //debug print
-        std::cout<<" "<< substring;
+        //std::cout<<" "<< substring;
         //assign the substring variable as a word of the read buffer
         strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
         }
-        std::cout <<std::endl;
+        //std::cout <<std::endl;
       }
     }
     else if(myrank==0){
@@ -977,11 +1012,11 @@ void Solver::read_mesh_vtk(const char *MESH){
         //read portions of the line into the substring variable
         line_parse >> substring;
         //debug print
-        std::cout<<" "<< substring;
+        //std::cout<<" "<< substring;
         //assign the substring variable as a word of the read buffer
         strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
         }
-        std::cout <<std::endl;
+        //std::cout <<std::endl;
         buffer_loop++;
         //std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
       }
@@ -1045,16 +1080,16 @@ void Solver::read_mesh_vtk(const char *MESH){
   
   elements::elem_types::elem_type mesh_element_type;
 
-  if(simparam->num_dim==2){
-    if(simparam->element_type == "Quad4"){
+  if(simparam.num_dims == 2){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::quad4){
       mesh_element_type = elements::elem_types::Quad4;
       max_nodes_per_patch = 2;
     }
-    else if(simparam->element_type == "Quad8"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad8){
       mesh_element_type = elements::elem_types::Quad8;
       max_nodes_per_patch = 3;
     }
-    else if(simparam->element_type == "Quad12"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad12){
       mesh_element_type = elements::elem_types::Quad12;
       max_nodes_per_patch = 4;
     }
@@ -1068,16 +1103,16 @@ void Solver::read_mesh_vtk(const char *MESH){
     max_nodes_per_element = elem2D->num_nodes();
   }
 
-  if(simparam->num_dim==3){
-    if(simparam->element_type == "Hex8"){
+  if(simparam.num_dims == 3){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::hex8){
       mesh_element_type = elements::elem_types::Hex8;
       max_nodes_per_patch = 4;
     }
-    else if(simparam->element_type == "Hex20"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex20){
       mesh_element_type = elements::elem_types::Hex20;
       max_nodes_per_patch = 8;
     }
-    else if(simparam->element_type == "Hex32"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex32){
       mesh_element_type = elements::elem_types::Hex32;
       max_nodes_per_patch = 12;
     }
@@ -1199,7 +1234,6 @@ void Solver::read_mesh_vtk(const char *MESH){
     std::cout << std::endl;
   }
   */  
- 
 } // end read_mesh
 
 /* ----------------------------------------------------------------------
@@ -1208,10 +1242,10 @@ void Solver::read_mesh_vtk(const char *MESH){
 void Solver::read_mesh_tecplot(const char *MESH){
 
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
-  bool restart_file = simparam->restart_file;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
+  bool restart_file = simparam.restart_file;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -1308,9 +1342,9 @@ void Solver::read_mesh_tecplot(const char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam->tecplot_words_per_line;
+  words_per_line = simparam.input_options.words_per_line;
   if(restart_file) words_per_line++;
-  elem_words_per_line = simparam->elem_words_per_line;
+  elem_words_per_line = simparam.input_options.elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
@@ -1539,16 +1573,16 @@ void Solver::read_mesh_tecplot(const char *MESH){
   
   elements::elem_types::elem_type mesh_element_type;
 
-  if(simparam->num_dim==2){
-    if(simparam->element_type == "Quad4"){
+  if(simparam.num_dims == 2){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::quad4){
       mesh_element_type = elements::elem_types::Quad4;
       max_nodes_per_patch = 2;
     }
-    else if(simparam->element_type == "Quad8"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad8){
       mesh_element_type = elements::elem_types::Quad8;
       max_nodes_per_patch = 3;
     }
-    else if(simparam->element_type == "Quad12"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::quad12){
       mesh_element_type = elements::elem_types::Quad12;
       max_nodes_per_patch = 4;
     }
@@ -1562,16 +1596,16 @@ void Solver::read_mesh_tecplot(const char *MESH){
     max_nodes_per_element = elem2D->num_nodes();
   }
 
-  if(simparam->num_dim==3){
-    if(simparam->element_type == "Hex8"){
+  if(simparam.num_dims == 3){
+    if(simparam.input_options.element_type == ELEMENT_TYPE::hex8){
       mesh_element_type = elements::elem_types::Hex8;
       max_nodes_per_patch = 4;
     }
-    else if(simparam->element_type == "Hex20"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex20){
       mesh_element_type = elements::elem_types::Hex20;
       max_nodes_per_patch = 8;
     }
-    else if(simparam->element_type == "Hex32"){
+    else if(simparam.input_options.element_type == ELEMENT_TYPE::hex32){
       mesh_element_type = elements::elem_types::Hex32;
       max_nodes_per_patch = 12;
     }
@@ -1686,9 +1720,9 @@ void Solver::read_mesh_tecplot(const char *MESH){
 
 void Solver::repartition_nodes(){
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::stringstream line_parse;
@@ -1764,7 +1798,7 @@ void Solver::repartition_nodes(){
   partitioned_map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*partitioned_map_one_to_one));
 
   //migrate density vector if this is a restart file read
-  if(simparam->restart_file){
+  if(simparam.restart_file){
     Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(partitioned_map, 1));
 
     //create import object using local node indices map and all indices map
@@ -1787,9 +1821,9 @@ void Solver::repartition_nodes(){
 
 void Solver::init_maps(){
   char ch;
-  int num_dim = simparam->num_dim;
-  int p_order = simparam->p_order;
-  real_t unit_scaling = simparam->unit_scaling;
+  int num_dim = simparam.num_dims;
+  int p_order = simparam.p_order;
+  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   int nodes_per_element;
   GO node_gid;
@@ -2056,23 +2090,23 @@ void Solver::init_maps(){
   //std::fflush(stdout);
 
   //create import object using local node indices map and all indices map
-  Tpetra::Import<LO, GO> importer(map, all_node_map);
+  comm_importer_setup();
 
   //comms to get ghosts
-  all_node_coords_distributed->doImport(*node_coords_distributed, importer, Tpetra::INSERT);
+  all_node_coords_distributed->doImport(*node_coords_distributed, *importer, Tpetra::INSERT);
   //all_node_nconn_distributed->doImport(*node_nconn_distributed, importer, Tpetra::INSERT);
   
   dual_nodes_in_elem.sync_device();
   dual_nodes_in_elem.modify_device();
   //construct distributed element connectivity multivector
-  nodes_in_elem_distributed = Teuchos::rcp(new MCONN(all_element_map, dual_nodes_in_elem));
+  global_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(all_element_map, dual_nodes_in_elem));
 
   //debug print
   //std::ostream &out = std::cout;
   //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
   //if(myrank==0)
   //*fos << "Element Connectivity :" << std::endl;
-  //nodes_in_elem_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  //global_nodes_in_elem_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   //*fos << std::endl;
   //std::fflush(stdout);
 
@@ -2100,7 +2134,7 @@ void Solver::init_maps(){
     //std::cout << "node "<<all_node_map->getGlobalElement(inode) << " } " ;
     //std::cout << dual_all_node_coords.view_host()(inode,0) << " " << dual_all_node_coords.view_host()(inode,1) << " " << dual_all_node_coords.view_host()(inode,2) << " " << std::endl;
   //}
-     
+
   //std::cout << "number of patches = " << mesh->num_patches() << std::endl;
   if(myrank == 0)
   std::cout << "End of map setup " << std::endl;
@@ -2113,9 +2147,9 @@ void Solver::init_maps(){
 void Solver::Get_Boundary_Patches(){
   size_t npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
   int local_node_id;
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
   CArray<GO> Surface_Nodes;
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   //Surface_Nodes = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(4, "Surface_Nodes");
   
   std::set<Node_Combination> my_patches;
@@ -2325,16 +2359,33 @@ void Solver::Get_Boundary_Patches(){
 }
 
 /* ----------------------------------------------------------------------
+  Setup Tpetra importers for comms
+------------------------------------------------------------------------- */
+
+void Solver::comm_importer_setup(){
+  
+  //create import object using local node indices map and ghost indices map
+  importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(map, all_node_map));
+  ghost_importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(map, ghost_node_map));
+  dof_importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(local_dof_map, all_dof_map));
+  
+  //output map and importers
+  sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  node_sorting_importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(map, sorted_map));
+
+}
+
+/* ----------------------------------------------------------------------
   Communicate updated nodal coordinates to ghost nodes
 ------------------------------------------------------------------------- */
 
 void Solver::comm_coordinates(){
 
   //create import object using local node indices map and ghost indices map
-  Tpetra::Import<LO, GO> importer(map, ghost_node_map);
+  //Tpetra::Import<LO, GO> importer(map, ghost_node_map);
   
   //comms to get ghosts
-  ghost_node_coords_distributed->doImport(*node_coords_distributed, importer, Tpetra::INSERT);
+  ghost_node_coords_distributed->doImport(*node_coords_distributed, *ghost_importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_coords_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 }

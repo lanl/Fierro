@@ -3,6 +3,8 @@
 
 real_t vm(real_t *dtensor_)
 {
+  /* Returens VonMises strain */
+
   ViewMatrixTypeReal dtensor(dtensor_,3,3);
   MatrixTypeRealHost dt(3,3);
 
@@ -28,3 +30,14 @@ real_t vm(real_t *dtensor_)
 
   return result;
 }
+
+real_t vm_stress(real_t *stress) {
+    /* Returns VonMises stress */
+
+    real_t von_mises = sqrtf((((stress[0] - stress[4])*(stress[0] - stress[4])) 
+                       +        ((stress[4] - stress[8])*(stress[4] - stress[8]))
+                       +        ((stress[8] - stress[0])*(stress[8] - stress[0]))
+                       +   6*(pow(stress[1], 2.0)+pow(stress[5],2.0)+pow(stress[2],2.0)))/2.0);
+    return von_mises;
+}
+

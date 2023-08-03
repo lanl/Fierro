@@ -31,7 +31,8 @@ void evpfft_strength_model(const DViewCArrayKokkos <double> &elem_pres,
                            const double vol,
                            const double dt,
                            const double rk_alpha,
-                           const size_t cycle);
+                           const size_t cycle,
+                           const size_t rk_level);
 
 // endif BUILD_EVPFFT_FIERRO
 #endif

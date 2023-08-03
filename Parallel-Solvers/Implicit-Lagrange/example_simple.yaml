@@ -1,46 +1,43 @@
 # input file
 solver_type: Implicit
-    #test:
-     #   dt_cfl: 0.2
-
-solver_options:
-    num_dims: 3
+num_dims: 3
+input_options:
     mesh_file_format: ensight
     mesh_file_name: TO_small_beam.geo
 
 output_options:
   graphics_step_frequency: 100
-    
-fea_module_1:
-    type: elasticity
+
+fea_modules:
+  - type: Elasticity
     # Dirichlet conditions
-    boundary_condition_1:
-        surface: z_plane
+    boundary_conditions:
+      - surface: z_plane
         plane_position: 0.0
         condition_type: fixed_displacement
         displacement_value: 0.0
             
     # Loading/Neumann Conditions
-    loading_condition_1:
-        surface: z_plane
+    loading_conditions:
+      - surface: z_plane
         plane_position: 100.0
         condition_type: surface_traction
         component_x: 500
         component_y: 0
         component_z: 0
 
-fea_module_2:
-    type: steady_heat
+fea_modules:
+  - type: Heat_Conduction
     # Dirichlet conditions
-    boundary_condition_1:
-        surface: z_plane
+    boundary_conditions:
+      - surface: z_plane
         plane_position: 0.0
         condition_type: fixed_temperature
         temperature_value: 293.0
 
     # Loading/Neumann Conditions
-    loading_condition_1:
-        surface: z_plane
+    loading_conditions:
+      - surface: z_plane
         plane_position: 100.0
         condition_type: surface_heat_flux
         #can be normal (q dot n) or coordinated (vector q) for curved surfaces
@@ -49,30 +46,27 @@ fea_module_2:
 
 optimization_options:
     optimization_process: topology_optimization
-    method_of_moving_asymptotes: disabled
+    method_of_moving_asymptotes: false
     density_epsilon: 0.00001
     simp_penalty_power: 4
-    optimization_objective: multi-objective
+    optimization_objective: multi_objective
     #Weight coefficients should add up to 1
-    multi-objective_structure: linear
-    multi-objective_module_1:
-        type: minimize_thermal_resistance
+    multi_objective_structure: linear
+    multi_objective_modules:
+      - type: minimize_thermal_resistance
         weight_coefficient: 0.25
-    multi-objective_module_2:
-        type: minimize_compliance
+      - type: minimize_compliance
         weight_coefficient: 0.75
-    num_optimization_constraint: 3
-    constraint_1:
-        type: mass
+
+    constraints:
+      - type: mass
         relation: equality
         value: 0.25
-    constraint_2:
-        type: moment_of_inertia
+      - type: moment_of_inertia
         relation: equality
         component: yy
         value: 0.35
-    constraint_3:
-        type: moment_of_inertia
+      - type: moment_of_inertia
         relation: equality
         component: xy
         value: 0.0

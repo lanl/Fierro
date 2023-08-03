@@ -55,6 +55,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
+#include "Simulation_Parameters.h"
 
 using namespace mtr;
 
@@ -71,7 +72,7 @@ class FEA_Module{
 
 public:
   FEA_Module(Solver *Solver_Pointer);
-  ~FEA_Module();
+  virtual ~FEA_Module();
 
   //Trilinos type definitions
   typedef Tpetra::Map<>::local_ordinal_type LO;
@@ -90,7 +91,7 @@ public:
   using execution_space = typename traits::execution_space;
   using device_type     = typename traits::device_type;
   using memory_traits   = typename traits::memory_traits;
-  using global_size_t = Tpetra::global_size_t;
+  using global_size_t   = Tpetra::global_size_t;
   
   typedef Kokkos::View<real_t*, Kokkos::LayoutRight, device_type, memory_traits> values_array;
   typedef Kokkos::View<GO*, array_layout, device_type, memory_traits> global_indices_array;
@@ -177,12 +178,12 @@ public:
   //output stream
   Teuchos::RCP<Teuchos::FancyOStream> fos;
   
-  elements::element_selector *element_select;
+  std::shared_ptr<elements::element_selector> element_select;
   elements::Element3D *elem;
   elements::Element2D *elem2D;
   
 
-  class Simulation_Parameters *simparam;
+  Simulation_Parameters simparam;
   Solver *Solver_Pointer_;
   int my_fea_module_index_;
   
@@ -216,7 +217,7 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_element_map; //overlapping map of elements connected to the local nodes in each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
-  Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
+  Teuchos::RCP<MCONN> global_nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
@@ -259,6 +260,10 @@ public:
   int myrank; //index of this mpi rank in the world communicator
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
+  Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> dof_importer; //ghost dof comms
 
   //! mapping used to get local ghost index from the global ID.
   //typedef ::Tpetra::Details::FixedHashTable<GO, LO, Kokkos::HostSpace::device_type>

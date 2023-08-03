@@ -74,25 +74,20 @@
 using namespace utils;
 
 
-FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fea_module_index) : FEA_Module(Solver_Pointer){
   
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
   Module_Type = "Inertial";
 
-  //create parameter object
-  simparam = new Simulation_Parameters_Inertial();
-  // ---- Read input file, define state and boundary conditions ---- //
-  simparam->input();
-
   //acquire base class data from existing simparam in solver (gets yaml options etc.)
-  simparam->Simulation_Parameters::operator=(*(Solver_Pointer->simparam));
+  simparam = Solver_Pointer->simparam;
   
   //sets base class simparam pointer to avoid instancing the base simparam twice
   FEA_Module::simparam = simparam;
 
   //TO parameters
-  nodal_density_flag = simparam->nodal_density_flag;
+  nodal_density_flag = simparam.nodal_density;
 
   //property initialization flags
   mass_init = false;
@@ -119,7 +114,7 @@ FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fe
   Global_Element_Moments_of_Inertia_yz = Teuchos::rcp(new MV(element_map, 1));
 }
 
-FEA_Module_Inertial::~FEA_Module_Inertial(){}
+FEA_Module_Inertial::~FEA_Module_Inertial(){ }
 
 /* ----------------------------------------------------------------------
    Compute the mass of each element; estimated with quadrature
@@ -138,10 +133,10 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam->num_gauss_points;
+  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -325,14 +320,14 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  int num_dim = simparam.num_dims;
   const_host_vec_array all_node_densities;
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam->num_gauss_points;
+  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -508,10 +503,10 @@ void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_de
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam->num_gauss_points;
+  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -702,14 +697,14 @@ void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_v
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  int num_dim = simparam.num_dims;
   const_host_vec_array all_node_densities;
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam->num_gauss_points;
+  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -896,31 +891,31 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  int num_dim = simparam.num_dims;
   double inertia_center[3];
-  if(simparam->enable_inertia_center[0]){
-    inertia_center[0] = simparam->moment_of_inertia_center[0];
+  if(simparam.enable_inertia_center[0]){
+    inertia_center[0] = simparam.moment_of_inertia_center[0];
   }
   else{
     inertia_center[0] = center_of_mass[0];
   }
-  if(simparam->enable_inertia_center[1]){
-    inertia_center[1] = simparam->moment_of_inertia_center[1];
+  if(simparam.enable_inertia_center[1]){
+    inertia_center[1] = simparam.moment_of_inertia_center[1];
   }
   else{
     inertia_center[1] = center_of_mass[1];
   }
   if(num_dim==3){
-    if(simparam->enable_inertia_center[2]){
-      inertia_center[2] = simparam->moment_of_inertia_center[2];
+    if(simparam.enable_inertia_center[2]){
+      inertia_center[2] = simparam.moment_of_inertia_center[2];
     }
     else{
       inertia_center[2] = center_of_mass[2];
     }
   }
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam->num_gauss_points;
+  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -1143,24 +1138,24 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam->num_dim;
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  int num_dim = simparam.num_dims;
   double inertia_center[3];
-  if(simparam->enable_inertia_center[0]){
-    inertia_center[0] = simparam->moment_of_inertia_center[0];
+  if(simparam.enable_inertia_center[0]){
+    inertia_center[0] = simparam.moment_of_inertia_center[0];
   }
   else{
     inertia_center[0] = center_of_mass[0];
   }
-  if(simparam->enable_inertia_center[1]){
-    inertia_center[1] = simparam->moment_of_inertia_center[1];
+  if(simparam.enable_inertia_center[1]){
+    inertia_center[1] = simparam.moment_of_inertia_center[1];
   }
   else{
     inertia_center[1] = center_of_mass[1];
   }
   if(num_dim==3){
-    if(simparam->enable_inertia_center[2]){
-      inertia_center[2] = simparam->moment_of_inertia_center[2];
+    if(simparam.enable_inertia_center[2]){
+      inertia_center[2] = simparam.moment_of_inertia_center[2];
     }
     else{
       inertia_center[2] = center_of_mass[2];
@@ -1171,7 +1166,7 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam->num_gauss_points;
+  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -1373,11 +1368,11 @@ void FEA_Module_Inertial::compute_element_volumes(){
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_elem_conn_array nodes_in_elem = nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam->num_gauss_points;
+  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;

@@ -5,6 +5,9 @@
 using namespace utils;
 
 KOKKOS_FUNCTION
+double optimizedPow(double base, int exponent);
+
+KOKKOS_FUNCTION
 void inverse_gj(real_t *a_, int n);
 
 KOKKOS_FUNCTION

@@ -74,6 +74,10 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   myrank = Solver_Pointer->myrank;
   nranks = Solver_Pointer->nranks;
   world = Solver_Pointer->world;
+  importer = Solver_Pointer->importer;
+  ghost_importer = Solver_Pointer->ghost_importer;
+  node_sorting_importer = Solver_Pointer->node_sorting_importer;
+  dof_importer = Solver_Pointer->dof_importer;
 
   //obtain node and element maps
   comm = Solver_Pointer->comm;
@@ -86,7 +90,7 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   all_dof_map = Solver_Pointer->all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
 
   //obtain mesh coordinates, densities, and element connectivity
-  nodes_in_elem_distributed = Solver_Pointer->nodes_in_elem_distributed; //element to node connectivity table
+  global_nodes_in_elem_distributed = Solver_Pointer->global_nodes_in_elem_distributed; //element to node connectivity table
   node_nconn_distributed = Solver_Pointer->node_nconn_distributed; //how many elements a node is connected to
   node_coords_distributed = Solver_Pointer->node_coords_distributed;
   all_node_coords_distributed = Solver_Pointer->all_node_coords_distributed;
@@ -231,7 +235,7 @@ int FEA_Module::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, real_t
 
   //Nodes on the Patch
   auto node_list = Patch_Nodes.node_set;
-  int num_dim = simparam->num_dim;
+  int num_dim = simparam.num_dims;
   size_t nnodes = node_list.size();
   size_t node_rid;
   real_t node_coord[num_dim];

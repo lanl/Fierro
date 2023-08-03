@@ -34,105 +34,325 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-
+#pragma once
 #ifndef SIMULATION_PARAMETERS_H
 #define SIMULATION_PARAMETERS_H
 
-#include "utilities.h"
-#include "Yaml.hpp"
-#include "mpi.h"
-#include <stdio.h>
+#include "yaml-serializable.h"
+#include "configuration-validation.h"
+#include <set>
 #include <vector>
 #include <string>
-using namespace utils;
+#include <stdio.h>
+#include <optional>
+#include <algorithm>
+#include <filesystem>
 
-class Simulation_Parameters
-{
- public:
-  Simulation_Parameters();
-  virtual ~Simulation_Parameters();
-  virtual void input(); //typically sets default problem parameters
-  virtual void apply_settings();
-  virtual size_t unapplied_settings();
-  virtual std::string yaml_input(std::string filename); //reads in user defined parameters
-  virtual void FEA_module_setup();
-  virtual void yaml_FEA_module_setup();
+template<typename T>
+inline void validate_unique_vector(const std::vector<T>& vec, std::string err_msg) {
+  std::set<T> seen;
+  for (auto v : vec) {
+    if (seen.find(v) != seen.end()) {
+      throw Yaml::ConfigurationException(
+        err_msg + to_string(v)
+      );
+      seen.insert(v);
+    }
+  }
+}
 
-  //==============================================================================
-  //   Mesh Variables
-  //==============================================================================
+SERIALIZABLE_ENUM(SOLVER_TYPE, SGH, Implicit)
+SERIALIZABLE_ENUM(MESH_FORMAT,
+    ensight,
+    tecplot,
+    vtk,
+    ansys_dat
+)
 
-  // --- Mesh regions and material fills ---
-  int NR; // number of Regions
-  int NC; // number of contours
-  int NF; // number of fill
-  int NB; // number of boundary patch sets to tag
+SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk)
+SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
 
-  // --- Dimensional and mesh constants ---
-  int num_dim;
-  int p_order;
+SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
+  Elasticity,
+  Heat_Conduction,
+  SGH,
+  Inertial,
+  Thermo_Elasticity,
+  Eulerian
+)
+
+SERIALIZABLE_ENUM(ELEMENT_TYPE, 
+  quad4, quad8, quad12,
+  hex8, hex20, hex32
+)
+
+struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
+  std::string mesh_file_name;
+  MESH_FORMAT mesh_file_format;
+
+  ELEMENT_TYPE element_type = ELEMENT_TYPE::hex8;
+  bool zero_index_base = false;
+
+  // Non-serialized fields
+  int words_per_line;
+  int elem_words_per_line;
+
+  /**
+   * Determine a couple of file parsing parameters from the specified filetype.
+  */
+  void derive() {
+    if (mesh_file_format == MESH_FORMAT::ansys_dat) {
+      words_per_line = 4;
+      elem_words_per_line = 11;
+    } else {
+      switch (mesh_file_format) {
+        case MESH_FORMAT::ensight:
+          words_per_line = 1;
+          break;
+        case MESH_FORMAT::vtk:
+        case MESH_FORMAT::tecplot:
+          words_per_line = 3;
+          break;
+        default:
+          break;
+      }
+
+      switch (element_type) {
+        case ELEMENT_TYPE::hex8:
+          elem_words_per_line = 8;
+          break;
+        case ELEMENT_TYPE::quad4:
+          elem_words_per_line = 4;
+          break;
+        // TODO: Implement handling for other element types
+        default:
+          throw Yaml::ConfigurationException("Unsupported element type `" + to_string(element_type) + "`.");
+          break;
+      }
+    }
+
+    mesh_file_name = std::filesystem::absolute(mesh_file_name).string();
+  }
   
-  //file input parameters 
-  int words_per_line, elem_words_per_line, tecplot_words_per_line, vtk_words_per_line, ansys_dat_node_words_per_line, ansys_dat_elem_words_per_line;
-  char *format_specification;  //per line file format when reading dofs
-  real_t unit_scaling;
-  bool restart_file;
-  bool tecplot_input, ansys_dat_input, vtk_input, zero_index_base;
-  std::string element_type;
-  std::string solver_type, mesh_file_name, mesh_file_format;
-
-  //debug and performance reporting flags
-  int report_runtime_flag;
-
-  //inertial settings
-  std::vector<bool> enable_inertia_center;
-  std::vector<double> moment_of_inertia_center;
- 
-  //necessary FEA modules
-  std::vector<std::string> FEA_Module_List;
-  std::vector<bool> fea_module_must_read;
-  int nfea_modules;
-
-  //====================================================================================================
-  //  possible values in dictionary of options (our yaml parser supports three nested levels of options)
-  //====================================================================================================
-  typedef std::multimap<std::string,std::string> options_multimap;
-
-  typedef std::multimap<std::string,std::multimap<std::string,std::string>> nested_options_multimap;
-
-  typedef std::multimap<std::string,std::multimap<std::string,std::multimap<std::string,std::string>>> doubly_nested_options_multimap;
-
-  options_multimap possible_options;
-
-  nested_options_multimap possible_options_nested2;
-
-  doubly_nested_options_multimap possible_options_nested3;
-
-  std::map<std::string,std::string> set_options;
-
-  std::map<std::string,std::map<std::string,std::string>> set_options_nested2;
-
-  std::map<std::string,std::map<std::string,std::map<std::string,std::string>>> set_options_nested3;
-
-  typedef std::pair<std::string,std::string> option_setting_pair;
-
-  typedef options_multimap::iterator multimap_iterator;
-
-  typedef nested_options_multimap::iterator multimap_iterator_nested2;
-  
-  typedef doubly_nested_options_multimap::iterator multimap_iterator_nested3;
-
-  //MPI data
-  int myrank; //index of this mpi rank in the world communicator
-  int nranks; //number of mpi ranks in the world communicator
-  MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
-
-  //output options
-  int file_output_frequency;
-
-  //flags
-  bool filtered_density;
-
+  /**
+   * Ensures that the provided filepath is valid.
+  */
+  void validate() {
+    Yaml::validate_filepath(mesh_file_name);
+  }
 };
+IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base)
 
-#endif // end HEADER_H
+struct Output_Options {
+  int graphics_step_frequency;
+  double graphics_step;
+  OUTPUT_FORMAT output_file_format;
+};
+IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format)
+
+
+SERIALIZABLE_ENUM(BOUNDARY_TAG, 
+    x_plane,   // tag an x-plane
+    y_plane,   // tag an y-plane
+    z_plane,   // tag an z-plane
+    cylinder,  // tag an cylindrical surface
+    sphere,    // tag a spherical surface
+    readFile   // read from a file
+)
+
+SERIALIZABLE_ENUM(BOUNDARY_FEA_CONDITION, fixed_displacement, fixed_temperature)
+SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux)
+SERIALIZABLE_ENUM(LOADING_SPECIFICATION, normal, coordinated)
+
+struct Loading_Condition : Yaml::ValidatedYaml {
+  std::string id;
+  BOUNDARY_TAG surface;
+  LOADING_CONDITION_TYPE condition_type;
+  std::optional<double> plane_position {};
+  std::optional<double> flux_value {};
+  std::optional<double> component_x {};
+  std::optional<double> component_y {};
+  std::optional<double> component_z {};
+  std::optional<LOADING_SPECIFICATION> specification {};
+
+  void validate_surface_heat_flux() {
+    std::string type_name = to_string(LOADING_CONDITION_TYPE::surface_heat_flux);
+    if (component_x.has_value() || component_y.has_value() || component_z.has_value())
+      throw Yaml::ConfigurationException("Do not specify xyz components for " + type_name);
+
+    if (!flux_value.has_value())
+      throw Yaml::ConfigurationException("`flux_value` required for " + type_name);
+    if (!specification.has_value())
+      throw Yaml::ConfigurationException("`specification` required for " + type_name);
+  }
+
+  void validate_surface_traction() {
+    std::string type_name = to_string(LOADING_CONDITION_TYPE::surface_traction);
+    
+    if (flux_value.has_value())
+      throw Yaml::ConfigurationException("Do not specify `flux_value` for " + type_name);
+    if (specification.has_value())
+      throw Yaml::ConfigurationException("Do not provide `specification` for " + type_name);
+    
+    if (!component_x.has_value() || !component_y.has_value() || !component_z.has_value())
+      throw Yaml::ConfigurationException("`component_[x,y,z]` values required for " + type_name);
+  }
+
+  void validate() {
+    switch (condition_type) {
+      case LOADING_CONDITION_TYPE::surface_heat_flux:
+        validate_surface_heat_flux();
+        break;
+      case LOADING_CONDITION_TYPE::surface_traction:
+        validate_surface_traction();
+        break;
+      default:
+        throw Yaml::ConfigurationException(
+          "Unhandled loading condition type: " + to_string(condition_type)
+        );
+    }
+  }
+};
+YAML_ADD_REQUIRED_FIELDS_FOR(Loading_Condition, condition_type, surface)
+IMPL_YAML_SERIALIZABLE_FOR(Loading_Condition, 
+  id, surface, plane_position, condition_type,
+  flux_value, component_x, component_y, component_z,
+  specification
+)
+
+struct FEA_Boundary_Condition {
+    std::string id;
+    BOUNDARY_TAG surface;
+    double value;
+    BOUNDARY_FEA_CONDITION condition_type;
+    // TODO: these should probably just be value
+    std::optional<double> temperature_value;
+    std::optional<double> displacement_value;
+    std::optional<double> plane_position;
+};
+YAML_ADD_REQUIRED_FIELDS_FOR(FEA_Boundary_Condition, surface, condition_type)
+IMPL_YAML_SERIALIZABLE_FOR(FEA_Boundary_Condition, 
+  id, surface, value, condition_type, 
+  temperature_value, plane_position, displacement_value
+)
+
+struct FEA_Module_Config {
+  FEA_MODULE_TYPE type;
+  std::vector<FEA_Boundary_Condition> boundary_conditions;
+  std::vector<Loading_Condition> loading_conditions;
+};
+IMPL_YAML_SERIALIZABLE_FOR(FEA_Module_Config, type, boundary_conditions, loading_conditions)
+
+struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
+  SOLVER_TYPE solver_type;
+  TIMER_VERBOSITY timer_output_level;
+  int num_dims = 3;
+  bool restart_file = false;
+  Input_Options input_options;
+  Output_Options output_options;
+  bool report_runtime = true;
+
+  // fea_modules holds configuration for a subset of
+  // the modules listed in FEA_Modules_List
+  std::vector<FEA_Module_Config> fea_modules;
+
+  // Non-serialized fields
+  int p_order = 0;
+  double unit_scaling = 1.0;
+  std::vector<FEA_MODULE_TYPE> FEA_Modules_List;
+  std::set<FEA_MODULE_TYPE> fea_module_must_read;
+  std::vector<bool> enable_inertia_center {false, false, false};
+  std::vector<double> moment_of_inertia_center {0.0, 0.0, 0.0};
+
+
+  void derive() {
+    for (auto& spec : fea_modules) {
+      FEA_Modules_List.push_back(spec.type);
+    }
+  }
+
+  void validate_element_type() {
+    auto et = input_options.element_type;
+    bool invalid_et = (et == ELEMENT_TYPE::quad4 || et == ELEMENT_TYPE::quad8 || et == ELEMENT_TYPE::quad12) && num_dims == 3;
+    invalid_et = invalid_et ||
+      (et == ELEMENT_TYPE::hex8 || et == ELEMENT_TYPE::hex20 || et == ELEMENT_TYPE::hex32) && num_dims == 2;
+    
+    if (invalid_et) 
+      throw Yaml::ConfigurationException(
+        "Invalid element type " + to_string(et) + " for number of dimensions " + std::to_string(num_dims)
+      );
+  }
+  void validate() {
+    validate_element_type();
+    validate_unique_vector(FEA_Modules_List, "Duplicate FEA Module Found: ");
+  }
+
+  /**
+   * Given a module type, return the optionally present
+   * configuration associated with it.
+  */
+  std::optional<FEA_Module_Config> get_module_config(FEA_MODULE_TYPE type) {
+    for (auto spec : fea_modules) 
+      if (spec.type == type) return spec;
+    return {};
+  }
+
+  /**
+   * If a module with the provided type is not present,
+   * add it to the list of modules without any configuration.
+  */
+  size_t ensure_module(FEA_MODULE_TYPE type) {
+    size_t i = find_module(type);
+    if (i == FEA_Modules_List.size())
+      FEA_Modules_List.push_back(type);
+    return i;
+  }
+
+  /**
+   * Ensure that the module is provided.
+   * 
+   * If module configuration of this type is not found,
+   * add it to the module configurations.
+   * 
+   * If there is one present already, don't do anything.
+  */
+  size_t ensure_module(FEA_Module_Config default_spec) {
+    for (size_t i = 0; i < fea_modules.size(); i++) {
+      if (fea_modules[i].type == default_spec.type) 
+        return i;
+    }
+
+    fea_modules.push_back(default_spec);
+    return ensure_module(default_spec.type);
+  }
+
+  /**
+   * Checks to see if a module of this type is already loaded,
+   * with or without additional configuration present.
+  */
+  bool has_module(FEA_MODULE_TYPE type) {
+    return find_module(type) != FEA_Modules_List.size();
+  }
+
+  /**
+   * Returns the index of the module in the list of modules.
+   * Returns FEA_Modules_List.size() if it isn't present.
+  */
+  size_t find_module(FEA_MODULE_TYPE type) {
+    size_t i = 0;
+    for (; i < FEA_Modules_List.size(); i++) {
+      if (FEA_Modules_List[i] == type)
+        break;
+    }
+    return i;
+  }
+};
+YAML_ADD_REQUIRED_FIELDS_FOR(Simulation_Parameters,
+  solver_type, num_dims, input_options
+)
+IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters, 
+  solver_type, restart_file, input_options, timer_output_level,
+  num_dims, output_options, fea_modules,
+  report_runtime
+)
+#endif

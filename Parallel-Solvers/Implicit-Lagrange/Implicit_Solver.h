@@ -41,6 +41,7 @@
 #include "Solver.h"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
 #include "Tpetra_Details_EquilibrationInfo.hpp"
+#include "Simulation_Parameters_Topology_Optimization.h"
 
 //#include <Xpetra_Operator.hpp>
 //#include <MueLu.hpp>
@@ -62,7 +63,6 @@ namespace Xpetra{
   class Matrix;
 }
 
-class FEA_Module;
 
 class Implicit_Solver: public Solver{
 
@@ -120,17 +120,9 @@ public:
   
   swage::mesh_t *init_mesh;
   swage::mesh_t *mesh;
-  
 
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters_Topology_Optimization *simparam_TO;
-
-  //set of enabled FEA modules
-  std::vector<std::string> fea_module_types;
-  std::vector<FEA_Module*> fea_modules;
-  std::vector<bool> fea_module_must_read;
-  int nfea_modules;
-  int displacement_module;
+  Simulation_Parameters_Topology_Optimization simparam_TO;
   
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NTopology_Condition_Patches;

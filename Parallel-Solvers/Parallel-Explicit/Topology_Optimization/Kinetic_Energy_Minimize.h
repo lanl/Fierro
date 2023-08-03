@@ -58,6 +58,9 @@
 #include "ROL_Objective.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
 #include "FEA_Module_SGH.h"
+#include "FEA_Module_Eulerian.h"
+#include "Explicit_Solver_Eulerian.h"
+#include "Explicit_Solver_SGH.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 
 class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
@@ -186,7 +189,7 @@ public:
     }
 
     //decide to output current optimization state
-    if(current_step%FEM_->simparam_dynamic_opt->optimization_output_freq==0)
+    if(current_step%FEM_->simparam_dynamic_opt.optimization_output_freq==0)
       FEM_->Explicit_Solver_Pointer_->parallel_tecplot_writer();
   }
 

@@ -1,6 +1,108 @@
 #include <stdio.h>
 #include "inverse.h"
 
+//
+// Optimized pow for integer exponents only
+//
+KOKKOS_FUNCTION
+double optimizedPow(double base, int exponent) {
+    if (exponent == 0)
+        return 1.0;
+    else if (exponent == 1)
+        return base;
+
+    double result = 1.0;
+    bool negativeExponent = (exponent < 0);
+    exponent = abs(exponent);
+
+    while (exponent > 0) {
+        if (exponent & 1)
+            result *= base;
+        base *= base;
+        exponent >>= 1;
+    }
+
+    return negativeExponent ? 1.0 / result : result;
+}
+
+
+//
+// New Gauss-Jordan elimination matrix inverse functions 
+//
+KOKKOS_FUNCTION
+void swap_rows(double *matrix, int row1, int row2, int n) {
+    for (int i = 0; i < n; i++) {
+        double temp = *(matrix + row1 * n + i);
+        *(matrix + row1 * n + i) = *(matrix + row2 * n + i);
+        *(matrix + row2 * n + i) = temp;
+    }
+}
+
+KOKKOS_FUNCTION
+void scale_row(double *matrix, int row, double factor, int n) {
+    for (int i = 0; i < n; i++) {
+        *(matrix + row * n + i) *= factor;
+    }
+}
+
+KOKKOS_FUNCTION
+void add_rows(double *matrix, int src_row, int dest_row, double factor, int n) {
+    for (int i = 0; i < n; i++) {
+        *(matrix + dest_row * n + i) += *(matrix + src_row * n + i) * factor;
+    }
+}
+
+KOKKOS_FUNCTION
+int invert_matrix(double *matrix, int n) {
+    int error_flag=0;
+    double *identity = new double[n*n];
+    if (identity == NULL) {
+        printf("Error: Failed to allocate memory for identity matrix.\n");
+        return 0;
+    }
+
+    // Initialize identity matrix
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            *(identity + i * n + j) = (i == j) ? 1.0 : 0.0;
+        }
+    }
+
+    // Perform Gauss-Jordan elimination
+    for (int i = 0; i < n; i++) {
+        if (*(matrix + i * n + i) == 0) {
+            //printf("Error: Matrix is not invertible.\n");
+            delete [] identity;
+            return error_flag;
+        }
+
+        double pivot = *(matrix + i * n + i);
+        scale_row(matrix, i, 1.0 / pivot, n);
+        scale_row(identity, i, 1.0 / pivot, n);
+
+        for (int j = 0; j < n; j++) {
+            if (j != i) {
+                double factor = -*(matrix + j * n + i);
+                add_rows(matrix, i, j, factor, n);
+                add_rows(identity, i, j, factor, n);
+            }
+        }
+    }
+
+    // Copy the inverted matrix to the input matrix pointer
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            *(matrix + i * n + j) = *(identity + i * n + j);
+        }
+    }
+
+    delete [] identity;
+    error_flag = 1;
+    return error_flag;
+}
+// End New Gauss-Jordan elimination matrix inverse functions
+
+
 
 //
 //  inverse_gj
@@ -8,6 +110,8 @@
 KOKKOS_FUNCTION
 void inverse_gj(real_t *a_, int n)
 {
+  invert_matrix(a_, n);
+#if 0
   ViewMatrixTypeReal a(a_,n,n);
   real_t             tmp;
   real_t             fac;
@@ -36,6 +140,7 @@ void inverse_gj(real_t *a_, int n)
       }
     } 
   } // end loop 1
+#endif
 }
 
 //

@@ -1,30 +1,29 @@
 # input file
 solver_type: Implicit
 
-solver_options:
-    num_dims: 3
+num_dims: 3
+input_options:
     mesh_file_format: ansys_dat
-    mesh_file_name: ANSYS_Bunny_Most_Loads.dat
+    mesh_file_name: ANSYS_Beam.dat
 
 output_options:
   graphics_step_frequency: 2000
     
-fea_module_1:
-    type: elasticity
+fea_modules:
+  - type: Elasticity
 
 optimization_options:
     optimization_process: topology_optimization
-    method_of_moving_asymptotes: disabled
+    method_of_moving_asymptotes: false
     density_epsilon: 0.00001
     simp_penalty_power: 3
     optimization_objective: minimize_compliance
-    num_optimization_constraint: 2
-    constraint_1:
-        type: mass
+    constraints:
+      - type: mass
         relation: equality
         value: 0.4
-    constraint_2:
-        type: moment_of_inertia
+
+      - type: moment_of_inertia
         relation: equality
         component: yy
         value: 0.4

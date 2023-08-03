@@ -39,6 +39,7 @@ struct EvpalReduce
 };
 #endif
 
+
 void EVPFFT::evpal(int imicro)
 {
 
@@ -46,11 +47,18 @@ void EVPFFT::evpal(int imicro)
   // Note: errs = all_reduce[0]
   //       erre = all_reduce[1]
   //
-  ArrayType <real_t, 2> all_reduce;
+#if BUILD_EVPFFT_FIERRO
+  // create space to perform reduction for dsde and cg66.
+  const size_t n = 2+36+36+9; // 2 for errs, erre. 36 for dsde_avg. 36 for cg66_avg. 9 edotp_avg
+  ArrayType <real_t, n> all_reduce;
+#else
+  const size_t n = 2; // 2 for errs, erre
+  ArrayType <real_t, n> all_reduce;
+#endif
 
   Kokkos::parallel_reduce(
     Kokkos::MDRangePolicy<Kokkos::Rank<3,LOOP_ORDER,LOOP_ORDER>>({1,1,1}, {npts3+1,npts2+1,npts1+1}),
-    KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, ArrayType <real_t,2> & loc_reduce) {
+    KOKKOS_CLASS_LAMBDA(const int k, const int j, const int i, ArrayType <real_t,n> & loc_reduce) {
 
     int jph;
     int itmaxal;
@@ -171,7 +179,7 @@ void EVPFFT::evpal(int imicro)
 
       erroral = 0.0000001;
       erral   = 2.0*erroral;
-      itmaxal = MAX_ITER_NR; //100
+      itmaxal = 100;
       iter1 = 0;
 
       while (iter1 < itmaxal && erral > erroral) {
@@ -237,11 +245,11 @@ void EVPFFT::evpal(int imicro)
 #endif
 
 #ifdef TWO_SIGN_SLIP_SYSTEMS
-              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(POW(rss(is),(nrsx(is)-1))) / taux(is,isign);
-              rss2(is) = gamd0(is,jph) * ABS(POW(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
+              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(optimizedPow(rss(is),(nrsx(is)-1))) / taux(is,isign);
+              rss2(is) = gamd0(is,jph) * ABS(optimizedPow(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
 #else
-              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(POW(rss(is),(nrsx(is)-1))) / taux(is,isign);
-              rss2(is) = gamd0(is,jph) * ABS(POW(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
+              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(optimizedPow(rss(is),(nrsx(is)-1))) / taux(is,isign);
+              rss2(is) = gamd0(is,jph) * ABS(optimizedPow(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
 #endif
 
               gamdot(is,i,j,k) = rss2(is);
@@ -376,6 +384,24 @@ void EVPFFT::evpal(int imicro)
 
     } // end if (igas(jph) == 0)
 
+#if BUILD_EVPFFT_FIERRO
+    ViewMatrixTypeReal cg66_avg(&loc_reduce.array[2],6,6);
+    ViewMatrixTypeReal dedotp66_avg(&loc_reduce.array[38],6,6);
+    for (int ii = 1; ii <= 6; ii++) {
+      for (int jj = 1; jj <= 6; jj++) {
+        cg66_avg(ii,jj) += cg66(ii,jj,i,j,k) * wgt;
+        dedotp66_avg(ii,jj) += dedotp66(ii,jj) * wgt;
+      }
+    }
+
+    ViewMatrixTypeReal edotp_avg_loc(&loc_reduce.array[74],3,3);
+    for (int ii = 1; ii <= 3; ii++) {
+      for (int jj = 1; jj <= 3; jj++) {
+        edotp_avg_loc(ii,jj) += edotp(ii,jj,i,j,k) * wgt;
+      }
+    }
+#endif
+
   }, all_reduce);
   Kokkos::fence(); // needed to prevent race condition
 
@@ -384,5 +410,33 @@ void EVPFFT::evpal(int imicro)
 
   errs = all_reduce.array[0];
   erre = all_reduce.array[1];
+
+#if BUILD_EVPFFT_FIERRO
+  ViewMatrixTypeReal cg66_avg_view (&all_reduce.array[2],6,6);
+  ViewMatrixTypeReal dedotp66_avg_view (&all_reduce.array[38],6,6);
+  ViewMatrixTypeReal edotp_avg_view (&all_reduce.array[74],3,3); 
+
+  for (int ii = 1; ii <= 6; ii++) {
+    for (int jj = 1; jj <= 6; jj++) {
+      cg66_avg(ii,jj) = cg66_avg_view(ii,jj);
+      sg66_avg(ii,jj) = cg66_avg_view(ii,jj);
+      dedotp66_avg(ii,jj) = dedotp66_avg_view(ii,jj);
+    }
+  }
+#ifdef LU_MATRIX_INVERSE
+  lu_inverse(sg66_avg.pointer(), 6);
+#elif GJE_MATRIX_INVERSE
+  inverse_gj(sg66_avg.pointer(), 6);
+#endif
+
+  // copy edotp_avg_view into edotp_avg
+  for (int ii = 1; ii <= 3; ii++) {
+    for (int jj = 1; jj <= 3; jj++) {
+      edotp_avg(ii,jj) = edotp_avg_view(ii,jj);
+    }
+  }
+
+// endif for if BUILD_EVPFFT_FIERRO
+#endif
 
 }

@@ -42,6 +42,8 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
+#include "Simulation_Parameters.h"
+#include "FEA_Module.h"
 #include <string>
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
@@ -55,7 +57,9 @@
 #include <Tpetra_CrsMatrix.hpp>
 #include <Kokkos_Core.hpp>
 #include "Tpetra_Details_DefaultTypes.hpp"
+#include "Tpetra_Import.hpp"
 #include <map>
+#include <memory>
 
 using namespace mtr;
 
@@ -64,18 +68,11 @@ namespace swage{
   class mesh_t;
 }
 
-namespace elements{
-  class element_selector;
-  class Element3D;
-  class Element2D;
-  class ref_element;
-}
-
-//forward declarations
 namespace ROL{
   template<class datatype>
   class Problem;
 }
+
 
 class Solver{
 
@@ -118,7 +115,7 @@ public:
   typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
 
   Solver();
-  ~Solver();
+  virtual ~Solver();
   
   virtual void setup() {}
 
@@ -140,6 +137,8 @@ public:
 
   virtual void repartition_nodes();
 
+  virtual void comm_importer_setup();
+
   virtual void comm_coordinates();
 
   virtual void tecplot_writer() {}
@@ -159,12 +158,23 @@ public:
   int setup_flag, finalize_flag;
 
   //MPI data
-  int myrank; //index of this mpi rank in the world communicator
+  int myrank = 0; //index of this mpi rank in the world communicator
   int nranks; //number of mpi ranks in the world communicator
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
+  Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> dof_importer; //ghost dof comms
 
   //class Simulation_Parameters *simparam;
-  class Simulation_Parameters *simparam;
+  Simulation_Parameters simparam;
+
+  //set of enabled FEA modules
+  std::vector<FEA_MODULE_TYPE> fea_module_types;
+  std::vector<FEA_Module*> fea_modules;
+  std::set<FEA_MODULE_TYPE> fea_module_must_read;
+  int nfea_modules;
+  int displacement_module;
 
   //Local FEA data
   size_t nlocal_nodes;
@@ -178,10 +188,10 @@ public:
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_vector_storage;
   size_t max_nodes_per_element, max_nodes_per_patch;
-  elements::element_selector *element_select;
-  elements::Element3D *elem;
+  std::shared_ptr<elements::element_selector> element_select;
+  std::shared_ptr<elements::ref_element>  ref_elem;
   elements::Element2D *elem2D;
-  elements::ref_element  *ref_elem;
+  elements::Element3D *elem;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;
@@ -204,11 +214,12 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_element_map; //sorted contiguous map of element indices owned by each rank used in parallel IO
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > local_dof_map; //map of local dofs (typically num_node_local*num_dim)
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_dof_map; //map of local and ghost dofs (typically num_node_all*num_dim)
-  Teuchos::RCP<MCONN> nodes_in_elem_distributed; //element to node connectivity table
+  Teuchos::RCP<MCONN> global_nodes_in_elem_distributed; //element to node connectivity table
   Teuchos::RCP<MCONN> node_nconn_distributed; //how many elements a node is connected to
   Teuchos::RCP<MV> node_coords_distributed;
   Teuchos::RCP<MV> ghost_node_coords_distributed;
   Teuchos::RCP<MV> initial_node_coords_distributed;
+  Teuchos::RCP<MV> all_initial_node_coords_distributed;
   Teuchos::RCP<MV> all_node_coords_distributed;
   Teuchos::RCP<MV> design_node_densities_distributed;
   Teuchos::RCP<MV> filtered_node_densities_distributed;
@@ -239,7 +250,7 @@ public:
   std::map<Node_Combination,LO> boundary_patch_to_index; //maps patches to corresponding patch index (inverse of Boundary Patches array)
   
   //file readin variables
-  std::ifstream *in;
+  std::ifstream *in = NULL;
   std::streampos before_condition_header;
   int words_per_line, elem_words_per_line;
   enum node_ordering_convention {IJK, ENSIGHT};
@@ -255,7 +266,7 @@ public:
   //debug and system functions/variables
   double CPU_Time();
   void init_clock();
-  double initial_CPU_time, communication_time, dev2host_time, host2dev_time;
+  double initial_CPU_time, communication_time, dev2host_time, host2dev_time, output_time;
 
   //Pointer to ROL Problem for optimization solves
   Teuchos::RCP<ROL::Problem<real_t>> problem;
