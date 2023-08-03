@@ -1098,7 +1098,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
    Gradient for the (unsimplified) kinetic energy minimization problem
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array design_variables, vec_array design_gradients){
+void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array design_variables, vec_array design_gradients, const_host_vec_array host_design_variables, host_vec_array host_design_gradients){
 
   size_t num_bdy_nodes = mesh.num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam->boundary;
@@ -1329,7 +1329,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(const_vec_array
   } //end view scope
   
   //force_design_gradient_term(design_variables, design_gradients);
-  compute_stiffness_gradients(design_variables, design_gradients);
+  compute_stiffness_gradients(host_design_variables, host_design_gradients);
 
 }
 

@@ -477,7 +477,7 @@ public:
 
   void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
 
-  void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
+  void compute_topology_optimization_gradient_full(const_vec_array design_variables, vec_array design_gradients, const_host_vec_array host_design_variables, host_vec_array host_design_gradients);
 
   //elastic TO stuff
   void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
