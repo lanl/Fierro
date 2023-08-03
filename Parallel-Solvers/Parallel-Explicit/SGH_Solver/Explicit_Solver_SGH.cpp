@@ -484,7 +484,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   //set initial saved velocities
   initial_node_velocities_distributed->assign(*node_velocities_distributed);
     
-  if(simparam_dynamic_opt->topology_optimization_on||simparam_dynamic_opt->shape_optimization_on){
+  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
       //design_node_densities_distributed->randomize(1,1);
       setup_optimization_problem();
       //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
