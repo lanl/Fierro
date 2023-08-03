@@ -649,7 +649,7 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_vec_array design_variable
   int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
-  const size_t rk_level = simparam->rk_num_bins - 1;  
+  const size_t rk_level = simparam.rk_num_bins - 1;  
   GO current_global_index;
   
   real_t global_dt;
