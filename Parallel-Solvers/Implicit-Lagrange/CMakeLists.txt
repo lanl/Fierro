@@ -31,11 +31,8 @@ include_directories(FEA_Physics_Modules)
 add_library(fea_modules OBJECT ${FEA_Module_SRC})
 add_executable(fierro-parallel-implicit main.cpp ${Implicit_Solver_SRC})
 
-target_link_libraries (fierro-parallel-implicit swage)
-target_link_libraries (fierro-parallel-implicit elements)
 target_link_libraries (fea_modules swage)
 target_link_libraries (fea_modules elements)
-
 
 target_include_directories(fierro-parallel-implicit PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(fea_modules PRIVATE ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
