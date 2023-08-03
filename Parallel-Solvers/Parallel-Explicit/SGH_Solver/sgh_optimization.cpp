@@ -248,7 +248,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 elem_mass(elem_gid) = elem_den(elem_gid)*elem_vol(elem_gid);
                 
                 // specific internal energy
-                elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie.value();
+                elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 		
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
@@ -307,9 +307,9 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                         case VELOCITY_TYPE::cartesian:
                         {
                         
-                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).u.value();
-                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).v.value();
-                            if (num_dim == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).w.value();
+                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).u;
+                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).v;
+                            if (num_dim == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).w;
                             
                         
                             break;

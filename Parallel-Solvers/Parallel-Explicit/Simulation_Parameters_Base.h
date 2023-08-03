@@ -143,7 +143,8 @@ IMPL_YAML_SERIALIZABLE_FOR(Time_Variables,
   cycle_stop, fuzz, tiny, small
 )
 
-struct material_t : Yaml::DerivedFields {
+
+struct material_t {
   EOS_MODEL eos_model_type           = EOS_MODEL::ideal_gas;
   STRENGTH_TYPE strength_type        = STRENGTH_TYPE::none;
   STRENGTH_SETUP strength_setup      = STRENGTH_SETUP::input;
@@ -154,23 +155,20 @@ struct material_t : Yaml::DerivedFields {
   double q2;
   double q1ex;
   double q2ex;
-  std::vector<double> state_vars;
-  std::vector<double> global_vars;
-
-  // Non-serialized fields
+  
   size_t num_state_vars = 0;
   size_t num_global_vars = 0;
       
   eos_function_type* eos_model = NULL;
   strength_function_type* strength_model = NULL;
-
-  void derive_function_pointers() {
+  
+  KOKKOS_FUNCTION
+  void derive_function_pointers_no_exec() {
     switch (eos_model_type) {
       case EOS_MODEL::ideal_gas:
         eos_model = ideal_gas;
         break;
       default:
-        throw Yaml::ConfigurationException("Unsupported EOS Model Type " + to_string(eos_model_type));
         break;
     }
 
@@ -179,10 +177,21 @@ struct material_t : Yaml::DerivedFields {
         strength_model = user_strength_model;
         break;
       default:
-        strength_model = NULL;
         break;
     }
   }
+
+  void derive_function_pointers() {
+    derive_function_pointers_no_exec();
+    if (eos_model == NULL) {
+      throw Yaml::ConfigurationException("Unsupported EOS MODEL type: " + to_string(eos_model_type));
+    }
+  }
+};
+
+struct Material : Yaml::DerivedFields, material_t {
+  std::vector<double> state_vars;
+  std::vector<double> global_vars;
 
   void derive() {
     num_state_vars = state_vars.size();
@@ -190,37 +199,66 @@ struct material_t : Yaml::DerivedFields {
     derive_function_pointers();
   }
 };
-IMPL_YAML_SERIALIZABLE_FOR(material_t, 
+IMPL_YAML_SERIALIZABLE_FOR(Material, 
   eos_model_type, strength_model_type, strength_type, strength_setup, 
   strength_run_location,
   q1, q2, q1ex, q2ex, 
   state_vars, global_vars
 )
 
-struct mat_fill_t : Yaml::DerivedFields, Yaml::ValidatedYaml {
-    VOLUME_TAG volume = VOLUME_TAG::sphere;
+struct mat_fill_t {
     size_t mat_id;
-    double den;
-    std::optional<double> sie;
+    VOLUME_TAG volume = VOLUME_TAG::sphere;
     VELOCITY_TYPE velocity = VELOCITY_TYPE::cartesian;
-    std::optional<double> u;
-    std::optional<double> v;
-    std::optional<double> w;
+    double radius1, radius2;
+    double u,v,w;
     double speed;
-
-    std::optional<double> radius1;
-    std::optional<double> radius2;
-
-    // Non-serialized
+    double sie;
+    double den;
     
     // TODO: These aren't set from the YAML at all
     // They are only set in the test problems.
-    double x1;
-    double x2;
-    double y1;
-    double y2;
-    double z1;
-    double z2;
+    double x1, x2, y1, y2, z1, z2;
+    
+    KOKKOS_FUNCTION
+    bool contains(const double* elem_coords) { 
+      double radius;
+
+      switch(volume)
+      {
+        case VOLUME_TAG::global:
+          return true;
+
+        case VOLUME_TAG::box:
+          return ( elem_coords[0] >= x1 && elem_coords[0] <= x2
+                && elem_coords[1] >= y1 && elem_coords[1] <= y2
+                && elem_coords[2] >= z1 && elem_coords[2] <= z2 );
+
+        case VOLUME_TAG::cylinder:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] ); 
+          return ( radius >= radius1
+                && radius <= radius2 );
+
+        case VOLUME_TAG::sphere:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] +
+                         elem_coords[2]*elem_coords[2] );
+          return ( radius >= radius1
+                && radius <= radius2 );
+        
+        default:
+          return false;
+      }
+    }
+};
+struct MaterialFill : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
+    std::optional<double> sie;
+    std::optional<double> u;
+    std::optional<double> v;
+    std::optional<double> w;
+    std::optional<double> radius1;
+    std::optional<double> radius2;
 
     void validate() {
       if ( (u.has_value() || v.has_value() || w.has_value())
@@ -245,53 +283,55 @@ struct mat_fill_t : Yaml::DerivedFields, Yaml::ValidatedYaml {
           sie = (963.652344 * std::pow((1.2 / 30.0), 3)) / std::pow(radius2.value(), 3);
         }
       }
-    }
 
-    bool contains(const double* elem_coords) { 
-      double radius;
-
-      switch(volume)
-      {
-        case VOLUME_TAG::global:
-          return true;
-
-        case VOLUME_TAG::box:
-          return ( elem_coords[0] >= x1 && elem_coords[0] <= x2
-                && elem_coords[1] >= y1 && elem_coords[1] <= y2
-                && elem_coords[2] >= z1 && elem_coords[2] <= z2 );
-
-        case VOLUME_TAG::cylinder:
-          radius = sqrt( elem_coords[0]*elem_coords[0] +
-                         elem_coords[1]*elem_coords[1] ); 
-          return ( radius >= radius1.value()
-                && radius <= radius2.value() );
-
-        case VOLUME_TAG::sphere:
-          radius = sqrt( elem_coords[0]*elem_coords[0] +
-                         elem_coords[1]*elem_coords[1] +
-                         elem_coords[2]*elem_coords[2] );
-          return ( radius >= radius1.value()
-                && radius <= radius2.value() );
-        
-        default:
-          throw std::runtime_error("Unsupported volume type: " + to_string(volume));
-      }
+      mat_fill_t::radius1 = radius1.value_or(0);
+      mat_fill_t::radius2 = radius2.value_or(0);
+      mat_fill_t::sie = sie.value_or(0);
+      mat_fill_t::u = u.value_or(0);
+      mat_fill_t::v = v.value_or(0);
+      mat_fill_t::w = w.value_or(0);
     }
 };
 IMPL_YAML_SERIALIZABLE_FOR(
-  mat_fill_t, volume, mat_id, 
+  MaterialFill, volume, mat_id, 
   den, sie, velocity, u, v, w, 
   radius1, radius2, speed
 )
 
-struct boundary_t : Yaml::ValidatedYaml {
-    std::string id;
+struct boundary_t {
+    BOUNDARY_HYDRO_CONDITION condition_type = BOUNDARY_HYDRO_CONDITION::fixed;
     BOUNDARY_TAG surface = BOUNDARY_TAG::sphere;
     double value;
-    BOUNDARY_HYDRO_CONDITION condition_type = BOUNDARY_HYDRO_CONDITION::fixed;
+    double u, v, w;
+    
+    KOKKOS_FUNCTION
+    size_t planar_surface_index() {
+      switch (surface) {
+        case BOUNDARY_TAG::x_plane:
+          return 0;
+        case BOUNDARY_TAG::y_plane:
+          return 1;
+        case BOUNDARY_TAG::z_plane:
+          return 2;
+        default:
+          // Not sure what to do about this error case, since we can't
+          // throw on the device.
+          return -1;
+      }
+    }
+};
+
+struct Boundary : Yaml::ValidatedYaml, Yaml::DerivedFields, boundary_t {
+    std::string id;
     std::optional<double> u;
     std::optional<double> v;
     std::optional<double> w;
+
+    void derive() {
+      boundary_t::u = u.value_or(0);
+      boundary_t::v = v.value_or(0);
+      boundary_t::w = w.value_or(0);
+    }
 
     void validate() {
       if ( (u.has_value() || v.has_value() || w.has_value())
@@ -313,21 +353,8 @@ struct boundary_t : Yaml::ValidatedYaml {
         }
       }
     }
-
-    size_t planar_surface_index() {
-      switch (surface) {
-        case BOUNDARY_TAG::x_plane:
-          return 0;
-        case BOUNDARY_TAG::y_plane:
-          return 1;
-        case BOUNDARY_TAG::z_plane:
-          return 2;
-        default:
-          throw std::runtime_error("Attempted to get surface index with invalid boundary type");
-      }
-    }
 };
-IMPL_YAML_SERIALIZABLE_FOR(boundary_t, id, surface, value, condition_type, u, v, w)
+IMPL_YAML_SERIALIZABLE_FOR(Boundary, id, surface, value, condition_type, u, v, w)
 
 struct Graphics_Options : Yaml::DerivedFields {
   bool output_velocity_flag = true;

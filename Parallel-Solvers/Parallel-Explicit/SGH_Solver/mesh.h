@@ -2,7 +2,6 @@
 #define MESH_H
 
 
-#include <Kokkos_Macros.hpp>
 #include "matar.h"
 #include "state.h"
 
@@ -806,11 +805,8 @@ struct mesh_t {
     } // end of node node connectivity
     
     
-
-    
-    
     void init_bdy_sets (size_t num_bcs){
-        // TODO: This default just causes errors.
+        
         if(num_bcs == 0){
             printf("ERROR: number of boundary sets = 0, set it = 1");
             num_bcs = 1;
@@ -825,127 +821,5 @@ struct mesh_t {
 
     
 }; // end mesh_t
-
-
-namespace region
-{
-
-    // for tagging boundary faces
-    enum vol_tag
-    {
-        global = 0,     // tag every cell in the mesh
-        box = 1,        // tag all cells inside a box
-        cylinder = 2,   // tag all cells inside a cylinder
-        sphere = 3      // tag all cells inside a sphere
-    };
-
-} // end of namespace
-
-
-namespace init_conds
-{
-    
-    // applying initial conditions
-    enum init_velocity_conds
-    {
-        // uniform
-        cartesian = 0,   // cart velocity
-        radial = 1,      // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
-        spherical = 2,   // spherical
-    
-        // linear variation
-        radial_linear = 3,     // linear variation from 0,0,0
-        spherical_linear = 4,   // linear variation from 0,0,0
-    
-        // vortical initial conditions
-        tg_vortex = 5
-    };
-    
-} // end of initial conditions namespace
-
-
-// // fill instructions
-// struct mat_fill_t {
-    
-//     // type
-//     region::vol_tag volume; // 1 is global, 2 are planes, 3 is a sphere
-    
-//     // material id
-//     size_t mat_id;
-    
-//     // planes
-//     double x1;
-//     double x2;
-//     double y1;
-//     double y2;
-//     double z1;
-//     double z2;
-    
-//     // radius
-//     double radius1;
-//     double radius2;
-
-    
-//     // initial conditions
-//     init_conds::init_velocity_conds velocity;
-    
-//     // velocity coefficients by component
-//     double u,v,w;
-    
-//     // velocity magnitude for radial velocity initialization
-//     double speed;
-    
-//     double sie;  // specific internal energy
-//     double den;  // density
-// };
-
-
-namespace bdy
-{
-    
-    // for tagging boundary faces
-    enum bdy_tag
-    {
-        x_plane  = 0,   // tag an x-plane
-        y_plane  = 1,   // tag an y-plane
-        z_plane  = 2,   // tag an z-plane
-        cylinder = 3,   // tag an cylindrical surface
-        sphere   = 4,   // tag a spherical surface
-        readFile = 5    // read from a file
-    };
-    
-    
-    
-    // for enforcing boundary conditions
-    enum bdy_hydro_conds
-    {
-        fixed = 0,          // zero velocity
-        reflected = 1,      // reflected or wall condition
-        velocity = 2,       // constant velocity
-        pressure = 3,       // constant pressure
-        acceleration = 4,   // constant acceleration
-        contact = 5         // contact surface
-    };
-
-} // end of bdy namespace
-
-
-// // tag mesh points on bdy's and set the BC type
-// struct boundary_t {
-
-//     // tag surface type
-//     bdy::bdy_tag surface;    // 0=xplane, 1=yplane, 2=zplane, 3=cylinder, 4=sphere, 5=read file
-    
-//     // tag surface value or radius
-//     real_t value;
-
-//     // velocity coefficients by component
-//     double u,v,w;
-   
-//     // BC type
-//     bdy::bdy_hydro_conds hydro_bc;
-    
-// };
-
 
 #endif 

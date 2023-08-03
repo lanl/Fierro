@@ -632,7 +632,7 @@ void FEA_Module_SGH::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array
    Compute the gradient of strain energy with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::compute_stiffness_gradients(const_host_vec_array design_variables, host_vec_array design_gradients){
+void FEA_Module_SGH::compute_stiffness_gradients(const_vec_array design_variables, vec_array design_gradients){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   

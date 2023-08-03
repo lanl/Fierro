@@ -55,9 +55,9 @@ using namespace mtr;
 
 struct Simulation_Parameters_SGH : Simulation_Parameters {
   Time_Variables time_variables;
-  std::vector<mat_fill_t> region_options;
-  std::vector<material_t> material_options;
-  std::vector<boundary_t> boundary_conditions;
+  std::vector<MaterialFill> region_options;
+  std::vector<Material> material_options;
+  std::vector<Boundary> boundary_conditions;
   Graphics_Options graphics_options;
 
   bool gravity_flag   = false;
@@ -97,10 +97,10 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
     }
   }
 
-  template<typename T> void from_vector(DCArrayKokkos<T>& array, const std::vector<T>& vec) {
+  template<typename T, typename K> void from_vector(DCArrayKokkos<T>& array, const std::vector<K>& vec) {
     array = DCArrayKokkos<T>(vec.size());
     for (size_t i = 0; i < vec.size(); i++)
-      array.host(i) = vec[i];
+      array.host(i) = *(T*)&vec[i];
   }
   void derive_kokkos_arrays() {
     max_num_state_vars = 0;
@@ -126,7 +126,7 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
 
     // Re-derive function pointers after move to device.
     for (size_t i = 0; i < material.size(); i++) {
-      RUN_CLASS({ material(i).derive_function_pointers(); });
+      RUN_CLASS({ material(i).derive_function_pointers_no_exec(); });
     }
   }
 
