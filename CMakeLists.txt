@@ -10,7 +10,6 @@ include(cmake/Modules/TargetDistclean.cmake OPTIONAL)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-
 option(TEST "Build tests" ON)
 
 if (TEST)
@@ -84,6 +83,7 @@ if(BUILD_EXPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
 endif()
 
 if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
+  set(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
   find_package(MPI REQUIRED)
   find_package(Trilinos REQUIRED)
 

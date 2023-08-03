@@ -1,5 +1,7 @@
 add_library(yaml_serializable src/Yaml.cpp)
 target_include_directories(yaml_serializable PUBLIC include)
+target_link_libraries(yaml_serializable PUBLIC stdc++fs)
+
 install(
   TARGETS yaml_serializable
 )
