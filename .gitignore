@@ -1,4 +1,6 @@
 bin
+_deps
+lib
 build
 build-SGH-cuda
 build-kokkos

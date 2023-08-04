@@ -482,7 +482,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
 
   //set initial saved velocities
-  initial_node_velocities_distributed->assign(*node_velocities_distributed);
+  initial_node_velocities_distributed->assign(*node_velocities_distributed);\
+
+  sgh_module->setup();
     
   if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
       //design_node_densities_distributed->randomize(1,1);
@@ -495,20 +497,6 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     // ---------------------------------------------------------------------  
       sgh_module->sgh_solve();
   }
-
-  //set initial saved velocities
-  initial_node_velocities_distributed->assign(*node_velocities_distributed);
-  
-  if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on){
-    //design_node_densities_distributed->randomize(1,1);
-    setup_optimization_problem();
-    //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
-  }
-  
-  // ---------------------------------------------------------------------
-  //  Calculate the SGH solution
-  // ---------------------------------------------------------------------  
-  sgh_module->sgh_solve();
 
   // cleanup user strength model if any
   sgh_module->cleanup_user_strength_model(); 
