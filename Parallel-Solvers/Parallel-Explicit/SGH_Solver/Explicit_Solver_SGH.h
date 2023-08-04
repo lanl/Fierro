@@ -111,7 +111,7 @@ public:
 
   void parallel_vtk_writer();
 
-  void write_outputs_new();
+  void write_outputs();
   void parallel_vtk_writer_new();
   void parallel_vtu_writer_new(); // not yet added
   enum output_file_format_type {VTK, VTU};

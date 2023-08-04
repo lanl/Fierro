@@ -1591,29 +1591,10 @@ void FEA_Module_SGH::sgh_solve(){
       printf("Writing outputs to file at %f \n", time_value);
 
       double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
-      Explicit_Solver_Pointer_->write_outputs_new();
+      Explicit_Solver_Pointer_->write_outputs();
       double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
       Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
     }
-    /*
-    write_outputs(mesh,
-                  Explicit_Solver_Pointer_,
-                  node_coords,
-                  node_vel,
-                  node_mass,
-                  elem_den,
-                  elem_pres,
-                  elem_stress,
-                  elem_sspd,
-                  elem_sie,
-                  elem_vol,
-                  elem_mass,
-                  elem_mat_id,
-                  graphics_times,
-                  graphics_id,
-                  time_value);
-      */
-    
     
     CArrayKokkos <double> node_extensive_mass(nall_nodes, "node_extensive_mass");
     
@@ -2304,7 +2285,7 @@ void FEA_Module_SGH::sgh_solve(){
             
         // write outputs
       if (write == 1){
-            //interface nodal coordinate data (note: this is not needed if using write_outputs_new())
+            //interface nodal coordinate data (note: this is not needed if using write_outputs())
             //view scope
             {
               vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
@@ -2320,7 +2301,7 @@ void FEA_Module_SGH::sgh_solve(){
               }
 
               double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
-              Explicit_Solver_Pointer_->write_outputs_new();
+              Explicit_Solver_Pointer_->write_outputs();
 
               double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
               Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
