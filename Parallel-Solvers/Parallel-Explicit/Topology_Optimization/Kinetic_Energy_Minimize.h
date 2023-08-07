@@ -189,8 +189,8 @@ public:
     }
 
     //decide to output current optimization state
-    if(current_step%FEM_->simparam_dynamic_opt.optimization_output_freq==0)
-      FEM_->Explicit_Solver_Pointer_->parallel_tecplot_writer();
+    //if(current_step%FEM_->simparam_dynamic_opt.optimization_output_freq==0)
+      //FEM_->Explicit_Solver_Pointer_->parallel_tecplot_writer();
   }
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
@@ -255,12 +255,9 @@ public:
     //FEM_->gradient_print_sync=1;
     //FEM_->gradient_print_sync=0;
     //get local view of the data
-    vec_array objective_gradients = gp->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-    const_vec_array design_densities = zp->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-    host_vec_array host_objective_gradients = gp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    const_host_vec_array host_design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    
 
-    FEM_->compute_topology_optimization_gradient_full(design_densities, objective_gradients, host_design_densities, host_objective_gradients);
+    FEM_->compute_topology_optimization_gradient_full(zp,gp);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));

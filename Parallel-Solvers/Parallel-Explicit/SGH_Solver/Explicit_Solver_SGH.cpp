@@ -480,11 +480,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
   sgh_module->get_vol();
 
+  sgh_module->setup();
 
   //set initial saved velocities
-  initial_node_velocities_distributed->assign(*node_velocities_distributed);\
-
-  sgh_module->setup();
+  initial_node_velocities_distributed->assign(*node_velocities_distributed);
     
   if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
       //design_node_densities_distributed->randomize(1,1);
