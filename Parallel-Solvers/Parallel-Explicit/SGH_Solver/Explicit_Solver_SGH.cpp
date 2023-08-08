@@ -1288,8 +1288,9 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
 
   //Design variables to optimize
   ROL::Ptr<ROL::Vector<real_t>> x;
-  if(nodal_density_flag)
+  if(nodal_density_flag){
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(design_node_densities_distributed);
+  }
   else
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities);
   

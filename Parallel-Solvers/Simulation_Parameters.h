@@ -147,8 +147,10 @@ struct Output_Options {
   int graphics_step_frequency;
   double graphics_step;
   OUTPUT_FORMAT output_file_format;
+  bool write_initial = true;
+  bool write_final = true;
 };
-IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format)
+IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format, write_initial, write_final)
 
 
 SERIALIZABLE_ENUM(BOUNDARY_TAG, 

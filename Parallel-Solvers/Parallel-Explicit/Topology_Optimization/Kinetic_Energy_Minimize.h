@@ -151,6 +151,8 @@ public:
       //first linear solve was done in FEA class run function already
       FEM_->sgh_solve();
       //initial design density data was already communicated for ghost nodes in init_design()
+      //decide to output current optimization state
+      FEM_->Explicit_Solver_Pointer_->write_outputs_new();
     }
     else if (type == ROL::UpdateType::Accept) {
       // u_ was set to u=S(x) during a trial update
@@ -177,6 +179,9 @@ public:
       FEM_->update_forward_solve(zp);
       if(FEM_->myrank==0)
       *fos << "called Trial" << std::endl;
+
+      //decide to output current optimization state
+      FEM_->Explicit_Solver_Pointer_->write_outputs_new();
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,
@@ -188,9 +193,6 @@ public:
       FEM_->update_forward_solve(zp);
     }
 
-    //decide to output current optimization state
-    //if(current_step%FEM_->simparam_dynamic_opt.optimization_output_freq==0)
-      //FEM_->Explicit_Solver_Pointer_->parallel_tecplot_writer();
   }
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {

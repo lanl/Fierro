@@ -558,15 +558,17 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
     global_dt = time_data[cycle+1] - time_data[cycle];
     
     //print
-    if (cycle==last_time_step){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::high){
+      if (cycle==last_time_step){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      }
+          // print time step every 10 cycles
+      else if (cycle%20==0){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      } // end if
     }
-        // print time step every 10 cycles
-    else if (cycle%20==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-    } // end if
     //else if (cycle==1){
       //if(myrank==0)
         //printf("cycle = %lu, time = %f, time step = %f \n", cycle-1, time_data[cycle-1], global_dt);
@@ -622,15 +624,17 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
     global_dt = time_data[cycle+1] - time_data[cycle];
     
     //print
-    if (cycle==last_time_step){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::high){
+      if (cycle==last_time_step){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      }
+          // print time step every 10 cycles
+      else if (cycle%20==0){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      } // end if
     }
-        // print time step every 10 cycles
-    else if (cycle%20==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-    } // end if
     //else if (cycle==1){
       //if(myrank==0)
         //printf("cycle = %lu, time = %f, time step = %f \n", cycle-1, time_data[cycle-1], global_dt);
@@ -865,15 +869,17 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
     global_dt = time_data[cycle+1] - time_data[cycle];
     
     //print
-    if (cycle==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::high){
+      if (cycle==0){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      }
+          // print time step every 10 cycles
+      else if (cycle%20==0){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      } // end if
     }
-        // print time step every 10 cycles
-    else if (cycle%20==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-    } // end if
 
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
@@ -977,15 +983,17 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
     global_dt = time_data[cycle+1] - time_data[cycle];
     
     //print
-    if (cycle==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::high){
+      if (cycle==0){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      }
+          // print time step every 10 cycles
+      else if (cycle%20==0){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      } // end if
     }
-        // print time step every 10 cycles
-    else if (cycle%20==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-    } // end if
 
     //compute adjoint vector for this data point; use velocity midpoint
       //view scope
@@ -1093,15 +1101,18 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
       global_dt = time_data[cycle+1] - time_data[cycle];
       
       //print
-      if (cycle==0){
-        if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::high){
+
+        if (cycle==0){
+          if(myrank==0)
+            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+        }
+            // print time step every 10 cycles
+        else if (cycle%20==0){
+          if(myrank==0)
+            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+        } // end if
       }
-          // print time step every 10 cycles
-      else if (cycle%20==0){
-        if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-      } // end if
 
       //compute adjoint vector for this data point; use velocity midpoint
         //view scope
@@ -1171,15 +1182,18 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print
-      if (cycle==0){
-        if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::high){
+
+        if (cycle==0){
+          if(myrank==0)
+            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+        }
+            // print time step every 10 cycles
+        else if (cycle%20==0){
+          if(myrank==0)
+            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+        } // end if
       }
-          // print time step every 10 cycles
-      else if (cycle%20==0){
-        if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-      } // end if
 
       //compute adjoint vector for this data point; use velocity midpoint
         //view scope

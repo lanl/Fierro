@@ -48,7 +48,7 @@ void FEA_Module_SGH::get_force_elastic(const DCArrayKokkos <material_t> &materia
             
             // loop over dimension
             for (size_t dim = 0; dim < num_dim; dim++){
-                node_force[dim] += -0.00001*node_vel(rk_level, node_gid, dim);
+                node_force[dim] += -0.00000001*node_vel(rk_level, node_gid, dim);
             } // end for dim
             
         } // end for corner_lid
@@ -712,15 +712,17 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_vec_array design_variable
     global_dt = time_data[cycle+1] - time_data[cycle];
 
     //print
-    if (cycle==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::high){
+      if (cycle==0){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      }
+          // print time step every 10 cycles
+      else if (cycle%20==0){
+        if(myrank==0)
+          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+      } // end if
     }
-        // print time step every 10 cycles
-    else if (cycle%20==0){
-      if(myrank==0)
-        printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-    } // end if
 
     //view scope
     {
