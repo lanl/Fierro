@@ -776,7 +776,8 @@ void FEA_Module_SGH::setup(){
     const DCArrayKokkos <material_t> material = simparam.material;
     const DCArrayKokkos <double> state_vars = simparam.state_vars; // array to hold init model variables
     global_vars = simparam.global_vars;
-    
+    elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options.max_num_user_output_vars); 
+ 
     //--- calculate bdy sets ---//
     mesh.num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
     mesh.num_patches_in_elem = 2*num_dim; // 4 (2D) or 6 (3D)
@@ -832,47 +833,30 @@ void FEA_Module_SGH::setup(){
         Kokkos::fence();
 
     }// end for
-    
-    
-    // ---- Read model values from a file ----
-    // check to see if state_vars come from an external file
-    read_from_file = DCArrayKokkos <STRENGTH_SETUP>(num_materials, "read_from_file");
-    FOR_ALL_CLASS(mat_id, 0, num_materials, {
-        
-        read_from_file(mat_id) = material(mat_id).strength_setup;
-        
-    }); // end parallel for
-    Kokkos::fence();
-    
-    read_from_file.update_host(); // copy to CPU if code is to read from a file
-    Kokkos::fence();
-   
+
+    // elem_mat_id needs to be initialized before initialization of material models
+    for (int f_id = 0; f_id < num_fills; f_id++){
+      FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+        elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
+      });
+    }
+    elem_mat_id.update_host();
  
-    // make memory to store state_vars from an external file
-    file_state_vars = DCArrayKokkos <double>(num_materials,rnum_elem,num_state_vars);
-    
-    for (size_t mat_id=0; mat_id<num_materials; mat_id++){
-        
-        if (read_from_file.host(mat_id) == STRENGTH_SETUP::user_input){
-            
-            size_t num_vars = material.host(mat_id).num_state_vars;
-            size_t num_gvars = material.host(mat_id).num_global_vars;
- 
-            init_user_strength_model(file_state_vars,
-                                     global_vars,
-                                     num_vars,
-                                     num_gvars,
-                                     mat_id,
-                                     rnum_elem);
-            
-            // copy the values to the device
-            file_state_vars.update_device();
-            Kokkos::fence();
-            
-        } // end if
-        
-    } // end for
-    
+    // initialize strength model
+    init_strength_model(elem_strength,
+                        material,
+                        elem_mat_id,
+                        global_vars,
+                        elem_user_output_vars,
+                        rnum_elem);
+
+    // initialize eos model
+    init_eos_model(elem_eos,
+                   material,
+                   elem_mat_id,
+                   global_vars,
+                   elem_user_output_vars,
+                   rnum_elem);
     
     //--- apply the fill instructions over each of the Elements---//
     
@@ -926,27 +910,7 @@ void FEA_Module_SGH::setup(){
                 // specific internal energy
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 		
-                elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
-                
-                
-                // get state_vars from the input file or read them in
-                if (material(mat_id).strength_setup == STRENGTH_SETUP::user_input){
-                    
-                    // use the values read from a file to get elem state vars
-                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
-                        elem_statev(elem_gid,var) = file_state_vars(mat_id,elem_gid,var);
-                    } // end for
-                    
-                }
-                else{
-                    // use the values in the input file
-                    // set state vars for the region where mat_id resides
-                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
-                        elem_statev(elem_gid,var) = state_vars(mat_id,var);
-                    } // end for
-                    
-                } // end logical on type
                 
                 // --- stress tensor ---
                 // always 3D even for 2D-RZ
@@ -956,19 +920,30 @@ void FEA_Module_SGH::setup(){
                     }        
                 }  // end for
                 
-                
-                
-                // --- Pressure and stress ---
-                material(mat_id).eos_model(elem_pres,
-                                           elem_stress,
-                                           elem_gid,
-                                           elem_mat_id(elem_gid),
-                                           elem_statev,
-                                           global_vars,
-                                           elem_sspd,
-                                           elem_den(elem_gid),
-                                           elem_sie(rk_level,elem_gid));
-					    
+                // short form for clean code
+                EOSParent * eos_model = elem_eos(elem_gid).model;
+
+                // --- Pressure ---
+                eos_model->calc_pressure(elem_pres,
+                                         elem_stress,
+                                         elem_gid,
+                                         elem_mat_id(elem_gid),
+                                         global_vars,
+                                         elem_user_output_vars,
+                                         elem_sspd,
+                                         elem_den(elem_gid),
+                                         elem_sie(rk_level,elem_gid));
+
+                // --- Sound speed ---
+                eos_model->calc_sound_speed(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            elem_mat_id(elem_gid),
+                                            global_vars,
+                                            elem_user_output_vars,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(rk_level,elem_gid));
                 
                 // loop over the nodes of this element and apply velocity
                 for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
@@ -1077,6 +1052,9 @@ void FEA_Module_SGH::setup(){
                 
                 if(mat_fill(f_id).velocity == VELOCITY_TYPE::tg_vortex)
                 {
+                    throw std::runtime_error("init_conds::tg_vortex needs fixing");
+                    /* Caleb Yenusah: commented out because elem_statev have been removed from code */
+                    #if 0
                     elem_pres(elem_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;
                 
                     // p = rho*ie*(gamma - 1)
@@ -1084,6 +1062,7 @@ void FEA_Module_SGH::setup(){
                     double gamma = elem_statev(elem_gid,4); // gamma value
                     elem_sie(rk_level, elem_gid) =
                                     elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
+                    #endif
                 } // end if
 
             } // end if fill
@@ -1193,7 +1172,6 @@ void FEA_Module_SGH::setup(){
     }
 
     // update host copies of arrays modified in this function
-    elem_mat_id.update_host();
     elem_den.update_host();
     elem_mass.update_host();
     elem_sie.update_host();
@@ -1207,37 +1185,28 @@ void FEA_Module_SGH::setup(){
 } // end of setup
 
 /* ----------------------------------------------------------------------------
-    supporting destructor for the user strength model interface
+    Deallocate memory used for  material models
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::cleanup_user_strength_model() {
-/*
-  This function is called at the end of the simulation.
-  This gives the user a chance to cleanup any memory allocation that was done during 
-  the call to `init_user_strength_model(...)`.
-*/
+void FEA_Module_SGH::cleanup_material_models() {
 
-    size_t num_materials = simparam.material_options.size();
-    const DCArrayKokkos <material_t> & material = simparam.material;
+    const DCArrayKokkos <material_t> material = simparam.material;
 
-    for (size_t mat_id=0; mat_id<num_materials; mat_id++){
-     
-        if (read_from_file.host(mat_id) == STRENGTH_SETUP::user_input){
-     
-            size_t num_vars = material.host(mat_id).num_state_vars;
-            size_t num_gvars = material.host(mat_id).num_global_vars;
+    // destroy strength model
+    destroy_strength_model(elem_strength,
+                           material,
+                           elem_mat_id,
+                           global_vars,
+                           elem_user_output_vars,
+                           rnum_elem);
 
-            destroy_user_strength_model(file_state_vars,
-                                        global_vars,
-                                        num_vars,
-                                        num_gvars,
-                                        mat_id,
-                                        rnum_elem);
-     
-        } // end if
-     
-    } // end for
-
+    // destroy eos model
+    destroy_eos_model(elem_eos,
+                      material,
+                      elem_mat_id,
+                      global_vars,
+                      elem_user_output_vars,
+                      rnum_elem);
     return;
 
 } // end cleanup_user_strength_model;

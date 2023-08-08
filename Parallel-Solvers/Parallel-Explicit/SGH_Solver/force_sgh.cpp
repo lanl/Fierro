@@ -390,27 +390,28 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
 
                 // cut out the node_gids for this element
                 ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
-            
-                // --- call strength model ---
-                material(mat_id).strength_model(elem_pres,
-                                                elem_stress,
-                                                elem_gid,
-                                                mat_id,
-                                                elem_statev,
-                                                global_vars,
-                                                elem_sspd,
-                                                elem_den(elem_gid),
-                                                elem_sie(rk_level,elem_gid),
-                                                vel_grad,
-                                                elem_node_gids,
-                                                node_coords,
-                                                node_vel,
-                                                elem_vol(elem_gid),
-                                                dt,
-                                                rk_alpha,
-                                                cycle,
-                                                rk_level);
 
+                StrengthParent* strength_model = elem_strength(elem_gid).model;
+    
+                // --- call strength model ---
+                strength_model->calc_stress(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            mat_id,
+                                            global_vars,
+                                            elem_user_output_vars,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(rk_level,elem_gid),
+                                            vel_grad,
+                                            elem_node_gids,
+                                            node_coords,
+                                            node_vel,
+                                            elem_vol(elem_gid),
+                                            dt, 
+                                            rk_alpha,
+                                            cycle,
+                                            rk_level);
             } // end logical for strength run location
             
         } // end logical on hypo strength model
@@ -449,25 +450,28 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                     // cut out vel_grad 
                     ViewCArrayKokkos <double> vel_grad(&elem_vel_grad.host(elem_gid,0,0), num_dims, num_dims);
 
+                    StrengthParent* strength_model = elem_strength.host(elem_gid).model;
+
                     // --- call strength model ---
-                    material.host(mat_id).strength_model(elem_pres,
-                                                    elem_stress,
-                                                    elem_gid,
-                                                    mat_id,
-                                                    elem_statev,
-                                                    global_vars,
-                                                    elem_sspd,
-                                                    elem_den.host(elem_gid),
-                                                    elem_sie.host(rk_level,elem_gid),
-                                                    vel_grad,
-                                                    elem_node_gids,
-                                                    node_coords,
-                                                    node_vel,
-                                                    elem_vol.host(elem_gid),
-                                                    dt,
-                                                    rk_alpha,
-                                                    cycle,
-                                                    rk_level);
+                    strength_model->calc_stress(elem_pres,
+                                                elem_stress,
+                                                elem_gid,
+                                                mat_id,
+                                                global_vars,
+                                                elem_user_output_vars,
+                                                elem_sspd,
+                                                elem_den.host(elem_gid),
+                                                elem_sie.host(rk_level,elem_gid),
+                                                vel_grad,
+                                                elem_node_gids,
+                                                node_coords,
+                                                node_vel,
+                                                elem_vol.host(elem_gid),
+                                                dt,
+                                                rk_alpha,
+                                                cycle,
+                                                rk_level);
+
                 } // end logical for strength run location
 
             } // end logical on hypo strength model
@@ -847,27 +851,29 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
 
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t>   elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
-            
+
+            StrengthParent* strength_model = elem_strength(elem_gid).model;
+
             // --- call strength model ---
-            material(mat_id).strength_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            mat_id,
-                                            elem_statev,
-                                            global_vars,
-                                            elem_sspd,
-                                            elem_den(elem_gid),
-                                            elem_sie(elem_gid),
-                                            vel_grad,
-                                            elem_node_gids,
-                                            node_coords,
-                                            node_vel,
-                                            elem_vol(elem_gid),
-                                            dt,
-                                            rk_alpha,
-                                            cycle,
-                                            rk_level);
-            
+            strength_model->calc_stress(elem_pres,
+                                        elem_stress,
+                                        elem_gid,
+                                        mat_id,
+                                        global_vars,
+                                        elem_user_output_vars,
+                                        elem_sspd,
+                                        elem_den(elem_gid),
+                                        elem_sie(elem_gid),
+                                        vel_grad,
+                                        elem_node_gids,
+                                        node_coords,
+                                        node_vel,
+                                        elem_vol(elem_gid),
+                                        dt,
+                                        rk_alpha,
+                                        cycle,
+                                        rk_level); 
+           
         } // end logical on hypo strength model
         
 

@@ -147,8 +147,9 @@ struct Output_Options {
   int graphics_step_frequency;
   double graphics_step;
   OUTPUT_FORMAT output_file_format;
+  size_t max_num_user_output_vars=0;
 };
-IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format)
+IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format, max_num_user_output_vars)
 
 
 SERIALIZABLE_ENUM(BOUNDARY_TAG, 

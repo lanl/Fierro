@@ -471,6 +471,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   // allocate elem_vel_grad
   sgh_module->elem_vel_grad = DCArrayKokkos <double> (num_elems,3,3);
 
+  // allocate material models
+  sgh_module->elem_eos = DCArrayKokkos <eos_t> (num_elems);
+  sgh_module->elem_strength = DCArrayKokkos <strength_t> (num_elems); 
     
       // ---------------------------------------------------------------------
       //   calculate geometry
@@ -500,8 +503,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   // ---------------------------------------------------------------------  
   sgh_module->sgh_solve();
 
-  // cleanup user strength model if any
-  sgh_module->cleanup_user_strength_model(); 
+  // clean up all material models
+  sgh_module->cleanup_material_models(); 
 
   //printf("Finished\n");
   

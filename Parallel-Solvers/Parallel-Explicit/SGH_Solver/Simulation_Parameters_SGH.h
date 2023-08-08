@@ -70,8 +70,8 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
 
   //Non-serialized fields
   int num_gauss_points = 2;
-  size_t max_num_state_vars;
-  size_t max_num_global_vars;
+  size_t max_num_state_vars = 0;
+  size_t max_num_global_vars = 0;
   size_t rk_num_bins;
   double time_value = 0.0;
   DCArrayKokkos<double> state_vars;

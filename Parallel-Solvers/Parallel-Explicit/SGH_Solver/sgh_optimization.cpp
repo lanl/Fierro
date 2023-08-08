@@ -253,25 +253,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
                 
-                
-                // get state_vars from the input file or read them in
-                if (material(mat_id).strength_setup == STRENGTH_SETUP::user_input){
-                    
-                    // use the values read from a file to get elem state vars
-                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
-                        elem_statev(elem_gid,var) = file_state_vars(mat_id,elem_gid,var);
-                    } // end for
-                    
-                }
-                else{
-                    // use the values in the input file
-                    // set state vars for the region where mat_id resides
-                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
-                        elem_statev(elem_gid,var) = state_vars(mat_id,var);
-                    } // end for
-                    
-                } // end logical on type
-                
                 // --- stress tensor ---
                 // always 3D even for 2D-RZ
                 for (size_t i=0; i<3; i++){
@@ -280,19 +261,30 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                     }        
                 }  // end for
                 
-                
-                
-                // --- Pressure and stress ---
-                material(mat_id).eos_model(elem_pres,
-                                           elem_stress,
-                                           elem_gid,
-                                           elem_mat_id(elem_gid),
-                                           elem_statev,
-                                           global_vars,
-                                           elem_sspd,
-                                           elem_den(elem_gid),
-                                           elem_sie(rk_level,elem_gid));
-					    
+                // short form for clean code
+                EOSParent * eos_model = elem_eos(elem_gid).model;
+
+                // --- Pressure ---
+                eos_model->calc_pressure(elem_pres,
+                                         elem_stress,
+                                         elem_gid,
+                                         elem_mat_id(elem_gid),
+                                         global_vars,
+                                         elem_user_output_vars,
+                                         elem_sspd,
+                                         elem_den(elem_gid),
+                                         elem_sie(rk_level,elem_gid));
+
+                // --- Sound speed ---
+                eos_model->calc_sound_speed(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            elem_mat_id(elem_gid),
+                                            global_vars,
+                                            elem_user_output_vars,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(rk_level,elem_gid));                
                 
                 // loop over the nodes of this element and apply velocity
                 for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
@@ -401,6 +393,9 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 
                 if(mat_fill(f_id).velocity == VELOCITY_TYPE::tg_vortex)
                 {
+                    throw std::runtime_error("init_conds::tg_vortex needs fixing");
+                    /* Caleb Yenusah: commented out because elem_statev have been removed from code*/
+                    #if 0
                     elem_pres(elem_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;
                 
                     // p = rho*ie*(gamma - 1)
@@ -408,6 +403,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                     double gamma = elem_statev(elem_gid,4); // gamma value
                     elem_sie(rk_level, elem_gid) =
                                     elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
+                    #endif
                 } // end if
 
             } // end if fill

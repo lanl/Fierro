@@ -79,41 +79,53 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                         elem_gid,
                         rk_level);
             
-            
+            StrengthParent* strength_model = elem_strength(elem_gid).model;
+
             // --- call strength model ---
-            material(mat_id).strength_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            mat_id,
-                                            elem_statev,
-                                            global_vars,
-                                            elem_sspd,
-                                            elem_den(elem_gid),
-                                            elem_sie(elem_gid),
-                                            vel_grad,
-                                            elem_node_gids,
-                                            node_coords,
-                                            node_vel,
-                                            elem_vol(elem_gid),
-                                            dt,
-                                            rk_alpha,
-                                            cycle,
-                                            rk_level);
-            
+            strength_model->calc_stress(elem_pres,
+                                        elem_stress,
+                                        elem_gid,
+                                        mat_id,
+                                        global_vars,
+                                        elem_user_output_vars,
+                                        elem_sspd,
+                                        elem_den(elem_gid),
+                                        elem_sie(elem_gid),
+                                        vel_grad,
+                                        elem_node_gids,
+                                        node_coords,
+                                        node_vel,
+                                        elem_vol(elem_gid),
+                                        dt,
+                                        rk_alpha,
+                                        cycle,
+                                        rk_level);
+
         } // end logical on hyper strength model
-        
-        
+
+        EOSParent* eos_model = elem_eos(elem_gid).model;
+
         // --- Pressure ---
-        material(mat_id).eos_model(elem_pres,
-                                   elem_stress,
-                                   elem_gid,
-                                   elem_mat_id(elem_gid),
-                                   elem_statev,
-                                   global_vars,
-                                   elem_sspd,
-                                   elem_den(elem_gid),
-                                   elem_sie(rk_level,elem_gid));
-        
+        eos_model->calc_pressure(elem_pres,
+                                 elem_stress,
+                                 elem_gid,
+                                 elem_mat_id(elem_gid),
+                                 global_vars,
+                                 elem_user_output_vars,
+                                 elem_sspd,
+                                 elem_den(elem_gid),
+                                 elem_sie(rk_level,elem_gid));
+
+        // --- Sound speed ---
+        eos_model->calc_sound_speed(elem_pres,
+                                    elem_stress,
+                                    elem_gid,
+                                    elem_mat_id(elem_gid),
+                                    global_vars,
+                                    elem_user_output_vars,
+                                    elem_sspd,
+                                    elem_den(elem_gid),
+                                    elem_sie(rk_level,elem_gid));        
         
     }); // end parallel for
     Kokkos::fence();
@@ -196,42 +208,54 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                         elem_gid,
                         rk_level);
             
-            
+            StrengthParent* strength_model = elem_strength(elem_gid).model;
+
             // --- call strength model ---
-            material(mat_id).strength_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            mat_id,
-                                            elem_statev,
-                                            global_vars,
-                                            elem_sspd,
-                                            elem_den(elem_gid),
-                                            elem_sie(elem_gid),
-                                            vel_grad,
-                                            elem_node_gids,
-                                            node_coords,
-                                            node_vel,
-                                            elem_vol(elem_gid),
-                                            dt,
-                                            rk_alpha,
-                                            cycle,
-                                            rk_level);
-            
+            strength_model->calc_stress(elem_pres,
+                                        elem_stress,
+                                        elem_gid,
+                                        mat_id,
+                                        global_vars,
+                                        elem_user_output_vars,
+                                        elem_sspd,
+                                        elem_den(elem_gid),
+                                        elem_sie(elem_gid),
+                                        vel_grad,
+                                        elem_node_gids,
+                                        node_coords,
+                                        node_vel,
+                                        elem_vol(elem_gid),
+                                        dt,
+                                        rk_alpha,
+                                        cycle,
+                                        rk_level);
+
         } // end logical on hyper strength model
-        
-        
+
+        EOSParent* eos_model = elem_eos(elem_gid).model;
+
         // --- Pressure ---
-        material(mat_id).eos_model(elem_pres,
-                                   elem_stress,
-                                   elem_gid,
-                                   elem_mat_id(elem_gid),
-                                   elem_statev,
-                                   global_vars,
-                                   elem_sspd,
-                                   elem_den(elem_gid),
-                                   elem_sie(rk_level,elem_gid));
-        
-        
+        eos_model->calc_pressure(elem_pres,
+                                 elem_stress,
+                                 elem_gid,
+                                 elem_mat_id(elem_gid),
+                                 global_vars,
+                                 elem_user_output_vars,
+                                 elem_sspd,
+                                 elem_den(elem_gid),
+                                 elem_sie(rk_level,elem_gid));
+
+        // --- Sound speed ---
+        eos_model->calc_sound_speed(elem_pres,
+                                    elem_stress,
+                                    elem_gid,
+                                    elem_mat_id(elem_gid),
+                                    global_vars,
+                                    elem_user_output_vars,
+                                    elem_sspd,
+                                    elem_den(elem_gid),
+                                    elem_sie(rk_level,elem_gid));
+ 
     }); // end parallel for
     Kokkos::fence();
     

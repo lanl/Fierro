@@ -49,6 +49,7 @@
 #include "Simulation_Parameters_SGH.h"
 #include "Simulation_Parameters_Elasticity.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "material_models.h"
 
 class Explicit_Solver_SGH;
 
@@ -64,8 +65,7 @@ public:
 
   void setup();
 
-  // to allow the user strngth model interface to do all neccesary cleanup
-  void cleanup_user_strength_model();
+  void cleanup_material_models();
 
   void sgh_solve();
 
@@ -618,6 +618,13 @@ public:
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;
 
+  //elem_user_output_vars allow users to output variables of interest per element
+  DCArrayKokkos <double> elem_user_output_vars;
+
+  //material models
+  DCArrayKokkos <eos_t> elem_eos;
+  DCArrayKokkos <strength_t> elem_strength;
+
   // Dual Views of the corner struct variables
   DViewCArrayKokkos <double> corner_force;
   DViewCArrayKokkos <double> corner_mass;
@@ -634,10 +641,6 @@ public:
   //Global arrays with collected data used to print
   int output_velocity_index, output_strain_index, output_stress_index;
   
-  //file parameters
-  DCArrayKokkos <STRENGTH_SETUP> read_from_file;
-  DCArrayKokkos <double>file_state_vars;
-
   //parameters
   double time_value, time_final, dt, dt_max, dt_min, dt_cfl, graphics_time, graphics_dt_ival;
   size_t graphics_cyc_ival, cycle_stop, rk_num_stages, graphics_id;
