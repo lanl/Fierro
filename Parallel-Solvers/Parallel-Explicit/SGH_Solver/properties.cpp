@@ -19,7 +19,6 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                   const DViewCArrayKokkos <double> &elem_vol,
                   const DViewCArrayKokkos <double> &elem_mass,
                   const DViewCArrayKokkos <size_t> &elem_mat_id,
-                  const DViewCArrayKokkos <double> &elem_statev,
                   const double rk_alpha,
                   const size_t cycle
                   ){
@@ -148,7 +147,6 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                     const DViewCArrayKokkos <double> &elem_vol,
                     const DViewCArrayKokkos <double> &elem_mass,
                     const DViewCArrayKokkos <size_t> &elem_mat_id,
-                    const DViewCArrayKokkos <double> &elem_statev,
                     const double rk_alpha,
                     const size_t cycle
                     ){

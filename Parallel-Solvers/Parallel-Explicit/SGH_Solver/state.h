@@ -69,9 +69,6 @@ struct elem_t {
     // mat ids
     CArray <size_t> mat_id;
     
-    // state variables
-    CArray <double> statev;
-    
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
     {

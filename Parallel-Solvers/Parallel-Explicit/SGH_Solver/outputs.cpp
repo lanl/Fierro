@@ -140,22 +140,22 @@ Explicit_Solver_SGH::write_outputs()
   //auto elem_gid = get_elem_gid(all_element_map);
   //cell_data_scalars_int["elem_gid"] = elem_gid->pointer();
 
-  // element "elem_statev" //uncomment if needed (works fine)
-  //sgh_module->elem_statev.update_host();
-  //cell_data_fields_double["elem_statev"] = std::make_pair(&sgh_module->elem_statev.host(0,0), 
-  //                                                        sgh_module->elem_statev.dims(1));
+  // element "user_output_vars" //uncomment if needed (works fine)
+  //sgh_module->elem_user_output_vars.update_host();
+  //cell_data_fields_double["user_output_vars"] = std::make_pair(&sgh_module->elem_user_output_vars.host_pointer(), 
+  //                                                             sgh_module->elem_user_output_vars.dims(1));
 
   // element "stress" //uncomment if needed (works fine)
   //sgh_module->elem_stress.update_host();
   //cell_data_fields_double["stress"] = std::make_pair(&sgh_module->elem_stress.host(rk_level,0,0,0), 9);
 
-  switch (output_file_format)
+  switch (simparam.output_options.output_file_format)
   {
-    case output_file_format_type::VTK:
+    case OUTPUT_FORMAT::vtk:
       parallel_vtk_writer_new();
       break;
 
-    case output_file_format_type::VTU:
+    case OUTPUT_FORMAT::vtu:
       parallel_vtu_writer_new();
       break;
 

@@ -22,7 +22,6 @@ struct material_t {
   double q1ex;
   double q2ex;
   
-  size_t num_state_vars = 0;
   size_t num_global_vars = 0;
       
   //eos_function_type* eos_model = NULL;
@@ -41,11 +40,9 @@ struct material_t {
 };
 
 struct Material : Yaml::DerivedFields, material_t {
-  std::vector<double> state_vars;
   std::vector<double> global_vars;
 
   void derive() {
-    num_state_vars = state_vars.size();
     num_global_vars = global_vars.size();
     derive_function_pointers();
   }
@@ -54,6 +51,6 @@ IMPL_YAML_SERIALIZABLE_FOR(Material,
   eos_model, strength_model, strength_type,
   strength_run_location, eos_run_location,
   q1, q2, q1ex, q2ex, 
-  state_vars, global_vars
+  global_vars
 )
 

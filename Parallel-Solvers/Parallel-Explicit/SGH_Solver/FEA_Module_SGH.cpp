@@ -76,7 +76,6 @@
 #include "Simulation_Parameters_Elasticity.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
-#include "user_material_functions.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -768,13 +767,11 @@ void FEA_Module_SGH::setup(){
     const size_t rk_num_bins = simparam.rk_num_bins;
     const size_t num_bcs = simparam.boundary_conditions.size();
     const size_t num_materials = simparam.material_options.size();
-    const size_t num_state_vars = simparam.max_num_state_vars;
     const int num_dim = simparam.num_dims;
 
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
     const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
     const DCArrayKokkos <material_t> material = simparam.material;
-    const DCArrayKokkos <double> state_vars = simparam.state_vars; // array to hold init model variables
     global_vars = simparam.global_vars;
     elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options.max_num_user_output_vars); 
  
@@ -1175,7 +1172,6 @@ void FEA_Module_SGH::setup(){
     elem_den.update_host();
     elem_mass.update_host();
     elem_sie.update_host();
-    elem_statev.update_host();
     elem_stress.update_host();
     elem_pres.update_host();
     elem_sspd.update_host(); 
@@ -1804,7 +1800,6 @@ void FEA_Module_SGH::sgh_solve(){
                                 elem_div,
                                 elem_mat_id,
                                 corner_force,
-                                elem_statev,
                                 rk_alpha,
                                 cycle);
             }
@@ -1822,7 +1817,6 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_div,
                               elem_mat_id,
                               corner_force,
-                              elem_statev,
                               rk_alpha,
                               cycle);
             }
@@ -1874,7 +1868,6 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_div,
                               elem_mat_id,
                               corner_force,
-                              elem_statev,
                               rk_alpha,
                               cycle);
             }
@@ -1973,7 +1966,6 @@ void FEA_Module_SGH::sgh_solve(){
                                elem_vol,
                                elem_mass,
                                elem_mat_id,
-                               elem_statev,
                                rk_alpha,
                                cycle);
             }
@@ -1990,7 +1982,6 @@ void FEA_Module_SGH::sgh_solve(){
                              elem_vol,
                              elem_mass,
                              elem_mat_id,
-                             elem_statev,
                              rk_alpha,
                              cycle);
             }

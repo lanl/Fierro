@@ -35,7 +35,6 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
-#include "user_material_functions.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -72,7 +71,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t rk_num_bins = simparam.rk_num_bins;
   const size_t num_bcs = simparam.boundary_conditions.size();
   const size_t num_materials = simparam.material_options.size();
-  const size_t num_state_vars = simparam.max_num_state_vars;
   real_t objective_accumulation;
 
   // --- Read in the nodes in the mesh ---
@@ -82,7 +80,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
-  const DCArrayKokkos <double> state_vars = simparam.state_vars; // array to hold init model variables
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
   std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt.FEA_Module_My_TO_Modules;
@@ -652,7 +649,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              elem_statev,
                               1,
                               cycle);
 
@@ -668,7 +664,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              elem_statev,
                               1,
                               cycle);
 
@@ -730,7 +725,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              elem_statev,
                               1,
                               cycle);
 
@@ -746,7 +740,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              elem_statev,
                               1,
                               cycle);
       */

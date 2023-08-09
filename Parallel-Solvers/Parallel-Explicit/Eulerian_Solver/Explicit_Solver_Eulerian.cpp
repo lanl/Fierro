@@ -394,13 +394,7 @@ void Explicit_Solver_Eulerian::run(int argc, char *argv[]){
   const size_t num_nodes = mesh->num_nodes;
   const size_t num_elems = mesh->num_elems;
   const size_t num_corners = mesh->num_corners;
-  const size_t max_num_state_vars = simparam.max_num_state_vars;
   const size_t rk_num_bins = simparam.rk_num_bins;
-
-      
-    // allocate elem_statev
-  elem.statev = CArray <double> (num_elems, max_num_state_vars);
-  std::fill_n(elem.statev.pointer(), elem.statev.size(), 0); // to avoid writing random number in output
 
       // --- make dual views of data on CPU and GPU ---
       //  Notes:

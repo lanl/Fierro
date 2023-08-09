@@ -47,7 +47,6 @@
 #include "state.h"
 #include "yaml-serializable.h"
 #include "Simulation_Parameters.h"
-#include "user_material_functions.h"
 #include "material_t.h"
 
 using namespace mtr;

@@ -21,12 +21,12 @@ output_options:
 material_options:
     #eos model is required
   - eos_model: ideal_gas
-    strength_model_type: none
+    strength_model: none
     q1: 1.0
     q2: 0
     q1ex: 1.0
     q2ex: 0.0
-    state_vars:
+    global_vars:
       - 1.666666666666667
       - 1.0E-14
       - 1.0

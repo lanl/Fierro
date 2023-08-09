@@ -20,7 +20,6 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
                    DViewCArrayKokkos <double> &corner_force,
-                   const DViewCArrayKokkos <double> &elem_statev,
                    const double rk_alpha,
                    const size_t cycle
                    ){
@@ -426,7 +425,6 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         // below host updates are commented out to save time because they are not used for
         // the current user model. if a user model uses any of them, please uncomment it
         //elem_pres.update_host();
-        //elem_statev.update_host;
         //elem_den.upsate_host();
         //elem_sie.update_host();
         //node_coords.update_host();
@@ -504,7 +502,6 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
                      DViewCArrayKokkos <double> &corner_force,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle
                      ){

@@ -82,7 +82,6 @@ public:
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
                      DViewCArrayKokkos <double> &corner_force,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
   
@@ -96,7 +95,6 @@ public:
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
                      DViewCArrayKokkos <double> &corner_force,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
 
@@ -112,7 +110,6 @@ public:
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
 
@@ -128,7 +125,6 @@ public:
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
 
@@ -144,7 +140,6 @@ public:
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
 
@@ -164,7 +159,6 @@ public:
                        const DViewCArrayKokkos <double> &elem_div,
                        const DViewCArrayKokkos <size_t> &elem_mat_id,
                        DViewCArrayKokkos <double> &corner_force,
-                       const DViewCArrayKokkos <double> &elem_statev,
                        const double rk_alpha,
                        const size_t cycle);
   
@@ -342,7 +336,6 @@ public:
                     const DViewCArrayKokkos <double> &elem_vol,
                     const DViewCArrayKokkos <double> &elem_mass,
                     const DViewCArrayKokkos <size_t> &elem_mat_id,
-                    const DViewCArrayKokkos <double> &elem_statev,
                     const double rk_alpha,
                     const size_t cycle);
 
@@ -359,42 +352,8 @@ public:
                       const DViewCArrayKokkos <double> &elem_vol,
                       const DViewCArrayKokkos <double> &elem_mass,
                       const DViewCArrayKokkos <size_t> &elem_mat_id,
-                      const DViewCArrayKokkos <double> &elem_statev,
                       const double rk_alpha,
                       const size_t cycle);
-
-  KOKKOS_INLINE_FUNCTION
-  void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
-                      const DViewCArrayKokkos <double> &elem_stress,
-                      const size_t elem_gid,
-                      const size_t mat_id,
-                      const DViewCArrayKokkos <double> &elem_state_vars,
-                      const DViewCArrayKokkos <double> &elem_sspd,
-                      const double den,
-                      const double sie) const;
-
-
-  KOKKOS_INLINE_FUNCTION
-  void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
-                           const DViewCArrayKokkos <double> &elem_stress,
-                           const size_t elem_gid,
-                           const size_t mat_id,
-                           const DViewCArrayKokkos <double> &elem_state_vars,
-                           const DViewCArrayKokkos <double> &elem_sspd,
-                           const double den,
-                           const double sie,
-                           const ViewCArrayKokkos <double> &vel_grad,
-                           const ViewCArrayKokkos <size_t> &elem_node_gids,
-                           const DViewCArrayKokkos <double> &node_coords,
-                           const DViewCArrayKokkos <double> &node_vel,
-                           const double vol,
-                           const double rk_alpha) const;
-
-
-  void user_model_init(const DCArrayKokkos <double> &file_state_vars,
-                       const size_t num_state_vars,
-                       const size_t mat_id,
-                       const size_t num_elems);
 
   void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
   
@@ -610,7 +569,6 @@ public:
   DViewCArrayKokkos <double> elem_div;    
   DViewCArrayKokkos <double> elem_mass;
   DViewCArrayKokkos <size_t> elem_mat_id;
-  DViewCArrayKokkos <double> elem_statev;
 
   // Element velocity gradient 
   DCArrayKokkos <double> elem_vel_grad;

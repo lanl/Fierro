@@ -32,7 +32,6 @@ target_compile_options (fierro-parallel-explicit PRIVATE ${CMAKE_CXX_COMPILE_FLA
 target_link_libraries (fierro-parallel-explicit PRIVATE
   yaml_serializable
   parallel_base_src 
-  user_material_interface
   material_models
   parallel_sgh_solver
   parallel_eulerian_solver
