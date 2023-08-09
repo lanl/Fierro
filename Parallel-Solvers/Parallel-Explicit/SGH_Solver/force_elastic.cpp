@@ -712,7 +712,7 @@ void FEA_Module_SGH::compute_stiffness_gradients(const_vec_array design_variable
     global_dt = time_data[cycle+1] - time_data[cycle];
 
     //print
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::high){
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==0){
         if(myrank==0)
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
