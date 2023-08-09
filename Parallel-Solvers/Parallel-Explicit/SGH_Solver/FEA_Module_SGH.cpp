@@ -1790,7 +1790,7 @@ void FEA_Module_SGH::sgh_solve(){
 	    //if (stop_calc == 1) break;
         
   
-      if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::high){
+      if(simparam.time_variables.output_time_sequence_level>=TIME_OUTPUT_LEVEL::high){
         if (cycle==0){
             if(myrank==0)
               printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
