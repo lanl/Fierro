@@ -1444,7 +1444,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
     for(int inode = 0; inode < nlocal_nodes; inode++){
       node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = DENSITY_EPSILON;
+      node_densities_lower_bound(inode,0) = simparam_dynamic_opt.optimization_options.density_epsilon;
     }
 
     //set lower bounds for nodes on surfaces with boundary and loading conditions
@@ -1512,7 +1512,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
     for(int ielem = 0; ielem < rnum_elem; ielem++){
       Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = DENSITY_EPSILON;
+      Element_Densities_Lower_Bound(ielem,0) = simparam_dynamic_opt.optimization_options.density_epsilon;
     }
 
     //create global vector

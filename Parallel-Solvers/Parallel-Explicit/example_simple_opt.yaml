@@ -76,6 +76,7 @@ boundary_conditions:
 optimization_options:
     optimization_process: topology_optimization
     optimization_objective: minimize_kinetic_energy
+    density_epsilon: 0.01
     constraints:
       - type: mass
         relation: equality
