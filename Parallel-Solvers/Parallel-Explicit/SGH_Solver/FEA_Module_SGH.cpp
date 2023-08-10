@@ -1927,6 +1927,19 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_statev,
                               rk_alpha,
                               cycle);
+                applied_forces(material,
+                              mesh,
+                              node_coords,
+                              node_vel,
+                              node_mass,
+                              elem_den,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              elem_statev,
+                              rk_alpha,
+                              cycle);
             }
             else{
               update_velocity_sgh(rk_alpha,
@@ -2294,7 +2307,7 @@ void FEA_Module_SGH::sgh_solve(){
       else if (cycle == cycle_stop) {
         write = 1;
       }
-      else if (time_value >= time_final){
+      else if (time_value >= time_final&&simparam.output_options.write_final==true){
         write = 1;
       }
       else if (time_value >= graphics_time){
@@ -2313,7 +2326,7 @@ void FEA_Module_SGH::sgh_solve(){
                 }
               }); // end parallel for
             } //end view scope
-            if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk&&simparam.output_options.write_final==true){
+            if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk){
               if(myrank==0){
               printf("Writing outputs to file at %f \n", graphics_time);
               }
