@@ -119,14 +119,14 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos <material_t> &material,
               
               // loop over dimension
               for (size_t dim = 0; dim < num_dim; dim++){
-                  node_force[dim] += 0.000001*(all_initial_node_coords(node_gid, 0) + all_initial_node_coords(node_gid, 1) + all_initial_node_coords(node_gid, 2))/radius;
+                  node_force[dim] += 0.0001*(all_initial_node_coords(node_gid, 0) + all_initial_node_coords(node_gid, 1) + all_initial_node_coords(node_gid, 2))/radius;
               } // end for dim
               
           } // end for corner_lid
           
           // update the velocity
           for (int dim = 0; dim < num_dim; dim++){
-              node_vel(rk_level, node_gid, dim) = node_vel(0, node_gid, dim) +
+              node_vel(rk_level, node_gid, dim) +=
                                           rk_alpha * dt*node_force[dim]/node_mass(node_gid);
           } // end for dim
         }
