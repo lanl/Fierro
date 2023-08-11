@@ -4,11 +4,11 @@
 
 KOKKOS_FUNCTION
 UserStrengthModel::UserStrengthModel(
-  const RUN_LOCATION run_loc,
+  const DCArrayKokkos <material_t> &material,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
-  const size_t mat_id)
-    : StrengthParent(RUN_LOCATION::host)
+  const size_t mat_id,
+  const size_t elem_gid)
 {
     // Input files for for multiple materials should be names as evpfft1.in, evpfft2.in, etc.
     std::string filename = "evpfft" + std::to_string(mat_id+1) + ".in";

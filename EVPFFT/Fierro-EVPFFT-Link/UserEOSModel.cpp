@@ -2,11 +2,11 @@
 
 KOKKOS_FUNCTION
 UserEOSModel::UserEOSModel(
-  const RUN_LOCATION run_loc,
+  const DCArrayKokkos <material_t> &material,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
-  const size_t mat_id)
-  : EOSParent(RUN_LOCATION::device)
+  const size_t mat_id,
+  const size_t elem_gid)
 {
  sound_speed = global_vars(mat_id,3); 
 }

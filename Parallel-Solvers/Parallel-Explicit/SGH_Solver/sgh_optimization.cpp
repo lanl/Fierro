@@ -390,7 +390,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 
                 if(mat_fill(f_id).velocity == VELOCITY_TYPE::tg_vortex)
                 {
-                    throw std::runtime_error("init_conds::tg_vortex needs fixing");
+                    //throw std::runtime_error("init_conds::tg_vortex needs fixing");
                     /* Caleb Yenusah: commented out because elem_statev have been removed from code*/
                     #if 0
                     elem_pres(elem_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;

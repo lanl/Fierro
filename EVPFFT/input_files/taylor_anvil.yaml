@@ -4,7 +4,7 @@ num_dims: 3
 rk_num_stages: 1
 
 time_variables:
-    time_final: 1.5e-04  #[s]
+    time_final: 6.0e-09 #1.5e-04  #[s]
     dt_min: 1.e-11  #[s]
     dt_max: 1.e-3  #[s]
     dt_start: 1.e-10  #[s]
@@ -27,7 +27,7 @@ material_options:
     eos_run_location: device
     strength_model: user_strength_model
     strength_type: hypo
-    strength_run_location: device
+    strength_run_location: host
     q1: 0.01 # 0.01 to 0.1
     q2: 0.5 # 0.5  q2/4
     q1ex: 0.01 # 0.01 to 0.1

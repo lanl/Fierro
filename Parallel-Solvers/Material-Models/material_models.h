@@ -8,10 +8,9 @@ struct strength_t;
 /* EOSParent */
 class EOSParent {
 public:
-  const RUN_LOCATION run_loc;
 
   KOKKOS_FUNCTION
-  EOSParent(RUN_LOCATION run_loc);
+  EOSParent();
 
   KOKKOS_FUNCTION
   virtual ~EOSParent();
@@ -45,13 +44,12 @@ public:
 /* sterngth_parent */
 class StrengthParent {
 public:
-  const RUN_LOCATION run_loc;
 
   KOKKOS_FUNCTION
-  StrengthParent(RUN_LOCATION run_loc);
+  StrengthParent();
 
   KOKKOS_FUNCTION
-  ~StrengthParent();
+  virtual ~StrengthParent();
 
   KOKKOS_FUNCTION
   virtual int calc_stress(

@@ -6,16 +6,14 @@
 
 /* EOSParent */
 KOKKOS_FUNCTION
-EOSParent::EOSParent(RUN_LOCATION run_loc) : run_loc(run_loc)
-{}
+EOSParent::EOSParent() {}
 
 KOKKOS_FUNCTION
 EOSParent::~EOSParent() {}
 
 /* sterngth_parent */
 KOKKOS_FUNCTION
-StrengthParent::StrengthParent(RUN_LOCATION run_loc) : run_loc(run_loc)
-{}
+StrengthParent::StrengthParent() {}
 
 KOKKOS_FUNCTION
 StrengthParent::~StrengthParent() {}
@@ -37,15 +35,13 @@ P* allocate_memory(RUN_LOCATION run_loc)
 }
 
 template <typename P>
-void free_memory(P* model_ptr)
+void free_memory(P* model_ptr, RUN_LOCATION run_loc)
 {
   static_assert(std::is_same<EOSParent, P>::value or std::is_same<StrengthParent, P>::value, 
                 "Invalid type. Type must be EOSParent or StrengthParent");
 
   if (model_ptr == nullptr)
     return;
-
-  auto run_loc = model_ptr->run_loc;
 
   if (run_loc == RUN_LOCATION::device) {
     Kokkos::kokkos_free<Kokkos::DefaultExecutionSpace::memory_space>(model_ptr);
@@ -61,43 +57,6 @@ void free_memory(P* model_ptr)
   
 }
 
-template <typename P, typename T>
-void model_cleanup(DCArrayKokkos <T> &elem_model)
-{
-  static_assert(std::is_same<eos_t, T>::value or std::is_same<strength_t, T>::value, 
-                "Invalid type. Type must be eos_t or strength_t");
-
-    const size_t num_elems = elem_model.size();
-
-    // Destroy GPU model
-    FOR_ALL(elem_gid, 0, num_elems, {
-      if (elem_model(elem_gid).model != nullptr and 
-          elem_model(elem_gid).model->run_loc == RUN_LOCATION::device)
-      {
-        elem_model(elem_gid).model->~P();
-      }
-    });
-    Kokkos::fence();
-
-    // Destroy CPU model
-    for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-      if (elem_model.host(elem_gid).model != nullptr and
-          elem_model.host(elem_gid).model->run_loc == RUN_LOCATION::host)
-      {
-        elem_model.host(elem_gid).model->~P();
-      }
-    }
-
-    // Free CPU memory
-    for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-      if (elem_model.host(elem_gid).model != nullptr) {
-        free_memory(elem_model.host(elem_gid).model);
-      }
-    }
-                
-}
-
-
 void init_strength_model(
   DCArrayKokkos <strength_t> &elem_strength,
   const DCArrayKokkos <material_t> &material,
@@ -110,17 +69,21 @@ void init_strength_model(
   Material model strength should be initialized here.
   */
 
-  // Allocate memory on GPU for models that run on device
+  // Allocate memory on GPU or CPU depending on model run_location
   for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
     size_t mat_id = elem_mat_id.host(elem_gid);
     auto run_loc = material.host(mat_id).strength_run_location;
     auto strength_model = material.host(mat_id).strength_model;
-    if (strength_model == STRENGTH_MODEL::ideal_gas) {
-      elem_strength.host(elem_gid).model = allocate_memory <StrengthParent, IdealGasStrengthModel> (run_loc);
-    }
-    else if (strength_model == STRENGTH_MODEL::user_strength_model) {
-      elem_strength.host(elem_gid).model = allocate_memory <StrengthParent, UserStrengthModel> (run_loc);
-    }
+    switch (strength_model) {
+      case STRENGTH_MODEL::ideal_gas:
+        elem_strength.host(elem_gid).model = allocate_memory <StrengthParent, IdealGasStrengthModel> (run_loc);
+        break;
+      case STRENGTH_MODEL::user_strength_model:
+        elem_strength.host(elem_gid).model = allocate_memory <StrengthParent, UserStrengthModel> (run_loc);
+        break;
+      default:
+        break;
+    } // end switch
   }
   elem_strength.update_device();
 
@@ -130,29 +93,37 @@ void init_strength_model(
     auto run_loc = material(mat_id).strength_run_location;
     auto strength_model = material(mat_id).strength_model;
     if (run_loc == RUN_LOCATION::device) {
-      if (strength_model == STRENGTH_MODEL::ideal_gas) {
-        new ((IdealGasStrengthModel*)elem_strength(elem_gid).model) IdealGasStrengthModel(run_loc, global_vars, elem_user_output_vars, elem_mat_id(elem_gid));        
-      }
-      else if (strength_model == STRENGTH_MODEL::user_strength_model) {
-        new ((UserStrengthModel*)elem_strength(elem_gid).model) UserStrengthModel(run_loc, global_vars, elem_user_output_vars, elem_mat_id(elem_gid));
-      }
+      switch (strength_model) {
+        case STRENGTH_MODEL::ideal_gas:
+          new ((IdealGasStrengthModel*)elem_strength(elem_gid).model) IdealGasStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          break;
+        case STRENGTH_MODEL::user_strength_model:
+          new ((UserStrengthModel*)elem_strength(elem_gid).model) UserStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          break;
+        default:
+          break;
+      } // end switch
     } // end if
   });
   Kokkos::fence();
 
 
-  // Create model on CPU using `placement new` for models that run on device
+  // Create model on CPU using `placement new` for models that run on host
   for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
     size_t mat_id = elem_mat_id.host(elem_gid);
     auto run_loc = material.host(mat_id).strength_run_location;
     auto strength_model = material.host(mat_id).strength_model;
-    if (run_loc == RUN_LOCATION::device) {
-      if (strength_model == STRENGTH_MODEL::ideal_gas) {
-        new ((IdealGasStrengthModel*)elem_strength.host(elem_gid).model) IdealGasStrengthModel(run_loc, global_vars, elem_user_output_vars, elem_mat_id.host(elem_gid));        
-      }
-      else if (strength_model == STRENGTH_MODEL::user_strength_model) {
-        new ((UserStrengthModel*)elem_strength.host(elem_gid).model) UserStrengthModel(run_loc, global_vars, elem_user_output_vars, elem_mat_id.host(elem_gid));
-      }
+    if (run_loc == RUN_LOCATION::host) {
+      switch (strength_model) {
+        case STRENGTH_MODEL::ideal_gas:
+          new ((IdealGasStrengthModel*)elem_strength.host(elem_gid).model) IdealGasStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          break;
+        case STRENGTH_MODEL::user_strength_model:
+          new ((UserStrengthModel*)elem_strength.host(elem_gid).model) UserStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          break;
+        default:
+          break;
+      } // end switch
     } // end if
   }
 
@@ -171,17 +142,21 @@ void init_eos_model(
   Material EOS model should be initialized here.
   */
 
-  // Allocate memory on GPU for models that run on device
+  // Allocate memory on GPU or CPU depending on model run_location
   for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
     size_t mat_id = elem_mat_id.host(elem_gid);
     auto run_loc = material.host(mat_id).eos_run_location;
     auto eos_model = material.host(mat_id).eos_model;
-    if (eos_model == EOS_MODEL::ideal_gas) {
-      elem_eos.host(elem_gid).model = allocate_memory <EOSParent, IdealGasEOSModel> (run_loc);
-    }
-    else if (eos_model == EOS_MODEL::user_eos_model) {
-      elem_eos.host(elem_gid).model = allocate_memory <EOSParent, UserEOSModel> (run_loc);
-    }
+    switch (eos_model) {
+      case EOS_MODEL::ideal_gas:
+        elem_eos.host(elem_gid).model = allocate_memory <EOSParent, IdealGasEOSModel> (run_loc);
+        break;
+      case EOS_MODEL::user_eos_model:
+        elem_eos.host(elem_gid).model = allocate_memory <EOSParent, UserEOSModel> (run_loc);
+        break;
+      default:
+        break;
+    } // end switch
   }
   elem_eos.update_device();
 
@@ -191,29 +166,37 @@ void init_eos_model(
     auto run_loc = material(mat_id).eos_run_location;
     auto eos_model = material(mat_id).eos_model;
     if (run_loc == RUN_LOCATION::device) {
-      if (eos_model == EOS_MODEL::ideal_gas) {
-        new ((IdealGasEOSModel*)elem_eos(elem_gid).model) IdealGasEOSModel(run_loc, global_vars, elem_user_output_vars, elem_mat_id(elem_gid));        
-      }
-      else if (eos_model == EOS_MODEL::user_eos_model) {
-        new ((UserEOSModel*)elem_eos(elem_gid).model) UserEOSModel(run_loc, global_vars, elem_user_output_vars, elem_mat_id(elem_gid));
-      }
+      switch (eos_model) {
+        case EOS_MODEL::ideal_gas:
+          new ((IdealGasEOSModel*)elem_eos(elem_gid).model) IdealGasEOSModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          break;
+        case EOS_MODEL::user_eos_model:
+          new ((UserEOSModel*)elem_eos(elem_gid).model) UserEOSModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          break;
+        default:
+          break;
+      } // end switch
     } // end if
   });
   Kokkos::fence();
 
 
-  // Create model on CPU using `placement new` for models that run on device
+  // Create model on CPU using `placement new` for models that run on host
   for (size_t elem_gid = 0; elem_gid<num_elems; elem_gid++) {
     size_t mat_id = elem_mat_id.host(elem_gid);
     auto run_loc = material.host(mat_id).eos_run_location;
     auto eos_model = material.host(mat_id).eos_model;
-    if (run_loc == RUN_LOCATION::device) {
-      if (eos_model == EOS_MODEL::ideal_gas) {
-        new ((IdealGasEOSModel*)elem_eos.host(elem_gid).model) IdealGasEOSModel(run_loc, global_vars, elem_user_output_vars, elem_mat_id.host(elem_gid));        
-      }
-      else if (eos_model == EOS_MODEL::user_eos_model) {
-        new ((UserEOSModel*)elem_eos.host(elem_gid).model) UserEOSModel(run_loc, global_vars, elem_user_output_vars, elem_mat_id.host(elem_gid));
-      }
+    if (run_loc == RUN_LOCATION::host) {
+      switch (eos_model) {
+        case EOS_MODEL::ideal_gas:
+          new ((IdealGasEOSModel*)elem_eos.host(elem_gid).model) IdealGasEOSModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          break;
+        case EOS_MODEL::user_eos_model:
+          new ((UserEOSModel*)elem_eos.host(elem_gid).model) UserEOSModel(material,  global_vars, elem_user_output_vars, mat_id, elem_gid);
+          break;
+        default:
+          break;
+      } // end switch
     } // end if 
   }
 
@@ -227,13 +210,41 @@ void destroy_strength_model(
   const DCArrayKokkos <double> elem_user_output_vars,
   const size_t num_elems)
 {
-    /*
+  /*
     All memory cleanup related to the user material model should be done in this fuction.
-    Fierro calls `destroy_user_mat_model()` at the end of a simulation.
-    */
+    Fierro calls `destroy_strength_model` at the end of a simulation.
+  */
 
-    model_cleanup <StrengthParent, strength_t> (elem_strength);
-} // end destroy_user_strength_model
+  // Destroy GPU model
+  FOR_ALL(elem_gid, 0, num_elems, {
+    size_t mat_id = elem_mat_id(elem_gid);
+    auto run_loc = material(mat_id).strength_run_location;
+    if (run_loc == RUN_LOCATION::device and elem_strength(elem_gid).model != nullptr) {  
+        elem_strength(elem_gid).model->~StrengthParent();
+    }
+  });
+  Kokkos::fence();
+
+  // Destroy CPU model
+  for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+    size_t mat_id = elem_mat_id.host(elem_gid);
+    auto run_loc = material.host(mat_id).strength_run_location;
+    if (run_loc == RUN_LOCATION::host and elem_strength.host(elem_gid).model != nullptr) {  
+        elem_strength.host(elem_gid).model->~StrengthParent();
+    }
+  }
+
+  // Free CPU memory
+  for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+    size_t mat_id = elem_mat_id.host(elem_gid);
+    auto run_loc = material.host(mat_id).strength_run_location;
+    if (elem_strength.host(elem_gid).model != nullptr) {
+      free_memory(elem_strength.host(elem_gid).model, run_loc);
+    }
+  }
+
+  return;
+} // end destroy_strength_model
 
 
 void destroy_eos_model(
@@ -244,11 +255,39 @@ void destroy_eos_model(
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems)
 {
-    /*
+  /*
     All memory cleanup related to the user material model should be done in this fuction.
-    Fierro calls `destroy_user_mat_model()` at the end of a simulation.
-    */
+    Fierro calls `destroy_eos_model()` at the end of a simulation.
+  */
 
-    model_cleanup <EOSParent, eos_t> (elem_eos);
-} // end destroy_user_eos_model
+  // Destroy GPU model
+  FOR_ALL(elem_gid, 0, num_elems, {
+    size_t mat_id = elem_mat_id(elem_gid);
+    auto run_loc = material(mat_id).eos_run_location;
+    if (run_loc == RUN_LOCATION::device and elem_eos(elem_gid).model != nullptr) {  
+        elem_eos(elem_gid).model->~EOSParent();
+    }
+  });
+  Kokkos::fence();
+
+  // Destroy CPU model
+  for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+    size_t mat_id = elem_mat_id.host(elem_gid);
+    auto run_loc = material.host(mat_id).eos_run_location;
+    if (run_loc == RUN_LOCATION::host and elem_eos.host(elem_gid).model != nullptr) {  
+        elem_eos.host(elem_gid).model->~EOSParent();
+    }
+  }
+
+  // Free CPU memory
+  for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+    size_t mat_id = elem_mat_id.host(elem_gid);
+    auto run_loc = material.host(mat_id).eos_run_location;
+    if (elem_eos.host(elem_gid).model != nullptr) {
+      free_memory(elem_eos.host(elem_gid).model, run_loc);
+    }
+  }
+
+  return;
+} // end destroy_eos_model
 
