@@ -120,7 +120,7 @@ FEA_Module_Inertial::~FEA_Module_Inertial(){ }
    Compute the mass of each element; estimated with quadrature
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_densities, bool max_flag){
+void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_densities, bool max_flag, bool use_initial_density){
   //local number of uniquely assigned elements
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //initialize memory for volume storage
@@ -279,10 +279,15 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
     
     
       //compute the determinant of the Jacobian
-      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-      if(Jacobian<0) Jacobian = -Jacobian;
+      if(use_initial_density) {
+        Jacobian = 1;
+      }
+      else{
+        Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                  JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                  JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+        if(Jacobian<0) Jacobian = -Jacobian;
+      }
 
       //compute density
       current_density = 0;
