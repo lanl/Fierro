@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.17)
 
+if(NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
+  add_definitions(-DBUILD_EVPFFT_FIERRO=1)
+endif()
+
 # CMAKE_BUILD_TYPE:
 # 1. Release: `-O3 -DNDEBUG`
 # 2. Debug: `-O0 -g`
@@ -94,9 +98,6 @@ if(Output_VonMises_Only)
 endif()
 
 
-#define project
-set(This evpfft)
-
 #if (KOKKOS)
   add_definitions(-DHAVE_KOKKOS=1)
 
@@ -133,13 +134,20 @@ set(This evpfft)
        output_file_manager.cpp
        write_macro_state.cpp
        write_micro_state.cpp
-       write_texture.cpp
-       evpfft_fierro_link.cpp)
+       write_texture.cpp)
 
   if (BUILD_EVPFFT_FIERRO)
-    add_library(${This} STATIC ${Sources})
-    target_link_libraries(${This} ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
+    set(This user_material_models)
+    list(APPEND Sources
+         Fierro-EVPFFT-Link/UserStrengthModel.cpp 
+         Fierro-EVPFFT-Link/UserEOSModel.cpp)
+
+    add_library(user_material_models STATIC ${Sources})
+    target_link_libraries(user_material_models ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
+    target_include_directories(user_material_models PUBLIC Fierro-EVPFFT-Link)
+    target_include_directories(user_material_models PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
   else ()
+    set(This evpfft)
     project (${This})
     add_executable(${This} ${Sources})
     target_link_libraries(${This} Kokkos::kokkos)

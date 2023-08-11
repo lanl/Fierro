@@ -49,7 +49,6 @@
 #include "yaml-serializable.h"
 #include "Simulation_Parameters.h"
 #include "Simulation_Parameters_Base.h"
-#include "user_material_functions.h"
 
 using namespace mtr;
 
@@ -70,11 +69,9 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
 
   //Non-serialized fields
   int num_gauss_points = 2;
-  size_t max_num_state_vars;
-  size_t max_num_global_vars;
+  size_t max_num_global_vars = 0;
   size_t rk_num_bins;
   double time_value = 0.0;
-  DCArrayKokkos<double> state_vars;
   DCArrayKokkos<double> global_vars;
 
   DCArrayKokkos<mat_fill_t> mat_fill;
@@ -82,15 +79,11 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
   DCArrayKokkos<boundary_t> boundary; 
   std::vector<double> gravity_vector {9.81, 0., 0.};
 
-  void init_material_variable_arrays(size_t nstate_vars, size_t nglobal_vars) {
-    state_vars = DCArrayKokkos <double> (material_options.size(), nstate_vars);
+  void init_material_variable_arrays(size_t nglobal_vars) {
     global_vars = DCArrayKokkos <double> (material_options.size(), nglobal_vars);
 
     for (size_t i = 0; i < material_options.size(); i++) {
       auto mat = material_options[i];
-
-      for (size_t j = 0; j < mat.state_vars.size(); j++)
-        state_vars.host(i, j) = mat.state_vars[j];
 
       for (size_t j = 0; j < mat.global_vars.size(); j++)
         global_vars.host(i, j) = mat.global_vars[j];
@@ -103,15 +96,11 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
       array.host(i) = *(T*)&vec[i];
   }
   void derive_kokkos_arrays() {
-    max_num_state_vars = 0;
-    for (auto mo : material_options) 
-      max_num_state_vars = std::max(max_num_state_vars, mo.state_vars.size());
-
     max_num_global_vars = 0;
     for (auto mo : material_options) 
       max_num_global_vars = std::max(max_num_global_vars, mo.global_vars.size());
 
-    init_material_variable_arrays(max_num_state_vars, max_num_global_vars);
+    init_material_variable_arrays(max_num_global_vars);
 
     from_vector(mat_fill, region_options);
     from_vector(material, material_options);
@@ -121,7 +110,6 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
     mat_fill.update_device();
     boundary.update_device();
     material.update_device();
-    state_vars.update_device();
     global_vars.update_device();
 
     // Re-derive function pointers after move to device.

@@ -22,7 +22,6 @@ void FEA_Module_SGH::get_force_elastic(const DCArrayKokkos <material_t> &materia
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
                    DViewCArrayKokkos <double> &corner_force,
-                   const DViewCArrayKokkos <double> &elem_statev,
                    const double rk_alpha,
                    const size_t cycle
                    ){
