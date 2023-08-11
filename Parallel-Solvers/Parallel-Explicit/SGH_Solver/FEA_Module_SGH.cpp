@@ -1049,17 +1049,13 @@ void FEA_Module_SGH::setup(){
                 
                 if(mat_fill(f_id).velocity == VELOCITY_TYPE::tg_vortex)
                 {
-                    //throw std::runtime_error("init_conds::tg_vortex needs fixing");
-                    /* Caleb Yenusah: commented out because elem_statev have been removed from code */
-                    #if 0
                     elem_pres(elem_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;
                 
                     // p = rho*ie*(gamma - 1)
                     size_t mat_id = f_id;
-                    double gamma = elem_statev(elem_gid,4); // gamma value
+                    double gamma = global_vars(mat_id,0); // gamma value
                     elem_sie(rk_level, elem_gid) =
                                     elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
-                    #endif
                 } // end if
 
             } // end if fill
