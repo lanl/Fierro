@@ -86,7 +86,6 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos <material_t> &material,
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
                    DViewCArrayKokkos <double> &corner_force,
-                   const DViewCArrayKokkos <double> &elem_statev,
                    const double rk_alpha,
                    const size_t cycle
                    ){

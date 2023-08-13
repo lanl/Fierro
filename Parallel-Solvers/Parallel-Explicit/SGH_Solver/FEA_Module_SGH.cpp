@@ -1876,7 +1876,6 @@ void FEA_Module_SGH::sgh_solve(){
                               elem_div,
                               elem_mat_id,
                               corner_force,
-                              elem_statev,
                               rk_alpha,
                               cycle);
             }
