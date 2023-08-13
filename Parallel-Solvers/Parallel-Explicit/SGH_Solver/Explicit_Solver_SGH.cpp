@@ -394,14 +394,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   const size_t num_nodes = mesh->num_nodes;
   const size_t num_elems = mesh->num_elems;
   const size_t num_corners = mesh->num_corners;
-  const size_t max_num_state_vars = simparam.max_num_state_vars;
   const size_t rk_num_bins = simparam.rk_num_bins;
 
       
-    // allocate elem_statev
-  elem.statev = CArray <double> (num_elems, max_num_state_vars);
-  std::fill_n(elem.statev.pointer(), elem.statev.size(), 0); // to avoid writing random number in output
-
       // --- make dual views of data on CPU and GPU ---
       //  Notes:
       //     Instead of using a struct of dual types like the mesh type, 
@@ -455,11 +450,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
   sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
                                               num_elems);
-
-  sgh_module->elem_statev = DViewCArrayKokkos<double>(elem.statev.pointer(),
-                                              num_elems,
-                                              max_num_state_vars );
-      
+     
   // create Dual Views of the corner struct variables
   sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
                                               num_corners, 
@@ -471,6 +462,9 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   // allocate elem_vel_grad
   sgh_module->elem_vel_grad = DCArrayKokkos <double> (num_elems,3,3);
 
+  // allocate material models
+  sgh_module->elem_eos = DCArrayKokkos <eos_t> (num_elems);
+  sgh_module->elem_strength = DCArrayKokkos <strength_t> (num_elems); 
     
       // ---------------------------------------------------------------------
       //   calculate geometry
@@ -497,8 +491,8 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       sgh_module->sgh_solve();
   }
 
-  // cleanup user strength model if any
-  sgh_module->cleanup_user_strength_model(); 
+  // clean up all material models
+  sgh_module->cleanup_material_models(); 
 
   //printf("Finished\n");
   

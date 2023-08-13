@@ -76,7 +76,6 @@
 #include "Simulation_Parameters_Elasticity.h"
 #include "FEA_Module_Eulerian.h"
 #include "Explicit_Solver_Eulerian.h"
-#include "user_material_functions.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -571,13 +570,11 @@ void FEA_Module_Eulerian::setup(){
     const size_t rk_num_bins = simparam.rk_num_bins;
     const size_t num_bcs = simparam.boundary_conditions.size();
     const size_t num_materials = simparam.material_options.size();
-    const size_t num_state_vars = simparam.max_num_state_vars;
     const int num_dim = simparam.num_dims;
 
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
     const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
     const DCArrayKokkos <material_t> material = simparam.material;
-    const DCArrayKokkos <double> state_vars = simparam.state_vars; // array to hold init model variables
     global_vars = simparam.global_vars;
     
     //--- calculate bdy sets ---//

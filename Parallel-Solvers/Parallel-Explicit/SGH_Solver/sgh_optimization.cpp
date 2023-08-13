@@ -35,7 +35,6 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver_SGH.h"
-#include "user_material_functions.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -72,7 +71,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t rk_num_bins = simparam.rk_num_bins;
   const size_t num_bcs = simparam.boundary_conditions.size();
   const size_t num_materials = simparam.material_options.size();
-  const size_t num_state_vars = simparam.max_num_state_vars;
   real_t objective_accumulation;
 
   // --- Read in the nodes in the mesh ---
@@ -82,7 +80,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
-  const DCArrayKokkos <double> state_vars = simparam.state_vars; // array to hold init model variables
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
   std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt.FEA_Module_My_TO_Modules;
@@ -253,25 +250,6 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
                 
-                
-                // get state_vars from the input file or read them in
-                if (material(mat_id).strength_setup == STRENGTH_SETUP::user_input){
-                    
-                    // use the values read from a file to get elem state vars
-                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
-                        elem_statev(elem_gid,var) = file_state_vars(mat_id,elem_gid,var);
-                    } // end for
-                    
-                }
-                else{
-                    // use the values in the input file
-                    // set state vars for the region where mat_id resides
-                    for (size_t var=0; var<material(mat_id).num_state_vars; var++){
-                        elem_statev(elem_gid,var) = state_vars(mat_id,var);
-                    } // end for
-                    
-                } // end logical on type
-                
                 // --- stress tensor ---
                 // always 3D even for 2D-RZ
                 for (size_t i=0; i<3; i++){
@@ -280,19 +258,30 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                     }        
                 }  // end for
                 
-                
-                
-                // --- Pressure and stress ---
-                material(mat_id).eos_model(elem_pres,
-                                           elem_stress,
-                                           elem_gid,
-                                           elem_mat_id(elem_gid),
-                                           elem_statev,
-                                           global_vars,
-                                           elem_sspd,
-                                           elem_den(elem_gid),
-                                           elem_sie(rk_level,elem_gid));
-					    
+                // short form for clean code
+                EOSParent * eos_model = elem_eos(elem_gid).model;
+
+                // --- Pressure ---
+                eos_model->calc_pressure(elem_pres,
+                                         elem_stress,
+                                         elem_gid,
+                                         elem_mat_id(elem_gid),
+                                         global_vars,
+                                         elem_user_output_vars,
+                                         elem_sspd,
+                                         elem_den(elem_gid),
+                                         elem_sie(rk_level,elem_gid));
+
+                // --- Sound speed ---
+                eos_model->calc_sound_speed(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            elem_mat_id(elem_gid),
+                                            global_vars,
+                                            elem_user_output_vars,
+                                            elem_sspd,
+                                            elem_den(elem_gid),
+                                            elem_sie(rk_level,elem_gid));                
                 
                 // loop over the nodes of this element and apply velocity
                 for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
@@ -405,7 +394,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 
                     // p = rho*ie*(gamma - 1)
                     size_t mat_id = f_id;
-                    double gamma = elem_statev(elem_gid,4); // gamma value
+                    double gamma = global_vars(mat_id,0); // gamma value
                     elem_sie(rk_level, elem_gid) =
                                     elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
                 } // end if
@@ -659,7 +648,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              elem_statev,
                               1,
                               cycle);
 
@@ -675,7 +663,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              elem_statev,
                               1,
                               cycle);
 
@@ -737,7 +724,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              elem_statev,
                               1,
                               cycle);
 
@@ -753,7 +739,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              elem_statev,
                               1,
                               cycle);
       */

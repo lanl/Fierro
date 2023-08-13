@@ -257,7 +257,6 @@ public:
   DViewCArrayKokkos <double> elem_div;    
   DViewCArrayKokkos <double> elem_mass;
   DViewCArrayKokkos <size_t> elem_mat_id;
-  DViewCArrayKokkos <double> elem_statev;
 
   // Element velocity gradient 
   DCArrayKokkos <double> elem_vel_grad;
@@ -283,7 +282,6 @@ public:
   
   //file parameters
   DCArrayKokkos <size_t>read_from_file;
-  DCArrayKokkos <double>file_state_vars;
 
   //parameters
   double time_value, time_final, dt, dt_max, dt_min, dt_cfl, graphics_time, graphics_dt_ival;

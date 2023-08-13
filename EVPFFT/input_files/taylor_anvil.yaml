@@ -1,75 +1,66 @@
-# input file
 solver_type: SGH
 
-solver_options:
-    num_dims: 3
-    rk_num_stages: 1
+num_dims: 3
+rk_num_stages: 1
+
+time_variables:
+    time_final: 6.0e-09 #1.5e-04  #[s]
+    dt_min: 1.e-11  #[s]
+    dt_max: 1.e-3  #[s]
+    dt_start: 1.e-10  #[s]
+    dt_cfl: 0.01
+    cycle_stop: 200000000
+timer_output_level: thorough
+
+input_options:
     mesh_file_format: ensight
-    output_file_format: vtk
     mesh_file_name: /vast/home/cyenusah/github/Fierro/Explicit-Lagrange/meshes/mesh_z_taylorAnvil.geo
-    time_variables:
-        time_final: 1.5e-04  #[s]
-        dt_min: 1.e-11  #[s]
-        dt_max: 1.e-3  #[s]
-        dt_start: 1.e-10  #[s]
-        dt_cfl: 0.01 
-        cycle_stop: 200000000
-    timer_output_level: thorough
+    element_type: hex8
 
 output_options:
-  graphics_step: 6.0e-07  #[s]
+    graphics_step: 6.0e-07  #[s]
+    output_file_format: vtk 
+    max_num_user_output_vars: 5    
 
 material_options:
-    num_materials: 1
-    max_num_state_var: 5
-    max_num_global_var: 1
-    material_1:
-        #eos model is required
-        eos_model: user_eos_model
-        strength_model: user_strength_model
-        strength_type: hypo
-        strength_setup: user_init
-        strength_run_location: host
-        q1: 0.01 # 0.01 to 0.1 
-        q2: 0.5 # 0.5  q2/4
-        q1ex: 0.01 # 0.01 to 0.1
-        q2ex: 0.0  
-
-        num_state_vars: 5
-
-        num_global_vars: 1
-        global_vars_1: 2400000 #[mm/s] ref sound speed
+  - eos_model: user_eos_model
+    eos_run_location: device
+    strength_model: user_strength_model
+    strength_type: hypo
+    strength_run_location: host
+    q1: 0.01 # 0.01 to 0.1
+    q2: 0.5 # 0.5  q2/4
+    q1ex: 0.01 # 0.01 to 0.1
+    q2ex: 0.0
+    global_vars:
+      - 8 #N1
+      - 8 #N2
+      - 8 #N3
+      - 2400000 #[mm/s] ref sound speed
 
 region_options:
-    num_fills: 1
-    #global initial conditions
-    mat_fill_1:
-        volume: global
-        mat_id: 0
-        den: 1.669e-8 #[tonne/mm3]
-        sie: 1.0e-11  #[mJ]
-    
-        velocity: cartesian
-        u: 0.0 
-        v: 0.0 
-        w: -175000.0  #[mm/s]
-    
-boundary_condition_options:
-    num_bcs: 3
-    # Tag X plane
-    boundary_condition_1:
-        surface: x_plane
-        value: 0.0 
-        condition_type: reflected
-    
+  - volume: global
+    mat_id: 0
+    den: 1.669e-8 #[tonne/mm3]
+    sie: 1.0e-11  #[mJ]
+        
+    velocity: cartesian
+    u: 0.0
+    v: 0.0
+    w: -175000.0  #[mm/s]
+        
+boundary_conditions:
+  # Tag X plane
+  - surface: x_plane
+    value: 0.0
+    condition_type: reflected
+            
     # Tag Y plane
-    boundary_condition_2:
-        surface: y_plane
-        value: 0.0
-        condition_type: reflected
-
+  - surface: y_plane
+    value: 0.0
+    condition_type: reflected
+            
     # Tag Z plane
-    boundary_condition_3:
-        surface: z_plane
-        value: 0.0
-        condition_type: reflected
+  - surface: z_plane
+    value: 0.0
+    condition_type: reflected 

@@ -152,7 +152,7 @@ public:
       FEM_->sgh_solve();
       //initial design density data was already communicated for ghost nodes in init_design()
       //decide to output current optimization state
-      FEM_->Explicit_Solver_Pointer_->write_outputs_new();
+      FEM_->Explicit_Solver_Pointer_->write_outputs();
     }
     else if (type == ROL::UpdateType::Accept) {
       // u_ was set to u=S(x) during a trial update
@@ -181,7 +181,7 @@ public:
       *fos << "called Trial" << std::endl;
 
       //decide to output current optimization state
-      FEM_->Explicit_Solver_Pointer_->write_outputs_new();
+      FEM_->Explicit_Solver_Pointer_->write_outputs();
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,

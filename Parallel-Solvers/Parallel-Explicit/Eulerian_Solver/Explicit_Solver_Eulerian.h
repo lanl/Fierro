@@ -129,8 +129,6 @@ public:
   void write_outputs_new();
   void parallel_vtk_writer_new();
   void parallel_vtu_writer_new(); // not yet added
-  enum output_file_format_type {VTK, VTU};
-  output_file_format_type output_file_format = VTK;
   // maps for variable_name:pointer
   std::map <std::string, const double*> point_data_scalars_double;
   std::map <std::string, const double*> point_data_vectors_double;
