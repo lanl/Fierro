@@ -149,8 +149,10 @@ public:
     if (type == ROL::UpdateType::Initial)  {
       // This is the first call to update
       //first linear solve was done in FEA class run function already
-
+      FEM_->sgh_solve();
       //initial design density data was already communicated for ghost nodes in init_design()
+      //decide to output current optimization state
+      FEM_->Explicit_Solver_Pointer_->write_outputs_new();
     }
     else if (type == ROL::UpdateType::Accept) {
       // u_ was set to u=S(x) during a trial update
@@ -177,6 +179,9 @@ public:
       FEM_->update_forward_solve(zp);
       if(FEM_->myrank==0)
       *fos << "called Trial" << std::endl;
+
+      //decide to output current optimization state
+      FEM_->Explicit_Solver_Pointer_->write_outputs_new();
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,
@@ -188,9 +193,6 @@ public:
       FEM_->update_forward_solve(zp);
     }
 
-    //decide to output current optimization state
-    if(current_step%FEM_->simparam_dynamic_opt.optimization_output_freq==0)
-      FEM_->Explicit_Solver_Pointer_->parallel_tecplot_writer();
   }
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
@@ -255,10 +257,9 @@ public:
     //FEM_->gradient_print_sync=1;
     //FEM_->gradient_print_sync=0;
     //get local view of the data
-    vec_array objective_gradients = gp->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-    const_vec_array design_densities = zp->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+    
 
-    FEM_->compute_topology_optimization_gradient_full(design_densities, objective_gradients);
+    FEM_->compute_topology_optimization_gradient_full(zp,gp);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
