@@ -36,6 +36,7 @@ material_options:
       - 8 #N1
       - 8 #N2
       - 8 #N3
+      - 0.001 #udotAccTh
       - 2400000 #[mm/s] ref sound speed
 
 region_options:
