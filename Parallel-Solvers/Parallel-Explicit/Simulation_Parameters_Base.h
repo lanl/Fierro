@@ -75,6 +75,11 @@ SERIALIZABLE_ENUM(BOUNDARY_HYDRO_CONDITION,
     contact       // contact surface
 )
 
+SERIALIZABLE_ENUM(LOADING_HYDRO_CONDITION,
+    body_force,
+    surface_force
+)
+
 SERIALIZABLE_ENUM(VELOCITY_TYPE,
     // uniform
     cartesian,          // cart velocity
@@ -110,6 +115,52 @@ IMPL_YAML_SERIALIZABLE_FOR(Time_Variables, output_time_sequence_level,
   time_initial, time_final, dt_min, dt_max, dt_start, dt_cfl,
   cycle_stop, fuzz, tiny, small
 )
+
+struct volume_t {
+    VOLUME_TAG volume = VOLUME_TAG::sphere;
+    VELOCITY_TYPE velocity = VELOCITY_TYPE::cartesian;
+    double radius1, radius2;
+    double u,v,w;
+    double speed;
+    double sie;
+    double den;
+    
+    // TODO: These aren't set from the YAML at all
+    // They are only set in the test problems.
+    double x1, x2, y1, y2, z1, z2;
+    
+    KOKKOS_FUNCTION
+    bool contains(const double* elem_coords) { 
+      double radius;
+
+      switch(volume)
+      {
+        case VOLUME_TAG::global:
+          return true;
+
+        case VOLUME_TAG::box:
+          return ( elem_coords[0] >= x1 && elem_coords[0] <= x2
+                && elem_coords[1] >= y1 && elem_coords[1] <= y2
+                && elem_coords[2] >= z1 && elem_coords[2] <= z2 );
+
+        case VOLUME_TAG::cylinder:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] ); 
+          return ( radius >= radius1
+                && radius <= radius2 );
+
+        case VOLUME_TAG::sphere:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] +
+                         elem_coords[2]*elem_coords[2] );
+          return ( radius >= radius1
+                && radius <= radius2 );
+        
+        default:
+          return false;
+      }
+    }
+};
 
 struct mat_fill_t {
     size_t mat_id;
@@ -157,6 +208,7 @@ struct mat_fill_t {
       }
     }
 };
+
 struct MaterialFill : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
     std::optional<double> sie;
     std::optional<double> u;
@@ -260,6 +312,113 @@ struct Boundary : Yaml::ValidatedYaml, Yaml::DerivedFields, boundary_t {
     }
 };
 IMPL_YAML_SERIALIZABLE_FOR(Boundary, id, surface, value, condition_type, u, v, w)
+
+struct loading_t {
+    LOADING_HYDRO_CONDITION condition_type = LOADING_HYDRO_CONDITION::body_force;
+    BOUNDARY_TAG surface = BOUNDARY_TAG::sphere;
+    VOLUME_TAG volume = VOLUME_TAG::sphere;
+    double value;
+    double fx, fy, fz;
+    double radius_inner, radius_outer;
+    double xlo, xhi, ylo, yhi, zlo, zhi;
+    double origin_x, origin_y, origin_z;
+
+    KOKKOS_FUNCTION
+    bool contains(const double* elem_coords) { 
+      double radius;
+
+      switch(volume)
+      {
+        case VOLUME_TAG::global:
+          return true;
+
+        case VOLUME_TAG::box:
+          return ( elem_coords[0] >= xlo && elem_coords[0] <= xhi
+                && elem_coords[1] >= ylo && elem_coords[1] <= yhi
+                && elem_coords[2] >= zlo && elem_coords[2] <= zhi );
+
+        case VOLUME_TAG::cylinder:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] ); 
+          return ( radius >= radius_inner
+                && radius <= radius_outer );
+
+        case VOLUME_TAG::sphere:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] +
+                         elem_coords[2]*elem_coords[2] );
+          return ( radius >= radius_inner
+                && radius <= radius_outer );
+        
+        default:
+          return false;
+      }
+    }
+    
+    KOKKOS_FUNCTION
+    size_t planar_surface_index() {
+      switch (surface) {
+        case BOUNDARY_TAG::x_plane:
+          return 0;
+        case BOUNDARY_TAG::y_plane:
+          return 1;
+        case BOUNDARY_TAG::z_plane:
+          return 2;
+        default:
+          // Not sure what to do about this error case, since we can't
+          // throw on the device.
+          return -1;
+      }
+    }
+};
+
+struct Loading : Yaml::ValidatedYaml, Yaml::DerivedFields, loading_t {
+    std::string id;
+    std::optional<double> fx, fy, fz;
+    std::optional<double> xlo, xhi, ylo, yhi, zlo, zhi;
+    std::optional<double> radius_inner, radius_outer;
+    std::optional<double> origin_x, origin_y, origin_z;
+
+    void derive() {
+      loading_t::fx = fx.value_or(0);
+      loading_t::fy = fy.value_or(0);
+      loading_t::fz = fz.value_or(0);
+      loading_t::xlo = xlo.value_or(0);
+      loading_t::xhi = xhi.value_or(0);
+      loading_t::ylo = ylo.value_or(0);
+      loading_t::yhi = yhi.value_or(0);
+      loading_t::zlo = zlo.value_or(0);
+      loading_t::zhi = zhi.value_or(0);
+      loading_t::radius_inner = radius_inner.value_or(0);
+      loading_t::radius_outer = radius_outer.value_or(0);
+      loading_t::origin_x = origin_x.value_or(0);
+      loading_t::origin_y = origin_y.value_or(0);
+      loading_t::origin_z = origin_z.value_or(0);
+    }
+
+    void validate() {
+      if ( (fx.has_value() || fy.has_value() || fz.has_value())
+          && condition_type != LOADING_HYDRO_CONDITION::body_force) {
+        std::cerr << "Warning: force values (fx, fy, fz) ignored for loading condition type " << to_string(condition_type) << "." << std::endl;
+      }
+
+      if (condition_type == LOADING_HYDRO_CONDITION::body_force) {
+        switch (volume) {
+          case VOLUME_TAG::sphere:
+          case VOLUME_TAG::box:
+          case VOLUME_TAG::cylinder:
+          case VOLUME_TAG::global:
+            break;
+          default:
+            throw Yaml::ConfigurationException(
+              "Invalid volume type `" + to_string(surface) + 
+              "` with loading condition type of `" + to_string(condition_type) + "`."
+            );
+        }
+      }
+    }
+};
+IMPL_YAML_SERIALIZABLE_FOR(Loading, id, surface, volume, value, condition_type, fx, fy, fz, xlo, xhi, ylo, yhi, zlo, zhi, radius_inner, radius_outer, origin_x, origin_y, origin_z);
 
 struct Graphics_Options : Yaml::DerivedFields {
   bool output_velocity_flag = true;

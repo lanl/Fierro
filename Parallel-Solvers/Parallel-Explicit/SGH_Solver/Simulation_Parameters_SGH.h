@@ -57,6 +57,7 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
   std::vector<MaterialFill> region_options;
   std::vector<Material> material_options;
   std::vector<Boundary> boundary_conditions;
+  std::vector<Loading> loading_conditions;
   Graphics_Options graphics_options;
 
   bool gravity_flag   = false;
@@ -76,7 +77,9 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
 
   DCArrayKokkos<mat_fill_t> mat_fill;
   DCArrayKokkos<material_t> material;
-  DCArrayKokkos<boundary_t> boundary; 
+  DCArrayKokkos<boundary_t> boundary;
+  DCArrayKokkos<loading_t> loading;
+
   std::vector<double> gravity_vector {9.81, 0., 0.};
 
   void init_material_variable_arrays(size_t nglobal_vars) {
@@ -105,6 +108,7 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
     from_vector(mat_fill, region_options);
     from_vector(material, material_options);
     from_vector(boundary, boundary_conditions);
+    from_vector(loading, loading_conditions);
 
     // Send to device.
     mat_fill.update_device();
@@ -129,7 +133,7 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_SGH, Simulation_Parameters, 
   time_variables, material_options, region_options,
-  boundary_conditions, gravity_flag, report_runtime, rk_num_stages,
+  boundary_conditions, loading_conditions, gravity_flag, report_runtime, rk_num_stages,
   NB, NBSF, NBV,
   graphics_options
 )
