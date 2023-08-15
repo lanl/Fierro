@@ -75,8 +75,15 @@ struct Optimization_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   OPTIMIZATION_PROCESS optimization_process = OPTIMIZATION_PROCESS::none;
   OPTIMIZATION_OBJECTIVE optimization_objective;
   std::vector<Optimization_Constraint> constraints;
+  bool method_of_moving_asymptotes;
+  double simp_penalty_power;
+  double density_epsilon;
 };
-IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options, optimization_process, optimization_objective, constraints)
+IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options, 
+  optimization_process, optimization_objective, 
+  constraints, method_of_moving_asymptotes,
+  simp_penalty_power, density_epsilon
+)
 
 struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters {
   // --- Mesh regions and material fills ---

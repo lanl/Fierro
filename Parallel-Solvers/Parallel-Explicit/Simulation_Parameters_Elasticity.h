@@ -65,7 +65,7 @@ struct Simulation_Parameters_Elasticity : public Simulation_Parameters
   bool strain_max_flag          = false;
 
   // --- Isotropic Elastic Parameters
-  double Elastic_Modulus = 200000000000;
+  double Elastic_Modulus = 10;
   double Poisson_Ratio   = 0.3;
 
   // -- Integration rule

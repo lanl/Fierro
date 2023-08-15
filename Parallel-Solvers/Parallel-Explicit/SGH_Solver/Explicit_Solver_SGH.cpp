@@ -474,25 +474,22 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
 
   sgh_module->get_vol();
 
-
-    // ---------------------------------------------------------------------
-    //   setup the IC's and BC's
-    // ---------------------------------------------------------------------
   sgh_module->setup();
 
   //set initial saved velocities
   initial_node_velocities_distributed->assign(*node_velocities_distributed);
-  
-  if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on){
-    //design_node_densities_distributed->randomize(1,1);
-    setup_optimization_problem();
-    //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
+    
+  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
+      //design_node_densities_distributed->randomize(1,1);
+      setup_optimization_problem();
+      //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
   }
-  
-  // ---------------------------------------------------------------------
-  //  Calculate the SGH solution
-  // ---------------------------------------------------------------------  
-  sgh_module->sgh_solve();
+  else{
+    // ---------------------------------------------------------------------
+    //  Calculate the SGH solution
+    // ---------------------------------------------------------------------  
+      sgh_module->sgh_solve();
+  }
 
   // clean up all material models
   sgh_module->cleanup_material_models(); 
@@ -1285,8 +1282,9 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
 
   //Design variables to optimize
   ROL::Ptr<ROL::Vector<real_t>> x;
-  if(nodal_density_flag)
+  if(nodal_density_flag){
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(design_node_densities_distributed);
+  }
   else
     x = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(Global_Element_Densities);
   
@@ -1383,7 +1381,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
         
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false);
+        eq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false, true);
       }
       else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
@@ -1409,7 +1407,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       ROL::Ptr<ROL::BoundConstraint<real_t>> constraint_bnd = ROL::makePtr<ROL::Bounds<real_t>>(ll,lu);
       if(TO_Module_List[imodule]==TO_MODULE_TYPE::Mass_Constraint){
         *fos << " MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, true, true);
       }
       else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
@@ -1440,7 +1438,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
     for(int inode = 0; inode < nlocal_nodes; inode++){
       node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = DENSITY_EPSILON;
+      node_densities_lower_bound(inode,0) = simparam_dynamic_opt.optimization_options.density_epsilon;
     }
 
     //set lower bounds for nodes on surfaces with boundary and loading conditions
@@ -1508,7 +1506,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
     for(int ielem = 0; ielem < rnum_elem; ielem++){
       Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = DENSITY_EPSILON;
+      Element_Densities_Lower_Bound(ielem,0) = simparam_dynamic_opt.optimization_options.density_epsilon;
     }
 
     //create global vector
@@ -1552,7 +1550,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
   directions_distributed->putScalar(1);
-  //directions_distributed->randomize(-1,1);
+  //directions_distributed->randomize(-0.8,1);
   //real_t normd = directions_distributed->norm2();
   //directions_distributed->scale(normd);
   //set all but first component to 0 for debug
@@ -1561,7 +1559,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
   //directions(4,0) = -0.3;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  obj->checkGradient(*rol_x, *rol_d);
+  //obj->checkGradient(*rol_x, *rol_d);
   //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);
@@ -1574,7 +1572,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  //solver.solve(*fos);
+  solver.solve(*fos);
 
   //print final constraint satisfaction
   //fea_elasticity->compute_element_masses(design_densities,false);
