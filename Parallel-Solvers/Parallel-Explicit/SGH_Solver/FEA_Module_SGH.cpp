@@ -1480,14 +1480,14 @@ void FEA_Module_SGH::sgh_solve(){
     Time_Variables tv = simparam.time_variables;
    
     const size_t rk_level = simparam.rk_num_bins - 1; 
-    time_value = simparam.time_value;
+    time_value = tv.time_initial;
     time_final = tv.time_final;
     dt_max = tv.dt_max;
     dt_min = tv.dt_min;
     dt_cfl = tv.dt_cfl;
-    graphics_time = simparam.graphics_options.graphics_time;
+    graphics_time = simparam.output_options.graphics_step;
     graphics_cyc_ival = simparam.graphics_options.graphics_cyc_ival;
-    graphics_dt_ival = simparam.graphics_options.graphics_dt_ival;
+    graphics_dt_ival = simparam.output_options.graphics_step;
     cycle_stop = tv.cycle_stop;
     rk_num_stages = simparam.rk_num_stages;
     dt = tv.dt;
@@ -1546,7 +1546,7 @@ void FEA_Module_SGH::sgh_solve(){
       nTO_modules = simparam_dynamic_opt.TO_Module_List.size();
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk)
+    if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk&&simparam.output_options.write_initial==true)
     {
       if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
@@ -1732,7 +1732,7 @@ void FEA_Module_SGH::sgh_solve(){
 	    //if (stop_calc == 1) break;
         
   
-
+      if(simparam.time_variables.output_time_sequence_level>=TIME_OUTPUT_LEVEL::high){
         if (cycle==0){
             if(myrank==0)
               printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
@@ -1742,7 +1742,7 @@ void FEA_Module_SGH::sgh_solve(){
             if(myrank==0)
               printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
         } // end if
-        
+      } 
         
         // ---------------------------------------------------------------------
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
@@ -1855,6 +1855,18 @@ void FEA_Module_SGH::sgh_solve(){
             // ---- Update nodal velocities ---- //
             if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
               get_force_elastic(material,
+                              mesh,
+                              node_coords,
+                              node_vel,
+                              node_mass,
+                              elem_den,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              corner_force,
+                              rk_alpha,
+                              cycle);
+                applied_forces(material,
                               mesh,
                               node_coords,
                               node_vel,
@@ -2105,8 +2117,7 @@ void FEA_Module_SGH::sgh_solve(){
       } // end of RK loop
 
 	    // increment the time
-	    time_value+=dt;
-      simparam.time_value = time_value;
+	    simparam.time_value = time_value+=dt;
 
       if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
         if(cycle >= max_time_steps)
@@ -2232,7 +2243,7 @@ void FEA_Module_SGH::sgh_solve(){
       else if (cycle == cycle_stop) {
         write = 1;
       }
-      else if (time_value >= time_final){
+      else if (time_value >= time_final&&simparam.output_options.write_final==true){
         write = 1;
       }
       else if (time_value >= graphics_time){

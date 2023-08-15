@@ -51,7 +51,7 @@ public:
 
   void compute_element_volumes();
 
-  void compute_element_masses(const_host_vec_array design_densities, bool max_flag);
+  void compute_element_masses(const_host_vec_array design_densities, bool max_flag, bool use_initial_density = false);
 
   void compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component);
 
@@ -84,6 +84,8 @@ public:
 
   //inertial properties
   real_t mass, center_of_mass[3], moments_of_inertia[6];
+
+  bool use_initial_density; //if density variable is from initial configuration then jacobian is not needed
 
   //runtime flags
   bool mass_init, com_init[3];

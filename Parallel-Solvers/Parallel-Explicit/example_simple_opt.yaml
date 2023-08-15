@@ -2,11 +2,13 @@ solver_type: SGH
 
 num_dims: 3
 time_variables:
+    time_initial: 0.0
     time_final: 1.0
     dt_min: 1.e-8
-    dt_max: 1.e-2
+    dt_max: 1.e-3
     dt_start: 1.e-5
     cycle_stop: 2000000
+    output_time_sequence_level: low
 timer_output_level: thorough
 
 input_options:
@@ -15,8 +17,10 @@ input_options:
     element_type: hex8
 
 output_options:
-    graphics_step: 0.25
+    graphics_step: 2.0
     output_file_format: vtk
+    write_initial: false
+    write_final: false
 
 material_options:
     #eos model is required
@@ -34,7 +38,7 @@ material_options:
 region_options:
   - volume: global
     mat_id: 0
-    den: 1.0
+    den: 100.0
     sie: 1.e-10
         
     velocity: cartesian
@@ -45,13 +49,13 @@ region_options:
   - volume: sphere
     mat_id: 0
     radius1: 0.0
-    radius2: 0.0375
-    den: 1.0
+    radius2: 0.1125
+    den: 100.0
         
     velocity: cartesian
-    u: 0.0
-    v: 0.0
-    w: 0.0
+    u: 0.1
+    v: 0.1
+    w: 0.1
     
 boundary_conditions:
     # Tag X plane
@@ -68,25 +72,21 @@ boundary_conditions:
   - surface: z_plane
     value: 0.0
     condition_type: reflected
-            
-    # Tag X plane
-  - surface: x_plane
-    value: 1.2
-    condition_type: reflected
-            
-    # Tag Y plane
-  - surface: y_plane
-    value: 1.2
-    condition_type: reflected
-            
-    # Tag Z plane
-  - surface: z_plane
-    value: 1.2
-    condition_type: reflected
 
+loading_conditions:
+    # Load radially around 0 0 0 corner
+  - volume: sphere
+    radius_inner: 0.0
+    radius_outer: 0.1125
+    condition_type: body_force
+    fx: 0.0001
+    fy: 0.0001
+    fz: 0.0001
+            
 optimization_options:
     optimization_process: topology_optimization
     optimization_objective: minimize_kinetic_energy
+    density_epsilon: 0.01
     constraints:
       - type: mass
         relation: equality
