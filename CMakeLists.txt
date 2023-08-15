@@ -85,7 +85,6 @@ endif()
 if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   set(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
   find_package(MPI REQUIRED)
-  SET(CMAKE_PREFIX_PATH ./Trilinos/build/lib/cmake/Trilinos ${CMAKE_PREFIX_PATH})
   find_package(Trilinos REQUIRED)
 
   # Assume if the CXX compiler exists, the rest do too.
