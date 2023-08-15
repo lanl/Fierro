@@ -93,13 +93,14 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos <material_t> &material,
     const size_t rk_level = simparam.rk_num_bins - 1;    
     const size_t num_dim = mesh.num_dims;
     const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-    const size_t num_lcs = simparam.loading_conditions.size();
-    auto loading_condition = simparam.loading_conditions;
+    const size_t num_lcs = simparam.loading.size();
     
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
     const DCArrayKokkos <loading_t> loading = simparam.loading;
 
-    
+    //debug check
+    //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
+
     // walk over the nodes to update the velocity
     FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         double current_node_coords[3];
@@ -113,6 +114,9 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos <material_t> &material,
         } // end for dim
         radius = sqrt(current_node_coords[0]*current_node_coords[0]+current_node_coords[1]*current_node_coords[1]+current_node_coords[2]*current_node_coords[2]);
         for(size_t ilc=0; ilc < num_lcs; ilc++){
+          //debug check
+          //std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
+
           bool fill_this = loading(ilc).contains(current_node_coords);
           if(fill_this){
             // loop over all corners around the node and calculate the nodal force

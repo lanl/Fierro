@@ -72,6 +72,16 @@ boundary_conditions:
   - surface: z_plane
     value: 0.0
     condition_type: reflected
+
+loading_conditions:
+    # Load radially around 0 0 0 corner
+  - volume: sphere
+    radius_inner: 0.0
+    radius_outer: 0.1125
+    condition_type: body_force
+    fx: 0.0001
+    fy: 0.0001
+    fz: 0.0001
             
 optimization_options:
     optimization_process: topology_optimization

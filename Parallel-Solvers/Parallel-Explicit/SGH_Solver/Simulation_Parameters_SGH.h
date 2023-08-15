@@ -113,6 +113,7 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
     // Send to device.
     mat_fill.update_device();
     boundary.update_device();
+    loading.update_device();
     material.update_device();
     global_vars.update_device();
 
