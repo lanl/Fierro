@@ -5,7 +5,8 @@
 
 using namespace mtr;
 
-// node_state
+// node state
+// kinematic variables are stored at the nodes
 struct node_t {
 
     // Position
@@ -14,6 +15,9 @@ struct node_t {
     // velocity
     CArray <double> vel;
 
+    // divergence of velocity
+    CArray <double> div;
+    
     // mass at nodes
     CArray <double> mass;
 
@@ -23,10 +27,30 @@ struct node_t {
     {
         this->coords = CArray <double> (num_rk, num_nodes, num_dims);
         this->vel    = CArray <double> (num_rk, num_nodes, num_dims);
+	this->div    = CArray <double> (num_rk, num_nodes);
         this->mass   = CArray <double> (num_nodes);
     }; // end method
 
 }; // end node_t
+
+// corner_state
+struct corner_t {
+
+    // force
+    CArray <double> force;
+    
+    // mass of corner
+    CArray <double> mass;
+
+    
+    // initialization method (num_corners, num_dims)
+    void initialize(size_t num_corners, size_t num_dims)
+    {
+        this->force = CArray <double> (num_corners, num_dims);
+        this->mass  = CArray <double> (num_corners);
+    }; // end method
+
+}; // end corner_t
 
 
 // elem_state
@@ -46,12 +70,9 @@ struct elem_t {
     
     // sie
     CArray <double> sie;
-
-    // vol
-    CArray <double> vol;
     
-    // divergence of velocity
-    CArray <double> div;
+    // vol
+    CArray <double> vol; 
     
     // mass of elem
     CArray <double> mass;
@@ -74,31 +95,40 @@ struct elem_t {
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
     {
+        
         this->den    = CArray <double> (num_elems);
         this->pres   = CArray <double> (num_elems);
-        this->stress = CArray <double> (num_rk, num_elems, num_dims, num_dims);
-        this->sspd   = CArray <double> (num_elems);
-        this->sie    = CArray <double> (num_rk, num_elems);
-        this->vol    = CArray <double> (num_elems);
-        this->div    = CArray <double> (num_elems);
+        this->stress = CArray <size_t> (num_rk, num_elems, num_dims, num_dims);
+        this->sspd = CArray <size_t> (num_elems);
+        this->sie = CArray <size_t> (num_rk, num_elems);
+	this->vol    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
 
     }; // end method
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
-    void initialize_Pn(size_t num_rk, size_t num_elems, size_t num_dims, size_t p_order)
+    void initialize_Pn(size_t num_rk, 
+		       size_t num_elems, 
+		       size_t num_nodes_in_elem, 
+		       size_t num_zones_in_elem, 
+		       size_t num_surfs_in_elem, 
+		       size_t num_dims, 
+		       size_t p_order)
     {
-	int num_leg_pts = std::pow( num_elems*(2*p_order), 3 );
-	int num_lob_pts = std::pow( num_elems*(2*p_order+1), 3 );
+	int num_leg_pts = std::pow( num_elems*(2*p_order), 3 );// discontinuous index across mesh
+	int num_lob_pts = std::pow( num_elems*(2*p_order+1), 3 );// discontinuous index across mesh
+        
+	// thermodynamic variables are internal to the element and located at the zone centers
+	int num_zones = num_elems*num_zones_in_elem; // to keep things global.
 
-        this->den    = CArray <double> (num_elems);
-        this->pres   = CArray <double> (num_elems);
-        this->stress = CArray <double> (num_rk, num_elems, num_dims, num_dims);
-        this->sspd   = CArray <double> (num_elems);
-        this->sie    = CArray <double> (num_rk, num_elems);
+        this->den    = CArray <double> (num_zones);
+        this->pres   = CArray <double> (num_zones);
+        this->stress = CArray <size_t> (num_rk, num_zones, num_dims, num_dims);
+        this->sspd = CArray <size_t> (num_zones);
+        this->sie = CArray <size_t> (num_rk, num_zones);
+
         this->vol    = CArray <double> (num_elems);
-        this->div    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
 
@@ -114,26 +144,6 @@ struct elem_t {
     }; // end method
 
 }; // end elem_t
-
-
-// corner_state
-struct corner_t {
-
-    // force
-    CArray <double> force;
-    
-    // mass of corner
-    CArray <double> mass;
-
-    
-    // initialization method (num_corners, num_dims)
-    void initialize(size_t num_corners, size_t num_dims)
-    {
-        this->force = CArray <double> (num_corners, num_dims);
-        this->mass  = CArray <double> (num_corners);
-    }; // end method
-
-}; // end corner_t
 
 
 namespace model

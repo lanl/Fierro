@@ -99,12 +99,14 @@ struct mesh_t {
     size_t num_nodes_in_elem;
     size_t num_patches_in_elem;
     size_t num_surfs_in_elem;
+    size_t num_zones_in_elem;
     size_t num_patches_in_surf;  // high-order mesh class
 
     size_t num_corners;
     
     size_t num_patches;
     size_t num_surfs;           // high_order mesh class
+    size_t num_zones;           // high_order mesh class
     
     size_t num_bdy_patches;
     size_t num_bdy_nodes;
@@ -147,7 +149,7 @@ struct mesh_t {
     // surface ids in elem
     CArrayKokkos <size_t> surfs_in_elem;  // high-order mesh class
     
-    // surface ids in elem
+    // zone ids in elem
     CArrayKokkos <size_t> zones_in_elem;     // high-order mesh class
     
     
@@ -211,15 +213,25 @@ struct mesh_t {
     }; // end method
     
     // initialization method
-    void initialize_elems_Pn(const size_t num_elems_inp, const size_t num_nodes_in_elem_inp, const size_t num_dims_inp)
+    void initialize_elems_Pn(const size_t num_elems_inp,
+		   	     const size_t num_nodes_in_elem_inp,
+			     const size_t num_zones_in_elem_inp,
+			     const size_t num_surfs_in_elem_inp,
+			     const size_t num_dims_inp)
     {
-        num_dims = num_dims_inp;
-        num_elems = num_elems_inp;
-        num_nodes_in_elem = num_nodes_in_elem_inp;
         
+	num_dims = num_dims_inp;
+        num_elems = num_elems_inp;
+        
+	num_nodes_in_elem = num_nodes_in_elem_inp;
+        num_zones_in_elem = num_zones_in_elem_inp;
+        num_surfs_in_elem = num_surfs_in_elem_inp;
+
         nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
-        
+        zones_in_elem = DCArrayKokkos <size_t> (num_elems, num_zones_in_elem);
+	surfs_in_elem = DCArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
+
         return;
         
     }; // end method
@@ -1750,7 +1762,7 @@ double max_Eigen2D(const ViewCArrayKokkos<double> tensor);
 
 
 
-void sgh_solve(CArrayKokkos <material_t> &material,
+void rdh_solve(CArrayKokkos <material_t> &material,
                CArrayKokkos <boundary_t> &boundary,
                mesh_t &mesh,
                DViewCArrayKokkos <double> &node_coords,
@@ -1868,7 +1880,7 @@ void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
                         const double vol);
 
 
-void get_force_sgh(const CArrayKokkos <material_t> &material,
+void get_force_tensor(const CArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
@@ -1888,7 +1900,7 @@ void get_force_sgh(const CArrayKokkos <material_t> &material,
                    const double rk_alpha);
 
 
-void get_force_sgh2D(const CArrayKokkos <material_t> &material,
+void get_force_tensor2D(const CArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -1908,7 +1920,7 @@ void get_force_sgh2D(const CArrayKokkos <material_t> &material,
                      const double rk_alpha);
 
 
-void update_velocity_sgh(double rk_alpha,
+void update_momentum_rdh(double rk_alpha,
                          double dt,
                          const mesh_t &mesh,
                          DViewCArrayKokkos <double> &node_vel,
@@ -1916,7 +1928,7 @@ void update_velocity_sgh(double rk_alpha,
                          const DViewCArrayKokkos <double> &corner_force);
 
 
-void update_energy_sgh(double rk_alpha,
+void update_energy_rdh(double rk_alpha,
                        double dt,
                        const mesh_t &mesh,
                        const DViewCArrayKokkos <double> &node_vel,
@@ -1926,7 +1938,7 @@ void update_energy_sgh(double rk_alpha,
                        const DViewCArrayKokkos <double> &corner_force);
 
 
-void update_position_sgh(double rk_alpha,
+void update_position_rdh(double rk_alpha,
                          double dt,
                          const size_t num_dims,
                          const size_t num_nodes,
@@ -1934,7 +1946,7 @@ void update_position_sgh(double rk_alpha,
                          const DViewCArrayKokkos <double> &node_vel);
 
 
-void update_state(const CArrayKokkos <material_t> &material,
+void update_state_rdh(const CArrayKokkos <material_t> &material,
                   const mesh_t &mesh,
                   const DViewCArrayKokkos <double> &node_coords,
                   const DViewCArrayKokkos <double> &node_vel,
@@ -1950,7 +1962,7 @@ void update_state(const CArrayKokkos <material_t> &material,
                   const double dt,
                   const double rk_alpha);
 
-void update_state2D(const CArrayKokkos <material_t> &material,
+void update_state_rdh2D(const CArrayKokkos <material_t> &material,
                     const mesh_t &mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,

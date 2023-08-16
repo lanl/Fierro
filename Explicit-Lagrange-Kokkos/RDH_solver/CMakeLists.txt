@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1.3)
 
 project (FierroRDH)
 
-add_executable(FierroRDH read_mesh.cpp eos.cpp outputs.cpp time_integration.cpp user_mat.cpp user_mat_init.cpp ref_elem.cpp)
+add_executable(FierroRDH driver.cpp read_mesh.cpp eos.cpp outputs.cpp time_integration.cpp user_mat.cpp user_mat_init.cpp ref_elem.cpp)
 
 if (CUDA)
   add_definitions(-DHAVE_CUDA=1)

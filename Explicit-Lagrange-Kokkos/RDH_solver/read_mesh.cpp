@@ -192,6 +192,8 @@ void readVTKPn(char* MESH,
     size_t num_nodes;
     size_t num_elems;
     size_t num_nodes_in_elem;
+    size_t num_zones_in_elem;
+    size_t num_surfs_in_elem;
 
     std::string token;
     
@@ -279,7 +281,7 @@ void readVTKPn(char* MESH,
     } // end while
     
     
-    // next line has the number of number of nodes in an element
+    // next line has the number of nodes in an element
     {
         std::streampos oldpos = in.tellg();  // stores the position
         
@@ -294,10 +296,13 @@ void readVTKPn(char* MESH,
         in.seekg(oldpos);
         
     }
+    int p = int(std::cbrt(num_nodes_in_elem)-1);
+    num_zones_in_elem = int(std::pow(p, 3)); // one order lower than nodal index space
+    num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
     
     // intialize elem mesh
-    mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_dims);
-    elem.initialize_Pn(rk_num_bins, num_elems, 3, std::cbrt(num_nodes_in_elem)-1); // always 3D here, even for 2D
+    mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_zones_in_elem, num_surfs_in_elem, num_dims);
+    elem.initialize_Pn(rk_num_bins, num_elems, num_nodes_in_elem, num_zones_in_elem, num_surfs_in_elem, 3, p); // always 3D here, even for 2D
     
     
     // intialize corner variables

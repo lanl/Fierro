@@ -266,7 +266,7 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
     
 } // end subroutine
 
-// Exact volume for a hex element
+// Volume from jacobian for a HexN element
 KOKKOS_FUNCTION
 void get_vol_jacobi(const DViewCArrayKokkos <double> &elem_vol,
                  const size_t elem_gid,
