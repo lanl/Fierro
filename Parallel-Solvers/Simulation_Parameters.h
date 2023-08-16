@@ -69,8 +69,26 @@ SERIALIZABLE_ENUM(MESH_FORMAT,
     ansys_dat
 )
 
-SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk, vtu)
+SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk, vtu, none)
 SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
+
+SERIALIZABLE_ENUM(FIELD_OUTPUT,
+    design_density,
+    velocity,
+    element_density,
+    pressure,
+    SIE,
+    volume,
+    mass,
+    sound_speed,
+    speed,
+    material_id,
+    element_switch,
+    processor_id,
+    element_id,
+    user_vars,
+    stress
+)
 
 SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
   Elasticity,
@@ -143,15 +161,33 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
 };
 IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base)
 
-struct Output_Options {
+struct Output_Options : Yaml::DerivedFields {
   int graphics_step_frequency;
   double graphics_step;
   OUTPUT_FORMAT output_file_format;
+  std::set<FIELD_OUTPUT> field_output;
   size_t max_num_user_output_vars=0;
   bool write_initial = true;
   bool write_final = true;
+
+  void derive_default_field_output() {
+    if (field_output.empty()) {
+      field_output.insert(FIELD_OUTPUT::velocity);
+      field_output.insert(FIELD_OUTPUT::element_density);
+      field_output.insert(FIELD_OUTPUT::pressure);
+      field_output.insert(FIELD_OUTPUT::SIE);
+      field_output.insert(FIELD_OUTPUT::volume);
+      field_output.insert(FIELD_OUTPUT::mass);
+      field_output.insert(FIELD_OUTPUT::sound_speed);
+      field_output.insert(FIELD_OUTPUT::speed);
+    }
+  }
+
+  void derive() {
+    derive_default_field_output();
+  }
 };
-IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format, write_initial, write_final, max_num_user_output_vars)
+IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format, field_output, write_initial, write_final, max_num_user_output_vars)
 
 
 SERIALIZABLE_ENUM(BOUNDARY_TAG, 
