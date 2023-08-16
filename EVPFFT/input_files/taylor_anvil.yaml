@@ -21,12 +21,13 @@ output_options:
     graphics_step: 6.0e-07  #[s]
     output_file_format: vtk 
     max_num_user_output_vars: 5    
-    field_output:
-      - velocity
-      - processor_id
-      - element_id
-      - stress
-      - user_vars
+    
+field_output:
+  - velocity
+  - processor_id
+  - element_id
+  - stress
+  - user_vars
 
 material_options:
   - eos_model: user_eos_model
