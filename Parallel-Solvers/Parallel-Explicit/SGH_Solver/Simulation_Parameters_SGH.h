@@ -52,6 +52,24 @@
 
 using namespace mtr;
 
+SERIALIZABLE_ENUM(FIELD_OUTPUT_SGH,
+    design_density,
+    velocity,
+    element_density,
+    pressure,
+    SIE,
+    volume,
+    mass,
+    sound_speed,
+    speed,
+    material_id,
+    element_switch,
+    processor_id,
+    element_id,
+    user_vars,
+    stress
+)
+
 struct Simulation_Parameters_SGH : Simulation_Parameters {
   Time_Variables time_variables;
   std::vector<MaterialFill> region_options;
@@ -59,6 +77,7 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
   std::vector<Boundary> boundary_conditions;
   std::vector<Loading> loading_conditions;
   Graphics_Options graphics_options;
+  std::set<FIELD_OUTPUT_SGH> field_output;  
 
   bool gravity_flag   = false;
   bool report_runtime = true;
@@ -123,12 +142,27 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
     }
   }
 
+  void derive_default_field_output() {
+    if (field_output.empty()) {
+      field_output.insert(FIELD_OUTPUT_SGH::velocity);
+      field_output.insert(FIELD_OUTPUT_SGH::element_density);
+      field_output.insert(FIELD_OUTPUT_SGH::pressure);
+      field_output.insert(FIELD_OUTPUT_SGH::SIE);
+      field_output.insert(FIELD_OUTPUT_SGH::volume);
+      field_output.insert(FIELD_OUTPUT_SGH::mass);
+      field_output.insert(FIELD_OUTPUT_SGH::sound_speed);
+      field_output.insert(FIELD_OUTPUT_SGH::speed);
+    }
+  }
+
   void derive() {
     derive_kokkos_arrays();
  
     rk_num_bins = rk_num_stages;
 
     ensure_module(FEA_MODULE_TYPE::SGH);
+
+    derive_default_field_output();
   }
   void validate() { }
 };
@@ -136,7 +170,7 @@ IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_SGH, Simulation_Parameter
   time_variables, material_options, region_options,
   boundary_conditions, loading_conditions, gravity_flag, report_runtime, rk_num_stages,
   NB, NBSF, NBV,
-  graphics_options
+  graphics_options, field_output
 )
 
 #endif // end HEADER_H
