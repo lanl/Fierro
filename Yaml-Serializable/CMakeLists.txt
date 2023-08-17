@@ -1,6 +1,8 @@
 add_library(yaml_serializable src/Yaml.cpp)
 target_include_directories(yaml_serializable PUBLIC include)
-#target_link_libraries(yaml_serializable PUBLIC stdc++fs)
+if (NOT APPLE)
+    target_link_libraries(yaml_serializable PUBLIC stdc++fs)
+endif()
 
 install(
   TARGETS yaml_serializable
