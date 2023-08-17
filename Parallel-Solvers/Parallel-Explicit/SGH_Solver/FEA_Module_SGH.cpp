@@ -2319,7 +2319,7 @@ void FEA_Module_SGH::sgh_solve(){
     }
     
     
-    auto time_2 = std::chrono::system_clock::now();
+    auto time_2 = std::chrono::high_resolution_clock::now();
     auto time_difference = time_2 - time_1;
     //double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
