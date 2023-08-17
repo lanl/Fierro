@@ -754,6 +754,35 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
 
 void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lower_bound){
 
+  const size_t num_dim = mesh.num_dims;
+  const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+  const size_t num_lcs = simparam.loading.size();
+    
+  const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
+  const DCArrayKokkos <loading_t> loading = simparam.loading;
+
+  //debug check
+  //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
+
+  // walk over the nodes to update the velocity
+  FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+      double current_node_coords[3];
+      double radius;
+      for (size_t dim = 0; dim < num_dim; dim++){
+          current_node_coords[dim] = all_initial_node_coords(node_gid, dim);
+      } // end for dim
+      radius = sqrt(current_node_coords[0]*current_node_coords[0]+current_node_coords[1]*current_node_coords[1]+current_node_coords[2]*current_node_coords[2]);
+      for(size_t ilc=0; ilc < num_lcs; ilc++){
+        //debug check
+        //std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
+
+        bool fill_this = loading(ilc).contains(current_node_coords);
+        if(fill_this){
+          node_densities_lower_bound(node_gid,0) = 1;
+        }
+      }
+  }); // end for parallel for over nodes
+
 }
 
 /* ----------------------------------------------------------------------------
@@ -768,6 +797,9 @@ void FEA_Module_SGH::setup(){
     const size_t num_bcs = simparam.boundary_conditions.size();
     const size_t num_materials = simparam.material_options.size();
     const int num_dim = simparam.num_dims;
+
+    //FEA_Module bc variable
+    num_boundary_conditions = num_bcs;
 
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
     const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
