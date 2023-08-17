@@ -80,8 +80,10 @@ void EVPFFT::update_crss_voce()
           } // end if (ABS(tau1) > tiny)
         } // end if (ABS(thet0) > tiny)
 
-        crss(is,1,ii,jj,kk) += dtau*voce/deltgam;
-        crss(is,2,ii,jj,kk) += dtau*voce/deltgam;
+        if (ABS(deltgam) > 0.0) {
+          crss(is,1,ii,jj,kk) += dtau*voce/deltgam;
+          crss(is,2,ii,jj,kk) += dtau*voce/deltgam;
+        }
 
         //trialtau(is,1,ii,jj,kk) = crss(is,1,ii,jj,kk);
         //trialtau(is,2,ii,jj,kk) = crss(is,2,ii,jj,kk);
