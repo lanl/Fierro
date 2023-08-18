@@ -1,33 +1,6 @@
-#!/usr/bin/env bash
+#!/bin/bash -e
 
-echo "Script executed from: ${PWD}"
-
-SCRIPT_DIR=$(dirname $0)
-echo "Script location: ${SCRIPT_DIR}"
-cd ${SCRIPT_DIR}
-
-#command line default
-NUM_TASKS=${1:-'-j1'}
-
-cd ../..
-BASE_DIR=${PWD}
-if { [ ! -d "build" ] ;}
-then
-    echo "Missing build directory, making one"
-    mkdir build
-fi
-BUILD_DIR=${BASE_DIR}/build
-
-#inititialize submodules if they aren't downloaded
-[ -d "Elements/elements" ] && echo "Elements submodule exists"
-[ -d "Elements/matar/src" ] && echo "matar submodule exists"
-
-
-if { [ ! -d "Elements/elements" ] || [ ! -d "Elements/matar/src" ] ;}
-then
-  echo "Missing submodules, downloading them...."
-  git submodule update --init --recursive
-fi
+cd ${basedir}
 
 #check if Trilinos directory exists, git clone Trilinos if it doesn't
 [ -d "Trilinos" ] && echo "Directory Trilinos exists, skipping Trilinos download"
@@ -44,7 +17,8 @@ fi
 if [ ! -d "Trilinos/build" ]
 then
   echo "Directory Trilinos/build does not exist, creating it...."
-  mkdir Trilinos/build
+    rm -rf ${TRILINOS_BUILD_DIR} ${TRILINOS_INSTALL_DIR}
+    mkdir -p ${TRILINOS_BUILD_DIR} 
 fi
 
 #check if Trilinos library files were installed, install them otherwise.
@@ -54,23 +28,36 @@ fi
 [ -e "Trilinos/build/CMakeCache.txt" ] && echo "CMake build exists, skipping cmake configure"
 if [ ! -e "Trilinos/build/CMakeCache.txt" ]
 then
-  #make text files for scripts executable
-  chmod +x Trilinos-Build-Scripts/cmake_configure_muelu.txt
-  cd Trilinos/build
-  ${BASE_DIR}/Trilinos-Build-Scripts/cmake_configure_muelu.txt
-  cd ${BASE_DIR} 
+cd ${TRILINOS_BUILD_DIR}
+OPTIONS=(
+-D CMAKE_BUILD_TYPE=Release
+-D Trilinos_MUST_FIND_ALL_TPL_LIBS=TRUE
+-D CMAKE_CXX_STANDARD=17
+-D TPL_ENABLE_MPI=ON
+-D Trilinos_ENABLE_Kokkos=ON
+-D Trilinos_ENABLE_OpenMP=ON
+-D Trilinos_ENABLE_Amesos2=ON
+-D Trilinos_ENABLE_Belos=ON
+-D Trilinos_ENABLE_MueLu=ON 
+-D Trilinos_ENABLE_ROL=ON 
+-D Trilinos_ENABLE_Ifpack2=ON
+-D Trilinos_ENABLE_Zoltan2=ON 
+-D MueLu_ENABLE_TESTS=OFF 
+-D Trilinos_ENABLE_ALL_PACKAGES=OFF 
+-D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF 
+-D Trilinos_ENABLE_TESTS=OFF 
+-D CMAKE_INSTALL_PREFIX=${TRILINOS_INSTALL_DIR} 
+)
+
+cmake "${OPTIONS[@]}" "${TRILINOS_SOURCE_DIR:-../}"
 fi
+
 
 if [ ! -d "Trilinos/build/lib" ]
 then
   echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
-  cd Trilinos/build
-  make $NUM_TASKS install all
-  cd ${BASE_DIR} 
+  cd ${TRILINOS_BUILD_DIR}
+  make install all
 fi
 
-#build Fierro
-echo "Building Fierro"
-cd ${BUILD_DIR}
-cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON ..
-make $NUM_TASKS
+cd $scriptdir
