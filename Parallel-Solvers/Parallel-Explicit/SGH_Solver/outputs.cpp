@@ -182,6 +182,8 @@ Explicit_Solver_SGH::write_outputs()
         sgh_module->elem_user_output_vars.update_host();
         cell_data_fields_double["user_vars"] = std::make_pair(sgh_module->elem_user_output_vars.host_pointer(), 
                                                                    sgh_module->elem_user_output_vars.dims(1));
+        break;
+
       case FIELD_OUTPUT_SGH::stress:
         // element "stress"
         sgh_module->elem_stress.update_host();
