@@ -199,6 +199,10 @@ void Implicit_Solver::run(int argc, char *argv[]){
     //debug
     //return;
     init_maps();
+
+    //equate pointers for this solver
+    initial_node_coords_distributed = node_coords_distributed;
+    all_initial_node_coords_distributed = all_node_coords_distributed;
     
     std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
     

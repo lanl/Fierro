@@ -120,7 +120,7 @@ FEA_Module_Inertial::~FEA_Module_Inertial(){ }
    Compute the mass of each element; estimated with quadrature
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_densities, bool max_flag, bool use_initial_density){
+void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_densities, bool max_flag, bool use_initial_coords){
   //local number of uniquely assigned elements
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //initialize memory for volume storage
@@ -128,7 +128,13 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
   if(!nodal_density_flag) compute_element_volumes();
   const_host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array all_node_coords;
+  if(use_initial_coords){
+    all_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+  else{
+    all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
   const_host_vec_array all_design_densities;
   //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
@@ -279,15 +285,10 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
     
     
       //compute the determinant of the Jacobian
-      if(use_initial_density) {
-        Jacobian = 1;
-      }
-      else{
-        Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
-                  JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
-                  JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
-        if(Jacobian<0) Jacobian = -Jacobian;
-      }
+      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+      if(Jacobian<0) Jacobian = -Jacobian;
 
       //compute density
       current_density = 0;
@@ -320,11 +321,17 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
    Compute the gradients of mass function with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients){
+void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_variables, host_vec_array design_gradients, bool use_initial_coords){
   //local number of uniquely assigned elements
   size_t nonoverlap_nelements = element_map->getLocalNumElements();
   //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array all_node_coords;
+  if(use_initial_coords){
+    all_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+  else{
+    all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int num_dim = simparam.num_dims;
   const_host_vec_array all_node_densities;
