@@ -322,7 +322,14 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   //hack allocation of module
   //sgh_module = new FEA_Module_SGH(this, *mesh);
 
-  sgh_module->setup();
+  //sgh_module->setup();
+
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+      if(myrank == 0)
+        std::cout << "Starting setup for FEA module " << imodule <<std::endl <<std::flush;
+      //allocate and fill sparse structures needed for global solution in each FEA module
+      fea_modules[imodule]->setup();
+  }
 
   //set initial saved velocities
   initial_node_velocities_distributed->assign(*node_velocities_distributed);
@@ -336,11 +343,23 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     // ---------------------------------------------------------------------
     //  Calculate the SGH solution
     // ---------------------------------------------------------------------  
-      sgh_module->sgh_solve();
+      //sgh_module->sgh_solve();
+      for(int imodule = 0; imodule < nfea_modules; imodule++){
+        if(myrank == 0)
+          std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
+        //allocate and fill sparse structures needed for global solution in each FEA module
+        fea_modules[imodule]->solve();
+      }
   }
 
   // clean up all material models
-  sgh_module->cleanup_material_models(); 
+  //sgh_module->cleanup_material_models();
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    if(myrank == 0)
+      std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
+    //allocate and fill sparse structures needed for global solution in each FEA module
+    fea_modules[imodule]->module_cleanup();
+  }
 
   //printf("Finished\n");
   

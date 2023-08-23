@@ -1344,6 +1344,14 @@ void FEA_Module_SGH::setup(){
 } // end of setup
 
 /* ----------------------------------------------------------------------------
+   solve function called by solver
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::module_cleanup(){
+  cleanup_material_models();
+}
+
+/* ----------------------------------------------------------------------------
     Deallocate memory used for  material models
 ------------------------------------------------------------------------------- */
 
@@ -1638,6 +1646,16 @@ void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &b
     
     return;
 } // end method to build boundary nodes
+
+/* ----------------------------------------------------------------------------
+   solve function called by solver
+------------------------------------------------------------------------------- */
+
+int FEA_Module_SGH::solve(){
+  sgh_solve();
+
+  return 0;
+}
 
 /* ----------------------------------------------------------------------------
    SGH solver loop

@@ -67,6 +67,10 @@ public:
 
   void cleanup_material_models();
 
+  int solve();
+
+  void module_cleanup();
+
   void sgh_solve();
 
   void get_force_sgh(const DCArrayKokkos <material_t> &material,

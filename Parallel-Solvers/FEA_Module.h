@@ -131,6 +131,8 @@ public:
 
   virtual void setup() {}
 
+  virtual void module_cleanup() {}
+
   virtual int solve() {return 0;}
 
   virtual void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header) {}
