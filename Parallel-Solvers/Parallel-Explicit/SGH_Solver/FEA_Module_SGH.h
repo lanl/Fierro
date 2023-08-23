@@ -57,11 +57,11 @@ class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int my_fea_module_index = 0);
+  FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
   ~FEA_Module_SGH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
-  void sgh_interface_setup(mesh_t &mesh, node_t &node, elem_t &elem, corner_t &corner);
+  void sgh_interface_setup(node_t &node, elem_t &elem, corner_t &corner);
 
   void setup();
 
@@ -478,7 +478,7 @@ public:
 
   elements::ref_element  *ref_elem;
   
-  mesh_t& mesh;
+  std::shared_ptr<mesh_t> mesh;
   //shallow copies of mesh class views
   size_t num_nodes_in_elem;
   // corner ids in node
@@ -565,6 +565,13 @@ public:
 
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
+
+  // ---------------------------------------------------------------------
+  //    state data type declarations (must stay in scope for output after run)
+  // ---------------------------------------------------------------------
+  node_t  node_interface;
+  elem_t  elem_interface;
+  corner_t  corner_interface;
 
   //Dual View wrappers
   // Dual Views of the individual node struct variables

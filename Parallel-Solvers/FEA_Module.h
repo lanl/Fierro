@@ -129,6 +129,8 @@ public:
   //interfaces between user input and creating data structures for applied loads
   virtual void generate_applied_loads() {}
 
+  virtual void setup() {}
+
   virtual int solve() {return 0;}
 
   virtual void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header) {}

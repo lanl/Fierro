@@ -41,6 +41,7 @@
 #include "utilities.h"
 #include "Explicit_Solver.h"
 #include "Simulation_Parameters_SGH.h"
+#include "mesh.h"
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
