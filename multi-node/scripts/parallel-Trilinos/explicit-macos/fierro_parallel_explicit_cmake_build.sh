@@ -12,4 +12,4 @@ OPTIONS=(
 cmake "${OPTIONS[@]}" "${FIERRO_BASE_DIR:-../}"
 make
 
-cd $builddir
+cd $basedir
