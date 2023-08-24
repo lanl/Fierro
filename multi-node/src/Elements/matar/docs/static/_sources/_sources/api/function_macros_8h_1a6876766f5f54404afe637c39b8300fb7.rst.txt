@@ -1,0 +1,14 @@
+.. _exhale_function_macros_8h_1a6876766f5f54404afe637c39b8300fb7:
+
+Template Function reduce_max(int, int, int, int, T, const F&, T&)
+=================================================================
+
+- Defined in :ref:`file_src_macros.h`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: reduce_max(int, int, int, int, T, const F&, T&)
+   :project: matar

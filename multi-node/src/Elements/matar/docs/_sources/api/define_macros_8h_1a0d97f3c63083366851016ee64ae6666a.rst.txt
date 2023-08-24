@@ -1,0 +1,14 @@
+.. _exhale_define_macros_8h_1a0d97f3c63083366851016ee64ae6666a:
+
+Define RMAX2D
+=============
+
+- Defined in :ref:`file_src_macros.h`
+
+
+Define Documentation
+--------------------
+
+
+.. doxygendefine:: RMAX2D
+   :project: matar

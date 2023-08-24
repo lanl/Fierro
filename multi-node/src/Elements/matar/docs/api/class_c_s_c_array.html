@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Template Class CSCArray &mdash; matar  documentation</title>
+      <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="../static/collapsible-lists/css/tree_view.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../static/documentation_options.js"></script>
+        <script src="../static/jquery.js"></script>
+        <script src="../static/underscore.js"></script>
+        <script src="../static/doctools.js"></script>
+        <script src="../static/collapsible-lists/js/CollapsibleLists.compressed.js"></script>
+        <script src="../static/collapsible-lists/js/apply-collapsible-lists.js"></script>
+    <script src="../static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Template Class CSCArrayKokkos" href="class_c_s_c_array_kokkos.html" />
+    <link rel="prev" title="Template Class CMatrixKokkos" href="class_c_matrix_kokkos.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> matar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="library_root.html">Library API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="library_root.html#class-hierarchy">Class Hierarchy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="library_root.html#file-hierarchy">File Hierarchy</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="library_root.html#full-api">Full API</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="library_root.html#classes-and-structs">Classes and Structs</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="class_c_array.html">Template Class CArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_array_kokkos.html">Template Class CArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_matrix.html">Template Class CMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_matrix_kokkos.html">Template Class CMatrixKokkos</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">Template Class CSCArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_s_c_array_kokkos.html">Template Class CSCArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_s_r_array.html">Template Class CSRArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_s_r_array_kokkos.html">Template Class CSRArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_s_r_array_kokkos_1_1init__start__indices__functor.html">Class CSRArrayKokkos::init_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_c_array_kokkos.html">Template Class DCArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_c_matrix_kokkos.html">Template Class DCMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_f_array_kokkos.html">Template Class DFArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_f_matrix_kokkos.html">Template Class DFMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_view_c_array_kokkos.html">Template Class DViewCArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_view_c_matrix_kokkos.html">Template Class DViewCMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_view_f_array_kokkos.html">Template Class DViewFArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_view_f_matrix_kokkos.html">Template Class DViewFMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_down_array.html">Template Class DynamicRaggedDownArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_down_array_kokkos.html">Template Class DynamicRaggedDownArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_down_array_kokkos_1_1set__strides__functor.html">Class DynamicRaggedDownArrayKokkos::set_strides_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_right_array.html">Template Class DynamicRaggedRightArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_right_array_kokkos.html">Template Class DynamicRaggedRightArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_right_array_kokkos_1_1set__strides__functor.html">Class DynamicRaggedRightArrayKokkos::set_strides_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_f_array.html">Template Class FArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_f_array_kokkos.html">Template Class FArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_f_matrix.html">Template Class FMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_f_matrix_kokkos.html">Template Class FMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array.html">Template Class RaggedDownArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array_kokkos.html">Template Class RaggedDownArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array_kokkos_1_1init__start__indices__functor.html">Class RaggedDownArrayKokkos::init_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array_kokkos_1_1setup__length__functor.html">Class RaggedDownArrayKokkos::setup_length_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array_kokkos_1_1setup__start__indices__functor.html">Class RaggedDownArrayKokkos::setup_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array.html">Template Class RaggedRightArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos.html">Template Class RaggedRightArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos_1_1finalize__stride__functor.html">Class RaggedRightArrayKokkos::finalize_stride_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos_1_1init__start__indices__functor.html">Class RaggedRightArrayKokkos::init_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos_1_1setup__length__functor.html">Class RaggedRightArrayKokkos::setup_length_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos_1_1setup__start__indices__functor.html">Class RaggedRightArrayKokkos::setup_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors.html">Template Class RaggedRightArrayofVectors</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos.html">Template Class RaggedRightArrayofVectorsKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos_1_1finalize__stride__functor.html">Class RaggedRightArrayofVectorsKokkos::finalize_stride_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos_1_1init__start__indices__functor.html">Class RaggedRightArrayofVectorsKokkos::init_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos_1_1setup__length__functor.html">Class RaggedRightArrayofVectorsKokkos::setup_length_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos_1_1setup__start__indices__functor.html">Class RaggedRightArrayofVectorsKokkos::setup_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_c_array.html">Template Class ViewCArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_c_array_kokkos.html">Template Class ViewCArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_c_matrix.html">Template Class ViewCMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_c_matrix_kokkos.html">Template Class ViewCMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_f_array.html">Template Class ViewFArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_f_array_kokkos.html">Template Class ViewFArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_f_matrix.html">Template Class ViewFMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_f_matrix_kokkos.html">Template Class ViewFMatrixKokkos</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="library_root.html#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="library_root.html#defines">Defines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="library_root.html#typedefs">Typedefs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">matar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="library_root.html">Library API</a> &raquo;</li>
+      <li>Template Class CSCArray</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/class_c_s_c_array.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="template-class-cscarray">
+<span id="exhale-class-class-c-s-c-array"></span><h1>Template Class CSCArray<a class="headerlink" href="#template-class-cscarray" title="Permalink to this headline"></a></h1>
+<ul class="simple">
+<li><p>Defined in <a class="reference internal" href="file_src_matar.h.html#file-src-matar-h"><span class="std std-ref">File matar.h</span></a></p></li>
+</ul>
+<section id="class-documentation">
+<h2>Class Documentation<a class="headerlink" href="#class-documentation" title="Permalink to this headline"></a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4I0E8CSCArray">
+<span id="_CPPv3I0E8CSCArray"></span><span id="_CPPv2I0E8CSCArray"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="class_c_s_c_array"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CSCArray</span></span></span><a class="headerlink" href="#_CPPv4I0E8CSCArray" title="Permalink to this definition"></a><br /></dt>
+<dd><div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray8CSCArrayEv">
+<span id="_CPPv3N8CSCArray8CSCArrayEv"></span><span id="_CPPv2N8CSCArray8CSCArrayEv"></span><span id="CSCArray::CSCArray"></span><span class="target" id="class_c_s_c_array_1a8b745305955df2d87a28c248af402241"></span><span class="sig-name descname"><span class="n"><span class="pre">CSCArray</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray8CSCArrayEv" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Construct a new empty Sparse Col Array object. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray8CSCArrayE6CArrayI1TE6CArrayI6size_tE6CArrayI6size_tE6size_t6size_t">
+<span id="_CPPv3N8CSCArray8CSCArrayE6CArrayI1TE6CArrayI6size_tE6CArrayI6size_tE6size_t6size_t"></span><span id="_CPPv2N8CSCArray8CSCArrayE6CArrayI1TE6CArrayI6size_tE6CArrayI6size_tE6size_t6size_t"></span><span id="CSCArray::CSCArray__CArray:T:.CArray:s:.CArray:s:.s.s"></span><span class="target" id="class_c_s_c_array_1ae1205ca0f276fef7169950b31016f886"></span><span class="sig-name descname"><span class="n"><span class="pre">CSCArray</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="class_c_array.html#_CPPv4I0E6CArray" title="CArray"><span class="n"><span class="pre">CArray</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray::T"><span class="n"><span class="pre">T</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">array</span></span>, <a class="reference internal" href="class_c_array.html#_CPPv4I0E6CArray" title="CArray"><span class="n"><span class="pre">CArray</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">size_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">row_index</span></span>, <a class="reference internal" href="class_c_array.html#_CPPv4I0E6CArray" title="CArray"><span class="n"><span class="pre">CArray</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">size_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">start_index</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim1</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim2</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray8CSCArrayE6CArrayI1TE6CArrayI6size_tE6CArrayI6size_tE6size_t6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Construct a new Sparse Col Array object. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>array</strong> – 1d array of data values in order as read top to bottom, left to right </p></li>
+<li><p><strong>row_index</strong> – 1d array that marks what row each element is in </p></li>
+<li><p><strong>start_index</strong> – 1d array that marks where the first element of each column starts </p></li>
+<li><p><strong>dim1</strong> – number of rows the matrix should have </p></li>
+<li><p><strong>dim2</strong> – number of columns the matrix should have </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK8CSCArrayclE6size_t6size_t">
+<span id="_CPPv3NK8CSCArrayclE6size_t6size_t"></span><span id="_CPPv2NK8CSCArrayclE6size_t6size_t"></span><span id="CSCArray::call-operator__s.sC"></span><span class="target" id="class_c_s_c_array_1a2f8a3d9fec014e37bd2540062e5613b8"></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">()</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">i</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">j</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK8CSCArrayclE6size_t6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Access A(i,j). Returns a dummy address with value 0 if A(i,j) is not allocated. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>i</strong> – : row </p></li>
+<li><p><strong>j</strong> – : column </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>T&amp; : address of array_ that corresponds to A(i,j) </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArrayaSERK8CSCArray">
+<span id="_CPPv3N8CSCArrayaSERK8CSCArray"></span><span id="_CPPv2N8CSCArrayaSERK8CSCArray"></span><span id="CSCArray::assign-operator__CSCArrayCR"></span><span class="target" id="class_c_s_c_array_1a5fea323157d9f4f36414bc1cc7d5365b"></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray"><span class="n"><span class="pre">CSCArray</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray"><span class="n"><span class="pre">CSCArray</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">temp</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArrayaSERK8CSCArray" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Overloaded copy operator. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>temp</strong> – : Array to copy </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><a class="reference internal" href="#class_c_s_c_array"><span class="std std-ref">CSCArray</span></a>&amp; </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK8CSCArray7pointerEv">
+<span id="_CPPv3NK8CSCArray7pointerEv"></span><span id="_CPPv2NK8CSCArray7pointerEv"></span><span id="CSCArray::pointerC"></span><span class="target" id="class_c_s_c_array_1a3807e5e741c75aa1e25d77bf2a4b8e67"></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">pointer</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK8CSCArray7pointerEv" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK8CSCArray6strideE6size_t">
+<span id="_CPPv3NK8CSCArray6strideE6size_t"></span><span id="_CPPv2NK8CSCArray6strideE6size_t"></span><span id="CSCArray::stride__sC"></span><span class="target" id="class_c_s_c_array_1aff6644b03d7b3e2cfa39a9f2dba21e8f"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stride</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">i</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK8CSCArray6strideE6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Same functionality as nnz(i) included for compatibility with the rest of matar. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>i</strong> – : row </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>size_t </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK8CSCArray5valueE6size_t6size_t">
+<span id="_CPPv3NK8CSCArray5valueE6size_t6size_t"></span><span id="_CPPv2NK8CSCArray5valueE6size_t6size_t"></span><span id="CSCArray::value__s.sC"></span><span class="target" id="class_c_s_c_array_1ace55111f5fb12a7eb41e4421642dbe3e"></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">value</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">i</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">j</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK8CSCArray5valueE6size_t6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Same functionality as operator() included for compatibility with the rest of matar. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>i</strong> – row </p></li>
+<li><p><strong>j</strong> – column </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>T&amp; </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK8CSCArray10get_startsEv">
+<span id="_CPPv3NK8CSCArray10get_startsEv"></span><span id="_CPPv2NK8CSCArray10get_startsEv"></span><span id="CSCArray::get_startsC"></span><span class="target" id="class_c_s_c_array_1ab61410a475de0cfdec3d32eab624a75d"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">get_starts</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK8CSCArray10get_startsEv" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Get the start_index array. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>size_t* : returns start_index_ </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK8CSCArray4dim1Ev">
+<span id="_CPPv3NK8CSCArray4dim1Ev"></span><span id="_CPPv2NK8CSCArray4dim1Ev"></span><span id="CSCArray::dim1C"></span><span class="target" id="class_c_s_c_array_1a6c7cc7cebc744e6dcf70c6c6e3f5c164"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">dim1</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK8CSCArray4dim1Ev" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Get number of rows. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>size_t number of rows </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK8CSCArray4dim2Ev">
+<span id="_CPPv3NK8CSCArray4dim2Ev"></span><span id="_CPPv2NK8CSCArray4dim2Ev"></span><span id="CSCArray::dim2C"></span><span class="target" id="class_c_s_c_array_1ad00414e167cd8510074390e8bf592444"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">dim2</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK8CSCArray4dim2Ev" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Get number of columns. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>size_t number of columns </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray5beginE6size_t">
+<span id="_CPPv3N8CSCArray5beginE6size_t"></span><span id="_CPPv2N8CSCArray5beginE6size_t"></span><span id="CSCArray::begin__s"></span><span class="target" id="class_c_s_c_array_1aded6f85b9692885f618a71034201e2d2"></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">begin</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">i</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray5beginE6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>iterator notation for iterating through the non zeros values of row i. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>i</strong> – : row </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>T* </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray3endE6size_t">
+<span id="_CPPv3N8CSCArray3endE6size_t"></span><span id="_CPPv2N8CSCArray3endE6size_t"></span><span id="CSCArray::end__s"></span><span class="target" id="class_c_s_c_array_1af51f981679caea93a8bd1efa1ab365f7"></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">end</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">i</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray3endE6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>iterator notation for iterating through the non zeros values of row i. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>i</strong> – : row </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>T* </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray11begin_indexE6size_t">
+<span id="_CPPv3N8CSCArray11begin_indexE6size_t"></span><span id="_CPPv2N8CSCArray11begin_indexE6size_t"></span><span id="CSCArray::begin_index__s"></span><span class="target" id="class_c_s_c_array_1ad93e968f4b101d57aa1ad9e478f2e980"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">begin_index</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">i</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray11begin_indexE6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray9end_indexE6size_t">
+<span id="_CPPv3N8CSCArray9end_indexE6size_t"></span><span id="_CPPv2N8CSCArray9end_indexE6size_t"></span><span id="CSCArray::end_index__s"></span><span class="target" id="class_c_s_c_array_1aa75095ea93ede2bda0d9c7c567870195"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">end_index</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">i</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray9end_indexE6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray3nnzE6size_t">
+<span id="_CPPv3N8CSCArray3nnzE6size_t"></span><span id="_CPPv2N8CSCArray3nnzE6size_t"></span><span id="CSCArray::nnz__s"></span><span class="target" id="class_c_s_c_array_1a891a72d2aed7aa23f1c5d520a321407c"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">nnz</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">i</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray3nnzE6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Get the number of non zero elements in row i. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>i</strong> – : row to get </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>size_t : size of row </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray3nnzEv">
+<span id="_CPPv3N8CSCArray3nnzEv"></span><span id="_CPPv2N8CSCArray3nnzEv"></span><span id="CSCArray::nnz"></span><span class="target" id="class_c_s_c_array_1ac31899ccd8cb982ba85978ccf70a0459"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">nnz</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray3nnzEv" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Get number of non zero elements total in array. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>size_t </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray12get_val_flatE6size_t">
+<span id="_CPPv3N8CSCArray12get_val_flatE6size_t"></span><span id="_CPPv2N8CSCArray12get_val_flatE6size_t"></span><span id="CSCArray::get_val_flat__s"></span><span class="target" id="class_c_s_c_array_1a226f07a4bca866539754a4909a4cf69f"></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">get_val_flat</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">k</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray12get_val_flatE6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray12get_row_flatE6size_t">
+<span id="_CPPv3N8CSCArray12get_row_flatE6size_t"></span><span id="_CPPv2N8CSCArray12get_row_flatE6size_t"></span><span id="CSCArray::get_row_flat__s"></span><span class="target" id="class_c_s_c_array_1a379abe5a7b2fc52c06c969aa77c1d7dc"></span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">get_row_flat</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">k</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray12get_row_flatE6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray10flat_indexE6size_t6size_t">
+<span id="_CPPv3N8CSCArray10flat_indexE6size_t6size_t"></span><span id="_CPPv2N8CSCArray10flat_indexE6size_t6size_t"></span><span id="CSCArray::flat_index__s.s"></span><span class="target" id="class_c_s_c_array_1a2e76986346faf7bc73e91ec8801a5b76"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flat_index</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">i</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">j</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray10flat_indexE6size_t6size_t" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray5toCSRER6CArrayI1TER6CArrayI6size_tER6CArrayI6size_tE">
+<span id="_CPPv3N8CSCArray5toCSRER6CArrayI1TER6CArrayI6size_tER6CArrayI6size_tE"></span><span id="_CPPv2N8CSCArray5toCSRER6CArrayI1TER6CArrayI6size_tER6CArrayI6size_tE"></span><span id="CSCArray::toCSR__CArray:T:R.CArray:s:R.CArray:s:R"></span><span class="target" id="class_c_s_c_array_1a123af493f6698fc2ebebbbd35551f044"></span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">toCSR</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="class_c_array.html#_CPPv4I0E6CArray" title="CArray"><span class="n"><span class="pre">CArray</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray::T"><span class="n"><span class="pre">T</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">data</span></span>, <a class="reference internal" href="class_c_array.html#_CPPv4I0E6CArray" title="CArray"><span class="n"><span class="pre">CArray</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">size_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">row_ptrs</span></span>, <a class="reference internal" href="class_c_array.html#_CPPv4I0E6CArray" title="CArray"><span class="n"><span class="pre">CArray</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">size_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">col_ptrs</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray5toCSRER6CArrayI1TER6CArrayI6size_tER6CArrayI6size_tE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArray8to_denseER6FArrayI1TE">
+<span id="_CPPv3N8CSCArray8to_denseER6FArrayI1TE"></span><span id="_CPPv2N8CSCArray8to_denseER6FArrayI1TE"></span><span id="CSCArray::to_dense__FArray:T:R"></span><span class="target" id="class_c_s_c_array_1a053f52c4708b507a5a58e56c8adebdf3"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">to_dense</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="class_f_array.html#_CPPv4I0E6FArray" title="FArray"><span class="n"><span class="pre">FArray</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0E8CSCArray" title="CSCArray::T"><span class="n"><span class="pre">T</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">A</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArray8to_denseER6FArrayI1TE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N8CSCArrayD0Ev">
+<span id="_CPPv3N8CSCArrayD0Ev"></span><span id="_CPPv2N8CSCArrayD0Ev"></span><span id="CSCArray::~CSCArray"></span><span class="target" id="class_c_s_c_array_1abab99403cb89d9f5c703a6f297130933"></span><span class="sig-name descname"><span class="n"><span class="pre">~CSCArray</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8CSCArrayD0Ev" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="class_c_matrix_kokkos.html" class="btn btn-neutral float-left" title="Template Class CMatrixKokkos" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="class_c_s_c_array_kokkos.html" class="btn btn-neutral float-right" title="Template Class CSCArrayKokkos" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, me.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

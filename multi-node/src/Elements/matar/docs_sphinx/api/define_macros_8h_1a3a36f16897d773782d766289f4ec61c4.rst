@@ -1,0 +1,14 @@
+.. _exhale_define_macros_8h_1a3a36f16897d773782d766289f4ec61c4:
+
+Define DO_REDUCE_MIN
+====================
+
+- Defined in :ref:`file_src_macros.h`
+
+
+Define Documentation
+--------------------
+
+
+.. doxygendefine:: DO_REDUCE_MIN
+   :project: matar

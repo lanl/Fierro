@@ -1,0 +1,14 @@
+.. _exhale_define_macros_8h_1a84e765ce01584a916348faf881b151a9:
+
+Define DO_RSUM2D
+================
+
+- Defined in :ref:`file_src_macros.h`
+
+
+Define Documentation
+--------------------
+
+
+.. doxygendefine:: DO_RSUM2D
+   :project: matar
