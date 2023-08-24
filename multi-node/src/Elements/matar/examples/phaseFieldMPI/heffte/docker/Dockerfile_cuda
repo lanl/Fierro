@@ -1,0 +1,37 @@
+FROM nvidia/cuda:9.0-devel-ubuntu16.04
+
+RUN apt-get update && apt-get install --no-install-recommends -y \
+        build-essential \
+        git \
+        wget \
+        openssh-client \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN export CMAKE_VERSION=3.10.3 && \
+    export CMAKE_VERSION_SHORT=3.10 && \
+    export CMAKE_URL=https://cmake.org/files/v${CMAKE_VERSION_SHORT}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh && \
+    export CMAKE_SCRIPT=cmake-${CMAKE_VERSION}-Linux-x86_64.sh && \
+    export CMAKE_PREFIX=/usr/local && \
+    wget --quiet ${CMAKE_URL} --output-document=${CMAKE_SCRIPT} && \
+    mkdir -p ${CMAKE_PREFIX} && \
+    sh ${CMAKE_SCRIPT} --skip-license --prefix=${CMAKE_PREFIX} && \
+    rm ${CMAKE_SCRIPT}
+
+ENV OPENMPI_DIR=/opt/openmpi
+RUN OPENMPI_VERSION=4.0.3 && \
+    OPENMPI_VERSION_SHORT=4.0 && \
+    OPENMPI_SHA1=d958454e32da2c86dd32b7d557cf9a401f0a08d3 && \
+    OPENMPI_URL=https://download.open-mpi.org/release/open-mpi/v${OPENMPI_VERSION_SHORT}/openmpi-${OPENMPI_VERSION}.tar.bz2 && \
+    OPENMPI_ARCHIVE=openmpi-${OPENMPI_VERSION}.tar.bz2 && \
+    SCRATCH_DIR=/scratch && mkdir -p ${SCRATCH_DIR} && cd ${SCRATCH_DIR} && \
+    wget --quiet ${OPENMPI_URL} --output-document=${OPENMPI_ARCHIVE} && \
+    echo "${OPENMPI_SHA1} ${OPENMPI_ARCHIVE}" | sha1sum -c && \
+    mkdir -p openmpi && \
+    tar -xf ${OPENMPI_ARCHIVE} -C openmpi --strip-components=1 && \
+    mkdir -p build && cd build && \
+    ../openmpi/configure --prefix=${OPENMPI_DIR} --with-cuda CFLAGS=-w && \
+    make -j8 install && \
+    rm -rf ${SCRATCH_DIR}
+ENV PATH=${OPENMPI_DIR}/bin:$PATH

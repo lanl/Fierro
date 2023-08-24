@@ -1,0 +1,534 @@
+
+Full API
+--------
+
+Classes and Structs
+*******************
+
+
+.. toctree::
+   :maxdepth: 5
+
+   class_c_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_c_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_c_matrix.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_c_matrix_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_c_s_c_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_c_s_c_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_c_s_r_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_c_s_r_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_c_s_r_array_kokkos_1_1init__start__indices__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_d_c_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_d_c_matrix_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_d_f_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_d_f_matrix_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_d_view_c_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_d_view_c_matrix_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_d_view_f_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_d_view_f_matrix_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_dynamic_ragged_down_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_dynamic_ragged_down_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_dynamic_ragged_down_array_kokkos_1_1set__strides__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_dynamic_ragged_right_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_dynamic_ragged_right_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_dynamic_ragged_right_array_kokkos_1_1set__strides__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_f_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_f_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_f_matrix.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_f_matrix_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_down_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_down_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_down_array_kokkos_1_1init__start__indices__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_down_array_kokkos_1_1setup__length__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_down_array_kokkos_1_1setup__start__indices__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_array_kokkos_1_1finalize__stride__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_array_kokkos_1_1init__start__indices__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_array_kokkos_1_1setup__length__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_array_kokkos_1_1setup__start__indices__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_arrayof_vectors.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_arrayof_vectors_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_arrayof_vectors_kokkos_1_1finalize__stride__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_arrayof_vectors_kokkos_1_1init__start__indices__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_arrayof_vectors_kokkos_1_1setup__length__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_ragged_right_arrayof_vectors_kokkos_1_1setup__start__indices__functor.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_view_c_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_view_c_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_view_c_matrix.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_view_c_matrix_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_view_f_array.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_view_f_array_kokkos.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_view_f_matrix.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   class_view_f_matrix_kokkos.rst
+
+Functions
+*********
+
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1a9990a0c765fdd023ba3afbde4d68d912.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1a7a582b0dc380ce3b4a75620cd9582ac3.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1a1e912a6edf6f879e8826a6c34dcee453.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1a4c54580179260515ee230f8aa48d964d.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1a6876766f5f54404afe637c39b8300fb7.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1afcebbb33e6e15350916a3c72cd87b8e7.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1a10986a06c1eb4d9259e60cda5e4bf720.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1a07a62ec30c02cce87f6eb74a99425934.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1af2117eac449bb5428c22867ab1947af9.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1a517c493e5ac36db206d9fbfe1371edc5.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1a5e7a4e59c0a7b4d6a4b3c19c9096840d.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   function_macros_8h_1ab8e70d505d6cf42005e5d5facb5d11f1.rst
+
+Defines
+*******
+
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1ada8d788639035cd6bade6d72b7526d59.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a4ccb122a1cfdef6c1cb4d75f732812d8.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a2bcc5248d9be291629ea9d76742d9ed1.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a2d026b9206c4acba8d6298246405f218.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a6925adafd5ec39defa7bb00e6175fb08.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a3a36f16897d773782d766289f4ec61c4.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a2504e3d4b5545464fcf79b3530a4b8fa.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a3a74718bd976e50a42fda90c17f22329.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1af62df601c7239a816ee3baeee6acd654.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a27e09b38cf20bba694cf0ab54985d717.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1ad7693774e38a49af238f7f147f88b44d.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1ad86a9a8fecc31c7160f6b6ac969ca3d9.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a542959c44328d6e2c2a0b12d30fd3a99.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1aefa832d10c68ffe1e04935ca533f440f.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a84e765ce01584a916348faf881b151a9.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a5f52ead4eeae00903f23c45188b48270.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1acca13adc01286b12a94ed6350013e1a6.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a1dbe240daf222881de71d9b49d9f3fc9.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1ad05cff8a2c5d3419dae6b849f13bd62d.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a82b7239c2454b1362239c23ff4f697b3.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1ac2a0a9c56d35a70259a9f1be0f6c360e.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a84b6103ad91a36ea3dbbacd8f37b31b3.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a16b4b8c80d2679239f47f31626509d05.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a449fa6f3e4a670b9f2b7ca60ea415c57.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a07eb88ec787f2e4c86756376daf80fd7.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a8aa15bc1c094b67d438fdfbf8d6298db.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1ae7ecd6d0c9b8dc463f460530809f6d7b.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1abb1f3149984673fffd9f96deb6c535ed.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1aea77414aa7bbe8b38645a63150945c1b.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a0d97f3c63083366851016ee64ae6666a.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a788afc3d6cbbc1bcedc7459572999bf3.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1ad1f00ee97a4b7d7096a50c57834d0a6c.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a1d88e6e3c6e0c317ce0837e97c4aeb13.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a237afc4c620b2a1190ee3c45d56ec742.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a96404197c4f5dea9e1a251a831db947c.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1a2156af709b555cd75b372160926b4772.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   define_macros_8h_1aafd0d8938bee99af66bb0aed8345ca4d.rst
+
+Typedefs
+********
+
+
+.. toctree::
+   :maxdepth: 5
+
+   typedef_matar_8h_1ab46614359717672dc9a4eed4669be6e6.rst
+
+.. toctree::
+   :maxdepth: 5
+
+   typedef_matar_8h_1a928e54b72368dfb0356c4a5b4a67eecd.rst

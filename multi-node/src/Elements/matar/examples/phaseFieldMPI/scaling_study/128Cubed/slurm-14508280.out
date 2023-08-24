@@ -1,0 +1,213 @@
+
+Currently Loaded Modules:
+  1) cmake/3.19.2   2) gcc/9.4.0   3) openmpi/4.1.1-gcc_9.4.0
+
+ 
+
+ nx = 128
+ ny = 128
+ nz = 128
+ dx = 1
+ dy = 1
+ dz = 1
+ dt = 0.05
+ num_steps = 100
+ print_rate = 100
+ iseed = 456
+ kappa = 1
+ M = 1
+ c0 = 0.5
+ noise = 0.005
+
+fft_forward:
+  time:   1.9400E+01 seconds  count: 200  fraction:   6.2024E+01%
+
+fft_backward:
+  time:   1.0783E+01 seconds  count: 100  fraction:   3.4473E+01%
+
+total:
+  time:   3.1278E+01 seconds  count: 1  fraction:   1.0000E+02%
+ nx = 128
+ ny = 128
+ nz = 128
+ dx = 1
+ dy = 1
+ dz = 1
+ dt = 0.05
+ num_steps = 100
+ print_rate = 100
+ iseed = 456
+ kappa = 1
+ M = 1
+ c0 = 0.5
+ noise = 0.005
+
+fft_forward:
+  time:   1.1591E+01 seconds  count: 200  fraction:   6.3105E+01%
+
+fft_backward:
+  time:   6.1381E+00 seconds  count: 100  fraction:   3.3419E+01%
+
+total:
+  time:   1.8367E+01 seconds  count: 1  fraction:   1.0000E+02%
+ nx = 128
+ ny = 128
+ nz = 128
+ dx = 1
+ dy = 1
+ dz = 1
+ dt = 0.05
+ num_steps = 100
+ print_rate = 100
+ iseed = 456
+ kappa = 1
+ M = 1
+ c0 = 0.5
+ noise = 0.005
+
+fft_forward:
+  time:   5.6281E+00 seconds  count: 200  fraction:   6.3046E+01%
+
+fft_backward:
+  time:   2.9286E+00 seconds  count: 100  fraction:   3.2806E+01%
+
+total:
+  time:   8.9270E+00 seconds  count: 1  fraction:   1.0000E+02%
+ nx = 128
+ ny = 128
+ nz = 128
+ dx = 1
+ dy = 1
+ dz = 1
+ dt = 0.05
+ num_steps = 100
+ print_rate = 100
+ iseed = 456
+ kappa = 1
+ M = 1
+ c0 = 0.5
+ noise = 0.005
+
+fft_forward:
+  time:   3.4181E+00 seconds  count: 200  fraction:   6.2152E+01%
+
+fft_backward:
+  time:   1.8032E+00 seconds  count: 100  fraction:   3.2789E+01%
+
+total:
+  time:   5.4995E+00 seconds  count: 1  fraction:   1.0000E+02%
+ nx = 128
+ ny = 128
+ nz = 128
+ dx = 1
+ dy = 1
+ dz = 1
+ dt = 0.05
+ num_steps = 100
+ print_rate = 100
+ iseed = 456
+ kappa = 1
+ M = 1
+ c0 = 0.5
+ noise = 0.005
+
+fft_forward:
+  time:   2.0178E+00 seconds  count: 200  fraction:   6.1583E+01%
+
+fft_backward:
+  time:   1.0356E+00 seconds  count: 100  fraction:   3.1608E+01%
+
+total:
+  time:   3.2765E+00 seconds  count: 1  fraction:   1.0000E+02%
+ nx = 128
+ ny = 128
+ nz = 128
+ dx = 1
+ dy = 1
+ dz = 1
+ dt = 0.05
+ num_steps = 100
+ print_rate = 100
+ iseed = 456
+ kappa = 1
+ M = 1
+ c0 = 0.5
+ noise = 0.005
+
+fft_forward:
+  time:   1.2145E+00 seconds  count: 200  fraction:   5.9347E+01%
+
+fft_backward:
+  time:   6.2696E-01 seconds  count: 100  fraction:   3.0636E+01%
+
+total:
+  time:   2.0465E+00 seconds  count: 1  fraction:   1.0000E+02%
+ nx = 128
+ ny = 128
+ nz = 128
+ dx = 1
+ dy = 1
+ dz = 1
+ dt = 0.05
+ num_steps = 100
+ print_rate = 100
+ iseed = 456
+ kappa = 1
+ M = 1
+ c0 = 0.5
+ noise = 0.005
+
+fft_forward:
+  time:   9.2310E-01 seconds  count: 200  fraction:   6.1269E+01%
+
+fft_backward:
+  time:   4.1367E-01 seconds  count: 100  fraction:   2.7457E+01%
+
+total:
+  time:   1.5066E+00 seconds  count: 1  fraction:   1.0000E+02%
+ nx = 128
+ ny = 128
+ nz = 128
+ dx = 1
+ dy = 1
+ dz = 1
+ dt = 0.05
+ num_steps = 100
+ print_rate = 100
+ iseed = 456
+ kappa = 1
+ M = 1
+ c0 = 0.5
+ noise = 0.005
+
+fft_forward:
+  time:   5.6273E-01 seconds  count: 200  fraction:   5.8371E+01%
+
+fft_backward:
+  time:   2.5463E-01 seconds  count: 100  fraction:   2.6413E+01%
+
+total:
+  time:   9.6406E-01 seconds  count: 1  fraction:   1.0000E+02%
+ nx = 128
+ ny = 128
+ nz = 128
+ dx = 1
+ dy = 1
+ dz = 1
+ dt = 0.05
+ num_steps = 100
+ print_rate = 100
+ iseed = 456
+ kappa = 1
+ M = 1
+ c0 = 0.5
+ noise = 0.005
+
+fft_forward:
+  time:   7.7830E-01 seconds  count: 200  fraction:   6.3964E+01%
+
+fft_backward:
+  time:   2.9227E-01 seconds  count: 100  fraction:   2.4020E+01%
+
+total:
+  time:   1.2168E+00 seconds  count: 1  fraction:   1.0000E+02%

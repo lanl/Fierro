@@ -1,0 +1,14 @@
+.. _exhale_define_macros_8h_1a16b4b8c80d2679239f47f31626509d05:
+
+Define REDUCE_MAX
+=================
+
+- Defined in :ref:`file_src_macros.h`
+
+
+Define Documentation
+--------------------
+
+
+.. doxygendefine:: REDUCE_MAX
+   :project: matar

@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Introduction to MATAR &mdash; matar  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="_static/collapsible-lists/css/tree_view.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/collapsible-lists/js/CollapsibleLists.compressed.js"></script>
+        <script src="_static/collapsible-lists/js/apply-collapsible-lists.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Library API" href="api/library_root.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="#" class="icon icon-home"> matar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="api/library_root.html">Library API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">matar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+      <li>Introduction to MATAR</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="introduction-to-matar">
+<h1>Introduction to MATAR<a class="headerlink" href="#introduction-to-matar" title="Permalink to this headline"></a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/library_root.html">Library API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/library_root.html#class-hierarchy">Class Hierarchy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/library_root.html#file-hierarchy">File Hierarchy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/library_root.html#full-api">Full API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/library_root.html#classes-and-structs">Classes and Structs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/class_c_array.html">Template Class CArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_c_array_kokkos.html">Template Class CArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_c_matrix.html">Template Class CMatrix</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_matrix.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_c_matrix_kokkos.html">Template Class CMatrixKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_matrix_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_c_s_c_array.html">Template Class CSCArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_s_c_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_c_s_c_array_kokkos.html">Template Class CSCArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_s_c_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_c_s_r_array.html">Template Class CSRArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_s_r_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_c_s_r_array_kokkos.html">Template Class CSRArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_s_r_array_kokkos.html#nested-relationships">Nested Relationships</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/class_c_s_r_array_kokkos.html#nested-types">Nested Types</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_s_r_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_c_s_r_array_kokkos_1_1init__start__indices__functor.html">Class CSRArrayKokkos::init_start_indices_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_s_r_array_kokkos_1_1init__start__indices__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_c_s_r_array_kokkos_1_1init__start__indices__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_d_c_array_kokkos.html">Template Class DCArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_d_c_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_d_c_matrix_kokkos.html">Template Class DCMatrixKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_d_c_matrix_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_d_f_array_kokkos.html">Template Class DFArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_d_f_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_d_f_matrix_kokkos.html">Template Class DFMatrixKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_d_f_matrix_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_d_view_c_array_kokkos.html">Template Class DViewCArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_d_view_c_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_d_view_c_matrix_kokkos.html">Template Class DViewCMatrixKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_d_view_c_matrix_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_d_view_f_array_kokkos.html">Template Class DViewFArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_d_view_f_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_d_view_f_matrix_kokkos.html">Template Class DViewFMatrixKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_d_view_f_matrix_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_dynamic_ragged_down_array.html">Template Class DynamicRaggedDownArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_down_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_dynamic_ragged_down_array_kokkos.html">Template Class DynamicRaggedDownArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_down_array_kokkos.html#nested-relationships">Nested Relationships</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/class_dynamic_ragged_down_array_kokkos.html#nested-types">Nested Types</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_down_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_dynamic_ragged_down_array_kokkos_1_1set__strides__functor.html">Class DynamicRaggedDownArrayKokkos::set_strides_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_down_array_kokkos_1_1set__strides__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_down_array_kokkos_1_1set__strides__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_dynamic_ragged_right_array.html">Template Class DynamicRaggedRightArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_right_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_dynamic_ragged_right_array_kokkos.html">Template Class DynamicRaggedRightArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_right_array_kokkos.html#nested-relationships">Nested Relationships</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/class_dynamic_ragged_right_array_kokkos.html#nested-types">Nested Types</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_right_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_dynamic_ragged_right_array_kokkos_1_1set__strides__functor.html">Class DynamicRaggedRightArrayKokkos::set_strides_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_right_array_kokkos_1_1set__strides__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_dynamic_ragged_right_array_kokkos_1_1set__strides__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_f_array.html">Template Class FArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_f_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_f_array_kokkos.html">Template Class FArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_f_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_f_matrix.html">Template Class FMatrix</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_f_matrix.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_f_matrix_kokkos.html">Template Class FMatrixKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_f_matrix_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_down_array.html">Template Class RaggedDownArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_down_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_down_array_kokkos.html">Template Class RaggedDownArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_down_array_kokkos.html#nested-relationships">Nested Relationships</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/class_ragged_down_array_kokkos.html#nested-types">Nested Types</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_down_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_down_array_kokkos_1_1init__start__indices__functor.html">Class RaggedDownArrayKokkos::init_start_indices_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_down_array_kokkos_1_1init__start__indices__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_down_array_kokkos_1_1init__start__indices__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_down_array_kokkos_1_1setup__length__functor.html">Class RaggedDownArrayKokkos::setup_length_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_down_array_kokkos_1_1setup__length__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_down_array_kokkos_1_1setup__length__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_down_array_kokkos_1_1setup__start__indices__functor.html">Class RaggedDownArrayKokkos::setup_start_indices_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_down_array_kokkos_1_1setup__start__indices__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_down_array_kokkos_1_1setup__start__indices__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_array.html">Template Class RaggedRightArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_array_kokkos.html">Template Class RaggedRightArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos.html#nested-relationships">Nested Relationships</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/class_ragged_right_array_kokkos.html#nested-types">Nested Types</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1finalize__stride__functor.html">Class RaggedRightArrayKokkos::finalize_stride_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1finalize__stride__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1finalize__stride__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1init__start__indices__functor.html">Class RaggedRightArrayKokkos::init_start_indices_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1init__start__indices__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1init__start__indices__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1setup__length__functor.html">Class RaggedRightArrayKokkos::setup_length_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1setup__length__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1setup__length__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1setup__start__indices__functor.html">Class RaggedRightArrayKokkos::setup_start_indices_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1setup__start__indices__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_array_kokkos_1_1setup__start__indices__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors.html">Template Class RaggedRightArrayofVectors</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos.html">Template Class RaggedRightArrayofVectorsKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos.html#nested-relationships">Nested Relationships</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos.html#nested-types">Nested Types</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1finalize__stride__functor.html">Class RaggedRightArrayofVectorsKokkos::finalize_stride_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1finalize__stride__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1finalize__stride__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1init__start__indices__functor.html">Class RaggedRightArrayofVectorsKokkos::init_start_indices_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1init__start__indices__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1init__start__indices__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1setup__length__functor.html">Class RaggedRightArrayofVectorsKokkos::setup_length_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1setup__length__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1setup__length__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1setup__start__indices__functor.html">Class RaggedRightArrayofVectorsKokkos::setup_start_indices_functor</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1setup__start__indices__functor.html#nested-relationships">Nested Relationships</a></li>
+<li class="toctree-l5"><a class="reference internal" href="api/class_ragged_right_arrayof_vectors_kokkos_1_1setup__start__indices__functor.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_view_c_array.html">Template Class ViewCArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_view_c_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_view_c_array_kokkos.html">Template Class ViewCArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_view_c_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_view_c_matrix.html">Template Class ViewCMatrix</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_view_c_matrix.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_view_c_matrix_kokkos.html">Template Class ViewCMatrixKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_view_c_matrix_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_view_f_array.html">Template Class ViewFArray</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_view_f_array.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_view_f_array_kokkos.html">Template Class ViewFArrayKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_view_f_array_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_view_f_matrix.html">Template Class ViewFMatrix</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_view_f_matrix.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/class_view_f_matrix_kokkos.html">Template Class ViewFMatrixKokkos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/class_view_f_matrix_kokkos.html#class-documentation">Class Documentation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/library_root.html#functions">Functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1a9990a0c765fdd023ba3afbde4d68d912.html">Template Function for_all(int, int, const F&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1a9990a0c765fdd023ba3afbde4d68d912.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1a7a582b0dc380ce3b4a75620cd9582ac3.html">Template Function for_all(int, int, int, int, const F&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1a7a582b0dc380ce3b4a75620cd9582ac3.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1a1e912a6edf6f879e8826a6c34dcee453.html">Template Function for_all(int, int, int, int, int, int, const F&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1a1e912a6edf6f879e8826a6c34dcee453.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1a4c54580179260515ee230f8aa48d964d.html">Template Function reduce_max(int, int, T, const F&amp;, T&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1a4c54580179260515ee230f8aa48d964d.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1a6876766f5f54404afe637c39b8300fb7.html">Template Function reduce_max(int, int, int, int, T, const F&amp;, T&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1a6876766f5f54404afe637c39b8300fb7.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1afcebbb33e6e15350916a3c72cd87b8e7.html">Template Function reduce_max(int, int, int, int, int, int, T, const F&amp;, T&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1afcebbb33e6e15350916a3c72cd87b8e7.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1a10986a06c1eb4d9259e60cda5e4bf720.html">Template Function reduce_min(int, int, T, const F&amp;, T&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1a10986a06c1eb4d9259e60cda5e4bf720.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1a07a62ec30c02cce87f6eb74a99425934.html">Template Function reduce_min(int, int, int, int, T, const F&amp;, T&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1a07a62ec30c02cce87f6eb74a99425934.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1af2117eac449bb5428c22867ab1947af9.html">Template Function reduce_min(int, int, int, int, int, int, T, const F&amp;, T&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1af2117eac449bb5428c22867ab1947af9.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1a517c493e5ac36db206d9fbfe1371edc5.html">Template Function reduce_sum(int, int, T, const F&amp;, T&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1a517c493e5ac36db206d9fbfe1371edc5.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1a5e7a4e59c0a7b4d6a4b3c19c9096840d.html">Template Function reduce_sum(int, int, int, int, T, const F&amp;, T&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1a5e7a4e59c0a7b4d6a4b3c19c9096840d.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/function_macros_8h_1ab8e70d505d6cf42005e5d5facb5d11f1.html">Template Function reduce_sum(int, int, int, int, int, int, T, const F&amp;, T&amp;)</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/function_macros_8h_1ab8e70d505d6cf42005e5d5facb5d11f1.html#function-documentation">Function Documentation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/library_root.html#defines">Defines</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1ada8d788639035cd6bade6d72b7526d59.html">Define DO1D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1ada8d788639035cd6bade6d72b7526d59.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a4ccb122a1cfdef6c1cb4d75f732812d8.html">Define DO2D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a4ccb122a1cfdef6c1cb4d75f732812d8.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a2bcc5248d9be291629ea9d76742d9ed1.html">Define DO3D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a2bcc5248d9be291629ea9d76742d9ed1.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a2d026b9206c4acba8d6298246405f218.html">Define DO_ALL</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a2d026b9206c4acba8d6298246405f218.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a6925adafd5ec39defa7bb00e6175fb08.html">Define DO_REDUCE_MAX</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a6925adafd5ec39defa7bb00e6175fb08.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a3a36f16897d773782d766289f4ec61c4.html">Define DO_REDUCE_MIN</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a3a36f16897d773782d766289f4ec61c4.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a2504e3d4b5545464fcf79b3530a4b8fa.html">Define DO_REDUCE_SUM</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a2504e3d4b5545464fcf79b3530a4b8fa.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a3a74718bd976e50a42fda90c17f22329.html">Define DO_RMAX1D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a3a74718bd976e50a42fda90c17f22329.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1af62df601c7239a816ee3baeee6acd654.html">Define DO_RMAX2D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1af62df601c7239a816ee3baeee6acd654.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a27e09b38cf20bba694cf0ab54985d717.html">Define DO_RMAX3D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a27e09b38cf20bba694cf0ab54985d717.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1ad7693774e38a49af238f7f147f88b44d.html">Define DO_RMIN1D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1ad7693774e38a49af238f7f147f88b44d.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1ad86a9a8fecc31c7160f6b6ac969ca3d9.html">Define DO_RMIN2D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1ad86a9a8fecc31c7160f6b6ac969ca3d9.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a542959c44328d6e2c2a0b12d30fd3a99.html">Define DO_RMIN3D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a542959c44328d6e2c2a0b12d30fd3a99.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1aefa832d10c68ffe1e04935ca533f440f.html">Define DO_RSUM1D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1aefa832d10c68ffe1e04935ca533f440f.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a84e765ce01584a916348faf881b151a9.html">Define DO_RSUM2D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a84e765ce01584a916348faf881b151a9.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a5f52ead4eeae00903f23c45188b48270.html">Define DO_RSUM3D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a5f52ead4eeae00903f23c45188b48270.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1acca13adc01286b12a94ed6350013e1a6.html">Define FOR1D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1acca13adc01286b12a94ed6350013e1a6.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a1dbe240daf222881de71d9b49d9f3fc9.html">Define FOR2D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a1dbe240daf222881de71d9b49d9f3fc9.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1ad05cff8a2c5d3419dae6b849f13bd62d.html">Define FOR3D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1ad05cff8a2c5d3419dae6b849f13bd62d.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a82b7239c2454b1362239c23ff4f697b3.html">Define FOR_ALL</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a82b7239c2454b1362239c23ff4f697b3.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1ac2a0a9c56d35a70259a9f1be0f6c360e.html">Define FOR_ALL_CLASS</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1ac2a0a9c56d35a70259a9f1be0f6c360e.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a84b6103ad91a36ea3dbbacd8f37b31b3.html">Define GET_MACRO</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a84b6103ad91a36ea3dbbacd8f37b31b3.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a16b4b8c80d2679239f47f31626509d05.html">Define REDUCE_MAX</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a16b4b8c80d2679239f47f31626509d05.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a449fa6f3e4a670b9f2b7ca60ea415c57.html">Define REDUCE_MAX_CLASS</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a449fa6f3e4a670b9f2b7ca60ea415c57.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a07eb88ec787f2e4c86756376daf80fd7.html">Define REDUCE_MIN</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a07eb88ec787f2e4c86756376daf80fd7.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a8aa15bc1c094b67d438fdfbf8d6298db.html">Define REDUCE_MIN_CLASS</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a8aa15bc1c094b67d438fdfbf8d6298db.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1ae7ecd6d0c9b8dc463f460530809f6d7b.html">Define REDUCE_SUM</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1ae7ecd6d0c9b8dc463f460530809f6d7b.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1abb1f3149984673fffd9f96deb6c535ed.html">Define REDUCE_SUM_CLASS</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1abb1f3149984673fffd9f96deb6c535ed.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1aea77414aa7bbe8b38645a63150945c1b.html">Define RMAX1D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1aea77414aa7bbe8b38645a63150945c1b.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a0d97f3c63083366851016ee64ae6666a.html">Define RMAX2D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a0d97f3c63083366851016ee64ae6666a.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a788afc3d6cbbc1bcedc7459572999bf3.html">Define RMAX3D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a788afc3d6cbbc1bcedc7459572999bf3.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1ad1f00ee97a4b7d7096a50c57834d0a6c.html">Define RMIN1D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1ad1f00ee97a4b7d7096a50c57834d0a6c.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a1d88e6e3c6e0c317ce0837e97c4aeb13.html">Define RMIN2D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a1d88e6e3c6e0c317ce0837e97c4aeb13.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a237afc4c620b2a1190ee3c45d56ec742.html">Define RMIN3D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a237afc4c620b2a1190ee3c45d56ec742.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a96404197c4f5dea9e1a251a831db947c.html">Define RSUM1D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a96404197c4f5dea9e1a251a831db947c.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1a2156af709b555cd75b372160926b4772.html">Define RSUM2D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1a2156af709b555cd75b372160926b4772.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/define_macros_8h_1aafd0d8938bee99af66bb0aed8345ca4d.html">Define RSUM3D</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/define_macros_8h_1aafd0d8938bee99af66bb0aed8345ca4d.html#define-documentation">Define Documentation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/library_root.html#typedefs">Typedefs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/typedef_matar_8h_1ab46614359717672dc9a4eed4669be6e6.html">Typedef real_t</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/typedef_matar_8h_1ab46614359717672dc9a4eed4669be6e6.html#typedef-documentation">Typedef Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="api/typedef_matar_8h_1a928e54b72368dfb0356c4a5b4a67eecd.html">Typedef u_int</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="api/typedef_matar_8h_1a928e54b72368dfb0356c4a5b4a67eecd.html#typedef-documentation">Typedef Documentation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline"></a></h1>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div></blockquote>
+<section id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline"></a></h2>
+<a class="reference internal image-reference" href="https://github.com/lanl/MATAR/blob/main/MATAR_Logo.png"><img alt="https://github.com/lanl/MATAR/blob/main/MATAR_Logo.png" src="https://github.com/lanl/MATAR/blob/main/MATAR_Logo.png" style="width: 350px;" /></a>
+<p>MATAR is a C++ library that addresses the need for simple, fast, and memory-efficient multi-dimensional data representations for dense and sparse storage that arise with numerical methods and in software applications. The data representations are designed to perform well across multiple computer architectures, including CPUs and GPUs. MATAR allows users to easily create and use intricate data representations that are also portable across disparate architectures using Kokkos. The performance aspect is achieved by forcing contiguous memory layout (or as close to contiguous as possible) for multi-dimensional and multi-size dense or sparse MATrix and ARray (hence, MATAR) types. Results show that MATAR has the capability to improve memory utilization, performance, and programmer productivity in scientific computing. This is achieved by fitting more work into the available memory, minimizing memory loads required, and by loading memory in the most efficient order.</p>
+<p>## Examples
+* [ELEMENTS](<a class="reference external" href="https://github.com/lanl/ELEMENTS/">https://github.com/lanl/ELEMENTS/</a>):   MATAR is a part of the ELEMENTS Library (LANL C# C20058) and it underpins the routines implemented in ELEMENTS.  MATAR is available in a stand-alone directory outside of the ELEMENTS directory because it can aid many code applications.  The dense and sparse storage types in MATAR are the foundation for the ELEMENTS library, which contains mathematical functions to support a very broad range of element types including: linear, quadratic, and cubic serendipity elements in 2D and 3D; high-order spectral elements; and a linear 4D element. An unstructured high-order mesh class is available in ELEMENTS and it takes advantage of MATAR for efficient access of various mesh entities.</p>
+<ul class="simple">
+<li><p>[Fierro](<a class="reference external" href="https://github.com/lanl/Fierro">https://github.com/lanl/Fierro</a>): The MATAR library underpins the Fierro code that is designed to simulate quasi-static solid mechanics problems and material dynamics problems.</p></li>
+<li><p>Simple examples are in the /test folder</p></li>
+</ul>
+<p>## Descriptions</p>
+<ul class="simple">
+<li><p>All Array MATAR types (e.g., CArray, ViewCArray, FArray, RaggedRightArray, etc.) start with an index of 0 and stop at an index of N-1, where N is the number of entries.</p></li>
+<li><p>All Matrix MATAR types  (e.g., CMatrix, ViewCMatrix, FMatrix, etc.)  start with an index of 1 and stop at an index of N, where N is the number of entries.</p></li>
+<li><p>The MATAR View types (e.g., ViewCArray, ViewCMatrix, ViewFArray, etc. ) are designed to accept a pointer to an existing 1D array and then access that 1D data as a multi-dimensional array.  The MATAR View types can also be used to slice an existing View.</p></li>
+<li><p>The C dense storage and View types (e.g., CArray, ViewCArray, CMatrix, etc.) access the data following the C/C++ language convection of having the last index in a multi-dimensional array vary the quickest.  In a 2D CArray A, the index j in A(i,j) varies first followed by the index i, so the optimal performance is achieved using the following loop ordering.</p></li>
+</ul>
+<blockquote>
+<div><dl>
+<dt><a href="#id1"><span class="problematic" id="id2">``</span></a><a href="#id3"><span class="problematic" id="id4">`</span></a></dt><dd><p>// Optimal use of CArray
+for (i=0,i&lt;N,i++){</p>
+<blockquote>
+<div><blockquote>
+<div><dl class="simple">
+<dt>for (j=0,j&lt;N,j++){</dt><dd><p>A(i,j) = 0.0;</p>
+</dd>
+</dl>
+<p>}</p>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p><a href="#id5"><span class="problematic" id="id6">``</span></a><a href="#id7"><span class="problematic" id="id8">`</span></a></p>
+</dd>
+</dl>
+</div></blockquote>
+<ul>
+<li><p>The F dense storage and View types (e.g., FArray, ViewFArray, FMatrix, etc.) access the data following the Fortran language convection of having the first index in a multi-dimensional array vary the quickest.  In a 2D FMatrix M, the index i in M(i,j) varies first followed by the index j, so the optimal performance is achieved using the following loop ordering.</p>
+<p><a href="#id9"><span class="problematic" id="id10">``</span></a><a href="#id11"><span class="problematic" id="id12">`</span></a></p>
+</li>
+</ul>
+<p>// Optimal use of FMatrix
+for (j=1,j&lt;=N,j++){</p>
+<blockquote>
+<div><dl class="simple">
+<dt>for (i=1,i&lt;=N,i++){</dt><dd><p>M(i,j) = 0.0;</p>
+</dd>
+</dl>
+<p>}</p>
+</div></blockquote>
+<dl class="simple">
+<dt>}</dt><dd><p><a href="#id13"><span class="problematic" id="id14">``</span></a><a href="#id15"><span class="problematic" id="id16">`</span></a></p>
+</dd>
+</dl>
+<ul class="simple">
+<li><p>The ragged data types (e.g., RaggedRightArray, RaggedDownArray, etc) in MATAR are special sparse storage types.  The Right access types are for R(i,j) where the number of column entries varies in width across the array.  The Down access types are for D(i,j) where the number of row entries vary in length across the array.</p></li>
+<li><p>The SparseRowArray MATAR type is the idetical to the Compressed Sparse Row (CSR) or Compressed Row Storage (CSR) respresentation.</p></li>
+<li><p>The SparseColumnArray MATAR type is identical to the Compressed Sparse Column (CSC) or Compressed Column Storage (CCS) respresentation.</p></li>
+</ul>
+<p>## Usage
+<a href="#id17"><span class="problematic" id="id18">``</span></a>`
+// create a 1D array of integers and then access as a 2D array
+int A[9];
+auto A_array = ViewCArray &lt;int&gt; (A, 3, 3); // access as A(i,j)</p>
+<p>// create a 3D array of doubles
+auto B = CArray &lt;double&gt; (3,3,3); // access as B(i,j,k)</p>
+<p>// create a slice of the 3D array at index 1
+auto C = ViewCArray &lt;double&gt; (&amp;B(1,0,0),3,3); // access as C(j,k)</p>
+<p>// create a 4D matrix of doubles, indices start at 1
+auto D = CMatrix &lt;double&gt; (10,9,8,7); // access as D(i,j,k,l)</p>
+<p>// create a 2D view of a standard array
+std::array&lt;int, 9&gt; E1d;
+auto E = ViewCArray&lt;int&gt; (&amp;E1d[0], 3, 3);
+E(0,0) = 1;  // and so on</p>
+<p>// create a ragged-right array of integers
+//
+// [1, 2, 3]
+// [4, 5]
+// [6]
+// [7, 8, 9, 10]
+//
+size_t my_strides[4] = {3, 2, 1, 4};
+RaggedRightArray &lt;int&gt; ragged(my_strides, 4);</p>
+<p>int value = 1;
+for (int i=0; i&lt;4; i++){</p>
+<blockquote>
+<div><dl class="simple">
+<dt>for (int j=0; j&lt;my_ragged.stride(i); j++){</dt><dd><p>ragged(i,j) = value;
+value++;</p>
+</dd>
+</dl>
+<p>}</p>
+</div></blockquote>
+<p>}</p>
+<p><a href="#id19"><span class="problematic" id="id20">``</span></a><a href="#id21"><span class="problematic" id="id22">`</span></a></p>
+<p>## Cloning the code
+If your SSH keys are set in github, then from the terminal type:
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">git</span> <span class="pre">clone</span> <span class="pre">--recursive</span> <span class="pre">ssh://git&#64;github.com/lanl/MATAR.git</span>
+<span class="pre">`</span></code></p>
+<p>## Basic build
+The basic build is for users only interested in the serial CPU only MATAR data types.  For this build, we recommend making a folder perhaps called build then go into the build folder and type
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">cmake</span> <span class="pre">..</span>
+<span class="pre">make</span>
+<span class="pre">`</span></code>
+The compiled code will be in the build folder.</p>
+<p>## Debug basic build</p>
+<p>To build serial CPU only MATAR data types in the debug mode, please use
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">cmake</span> <span class="pre">-DCMAKE_BUILD_TYPE=Debug</span> <span class="pre">..</span>
+<span class="pre">make</span>
+<span class="pre">`</span></code>
+The debug flag includes checks on array and matrix dimensions and index bounds.</p>
+<p>## Building MATAR with Kokkos
+A suite of build scripts are provided to build MATAR with Kokkos for performance portability across computer architectures (CPUs and GPUs).  The scripts for various Kokkos backends (e.g., CUDA, HIP, OpenMP, and pthreads) are located within the scripts folder.  The provided scripts are configured for particular hardware, the user will likely need to alter the inputs to reflect their hardware.  There are three scripts in each folder that are sourced to build MATAR with Kokkos.  The scripts are
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">sourceme-env.sh</span>
+<span class="pre">kokkos-install.sh</span>
+<span class="pre">backend-cmake-build.sh</span>
+<span class="pre">`</span></code>
+The word backend denotes cuda, hip, openMP, and so forth.  Scripts are also provided to build MATAR without Kokkos, and in that case there is no backend listed since it doesn’t use Kokko.  The backend-cmake-build.sh script will run cmake and make for the project.  Afterwords, the user can just runs make inside the respective build directory to compile the project.  For clarity, running all the scripts is only necessary to set up and compile the code the first time, afterwards, the use can compile the code using make in the build directory.  The environment variables will need to be set when logging into a compute node or when changing to a different kokkos backend. For all builds, a single script is provided in each script folder to automate the entire build process, it runs the three aforementioned scripts sequentially.
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">build-it.sh</span>
+<span class="pre">`</span></code>
+Before using the build-it.sh script, the user must verify that the settings in the other scripts that build MATAR with a Kokkos backend are correctly set.  After running the build-it.sh script, the entire project is compiled and stored in a directory that is named with the respective Kokkos backend e.g., build-kokkos-cuda.  Further details are provided on the three scripts to configure and build MATAR with a Kokkos backend.</p>
+<p>### Environment configuration script
+To start, the environment variables and modules must be configured by sourcing the following script
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">source</span> <span class="pre">sourceme-env.sh</span>
+<span class="pre">`</span></code>
+This script is where the user will load the necessary module files for their given machine/architecture combination.  This script also creates the build directory for the project e.g., build-kokkos-cuda, build-kokkos-hip, build-kokkos-openmp, etc.</p>
+<p>### Install Kokkos script
+The next step is to install Kokkos, using the version that was cloned recursively within MATAR, and configure the Kokkos build for specific hardware and a backend.
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">source</span> <span class="pre">kokkos-install.sh</span>
+<span class="pre">`</span></code>
+Within this script, the user will need to set any Kokkos specific variables for their project. The architecture variables will need to be modified based on the architecture being used. The provided scripts are set for a particular hardware that might differ from what a user might be using.  CPU architecture information needs to be listed if running with the Kokkos serial or OpenMP backends; GPU architecture information must be listed if using a Kokkos GPU backend.  We refer the user to Kokkos compiling page to see the large list of compilation options,
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">https://github.com/kokkos/kokkos/wiki/Compiling</span>
+<span class="pre">`</span></code></p>
+<p>### CUDA compilation script
+To build the project with cuda, the last step is to type
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">source</span> <span class="pre">cuda-cmake-build.sh</span>
+<span class="pre">`</span></code></p>
+<p>### HIP compilation script
+To build the project with hip, the last step is to type
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">source</span> <span class="pre">hip-cmake-build.sh</span>
+<span class="pre">`</span></code></p>
+<p>### openMP compilation script
+To build the project with openMP, the last step is to type</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">source</span> <span class="pre">openmp-cmake-build.sh</span>
+<span class="pre">`</span></code>
+The sourceme-env.sh script (the first step) sets the number of threads to 16 by default.  Changing the number of threads used with openMP requires manually setting the environment variable OMP_NUM_THREADS.</p>
+<p>### pthreads compilation script
+To build the project with ptheads, the last step is to type
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">source</span> <span class="pre">pthreads-cmake-build.sh</span>
+<span class="pre">`</span></code>
+To specify number of threads when running a code with the Kokkos pthread backend, add the following command line arguments
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">--kokkos-threads=4</span>
+<span class="pre">`</span></code></p>
+<p>### Automate build process
+A build-it.sh script is provided that runs all scripts sequentially for the user.  The build-it.sh script obviates the need to manually source each script.  The user must verify the settings are correct in each script prior to using the build-it.sh script.  If the build-it.sh script fails to build the project correctly, the user should carefully look at the loaded modules and settings for building Kokkos.</p>
+<p>## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.</p>
+<p>## License
+This program is open source under the BSD-3 License.</p>
+<p>## Citation
+<code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">&#64;article{MATAR,</span>
+<span class="pre">title</span> <span class="pre">=</span> <span class="pre">&quot;{MATAR:</span> <span class="pre">A</span> <span class="pre">Performance</span> <span class="pre">Portability</span> <span class="pre">and</span> <span class="pre">Productivity</span> <span class="pre">Implementation</span> <span class="pre">of</span> <span class="pre">Data-Oriented</span> <span class="pre">Design</span> <span class="pre">with</span> <span class="pre">Kokkos}&quot;,</span>
+<span class="pre">journal</span> <span class="pre">=</span> <span class="pre">{Journal</span> <span class="pre">of</span> <span class="pre">Parallel</span> <span class="pre">and</span> <span class="pre">Distributed</span> <span class="pre">Computing},</span>
+<span class="pre">pages</span> <span class="pre">=</span> <span class="pre">{86-104},</span>
+<span class="pre">volume</span> <span class="pre">=</span> <span class="pre">{157},</span>
+<span class="pre">year</span> <span class="pre">=</span> <span class="pre">{2021},</span>
+<span class="pre">author</span> <span class="pre">=</span> <span class="pre">{Daniel</span> <span class="pre">J.</span> <span class="pre">Dunning</span> <span class="pre">and</span> <span class="pre">Nathaniel</span> <span class="pre">R.</span> <span class="pre">Morgan</span> <span class="pre">and</span> <span class="pre">Jacob</span> <span class="pre">L.</span> <span class="pre">Moore</span> <span class="pre">and</span> <span class="pre">Eappen</span> <span class="pre">Nelluvelil</span> <span class="pre">and</span> <span class="pre">Tanya</span> <span class="pre">V.</span> <span class="pre">Tafolla</span> <span class="pre">and</span> <span class="pre">Robert</span> <span class="pre">W.</span> <span class="pre">Robey},</span>
+<span class="pre">keywords</span> <span class="pre">=</span> <span class="pre">{Performance,</span> <span class="pre">Portability,</span> <span class="pre">Productivity,</span> <span class="pre">Memory</span> <span class="pre">Efficiency,</span> <span class="pre">GPUs,</span> <span class="pre">dense</span> <span class="pre">and</span> <span class="pre">sparse</span> <span class="pre">storage}</span>
+<span class="pre">`</span></code></p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="api/library_root.html" class="btn btn-neutral float-right" title="Library API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, me.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

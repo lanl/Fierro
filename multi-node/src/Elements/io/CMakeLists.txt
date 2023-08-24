@@ -1,0 +1,5 @@
+if (VTK_FOUND AND WITH_VTK)
+  add_library(swage2vtk vtk_io.cpp)
+  target_include_directories(swage2vtk PRIVATE ${VTK_INCLUDE_DIRS})
+  target_link_libraries(swage2vtk ${VTK_LIBRARIES})
+endif()

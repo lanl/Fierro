@@ -1,0 +1,14 @@
+.. _exhale_define_macros_8h_1a542959c44328d6e2c2a0b12d30fd3a99:
+
+Define DO_RMIN3D
+================
+
+- Defined in :ref:`file_src_macros.h`
+
+
+Define Documentation
+--------------------
+
+
+.. doxygendefine:: DO_RMIN3D
+   :project: matar

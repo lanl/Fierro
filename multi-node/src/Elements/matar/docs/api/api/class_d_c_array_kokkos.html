@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Template Class DCArrayKokkos &mdash; matar  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/collapsible-lists/css/tree_view.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/collapsible-lists/js/CollapsibleLists.compressed.js"></script>
+        <script src="../_static/collapsible-lists/js/apply-collapsible-lists.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Template Class DCMatrixKokkos" href="class_d_c_matrix_kokkos.html" />
+    <link rel="prev" title="Class CSRArrayKokkos::init_start_indices_functor" href="class_c_s_r_array_kokkos_1_1init__start__indices__functor.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> matar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="library_root.html">Library API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="library_root.html#class-hierarchy">Class Hierarchy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="library_root.html#file-hierarchy">File Hierarchy</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="library_root.html#full-api">Full API</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="library_root.html#classes-and-structs">Classes and Structs</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="class_c_array.html">Template Class CArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_array_kokkos.html">Template Class CArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_matrix.html">Template Class CMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_matrix_kokkos.html">Template Class CMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_s_c_array.html">Template Class CSCArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_s_c_array_kokkos.html">Template Class CSCArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_s_r_array.html">Template Class CSRArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_s_r_array_kokkos.html">Template Class CSRArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_c_s_r_array_kokkos_1_1init__start__indices__functor.html">Class CSRArrayKokkos::init_start_indices_functor</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">Template Class DCArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_c_matrix_kokkos.html">Template Class DCMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_f_array_kokkos.html">Template Class DFArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_f_matrix_kokkos.html">Template Class DFMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_view_c_array_kokkos.html">Template Class DViewCArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_view_c_matrix_kokkos.html">Template Class DViewCMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_view_f_array_kokkos.html">Template Class DViewFArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_d_view_f_matrix_kokkos.html">Template Class DViewFMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_down_array.html">Template Class DynamicRaggedDownArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_down_array_kokkos.html">Template Class DynamicRaggedDownArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_down_array_kokkos_1_1set__strides__functor.html">Class DynamicRaggedDownArrayKokkos::set_strides_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_right_array.html">Template Class DynamicRaggedRightArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_right_array_kokkos.html">Template Class DynamicRaggedRightArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_dynamic_ragged_right_array_kokkos_1_1set__strides__functor.html">Class DynamicRaggedRightArrayKokkos::set_strides_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_f_array.html">Template Class FArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_f_array_kokkos.html">Template Class FArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_f_matrix.html">Template Class FMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_f_matrix_kokkos.html">Template Class FMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array.html">Template Class RaggedDownArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array_kokkos.html">Template Class RaggedDownArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array_kokkos_1_1init__start__indices__functor.html">Class RaggedDownArrayKokkos::init_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array_kokkos_1_1setup__length__functor.html">Class RaggedDownArrayKokkos::setup_length_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_down_array_kokkos_1_1setup__start__indices__functor.html">Class RaggedDownArrayKokkos::setup_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array.html">Template Class RaggedRightArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos.html">Template Class RaggedRightArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos_1_1finalize__stride__functor.html">Class RaggedRightArrayKokkos::finalize_stride_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos_1_1init__start__indices__functor.html">Class RaggedRightArrayKokkos::init_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos_1_1setup__length__functor.html">Class RaggedRightArrayKokkos::setup_length_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_array_kokkos_1_1setup__start__indices__functor.html">Class RaggedRightArrayKokkos::setup_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors.html">Template Class RaggedRightArrayofVectors</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos.html">Template Class RaggedRightArrayofVectorsKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos_1_1finalize__stride__functor.html">Class RaggedRightArrayofVectorsKokkos::finalize_stride_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos_1_1init__start__indices__functor.html">Class RaggedRightArrayofVectorsKokkos::init_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos_1_1setup__length__functor.html">Class RaggedRightArrayofVectorsKokkos::setup_length_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_ragged_right_arrayof_vectors_kokkos_1_1setup__start__indices__functor.html">Class RaggedRightArrayofVectorsKokkos::setup_start_indices_functor</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_c_array.html">Template Class ViewCArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_c_array_kokkos.html">Template Class ViewCArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_c_matrix.html">Template Class ViewCMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_c_matrix_kokkos.html">Template Class ViewCMatrixKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_f_array.html">Template Class ViewFArray</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_f_array_kokkos.html">Template Class ViewFArrayKokkos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_f_matrix.html">Template Class ViewFMatrix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="class_view_f_matrix_kokkos.html">Template Class ViewFMatrixKokkos</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="library_root.html#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="library_root.html#defines">Defines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="library_root.html#typedefs">Typedefs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">matar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="library_root.html">Library API</a> &raquo;</li>
+      <li>Template Class DCArrayKokkos</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/class_d_c_array_kokkos.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="template-class-dcarraykokkos">
+<span id="exhale-class-class-d-c-array-kokkos"></span><h1>Template Class DCArrayKokkos<a class="headerlink" href="#template-class-dcarraykokkos" title="Permalink to this headline"></a></h1>
+<ul class="simple">
+<li><p>Defined in <a class="reference internal" href="file_src_matar.h.html#file-src-matar-h"><span class="std std-ref">File matar.h</span></a></p></li>
+</ul>
+<section id="class-documentation">
+<h2>Class Documentation<a class="headerlink" href="#class-documentation" title="Permalink to this headline"></a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4I0000E13DCArrayKokkos">
+<span id="_CPPv3I0000E13DCArrayKokkos"></span><span id="_CPPv2I0000E13DCArrayKokkos"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Layout</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">DefaultLayout</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ExecSpace</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">DefaultExecSpace</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MemoryTraits</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="class_d_c_array_kokkos"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DCArrayKokkos</span></span></span><a class="headerlink" href="#_CPPv4I0000E13DCArrayKokkos" title="Permalink to this definition"></a><br /></dt>
+<dd><div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos13DCArrayKokkosEv">
+<span id="_CPPv3N13DCArrayKokkos13DCArrayKokkosEv"></span><span id="_CPPv2N13DCArrayKokkos13DCArrayKokkosEv"></span><span id="DCArrayKokkos::DCArrayKokkos"></span><span class="target" id="class_d_c_array_kokkos_1a6bd9e4f631f040b79eccdf9f98041832"></span><span class="sig-name descname"><span class="n"><span class="pre">DCArrayKokkos</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos13DCArrayKokkosEv" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_tRKNSt6stringE">
+<span id="_CPPv3N13DCArrayKokkos13DCArrayKokkosE6size_tRKNSt6stringE"></span><span id="_CPPv2N13DCArrayKokkos13DCArrayKokkosE6size_tRKNSt6stringE"></span><span id="DCArrayKokkos::DCArrayKokkos__s.ssCR"></span><span class="target" id="class_d_c_array_kokkos_1a0399249d02da0195571f2e65f249e6d5"></span><span class="sig-name descname"><span class="n"><span class="pre">DCArrayKokkos</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim0</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tag_string</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">DEFAULTSTRINGARRAY</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_tRKNSt6stringE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_tRKNSt6stringE">
+<span id="_CPPv3N13DCArrayKokkos13DCArrayKokkosE6size_t6size_tRKNSt6stringE"></span><span id="_CPPv2N13DCArrayKokkos13DCArrayKokkosE6size_t6size_tRKNSt6stringE"></span><span id="DCArrayKokkos::DCArrayKokkos__s.s.ssCR"></span><span class="target" id="class_d_c_array_kokkos_1aa8c54446e983cba64e854d44743cb363"></span><span class="sig-name descname"><span class="n"><span class="pre">DCArrayKokkos</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim0</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim1</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tag_string</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">DEFAULTSTRINGARRAY</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_tRKNSt6stringE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_tRKNSt6stringE">
+<span id="_CPPv3N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_tRKNSt6stringE"></span><span id="_CPPv2N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_tRKNSt6stringE"></span><span id="DCArrayKokkos::DCArrayKokkos__s.s.s.ssCR"></span><span class="target" id="class_d_c_array_kokkos_1a1700b3a1a1c35846e5259abe7e1f92a9"></span><span class="sig-name descname"><span class="n"><span class="pre">DCArrayKokkos</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim0</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim1</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim2</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tag_string</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">DEFAULTSTRINGARRAY</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_tRKNSt6stringE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_tRKNSt6stringE">
+<span id="_CPPv3N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_tRKNSt6stringE"></span><span id="_CPPv2N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_tRKNSt6stringE"></span><span id="DCArrayKokkos::DCArrayKokkos__s.s.s.s.ssCR"></span><span class="target" id="class_d_c_array_kokkos_1a8c0237cbeb9cea4ed11dd9d3ae69804d"></span><span class="sig-name descname"><span class="n"><span class="pre">DCArrayKokkos</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim0</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim1</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim2</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim3</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tag_string</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">DEFAULTSTRINGARRAY</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_tRKNSt6stringE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_tRKNSt6stringE">
+<span id="_CPPv3N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_tRKNSt6stringE"></span><span id="_CPPv2N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_tRKNSt6stringE"></span><span id="DCArrayKokkos::DCArrayKokkos__s.s.s.s.s.ssCR"></span><span class="target" id="class_d_c_array_kokkos_1a7c448ad6b63059f0fb899c72e3610a4b"></span><span class="sig-name descname"><span class="n"><span class="pre">DCArrayKokkos</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim0</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim1</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim2</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim3</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim4</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tag_string</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">DEFAULTSTRINGARRAY</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_tRKNSt6stringE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_t6size_tRKNSt6stringE">
+<span id="_CPPv3N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_t6size_tRKNSt6stringE"></span><span id="_CPPv2N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_t6size_tRKNSt6stringE"></span><span id="DCArrayKokkos::DCArrayKokkos__s.s.s.s.s.s.ssCR"></span><span class="target" id="class_d_c_array_kokkos_1a3031e280889eb4f0278c7e05d5cafcfd"></span><span class="sig-name descname"><span class="n"><span class="pre">DCArrayKokkos</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim0</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim1</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim2</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim3</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim4</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim5</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tag_string</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">DEFAULTSTRINGARRAY</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_t6size_tRKNSt6stringE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_t6size_t6size_tRKNSt6stringE">
+<span id="_CPPv3N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_t6size_t6size_tRKNSt6stringE"></span><span id="_CPPv2N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_t6size_t6size_tRKNSt6stringE"></span><span id="DCArrayKokkos::DCArrayKokkos__s.s.s.s.s.s.s.ssCR"></span><span class="target" id="class_d_c_array_kokkos_1a3a09bf036dd666ead430ac77f157bd7b"></span><span class="sig-name descname"><span class="n"><span class="pre">DCArrayKokkos</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim0</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim1</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim2</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim3</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim4</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim5</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">dim6</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">tag_string</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">DEFAULTSTRINGARRAY</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos13DCArrayKokkosE6size_t6size_t6size_t6size_t6size_t6size_t6size_tRKNSt6stringE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1aba346ea250e5528a24902674360934b5"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">T</span> <span class="pre">&amp;</span> <span class="pre">operator()</span> <span class="pre">(size_t</span> <span class="pre">i)</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1a94fd903f9ed6e6637ecc1406df2eae61"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">T</span> <span class="pre">&amp;</span> <span class="pre">operator()</span> <span class="pre">(size_t</span> <span class="pre">i,</span> <span class="pre">size_t</span> <span class="pre">j)</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1a315d5f9782a2253e20317da41c6be10d"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">T</span> <span class="pre">&amp;</span> <span class="pre">operator()</span> <span class="pre">(size_t</span> <span class="pre">i,</span> <span class="pre">size_t</span> <span class="pre">j,</span> <span class="pre">size_t</span> <span class="pre">k)</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1acd2ed11124ad3faf022099e759e987f3"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">T</span> <span class="pre">&amp;</span> <span class="pre">operator()</span> <span class="pre">(size_t</span> <span class="pre">i,</span> <span class="pre">size_t</span> <span class="pre">j,</span> <span class="pre">size_t</span> <span class="pre">k,</span> <span class="pre">size_t</span> <span class="pre">l)</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1ae5ac77e00caa968e45e942107a6570f6"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">T</span> <span class="pre">&amp;</span> <span class="pre">operator()</span> <span class="pre">(size_t</span> <span class="pre">i,</span> <span class="pre">size_t</span> <span class="pre">j,</span> <span class="pre">size_t</span> <span class="pre">k,</span> <span class="pre">size_t</span> <span class="pre">l,</span> <span class="pre">size_t</span> <span class="pre">m)</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1a865a6f7068bc700316f6ab4bff3513e5"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">T</span> <span class="pre">&amp;</span> <span class="pre">operator()</span> <span class="pre">(size_t</span> <span class="pre">i,</span> <span class="pre">size_t</span> <span class="pre">j,</span> <span class="pre">size_t</span> <span class="pre">k,</span> <span class="pre">size_t</span> <span class="pre">l,</span> <span class="pre">size_t</span> <span class="pre">m,</span> <span class="pre">size_t</span> <span class="pre">n)</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1aa1175cad8a2dd142a24e7191495fe43d"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">T</span> <span class="pre">&amp;</span> <span class="pre">operator()</span> <span class="pre">(size_t</span> <span class="pre">i,</span> <span class="pre">size_t</span> <span class="pre">j,</span> <span class="pre">size_t</span> <span class="pre">k,</span> <span class="pre">size_t</span> <span class="pre">l,</span> <span class="pre">size_t</span> <span class="pre">m,</span> <span class="pre">size_t</span> <span class="pre">n,</span> <span class="pre">size_t</span> <span class="pre">o)</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1a310e5066d87067de53503de0662528ec"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">DCArrayKokkos</span> <span class="pre">&amp;</span> <span class="pre">operator=</span> <span class="pre">(const</span> <span class="pre">DCArrayKokkos</span> <span class="pre">&amp;temp)</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1afa561b7df98d625339f91b06f13433be"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">size_t</span> <span class="pre">size</span> <span class="pre">()</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1a33ebd5567799d4a390f062350ee692e4"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">size_t</span> <span class="pre">extent</span> <span class="pre">()</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1a4e61abf526574bba687eb1e92ff22d0e"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">size_t</span> <span class="pre">dims</span> <span class="pre">(size_t</span> <span class="pre">i)</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1a6c8e34136d44b938c9fc6ee833178fb3"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">size_t</span> <span class="pre">order</span> <span class="pre">()</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1a00cdcb88242998a58f0204fcca4fd938"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">T</span> <span class="pre">*</span> <span class="pre">device_pointer</span> <span class="pre">()</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1a068b1a9240511aede5b839e32c157d65"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">T</span> <span class="pre">*</span> <span class="pre">host_pointer</span> <span class="pre">()</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp">
+<span class="target" id="class_d_c_array_kokkos_1adf3c9db9d805348c552ae9351365a9df"></span><span class="sig-name descname"><span class="pre">KOKKOS_INLINE_FUNCTION</span> <span class="pre">TArray1D</span> <span class="pre">get_kokkos_dual_view</span> <span class="pre">()</span> <span class="pre">const</span></span></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos11update_hostEv">
+<span id="_CPPv3N13DCArrayKokkos11update_hostEv"></span><span id="_CPPv2N13DCArrayKokkos11update_hostEv"></span><span id="DCArrayKokkos::update_host"></span><span class="target" id="class_d_c_array_kokkos_1a2676240b8b2c4bb1e65b11629cf66bfb"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">update_host</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos11update_hostEv" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos13update_deviceEv">
+<span id="_CPPv3N13DCArrayKokkos13update_deviceEv"></span><span id="_CPPv2N13DCArrayKokkos13update_deviceEv"></span><span id="DCArrayKokkos::update_device"></span><span class="target" id="class_d_c_array_kokkos_1a20eb40f5430b056a81ba14cceead5b61"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">update_device</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos13update_deviceEv" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkosD0Ev">
+<span id="_CPPv3N13DCArrayKokkosD0Ev"></span><span id="_CPPv2N13DCArrayKokkosD0Ev"></span><span id="DCArrayKokkos::~DCArrayKokkos"></span><span class="target" id="class_d_c_array_kokkos_1aa5174487d71a737a99c67205cd650550"></span><span class="n"><span class="pre">KOKKOS_INLINE_FUNCTION</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~DCArrayKokkos</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N13DCArrayKokkosD0Ev" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-members">Public Members</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N13DCArrayKokkos4hostE">
+<span id="_CPPv3N13DCArrayKokkos4hostE"></span><span id="_CPPv2N13DCArrayKokkos4hostE"></span><span id="DCArrayKokkos::host__ViewCArray:T:"></span><span class="target" id="class_d_c_array_kokkos_1a2a031f428ff7187a7fd811ee2ccc9bea"></span><a class="reference internal" href="class_view_c_array.html#_CPPv4I0E10ViewCArray" title="ViewCArray"><span class="n"><span class="pre">ViewCArray</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0000E13DCArrayKokkos" title="DCArrayKokkos::T"><span class="n"><span class="pre">T</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">host</span></span></span><a class="headerlink" href="#_CPPv4N13DCArrayKokkos4hostE" title="Permalink to this definition"></a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="class_c_s_r_array_kokkos_1_1init__start__indices__functor.html" class="btn btn-neutral float-left" title="Class CSRArrayKokkos::init_start_indices_functor" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="class_d_c_matrix_kokkos.html" class="btn btn-neutral float-right" title="Template Class DCMatrixKokkos" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, me.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
