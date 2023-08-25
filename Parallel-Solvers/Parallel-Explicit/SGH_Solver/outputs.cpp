@@ -85,48 +85,18 @@ void
 Explicit_Solver_SGH::write_outputs()
 {
 
-  const size_t rk_level = simparam.rk_num_bins - 1;
-
   // node "design_density"
   auto design_density = get_design_density(map->getLocalNumElements(),
     simparam_dynamic_opt.topology_optimization_on, design_node_densities_distributed);
   point_data_scalars_double["design_density"] = design_density->pointer();  
 
-  // node "velocity"
-  sgh_module->node_vel.update_host();
-  point_data_vectors_double["velocity"] = &sgh_module->node_vel.host(rk_level,0,0);
-
-  // element "element_density"
-  sgh_module->elem_den.update_host();
-  cell_data_scalars_double["element_density"] = &sgh_module->elem_den.host(0);
-  
-  // element "pres"
-  sgh_module->elem_pres.update_host();
-  cell_data_scalars_double["pres"] = &sgh_module->elem_pres.host(0);
-
-  // element "sie"
-  sgh_module->elem_sie.update_host();
-  cell_data_scalars_double["sie"] = &sgh_module->elem_sie.host(rk_level,0);
-
-  // element "vol"
-  sgh_module->elem_vol.update_host();
-  cell_data_scalars_double["vol"] = &sgh_module->elem_vol.host(0);
-
-  // element "mass"
-  sgh_module->elem_mass.update_host();
-  cell_data_scalars_double["mass"] = &sgh_module->elem_mass.host(0);
-
-  // element "sspd"
-  sgh_module->elem_sspd.update_host();
-  cell_data_scalars_double["sspd"] = &sgh_module->elem_sspd.host(0);
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->write_data(point_data_scalars_double, point_data_vectors_double, cell_data_scalars_double, cell_data_scalars_int);
+  }
 
   // element "speed"
   auto elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
   cell_data_scalars_double["speed"] = elem_speed->pointer();
-
-  // element "mat_id" //uncomment if needed (works fine)
-  //sgh_module->elem_mat_id.update_host();
-  //cell_data_scalars_int["mat_id"] = reinterpret_cast<int*>(&sgh_module->elem_mat_id.host(0));
 
   // element "elem_switch" //uncomment if needed (works fine)
   //auto elem_switch = calculate_elem_switch(all_element_map);
@@ -139,15 +109,6 @@ Explicit_Solver_SGH::write_outputs()
   // element "elem_gid" //uncomment if needed (works fine)
   //auto elem_gid = get_elem_gid(all_element_map);
   //cell_data_scalars_int["elem_gid"] = elem_gid->pointer();
-
-  // element "user_output_vars" //uncomment if needed (works fine)
-  //sgh_module->elem_user_output_vars.update_host();
-  //cell_data_fields_double["user_output_vars"] = std::make_pair(&sgh_module->elem_user_output_vars.host_pointer(), 
-  //                                                             sgh_module->elem_user_output_vars.dims(1));
-
-  // element "stress" //uncomment if needed (works fine)
-  //sgh_module->elem_stress.update_host();
-  //cell_data_fields_double["stress"] = std::make_pair(&sgh_module->elem_stress.host(rk_level,0,0,0), 9);
 
   switch (simparam.output_options.output_file_format)
   {

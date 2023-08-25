@@ -639,6 +639,74 @@ void FEA_Module_SGH::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sor
 }
 
 /* -------------------------------------------------------------------------------------------
+   Prompts sorting for elastic response output data. For now, nodal strains.
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::write_data(std::map <std::string, const double*> point_data_scalars_double,
+  std::map <std::string, const double*> point_data_vectors_double,
+  std::map <std::string, const double*> cell_data_scalars_double,
+  std::map <std::string, const int*> cell_data_scalars_int){
+  const size_t rk_level = simparam.rk_num_bins - 1;
+
+  // node "velocity"
+  node_vel.update_host();
+  point_data_vectors_double["velocity"] = &node_vel.host(rk_level,0,0);
+
+  // element "element_density"
+  elem_den.update_host();
+  cell_data_scalars_double["element_density"] = &elem_den.host(0);
+  
+  // element "pres"
+  elem_pres.update_host();
+  cell_data_scalars_double["pres"] = &elem_pres.host(0);
+
+  // element "sie"
+  elem_sie.update_host();
+  cell_data_scalars_double["sie"] = &elem_sie.host(rk_level,0);
+
+  // element "vol"
+  elem_vol.update_host();
+  cell_data_scalars_double["vol"] = &elem_vol.host(0);
+
+  // element "mass"
+  elem_mass.update_host();
+  cell_data_scalars_double["mass"] = &elem_mass.host(0);
+
+  // element "sspd"
+  elem_sspd.update_host();
+  cell_data_scalars_double["sspd"] = &elem_sspd.host(0);
+
+  // element "mat_id" //uncomment if needed (works fine)
+  //sgh_module->elem_mat_id.update_host();
+  //cell_data_scalars_int["mat_id"] = reinterpret_cast<int*>(&sgh_module->elem_mat_id.host(0));
+  
+  // element "user_output_vars" //uncomment if needed (works fine)
+  //sgh_module->elem_user_output_vars.update_host();
+  //cell_data_fields_double["user_output_vars"] = std::make_pair(&sgh_module->elem_user_output_vars.host_pointer(), 
+  //                                                             sgh_module->elem_user_output_vars.dims(1));
+
+  // element "stress" //uncomment if needed (works fine)
+  //sgh_module->elem_stress.update_host();
+  //cell_data_fields_double["stress"] = std::make_pair(&sgh_module->elem_stress.host(rk_level,0,0,0), 9);
+}
+
+/* -------------------------------------------------------------------------------------------
+   Prompts sorting for elastic response output data. For now, nodal strains.
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::sort_element_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
+  //interface element density data
+  {
+  host_vec_array Element_Densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  elem_den.update_host();
+  for(int ielem = 0; ielem < rnum_elem; ielem++){
+    Element_Densities(ielem,0) = elem_den.host(ielem);
+  }
+  }
+  
+}
+
+/* -------------------------------------------------------------------------------------------
    Prompts computation of elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 

@@ -77,6 +77,7 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   importer = Solver_Pointer->importer;
   ghost_importer = Solver_Pointer->ghost_importer;
   node_sorting_importer = Solver_Pointer->node_sorting_importer;
+  element_sorting_importer = Solver_Pointer->element_sorting_importer;
   dof_importer = Solver_Pointer->dof_importer;
 
   //obtain node and element maps

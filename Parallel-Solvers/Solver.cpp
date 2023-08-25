@@ -2381,6 +2381,9 @@ void Solver::comm_importer_setup(){
   //output map and importers
   sorted_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
   node_sorting_importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(map, sorted_map));
+  //sorted element mapping
+  sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
+  element_sorting_importer = Teuchos::rcp( new Tpetra::Import<LO, GO>(all_element_map, sorted_element_map));;
 
 }
 

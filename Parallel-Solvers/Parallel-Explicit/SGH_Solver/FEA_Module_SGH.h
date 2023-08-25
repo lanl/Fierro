@@ -376,8 +376,14 @@ public:
   
   void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
 
+  void sort_element_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
+
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
+  void write_data(std::map <std::string, const double*> point_data_scalars_double,
+  std::map <std::string, const double*> point_data_vectors_double,
+  std::map <std::string, const double*> cell_data_scalars_double,
+  std::map <std::string, const int*> cell_data_scalars_int);
   
   void write_outputs (const mesh_t &mesh,
                       DViewCArrayKokkos <double> &node_coords,
@@ -514,17 +520,9 @@ public:
     
   // element ids in a patch
   CArrayKokkos <size_t> elems_in_patch;
-
-  // patch ids in bdy set
-  size_t num_bdy_sets;
-  DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
   
   // bdy nodes
   CArrayKokkos <size_t> bdy_nodes;
-
-  // node ids in bdy_patch set
-  RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
-  DCArrayKokkos <size_t> num_bdy_nodes_in_set;
   
   //Topology optimization filter variable
   DCArrayKokkos<double> relative_element_densities;

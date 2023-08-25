@@ -168,12 +168,27 @@ public:
   virtual int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
 
   virtual void compute_output(){}
+  
+  virtual void write_data(std::map <std::string, const double*> point_data_scalars_double,
+  std::map <std::string, const double*> point_data_vectors_double,
+  std::map <std::string, const double*> cell_data_scalars_double,
+  std::map <std::string, const int*> cell_data_scalars_int){}
 
-  virtual void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> sorted_map){}
+  virtual void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> sorted_map){} //node data outputs
+
+  virtual void sort_element_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> sorted_element_map){} //element data outputs
 
   virtual void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> global_reduce_map){}
 
   virtual void node_density_constraints(host_vec_array node_densities_lower_bound){}
+
+  virtual void compute_topology_optimization_adjoint() {} //Force does not depend on node coords and velocity
+
+  virtual void compute_topology_optimization_adjoint_full() {} //Force depends on node coords and velocity
+
+  virtual void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients) {}
+
+  virtual void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed) {}
 
   //interfacing information
   std::string Module_Type;
@@ -268,7 +283,8 @@ public:
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
   Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
   Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
-  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //sorted node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> element_sorting_importer; //sorted element comms
   Teuchos::RCP<Tpetra::Import<LO, GO>> dof_importer; //ghost dof comms
 
   //! mapping used to get local ghost index from the global ID.
@@ -309,6 +325,15 @@ public:
 
   //Pointer to ROL Problem for optimization solves
   Teuchos::RCP<ROL::Problem<real_t>> problem;
+
+  //Explicit BC data kept for now until bc data is refactored/consolidated
+  // node ids in bdy_patch set
+  RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
+  DCArrayKokkos <size_t> num_bdy_nodes_in_set;
+
+  // patch ids in bdy set
+  size_t num_bdy_sets;
+  DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
   
 };
 

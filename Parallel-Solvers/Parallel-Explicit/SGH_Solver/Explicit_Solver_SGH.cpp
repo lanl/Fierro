@@ -391,10 +391,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       const_vec_array test_node_densities = design_node_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       vec_array test_gradients = test_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
-      sgh_module->comm_variables(design_node_densities_distributed);
-      sgh_module->update_forward_solve(design_node_densities_distributed);
-      sgh_module->compute_topology_optimization_adjoint();
-      sgh_module->compute_topology_optimization_gradient(test_node_densities, test_gradients);
+      fea_modules[0]->comm_variables(design_node_densities_distributed);
+      fea_modules[0]->update_forward_solve(design_node_densities_distributed);
+      fea_modules[0]->compute_topology_optimization_adjoint();
+      fea_modules[0]->compute_topology_optimization_gradient(test_node_densities, test_gradients);
       // Data writers
       //parallel_vtk_writer();
     }
@@ -1309,18 +1309,18 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
     }
 
     //set lower bounds for nodes on surfaces with boundary and loading conditions
-    //for(int imodule = 0; imodule < nfea_modules; imodule++){
-      num_boundary_sets = sgh_module->num_boundary_conditions;
+    for(int imodule = 0; imodule < nfea_modules; imodule++){
+      num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
       for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
 
-        num_bdy_patches_in_set = sgh_module->bdy_patches_in_set.stride(iboundary);
+        num_bdy_patches_in_set = fea_modules[imodule]->bdy_patches_in_set.stride(iboundary);
 
         //loop over boundary patches for this boundary set
         if(simparam_dynamic_opt.thick_condition_boundary){
           for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
                   
             // get the global id for this boundary patch
-              patch_id = sgh_module->bdy_patches_in_set(iboundary, bdy_patch_gid);
+              patch_id = fea_modules[imodule]->bdy_patches_in_set(iboundary, bdy_patch_gid);
               Surface_Nodes = Boundary_Patches(patch_id).node_set;
               current_element_index = Boundary_Patches(patch_id).element_id;
               //debug print of local surface ids
@@ -1356,8 +1356,8 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
           }//boundary patch for
         }
         else{
-          for(int node_loop=0; node_loop < sgh_module->num_bdy_nodes_in_set(iboundary); node_loop++){
-            local_node_index = sgh_module->bdy_nodes_in_set(iboundary, node_loop);
+          for(int node_loop=0; node_loop < fea_modules[imodule]->num_bdy_nodes_in_set(iboundary); node_loop++){
+            local_node_index = fea_modules[imodule]->bdy_nodes_in_set(iboundary, node_loop);
             node_densities_lower_bound(local_node_index,0) = 1;
           }
         }
@@ -1365,8 +1365,8 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
 
       //set node conditions due to point BCS that might not show up in boundary sets
       //possible to have overlap in which nodes are set with the previous loop
-      sgh_module->node_density_constraints(node_densities_lower_bound);
-    //}//module for
+      fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
+    }//module for
   
     //sync device view
     dual_node_densities_upper_bound.sync_device();
@@ -1706,27 +1706,26 @@ void Explicit_Solver_SGH::sort_information(){
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
   
-  //interface element density data
-  {
-  host_vec_array Element_Densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  sgh_module->elem_den.update_host();
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    Element_Densities(ielem,0) = sgh_module->elem_den.host(ielem);
+  //comms to collect FEA module related vector data
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->sort_output(sorted_map);
+    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
   }
-  }
+  
   //Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
   
-  //sorted element mapping
-  sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
   sorted_element_densities_distributed = Teuchos::rcp(new MV(sorted_element_map, 1));
 
-  Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->sort_element_output(sorted_element_map);
+    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+  }
   
   sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
 
   //comms
-  sorted_nodes_in_elem_distributed->doImport(*global_nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
-  sorted_element_densities_distributed->doImport(*Global_Element_Densities, element_sorting_importer, Tpetra::INSERT);
+  sorted_nodes_in_elem_distributed->doImport(*global_nodes_in_elem_distributed, *element_sorting_importer, Tpetra::INSERT);
+  sorted_element_densities_distributed->doImport(*Global_Element_Densities, *element_sorting_importer, Tpetra::INSERT);
   
 }
 
