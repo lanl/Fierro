@@ -165,7 +165,7 @@ void Solver::read_mesh_ensight(const char *MESH){
   
   //construct contiguous parallel row map now that we know the number of nodes
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
-
+  //map->describe(*fos,Teuchos::VERB_EXTREME);
   // set the vertices in the mesh read in
   nlocal_nodes = map->getLocalNumElements();
   //populate local row offset data from global data
@@ -775,6 +775,7 @@ void Solver::read_mesh_vtk(const char *MESH){
   
   //construct contiguous parallel row map now that we know the number of nodes
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
+  //map->describe(*fos,Teuchos::VERB_EXTREME);
 
   // set the vertices in the mesh read in
   nlocal_nodes = map->getLocalNumElements();
@@ -1044,9 +1045,17 @@ void Solver::read_mesh_vtk(const char *MESH){
         else
           node_store(inode) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
         //first we add the elements to a dynamically allocated list
-        if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
-          assign_flag = 1;
-          rnum_elem++;
+        if(zero_index_base){
+          if(map->isNodeGlobalElement(node_gid)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
+        }
+        else{
+          if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
         }
       }
 
