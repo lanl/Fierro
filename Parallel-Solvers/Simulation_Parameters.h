@@ -69,7 +69,7 @@ SERIALIZABLE_ENUM(MESH_FORMAT,
     ansys_dat
 )
 
-SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk, vtu)
+SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk, vtu, none)
 SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
 
 SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
@@ -144,7 +144,7 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
 };
 IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base)
 
-struct Output_Options {
+struct Output_Options : Yaml::DerivedFields {
   int graphics_step_frequency;
   double graphics_step;
   OUTPUT_FORMAT output_file_format;

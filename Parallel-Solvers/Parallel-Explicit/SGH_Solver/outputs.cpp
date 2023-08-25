@@ -80,10 +80,12 @@ get_design_density(
   bool topology_optimization_on,
   const Teuchos::RCP<Solver::MV> design_node_densities_distributed);
 
-
 void
 Explicit_Solver_SGH::write_outputs()
 {
+  // No output for OUTPUT_FORMAT::none
+  if (simparam.output_options.output_file_format == OUTPUT_FORMAT::none)
+    return;
 
   // node "design_density"
   auto design_density = get_design_density(map->getLocalNumElements(),
@@ -109,6 +111,7 @@ Explicit_Solver_SGH::write_outputs()
   // element "elem_gid" //uncomment if needed (works fine)
   //auto elem_gid = get_elem_gid(all_element_map);
   //cell_data_scalars_int["elem_gid"] = elem_gid->pointer();
+
 
   switch (simparam.output_options.output_file_format)
   {
@@ -357,7 +360,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
 
   /*************** write .vtk.series file ***************/
-  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = simparam.time_value;
+  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = sgh_module->simparam.time_value;
   if (myrank == 0) {
     FILE *myfile;
     std::string filename = vtk_dir + "outputs.vtk.series";

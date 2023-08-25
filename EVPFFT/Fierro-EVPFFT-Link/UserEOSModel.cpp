@@ -8,7 +8,7 @@ UserEOSModel::UserEOSModel(
   const size_t mat_id,
   const size_t elem_gid)
 {
- sound_speed = global_vars(mat_id,3); 
+ sound_speed = global_vars(mat_id,4); 
 }
 
 KOKKOS_FUNCTION
