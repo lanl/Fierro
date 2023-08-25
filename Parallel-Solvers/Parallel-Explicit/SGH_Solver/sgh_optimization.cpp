@@ -411,7 +411,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
    
     
     // apply BC's to velocity
-    FEA_Module_SGH::boundary_velocity(mesh, boundary, node_vel);
+    FEA_Module_SGH::boundary_velocity(*mesh, boundary, node_vel);
     
     
     // calculate the corner massess if 2D
@@ -527,7 +527,7 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
 
 void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   
-  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
@@ -591,7 +591,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
 
 void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
   const size_t rk_level = simparam.rk_num_bins - 1;
-  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
@@ -713,7 +713,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       Kokkos::fence();
 
       get_force_vgradient_sgh(material,
-                              mesh,
+                              *mesh,
                               node_coords,
                               node_vel,
                               elem_den,
@@ -827,7 +827,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
 
 void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients){
 
-  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
@@ -1053,7 +1053,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
 
 void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed){
 
-  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;

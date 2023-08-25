@@ -87,112 +87,31 @@ Explicit_Solver_SGH::write_outputs()
   if (simparam.output_options.output_file_format == OUTPUT_FORMAT::none)
     return;
 
-  const size_t rk_level = simparam.rk_num_bins - 1;
+  // node "design_density"
+  auto design_density = get_design_density(map->getLocalNumElements(),
+    simparam_dynamic_opt.topology_optimization_on, design_node_densities_distributed);
+  point_data_scalars_double["design_density"] = design_density->pointer();  
 
-  Teuchos::RCP<CArray<double>> design_density;
-  Teuchos::RCP<CArray<int>> elem_switch;
-  Teuchos::RCP<CArray<int>> elem_proc_id;
-  Teuchos::RCP<CArray<int>> elem_gid;
-  Teuchos::RCP<CArray<double>> elem_speed;
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->write_data(point_data_scalars_double, point_data_vectors_double, cell_data_scalars_double, cell_data_scalars_int);
+  }
 
-  for (const FIELD_OUTPUT_SGH& field_name : simparam.field_output) {
-    switch (field_name)
-    {
-      case FIELD_OUTPUT_SGH::design_density:
-        // node "design_density"
-        design_density = get_design_density(map->getLocalNumElements(),
-          simparam_dynamic_opt.topology_optimization_on, design_node_densities_distributed);
-        point_data_scalars_double["design_density"] = design_density->pointer();
-        break;
+  // element "speed"
+  auto elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
+  cell_data_scalars_double["speed"] = elem_speed->pointer();
 
-      case FIELD_OUTPUT_SGH::velocity:
-        // node "velocity"
-        sgh_module->node_vel.update_host();
-        point_data_vectors_double["velocity"] = &sgh_module->node_vel.host(rk_level,0,0);
-        break;
+  // element "elem_switch" //uncomment if needed (works fine)
+  //auto elem_switch = calculate_elem_switch(all_element_map);
+  //cell_data_scalars_int["elem_switch"] = elem_switch->pointer();
 
-      case FIELD_OUTPUT_SGH::element_density:
-        // element "density"
-        sgh_module->elem_den.update_host();
-        cell_data_scalars_double["element_density"] = sgh_module->elem_den.host_pointer();
-        break;
+  // element "proc_id" //uncomment if needed (works fine)
+  //auto elem_proc_id = get_elem_proc_id(all_element_map, myrank);
+  //cell_data_scalars_int["proc_id"] = elem_proc_id->pointer();
 
-      case FIELD_OUTPUT_SGH::pressure:  
-        // element "pressure"
-        sgh_module->elem_pres.update_host();
-        cell_data_scalars_double["pressure"] = sgh_module->elem_pres.host_pointer();
-        break;
+  // element "elem_gid" //uncomment if needed (works fine)
+  //auto elem_gid = get_elem_gid(all_element_map);
+  //cell_data_scalars_int["elem_gid"] = elem_gid->pointer();
 
-      case FIELD_OUTPUT_SGH::SIE:
-        // element "SIE"
-        sgh_module->elem_sie.update_host();
-        cell_data_scalars_double["SIE"] = &sgh_module->elem_sie.host(rk_level,0);
-        break;
-
-      case FIELD_OUTPUT_SGH::volume:
-        // element "volume"
-        sgh_module->elem_vol.update_host();
-        cell_data_scalars_double["volume"] = sgh_module->elem_vol.host_pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::mass:
-        // element "mass"
-        sgh_module->elem_mass.update_host();
-        cell_data_scalars_double["mass"] = sgh_module->elem_mass.host_pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::sound_speed:
-        // element "sspd"
-        sgh_module->elem_sspd.update_host();
-        cell_data_scalars_double["sound_speed"] = sgh_module->elem_sspd.host_pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::speed:
-        // element "speed"
-        elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
-        cell_data_scalars_double["speed"] = elem_speed->pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::material_id:
-        // element "material_id"
-        sgh_module->elem_mat_id.update_host();
-        cell_data_scalars_int["material_id"] = reinterpret_cast<int*>(sgh_module->elem_mat_id.host_pointer());
-        break;
-
-      case FIELD_OUTPUT_SGH::element_switch:
-        // element "element_switch"
-        elem_switch = calculate_elem_switch(all_element_map);
-        cell_data_scalars_int["element_switch"] = elem_switch->pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::processor_id:
-        // element "processor_id"
-        elem_proc_id = get_elem_proc_id(all_element_map, myrank);
-        cell_data_scalars_int["processor_id"] = elem_proc_id->pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::element_id:
-        // element "element_id"
-        elem_gid = get_elem_gid(all_element_map);
-        cell_data_scalars_int["element_id"] = elem_gid->pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::user_vars:
-        // element "user_vars"
-        sgh_module->elem_user_output_vars.update_host();
-        cell_data_fields_double["user_vars"] = std::make_pair(sgh_module->elem_user_output_vars.host_pointer(), 
-                                                                   sgh_module->elem_user_output_vars.dims(1));
-      case FIELD_OUTPUT_SGH::stress:
-        // element "stress"
-        sgh_module->elem_stress.update_host();
-        cell_data_fields_double["stress"] = std::make_pair(&sgh_module->elem_stress.host(rk_level,0,0,0), 9);
-        break;
-
-      default:
-        break;
-
-    } // end switch
-  } // end if
 
   switch (simparam.output_options.output_file_format)
   {

@@ -3,7 +3,7 @@ solver_type: SGH
 num_dims: 3
 time_variables:
     time_initial: 0.0
-    time_final: 1.0
+    time_final: 0.6
     dt_min: 1.e-8
     dt_max: 1.e-3
     dt_start: 1.e-5
@@ -38,7 +38,7 @@ material_options:
 region_options:
   - volume: global
     mat_id: 0
-    den: 100.0
+    den: 1.0
     sie: 1.e-10
         
     velocity: cartesian
@@ -50,12 +50,12 @@ region_options:
     mat_id: 0
     radius1: 0.0
     radius2: 0.1125
-    den: 100.0
+    den: 1.0
         
     velocity: cartesian
-    u: 0.1
-    v: 0.1
-    w: 0.1
+    u: 0.0
+    v: 0.0
+    w: 0.0
     
 boundary_conditions:
     # Tag X plane

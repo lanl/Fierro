@@ -57,15 +57,19 @@ class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int my_fea_module_index = 0);
+  FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
   ~FEA_Module_SGH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
-  void sgh_interface_setup(mesh_t &mesh, node_t &node, elem_t &elem, corner_t &corner);
+  void sgh_interface_setup(node_t &node, elem_t &elem, corner_t &corner);
 
   void setup();
 
   void cleanup_material_models();
+
+  int solve();
+
+  void module_cleanup();
 
   void sgh_solve();
 
@@ -372,8 +376,14 @@ public:
   
   void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
 
+  void sort_element_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
+
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
+  void write_data(std::map <std::string, const double*> point_data_scalars_double,
+  std::map <std::string, const double*> point_data_vectors_double,
+  std::map <std::string, const double*> cell_data_scalars_double,
+  std::map <std::string, const int*> cell_data_scalars_int);
   
   void write_outputs (const mesh_t &mesh,
                       DViewCArrayKokkos <double> &node_coords,
@@ -478,7 +488,7 @@ public:
 
   elements::ref_element  *ref_elem;
   
-  mesh_t& mesh;
+  std::shared_ptr<mesh_t> mesh;
   //shallow copies of mesh class views
   size_t num_nodes_in_elem;
   // corner ids in node
@@ -510,17 +520,9 @@ public:
     
   // element ids in a patch
   CArrayKokkos <size_t> elems_in_patch;
-
-  // patch ids in bdy set
-  size_t num_bdy_sets;
-  DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
   
   // bdy nodes
   CArrayKokkos <size_t> bdy_nodes;
-
-  // node ids in bdy_patch set
-  RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
-  DCArrayKokkos <size_t> num_bdy_nodes_in_set;
   
   //Topology optimization filter variable
   DCArrayKokkos<double> relative_element_densities;
@@ -565,6 +567,13 @@ public:
 
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
+
+  // ---------------------------------------------------------------------
+  //    state data type declarations (must stay in scope for output after run)
+  // ---------------------------------------------------------------------
+  node_t  node_interface;
+  elem_t  elem_interface;
+  corner_t  corner_interface;
 
   //Dual View wrappers
   // Dual Views of the individual node struct variables

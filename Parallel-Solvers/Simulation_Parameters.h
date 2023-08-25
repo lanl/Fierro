@@ -74,6 +74,7 @@ SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
 
 SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
   Elasticity,
+  Dynamic_Elasticity,
   Heat_Conduction,
   SGH,
   Inertial,
@@ -163,8 +164,8 @@ SERIALIZABLE_ENUM(BOUNDARY_TAG,
     readFile   // read from a file
 )
 
-SERIALIZABLE_ENUM(BOUNDARY_FEA_CONDITION, fixed_displacement, fixed_temperature)
-SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux)
+SERIALIZABLE_ENUM(BOUNDARY_FEA_CONDITION, fixed_displacement, fixed_temperature, fixed_velocity, reflection)
+SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux, body_force)
 SERIALIZABLE_ENUM(LOADING_SPECIFICATION, normal, coordinated)
 
 struct Loading_Condition : Yaml::ValidatedYaml {

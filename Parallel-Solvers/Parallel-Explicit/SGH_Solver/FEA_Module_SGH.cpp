@@ -102,7 +102,7 @@
 using namespace utils;
 
 
-FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int my_fea_module_index) :FEA_Module(Solver_Pointer), mesh(mesh){
+FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
@@ -123,6 +123,8 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int m
   //create mesh objects
   //init_mesh = new swage::mesh_t(simparam);
   //mesh = new swage::mesh_t(simparam);
+
+  mesh = mesh_in;
 
   //boundary condition data
   max_boundary_sets = 0;
@@ -230,8 +232,7 @@ void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream *in, std::streampos
 // -----------------------------------------------------------------------------
 // Interfaces read in data with the SGH solver data; currently a hack to streamline
 //------------------------------------------------------------------------------
-void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
-                       node_t &node,
+void FEA_Module_SGH::sgh_interface_setup(node_t &node,
                        elem_t &elem,
                        corner_t &corner){
 
@@ -251,8 +252,8 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     //printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, nall_nodes);
 
     // intialize node variables
-    mesh.initialize_nodes(nall_nodes);
-    mesh.initialize_local_nodes(Explicit_Solver_Pointer_->nlocal_nodes);
+    mesh->initialize_nodes(nall_nodes);
+    mesh->initialize_local_nodes(Explicit_Solver_Pointer_->nlocal_nodes);
     node.initialize(rk_num_bins, nall_nodes, num_dim);
     //std::cout << "Bin counts " << rk_num_bins << " Node counts " << nall_nodes << " Num dim " << num_dim << std::endl;
 
@@ -289,9 +290,9 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     //printf("Num elems assigned to MPI rank %lu is %lu\n" , myrank, rnum_elem);
 
     // intialize elem variables
-    mesh.initialize_elems(rnum_elem, num_dim);
+    mesh->initialize_elems(rnum_elem, num_dim);
     elem.initialize(rk_num_bins, nall_nodes, 3); // always 3D here, even for 2D
-    nodes_in_elem = mesh.nodes_in_elem;
+    nodes_in_elem = mesh->nodes_in_elem;
     //save data to nodes_in_elem.host
     //CArrayKokkos<size_t, DefaultLayout, HostSpace> host_mesh_nodes_in_elem(rnum_elem, num_nodes_in_elem);
     //view scope
@@ -404,7 +405,7 @@ void FEA_Module_SGH::sgh_interface_setup(mesh_t &mesh,
     
     // intialize corner variables
     int num_corners = rnum_elem*num_nodes_in_elem;
-    mesh.initialize_corners(num_corners);
+    mesh->initialize_corners(num_corners);
     corner.initialize(num_corners, num_dim);
     
     /*
@@ -638,6 +639,74 @@ void FEA_Module_SGH::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sor
 }
 
 /* -------------------------------------------------------------------------------------------
+   Prompts sorting for elastic response output data. For now, nodal strains.
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::write_data(std::map <std::string, const double*> point_data_scalars_double,
+  std::map <std::string, const double*> point_data_vectors_double,
+  std::map <std::string, const double*> cell_data_scalars_double,
+  std::map <std::string, const int*> cell_data_scalars_int){
+  const size_t rk_level = simparam.rk_num_bins - 1;
+
+  // node "velocity"
+  node_vel.update_host();
+  point_data_vectors_double["velocity"] = &node_vel.host(rk_level,0,0);
+
+  // element "element_density"
+  elem_den.update_host();
+  cell_data_scalars_double["element_density"] = &elem_den.host(0);
+  
+  // element "pres"
+  elem_pres.update_host();
+  cell_data_scalars_double["pres"] = &elem_pres.host(0);
+
+  // element "sie"
+  elem_sie.update_host();
+  cell_data_scalars_double["sie"] = &elem_sie.host(rk_level,0);
+
+  // element "vol"
+  elem_vol.update_host();
+  cell_data_scalars_double["vol"] = &elem_vol.host(0);
+
+  // element "mass"
+  elem_mass.update_host();
+  cell_data_scalars_double["mass"] = &elem_mass.host(0);
+
+  // element "sspd"
+  elem_sspd.update_host();
+  cell_data_scalars_double["sspd"] = &elem_sspd.host(0);
+
+  // element "mat_id" //uncomment if needed (works fine)
+  //sgh_module->elem_mat_id.update_host();
+  //cell_data_scalars_int["mat_id"] = reinterpret_cast<int*>(&sgh_module->elem_mat_id.host(0));
+  
+  // element "user_output_vars" //uncomment if needed (works fine)
+  //sgh_module->elem_user_output_vars.update_host();
+  //cell_data_fields_double["user_output_vars"] = std::make_pair(&sgh_module->elem_user_output_vars.host_pointer(), 
+  //                                                             sgh_module->elem_user_output_vars.dims(1));
+
+  // element "stress" //uncomment if needed (works fine)
+  //sgh_module->elem_stress.update_host();
+  //cell_data_fields_double["stress"] = std::make_pair(&sgh_module->elem_stress.host(rk_level,0,0,0), 9);
+}
+
+/* -------------------------------------------------------------------------------------------
+   Prompts sorting for elastic response output data. For now, nodal strains.
+---------------------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::sort_element_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
+  //interface element density data
+  {
+  host_vec_array Element_Densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  elem_den.update_host();
+  for(int ielem = 0; ielem < rnum_elem; ielem++){
+    Element_Densities(ielem,0) = elem_den.host(ielem);
+  }
+  }
+  
+}
+
+/* -------------------------------------------------------------------------------------------
    Prompts computation of elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
@@ -754,6 +823,35 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
 
 void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lower_bound){
 
+  const size_t num_dim = mesh->num_dims;
+  const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+  const size_t num_lcs = simparam.loading.size();
+    
+  const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
+  const DCArrayKokkos <loading_t> loading = simparam.loading;
+
+  //debug check
+  //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
+
+  // walk over the nodes to update the velocity
+  FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+      double current_node_coords[3];
+      double radius;
+      for (size_t dim = 0; dim < num_dim; dim++){
+          current_node_coords[dim] = all_initial_node_coords(node_gid, dim);
+      } // end for dim
+      radius = sqrt(current_node_coords[0]*current_node_coords[0]+current_node_coords[1]*current_node_coords[1]+current_node_coords[2]*current_node_coords[2]);
+      for(size_t ilc=0; ilc < num_lcs; ilc++){
+        //debug check
+        //std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
+
+        bool fill_this = loading(ilc).contains(current_node_coords);
+        if(fill_this){
+          node_densities_lower_bound(node_gid,0) = 1;
+        }
+      }
+  }); // end for parallel for over nodes
+
 }
 
 /* ----------------------------------------------------------------------------
@@ -767,7 +865,144 @@ void FEA_Module_SGH::setup(){
     const size_t rk_num_bins = simparam.rk_num_bins;
     const size_t num_bcs = simparam.boundary_conditions.size();
     const size_t num_materials = simparam.material_options.size();
-    const int num_dim = simparam.num_dims;
+    const int num_dim = simparam.num_dims;    
+
+    // ---------------------------------------------------------------------
+    //    obtain mesh data
+    // --------------------------------------------------------------------- 
+    sgh_interface_setup(node_interface, elem_interface, corner_interface);
+    mesh->build_corner_connectivity();
+        //debug print of corner ids
+        /*
+        if(myrank==1){
+              for(int i = 0; i < mesh.num_nodes; i++){
+        
+                // loop over all corners around the node and calculate the nodal force
+                for (size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(i); corner_lid++){
+        
+                  // Get corner gid
+                  size_t corner_gid = mesh.corners_in_node(i, corner_lid);
+                  std::cout << map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
+            
+                } // end for corner_lid
+                //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
+                //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
+              }
+            }
+          */
+          /*
+          if(myrank==1){
+              for(int i = 0; i < mesh.num_elems; i++){
+        
+                // loop over all corners around the node and calculate the nodal force
+                for (size_t corner_lid=0; corner_lid<max_nodes_per_element; corner_lid++){
+        
+                  // Get corner gid
+                  size_t corner_gid = mesh.corners_in_elem(i, corner_lid);
+                  std::cout << i  << " " << mesh.nodes_in_elem(i, corner_lid) << " " << all_node_map->getGlobalElement(mesh.nodes_in_elem(i, corner_lid)) <<" " << corner_gid << " " << std::endl;
+            
+                } // end for corner_lid
+                //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
+                //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
+              }
+            }
+            */
+    mesh->build_elem_elem_connectivity();
+    mesh->num_bdy_patches = nboundary_patches;
+    if(num_dim==2){
+      mesh->build_patch_connectivity();
+      mesh->build_node_node_connectivity();
+    }
+        
+      // ---------------------------------------------------------------------
+      //    allocate memory
+      // ---------------------------------------------------------------------
+
+      // shorthand names
+    const size_t num_nodes = mesh->num_nodes;
+    const size_t num_elems = mesh->num_elems;
+    const size_t num_corners = mesh->num_corners;
+
+        
+        // --- make dual views of data on CPU and GPU ---
+        //  Notes:
+        //     Instead of using a struct of dual types like the mesh type, 
+        //     individual dual views will be made for all the state 
+        //     variables.  The motivation is to reduce memory movement 
+        //     when passing state into a function.  Passing a struct by 
+        //     reference will copy the meta data and pointers for the 
+        //     variables held inside the struct.  Since all the mesh 
+        //     variables are typically used by most functions, a single 
+        //     mesh struct or passing the arrays will be roughly equivalent 
+        //     for memory movement.
+
+        
+    // create Dual Views of the individual node struct variables
+    node_coords = DViewCArrayKokkos<double>(node_interface.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+
+    node_vel = DViewCArrayKokkos<double>(node_interface.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
+
+    node_mass = DViewCArrayKokkos<double>(node_interface.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
+        
+        
+    // create Dual Views of the individual elem struct variables
+    elem_den= DViewCArrayKokkos<double>(&elem_interface.den(0),
+                                            num_elems);
+
+    elem_pres = DViewCArrayKokkos<double>(&elem_interface.pres(0),
+                                              num_elems);
+
+    elem_stress = DViewCArrayKokkos<double>(&elem_interface.stress(0,0,0,0),
+                                                rk_num_bins,
+                                                num_elems,
+                                                3,
+                                                3); // always 3D even in 2D-RZ
+
+    elem_sspd = DViewCArrayKokkos<double>(&elem_interface.sspd(0),
+                                              num_elems);
+
+    elem_sie = DViewCArrayKokkos<double>(&elem_interface.sie(0,0),
+                                            rk_num_bins,
+                                            num_elems);
+
+    elem_vol = DViewCArrayKokkos<double>(&elem_interface.vol(0),
+                                            num_elems);
+        
+    elem_div = DViewCArrayKokkos<double>(&elem_interface.div(0),
+                                            num_elems);
+        
+
+    elem_mass = DViewCArrayKokkos<double>(&elem_interface.mass(0),
+                                              num_elems);
+
+    elem_mat_id = DViewCArrayKokkos<size_t>(&elem_interface.mat_id(0),
+                                                num_elems);
+      
+    // create Dual Views of the corner struct variables
+    corner_force = DViewCArrayKokkos <double>(&corner_interface.force(0,0),
+                                                num_corners, 
+                                                num_dim);
+
+    corner_mass = DViewCArrayKokkos <double>(&corner_interface.mass(0),
+                                                num_corners);
+        
+    // allocate elem_vel_grad
+    elem_vel_grad = DCArrayKokkos <double> (num_elems,3,3);
+
+    // allocate material models
+    elem_eos = DCArrayKokkos <eos_t> (num_elems);
+    elem_strength = DCArrayKokkos <strength_t> (num_elems); 
+      
+    // ---------------------------------------------------------------------
+    //   calculate geometry
+    // ---------------------------------------------------------------------
+    node_coords.update_device();
+    Kokkos::fence();
+
+    get_vol();
+
+    //FEA_Module bc variable
+    num_boundary_conditions = num_bcs;
 
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
     const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
@@ -776,47 +1011,47 @@ void FEA_Module_SGH::setup(){
     elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options.max_num_user_output_vars); 
  
     //--- calculate bdy sets ---//
-    mesh.num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
-    mesh.num_patches_in_elem = 2*num_dim; // 4 (2D) or 6 (3D)
-    mesh.init_bdy_sets(num_bcs);
-    num_bdy_sets = mesh.num_bdy_sets;
+    mesh->num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
+    mesh->num_patches_in_elem = 2*num_dim; // 4 (2D) or 6 (3D)
+    mesh->init_bdy_sets(num_bcs);
+    num_bdy_sets = mesh->num_bdy_sets;
     printf("Num BC's = %lu\n", num_bcs);
 
     // patch ids in bdy set
-    bdy_patches_in_set = mesh.bdy_patches_in_set;
+    bdy_patches_in_set = mesh->bdy_patches_in_set;
     if(num_dim==2)
-      bdy_nodes = mesh.bdy_nodes;
+      bdy_nodes = mesh->bdy_nodes;
 
     // tag boundary patches in the set
-    tag_bdys(boundary, mesh, node_coords);
+    tag_bdys(boundary, *mesh, node_coords);
 
-    build_boundry_node_sets(boundary, mesh);
+    build_boundry_node_sets(boundary, *mesh);
     
     // node ids in bdy_patch set
-    bdy_nodes_in_set = mesh.bdy_nodes_in_set;
-    num_bdy_nodes_in_set = mesh.num_bdy_nodes_in_set;
+    bdy_nodes_in_set = mesh->bdy_nodes_in_set;
+    num_bdy_nodes_in_set = mesh->num_bdy_nodes_in_set;
     
     //assign mesh views needed by the FEA module
 
     // elem ids in elem
-    elems_in_elem = mesh.elems_in_elem;
-    num_elems_in_elem = mesh.num_elems_in_elem;
+    elems_in_elem = mesh->elems_in_elem;
+    num_elems_in_elem = mesh->num_elems_in_elem;
 
     //corners
-    num_corners_in_node = mesh.num_corners_in_node;
-    corners_in_node = mesh.corners_in_node;
-    corners_in_elem = mesh.corners_in_elem;
+    num_corners_in_node = mesh->num_corners_in_node;
+    corners_in_node = mesh->corners_in_node;
+    corners_in_elem = mesh->corners_in_elem;
 
     //elem-node conn & node-node conn
-    elems_in_node = mesh.elems_in_node;
+    elems_in_node = mesh->elems_in_node;
     if(num_dim==2){
-      nodes_in_node = mesh.nodes_in_node;
-      num_nodes_in_node = mesh.num_nodes_in_node;
+      nodes_in_node = mesh->nodes_in_node;
+      num_nodes_in_node = mesh->num_nodes_in_node;
       //patch conn
     
-      patches_in_elem = mesh.patches_in_elem;
-      nodes_in_patch = mesh.nodes_in_patch;
-      elems_in_patch = mesh.elems_in_patch;
+      patches_in_elem = mesh->patches_in_elem;
+      nodes_in_patch = mesh->nodes_in_patch;
+      elems_in_patch = mesh->elems_in_patch;
     }
 
     // loop over BCs
@@ -1068,7 +1303,7 @@ void FEA_Module_SGH::setup(){
    
 
     // apply BC's to velocity
-    FEA_Module_SGH::boundary_velocity(mesh, boundary, node_vel);
+    FEA_Module_SGH::boundary_velocity(*mesh, boundary, node_vel);
     
     
     // calculate the corner massess if 2D
@@ -1175,6 +1410,14 @@ void FEA_Module_SGH::setup(){
     return;
     
 } // end of setup
+
+/* ----------------------------------------------------------------------------
+   solve function called by solver
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::module_cleanup(){
+  cleanup_material_models();
+}
 
 /* ----------------------------------------------------------------------------
     Deallocate memory used for  material models
@@ -1473,6 +1716,16 @@ void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &b
 } // end method to build boundary nodes
 
 /* ----------------------------------------------------------------------------
+   solve function called by solver
+------------------------------------------------------------------------------- */
+
+int FEA_Module_SGH::solve(){
+  sgh_solve();
+
+  return 0;
+}
+
+/* ----------------------------------------------------------------------------
    SGH solver loop
 ------------------------------------------------------------------------------- */
 
@@ -1496,7 +1749,7 @@ void FEA_Module_SGH::sgh_solve(){
     small = tv.small;
     graphics_times = simparam.graphics_options.graphics_times;
     graphics_id = simparam.graphics_options.graphics_id;
-    size_t num_bdy_nodes = mesh.num_bdy_nodes;
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
     const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
     const DCArrayKokkos <material_t> material = simparam.material;
     int nTO_modules;
@@ -1710,14 +1963,14 @@ void FEA_Module_SGH::sgh_solve(){
 
       // get the step
         if(num_dim==2){
-            get_timestep2D(mesh,
+            get_timestep2D(*mesh,
                            node_coords,
                            node_vel,
                            elem_sspd,
                            elem_vol);
         }
         else {
-            get_timestep(mesh,
+            get_timestep(*mesh,
                          node_coords,
                          node_vel,
                          elem_sspd,
@@ -1768,14 +2021,14 @@ void FEA_Module_SGH::sgh_solve(){
             // ---- Calculate velocity diveregence for the element ----
             if(num_dim==2){
                 get_divergence2D(elem_div,
-                                 mesh,
+                                 *mesh,
                                  node_coords,
                                  node_vel,
                                  elem_vol);
             }
             else {
                 get_divergence(elem_div,
-                               mesh,
+                               *mesh,
                                node_coords,
                                node_vel,
                                elem_vol);
@@ -1784,7 +2037,7 @@ void FEA_Module_SGH::sgh_solve(){
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             if(num_dim==2){
                 get_force_sgh2D(material,
-                                mesh,
+                                *mesh,
                                 node_coords,
                                 node_vel,
                                 elem_den,
@@ -1801,7 +2054,7 @@ void FEA_Module_SGH::sgh_solve(){
             }
             else {
                 get_force_sgh(material,
-                              mesh,
+                              *mesh,
                               node_coords,
                               node_vel,
                               elem_den,
@@ -1855,7 +2108,7 @@ void FEA_Module_SGH::sgh_solve(){
             // ---- Update nodal velocities ---- //
             if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
               get_force_elastic(material,
-                              mesh,
+                              *mesh,
                               node_coords,
                               node_vel,
                               node_mass,
@@ -1867,7 +2120,7 @@ void FEA_Module_SGH::sgh_solve(){
                               rk_alpha,
                               cycle);
                 applied_forces(material,
-                              mesh,
+                              *mesh,
                               node_coords,
                               node_vel,
                               node_mass,
@@ -1881,14 +2134,14 @@ void FEA_Module_SGH::sgh_solve(){
             }
             else{
               update_velocity_sgh(rk_alpha,
-                                mesh,
+                                *mesh,
                                 node_vel,
                                 node_mass,
                                 corner_force);
             }
             
             // ---- apply force boundary conditions to the boundary patches----
-            boundary_velocity(mesh, boundary, node_vel);
+            boundary_velocity(*mesh, boundary, node_vel);
 
             //current interface has differing velocity arrays; this equates them until we unify memory
             //first comm time interval point
@@ -1940,7 +2193,7 @@ void FEA_Module_SGH::sgh_solve(){
             */ 
             // ---- Update specific internal energy in the elements ----
             update_energy_sgh(rk_alpha,
-                              mesh,
+                              *mesh,
                               node_vel,
                               node_coords,
                               elem_sie,
@@ -1963,7 +2216,7 @@ void FEA_Module_SGH::sgh_solve(){
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
             if(num_dim==2){
                 update_state2D(material,
-                               mesh,
+                               *mesh,
                                node_coords,
                                node_vel,
                                elem_den,
@@ -1979,7 +2232,7 @@ void FEA_Module_SGH::sgh_solve(){
             }
             else{
                 update_state(material,
-                             mesh,
+                             *mesh,
                              node_coords,
                              node_vel,
                              elem_den,
@@ -2273,27 +2526,7 @@ void FEA_Module_SGH::sgh_solve(){
               double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
               Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
             }
-            //Explicit_Solver_Pointer_->parallel_vtk_writer();
-            //Explicit_Solver_Pointer_->parallel_vtk_writer_new();
-            //Explicit_Solver_Pointer_->parallel_tecplot_writer();
-              /*
-            write_outputs(mesh,
-                          Explicit_Solver_Pointer_,
-                          node_coords,
-                          node_vel,
-                          node_mass,
-                          elem_den,
-                          elem_pres,
-                          elem_stress,
-                          elem_sspd,
-                          elem_sie,
-                          elem_vol,
-                          elem_mass,
-                          elem_mat_id,
-                          graphics_times,
-                          graphics_id,
-                          time_value);
-            */
+
             graphics_time = time_value + graphics_dt_ival;
       } // end if
         

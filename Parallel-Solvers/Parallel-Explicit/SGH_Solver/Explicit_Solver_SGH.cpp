@@ -321,160 +321,15 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   
   //hack allocation of module
   //sgh_module = new FEA_Module_SGH(this, *mesh);
-  // ---------------------------------------------------------------------
-  //    state data type declarations (must stay in scope for output after run)
-  // ---------------------------------------------------------------------
-  node_t  node;
-  elem_t  elem;
-  corner_t  corner;
-  // ---------------------------------------------------------------------
-  //    mesh data type declarations
-  // ---------------------------------------------------------------------
-  //mesh_t mesh;
-      
 
-  // ---------------------------------------------------------------------
-  //    read the input file
-  // ---------------------------------------------------------------------  
-  //simparam->input();
-      
+  //sgh_module->setup();
 
-  // ---------------------------------------------------------------------
-  //    read in supplied mesh
-  // --------------------------------------------------------------------- 
-  sgh_module->sgh_interface_setup(*mesh, node, elem, corner);
-  mesh->build_corner_connectivity();
-      //debug print of corner ids
-      /*
-      if(myrank==1){
-            for(int i = 0; i < mesh.num_nodes; i++){
-      
-              // loop over all corners around the node and calculate the nodal force
-              for (size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(i); corner_lid++){
-      
-                // Get corner gid
-                size_t corner_gid = mesh.corners_in_node(i, corner_lid);
-                std::cout << map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
-          
-              } // end for corner_lid
-              //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
-              //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
-            }
-          }
-        */
-        /*
-        if(myrank==1){
-            for(int i = 0; i < mesh.num_elems; i++){
-      
-              // loop over all corners around the node and calculate the nodal force
-              for (size_t corner_lid=0; corner_lid<max_nodes_per_element; corner_lid++){
-      
-                // Get corner gid
-                size_t corner_gid = mesh.corners_in_elem(i, corner_lid);
-                std::cout << i  << " " << mesh.nodes_in_elem(i, corner_lid) << " " << all_node_map->getGlobalElement(mesh.nodes_in_elem(i, corner_lid)) <<" " << corner_gid << " " << std::endl;
-          
-              } // end for corner_lid
-              //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
-              //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
-            }
-          }
-          */
-  mesh->build_elem_elem_connectivity();
-  mesh->num_bdy_patches = nboundary_patches;
-  if(num_dim==2){
-    mesh->build_patch_connectivity();
-    mesh->build_node_node_connectivity();
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+      if(myrank == 0)
+        std::cout << "Starting setup for FEA module " << imodule <<std::endl <<std::flush;
+      //allocate and fill sparse structures needed for global solution in each FEA module
+      fea_modules[imodule]->setup();
   }
-      
-    // ---------------------------------------------------------------------
-    //    allocate memory
-    // ---------------------------------------------------------------------
-
-    // shorthand names
-  const size_t num_nodes = mesh->num_nodes;
-  const size_t num_elems = mesh->num_elems;
-  const size_t num_corners = mesh->num_corners;
-  const size_t rk_num_bins = simparam.rk_num_bins;
-
-      
-      // --- make dual views of data on CPU and GPU ---
-      //  Notes:
-      //     Instead of using a struct of dual types like the mesh type, 
-      //     individual dual views will be made for all the state 
-      //     variables.  The motivation is to reduce memory movement 
-      //     when passing state into a function.  Passing a struct by 
-      //     reference will copy the meta data and pointers for the 
-      //     variables held inside the struct.  Since all the mesh 
-      //     variables are typically used by most functions, a single 
-      //     mesh struct or passing the arrays will be roughly equivalent 
-      //     for memory movement.
-
-      
-  // create Dual Views of the individual node struct variables
-  sgh_module->node_coords = DViewCArrayKokkos<double>(node.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
-
-  sgh_module->node_vel = DViewCArrayKokkos<double>(node.vel.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
-
-  sgh_module->node_mass = DViewCArrayKokkos<double>(node.mass.get_kokkos_dual_view().view_host().data(),num_nodes);
-      
-      
-  // create Dual Views of the individual elem struct variables
-  sgh_module->elem_den= DViewCArrayKokkos<double>(&elem.den(0),
-                                          num_elems);
-
-  sgh_module->elem_pres = DViewCArrayKokkos<double>(&elem.pres(0),
-                                            num_elems);
-
-  sgh_module->elem_stress = DViewCArrayKokkos<double>(&elem.stress(0,0,0,0),
-                                              rk_num_bins,
-                                              num_elems,
-                                              3,
-                                              3); // always 3D even in 2D-RZ
-
-  sgh_module->elem_sspd = DViewCArrayKokkos<double>(&elem.sspd(0),
-                                            num_elems);
-
-  sgh_module->elem_sie = DViewCArrayKokkos<double>(&elem.sie(0,0),
-                                          rk_num_bins,
-                                          num_elems);
-
-  sgh_module->elem_vol = DViewCArrayKokkos<double>(&elem.vol(0),
-                                          num_elems);
-      
-  sgh_module->elem_div = DViewCArrayKokkos<double>(&elem.div(0),
-                                          num_elems);
-      
-
-  sgh_module->elem_mass = DViewCArrayKokkos<double>(&elem.mass(0),
-                                            num_elems);
-
-  sgh_module->elem_mat_id = DViewCArrayKokkos<size_t>(&elem.mat_id(0),
-                                              num_elems);
-     
-  // create Dual Views of the corner struct variables
-  sgh_module->corner_force = DViewCArrayKokkos <double>(&corner.force(0,0),
-                                              num_corners, 
-                                              num_dim);
-
-  sgh_module->corner_mass = DViewCArrayKokkos <double>(&corner.mass(0),
-                                              num_corners);
-      
-  // allocate elem_vel_grad
-  sgh_module->elem_vel_grad = DCArrayKokkos <double> (num_elems,3,3);
-
-  // allocate material models
-  sgh_module->elem_eos = DCArrayKokkos <eos_t> (num_elems);
-  sgh_module->elem_strength = DCArrayKokkos <strength_t> (num_elems); 
-    
-      // ---------------------------------------------------------------------
-      //   calculate geometry
-      // ---------------------------------------------------------------------
-    sgh_module->node_coords.update_device();
-    Kokkos::fence();
-
-  sgh_module->get_vol();
-
-  sgh_module->setup();
 
   //set initial saved velocities
   initial_node_velocities_distributed->assign(*node_velocities_distributed);
@@ -488,11 +343,23 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
     // ---------------------------------------------------------------------
     //  Calculate the SGH solution
     // ---------------------------------------------------------------------  
-      sgh_module->sgh_solve();
+      //sgh_module->sgh_solve();
+      for(int imodule = 0; imodule < nfea_modules; imodule++){
+        if(myrank == 0)
+          std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
+        //allocate and fill sparse structures needed for global solution in each FEA module
+        fea_modules[imodule]->solve();
+      }
   }
 
   // clean up all material models
-  sgh_module->cleanup_material_models(); 
+  //sgh_module->cleanup_material_models();
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    if(myrank == 0)
+      std::cout << "Starting solve for FEA module " << imodule <<std::endl <<std::flush;
+    //allocate and fill sparse structures needed for global solution in each FEA module
+    fea_modules[imodule]->module_cleanup();
+  }
 
   //printf("Finished\n");
   
@@ -524,10 +391,10 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
       const_vec_array test_node_densities = design_node_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       vec_array test_gradients = test_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
-      sgh_module->comm_variables(design_node_densities_distributed);
-      sgh_module->update_forward_solve(design_node_densities_distributed);
-      sgh_module->compute_topology_optimization_adjoint();
-      sgh_module->compute_topology_optimization_gradient(test_node_densities, test_gradients);
+      fea_modules[0]->comm_variables(design_node_densities_distributed);
+      fea_modules[0]->update_forward_solve(design_node_densities_distributed);
+      fea_modules[0]->compute_topology_optimization_adjoint();
+      fea_modules[0]->compute_topology_optimization_gradient(test_node_densities, test_gradients);
       // Data writers
       //parallel_vtk_writer();
     }
@@ -1219,7 +1086,7 @@ void Explicit_Solver_SGH::FEA_module_setup(){
     //automate selection list later; use std::map maybe?
     if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::SGH){
       fea_module_types[imodule] = FEA_MODULE_TYPE::SGH;
-      fea_modules[imodule] = sgh_module = new FEA_Module_SGH(this, *mesh);
+      fea_modules[imodule] = sgh_module = new FEA_Module_SGH(this, mesh);
       module_found = true;
       //debug print
       *fos << " SGH MODULE ALLOCATED AS " <<imodule << std::endl;
@@ -1385,7 +1252,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       }
       else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false);
+        eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false, true);
       }
       else{
         // TODO: Put validation earlier
@@ -1411,7 +1278,7 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       }
       else if(TO_Module_List[imodule]==TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
+        ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], true, true);
       }
       else{
         // TODO: Put this validation earlier
@@ -1446,44 +1313,54 @@ void Explicit_Solver_SGH::setup_optimization_problem(){
       num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
       for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
 
-        num_bdy_patches_in_set = fea_modules[imodule]->NBoundary_Condition_Patches(iboundary);
+        num_bdy_patches_in_set = fea_modules[imodule]->bdy_patches_in_set.stride(iboundary);
 
         //loop over boundary patches for this boundary set
-        for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
-                
-          // get the global id for this boundary patch
-          patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          if(simparam_dynamic_opt.thick_condition_boundary){
-            Surface_Nodes = Boundary_Patches(patch_id).node_set;
-            current_element_index = Boundary_Patches(patch_id).element_id;
-            //debug print of local surface ids
-            //std::cout << " LOCAL SURFACE IDS " << std::endl;
-            //std::cout << local_surface_id << std::endl;
-            //acquire set of nodes for this face
-            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
-              current_node_index = nodes_in_elem(current_element_index,node_loop);
-              if(map->isNodeGlobalElement(current_node_index)){
-                local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = 1;
-              }
-            }// node loop for
-          }//if
-          else{
-            Surface_Nodes = Boundary_Patches(patch_id).node_set;
-            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
-            //debug print of local surface ids
-            //std::cout << " LOCAL SURFACE IDS " << std::endl;
-            //std::cout << local_surface_id << std::endl;
-            //acquire set of nodes for this face
-            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
-              current_node_index = Surface_Nodes(node_loop);
-              if(map->isNodeGlobalElement(current_node_index)){
-                local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = 1;
-              }
-            }// node loop for
-          }//if
-        }//boundary patch for
+        if(simparam_dynamic_opt.thick_condition_boundary){
+          for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
+                  
+            // get the global id for this boundary patch
+              patch_id = fea_modules[imodule]->bdy_patches_in_set(iboundary, bdy_patch_gid);
+              Surface_Nodes = Boundary_Patches(patch_id).node_set;
+              current_element_index = Boundary_Patches(patch_id).element_id;
+              //debug print of local surface ids
+              //std::cout << " LOCAL SURFACE IDS " << std::endl;
+              //std::cout << local_surface_id << std::endl;
+              //acquire set of nodes for this face
+              for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+                current_node_index = nodes_in_elem(current_element_index,node_loop);
+                if(map->isNodeGlobalElement(current_node_index)){
+                  local_node_index = map->getLocalElement(current_node_index);
+                  node_densities_lower_bound(local_node_index,0) = 1;
+                }
+              }// node loop for
+              
+            //if
+            /*
+            else{
+              Surface_Nodes = Boundary_Patches(patch_id).node_set;
+              local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+              //debug print of local surface ids
+              //std::cout << " LOCAL SURFACE IDS " << std::endl;
+              //std::cout << local_surface_id << std::endl;
+              //acquire set of nodes for this face
+              for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+                current_node_index = Surface_Nodes(node_loop);
+                if(map->isNodeGlobalElement(current_node_index)){
+                  local_node_index = map->getLocalElement(current_node_index);
+                  node_densities_lower_bound(local_node_index,0) = 1;
+                }
+              }// node loop for
+            }//if
+            */
+          }//boundary patch for
+        }
+        else{
+          for(int node_loop=0; node_loop < fea_modules[imodule]->num_bdy_nodes_in_set(iboundary); node_loop++){
+            local_node_index = fea_modules[imodule]->bdy_nodes_in_set(iboundary, node_loop);
+            node_densities_lower_bound(local_node_index,0) = 1;
+          }
+        }
       }//boundary set for
 
       //set node conditions due to point BCS that might not show up in boundary sets
@@ -1829,27 +1706,26 @@ void Explicit_Solver_SGH::sort_information(){
   //comms to sort
   //collected_node_densities_distributed->doImport(*design_node_densities_distributed, node_collection_importer, Tpetra::INSERT);
   
-  //interface element density data
-  {
-  host_vec_array Element_Densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  sgh_module->elem_den.update_host();
-  for(int ielem = 0; ielem < rnum_elem; ielem++){
-    Element_Densities(ielem,0) = sgh_module->elem_den.host(ielem);
+  //comms to collect FEA module related vector data
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->sort_output(sorted_map);
+    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
   }
-  }
+  
   //Global_Element_Densities->describe(*fos,Teuchos::VERB_EXTREME);
   
-  //sorted element mapping
-  sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
   sorted_element_densities_distributed = Teuchos::rcp(new MV(sorted_element_map, 1));
 
-  Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
+  for (int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->sort_element_output(sorted_element_map);
+    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+  }
   
   sorted_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(sorted_element_map, max_nodes_per_element));
 
   //comms
-  sorted_nodes_in_elem_distributed->doImport(*global_nodes_in_elem_distributed, element_sorting_importer, Tpetra::INSERT);
-  sorted_element_densities_distributed->doImport(*Global_Element_Densities, element_sorting_importer, Tpetra::INSERT);
+  sorted_nodes_in_elem_distributed->doImport(*global_nodes_in_elem_distributed, *element_sorting_importer, Tpetra::INSERT);
+  sorted_element_densities_distributed->doImport(*Global_Element_Densities, *element_sorting_importer, Tpetra::INSERT);
   
 }
 
