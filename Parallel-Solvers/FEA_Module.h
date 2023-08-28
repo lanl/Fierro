@@ -169,10 +169,11 @@ public:
 
   virtual void compute_output(){}
   
-  virtual void write_data(std::map <std::string, const double*> point_data_scalars_double,
-  std::map <std::string, const double*> point_data_vectors_double,
-  std::map <std::string, const double*> cell_data_scalars_double,
-  std::map <std::string, const int*> cell_data_scalars_int){}
+  virtual void write_data(std::map <std::string, const double*> &point_data_scalars_double,
+  std::map <std::string, const double*> &point_data_vectors_double,
+  std::map <std::string, const double*> &cell_data_scalars_double,
+  std::map <std::string, const int*> &cell_data_scalars_int,
+  std::map <std::string, std::pair<const double*, size_t> > &cell_data_fields_double){}
 
   virtual void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type>> sorted_map){} //node data outputs
 
