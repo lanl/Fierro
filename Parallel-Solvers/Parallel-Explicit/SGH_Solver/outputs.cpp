@@ -219,9 +219,13 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
-  sgh_module->node_coords.update_host();
-  sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-    &sgh_module->node_coords.host(rk_level,0,0), map, num_dim, num_nodes, world, myfile_parallel);
+  //sgh_module->node_coords.update_host();
+  { //view scope
+  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  double* coord_data = node_coords.data();
+  sort_and_write_data_to_file_mpi_all <array_layout,double,LO,GO,node_type> (
+    coord_data, map, num_dim, num_nodes, world, myfile_parallel);
+  }
 
 
   /*************** write CELLS ***************/
@@ -231,7 +235,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
-  CArray <size_t> nodes_in_elem (sgh_module->nodes_in_elem.dims(0), sgh_module->nodes_in_elem.dims(1));
+  CArray <size_t> nodes_in_elem (rnum_elem, max_nodes_per_element);
   { //view scope
     auto host_view = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     for (size_t ielem = 0; ielem < nodes_in_elem.dims(0); ielem++) {
@@ -360,7 +364,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
 
   /*************** write .vtk.series file ***************/
-  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = sgh_module->simparam.time_value;
+  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = simparam.time_value;
   if (myrank == 0) {
     FILE *myfile;
     std::string filename = vtk_dir + "outputs.vtk.series";

@@ -642,10 +642,10 @@ void FEA_Module_SGH::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sor
    Prompts sorting for elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::write_data(std::map <std::string, const double*> point_data_scalars_double,
-  std::map <std::string, const double*> point_data_vectors_double,
-  std::map <std::string, const double*> cell_data_scalars_double,
-  std::map <std::string, const int*> cell_data_scalars_int){
+void FEA_Module_SGH::write_data(std::map <std::string, const double*> &point_data_scalars_double,
+  std::map <std::string, const double*> &point_data_vectors_double,
+  std::map <std::string, const double*> &cell_data_scalars_double,
+  std::map <std::string, const int*> &cell_data_scalars_int){
   const size_t rk_level = simparam.rk_num_bins - 1;
 
   // node "velocity"
@@ -2370,7 +2370,7 @@ void FEA_Module_SGH::sgh_solve(){
       } // end of RK loop
 
 	    // increment the time
-	    simparam.time_value = time_value+=dt;
+	    Explicit_Solver_Pointer_->simparam.time_value = simparam.time_value = time_value+=dt;
 
       if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
         if(cycle >= max_time_steps)

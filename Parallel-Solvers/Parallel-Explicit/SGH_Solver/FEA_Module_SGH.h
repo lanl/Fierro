@@ -380,10 +380,10 @@ public:
 
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
-  void write_data(std::map <std::string, const double*> point_data_scalars_double,
-  std::map <std::string, const double*> point_data_vectors_double,
-  std::map <std::string, const double*> cell_data_scalars_double,
-  std::map <std::string, const int*> cell_data_scalars_int);
+  void write_data(std::map <std::string, const double*> &point_data_scalars_double,
+  std::map <std::string, const double*> &point_data_vectors_double,
+  std::map <std::string, const double*> &cell_data_scalars_double,
+  std::map <std::string, const int*> &cell_data_scalars_int);
   
   void write_outputs (const mesh_t &mesh,
                       DViewCArrayKokkos <double> &node_coords,
