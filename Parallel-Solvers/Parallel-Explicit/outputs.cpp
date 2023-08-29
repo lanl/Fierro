@@ -1,4 +1,4 @@
-#include "Explicit_Solver_SGH.h"
+#include "Explicit_Solver.h"
 #include "Simulation_Parameters_SGH.h"
 #include "FEA_Module_SGH.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
@@ -81,7 +81,7 @@ get_design_density(
   const Teuchos::RCP<Solver::MV> design_node_densities_distributed);
 
 void
-Explicit_Solver_SGH::write_outputs()
+Explicit_Solver::write_outputs()
 {
   // No output for OUTPUT_FORMAT::none
   if (simparam.output_options.output_file_format == OUTPUT_FORMAT::none)
@@ -166,7 +166,7 @@ Explicit_Solver_SGH::write_outputs()
 }
 
 void
-Explicit_Solver_SGH::parallel_vtu_writer_new()
+Explicit_Solver::parallel_vtu_writer_new()
 {
   /* to be added... */
   throw std::runtime_error("parallel_vtu_writer_new() not yet implemented. use parallel_vtk_writer_new()");
@@ -191,7 +191,7 @@ construct_file_name(
 }
 
 void
-Explicit_Solver_SGH::parallel_vtk_writer_new()
+Explicit_Solver::parallel_vtk_writer_new()
 {
   const size_t rk_level = simparam.rk_num_bins - 1;
 
