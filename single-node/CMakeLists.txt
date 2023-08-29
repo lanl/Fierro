@@ -10,7 +10,8 @@ include(cmake/Modules/TargetDistclean.cmake OPTIONAL)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-option(TEST "Build tests" ON)
+#Set to off because of errors inside of Matar
+option(TEST "Build tests" OFF)
 
 if (TEST)
   include(FetchContent)
@@ -32,6 +33,8 @@ if(NOT CMAKE_BUILD_TYPE)
  # set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
 
+include_directories(include)
+add_subdirectory(include)
 include_directories(src)
 add_subdirectory(src)
 
