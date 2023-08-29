@@ -50,7 +50,7 @@
 
                 <h3>Parallel Solvers</h3>
                 <p>
-                    Both the parallel implicit and parallel explicit solvers take similar arguments in the form of a Yaml configuration file. 
+                    Both the parallel implicit solver and parallel explicit integrator take similar arguments in the form of a Yaml configuration file. 
                     The specific syntax for invoking them can be shown by running the following commands:
                 </p>
 <pre><code>fierro parallel-explicit -h
@@ -63,7 +63,7 @@ fierro parallel-implicit -h</code></pre>
                 <table class="table field-description">
                     <thead>
                         <tr>
-                            <a id="fea-boundary-anchor"><th colspan="2"><h4>Simulation Parameters</h4></th></a>
+                            <a id="simulation-parameters-anchor"><th colspan="2"><h4>Simulation Parameters</h4></th></a>
                         </tr>
                     </thead>
                     <tbody>
@@ -246,6 +246,12 @@ fierro parallel-implicit -h</code></pre>
 
 
                 <h3>Parallel Explicit SGH</h3>
+                <p>
+                    The parallel explicit solver performs dynamic time integration to evolve the system from an initial state.
+                    
+                    When invoking the explicit dynamics solver, you should provide it with a single Yaml file containing fields from both the
+                    <a href="#sgh-parameters">SGH Parameters</a> spec as well as the <a href="#simulation-parameters-anchor">Simulation Parameters</a> spec.
+                </p>
                 
   <!-- Time_Variables time_variables;
   std::vector<MaterialFill> region_options;
@@ -274,7 +280,7 @@ fierro parallel-implicit -h</code></pre>
                         </tr>
                         <tr>
                             <td>boundary_conditions</td>
-                            <td>List of <a href="#boundary-conditions-anchor">Boundary Conditions</a></td>
+                            <td>List of <a href="#boundary-condition-anchor">Boundary Conditions</a></td>
                         </tr>
                         <tr>
                             <td>graphics_options</td>
@@ -286,29 +292,197 @@ fierro parallel-implicit -h</code></pre>
                 <table class="table field-description">
                     <thead>
                         <tr>
-                            <a id="time-variables-anchor"><th colspan="2"><h4>Time_Variables</h4></th></a>
+                            <a id="time-variables-anchor"><th colspan="2"><h4>Time Variables</h4></th></a>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td>time_final</td>
-                            <td><a href="#time-variables-anchor">Time Variables</a></td>
+                            <td>End time of the simulation</td>
                         </tr>
                         <tr>
-                            <td>region_options</td>
-                            <td>List of <a href="#region-options-anchor">Region Options</a></td>
+                            <td>dt_min</td>
+                            <td>Smallest allowed step size</td>
                         </tr>
                         <tr>
-                            <td>material_options</td>
-                            <td>List of <a href="#material-options-anchor">Material Options</a></td>
+                            <td>dt_max</td>
+                            <td>Largest allowed step size</td>
                         </tr>
                         <tr>
-                            <td>boundary_conditions</td>
-                            <td>List of <a href="#boundary-conditions-anchor">Boundary Conditions</a></td>
+                            <td>dt_start</td>
+                            <td>Initial step size</td>
                         </tr>
                         <tr>
-                            <td>graphics_options</td>
-                            <td>List of <a href="#graphics_options-anchor">Graphics Options</a></td>
+                            <td>dt_cfl</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>cycle_stop</td>
+                            <td>Maximum number of cycles</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="region-options-anchor"><th colspan="2"><h4>Region Options</h4></th></a>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>mat_id</td>
+                            <td>Unique material ID</td>
+                        </tr>
+                        <tr>
+                            <td>volume</td>
+                            <td>Geometry type {global, box, cylinder, sphere}</td>
+                        </tr>
+                        <tr>
+                            <td>velocity</td>
+                            <td>Type of velocity {cartesian, radial, spherical, radial_linear, spherical_linear, tg_vortex}</td>
+                        </tr>
+                        <tr>
+                            <td>radius1</td>
+                            <td>Inner radius for shells</td>
+                        </tr>
+                        <tr>
+                            <td>radius2</td>
+                            <td>Outer radiues for shells</td>
+                        </tr>
+                        <tr>
+                            <td>u, v, w</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>speed</td>
+                            <td>Expansion speed</td>
+                        </tr>
+                        <tr>
+                            <td>sie</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>den</td>
+                            <td>Density</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="material-options-anchor"><th colspan="2"><h4>Material Options</h4></th></a>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>eos_model_type</td>
+                            <td>Equation of state model type {ideal_gas, user_eos_model}</td>
+                        </tr>
+                        <tr>
+                            <td>strength_type</td>
+                            <td>{none, hypo, hyper}</td>
+                        </tr>
+                        <tr>
+                            <td>strength_setup</td>
+                            <td>{input, user_input}</td>
+                        </tr>
+                        <tr>
+                            <td>strength_run_location</td>
+                            <td>Whether to run on the host or the device {host, device}</td>
+                        </tr>
+                        <tr>
+                            <td>q1, q1ex</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>q2, q2ex</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="boundary-condition-anchor"><th colspan="2"><h4>Boundary Condition</h4></th></a>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>id</td>
+                            <td>Unique condition identifier</td>
+                        </tr>
+                        <tr>
+                            <td>condition_type</td>
+                            <td>Type of boundary condition {fixed, reflected, velocity, pressure, acceleration, contact}</td>
+                        </tr>
+                        <tr>
+                            <td>surface</td>
+                            <td>Boundary surface type {x_plane, y_plane, z_plane, cylinder, sphere, readFile}</td>
+                        </tr>
+                        <tr>
+                            <td>value</td>
+                            <td>Constant value to maintain at the boundary</td>
+                        </tr>
+                        <tr>
+                            <td>u, v, w</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="graphics-options-anchor"><th colspan="2"><h4>Graphics Options</h4></th></a>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>output_velocity_flag, output_strain_flag, output_stress_flag</td>
+                            <td>Boolean options for enabling output of velocity, strain, and stress.</td>
+                        </tr>
+                        <tr>
+                            <td>displaced_mesh_flag</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>strain_max_flag</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3>Parallel Implicit Solver</h3>
+                <p>
+                    The parallel implicit solver optimizes density, shape and/or topology of the mesh to minimize the
+                    optimization objective function while maintaining the optimization constraints.
+                    
+                    When invoking the implicit solver, you should provide it with a single Yaml file containing fields from both the
+                    <a href="#topology-optimization-anchor">Topology Optimization Parameters</a> spec 
+                    as well as the <a href="#simulation-parameters-anchor">Simulation Parameters</a> spec.
+                </p>
+                
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="topology-optimization-anchor"><th colspan="2"><h4>Topology Optimization Parameters</h4></th></a>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>output_velocity_flag, output_strain_flag, output_stress_flag</td>
+                            <td>Boolean options for enabling output of velocity, strain, and stress.</td>
+                        </tr>
+                        <tr>
+                            <td>displaced_mesh_flag</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>strain_max_flag</td>
+                            <td></td>
                         </tr>
                     </tbody>
                 </table>
