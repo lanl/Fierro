@@ -1,0 +1,57 @@
+
+<html lang="en">
+<head>
+
+    <title>Fierro</title>
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.png">
+    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Tooplate">
+    <link href="https://fonts.googleapis.com/css?family=Poppins:100,100i,200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,800,800i,900,900i&display=swap" rel="stylesheet">
+
+    <!-- Additional CSS Files -->
+    <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/font-awesome.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/owl-carousel.css">
+
+    <link rel="stylesheet" href="assets/css/tooplate-artxibition.css">
+</head>
+
+<body data-spy="scroll" data-target="#toc">
+    <div id="header"></div>
+    <div class="container">
+        <div class="row">
+            <!-- sidebar, which will move to the top on a small screen -->
+            <div class="col-sm-3">
+                <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
+            </div>
+            <!-- main content area -->
+            <div class="col-sm-9">
+                <h1>Research</h1>
+                <h2>Ongoing Research</h2>
+                <h2>Past Research</h2>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <!-- jQuery -->
+    <script src="assets/js/jquery-2.1.0.min.js"></script>
+    <script> 
+        $(function(){
+          $("#header").load("header.html", () => $("#nav-research").addClass("active")); 
+          $("#footer").load("footer.html"); 
+        });
+    </script> 
+
+    <!-- Bootstrap -->
+    <script src="assets/js/popper.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/bootstrap-toc.min.js"></script>
+</body>
+</html>

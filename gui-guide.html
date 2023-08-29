@@ -1,0 +1,113 @@
+
+<html lang="en">
+<head>
+
+    <title>Fierro</title>
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.png">
+    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Tooplate">
+    <link href="https://fonts.googleapis.com/css?family=Poppins:100,100i,200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,800,800i,900,900i&display=swap" rel="stylesheet">
+
+
+
+    <!-- Additional CSS Files -->
+    <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/font-awesome.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/owl-carousel.css">
+
+    <link rel="stylesheet" href="assets/css/tooplate-artxibition.css">
+</head>
+
+<body data-spy="scroll" data-target="#toc">
+    <div id="header"></div>
+    <div class="container">
+        <div class="row">
+            <!-- sidebar, which will move to the top on a small screen -->
+            <div class="col-sm-3">
+                <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
+            </div>
+            <!-- main content area -->
+            <div class="col-sm-9">
+                <h1>Installation</h1>
+                <p><em>Fierro</em> backend is designed to run on almost harware you might want to run it on. We support 
+                    three CPU architectures (x86_64, arm64, ppc64le), as well as CUDA GPUs through nvcc and AMD GPUs through HIP. 
+                    Additionally, we support both Linux and MacOS. To run <em>Fierro</em> on Windows we recommend making use of 
+                    <a href="https://learn.microsoft.com/en-us/windows/wsl/install">Windows Subsystem for Linux</a>.
+                </p>
+                
+                <p>
+                    To make the installation process as simple as possible, we offer several pre-compile binaries through <a href="https://www.anaconda.com/">Anaconda</a> 
+                    for the backend software. The builds for <em>Fierro</em> as well as its primary dependencies can be found <a href="https://anaconda.org/kwelsh-lanl">here</a> for all supported platforms.
+                    Anaconda will automatically select the right build for your OS and CPU architecture, however, you must select the correct build based on which GPU hardware is present.
+                    This can be seen in the package prefix (-cpu, -cuda, -hip).
+                </p>
+
+                <h2>Workflows</h2>
+                <p>
+                    What you might install depends on your workflow
+                </p>
+
+                <h3>Running Fierro</h3>
+                <p>
+                    If you only want to download the <em>Fierro</em> backends and configure existing models, you only need to install the fierro package.
+                </p>
+                <pre><code>
+    conda install fierro -c kwelsh-lanl -c conda-forge
+                </code></pre>
+
+                <h3>Developing For Fierro in Anaconda</h3>
+                <p>
+                    If you need to compile <em>Fierro</em> using cmake, it is still possible to avoid building all of the dependencies from scratch. To leverage
+                    pre-build packages should start by making a new Anaconda environment.
+                </p>
+                <pre><code>
+    conda create -n my_fierro_env
+                </code></pre>
+                <p>
+                    Then you can install the primary dependencies into environemnt (making sure to replace "-cpu" with your desired GPU suffix).
+                </p>
+                <pre><code>
+    conda install elements fierro-trilinos-cpu -c kwelsh-lanl -c conda-forge
+                </code></pre>
+                <p>
+                    Now you can checkout the latest version of <em>Fierro</em> from our github.
+                </p>
+                <pre><code>
+    git clone https://github.com/lanl/Fierro
+    cd Fierro
+                </code></pre>
+                <p>
+                    The Trilinos and Elements dependencies will now be automatically located, and you can build the <em>Fierro</em> backend executables with CMake. 
+                    The following example builds the parallel solvers 
+                </p>
+                
+            <pre><code>
+    cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON -DBUILD_ELEMENTS=OFF .
+    make -j 4
+            </code></pre>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <!-- jQuery -->
+    <script src="assets/js/jquery-2.1.0.min.js"></script>
+    <script> 
+        $(function(){
+          $("#header").load("header.html", () => $("#nav-user-guides").addClass("active")); 
+          $("#footer").load("footer.html"); 
+        });
+    </script> 
+
+    <!-- Bootstrap -->
+    <script src="assets/js/popper.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/bootstrap-toc.min.js"></script>
+</body>
+</html>

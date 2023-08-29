@@ -1,0 +1,144 @@
+
+<html lang="en">
+<head>
+    
+    <title>Fierro</title>
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.png">
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Tooplate">
+    <link href="https://fonts.googleapis.com/css?family=Poppins:100,100i,200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,800,800i,900,900i&display=swap" rel="stylesheet">
+
+
+    <!-- Additional CSS Files -->
+    <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/font-awesome.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/owl-carousel.css">
+
+    <link rel="stylesheet" href="assets/css/tooplate-artxibition.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+
+<body data-spy="scroll" data-target="#toc">
+    <div id="header"></div>
+    <div class="container">
+        <div class="row">
+            <!-- sidebar, which will move to the top on a small screen -->
+            <div class="col-sm-3">
+                <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
+            </div>
+            <!-- main content area -->
+            <div class="col-sm-9">
+                <h1>Installation</h1>
+                <p><em>Fierro</em> backend is designed to run on almost harware you might want to run it on. We support 
+                    three CPU architectures (x86_64, arm64, ppc64le), as well as CUDA GPUs through nvcc and AMD GPUs through HIP. 
+                    Additionally, we support both Linux and MacOS. To run <em>Fierro</em> on Windows we recommend making use of 
+                    <a href="https://learn.microsoft.com/en-us/windows/wsl/install">Windows Subsystem for Linux</a>.
+                </p>
+                <p>
+                    To make the installation process as simple as possible, we offer several pre-compile binaries through <a href="https://www.anaconda.com/">Anaconda</a> 
+                    for the backend software. The builds for <em>Fierro</em> as well as its primary dependencies can be found <a href="https://anaconda.org/kwelsh-lanl">here</a> for all supported platforms.
+                    Anaconda will automatically select the right build for your OS and CPU architecture, however, you must select the correct build based on which GPU hardware is present.
+                    This can be seen in the package prefix (-cpu, -cuda, -hip).
+                </p>
+
+
+                <h2>Building From Source</h2>
+                <p>
+                    While we maintain <em>Fierro</em> distributions for a variety of hardware/OS combinations, there may be cases where you need to build both <em>Fierro</em> and 
+                    its dependencies from scratch. One example is if you have custom low-level libraries that you need to link to that are not ABI compatible with the
+                    standard versions. When you build from source, the <em>Fierro</em> backend executables will be available in either the <code>Fierro/bin</code> 
+                    or <code>Fierro/build/bin</code> folders depending on where the build command was executed.
+                </p>
+
+
+                <h3>1. Downloading Source Code</h3>
+                <p>
+                    <em>Fierro</em> depends on both <a href="https://github.com/lanl/ELEMENTS">Elements</a> and <a href="https://trilinos.github.io/">Trilinos</a>. The <em>Fierro</em> 
+                    repository includes <a href="https://github.com/lanl/ELEMENTS">Elements</a> as a git submodule. To download both <em>Fierro</em> and <a href="https://github.com/lanl/ELEMENTS">Elements</a>,
+                    use the following command:
+                </p>
+<pre><code>git clone https://github.com/lanl/Fierro.git --recurse-submodules</code></pre>
+
+
+                <h3>2. Comprehensive Build Scripts</h3>
+                <p>
+                    If <a href="https://trilinos.github.io/">Trilinos</a>
+                    is not already built with the correct packages/configuration on your machine we provide scripts for downloading a compatible version of 
+                    <a href="https://trilinos.github.io/">Trilinos</a> and building it inside of <em>Fierro</em> in addition to building <em>Fierro</em>.
+                    These scripts can be found in and should be executed from the <code>Fierro/Parallel-Solvers/scripts</code> folder. These scripts
+                    will check for the presence of Trilinos under <code>Fierro/Trilinos</code> and if it isn't found will download and build it with the 
+                    correct arguments for the version of <em>Fierro</em> selected. Then it will invoke the top level CMakeLists.txt and build <em>Fierro</em>.
+                    Because this includes building <a href="https://trilinos.github.io/">Trilinos</a>, this can take quite some time.
+                </p>
+                <h3>3. Leveraging Existing Trilinos Builds</h3>
+                <p>
+                    If you already have a compatible build of <a href="https://trilinos.github.io/">Trilinos</a> on your system, you do not need to re-build it.
+                    You can provide the Trilinos installation directory to CMake when building <em>Fierro</em> with the following commands:
+                </p>
+<pre><code>mkdir build; cd build
+cmake .. -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON -DTrilinos_DIR=&ltTRILINOS_INSTALL_DIRECTORY&gt
+make -j &ltNUMBER_OF_COMPILE_THREADS&gt</code></pre>
+                <h3>4. Building Against Anaconda Packages</h3>
+                <p>
+                    While building the whole dependency chain might be necessary, it is often sufficient to avoid build <em>Fierro</em> against the Anaconda packages
+                    we provide for <a href="https://github.com/lanl/ELEMENTS">Elements</a> and <a href="https://trilinos.github.io/">Trilinos</a>. To make use of these packages
+                    you should start by selecting or creating an Anaconda environment to install them in. To create one, run: 
+                </p>
+<pre><code>conda create -n my_fierro_env
+conda activate my_fierro_env</code></pre>
+                <p>
+                    Then you can install the primary dependencies into environemnt (making sure to replace "-cpu" with your desired GPU suffix).
+                </p>
+<pre><code>conda install elements fierro-trilinos-cpu -c kwelsh-lanl -c conda-forge</code></pre>
+                <p>
+                    The Trilinos and Elements dependencies will now be automatically located, and you can build the <em>Fierro</em> backend executables with CMake. 
+                    The following example builds the parallel solvers 
+                </p>
+<pre><code>mkdir build; cd build
+cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON -DBUILD_ELEMENTS=OFF ..
+make -j &ltNUMBER_OF_COMPILE_THREADS&gt</code></pre>
+                <p>
+                    If CMake is having trouble linking against either of the libraries found in the package, delete the CMakeCache in the build folder and try again.
+                    Anaconda uses the LDFLAGS environment variable to let CMake know where to look for libraries, but new values of this variable are ignored
+                    if an old one was cached during a previous build attempt.
+                </p>
+
+                
+                <h2>Installing Pre-built Binaries</h2>
+                <p>
+                    If you only want to download the <em>Fierro</em> backends and configure existing models, you only need to install the fierro package.
+                </p>
+<pre><code>conda install fierro -c kwelsh-lanl -c conda-forge</code></pre>
+                <p>
+                    When installing the pre-built binaries, the <em>Fierro</em> backend executables will be located in
+                    you Anaconda environment path and can be invoked from anywhere.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <!-- jQuery -->
+    <script src="assets/js/jquery-2.1.0.min.js"></script>
+    <script> 
+        $(function(){
+          $("#header").load("header.html", () => $("#nav-installation").addClass("active")); 
+          $("#footer").load("footer.html"); 
+        });
+    </script> 
+
+    <!-- Bootstrap -->
+    <script src="assets/js/popper.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/bootstrap-toc.min.js"></script>
+</body>
+</html>

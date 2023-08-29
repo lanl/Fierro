@@ -1,0 +1,251 @@
+
+<html lang="en">
+<head>
+    <title>Fierro</title>
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.png">
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Tooplate">
+    <link href="https://fonts.googleapis.com/css?family=Poppins:100,100i,200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,800,800i,900,900i&display=swap" rel="stylesheet">
+    <title>ArtXibition Event HTML Template</title>
+
+
+    <!-- Additional CSS Files -->
+    <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/font-awesome.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/owl-carousel.css">
+
+    <link rel="stylesheet" href="assets/css/tooplate-artxibition.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+
+<body data-spy="scroll" data-target="#toc">
+    <div id="header"></div>
+    <div class="container">
+        <div class="row">
+            <!-- sidebar, which will move to the top on a small screen -->
+            <div class="col-sm-3">
+                <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
+            </div>
+            <!-- main content area -->
+            <div class="col-sm-9">
+                <h1>Command Line Interface Guide</h1>
+                <h2>Entry Points</h2>
+                <p>
+                    The <em>Fierro</em> command line interface offers a single interface into all of the <em>Fierro</em> backend tools. The current options available on your
+                    machine can be explored by running
+                </p>
+                <pre><code>fierro -h</code></pre>
+                <p>
+                    This will list as subcommands all of the available backend applications.
+                </p>
+
+                <h3>Parallel Explicit Solver</h3>
+                <p>
+                    The parallel explicit solver can be invoked through
+                </p>
+                <pre><code>fierro parallel-explicit</code></pre>
+                <p>
+                    As an argument, it expects a Yaml configuration file with the following configuration options specified:
+                </p>
+
+                <table class="table table-dark field-description">
+                    <tbody>
+                        <thead>
+                            Simulation Parameters
+                        </thead>
+                        <tr>
+                            <td>solver_type</td>
+                            <td>Type of solver used {SGH}</td>
+                        </tr>
+                        <tr>
+                            <td>num_dims</td>
+                            <td>Dimensionality of Problem {2, 3}</td>
+                        </tr>
+                        <tr>
+                            <td>fea_modules</td>
+                            <td>List of <em>FEA Module</em>s to use in the optimization</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <table class="table table-dark field-description">
+                    <tbody>
+                        <thead>
+                            <tr>
+                                <a id="fea-module-anchor"><th colspan="2">FEA Module</th></a>
+                            </tr>
+                        </thead>
+                        <tr>
+                            <td>fea_module_type</td>
+                            <td>Type of moduel {Elasticity, Heat_Conduction, SGH, Inertial, Thermo_Elasticity, Eulerian}</td>
+                        </tr>
+                        <tr>
+                            <td>boundary_conditions</td>
+                            <td>List of <em>FEA Boundary Condition</em>s</td>
+                        </tr>
+                        <tr>
+                            <td>loading_conditions</td>
+                            <td>List of <a href="#fea-loading-anchor">FEA Loading Condition</a>s</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <table class="table table-dark field-description">
+                    <tbody>
+                        <thead>
+                            <tr>
+                                <a id="fea-boundary-anchor"><th colspan="2">FEA Boundary Condition</th></a>
+                            </tr>
+                        </thead>
+                        <tr>
+                            <td>id</td>
+                            <td>Unique condition id</td>
+                        </tr>
+                        <tr>
+                            <td>surface</td>
+                            <td>Type of surface {x_plane, y_plane, z_plane, cylinder, sphere, readFile}</td>
+                        </tr>
+                        <tr>
+                            <td>condition_type</td>
+                            <td>The type of constraint {fixed_displacement, fixed_temperature}</td>
+                        </tr>
+                        <tr>
+                            <td>value</td>
+                            <td>The value to enforce along the boundary</td>
+                        </tr>
+                        <tr>
+                            <td>displacement_value</td>
+                            <td>The displacement to enforce along the boundary</td>
+                        </tr>
+                        <tr>
+                            <td>temperature_value</td>
+                            <td>The temperature to enforce along the boundary</td>
+                        </tr>
+                        <tr>
+                            <td>plane_position</td>
+                            <td>The position of the plane along its axis</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <table class="table table-dark field-description">
+                    <tbody>
+                        <thead>
+                            <tr>
+                                <a id="fea-loading-anchor"><th colspan="2">FEA Loading Condition</th></a>
+                            </tr>
+                        </thead>
+                        <tr>
+                            <td>id</td>
+                            <td>Unique condition id</td>
+                        </tr>
+                        <tr>
+                            <td>surface</td>
+                            <td>Type of surface {x_plane, y_plane, z_plane, cylinder, sphere, readFile}</td>
+                        </tr>
+                        <tr>
+                            <td>condition_type</td>
+                            <td>The type of constraint {surface_traction, surface_heat_flux}</td>
+                        </tr>
+                        <tr>
+                            <td>flux_value</td>
+                            <td>The flux to enforce along the boundary</td>
+                        </tr>
+                        <tr>
+                            <td>specification</td>
+                            <td>The directionality of the traction {normal, coordinated}</td>
+                        </tr>
+                        <tr>
+                            <td>component_x</td>
+                            <td>The x component of the loading force</td>
+                        </tr>
+                        <tr>
+                            <td>component_y</td>
+                            <td>The y component of the loading force</td>
+                        </tr>
+                        <tr>
+                            <td>component_z</td>
+                            <td>The z component of the loading force</td>
+                        </tr>
+                        <tr>
+                            <td>plane_position</td>
+                            <td>The position of the plane along its axis</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table class="table table-dark field-description">
+                    <tbody>
+                        <thead>
+                            <tr>
+                                <a id="input-options-anchor"><th colspan="2">Input Options</th></a>
+                            </tr>
+                        </thead>
+                        <tr>
+                            <td>mesh_file_name</td>
+                            <td>Filepath to the mesh to load</td>
+                        </tr>
+                        <tr>
+                            <td>mesh_file_format</td>
+                            <td>Format of the mesh file {ensight, tecplot, vtk, ansys_dat}</td>
+                        </tr>
+                        <tr>
+                            <td>element_type</td>
+                            <td>The type of elements contained in the mesh file {quad4, quad8, quad12, hex8, hex20, hex32}</td>
+                        </tr>
+                        <tr>
+                            <td>zero_index_base</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <table class="table table-dark field-description">
+                    <tbody>
+                        <thead>
+                            <tr>
+                                <a id="output-options-anchor"><th colspan="2">Output Options</th></a>
+                            </tr>
+                        </thead>
+                        <tr>
+                            <td>graphics_step_frequency</td>
+                            <td>Output current mesh every "graphics_step_frequency" optimization steps.</td>
+                        </tr>
+                        <tr>
+                            <td>graphics_step</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>output_format</td>
+                            <td>Mesh output format {vtk}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <!-- jQuery -->
+    <script src="assets/js/jquery-2.1.0.min.js"></script>
+    <script> 
+        $(function(){
+          $("#header").load("header.html", () => $("#nav-user-guides").addClass("active")); 
+          $("#footer").load("footer.html"); 
+        });
+    </script> 
+
+    <!-- Bootstrap -->
+    <script src="assets/js/popper.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/bootstrap-toc.min.js"></script>
+</body>
+</html>

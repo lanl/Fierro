@@ -1,0 +1,236 @@
+
+<html lang="en">
+<head>
+    <title>Fierro</title>
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.png">
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Tooplate">
+    <link href="https://fonts.googleapis.com/css?family=Poppins:100,100i,200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,800,800i,900,900i&display=swap" rel="stylesheet">
+    
+    <!-- Additional CSS Files -->
+    <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/font-awesome.css">
+
+    <link rel="stylesheet" type="text/css" href="assets/css/owl-carousel.css">
+
+    <link rel="stylesheet" href="assets/css/tooplate-artxibition.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+
+<body data-spy="scroll" data-target="#toc">
+    <div id="header"></div>
+    <div class="container">
+        <div class="row">
+            <!-- sidebar, which will move to the top on a small screen -->
+            <div class="col-sm-3">
+                <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
+            </div>
+            <!-- main content area -->
+            <div class="col-lg-9">
+                <h1>Developer Guide</h1>
+                <p>
+                    The following is intended to outline how to build new models and applications in the <em>Fierro</em> ecosystem.
+                </p>
+                <h2>Folder Structure</h2>
+                <p>
+                    The <em>Fierro</em> repository contains many useful things for building models and applications. See the following 
+                    annotated folder structure for the most important file locations.
+                </p>
+                <pre>
+    Fierro
+      - CMakeLists.txt            // Top level CMake for building Fierro
+      - Trilinos-Build-Scripts    // Bash scripts for building Trilinos dependencies from source
+      - Explicit-Lagrange
+        - meshes                  // Suite of example meshes
+      - Parallel-Solvers
+        - Simulation_Parameters.h // Comprehensive example of Yaml input parsing
+        - User-Material-Interface // Contains placeholders for implementing custom material models
+        - scripts                 // Bash scripts for building the parallel solvers
+        - Parallel-Explicit       // All code for the explicit solver
+          - example_simple.yaml   // Example explicit input file
+          - main.cpp              // Entry point for solver  
+        - Implicit-Lagrange       // All code for the implicit solver
+          - example_simple.yaml   // Example implicit input file
+          - main.cpp              // Entry point for solver
+      - Yaml-Serializable         // Library for parsing Yaml files into native structs
+                </pre>
+                
+                <h2>Custom Material Models</h2>
+                <h2>Solvers</h2>
+                <h2>FEA Modules</h2>
+
+                <h2>Yaml Serialization</h2>
+                <p>
+                    Fierro makes use of Yaml as a human readable configuration interface. The Fierro GUI exists to improve the 
+                    Yaml file creation experience, but the backend ingests the inputs as Yaml options. Yaml-Serializable is a library
+                    designed to simplify the conversion of Yaml strings to native C++ data types.
+                </p>
+                <h3>Basic Usage</h3>
+                <p>
+                    The following is an example of a C++ struct and a potential Yaml representation:
+                </p>
+                <div class="row">
+                <div class="col-lg-6" style="display: inline-block;">
+                    <pre><code class="language-c++">SERIALIZABLE_ENUM(TEST_ENUM,
+    VALUE_1,
+    VALUE_2,
+    VALUE_3
+)
+struct Serializable {
+    int a;
+    float b;
+    double c;
+    std::set<TEST_ENUM> d;
+    std::vector<std::string> e;
+};
+IMPL_YAML_SERIALIZABLE_FOR(Serializable, 
+    a, b, c, d, e
+)</code></pre>
+                </div>
+                
+                <div class="col-lg-6" style="display: block;">
+                    <pre><code class="language-yaml">a: 1
+b: 1.01
+c: 1.025
+d: 
+  - VALUE_1
+  - VALUE_2
+  - VALUE_3 
+e: 
+ - string_1
+ - string_2</code></pre>
+                </div>
+                </div>
+                
+                <p>
+                    Here we have defined a C++ struct with all of the supported fundamental datatypes (custom nested data types are also supported
+                    but not featured here). Once defined and serialization is enabled with the <code>IMPL_YAML_SERIALIZABLE_FOR</code> macro,
+                    you can load an instance of the struct from a string with <code>Yaml::from_string&ltSerializable&gt(string)</code> or from 
+                    a file with <code>Yaml::from_file&ltSerializable&gt(filepath)</code>.
+                </p>
+                <h3>Validation</h3>
+                <p>
+                    Yaml is naturally a permissive specification. When it is initially parsed into a C++ Yaml::Node object, each value will
+                    be parsed as a string and the existence and structure of nodes is not yet validated. The Yaml-Serializable library 
+                    makes it trivial to coerce the Yaml values into the specific C++ types as well as apply validation. In general, validation
+                    errors are represented as <code>Yaml::ConfigurationException</code>.
+                </p>
+                <p>
+                    By default, the deserializer will only validate enumerations. In the example above, specifying a value for
+                    the "d" field that is not in the enumeration will throw an exception. All other potential errors will fail softly, including 
+                    missing fields or the presence of Yaml fields that don't map to struct fields.
+                </p>
+                <p>
+                    To enforce that all values in the Yaml representation must map to something in the struct, use <code>Yaml::from_file_strict</code>
+                    when loading the object. If there is an errant field present in the Yaml, an execption will be thrown.
+                </p>
+                <p>
+                    To enforce that a field is present in the Yaml representation when loading, use the <code>YAML_ADD_REQUIRED_FIELDS_FOR</code>
+                    macro when defining the struct. There you can list out all of the fields that should be required.
+                </p>
+                <h3>Advanced Usage</h3>
+                <p>
+                    While the Yaml-Serializable library offers a simple interface for establishing a mapping between Yaml representation and 
+                    C++ representation, it also offers flexibility throughout the deserialization process. The following example, taken
+                    from the Fierro source code, demonstrates a more advanced usage pattern.
+                </p>
+                <pre><code class="language-c++">struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
+    std::string mesh_file_name;
+    MESH_FORMAT mesh_file_format;
+
+    ELEMENT_TYPE element_type = ELEMENT_TYPE::hex8;
+    bool zero_index_base = false;
+
+    // Non-serialized fields
+    int words_per_line;
+    int elem_words_per_line;
+
+    /**
+    * Determine a couple of file parsing parameters from the specified filetype.
+    */
+    void derive() {
+        if (mesh_file_format == MESH_FORMAT::ansys_dat) {
+            words_per_line = 4;
+            elem_words_per_line = 11;
+        } else {
+            switch (mesh_file_format) {
+                case MESH_FORMAT::ensight:
+                    words_per_line = 1;
+                    break;
+                case MESH_FORMAT::vtk:
+                case MESH_FORMAT::tecplot:
+                    words_per_line = 3;
+                    break;
+                default:
+                    break;
+            }
+
+            switch (element_type) {
+                case ELEMENT_TYPE::hex8:
+                    elem_words_per_line = 8;
+                    break;
+                case ELEMENT_TYPE::quad4:
+                    elem_words_per_line = 4;
+                    break;
+                default:
+                    throw Yaml::ConfigurationException("Unsupported element type `" + to_string(element_type) + "`.");
+                    break;
+            }
+        }
+
+        mesh_file_name = std::filesystem::absolute(mesh_file_name).string();
+    }
+    
+    /**
+    * Ensures that the provided filepath is valid.
+    */
+    void validate() {
+        Yaml::validate_filepath(mesh_file_name);
+    }
+};
+YAML_ADD_REQUIRED_FIELDS_FOR(Input_Options, mesh_file_name)
+IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base)</code></pre>
+            <p>
+                Here we can see several features in use. As mentioned earlier, <code>YAML_ADD_REQUIRED_FIELDS_FOR(Input_Options, mesh_file_name)</code>
+                is used to enforce that the field "mesh_file_name" is present in the Yaml representation. However, on top of that, we implement 
+                a custom validation step by deriving from <code>Yaml::ValidatedYaml</code> and implementing <code>void validate()</code>.
+                Here we make use of a convenience method for validating that the string is actually a valid file.
+            </p>
+            <p>
+                Aside from validations, we can also see two other options: non-serialized properties, and property derivation. When creating the struct
+                not all of the fields must be serializable. Any field not listed in <code>IMPL_YAML_SERIALIZABLE_FOR</code> will simply 
+                be ignored by both the serializer and deserializer. One good use case for these kinds of fields is having derived properties.
+                In this case, "words_per_line" and "elem_words_per_line" are not unique information as they can be determined from the 
+                other fields, namely "mesh_file_format" and "element_type". However, it is convenient to keep the logic for deriving these 
+                fields close to the definition. This is achieved by deriving from <code>Yaml::DerivedFields</code> and implementing 
+                <code>void derive()</code>. With those things in place, the deserializer will automatically call <code>derive</code> 
+                after the serializable fields are loaded and before calling <code>validate</code>.
+            </p>
+        </div>
+        </div>
+    </div>
+
+    <div id="footer"></div>
+
+    <!-- jQuery -->
+    <script src="assets/js/jquery-2.1.0.min.js"></script>
+    <script> 
+        $(function(){
+          $("#header").load("header.html", () => $("#nav-user-guides").addClass("active")); 
+          $("#footer").load("footer.html"); 
+        });
+    </script> 
+
+    <!-- Bootstrap -->
+    <script src="assets/js/popper.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/bootstrap-toc.min.js"></script>
+</body>
+</html>
