@@ -60,7 +60,7 @@
 #include "FEA_Module_SGH.h"
 #include "FEA_Module_Eulerian.h"
 #include "Explicit_Solver_Eulerian.h"
-#include "Explicit_Solver_SGH.h"
+#include "Explicit_Solver.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 
 class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t> {

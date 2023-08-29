@@ -1,4 +1,4 @@
-solver_type: SGH
+solver_type: Explicit
 
 num_dims: 3
 time_variables:

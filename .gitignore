@@ -12,3 +12,5 @@ Trilinos
 main
 .vscode
 *.swp
+cmake_uninstall.cmake
+CTestTestfile.cmake

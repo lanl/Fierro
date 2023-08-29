@@ -61,7 +61,7 @@ inline void validate_unique_vector(const std::vector<T>& vec, std::string err_ms
   }
 }
 
-SERIALIZABLE_ENUM(SOLVER_TYPE, SGH, Implicit)
+SERIALIZABLE_ENUM(SOLVER_TYPE, Explicit, Implicit)
 SERIALIZABLE_ENUM(MESH_FORMAT,
     ensight,
     tecplot,

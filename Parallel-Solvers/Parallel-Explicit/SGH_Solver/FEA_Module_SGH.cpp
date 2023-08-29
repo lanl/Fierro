@@ -75,7 +75,7 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "Simulation_Parameters_Elasticity.h"
 #include "FEA_Module_SGH.h"
-#include "Explicit_Solver_SGH.h"
+#include "Explicit_Solver.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -108,7 +108,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
   my_fea_module_index_ = my_fea_module_index;
   
   //recast solver pointer for non-base class access
-  Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver_SGH*>(Solver_Pointer);
+  Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
 
   //create parameter object
   simparam = Explicit_Solver_Pointer_->simparam;

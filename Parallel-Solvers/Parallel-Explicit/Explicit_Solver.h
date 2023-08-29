@@ -41,6 +41,23 @@
 
 #include "Solver.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "utilities.h"
+#include "Simulation_Parameters_SGH.h"
+#include "mesh.h"
+#include "matar.h"
+#include "elements.h"
+#include "node_combination.h"
+#include <string>
+#include <Teuchos_ScalarTraits.hpp>
+#include <Teuchos_RCP.hpp>
+#include <Teuchos_oblackholestream.hpp>
+
+#include <Tpetra_Core.hpp>
+#include <Tpetra_Map.hpp>
+#include <Tpetra_MultiVector.hpp>
+#include <Tpetra_CrsMatrix.hpp>
+#include "Tpetra_Details_DefaultTypes.hpp"
+#include <map>
 
 class Explicit_Solver: public Solver{
 
@@ -48,7 +65,113 @@ public:
   Explicit_Solver();
   ~Explicit_Solver();
 
-  virtual void run(int argc, char *argv[]) {}
+  virtual void run(int argc, char *argv[]);
+
+  //void read_mesh_ensight(char *MESH);
+
+  void read_mesh_ansys_dat(const char *MESH);
+
+  void init_state_vectors();
+
+  //void repartition_nodes();
+
+  void comm_velocities();
+
+  void comm_densities();
+
+  void init_design();
+
+  void collect_information();
+
+  void sort_information();
+
+  //process input to decide TO problem and FEA modules
+  void FEA_module_setup();
+
+  void setup_optimization_problem();
+  
+  //initialize data for boundaries of the model and storage for boundary conditions and applied loads
+  void init_boundaries();
+  
+  //interfaces between user input and creating data structures for bcs
+  void topology_conditions();
+
+  //void vtk_writer();
+
+  //void ensight_writer();
+
+  //interfaces between user input and creating data structures for topology conditions
+  void generate_tcs();
+
+  void init_topology_conditions (int num_sets);
+
+  void tecplot_writer();
+
+  void parallel_tecplot_writer();
+
+  void parallel_vtk_writer();
+
+  void write_outputs();
+  void parallel_vtk_writer_new();
+  void parallel_vtu_writer_new(); // not yet added
+  // maps for variable_name:pointer
+  std::map <std::string, const double*> point_data_scalars_double;
+  std::map <std::string, const double*> point_data_vectors_double;
+  std::map <std::string, const double*> cell_data_scalars_double;
+  std::map <std::string, const int*> cell_data_scalars_int;
+  std::map <std::string, std::pair<const double*, size_t> > cell_data_fields_double;
+
+  //void init_boundary_sets(int num_boundary_sets);
+
+  void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
+
+  int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
+  
+  mesh_t *init_mesh;
+  std::shared_ptr<mesh_t> mesh;
+  
+  Simulation_Parameters_SGH simparam;
+
+  //FEA simulations
+  class FEA_Module_SGH *sgh_module;
+
+  //Global FEA data
+  Teuchos::RCP<MV> node_velocities_distributed;
+  Teuchos::RCP<MV> initial_node_velocities_distributed;
+  Teuchos::RCP<MV> all_node_velocities_distributed;
+  Teuchos::RCP<MV> ghost_node_velocities_distributed;
+  Teuchos::RCP<MV> all_cached_node_velocities_distributed;
+
+  //Distributions of data used to print
+  Teuchos::RCP<MV> collected_node_velocities_distributed;
+  Teuchos::RCP<MV> sorted_node_velocities_distributed;
+  
+  //Boundary Conditions Data
+  DCArrayKokkos<size_t> Local_Index_Boundary_Patches;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> NTopology_Condition_Patches;
+
+  //types of boundary conditions
+  enum tc_type {NONE, TO_SURFACE_CONSTRAINT, TO_BODY_CONSTRAINT};
+
+  //lists what kind of boundary condition each boundary set is assigned to
+  CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
+  
+  //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
+  size_t Number_DOF_BCS;
+
+  //! mapping used to get local ghost index from the global ID.
+  //typedef ::Tpetra::Details::FixedHashTable<GO, LO, Kokkos::HostSpace::device_type>
+    //global_to_local_table_host_type;
+
+  //global_to_local_table_host_type global2local_map;
+  //CArrayKokkos<int, Kokkos::LayoutLeft, Kokkos::HostSpace::device_type> active_ranks;
+
+  //allocation flags to avoid repeat MV and global matrix construction
+  int Matrix_alloc;
+
+  //debug flags
+  int gradient_print_sync;
 
   Teuchos::RCP<MV> initial_node_coords_distributed;
   

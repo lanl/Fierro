@@ -34,7 +34,7 @@
 #include "Simulation_Parameters_SGH.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
-#include "Explicit_Solver_SGH.h"
+#include "Explicit_Solver.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"

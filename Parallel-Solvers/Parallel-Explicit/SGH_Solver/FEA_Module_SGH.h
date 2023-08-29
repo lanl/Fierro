@@ -51,7 +51,7 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "material_models.h"
 
-class Explicit_Solver_SGH;
+class Explicit_Solver;
 
 class FEA_Module_SGH: public FEA_Module{
 
@@ -485,7 +485,7 @@ public:
   Simulation_Parameters_SGH simparam;
   Simulation_Parameters_Elasticity simparam_elasticity;
   Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
-  Explicit_Solver_SGH *Explicit_Solver_Pointer_;
+  Explicit_Solver *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;
   

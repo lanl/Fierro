@@ -42,7 +42,6 @@
 #include <mpi.h>
 #include <Kokkos_Core.hpp>
 #include "Explicit_Solver.h"
-#include "Explicit_Solver_SGH.h"
 #include "Simulation_Parameters.h"
 #include "yaml-serializable.h"
 #include <memory>
@@ -92,8 +91,8 @@ void solver_setup(int argc, char *argv[]){
   
   std::shared_ptr<Solver> solver;
   switch (simparam.solver_type) {
-    case SOLVER_TYPE::SGH:
-      solver = std::make_shared<Explicit_Solver_SGH>(Explicit_Solver_SGH());
+    case SOLVER_TYPE::Explicit:
+      solver = std::make_shared<Explicit_Solver>(Explicit_Solver());
       if (!node.IsNone())
         Yaml::deserialize(solver->simparam, node);
       break;
