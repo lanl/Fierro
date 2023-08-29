@@ -230,6 +230,10 @@ body {
   margin-left: 8px;
 }
 
+.table {
+  border: 2px solid;
+}
+
 
 /* 
 ---------------------------------------------
@@ -881,7 +885,6 @@ footer h4 {
    font-size: 20px;
    color: #2a2a2a;
    font-weight: 700;
-   margin-bottom: 25px;;
 }
 
 footer .address span {
@@ -893,6 +896,7 @@ footer .address span {
 
 footer .links {
   text-align: center;
+  margin-left: auto;
 }
 
 footer .links ul li a {
@@ -902,13 +906,18 @@ footer .links ul li a {
   margin-bottom: 5px;
 }
 
-footer .links {
-  margin-left: auto;
-  margin-right: auto;
+footer .links .useful-links {
+  text-align: left;
+  list-style-type: none;
+}
+
+footer .title {
+  text-align: center;
+  margin-top: 20px;
 }
 
 footer .row {
-  justify-content: center;
+  justify-content: left;
 }
 
 footer .under-footer {

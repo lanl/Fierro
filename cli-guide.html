@@ -1,8 +1,8 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <title>Fierro</title>
-    <link rel="icon" type="image/x-icon" href="assets/images/favicon.png">
+    <!-- <link rel="icon" type="image/x-icon" href="assets/images/favicon.png"> -->
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -19,7 +19,7 @@
 
     <link rel="stylesheet" type="text/css" href="assets/css/owl-carousel.css">
 
-    <link rel="stylesheet" href="assets/css/tooplate-artxibition.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script>hljs.highlightAll();</script>
@@ -27,12 +27,14 @@
 
 <body data-spy="scroll" data-target="#toc">
     <div id="header"></div>
+
     <div class="container">
         <div class="row">
             <!-- sidebar, which will move to the top on a small screen -->
             <div class="col-sm-3">
                 <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
             </div>
+
             <!-- main content area -->
             <div class="col-sm-9">
                 <h1>Command Line Interface Guide</h1>
@@ -46,20 +48,25 @@
                     This will list as subcommands all of the available backend applications.
                 </p>
 
-                <h3>Parallel Explicit Solver</h3>
+                <h3>Parallel Solvers</h3>
                 <p>
-                    The parallel explicit solver can be invoked through
+                    Both the parallel implicit and parallel explicit solvers take similar arguments in the form of a Yaml configuration file. 
+                    The specific syntax for invoking them can be shown by running the following commands:
                 </p>
-                <pre><code>fierro parallel-explicit</code></pre>
+<pre><code>fierro parallel-explicit -h
+fierro parallel-implicit -h</code></pre>
                 <p>
-                    As an argument, it expects a Yaml configuration file with the following configuration options specified:
+                    The primary argument that each backend accepts is a Yaml configuration file. While each program takes somewhat different configuration
+                    options, they share much of their configuration. 
                 </p>
-
-                <table class="table table-dark field-description">
+                <h3>Shared Configuration</h3>
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="fea-boundary-anchor"><th colspan="2"><h4>Simulation Parameters</h4></th></a>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <thead>
-                            Simulation Parameters
-                        </thead>
                         <tr>
                             <td>solver_type</td>
                             <td>Type of solver used {SGH}</td>
@@ -70,25 +77,33 @@
                         </tr>
                         <tr>
                             <td>fea_modules</td>
-                            <td>List of <em>FEA Module</em>s to use in the optimization</td>
+                            <td>List of <a href="#fea-module-anchor">FEA Module</a>s to use in the optimization</td>
+                        </tr>
+                        <tr>
+                            <td>input_options</td>
+                            <td><a href="#input-options-anchor">Input Options</a></td>
+                        </tr>
+                        <tr>
+                            <td>output_options</td>
+                            <td><a href="#output-options-anchor">Output Options</a></td>
                         </tr>
                     </tbody>
                 </table>
                 
-                <table class="table table-dark field-description">
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="fea-module-anchor"><th colspan="2"><h4>FEA Module</h4></th></a>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <thead>
-                            <tr>
-                                <a id="fea-module-anchor"><th colspan="2">FEA Module</th></a>
-                            </tr>
-                        </thead>
                         <tr>
                             <td>fea_module_type</td>
                             <td>Type of moduel {Elasticity, Heat_Conduction, SGH, Inertial, Thermo_Elasticity, Eulerian}</td>
                         </tr>
                         <tr>
                             <td>boundary_conditions</td>
-                            <td>List of <em>FEA Boundary Condition</em>s</td>
+                            <td>List of <a href="#fea-boundary-anchor">FEA Boundary Condition</a>s</td>
                         </tr>
                         <tr>
                             <td>loading_conditions</td>
@@ -97,13 +112,13 @@
                     </tbody>
                 </table>
                 
-                <table class="table table-dark field-description">
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="fea-boundary-anchor"><th colspan="2"><h4>FEA Boundary Condition</h4></th></a>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <thead>
-                            <tr>
-                                <a id="fea-boundary-anchor"><th colspan="2">FEA Boundary Condition</th></a>
-                            </tr>
-                        </thead>
                         <tr>
                             <td>id</td>
                             <td>Unique condition id</td>
@@ -135,13 +150,13 @@
                     </tbody>
                 </table>
                 
-                <table class="table table-dark field-description">
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="fea-loading-anchor"><th colspan="2"><h4>FEA Loading Condition</h4></th></a>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <thead>
-                            <tr>
-                                <a id="fea-loading-anchor"><th colspan="2">FEA Loading Condition</th></a>
-                            </tr>
-                        </thead>
                         <tr>
                             <td>id</td>
                             <td>Unique condition id</td>
@@ -181,13 +196,13 @@
                     </tbody>
                 </table>
 
-                <table class="table table-dark field-description">
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="input-options-anchor"><th colspan="2"><h4>Input Options</h4></th></a>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <thead>
-                            <tr>
-                                <a id="input-options-anchor"><th colspan="2">Input Options</th></a>
-                            </tr>
-                        </thead>
                         <tr>
                             <td>mesh_file_name</td>
                             <td>Filepath to the mesh to load</td>
@@ -207,13 +222,13 @@
                     </tbody>
                 </table>
                 
-                <table class="table table-dark field-description">
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="output-options-anchor"><th colspan="2"><h4>Output Options</h4></th></a>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <thead>
-                            <tr>
-                                <a id="output-options-anchor"><th colspan="2">Output Options</th></a>
-                            </tr>
-                        </thead>
                         <tr>
                             <td>graphics_step_frequency</td>
                             <td>Output current mesh every "graphics_step_frequency" optimization steps.</td>
@@ -225,6 +240,75 @@
                         <tr>
                             <td>output_format</td>
                             <td>Mesh output format {vtk}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+
+                <h3>Parallel Explicit SGH</h3>
+                
+  <!-- Time_Variables time_variables;
+  std::vector<MaterialFill> region_options;
+  std::vector<Material> material_options;
+  std::vector<Boundary> boundary_conditions;
+  Graphics_Options graphics_options; -->
+  
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="sgh-parameters-anchor"><th colspan="2"><h4>SGH Parameters</h4></th></a>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>time_variables</td>
+                            <td><a href="#time-variables-anchor">Time Variables</a></td>
+                        </tr>
+                        <tr>
+                            <td>region_options</td>
+                            <td>List of <a href="#region-options-anchor">Region Options</a></td>
+                        </tr>
+                        <tr>
+                            <td>material_options</td>
+                            <td>List of <a href="#material-options-anchor">Material Options</a></td>
+                        </tr>
+                        <tr>
+                            <td>boundary_conditions</td>
+                            <td>List of <a href="#boundary-conditions-anchor">Boundary Conditions</a></td>
+                        </tr>
+                        <tr>
+                            <td>graphics_options</td>
+                            <td>List of <a href="#graphics_options-anchor">Graphics Options</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <table class="table field-description">
+                    <thead>
+                        <tr>
+                            <a id="time-variables-anchor"><th colspan="2"><h4>Time_Variables</h4></th></a>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>time_final</td>
+                            <td><a href="#time-variables-anchor">Time Variables</a></td>
+                        </tr>
+                        <tr>
+                            <td>region_options</td>
+                            <td>List of <a href="#region-options-anchor">Region Options</a></td>
+                        </tr>
+                        <tr>
+                            <td>material_options</td>
+                            <td>List of <a href="#material-options-anchor">Material Options</a></td>
+                        </tr>
+                        <tr>
+                            <td>boundary_conditions</td>
+                            <td>List of <a href="#boundary-conditions-anchor">Boundary Conditions</a></td>
+                        </tr>
+                        <tr>
+                            <td>graphics_options</td>
+                            <td>List of <a href="#graphics_options-anchor">Graphics Options</a></td>
                         </tr>
                     </tbody>
                 </table>
