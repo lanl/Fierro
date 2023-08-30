@@ -5,6 +5,25 @@ module load clang/13.0.0
 module load rocm
 module list
 
+
+my_build="build-SGH"
+if [ -z $1 ]
+then
+    my_build="build-SGH"
+else
+    my_build=$1
+fi
+my_device=""
+if [ "$2" != "none" ]
+then
+    my_device="$2"
+fi
+my_host=""
+if [ "$3" != "none" ]
+then
+    my_host="$3"
+fi
+
 export scriptdir=`pwd`
 
 cd ../../../..
@@ -13,8 +32,8 @@ export basedir=${topdir}/single-node
 export srcdir=${basedir}/src
 export includedir=${basedir}/include
 export matardir=${includedir}/matar
-export builddir=${basedir}/build-SGH-hip
-export installdir=${basedir}/install-kokkos/install-kokkos-hip
+export builddir=${basedir}/${my_build}
+export installdir=${basedir}/install-kokkos/install-kokkos-${my_device}${my_host}
 
 export SGH_BASE_DIR=${basedir}
 export SGH_SOURCE_DIR=${srcdir}/Explicit-Lagrange-Kokkos/SGH_solver

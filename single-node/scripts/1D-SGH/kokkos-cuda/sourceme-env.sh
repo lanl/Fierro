@@ -11,8 +11,8 @@ cd ../../../..
 export topdir=`pwd`
 export basedir=${topdir}/single-node
 export srcdir=${basedir}/src
-export includedir=${basedir}/include
-export matardir=${includedir}/matar
+export libdir=${topdir}/lib
+export matardir=${libdir}/Elements/matar
 export builddir=${basedir}/build-1DSGH-cuda
 export installdir=${basedir}/install-kokkos/install-kokkos-cuda
 
