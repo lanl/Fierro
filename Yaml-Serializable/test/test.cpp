@@ -27,7 +27,7 @@ bool is_close(float a, float b) {
     return std::fabs(a - b) <= tolerance;
 }
 bool is_close(double a, double b) {
-    const double tolerance = 1e-6 * (a + b) / 2.0;
+    const double tolerance = 1e-6 * (std::fabs(a) + std::fabs(b)) / 2.0;
     return std::fabs(a - b) < tolerance;
 }
 
@@ -186,3 +186,48 @@ struct EmptyBase { };
 IMPL_YAML_SERIALIZABLE_FOR(EmptyBase)
 struct EmptyDerived : EmptyBase { };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(EmptyDerived, EmptyBase)
+
+
+struct SimpleSerializable {
+    int a;
+    float b;
+    double c;
+    std::set<TEST_ENUM> d;
+    std::vector<std::string> e;
+};
+IMPL_YAML_SERIALIZABLE_FOR(SimpleSerializable, a, b, c, d, e)
+
+TEST(YamlSerailizable, StrictDeserialization) {
+    std::string input = "\
+    a: 1        \n\
+    b: 1.0      \n\
+    c: 1.01     \n\
+    d:          \n\
+      - VALUE_1 \n\
+      - VALUE_2 \n\
+      - VALUE_3 \n\
+    e:          \n\
+      - string_1\n\
+      - string_2\n\
+      - string_3\n\
+    ";
+
+    std::string over_input = "\
+    a: 1        \n\
+    b: 1.0      \n\
+    c: 1.01     \n\
+    d:          \n\
+      - VALUE_1 \n\
+    e:          \n\
+      - string_1\n\
+    f: 5        \n\
+    ";
+
+    EXPECT_NO_THROW({
+        Yaml::from_string_strict<SimpleSerializable>(input);
+    });
+    
+    EXPECT_THROW({
+        Yaml::from_string_strict<SimpleSerializable>(over_input);
+    }, Yaml::ConfigurationException);
+}
