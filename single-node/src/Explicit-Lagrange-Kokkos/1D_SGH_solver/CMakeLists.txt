@@ -1,11 +1,10 @@
 cmake_minimum_required(VERSION 3.1.3)
 
-project (1DSGH)
-
+#project (1DSGH)
+find_package(Kokkos REQUIRED)
+add_definitions(-DHAVE_KOKKOS=1)
 
 add_executable(fierro1D 1D_SGH.cpp)
-
-add_definitions(-DHAVE_KOKKOS=1)
 
 if (CUDA)
   add_definitions(-DHAVE_CUDA=1)

@@ -27,6 +27,7 @@
 const double fuzz = 1.0E-15;
 const double huge = 1.0E15;
 
+using namespace mtr;
 
 // -----------------------------------------------------------------------------
 //    A region
