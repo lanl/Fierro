@@ -121,7 +121,7 @@ each surface to use for hammering metal into to form it.
 
 Explicit_Solver::Explicit_Solver() : Solver(){
   //create parameter objects
-  simparam = Simulation_Parameters_SGH();
+  simparam = Simulation_Parameters_Explicit();
   simparam_dynamic_opt = Simulation_Parameters_Dynamic_Optimization();
   //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
@@ -147,6 +147,7 @@ Explicit_Solver::Explicit_Solver() : Solver(){
   //file readin parameter
   active_node_ordering_convention = ENSIGHT;
   //default simulation parameters
+  time_value = 0;
 }
 
 Explicit_Solver::~Explicit_Solver(){
@@ -185,11 +186,14 @@ void Explicit_Solver::run(int argc, char *argv[]){
   //error handle for file input name
   //if(argc < 2)
   //yaml file reader for simulation parameters
-  std::string filename = std::string(argv[1]);
+  filename = std::string(argv[1]);
   if(filename.find(".yaml") != std::string::npos){
     simparam_dynamic_opt = Yaml::from_file<Simulation_Parameters_Dynamic_Optimization>(filename);
-    simparam = Yaml::from_file<Simulation_Parameters_SGH>(filename);
+    simparam = Yaml::from_file<Simulation_Parameters_Explicit>(filename);
   }
+
+  //init time
+  //time_value = simparam->time_initial;
 
   const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
   switch (simparam.input_options.mesh_file_format) {
@@ -1464,7 +1468,7 @@ void Explicit_Solver::setup_optimization_problem(){
 ------------------------------------------------------------------------------- */
 
 void Explicit_Solver::init_boundaries(){
-  int num_boundary_sets = simparam.NB;
+  //int num_boundary_sets = simparam.NB;
   int num_dim = simparam.num_dims;
   size_t num_nodes_in_patch;
   // build boundary mesh patches
@@ -1488,8 +1492,8 @@ void Explicit_Solver::init_boundaries(){
   std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
   
   //disable for now
-  if(0)
-  init_topology_conditions(num_boundary_sets);
+  //if(0)
+  //init_topology_conditions(num_boundary_sets);
 }
 
 /* ----------------------------------------------------------------------
@@ -1536,7 +1540,6 @@ void Explicit_Solver::init_topology_conditions (int num_sets){
 
 void Explicit_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits){
   
-  int num_boundary_sets = simparam.NB;
   int num_dim = simparam.num_dims;
   int is_on_set;
   /*

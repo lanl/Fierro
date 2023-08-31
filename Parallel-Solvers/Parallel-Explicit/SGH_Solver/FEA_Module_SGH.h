@@ -373,6 +373,8 @@ public:
   void init_output();
 
   void compute_output();
+
+  void output_control();
   
   void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
 

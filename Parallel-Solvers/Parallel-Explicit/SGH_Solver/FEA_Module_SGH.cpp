@@ -111,7 +111,8 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
 
   //create parameter object
-  simparam = Explicit_Solver_Pointer_->simparam;
+  simparam = Simulation_Parameters_SGH();
+  simparam = Yaml::from_file<Simulation_Parameters_SGH>(Explicit_Solver_Pointer_->filename);
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->input();
   
@@ -197,6 +198,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
     }
     
   }
+
 }
 
 FEA_Module_SGH::~FEA_Module_SGH(){
@@ -540,6 +542,14 @@ void FEA_Module_SGH::Displacement_Boundary_Conditions(){
 }
 
 /* ----------------------------------------------------------------------------
+   Output field settings and file settings
+------------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::output_control(){
+
+}
+
+/* ----------------------------------------------------------------------------
    Initialize output data structures
 ------------------------------------------------------------------------------- */
 
@@ -553,7 +563,8 @@ void FEA_Module_SGH::init_output(){
   int Brows;
   if(num_dim==3) Brows = 6;
   else Brows = 3;
-
+  
+  //Implicit compliant code
   if(output_velocity_flag){
     //displacement_index is accessed by writers at the solver level for deformed output
     output_velocity_index = noutput;
@@ -627,6 +638,7 @@ void FEA_Module_SGH::init_output(){
       output_dof_names[noutput-1][5] = "stress_yz";
     }
   }
+
 }
 
 /* -------------------------------------------------------------------------------------------
@@ -2414,7 +2426,7 @@ void FEA_Module_SGH::sgh_solve(){
       } // end of RK loop
 
 	    // increment the time
-	    Explicit_Solver_Pointer_->simparam.time_value = simparam.time_value = time_value+=dt;
+	    Explicit_Solver_Pointer_->time_value = simparam.time_value = time_value+=dt;
 
       if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
         if(cycle >= max_time_steps)
