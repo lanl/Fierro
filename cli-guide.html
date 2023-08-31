@@ -35,8 +35,11 @@
             </div>
 
             <!-- main content area -->
-            <div class="col-sm-9">
+            <div class="col-sm-9 text-content">
                 <h1>Command Line Interface Guide</h1>
+                The <em>Fierro</em> CLI gives you direct access to the back-end functions without a GUI. This can be useful for making and running advanced configurations
+                as well as for use on remote computing clusters.
+                
                 <h2>Entry Points</h2>
                 <p>
                     The <em>Fierro</em> command line interface offers a single interface into all of the <em>Fierro</em> backend tools. The current options available on your
@@ -58,6 +61,85 @@ fierro parallel-implicit -h</code></pre>
                     The primary argument that each backend accepts is a Yaml configuration file. While each program takes somewhat different configuration
                     options, they share much of their configuration. 
                 </p>
+                <h3>How to read the following tables</h3>
+                All of the <em>Fierro</em> backends take Yaml inputs. These may have required arguments, type annotations, 
+                nested input structures, and inherited structure. The following tables denote the expected input structure, 
+                calling out these properties. The Yaml eamples on the right are each valid inputs for the specification (Example) on the left.
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table field-description">
+                            <thread>
+                                <tr>
+                                    <th colspan="2"><h4>Example(<a href="#examplebase-anchor">ExampleBase</a>)</h4></th>
+                                </tr>
+                            </thread>
+                            <tbody>
+                                <tr>
+                                    <td>options: List[<a href="#substructure-anchor">SubStructure</a>]</td>
+                                    <td>options description</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table class="table field-description">
+                            <thread>
+                                <tr>
+                                    <th colspan="2"><a id="examplebase-anchor"><h4>ExampleBase</h4></a></th>
+                                </tr>
+                            </thread>
+                            <tbody>
+                                <tr>
+                                    <td>*A: float</td>
+                                    <td>A Description</td>
+                                </tr>
+                                <tr>
+                                    <td>*B: string</td>
+                                    <td>B Description</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table class="table field-description">
+                            <thread>
+                                <tr>
+                                    <a id="substructure-anchor"><th colspan="2"><h4>SubStructure</h4></th></a>
+                                </tr>
+                            </thread>
+                            <tbody>
+                                <tr>
+                                    <td>SA: int</td>
+                                    <td>SA Description</td>
+                                </tr>
+                                <tr>
+                                    <td>SB: int</td>
+                                    <td>SB Description</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+<pre><code>A: 1.025
+B: some-string
+options:
+  - SA: 1
+    SB: 2
+  - SA: 4
+    SB: -10
+</code></pre>
+<br>
+<pre><code class="language-yaml"># While other fields can be omitted,
+# A and B are required.
+A: 1.025
+B: some-string
+</code></pre>
+                    </div>
+                </div>
+                <p>
+                    If a specification has another next to it listed (in parantheses), that means the fields are inherited from that
+                    specification. If a field is listed with an "*" next to it, that means it is required. If the type of a field 
+                    links to another specification, then the value of the field should be a nested structure described by that
+                    specification.
+                </p>
+
                 <h3>Shared Configuration</h3>
                 <table class="table field-description">
                     <thead>
@@ -75,16 +157,16 @@ fierro parallel-implicit -h</code></pre>
                             <td>Dimensionality of Problem {2, 3}</td>
                         </tr>
                         <tr>
-                            <td>fea_modules</td>
-                            <td>List of <a href="#fea-module-anchor">FEA Module</a>s to use in the optimization</td>
+                            <td>fea_modules: List[<a href="#fea-module-anchor">FEA Module</a>]</td>
+                            <td>List of modules to load and use during evolution/optimization</td>
                         </tr>
                         <tr>
-                            <td>input_options</td>
-                            <td><a href="#input-options-anchor">Input Options</a></td>
+                            <td>input_options: <a href="#input-options-anchor">Input Options</a></td>
+                            <td>Options controlling input meshes/models</td>
                         </tr>
                         <tr>
-                            <td>output_options</td>
-                            <td><a href="#output-options-anchor">Output Options</a></td>
+                            <td>output_options: <a href="#output-options-anchor">Output Options</a></td>
+                            <td>Options controlling solver output</td>
                         </tr>
                     </tbody>
                 </table>
@@ -101,12 +183,12 @@ fierro parallel-implicit -h</code></pre>
                             <td>Type of moduel {Elasticity, Heat_Conduction, SGH, Inertial, Thermo_Elasticity, Eulerian}</td>
                         </tr>
                         <tr>
-                            <td>boundary_conditions</td>
-                            <td>List of <a href="#fea-boundary-anchor">FEA Boundary Condition</a>s</td>
+                            <td>boundary_conditions: List[<a href="#fea-boundary-anchor">FEA Boundary Condition</a>]</td>
+                            <td>Boundary conditions enforced during evolution</td>
                         </tr>
                         <tr>
-                            <td>loading_conditions</td>
-                            <td>List of <a href="#fea-loading-anchor">FEA Loading Condition</a>s</td>
+                            <td>loading_conditions: List[<a href="#fea-loading-anchor">FEA Loading Condition</a>]</td>
+                            <td>External factors to apply</td>
                         </tr>
                     </tbody>
                 </table>
@@ -119,7 +201,7 @@ fierro parallel-implicit -h</code></pre>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>id</td>
+                            <td>id: string</td>
                             <td>Unique condition id</td>
                         </tr>
                         <tr>
@@ -131,19 +213,19 @@ fierro parallel-implicit -h</code></pre>
                             <td>The type of constraint {fixed_displacement, fixed_temperature}</td>
                         </tr>
                         <tr>
-                            <td>value</td>
+                            <td>value: float</td>
                             <td>The value to enforce along the boundary</td>
                         </tr>
                         <tr>
-                            <td>displacement_value</td>
+                            <td>displacement_value: float</td>
                             <td>The displacement to enforce along the boundary</td>
                         </tr>
                         <tr>
-                            <td>temperature_value</td>
+                            <td>temperature_value: float</td>
                             <td>The temperature to enforce along the boundary</td>
                         </tr>
                         <tr>
-                            <td>plane_position</td>
+                            <td>plane_position: float</td>
                             <td>The position of the plane along its axis</td>
                         </tr>
                     </tbody>
@@ -157,7 +239,7 @@ fierro parallel-implicit -h</code></pre>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>id</td>
+                            <td>id: string</td>
                             <td>Unique condition id</td>
                         </tr>
                         <tr>
@@ -169,7 +251,7 @@ fierro parallel-implicit -h</code></pre>
                             <td>The type of constraint {surface_traction, surface_heat_flux}</td>
                         </tr>
                         <tr>
-                            <td>flux_value</td>
+                            <td>flux_value: float</td>
                             <td>The flux to enforce along the boundary</td>
                         </tr>
                         <tr>
@@ -177,19 +259,19 @@ fierro parallel-implicit -h</code></pre>
                             <td>The directionality of the traction {normal, coordinated}</td>
                         </tr>
                         <tr>
-                            <td>component_x</td>
+                            <td>component_x: float</td>
                             <td>The x component of the loading force</td>
                         </tr>
                         <tr>
-                            <td>component_y</td>
+                            <td>component_y: float</td>
                             <td>The y component of the loading force</td>
                         </tr>
                         <tr>
-                            <td>component_z</td>
+                            <td>component_z: float</td>
                             <td>The z component of the loading force</td>
                         </tr>
                         <tr>
-                            <td>plane_position</td>
+                            <td>plane_position: float</td>
                             <td>The position of the plane along its axis</td>
                         </tr>
                     </tbody>
@@ -203,7 +285,7 @@ fierro parallel-implicit -h</code></pre>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>mesh_file_name</td>
+                            <td>mesh_file_name: string</td>
                             <td>Filepath to the mesh to load</td>
                         </tr>
                         <tr>
@@ -215,7 +297,7 @@ fierro parallel-implicit -h</code></pre>
                             <td>The type of elements contained in the mesh file {quad4, quad8, quad12, hex8, hex20, hex32}</td>
                         </tr>
                         <tr>
-                            <td>zero_index_base</td>
+                            <td>zero_index_base: bool</td>
                             <td></td>
                         </tr>
                     </tbody>
@@ -229,7 +311,7 @@ fierro parallel-implicit -h</code></pre>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>graphics_step_frequency</td>
+                            <td>graphics_step_frequency: int</td>
                             <td>Output current mesh every "graphics_step_frequency" optimization steps.</td>
                         </tr>
                         <tr>
@@ -251,12 +333,6 @@ fierro parallel-implicit -h</code></pre>
                     When invoking the explicit dynamics solver, you should provide it with a single Yaml file containing fields from both the
                     <a href="#sgh-parameters">SGH Parameters</a> spec as well as the <a href="#simulation-parameters-anchor">Simulation Parameters</a> spec.
                 </p>
-                
-  <!-- Time_Variables time_variables;
-  std::vector<MaterialFill> region_options;
-  std::vector<Material> material_options;
-  std::vector<Boundary> boundary_conditions;
-  Graphics_Options graphics_options; -->
   
                 <table class="table field-description">
                     <thead>
@@ -270,20 +346,20 @@ fierro parallel-implicit -h</code></pre>
                             <td><a href="#time-variables-anchor">Time Variables</a></td>
                         </tr>
                         <tr>
-                            <td>region_options</td>
-                            <td>List of <a href="#region-options-anchor">Region Options</a></td>
+                            <td>region_options: List[<a href="#region-options-anchor">Region Options</a>]</td>
+                            <td>Properties of different spatial regions</td>
                         </tr>
                         <tr>
-                            <td>material_options</td>
-                            <td>List of <a href="#material-options-anchor">Material Options</a></td>
+                            <td>material_options: List[<a href="#material-options-anchor">Material Options</a>]</td>
+                            <td>Properties of each material</td>
                         </tr>
                         <tr>
-                            <td>boundary_conditions</td>
-                            <td>List of <a href="#boundary-condition-anchor">Boundary Conditions</a></td>
+                            <td>boundary_conditions: List[<a href="#boundary-condition-anchor">Boundary Conditions</a>]</td>
+                            <td>Global boundary conditions to enforce during evolution</td>
                         </tr>
                         <tr>
-                            <td>graphics_options</td>
-                            <td>List of <a href="#graphics_options-anchor">Graphics Options</a></td>
+                            <td>graphics_options: <a href="#graphics_options-anchor">Graphics Options</a></td>
+                            <td>Options controlling what is output at each timestep</td>
                         </tr>
                     </tbody>
                 </table>
@@ -296,27 +372,27 @@ fierro parallel-implicit -h</code></pre>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>time_final</td>
+                            <td>time_final: float</td>
                             <td>End time of the simulation</td>
                         </tr>
                         <tr>
-                            <td>dt_min</td>
+                            <td>dt_min: float</td>
                             <td>Smallest allowed step size</td>
                         </tr>
                         <tr>
-                            <td>dt_max</td>
+                            <td>dt_max: float</td>
                             <td>Largest allowed step size</td>
                         </tr>
                         <tr>
-                            <td>dt_start</td>
+                            <td>dt_start: float</td>
                             <td>Initial step size</td>
                         </tr>
                         <tr>
-                            <td>dt_cfl</td>
+                            <td>dt_cfl: float</td>
                             <td></td>
                         </tr>
                         <tr>
-                            <td>cycle_stop</td>
+                            <td>cycle_stop: int</td>
                             <td>Maximum number of cycles</td>
                         </tr>
                     </tbody>
@@ -330,7 +406,7 @@ fierro parallel-implicit -h</code></pre>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>mat_id</td>
+                            <td>mat_id: string</td>
                             <td>Unique material ID</td>
                         </tr>
                         <tr>
@@ -342,27 +418,27 @@ fierro parallel-implicit -h</code></pre>
                             <td>Type of velocity {cartesian, radial, spherical, radial_linear, spherical_linear, tg_vortex}</td>
                         </tr>
                         <tr>
-                            <td>radius1</td>
+                            <td>radius1: float</td>
                             <td>Inner radius for shells</td>
                         </tr>
                         <tr>
-                            <td>radius2</td>
+                            <td>radius2: float</td>
                             <td>Outer radiues for shells</td>
                         </tr>
                         <tr>
-                            <td>u, v, w</td>
+                            <td>u, v, w : float</td>
                             <td></td>
                         </tr>
                         <tr>
-                            <td>speed</td>
+                            <td>speed: float</td>
                             <td>Expansion speed</td>
                         </tr>
                         <tr>
-                            <td>sie</td>
+                            <td>sie: float</td>
                             <td></td>
                         </tr>
                         <tr>
-                            <td>den</td>
+                            <td>den: float</td>
                             <td>Density</td>
                         </tr>
                     </tbody>
@@ -392,11 +468,11 @@ fierro parallel-implicit -h</code></pre>
                             <td>Whether to run on the host or the device {host, device}</td>
                         </tr>
                         <tr>
-                            <td>q1, q1ex</td>
+                            <td>q1, q1ex : float</td>
                             <td></td>
                         </tr>
                         <tr>
-                            <td>q2, q2ex</td>
+                            <td>q2, q2ex : float</td>
                             <td></td>
                         </tr>
                     </tbody>
@@ -410,7 +486,7 @@ fierro parallel-implicit -h</code></pre>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>id</td>
+                            <td>id: string</td>
                             <td>Unique condition identifier</td>
                         </tr>
                         <tr>
@@ -422,11 +498,11 @@ fierro parallel-implicit -h</code></pre>
                             <td>Boundary surface type {x_plane, y_plane, z_plane, cylinder, sphere, readFile}</td>
                         </tr>
                         <tr>
-                            <td>value</td>
+                            <td>value: float</td>
                             <td>Constant value to maintain at the boundary</td>
                         </tr>
                         <tr>
-                            <td>u, v, w</td>
+                            <td>u, v, w : float</td>
                             <td></td>
                         </tr>
                     </tbody>
@@ -440,15 +516,15 @@ fierro parallel-implicit -h</code></pre>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>output_velocity_flag, output_strain_flag, output_stress_flag</td>
+                            <td>output_velocity_flag, output_strain_flag, output_stress_flag : bool</td>
                             <td>Boolean options for enabling output of velocity, strain, and stress.</td>
                         </tr>
                         <tr>
-                            <td>displaced_mesh_flag</td>
+                            <td>displaced_mesh_flag: bool</td>
                             <td></td>
                         </tr>
                         <tr>
-                            <td>strain_max_flag</td>
+                            <td>strain_max_flag: bool</td>
                             <td></td>
                         </tr>
                     </tbody>

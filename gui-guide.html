@@ -32,64 +32,51 @@
                 <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
             </div>
             <!-- main content area -->
-            <div class="col-sm-9">
-                <h1>Installation</h1>
-                <p><em>Fierro</em> backend is designed to run on almost harware you might want to run it on. We support 
-                    three CPU architectures (x86_64, arm64, ppc64le), as well as CUDA GPUs through nvcc and AMD GPUs through HIP. 
-                    Additionally, we support both Linux and MacOS. To run <em>Fierro</em> on Windows we recommend making use of 
-                    <a href="https://learn.microsoft.com/en-us/windows/wsl/install">Windows Subsystem for Linux</a>.
-                </p>
-                
+            <div class="col-sm-9 text-content">
+                <h1>GUI Guide</h1>
                 <p>
-                    To make the installation process as simple as possible, we offer several pre-compile binaries through <a href="https://www.anaconda.com/">Anaconda</a> 
-                    for the backend software. The builds for <em>Fierro</em> as well as its primary dependencies can be found <a href="https://anaconda.org/kwelsh-lanl">here</a> for all supported platforms.
-                    Anaconda will automatically select the right build for your OS and CPU architecture, however, you must select the correct build based on which GPU hardware is present.
-                    This can be seen in the package prefix (-cpu, -cuda, -hip).
+                    The <em>Fierro</em> graphical interface is designed to give a simple interface for the most
+                    common use cases. This guide describes the steps for running <em>Fierro</em> dynamics evolution 
+                    simulations from this GUI.
                 </p>
-
-                <h2>Workflows</h2>
+                <h2>1. Generating a mesh</h2>
                 <p>
-                    What you might install depends on your workflow
+                    A mesh is a (potentially non-uniform) spatial grid on which computation takes place. This is layer is connected with, but
+                    distinct from the model geometry (which is also sometimes referred to as a "mesh"). Our GUI offers options for either creating 
+                    a generic, regular, rectilinear grid mesh if you don't have one, or for laoding a mesh (.geo file) if you do. For best results,
+                    we recommend using an external meshing program to create a .geo mesh file for your specific geometry.
                 </p>
-
-                <h3>Running Fierro</h3>
+                <h2>2. Selecting a Geometry</h2>
                 <p>
-                    If you only want to download the <em>Fierro</em> backends and configure existing models, you only need to install the fierro package.
+                    After selecting a mesh, you can load a model geometry (.stl) from your computer. The model geometry will define a volume
+                    that can have a material assigned to it. After you select a geometry file, you will be prompted to specify a voxel resolution.
+                    This is used for rasterizing the geometry into the underlying mesh.
                 </p>
-                <pre><code>
-    conda install fierro -c kwelsh-lanl -c conda-forge
-                </code></pre>
-
-                <h3>Developing For Fierro in Anaconda</h3>
+                <h2>3. Assigning Material Properties</h2>
                 <p>
-                    If you need to compile <em>Fierro</em> using cmake, it is still possible to avoid building all of the dependencies from scratch. To leverage
-                    pre-build packages should start by making a new Anaconda environment.
+                    Once you have a mesh and geometry loaded, you can then create and assign materials to regions of the mesh.
+                    First, you create the materials that you might want to use and specify the material properties. 
+                    Then, on the next window you can assign those materials either to the background mesh or to the voxelized volume.
                 </p>
-                <pre><code>
-    conda create -n my_fierro_env
-                </code></pre>
+                <h2>4. Specifying Boundary Conditions</h2>
                 <p>
-                    Then you can install the primary dependencies into environemnt (making sure to replace "-cpu" with your desired GPU suffix).
+                    You should now see a window where your voxelized geometry is being rendered. You can now add boundary conditions
+                    to the system and view all current boundaries in the geometry viewer.
                 </p>
-                <pre><code>
-    conda install elements fierro-trilinos-cpu -c kwelsh-lanl -c conda-forge
-                </code></pre>
+                <h2>5. Solver Settings</h2>
                 <p>
-                    Now you can checkout the latest version of <em>Fierro</em> from our github.
+                    The last step before running <em>Fierro</em> is to check the solver settings. Here you can edit how long the solver should run
+                    in simulated time, as well as control some of the bounds for timestepping.
                 </p>
-                <pre><code>
-    git clone https://github.com/lanl/Fierro
-    cd Fierro
-                </code></pre>
+                <h2>6. Run &amp; View</h2>
                 <p>
-                    The Trilinos and Elements dependencies will now be automatically located, and you can build the <em>Fierro</em> backend executables with CMake. 
-                    The following example builds the parallel solvers 
+                    Once you have your problem configured correctly, you can run <em>Fierro</em>. This will invoke the back-end programs, giving
+                    you intermediate information about the progress.
                 </p>
-                
-            <pre><code>
-    cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON -DBUILD_ELEMENTS=OFF .
-    make -j 4
-            </code></pre>
+                <p>
+                    Once the execution is finished, you are able to open the resulting evolution in <a href="https://www.paraview.org/">ParaView</a>
+                        directly from the GUI. 
+                </p>
             </div>
         </div>
     </div>

@@ -33,7 +33,7 @@
                 <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
             </div>
             <!-- main content area -->
-            <div class="col-lg-9">
+            <div class="col-lg-9 text-content">
                 <h1>Developer Guide</h1>
                 <p>
                     The following is intended to outline how to build new models and applications in the <em>Fierro</em> ecosystem.
@@ -213,6 +213,9 @@ IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, elem
                 <code>void derive()</code>. With those things in place, the deserializer will automatically call <code>derive</code> 
                 after the serializable fields are loaded and before calling <code>validate</code>.
             </p>
+
+            <h4>Inheritance</h4>
+            Occasionally, it is useful to have serializable structs derive from other serializable structs.
         </div>
         </div>
     </div>
