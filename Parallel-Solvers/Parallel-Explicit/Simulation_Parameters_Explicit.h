@@ -143,7 +143,7 @@ struct Simulation_Parameters_Explicit : Simulation_Parameters {
  
     rk_num_bins = rk_num_stages;
 
-    ensure_module(FEA_MODULE_TYPE::SGH);
+    //ensure_module(FEA_MODULE_TYPE::SGH);
 
     derive_default_field_output();
   }

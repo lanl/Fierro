@@ -18,6 +18,9 @@ output_options:
     graphics_step: 0.25
     output_file_format: vtk 
 
+fea_modules:
+  - type: SGH
+
 material_options:
     #eos model is required
   - eos_model: ideal_gas
