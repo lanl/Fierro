@@ -1,3 +1,3 @@
 [submodule "lib/Elements"]
 	path = lib/Elements
-	url = https://github.com/lanl/ELEMENTS.git
+    url = git@github.com:lanl/ELEMENTS.git
