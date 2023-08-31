@@ -1,8 +1,10 @@
 module purge
 ### Load environment modules here
 module load cmake
-module load clang/13.0.0
-module load rocm
+#module load clang/13.0.0
+#module load rocm
+module load gcc/9.4.0
+module load cuda/11.4.0
 module list
 
 
@@ -30,8 +32,8 @@ cd ../../../..
 export topdir=`pwd`
 export basedir=${topdir}/single-node
 export srcdir=${basedir}/src
-export includedir=${basedir}/include
-export matardir=${includedir}/matar
+export libdir=${topdir}/lib
+export matardir=${libdir}/Elements/matar
 export builddir=${basedir}/${my_build}
 export installdir=${basedir}/install-kokkos/install-kokkos-${my_device}${my_host}
 
