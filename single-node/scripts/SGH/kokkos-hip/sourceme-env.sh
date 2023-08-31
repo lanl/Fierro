@@ -1,29 +1,43 @@
-module purge
 ### Load environment modules here
-module load cmake
-#module load clang/13.0.0
-#module load rocm
-module load gcc/9.4.0
-module load cuda/11.4.0
-module list
+### Assign names as relevant
 
+mygcc="gcc/9.4.0"
+myclang="clang/13.0.0"
+mycuda="cuda/11.4.0"
+myrocm="rocm"
 
-my_build="build-SGH"
-if [ -z $1 ]
+if [ "$1" = "hpc" ]
 then
-    my_build="build-SGH"
-else
-    my_build=$1
+    module purge
+    if [ "$2" = "cuda" ]
+    then
+        module purge
+        module load ${mygcc}
+        module load ${mycuda}
+    elif [ "$2" = "hip" ]
+    then
+        module purge
+        module load ${myclang}
+        module load ${myrocm}
+    else
+        module load ${mygcc}
+    module load cmake
+    module -t list
 fi
-my_device=""
+
+
+my_device="serial"
 if [ "$2" != "none" ]
 then
     my_device="$2"
 fi
-my_host=""
-if [ "$3" != "none" ]
+
+my_build="build-SGH"
+if [ -n $1 ]
 then
-    my_host="$3"
+    my_build="build-SGH-${my_device}"
+else
+    my_build=$1
 fi
 
 export scriptdir=`pwd`
@@ -35,7 +49,7 @@ export srcdir=${basedir}/src
 export libdir=${topdir}/lib
 export matardir=${libdir}/Elements/matar
 export builddir=${basedir}/${my_build}
-export installdir=${basedir}/install-kokkos/install-kokkos-${my_device}${my_host}
+export installdir=${basedir}/install-kokkos/install-kokkos-${my_device}
 
 export SGH_BASE_DIR=${basedir}
 export SGH_SOURCE_DIR=${srcdir}/Explicit-Lagrange-Kokkos/SGH_solver
