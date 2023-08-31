@@ -93,6 +93,7 @@ class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
 
 private:
 
+  Explicit_Solver *Explicit_Solver_Pointer_;
   FEA_Module_SGH *FEM_;
   ROL::Ptr<ROL_MV> ROL_Force;
   ROL::Ptr<ROL_MV> ROL_Velocities;
@@ -112,12 +113,15 @@ private:
 public:
   bool nodal_density_flag_, time_accumulation;
   int last_comm_step, last_solve_step, current_step;
-  std::string my_fea_module = "SGH";
+  std::vector<FEA_MODULE_TYPE> my_fea_modules; //modules that may interface with this objective function
+  //std::string my_fea_module = "SGH";
   real_t objective_accumulation;
 
-  KineticEnergyMinimize_TopOpt(FEA_Module *FEM, bool nodal_density_flag) 
+  KineticEnergyMinimize_TopOpt(Explicit_Solver *Explicit_Solver_Pointer, bool nodal_density_flag) 
     : useLC_(true) {
-      FEM_ = dynamic_cast<FEA_Module_SGH*>(FEM);
+      Explicit_Solver_Pointer_ = Explicit_Solver_Pointer;
+      my_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
+      my_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
@@ -125,15 +129,15 @@ public:
       objective_accumulation = 0;
       
       //deep copy solve data into the cache variable
-      FEM_->all_cached_node_velocities_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_velocities_distributed), Teuchos::Copy));
-      all_node_velocities_distributed_temp = FEM_->all_node_velocities_distributed;
+      Explicit_Solver_Pointer_->fea_modules[0]->all_cached_node_velocities_distributed = Teuchos::rcp(new MV(*(Explicit_Solver_Pointer_->fea_modules[0]->all_node_velocities_distributed), Teuchos::Copy));
+      all_node_velocities_distributed_temp = Explicit_Solver_Pointer_->fea_modules[0]->all_node_velocities_distributed;
 
-      //ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
-      ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_->node_velocities_distributed);
+      //ROL_Force = ROL::makePtr<ROL_MV>(Explicit_Solver_Pointer_->fea_modules[0]->Global_Nodal_Forces);
+      ROL_Velocities = ROL::makePtr<ROL_MV>(Explicit_Solver_Pointer_->fea_modules[0]->node_velocities_distributed);
 
       //real_t current_kinetic_energy = ROL_Velocities->dot(*ROL_Force)/2;
       //std::cout.precision(10);
-      //if(FEM_->myrank==0)
+      //if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
       //std::cout << "INITIAL KINETIC ENERGY " << current_kinetic_energy << std::endl;
   }
 
@@ -149,61 +153,61 @@ public:
     if (type == ROL::UpdateType::Initial)  {
       // This is the first call to update
       //first linear solve was done in FEA class run function already
-      FEM_->sgh_solve();
+      Explicit_Solver_Pointer_->fea_modules[0]->sgh_solve();
       //initial design density data was already communicated for ghost nodes in init_design()
       //decide to output current optimization state
-      FEM_->Explicit_Solver_Pointer_->write_outputs();
+      Explicit_Solver_Pointer_->fea_modules[0]->Explicit_Solver_Pointer_->write_outputs();
     }
     else if (type == ROL::UpdateType::Accept) {
       // u_ was set to u=S(x) during a trial update
       // and has been accepted as the new iterate
       /*assign temp pointer to the cache multivector (not the cache pointer) storage for a swap of the multivectors;
         this just avoids deep copy */
-      all_node_velocities_distributed_temp = FEM_->all_cached_node_velocities_distributed;
+      all_node_velocities_distributed_temp = Explicit_Solver_Pointer_->fea_modules[0]->all_cached_node_velocities_distributed;
       // Cache the accepted value
-      FEM_->all_cached_node_velocities_distributed = FEM_->all_node_velocities_distributed;
+      Explicit_Solver_Pointer_->fea_modules[0]->all_cached_node_velocities_distributed = Explicit_Solver_Pointer_->fea_modules[0]->all_node_velocities_distributed;
     }
     else if (type == ROL::UpdateType::Revert) {
       // u_ was set to u=S(x) during a trial update
       // and has been rejected as the new iterate
       // Revert to cached value
-      FEM_->comm_variables(zp);
-      FEM_->all_node_velocities_distributed = FEM_->all_cached_node_velocities_distributed;
+      Explicit_Solver_Pointer_->fea_modules[0]->comm_variables(zp);
+      Explicit_Solver_Pointer_->fea_modules[0]->all_node_velocities_distributed = Explicit_Solver_Pointer_->fea_modules[0]->all_cached_node_velocities_distributed;
     }
     else if (type == ROL::UpdateType::Trial) {
       // This is a new value of x
-      FEM_->all_node_velocities_distributed = all_node_velocities_distributed_temp;
+      Explicit_Solver_Pointer_->fea_modules[0]->all_node_velocities_distributed = all_node_velocities_distributed_temp;
       //communicate density variables for ghosts
-      FEM_->comm_variables(zp);
+      Explicit_Solver_Pointer_->fea_modules[0]->comm_variables(zp);
       //update deformation variables
-      FEM_->update_forward_solve(zp);
-      if(FEM_->myrank==0)
+      Explicit_Solver_Pointer_->fea_modules[0]->update_forward_solve(zp);
+      if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
       *fos << "called Trial" << std::endl;
 
       //decide to output current optimization state
-      FEM_->Explicit_Solver_Pointer_->write_outputs();
+      Explicit_Solver_Pointer_->fea_modules[0]->Explicit_Solver_Pointer_->write_outputs();
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,
       // e.g., finite-difference checks
-      if(FEM_->myrank==0)
+      if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
       *fos << "called Temp" << std::endl;
-      FEM_->all_node_velocities_distributed = all_node_velocities_distributed_temp;
-      FEM_->comm_variables(zp);
-      FEM_->update_forward_solve(zp);
+      Explicit_Solver_Pointer_->fea_modules[0]->all_node_velocities_distributed = all_node_velocities_distributed_temp;
+      Explicit_Solver_Pointer_->fea_modules[0]->comm_variables(zp);
+      Explicit_Solver_Pointer_->fea_modules[0]->update_forward_solve(zp);
     }
 
   }
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
-    //std::cout << "Started obj value on task " <<FEM_->myrank  << std::endl;
+    //std::cout << "Started obj value on task " <<Explicit_Solver_Pointer_->fea_modules[0]->myrank  << std::endl;
     ROL::Ptr<const MV> zp = getVector(z);
     real_t c = 0.0;
 
     //debug print
     //std::ostream &out = std::cout;
     //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(FEM_->myrank==0)
+    //if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
     //*fos << "Value function z:" << std::endl;
     //zp->describe(*fos,Teuchos::VERB_EXTREME);
     //*fos << std::endl;
@@ -213,33 +217,33 @@ public:
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
     /*
     if(last_comm_step!=current_step){
-      FEM_->comm_variables(zp);
+      Explicit_Solver_Pointer_->fea_modules[0]->comm_variables(zp);
       last_comm_step = current_step;
     }
     
     if(last_solve_step!=current_step){
       //std::cout << "UPDATED velocities" << std::endl;
-      FEM_->update_linear_solve(zp);
+      Explicit_Solver_Pointer_->fea_modules[0]->update_linear_solve(zp);
       last_solve_step = current_step;
     }
     */
     //debug print of velocities
     //std::ostream &out = std::cout;
     //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(FEM_->myrank==0)
+    //if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
     //*fos << "Displacement data :" << std::endl;
-    //FEM_->node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+    //Explicit_Solver_Pointer_->fea_modules[0]->node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
     //*fos << std::endl;
     //std::fflush(stdout);
     
-    //ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
-    ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_->node_velocities_distributed);
+    //ROL_Force = ROL::makePtr<ROL_MV>(Explicit_Solver_Pointer_->fea_modules[0]->Global_Nodal_Forces);
+    ROL_Velocities = ROL::makePtr<ROL_MV>(Explicit_Solver_Pointer_->fea_modules[0]->node_velocities_distributed);
 
     std::cout.precision(10);
-    if(FEM_->myrank==0)
+    if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
     std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
 
-    //std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
+    //std::cout << "Ended obj value on task " <<Explicit_Solver_Pointer_->fea_modules[0]->myrank  << std::endl;
     return objective_accumulation;
   }
 
@@ -248,27 +252,27 @@ public:
   //}
   
   void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
+    //std::cout << "Started obj gradient on task " <<Explicit_Solver_Pointer_->fea_modules[0]->myrank  << std::endl;
     //get Tpetra multivector pointer from the ROL vector
     ROL::Ptr<const MV> zp = getVector(z);
     ROL::Ptr<MV> gp = getVector(g);
 
     //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
-    //FEM_->gradient_print_sync=1;
-    //FEM_->gradient_print_sync=0;
+    //Explicit_Solver_Pointer_->fea_modules[0]->gradient_print_sync=1;
+    //Explicit_Solver_Pointer_->fea_modules[0]->gradient_print_sync=0;
     //get local view of the data
     
 
-    FEM_->compute_topology_optimization_gradient_full(zp,gp);
+    Explicit_Solver_Pointer_->fea_modules[0]->compute_topology_optimization_gradient_full(zp,gp);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(FEM_->myrank==0)
+      //if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
       //*fos << "Gradient data :" << std::endl;
       //gp->describe(*fos,Teuchos::VERB_EXTREME);
       //*fos << std::endl;
       //std::fflush(stdout);
-      //for(int i = 0; i < FEM_->nlocal_nodes; i++){
+      //for(int i = 0; i < Explicit_Solver_Pointer_->fea_modules[0]->nlocal_nodes; i++){
         //objective_gradients(i,0) *= -1;
       //}
     
@@ -276,13 +280,13 @@ public:
     //debug print of design variables
     //std::ostream &out = std::cout;
     //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(FEM_->myrank==0)
+    //if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
     //*fos << "Gradient data :" << std::endl;
     //gp->describe(*fos,Teuchos::VERB_EXTREME);
     
     //*fos << std::endl;
     //std::fflush(stdout);
-    //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
+    //std::cout << "ended obj gradient on task " <<Explicit_Solver_Pointer_->fea_modules[0]->myrank  << std::endl;
   }
   
   /*
@@ -301,14 +305,14 @@ public:
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
-    FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
-    //if(FEM_->myrank==0)
+    Explicit_Solver_Pointer_->fea_modules[0]->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
+    //if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);
     //hvp->describe(*fos,Teuchos::VERB_EXTREME);
-    if(FEM_->myrank==0)
+    if(Explicit_Solver_Pointer_->fea_modules[0]->myrank==0)
     *fos << "Called Strain Energy Hessianvec" << std::endl;
-    FEM_->hessvec_count++;
+    Explicit_Solver_Pointer_->fea_modules[0]->hessvec_count++;
   }
   */
 /*
@@ -330,11 +334,11 @@ public:
     if ( !useLC_ ) {
       std::MV<real_t> U;
       U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
+      Explicit_Solver_Pointer_->fea_modules[0]->set_boundary_conditions(U);
       std::MV<real_t> V;
       V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,V);
+      Explicit_Solver_Pointer_->fea_modules[0]->set_boundary_conditions(V);
+      Explicit_Solver_Pointer_->fea_modules[0]->apply_adjoint_jacobian(*hvp,U,*zp,V);
       for (size_t i=0; i<hvp->size(); i++) {
         (*hvp)[i] *= 2.0;
       }
@@ -359,11 +363,11 @@ public:
     if ( !useLC_ ) {
       MV U;
       U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
+      Explicit_Solver_Pointer_->fea_modules[0]->set_boundary_conditions(U);
       MV V;
       V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,*vp,U);
+      Explicit_Solver_Pointer_->fea_modules[0]->set_boundary_conditions(V);
+      Explicit_Solver_Pointer_->fea_modules[0]->apply_adjoint_jacobian(*hvp,U,*zp,*vp,U);
     }
     
   }

@@ -1174,7 +1174,7 @@ void Explicit_Solver::setup_optimization_problem(){
       if(TO_Module_List[imodule] == TO_MODULE_TYPE::Kinetic_Energy_Minimize){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
       }
       /*
       else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
