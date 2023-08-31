@@ -21,6 +21,7 @@ then
         module load ${myrocm}
     else
         module load ${mygcc}
+    fi
     module load cmake
     module -t list
 fi
@@ -60,4 +61,6 @@ export KOKKOS_BUILD_DIR=${builddir}/kokkos
 export KOKKOS_INSTALL_DIR=${installdir}/kokkos
 
 cd $scriptdir
+
+
 
