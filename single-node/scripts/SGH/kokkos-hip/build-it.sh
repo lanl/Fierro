@@ -1,9 +1,8 @@
 #!/bin/bash -e
 SYSTEM=$1
-DEVICE_PARALLEL=$2
-HOST_PARALLEL=$3
-CUSTOM_BUILD=$4
+PARALLEL=$2
+CUSTOM_BUILD=$3
 
-source sourceme-env.sh $CUSTOM_BUILD $DEVICE_PARALLEL $HOST_PARALLEL
-source kokkos-install.sh $SYSTEM $DEVICE_PARALLEL $HOST_PARALLEL
-source cmake_build.sh $SYSTEM $DEVICE_PARALLEL $HOST_PARALLEL
+source sourceme-env.sh ${SYSTEM} ${PARALLEL} ${CUSTOM_BUILD}
+source kokkos-install.sh ${SYSTEM} ${PARALLEL}
+source cmake_build.sh ${SYSTEM} ${PARALLEL}
