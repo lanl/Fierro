@@ -231,3 +231,65 @@ TEST(YamlSerailizable, StrictDeserialization) {
         Yaml::from_string_strict<SimpleSerializable>(over_input);
     }, Yaml::ConfigurationException);
 }
+
+
+struct MultiA {
+    int a = 100;
+    float b = 100.5;
+};
+IMPL_YAML_SERIALIZABLE_FOR(MultiA, a, b)
+
+struct MultiB {
+    int a = 100;
+    double c = 100.5;
+};
+IMPL_YAML_SERIALIZABLE_FOR(MultiB, a, c)
+
+
+TEST(YamlSerializable, FromMulti) {
+    std::string input = "\
+    a: 1        \n\
+    b: 1.0      \n\
+    c: 1.01     \n\
+    d:          \n\
+      - VALUE_1 \n\
+      - VALUE_2 \n\
+      - VALUE_3 \n\
+    e:          \n\
+      - string_1\n\
+      - string_2\n\
+      - string_3\n\
+    ";
+
+    MultiA a;
+    MultiB b;
+
+    Yaml::from_string(input, a, b);
+    EXPECT_EQ(a.a, 1);
+    EXPECT_NEAR(a.b, 1.0, 1e-8);
+    EXPECT_EQ(b.a, 1);
+    EXPECT_NEAR(b.c, 1.01, 1e-8);
+}
+
+TEST(YamlSerializable, FromMultiStrict) {
+    std::string input = "\
+    a: 1        \n\
+    b: 1.0      \n\
+    c: 1.01     \n\
+    d:          \n\
+      - VALUE_1 \n\
+      - VALUE_2 \n\
+      - VALUE_3 \n\
+    e:          \n\
+      - string_1\n\
+      - string_2\n\
+      - string_3\n\
+    ";
+
+    MultiA a;
+    MultiB b;
+
+    EXPECT_THROW({
+        Yaml::from_string_strict(input, a, b);
+    }, Yaml::ConfigurationException);
+}
