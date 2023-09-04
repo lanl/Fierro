@@ -7,7 +7,8 @@
 // -----------------------------------------------------------------------------
 // This function evolves the velocity at the nodes of the mesh
 //------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::update_velocity_sgh(double rk_alpha,
+/*
+void FEA_Module_Dynamic_Elasticity::update_velocity_elastic(double rk_alpha,
                          const mesh_t &mesh,
                          DViewCArrayKokkos <double> &node_vel,
                          const DViewCArrayKokkos <double> &node_mass,
@@ -49,7 +50,7 @@ void FEA_Module_Dynamic_Elasticity::update_velocity_sgh(double rk_alpha,
     return;
     
 } // end subroutine update_velocity
-
+*/
 
 // -----------------------------------------------------------------------------
 // This function calculates the velocity gradient

@@ -66,10 +66,11 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module.h"
 #include "FEA_Module_SGH.h"
+#include "FEA_Module_Dynamic_Elasticity.h"
 #include "FEA_Module_Inertial.h"
 #include "Explicit_Solver.h"
 #include "mesh.h"
@@ -1067,10 +1068,9 @@ void Explicit_Solver::FEA_module_setup(){
 
   std::vector<FEA_MODULE_TYPE> FEA_Module_List;
   if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on){
-    //nfea_modules = simparam_dynamic_opt->nfea_modules;
-    FEA_Module_List = simparam_dynamic_opt.FEA_Modules_List;
+    FEA_Module_List = simparam.FEA_Modules_List = simparam_dynamic_opt.FEA_Modules_List;
     nfea_modules = FEA_Module_List.size();
-    fea_module_must_read = simparam_dynamic_opt.fea_module_must_read;
+    fea_module_must_read = simparam.fea_module_must_read = simparam_dynamic_opt.fea_module_must_read;
   }
   else{
     //nfea_modules = simparam->nfea_modules;
@@ -1094,6 +1094,14 @@ void Explicit_Solver::FEA_module_setup(){
       module_found = true;
       //debug print
       *fos << " SGH MODULE ALLOCATED AS " <<imodule << std::endl;
+      
+    }
+    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Dynamic_Elasticity){
+      fea_module_types[imodule] = FEA_MODULE_TYPE::Dynamic_Elasticity;
+      fea_modules[imodule] = new FEA_Module_Dynamic_Elasticity(this, mesh);
+      module_found = true;
+      //debug print
+      *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
     else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Inertial){

@@ -34,7 +34,7 @@
 #include "Simulation_Parameters_Dynamic_Elasticity.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
-#include "Explicit_Solver_SGH.h"
+#include "Explicit_Solver.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -502,7 +502,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
     }
     
     //execute solve
-    sgh_solve();
+    elastic_solve();
 
 }
 
@@ -624,74 +624,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       } // end if
     }
-    //else if (cycle==1){
-      //if(myrank==0)
-        //printf("cycle = %lu, time = %f, time step = %f \n", cycle-1, time_data[cycle-1], global_dt);
-    //} // end if
-
-    //compute adjoint vector for this data point; use velocity midpoint
-    //view scope
-    /*
-    {
-      const_vec_array previous_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-
-      get_force_vgradient_sgh(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              1,
-                              cycle);
-
-      get_force_ugradient_sgh(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              1,
-                              cycle);
-
-      //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
-      const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      //const_vec_array current_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array previous_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      //const_vec_array current_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      //compute gradient of force with respect to velocity
-  
-      const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-
-      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-        real_t rate_of_change;
-        for (int idim = 0; idim < num_dim; idim++){
-          rate_of_change = previous_velocity_vector(node_gid,idim)- 
-                            previous_adjoint_vector(node_gid,idim)*previous_force_gradient_velocity(node_gid,idim)/node_mass(node_gid)-
-                            phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
-          current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
-          rate_of_change = -previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim);
-          phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
-        } 
-      }); // end parallel for
-      Kokkos::fence();
-    } //end view scope
-    */
+    
     //view scope
     {
       
@@ -712,7 +645,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
       });
       Kokkos::fence();
 
-      get_force_vgradient_sgh(material,
+      get_force_vgradient_elastic(material,
                               *mesh,
                               node_coords,
                               node_vel,
@@ -726,22 +659,6 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
                               elem_mat_id,
                               1,
                               cycle);
-
-     /* get_force_ugradient_sgh(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              1,
-                              cycle);
-      */
 
       //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
       const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);

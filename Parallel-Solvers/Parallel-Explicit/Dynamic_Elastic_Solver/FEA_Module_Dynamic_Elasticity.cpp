@@ -231,9 +231,9 @@ void FEA_Module_Dynamic_Elasticity::read_conditions_ansys_dat(std::ifstream *in,
 } // end read_conditions_ansys_dat
 
 // -----------------------------------------------------------------------------
-// Interfaces read in data with the SGH solver data; currently a hack to streamline
+// Interfaces read in data with the elastic solver data; currently a hack to streamline
 //------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::sgh_interface_setup(node_t &node,
+void FEA_Module_Dynamic_Elasticity::elastic_interface_setup(node_t &node,
                        elem_t &elem,
                        corner_t &corner){
 
@@ -856,7 +856,7 @@ void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array node
 }
 
 /* ----------------------------------------------------------------------------
-   Setup SGH solver data
+   Setup elastic solver data
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::setup(){
@@ -871,7 +871,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     // ---------------------------------------------------------------------
     //    obtain mesh data
     // --------------------------------------------------------------------- 
-    sgh_interface_setup(node_interface, elem_interface, corner_interface);
+    elastic_interface_setup(node_interface, elem_interface, corner_interface);
     mesh->build_corner_connectivity();
         //debug print of corner ids
         /*
@@ -1721,7 +1721,7 @@ void FEA_Module_Dynamic_Elasticity::build_boundry_node_sets(const DCArrayKokkos 
 ------------------------------------------------------------------------------- */
 
 int FEA_Module_Dynamic_Elasticity::solve(){
-  sgh_solve();
+  elastic_solve();
 
   return 0;
 }
@@ -1730,7 +1730,7 @@ int FEA_Module_Dynamic_Elasticity::solve(){
    SGH solver loop
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_Dynamic_Elasticity::sgh_solve(){
+void FEA_Module_Dynamic_Elasticity::elastic_solve(){
     Time_Variables tv = simparam.time_variables;
    
     const size_t rk_level = simparam.rk_num_bins - 1; 
@@ -2020,56 +2020,11 @@ void FEA_Module_Dynamic_Elasticity::sgh_solve(){
             double rk_alpha = 1.0/((double)rk_num_stages - (double)rk_stage);
             
             // ---- Calculate velocity diveregence for the element ----
-            if(num_dim==2){
-                get_divergence2D(elem_div,
-                                 *mesh,
-                                 node_coords,
-                                 node_vel,
-                                 elem_vol);
-            }
-            else {
                 get_divergence(elem_div,
                                *mesh,
                                node_coords,
                                node_vel,
                                elem_vol);
-            } // end if 2D
-            
-            // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
-            if(num_dim==2){
-                get_force_sgh2D(material,
-                                *mesh,
-                                node_coords,
-                                node_vel,
-                                elem_den,
-                                elem_sie,
-                                elem_pres,
-                                elem_stress,
-                                elem_sspd,
-                                elem_vol,
-                                elem_div,
-                                elem_mat_id,
-                                corner_force,
-                                rk_alpha,
-                                cycle);
-            }
-            else {
-                get_force_sgh(material,
-                              *mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              rk_alpha,
-                              cycle);
-            }
 
             /*
             debug block
@@ -2107,39 +2062,31 @@ void FEA_Module_Dynamic_Elasticity::sgh_solve(){
             */
 
             // ---- Update nodal velocities ---- //
-            if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
-              get_force_elastic(material,
-                              *mesh,
-                              node_coords,
-                              node_vel,
-                              node_mass,
-                              elem_den,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              rk_alpha,
-                              cycle);
-                applied_forces(material,
-                              *mesh,
-                              node_coords,
-                              node_vel,
-                              node_mass,
-                              elem_den,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              rk_alpha,
-                              cycle);
-            }
-            else{
-              update_velocity_sgh(rk_alpha,
-                                *mesh,
-                                node_vel,
-                                node_mass,
-                                corner_force);
-            }
+            get_force_elastic(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            node_mass,
+                            elem_den,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            rk_alpha,
+                            cycle);
+              applied_forces(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            node_mass,
+                            elem_den,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            rk_alpha,
+                            cycle);
+            
             
             // ---- apply force boundary conditions to the boundary patches----
             boundary_velocity(*mesh, boundary, node_vel);
@@ -2195,7 +2142,7 @@ void FEA_Module_Dynamic_Elasticity::sgh_solve(){
             
             
             // ---- Update nodal positions ----
-            update_position_sgh(rk_alpha,
+            update_position_elastic(rk_alpha,
                                 nall_nodes,
                                 node_coords,
                                 node_vel);
@@ -2611,6 +2558,6 @@ void FEA_Module_Dynamic_Elasticity::sgh_solve(){
     
     return;
     
-} // end of SGH solve
+} // end of elastic solve
 
 

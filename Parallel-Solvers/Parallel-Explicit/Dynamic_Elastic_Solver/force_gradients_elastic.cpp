@@ -27,7 +27,7 @@
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &material,
+void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
@@ -413,7 +413,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_sgh(const DCArrayKokkos 
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &material,
+void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
@@ -911,7 +911,7 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &material,
+void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(const DCArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,

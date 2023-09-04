@@ -61,7 +61,7 @@ public:
   ~FEA_Module_Dynamic_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
-  void sgh_interface_setup(node_t &node, elem_t &elem, corner_t &corner);
+  void elastic_interface_setup(node_t &node, elem_t &elem, corner_t &corner);
 
   void setup();
 
@@ -71,9 +71,9 @@ public:
 
   void module_cleanup();
 
-  void sgh_solve();
+  void elastic_solve();
 
-  void get_force_vgradient_sgh(const DCArrayKokkos <material_t> &material,
+  void get_force_vgradient_elastic(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -88,7 +88,7 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
-  void get_force_ugradient_sgh(const DCArrayKokkos <material_t> &material,
+  void get_force_ugradient_elastic(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -103,7 +103,7 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
-  void get_force_dgradient_sgh(const DCArrayKokkos <material_t> &material,
+  void get_force_dgradient_elastic(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -120,7 +120,7 @@ public:
 
   void force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
   
-  void update_position_sgh(double rk_alpha,
+  void update_position_elastic(double rk_alpha,
                            const size_t num_nodes,
                            DViewCArrayKokkos <double> &node_coords,
                            const DViewCArrayKokkos <double> &node_vel);
@@ -228,13 +228,6 @@ public:
                           const DViewCArrayKokkos <double> &node_coords,
                           const DViewCArrayKokkos <double> &node_vel,
                           const double vol) const;
-
-
-  void update_velocity_sgh(double rk_alpha,
-                           const mesh_t &mesh,
-                           DViewCArrayKokkos <double> &node_vel,
-                           const DViewCArrayKokkos <double> &node_mass,
-                           const DViewCArrayKokkos <double> &corner_force);
   
   void tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
                 mesh_t &mesh,
@@ -273,14 +266,6 @@ public:
                       DViewCArrayKokkos <double> &node_vel,
                       DViewCArrayKokkos <double> &elem_sspd,
                       DViewCArrayKokkos <double> &elem_vol);
-  
-  void update_energy_sgh(double rk_alpha,
-                         const mesh_t &mesh,
-                         const DViewCArrayKokkos <double> &node_vel,
-                         const DViewCArrayKokkos <double> &node_coords,
-                         DViewCArrayKokkos <double> &elem_sie,
-                         const DViewCArrayKokkos <double> &elem_mass,
-                         const DViewCArrayKokkos <double> &corner_force);
                    
   void update_state(const DCArrayKokkos <material_t> &material,
                     const mesh_t &mesh,

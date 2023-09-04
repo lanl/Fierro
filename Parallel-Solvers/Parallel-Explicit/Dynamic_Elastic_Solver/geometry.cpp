@@ -7,7 +7,7 @@
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Simulation_Parameters_Dynamic_Elasticity.h"
 
-void FEA_Module_Dynamic_Elasticity::update_position_sgh(double rk_alpha,
+void FEA_Module_Dynamic_Elasticity::update_position_elastic(double rk_alpha,
                          const size_t num_nodes,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
