@@ -498,7 +498,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
 
     //update stiffness matrix
     if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
-      assemble_matrix();
+      //assemble_matrix();
     }
     
     //execute solve
@@ -1298,7 +1298,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
   {
     host_vec_array host_design_gradients = design_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array host_design_variables = design_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    compute_stiffness_gradients(host_design_variables, host_design_gradients);
+    //compute_stiffness_gradients(host_design_variables, host_design_gradients);
   }//end view scope
 
 }
@@ -1544,7 +1544,7 @@ void FEA_Module_SGH::init_assembly(){
     Gradient_Matrix_Strides(idof) = num_dim*Graph_Matrix_Strides(idof/num_dim);
   }); // end parallel for
 
-  Stiffness_Matrix = Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
+  Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   Force_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Gradient_Matrix_Strides);
 
@@ -1557,7 +1557,6 @@ void FEA_Module_SGH::init_assembly(){
     }
   }); // end parallel for
 
-  Stiffness_Matrix_Strides = Gradient_Matrix_Strides;
   
   /*
   //construct distributed gradient matrix from local kokkos data

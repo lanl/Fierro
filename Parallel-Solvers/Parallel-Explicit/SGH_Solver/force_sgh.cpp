@@ -880,3 +880,77 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
     return;
     
 } // end of routine for 2D force and stress update
+
+// -----------------------------------------------------------------------------
+// This function calculates the corner forces and the evolves stress (hypo)
+//------------------------------------------------------------------------------
+void FEA_Module_SGH::applied_forces(const DCArrayKokkos <material_t> &material,
+                   const mesh_t &mesh,
+                   const DViewCArrayKokkos <double> &node_coords,
+                   const DViewCArrayKokkos <double> &node_vel,
+                   const DViewCArrayKokkos <double> &node_mass,
+                   const DViewCArrayKokkos <double> &elem_den,
+                   const DViewCArrayKokkos <double> &elem_vol,
+                   const DViewCArrayKokkos <double> &elem_div,
+                   const DViewCArrayKokkos <size_t> &elem_mat_id,
+                   DViewCArrayKokkos <double> &corner_force,
+                   const double rk_alpha,
+                   const size_t cycle
+                   ){
+
+    const size_t rk_level = simparam.rk_num_bins - 1;    
+    const size_t num_dim = mesh.num_dims;
+    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+    const size_t num_lcs = simparam.loading.size();
+    
+    const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
+    const DCArrayKokkos <loading_t> loading = simparam.loading;
+
+    //debug check
+    //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
+
+    // walk over the nodes to update the velocity
+    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+        double current_node_coords[3];
+        size_t dof_id;
+        double node_force[3];
+        double applied_force[3];
+        double radius;
+        for (size_t dim = 0; dim < num_dim; dim++){
+            node_force[dim] = 0.0;
+            current_node_coords[dim] = all_initial_node_coords(node_gid, dim);
+        } // end for dim
+        radius = sqrt(current_node_coords[0]*current_node_coords[0]+current_node_coords[1]*current_node_coords[1]+current_node_coords[2]*current_node_coords[2]);
+        for(size_t ilc=0; ilc < num_lcs; ilc++){
+          //debug check
+          //std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
+
+          bool fill_this = loading(ilc).contains(current_node_coords);
+          if(fill_this){
+            // loop over all corners around the node and calculate the nodal force
+            for (size_t corner_lid=0; corner_lid<num_corners_in_node(node_gid); corner_lid++){
+            
+                // Get corner gid
+                size_t corner_gid = corners_in_node(node_gid, corner_lid);
+                applied_force[0] = loading(ilc).fx;
+                applied_force[1] = loading(ilc).fy;
+                applied_force[2] = loading(ilc).fz;
+                // loop over dimension
+                for (size_t dim = 0; dim < num_dim; dim++){
+                    node_force[dim] += applied_force[dim]*(all_initial_node_coords(node_gid, 0) + all_initial_node_coords(node_gid, 1) + all_initial_node_coords(node_gid, 2))/radius;
+                } // end for dim
+                
+            } // end for corner_lid
+            
+            // update the velocity
+            for (int dim = 0; dim < num_dim; dim++){
+                node_vel(rk_level, node_gid, dim) +=
+                                            rk_alpha * dt*node_force[dim]/node_mass(node_gid);
+            } // end for dim
+          }
+        }
+    }); // end for parallel for over nodes
+    
+    return;
+    
+} // end of routine

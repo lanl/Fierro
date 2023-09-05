@@ -199,6 +199,8 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
     
   }
 
+  have_loading_conditions = false;
+
 }
 
 FEA_Module_SGH::~FEA_Module_SGH(){
@@ -921,7 +923,11 @@ void FEA_Module_SGH::setup(){
     const size_t rk_num_bins = simparam.rk_num_bins;
     const size_t num_bcs = simparam.boundary_conditions.size();
     const size_t num_materials = simparam.material_options.size();
-    const int num_dim = simparam.num_dims;    
+    const int num_dim = simparam.num_dims;
+    const size_t num_lcs = simparam.loading.size();
+    if(num_lcs)
+      have_loading_conditions = true;
+
 
     // ---------------------------------------------------------------------
     //    obtain mesh data
@@ -2162,8 +2168,14 @@ void FEA_Module_SGH::sgh_solve(){
             */
 
             // ---- Update nodal velocities ---- //
-            if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
-              get_force_elastic(material,
+            update_velocity_sgh(rk_alpha,
+                              *mesh,
+                              node_vel,
+                              node_mass,
+                              corner_force);
+
+            if(have_loading_conditions){
+              applied_forces(material,
                               *mesh,
                               node_coords,
                               node_vel,
@@ -2175,25 +2187,6 @@ void FEA_Module_SGH::sgh_solve(){
                               corner_force,
                               rk_alpha,
                               cycle);
-                applied_forces(material,
-                              *mesh,
-                              node_coords,
-                              node_vel,
-                              node_mass,
-                              elem_den,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              rk_alpha,
-                              cycle);
-            }
-            else{
-              update_velocity_sgh(rk_alpha,
-                                *mesh,
-                                node_vel,
-                                node_mass,
-                                corner_force);
             }
             
             // ---- apply force boundary conditions to the boundary patches----

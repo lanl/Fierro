@@ -4,7 +4,7 @@ set(CMAKE_CXX_FLAGS  "${Trilinos_CXX_COMPILER_FLAGS} ${CMAKE_CXX_FLAGS}")
 set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
 set(SRC_Files geometry.cpp boundary.cpp time_integration.cpp momentum.cpp force_sgh.cpp
-sgh_optimization.cpp force_gradients_sgh.cpp force_elastic.cpp energy_sgh.cpp properties.cpp)
+sgh_optimization.cpp force_gradients_sgh.cpp energy_sgh.cpp properties.cpp)
 set(FEA_Module_SRC FEA_Module_SGH.cpp )
 
 INCLUDE_DIRECTORIES (${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
