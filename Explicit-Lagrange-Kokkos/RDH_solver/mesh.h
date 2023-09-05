@@ -112,8 +112,8 @@ struct mesh_t {
     size_t num_leg_gauss_in_elem;
     size_t num_lob_gauss_in_elem;
 
-    num_leg_gauss_in_elem = std::pow(2*Pn, num_dims); 
-    num_lob_gauss_in_elem = std::pow(2*Pn+1, num_dims);
+    //num_leg_gauss_in_elem = std::pow(2*Pn, num_dims); 
+    //num_lob_gauss_in_elem = std::pow(2*Pn+1, num_dims);
 
     size_t num_bdy_patches;
     size_t num_bdy_nodes;
@@ -157,7 +157,7 @@ struct mesh_t {
     CArrayKokkos <size_t> surfs_in_elem;  // high-order mesh class
     
     // zone ids in elem
-    //CArrayKokkos <size_t> zones_in_elem;     // high-order mesh class
+    CArrayKokkos <size_t> zones_in_elem;     // high-order mesh class
      
     
     // ---- patches / surfaces ----
@@ -193,28 +193,31 @@ struct mesh_t {
     DCArrayKokkos <size_t> num_bdy_nodes_in_set;
     
     struct zones_in_elem {
-	const size_t num_zones_in_elem;
+	
+	size_t num_zones_in_elem;
 	zones_in_elem();
+
 	zones_in_elem(const size_t num_zones_in_elem_inp){
-	  this -> num_zones_in_elem = num_zones_in_elem_inp;
+	  this->num_zones_in_elem = num_zones_in_elem_inp;
 	}
+
         // return global zone index for given local zone index in an element    
         size_t  host(const size_t elem_gid, const size_t zone_lid){
     	    return elem_gid*num_zones_in_elem + zone_lid;
         }
-        INLINE_KOKKOS_FUNCTION	
+
+        KOKKOS_INLINE_FUNCTION	
 	size_t operator()(const size_t elem_gid, const size_t zone_lid) const {
 	    return elem_gid*num_zones_in_elem + zone_lid;
-
 	}
     };
     
-    struct leg_gauss_in_elem {
+    struct legendre_gauss_in_elem {
 
-	const size_t num_gauss_in_elem;
-	leg_gauss_in_elem();
-	leg_gauss_in_elem(const size_t num_leg_gauss_in_elem_inp){
-	  this -> num_leg_gauss_in_elem = num_leg_gauss_in_elem_inp;
+	size_t num_leg_gauss_in_elem;
+	legendre_gauss_in_elem();
+	legendre_gauss_in_elem(const size_t num_leg_gauss_in_elem_inp){
+	  this->num_leg_gauss_in_elem = num_leg_gauss_in_elem_inp;
 	}
 
         // return global gauss index for given local gauss index in an element    
@@ -222,7 +225,7 @@ struct mesh_t {
     	  return elem_gid*num_leg_gauss_in_elem + leg_gauss_lid;
         }
 
-        INLINE_KOKKOS_FUNCTION	
+        KOKKOS_INLINE_FUNCTION	
 	size_t operator()(const size_t elem_gid, const size_t leg_gauss_lid) const{
 	    return elem_gid*num_leg_gauss_in_elem + leg_gauss_lid;
 	}
@@ -271,8 +274,8 @@ struct mesh_t {
 
         nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
-        zones_in_elem = DCArrayKokkos <size_t> (num_elems, num_zones_in_elem);
-	surfs_in_elem = DCArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
+        zones_in_elem = CArrayKokkos <size_t> (num_elems, num_zones_in_elem);
+	surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
 
         return;
         
@@ -1813,7 +1816,6 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                DViewCArrayKokkos <double> &elem_sspd,
                DViewCArrayKokkos <double> &elem_sie,
                DViewCArrayKokkos <double> &elem_vol,
-               DViewCArrayKokkos <double> &elem_div,
                DViewCArrayKokkos <double> &elem_mass,
                DViewCArrayKokkos <size_t> &elem_mat_id,
                DViewCArrayKokkos <double> &elem_statev,

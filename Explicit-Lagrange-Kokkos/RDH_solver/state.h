@@ -98,9 +98,9 @@ struct elem_t {
         
         this->den    = CArray <double> (num_elems);
         this->pres   = CArray <double> (num_elems);
-        this->stress = CArray <size_t> (num_rk, num_elems, num_dims, num_dims);
-        this->sspd = CArray <size_t> (num_elems);
-        this->sie = CArray <size_t> (num_rk, num_elems);
+        this->stress = CArray <double> (num_rk, num_elems, num_dims, num_dims);
+        this->sspd = CArray <double> (num_elems);
+        this->sie = CArray <double> (num_rk, num_elems);
 	this->vol    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
@@ -122,7 +122,7 @@ struct elem_t {
 	// thermodynamic variables are internal to the element and located at the zone centers
 	size_t num_zones = num_elems*num_zones_in_elem; // to keep things global.
 
-        this->sie = CArray <size_t> (num_rk, num_zones);
+        this->sie = CArray <double> (num_rk, num_zones);
 
         this->vol    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
@@ -130,8 +130,8 @@ struct elem_t {
 
         this->den    = CArray <double> (num_leg_pts);// move to gauss 
         this->pres   = CArray <double> (num_leg_pts);// move to gauss
-        this->stress = CArray <size_t> (num_rk, num_leg_pts, num_dims, num_dims);// move to gauss points
-        this->sspd = CArray <size_t> (num_leg_pts);
+        this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);// move to gauss points
+        this->sspd = CArray <double> (num_leg_pts);
 	
 	//this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);
 	//this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);

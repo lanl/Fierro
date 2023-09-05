@@ -93,7 +93,7 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         node_t  node;
         elem_t  elem;
-        zone_t  zone;
+	corner_t corner;
         CArrayKokkos <material_t> material;
         CArrayKokkos <double> state_vars; // array to hold init model variables
         
@@ -272,11 +272,11 @@ int main(int argc, char *argv[]){
               node_coords,
               node_vel,
               node_mass,
-              zone_den,
-              zone_pres,
-              zone_stress,
-              zone_sspd,
-              zone_sie,
+              elem_den,
+              elem_pres,
+              elem_stress,
+              elem_sspd,
+              elem_sie,
               elem_vol,
               elem_mass,
               elem_mat_id,
@@ -304,11 +304,11 @@ int main(int argc, char *argv[]){
                 node_coords,
                 node_vel,
                 node_mass,
-                zone_den,
-                zone_pres,
-                zone_stress,
-                zone_sspd,
-                zone_sie,
+                elem_den,
+                elem_pres,
+                elem_stress,
+                elem_sspd,
+                elem_sie,
                 elem_vol,
                 elem_mass,
                 elem_mat_id,
@@ -321,7 +321,7 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //   Calculate the SGH solution
         // ---------------------------------------------------------------------
-        sgh_solve(material,
+        rdh_solve(material,
                   boundary,
                   mesh,
                   node_coords,
@@ -333,7 +333,6 @@ int main(int argc, char *argv[]){
                   elem_sspd,
                   elem_sie,
                   elem_vol,
-                  elem_div,
                   elem_mass,
                   elem_mat_id,
                   elem_statev,
