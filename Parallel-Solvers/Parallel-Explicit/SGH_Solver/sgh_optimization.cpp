@@ -1284,7 +1284,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         size_t corner_id;
         for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
           corner_id = corners_in_node(node_id,icorner);
-          design_gradients(node_id,0) += -corner_value_storage(corner_id)/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
+          design_gradients(node_id,0) += corner_value_storage(corner_id)/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
         }
       }); // end parallel for
       Kokkos::fence();
