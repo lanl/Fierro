@@ -296,7 +296,7 @@ void readVTKPn(char* MESH,
         in.seekg(oldpos);
         
     }
-    int p = int(std::cbrt(num_nodes_in_elem)-1);
+    size_t p = int(std::cbrt(num_nodes_in_elem)-1);
     num_zones_in_elem = int(std::pow(p, 3)); // one order lower than nodal index space
     num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
     

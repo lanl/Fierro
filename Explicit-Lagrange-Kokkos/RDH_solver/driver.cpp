@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <ctime>
 
-
+//#include "ref_elem.h"
 #include "mesh.h"
 #include "state.h"
 #include "matar.h"
@@ -229,6 +229,9 @@ int main(int argc, char *argv[]){
                                             num_zones);
 
 	// same for elem struct variables
+        DViewCArrayKokkos <double> elem_div(&elem.div(0),
+                                            num_elems);
+
         DViewCArrayKokkos <double> elem_vol(&elem.vol(0),
                                             num_elems);
         
@@ -333,6 +336,7 @@ int main(int argc, char *argv[]){
                   elem_sspd,
                   elem_sie,
                   elem_vol,
+		  elem_div,
                   elem_mass,
                   elem_mat_id,
                   elem_statev,

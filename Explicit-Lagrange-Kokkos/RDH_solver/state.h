@@ -74,6 +74,9 @@ struct elem_t {
     // vol
     CArray <double> vol; 
     
+    // div
+    CArray <double> div; 
+    
     // mass of elem
     CArray <double> mass;
     
@@ -102,6 +105,7 @@ struct elem_t {
         this->sspd = CArray <double> (num_elems);
         this->sie = CArray <double> (num_rk, num_elems);
 	this->vol    = CArray <double> (num_elems);
+	this->div    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
 
@@ -125,6 +129,7 @@ struct elem_t {
         this->sie = CArray <double> (num_rk, num_zones);
 
         this->vol    = CArray <double> (num_elems);
+        this->div    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
 
@@ -133,13 +138,13 @@ struct elem_t {
         this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);// move to gauss points
         this->sspd = CArray <double> (num_leg_pts);
 	
-	//this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);
-	//this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
+	this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);
+	this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
 	
-	//this->gauss_lobatto_jacobian_inverse = CArray <double> (num_lob_pts, num_dims, num_dims);
+	this->gauss_lobatto_jacobian_inverse = CArray <double> (num_lob_pts, num_dims, num_dims);
 	this->gauss_legendre_jacobian_inverse = CArray <double> (num_leg_pts, num_dims, num_dims);
 	
-	//this->gauss_lobatto_det_j = CArray <double> (num_lob_pts);
+	this->gauss_lobatto_det_j = CArray <double> (num_lob_pts);
 	this->gauss_legendre_det_j = CArray <double> (num_leg_pts);
 
     }; // end method
