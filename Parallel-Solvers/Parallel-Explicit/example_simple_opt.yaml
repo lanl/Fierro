@@ -23,7 +23,7 @@ output_options:
     write_final: false
 
 fea_modules:
-  - type: SGH
+  - type: Dynamic_Elasticity
 
 material_options:
     #eos model is required
