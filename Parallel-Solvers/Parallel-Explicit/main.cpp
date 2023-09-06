@@ -84,18 +84,19 @@ void solver_setup(int argc, char *argv[]){
   Simulation_Parameters simparam = Simulation_Parameters();
   std::string filename = std::string(argv[1]);
   Yaml::Node node;
+  bool from_yaml = false;
 
   if (filename.find(".yaml") != std::string::npos) {
-    Yaml::Parse(node, filename.c_str());
-    Yaml::deserialize(simparam, node);
+    Yaml::from_file(filename, simparam);
+    from_yaml = true;
   }
   
   std::shared_ptr<Solver> solver;
   switch (simparam.solver_type) {
     case SOLVER_TYPE::SGH:
       solver = std::make_shared<Explicit_Solver_SGH>(Explicit_Solver_SGH());
-      if (!node.IsNone())
-        Yaml::deserialize(solver->simparam, node);
+      if (from_yaml)
+        Yaml::from_file(filename, solver->simparam);
       break;
     default:
       if (myrank == 0)

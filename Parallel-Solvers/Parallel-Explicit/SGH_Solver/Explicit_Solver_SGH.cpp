@@ -187,8 +187,7 @@ void Explicit_Solver_SGH::run(int argc, char *argv[]){
   //yaml file reader for simulation parameters
   std::string filename = std::string(argv[1]);
   if(filename.find(".yaml") != std::string::npos){
-    simparam_dynamic_opt = Yaml::from_file<Simulation_Parameters_Dynamic_Optimization>(filename);
-    simparam = Yaml::from_file<Simulation_Parameters_SGH>(filename);
+    Yaml::from_file_strict(filename, simparam, simparam_dynamic_opt);
   }
 
   const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
