@@ -20,7 +20,7 @@ output_options:
 
 material_options:
     #eos model is required
-  - eos_model: ideal_gas
+  - eos_model_type: ideal_gas
     strength_model_type: none
     q1: 1.0
     q2: 0
