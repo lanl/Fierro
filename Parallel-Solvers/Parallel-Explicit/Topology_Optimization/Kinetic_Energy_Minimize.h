@@ -58,8 +58,7 @@
 #include "ROL_Objective.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
 #include "FEA_Module_SGH.h"
-#include "FEA_Module_Eulerian.h"
-#include "Explicit_Solver_Eulerian.h"
+#include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 
@@ -93,11 +92,12 @@ class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
 
 private:
 
-  FEA_Module_SGH *FEM_;
+  Explicit_Solver *Explicit_Solver_Pointer_;
+  FEA_Module_SGH *FEM_SGH_;
+  FEA_Module_Dynamic_Elasticity *FEM_Dynamic_Elasticity_;
   ROL::Ptr<ROL_MV> ROL_Force;
   ROL::Ptr<ROL_MV> ROL_Velocities;
   ROL::Ptr<ROL_MV> ROL_Gradients;
-  Teuchos::RCP<MV> all_node_velocities_distributed_temp;
 
   bool useLC_; // Use linear form of energy.  Otherwise use quadratic form.
 
@@ -112,24 +112,44 @@ private:
 public:
   bool nodal_density_flag_, time_accumulation;
   int last_comm_step, last_solve_step, current_step;
-  std::string my_fea_module = "SGH";
+  size_t nvalid_modules;
+  std::vector<FEA_MODULE_TYPE> valid_fea_modules; //modules that may interface with this objective function
+  std::vector<FEA_MODULE_TYPE> FEA_Modules_List;
+  FEA_MODULE_TYPE set_module_type;
+  //std::string my_fea_module = "SGH";
   real_t objective_accumulation;
 
-  KineticEnergyMinimize_TopOpt(FEA_Module *FEM, bool nodal_density_flag) 
+  KineticEnergyMinimize_TopOpt(Explicit_Solver *Explicit_Solver_Pointer, bool nodal_density_flag) 
     : useLC_(true) {
-      FEM_ = dynamic_cast<FEA_Module_SGH*>(FEM);
+      Explicit_Solver_Pointer_ = Explicit_Solver_Pointer;
+      
+      valid_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
+      valid_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
+      nvalid_modules = valid_fea_modules.size();
+      FEA_Modules_List = Explicit_Solver_Pointer_->simparam.FEA_Modules_List;
+      for(int imodule = 0; imodule < Explicit_Solver_Pointer_->nfea_modules; imodule++){
+        for(int ivalid = 0; ivalid < nvalid_modules; ivalid++){
+          if(FEA_Modules_List[imodule]==FEA_MODULE_TYPE::SGH){
+            FEM_SGH_ = dynamic_cast<FEA_Module_SGH*>(Explicit_Solver_Pointer_->fea_modules[imodule]);
+            set_module_type = FEA_MODULE_TYPE::SGH;
+          }
+          if(FEA_Modules_List[imodule]==FEA_MODULE_TYPE::Dynamic_Elasticity){
+            FEM_Dynamic_Elasticity_ = dynamic_cast<FEA_Module_Dynamic_Elasticity*>(Explicit_Solver_Pointer_->fea_modules[imodule]);
+            set_module_type = FEA_MODULE_TYPE::Dynamic_Elasticity;
+          }
+        }
+      }
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
       time_accumulation = true;
       objective_accumulation = 0;
-      
-      //deep copy solve data into the cache variable
-      FEM_->all_cached_node_velocities_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_velocities_distributed), Teuchos::Copy));
-      all_node_velocities_distributed_temp = FEM_->all_node_velocities_distributed;
 
       //ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
-      ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_->node_velocities_distributed);
+      if(set_module_type==FEA_MODULE_TYPE::SGH)
+        ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_SGH_->node_velocities_distributed);
+      if(set_module_type==FEA_MODULE_TYPE::Dynamic_Elasticity)
+        ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_Dynamic_Elasticity_->node_velocities_distributed);
 
       //real_t current_kinetic_energy = ROL_Velocities->dot(*ROL_Force)/2;
       //std::cout.precision(10);
@@ -138,6 +158,14 @@ public:
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
+    if(set_module_type==FEA_MODULE_TYPE::SGH)
+      update_sgh(z,type,iter);
+    if(set_module_type==FEA_MODULE_TYPE::Dynamic_Elasticity)
+      update_elasticity(z,type,iter);
+  }
+
+  void update_elasticity(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
+
     //debug
     std::ostream &out = std::cout;
     Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -149,50 +177,100 @@ public:
     if (type == ROL::UpdateType::Initial)  {
       // This is the first call to update
       //first linear solve was done in FEA class run function already
-      FEM_->sgh_solve();
+      FEM_Dynamic_Elasticity_->elastic_solve();
       //initial design density data was already communicated for ghost nodes in init_design()
       //decide to output current optimization state
-      FEM_->Explicit_Solver_Pointer_->write_outputs();
+      FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
     }
     else if (type == ROL::UpdateType::Accept) {
-      // u_ was set to u=S(x) during a trial update
-      // and has been accepted as the new iterate
-      /*assign temp pointer to the cache multivector (not the cache pointer) storage for a swap of the multivectors;
-        this just avoids deep copy */
-      all_node_velocities_distributed_temp = FEM_->all_cached_node_velocities_distributed;
-      // Cache the accepted value
-      FEM_->all_cached_node_velocities_distributed = FEM_->all_node_velocities_distributed;
+
     }
     else if (type == ROL::UpdateType::Revert) {
       // u_ was set to u=S(x) during a trial update
       // and has been rejected as the new iterate
       // Revert to cached value
-      FEM_->comm_variables(zp);
-      FEM_->all_node_velocities_distributed = FEM_->all_cached_node_velocities_distributed;
+      // This is a new value of x
+      //communicate density variables for ghosts
+      FEM_Dynamic_Elasticity_->comm_variables(zp);
+      //update deformation variables
+      FEM_Dynamic_Elasticity_->update_forward_solve(zp);
+      if(Explicit_Solver_Pointer_->myrank==0)
+      *fos << "called Revert" << std::endl;
     }
     else if (type == ROL::UpdateType::Trial) {
       // This is a new value of x
-      FEM_->all_node_velocities_distributed = all_node_velocities_distributed_temp;
       //communicate density variables for ghosts
-      FEM_->comm_variables(zp);
+      FEM_Dynamic_Elasticity_->comm_variables(zp);
       //update deformation variables
-      FEM_->update_forward_solve(zp);
-      if(FEM_->myrank==0)
+      FEM_Dynamic_Elasticity_->update_forward_solve(zp);
+      if(Explicit_Solver_Pointer_->myrank==0)
       *fos << "called Trial" << std::endl;
 
       //decide to output current optimization state
-      FEM_->Explicit_Solver_Pointer_->write_outputs();
+      FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,
       // e.g., finite-difference checks
-      if(FEM_->myrank==0)
-      *fos << "called Temp" << std::endl;
-      FEM_->all_node_velocities_distributed = all_node_velocities_distributed_temp;
-      FEM_->comm_variables(zp);
-      FEM_->update_forward_solve(zp);
+      if(Explicit_Solver_Pointer_->myrank==0)
+        *fos << "called Temp" << std::endl;
+      FEM_Dynamic_Elasticity_->comm_variables(zp);
+      FEM_Dynamic_Elasticity_->update_forward_solve(zp);
     }
+  }
 
+  void update_sgh(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
+    //debug
+    std::ostream &out = std::cout;
+    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+
+    current_step++;
+    ROL::Ptr<const MV> zp = getVector(z);
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+    if (type == ROL::UpdateType::Initial)  {
+      // This is the first call to update
+      //first linear solve was done in FEA class run function already
+      FEM_SGH_->sgh_solve();
+      //initial design density data was already communicated for ghost nodes in init_design()
+      //decide to output current optimization state
+      FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
+    }
+    else if (type == ROL::UpdateType::Accept) {
+
+    }
+    else if (type == ROL::UpdateType::Revert) {
+      // u_ was set to u=S(x) during a trial update
+      // and has been rejected as the new iterate
+      // Revert to cached value
+      // This is a new value of x
+      //communicate density variables for ghosts
+      FEM_SGH_->comm_variables(zp);
+      //update deformation variables
+      FEM_SGH_->update_forward_solve(zp);
+      if(Explicit_Solver_Pointer_->myrank==0)
+      *fos << "called Revert" << std::endl;
+    }
+    else if (type == ROL::UpdateType::Trial) {
+      // This is a new value of x
+      //communicate density variables for ghosts
+      FEM_SGH_->comm_variables(zp);
+      //update deformation variables
+      FEM_SGH_->update_forward_solve(zp);
+      if(Explicit_Solver_Pointer_->myrank==0)
+      *fos << "called Trial" << std::endl;
+
+      //decide to output current optimization state
+      FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
+    }
+    else { // ROL::UpdateType::Temp
+      // This is a new value of x used for,
+      // e.g., finite-difference checks
+      if(Explicit_Solver_Pointer_->myrank==0)
+        *fos << "called Temp" << std::endl;
+      FEM_SGH_->comm_variables(zp);
+      FEM_SGH_->update_forward_solve(zp);
+    }
   }
 
   real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
@@ -233,10 +311,13 @@ public:
     //std::fflush(stdout);
     
     //ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
-    ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_->node_velocities_distributed);
+    if(set_module_type==FEA_MODULE_TYPE::SGH)
+      ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_SGH_->node_velocities_distributed);
+    if(set_module_type==FEA_MODULE_TYPE::Dynamic_Elasticity)
+      ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_Dynamic_Elasticity_->node_velocities_distributed);
 
     std::cout.precision(10);
-    if(FEM_->myrank==0)
+    if(Explicit_Solver_Pointer_->myrank==0)
     std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
 
     //std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
@@ -258,8 +339,10 @@ public:
     //FEM_->gradient_print_sync=0;
     //get local view of the data
     
-
-    FEM_->compute_topology_optimization_gradient_full(zp,gp);
+    if(set_module_type==FEA_MODULE_TYPE::SGH)
+      FEM_SGH_->compute_topology_optimization_gradient_full(zp,gp);
+    if(set_module_type==FEA_MODULE_TYPE::Dynamic_Elasticity)
+      FEM_Dynamic_Elasticity_->compute_topology_optimization_gradient_full(zp,gp);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -285,89 +368,6 @@ public:
     //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
   }
   
-  /*
-  void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //debug
-    std::ostream &out = std::cout;
-    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    // Unwrap hv
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-    ROL::Ptr<const MV> zp = getVector(z);
-    
-    host_vec_array objective_hessvec = hvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-
-    FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
-    //if(FEM_->myrank==0)
-    //std::cout << "hessvec" << std::endl;
-    //vp->describe(*fos,Teuchos::VERB_EXTREME);
-    //hvp->describe(*fos,Teuchos::VERB_EXTREME);
-    if(FEM_->myrank==0)
-    *fos << "Called Strain Energy Hessianvec" << std::endl;
-    FEM_->hessvec_count++;
-  }
-  */
-/*
-  void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    // Unwrap g
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
- 
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      std::MV<real_t> U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      std::MV<real_t> V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,V);
-      for (size_t i=0; i<hvp->size(); i++) {
-        (*hvp)[i] *= 2.0;
-      }
-    }
-    
-  }
-
-  void hessVec_22( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
-    
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      MV V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,*vp,U);
-    }
-    
-  }
-  */
 };
 
 #endif // end header guard

@@ -66,10 +66,11 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module.h"
 #include "FEA_Module_SGH.h"
+#include "FEA_Module_Dynamic_Elasticity.h"
 #include "FEA_Module_Inertial.h"
 #include "Explicit_Solver.h"
 #include "mesh.h"
@@ -121,7 +122,7 @@ each surface to use for hammering metal into to form it.
 
 Explicit_Solver::Explicit_Solver() : Solver(){
   //create parameter objects
-  simparam = Simulation_Parameters_SGH();
+  simparam = Simulation_Parameters_Explicit();
   simparam_dynamic_opt = Simulation_Parameters_Dynamic_Optimization();
   //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
   // ---- Read input file, define state and boundary conditions ---- //
@@ -147,6 +148,7 @@ Explicit_Solver::Explicit_Solver() : Solver(){
   //file readin parameter
   active_node_ordering_convention = ENSIGHT;
   //default simulation parameters
+  time_value = 0;
 }
 
 Explicit_Solver::~Explicit_Solver(){
@@ -185,11 +187,14 @@ void Explicit_Solver::run(int argc, char *argv[]){
   //error handle for file input name
   //if(argc < 2)
   //yaml file reader for simulation parameters
-  std::string filename = std::string(argv[1]);
+  filename = std::string(argv[1]);
   if(filename.find(".yaml") != std::string::npos){
     simparam_dynamic_opt = Yaml::from_file<Simulation_Parameters_Dynamic_Optimization>(filename);
-    simparam = Yaml::from_file<Simulation_Parameters_SGH>(filename);
+    simparam = Yaml::from_file<Simulation_Parameters_Explicit>(filename);
   }
+
+  //init time
+  //time_value = simparam->time_initial;
 
   const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
   switch (simparam.input_options.mesh_file_format) {
@@ -1063,10 +1068,9 @@ void Explicit_Solver::FEA_module_setup(){
 
   std::vector<FEA_MODULE_TYPE> FEA_Module_List;
   if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on){
-    //nfea_modules = simparam_dynamic_opt->nfea_modules;
-    FEA_Module_List = simparam_dynamic_opt.FEA_Modules_List;
+    FEA_Module_List = simparam.FEA_Modules_List = simparam_dynamic_opt.FEA_Modules_List;
     nfea_modules = FEA_Module_List.size();
-    fea_module_must_read = simparam_dynamic_opt.fea_module_must_read;
+    fea_module_must_read = simparam.fea_module_must_read = simparam_dynamic_opt.fea_module_must_read;
   }
   else{
     //nfea_modules = simparam->nfea_modules;
@@ -1090,6 +1094,14 @@ void Explicit_Solver::FEA_module_setup(){
       module_found = true;
       //debug print
       *fos << " SGH MODULE ALLOCATED AS " <<imodule << std::endl;
+      
+    }
+    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Dynamic_Elasticity){
+      fea_module_types[imodule] = FEA_MODULE_TYPE::Dynamic_Elasticity;
+      fea_modules[imodule] = new FEA_Module_Dynamic_Elasticity(this, mesh);
+      module_found = true;
+      //debug print
+      *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
     else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Inertial){
@@ -1170,7 +1182,7 @@ void Explicit_Solver::setup_optimization_problem(){
       if(TO_Module_List[imodule] == TO_MODULE_TYPE::Kinetic_Energy_Minimize){
         //debug print
         *fos << " KINETIC ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
+        obj = ROL::makePtr<KineticEnergyMinimize_TopOpt>(this, nodal_density_flag);
       }
       /*
       else if(TO_Module_List[imodule] == "Heat_Capacity_Potential_Minimize"){
@@ -1464,7 +1476,7 @@ void Explicit_Solver::setup_optimization_problem(){
 ------------------------------------------------------------------------------- */
 
 void Explicit_Solver::init_boundaries(){
-  int num_boundary_sets = simparam.NB;
+  //int num_boundary_sets = simparam.NB;
   int num_dim = simparam.num_dims;
   size_t num_nodes_in_patch;
   // build boundary mesh patches
@@ -1488,8 +1500,8 @@ void Explicit_Solver::init_boundaries(){
   std::cout << "number of boundary patches on task " << myrank << " = " << nboundary_patches << std::endl;
   
   //disable for now
-  if(0)
-  init_topology_conditions(num_boundary_sets);
+  //if(0)
+  //init_topology_conditions(num_boundary_sets);
 }
 
 /* ----------------------------------------------------------------------
@@ -1536,7 +1548,6 @@ void Explicit_Solver::init_topology_conditions (int num_sets){
 
 void Explicit_Solver::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *patch_limits){
   
-  int num_boundary_sets = simparam.NB;
   int num_dim = simparam.num_dims;
   int is_on_set;
   /*

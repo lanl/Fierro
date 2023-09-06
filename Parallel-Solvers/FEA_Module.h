@@ -168,6 +168,8 @@ public:
   virtual int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
 
   virtual void compute_output(){}
+
+  virtual void output_control(){}
   
   virtual void write_data(std::map <std::string, const double*> &point_data_scalars_double,
   std::map <std::string, const double*> &point_data_vectors_double,

@@ -42,7 +42,7 @@
 #include "Solver.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "utilities.h"
-#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Explicit.h"
 #include "mesh.h"
 #include "matar.h"
 #include "elements.h"
@@ -130,7 +130,7 @@ public:
   mesh_t *init_mesh;
   std::shared_ptr<mesh_t> mesh;
   
-  Simulation_Parameters_SGH simparam;
+  Simulation_Parameters_Explicit simparam;
 
   //FEA simulations
   class FEA_Module_SGH *sgh_module;
@@ -156,6 +156,9 @@ public:
 
   //lists what kind of boundary condition each boundary set is assigned to
   CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
+
+  //time data
+  real_t time_value;
   
   //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
   size_t Number_DOF_BCS;

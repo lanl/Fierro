@@ -253,6 +253,7 @@ public:
   //file readin variables
   std::ifstream *in = NULL;
   std::streampos before_condition_header;
+  std::string filename;
   int words_per_line, elem_words_per_line;
   enum node_ordering_convention {IJK, ENSIGHT};
   node_ordering_convention active_node_ordering_convention;

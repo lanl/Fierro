@@ -93,35 +93,35 @@ Explicit_Solver::write_outputs()
   Teuchos::RCP<CArray<int>> elem_gid;
   Teuchos::RCP<CArray<double>> elem_speed;
 
-  for (const FIELD_OUTPUT_SGH& field_name : simparam.field_output) {
+  for (const FIELD_OUTPUT_EXPLICIT& field_name : simparam.field_output) {
     switch (field_name)
     {
-      case FIELD_OUTPUT_SGH::design_density:
+      case FIELD_OUTPUT_EXPLICIT::design_density:
         // node "design_density"
         design_density = get_design_density(map->getLocalNumElements(),
           simparam_dynamic_opt.topology_optimization_on, design_node_densities_distributed);
         point_data_scalars_double["design_density"] = design_density->pointer();
         break;
 
-      case FIELD_OUTPUT_SGH::speed:
+      case FIELD_OUTPUT_EXPLICIT::speed:
         // element "speed"
         elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
         cell_data_scalars_double["speed"] = elem_speed->pointer();
         break;
 
-      case FIELD_OUTPUT_SGH::element_switch:
+      case FIELD_OUTPUT_EXPLICIT::element_switch:
         // element "element_switch"
         elem_switch = calculate_elem_switch(all_element_map);
         cell_data_scalars_int["element_switch"] = elem_switch->pointer();
         break;
 
-      case FIELD_OUTPUT_SGH::processor_id:
+      case FIELD_OUTPUT_EXPLICIT::processor_id:
         // element "processor_id"
         elem_proc_id = get_elem_proc_id(all_element_map, myrank);
         cell_data_scalars_int["processor_id"] = elem_proc_id->pointer();
         break;
 
-      case FIELD_OUTPUT_SGH::element_id:
+      case FIELD_OUTPUT_EXPLICIT::element_id:
         // element "element_id"
         elem_gid = get_elem_gid(all_element_map);
         cell_data_scalars_int["element_id"] = elem_gid->pointer();
@@ -193,7 +193,6 @@ construct_file_name(
 void
 Explicit_Solver::parallel_vtk_writer_new()
 {
-  const size_t rk_level = simparam.rk_num_bins - 1;
 
   int num_dim = simparam.num_dims;
   std::stringstream str_stream;
@@ -401,7 +400,7 @@ Explicit_Solver::parallel_vtk_writer_new()
 
 
   /*************** write .vtk.series file ***************/
-  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = simparam.time_value;
+  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = time_value;
   if (myrank == 0) {
     FILE *myfile;
     std::string filename = vtk_dir + "outputs.vtk.series";

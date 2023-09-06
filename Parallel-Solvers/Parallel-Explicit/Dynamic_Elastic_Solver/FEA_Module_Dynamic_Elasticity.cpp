@@ -71,10 +71,10 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Dynamic_Elasticity.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "Simulation_Parameters_Elasticity.h"
-#include "FEA_Module_SGH.h"
+#include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
 
 //optimization
@@ -102,7 +102,7 @@
 using namespace utils;
 
 
-FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
@@ -111,8 +111,8 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
 
   //create parameter object
-  simparam = Simulation_Parameters_SGH();
-  simparam = Yaml::from_file<Simulation_Parameters_SGH>(Explicit_Solver_Pointer_->filename);
+  simparam = Simulation_Parameters_Dynamic_Elasticity();
+  simparam = Yaml::from_file<Simulation_Parameters_Dynamic_Elasticity>(Explicit_Solver_Pointer_->filename);
   // ---- Read input file, define state and boundary conditions ---- //
   //simparam->input();
   
@@ -198,19 +198,16 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
     }
     
   }
-
-  have_loading_conditions = false;
-
 }
 
-FEA_Module_SGH::~FEA_Module_SGH(){
+FEA_Module_Dynamic_Elasticity::~FEA_Module_Dynamic_Elasticity(){
    //delete simparam;
 }
 
 /* ----------------------------------------------------------------------
    Read ANSYS dat format mesh file
 ------------------------------------------------------------------------- */
-void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header){
+void FEA_Module_Dynamic_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header){
 
   char ch;
   int num_dim = simparam.num_dims;
@@ -234,9 +231,9 @@ void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream *in, std::streampos
 } // end read_conditions_ansys_dat
 
 // -----------------------------------------------------------------------------
-// Interfaces read in data with the SGH solver data; currently a hack to streamline
+// Interfaces read in data with the elastic solver data; currently a hack to streamline
 //------------------------------------------------------------------------------
-void FEA_Module_SGH::sgh_interface_setup(node_t &node,
+void FEA_Module_Dynamic_Elasticity::elastic_interface_setup(node_t &node,
                        elem_t &elem,
                        corner_t &corner){
 
@@ -434,7 +431,7 @@ void FEA_Module_SGH::sgh_interface_setup(node_t &node,
    Initialize sets of element boundary surfaces and arrays for input conditions
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::init_boundaries(){
+void FEA_Module_Dynamic_Elasticity::init_boundaries(){
   max_boundary_sets = simparam.NB;
   int num_dim = simparam.num_dims;
   
@@ -461,7 +458,7 @@ void FEA_Module_SGH::init_boundaries(){
    initialize storage for element boundary surfaces corresponding to user BCs
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::init_boundary_sets (int num_sets){
+void FEA_Module_Dynamic_Elasticity::init_boundary_sets (int num_sets){
 
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions = 0";
@@ -486,7 +483,7 @@ void FEA_Module_SGH::init_boundary_sets (int num_sets){
    Grow boundary conditions sets of element boundary surfaces
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::grow_boundary_sets(int num_sets){
+void FEA_Module_Dynamic_Elasticity::grow_boundary_sets(int num_sets){
   int num_dim = simparam.num_dims;
 
   if(num_sets == 0){
@@ -529,7 +526,7 @@ void FEA_Module_SGH::grow_boundary_sets(int num_sets){
    Assign sets of element boundary surfaces corresponding to user BCs
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::generate_bcs(){
+void FEA_Module_Dynamic_Elasticity::generate_bcs(){
   
 } // end generate_bcs
 
@@ -539,23 +536,15 @@ void FEA_Module_SGH::generate_bcs(){
    necessary rows and columns from the assembled linear system
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::Displacement_Boundary_Conditions(){
+void FEA_Module_Dynamic_Elasticity::Displacement_Boundary_Conditions(){
  
-}
-
-/* ----------------------------------------------------------------------------
-   Output field settings and file settings
-------------------------------------------------------------------------------- */
-
-void FEA_Module_SGH::output_control(){
-
 }
 
 /* ----------------------------------------------------------------------------
    Initialize output data structures
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::init_output(){
+void FEA_Module_Dynamic_Elasticity::init_output(){
   //check user parameters for output
   bool output_velocity_flag = simparam.graphics_options.output_velocity_flag;
   displaced_mesh_flag = simparam.graphics_options.displaced_mesh_flag;
@@ -565,8 +554,7 @@ void FEA_Module_SGH::init_output(){
   int Brows;
   if(num_dim==3) Brows = 6;
   else Brows = 3;
-  
-  //Implicit compliant code
+
   if(output_velocity_flag){
     //displacement_index is accessed by writers at the solver level for deformed output
     output_velocity_index = noutput;
@@ -640,14 +628,13 @@ void FEA_Module_SGH::init_output(){
       output_dof_names[noutput-1][5] = "stress_yz";
     }
   }
-
 }
 
 /* -------------------------------------------------------------------------------------------
    Prompts sorting for elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
+void FEA_Module_Dynamic_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
  
   
 }
@@ -656,83 +643,39 @@ void FEA_Module_SGH::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sor
    Prompts sorting for elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::write_data(std::map <std::string, const double*> &point_data_scalars_double,
-  std::map <std::string, const double*> &point_data_vectors_double,
-  std::map <std::string, const double*> &cell_data_scalars_double,
-  std::map <std::string, const int*> &cell_data_scalars_int,
-  std::map <std::string, std::pair<const double*, size_t> > &cell_data_fields_double){
-
-  
+void FEA_Module_Dynamic_Elasticity::write_data(std::map <std::string, const double*> point_data_scalars_double,
+  std::map <std::string, const double*> point_data_vectors_double,
+  std::map <std::string, const double*> cell_data_scalars_double,
+  std::map <std::string, const int*> cell_data_scalars_int){
   const size_t rk_level = simparam.rk_num_bins - 1;
 
-  for (const FIELD_OUTPUT_SGH& field_name : simparam.field_output) {
-    switch (field_name)
-    {
+  // node "velocity"
+  node_vel.update_host();
+  point_data_vectors_double["velocity"] = &node_vel.host(rk_level,0,0);
 
-      case FIELD_OUTPUT_SGH::velocity:
-        // node "velocity"
-        node_vel.update_host();
-        point_data_vectors_double["velocity"] = &node_vel.host(rk_level,0,0);
-        break;
+  // element "element_density"
+  elem_den.update_host();
+  cell_data_scalars_double["element_density"] = &elem_den.host(0);
+  
+  // element "pres"
+  elem_pres.update_host();
+  cell_data_scalars_double["pres"] = &elem_pres.host(0);
 
-      case FIELD_OUTPUT_SGH::element_density:
-        // element "density"
-        elem_den.update_host();
-        cell_data_scalars_double["element_density"] = elem_den.host_pointer();
-        break;
+  // element "sie"
+  elem_sie.update_host();
+  cell_data_scalars_double["sie"] = &elem_sie.host(rk_level,0);
 
-      case FIELD_OUTPUT_SGH::pressure:  
-        // element "pressure"
-        elem_pres.update_host();
-        cell_data_scalars_double["pressure"] = elem_pres.host_pointer();
-        break;
+  // element "vol"
+  elem_vol.update_host();
+  cell_data_scalars_double["vol"] = &elem_vol.host(0);
 
-      case FIELD_OUTPUT_SGH::SIE:
-        // element "SIE"
-        elem_sie.update_host();
-        cell_data_scalars_double["SIE"] = &elem_sie.host(rk_level,0);
-        break;
+  // element "mass"
+  elem_mass.update_host();
+  cell_data_scalars_double["mass"] = &elem_mass.host(0);
 
-      case FIELD_OUTPUT_SGH::volume:
-        // element "volume"
-        elem_vol.update_host();
-        cell_data_scalars_double["volume"] = elem_vol.host_pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::mass:
-        // element "mass"
-        elem_mass.update_host();
-        cell_data_scalars_double["mass"] = elem_mass.host_pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::sound_speed:
-        // element "sspd"
-        elem_sspd.update_host();
-        cell_data_scalars_double["sound_speed"] = elem_sspd.host_pointer();
-        break;
-
-      case FIELD_OUTPUT_SGH::material_id:
-        // element "material_id"
-        elem_mat_id.update_host();
-        cell_data_scalars_int["material_id"] = reinterpret_cast<int*>(elem_mat_id.host_pointer());
-        break;
-
-      case FIELD_OUTPUT_SGH::user_vars:
-        // element "user_vars"
-        elem_user_output_vars.update_host();
-        cell_data_fields_double["user_vars"] = std::make_pair(elem_user_output_vars.host_pointer(), 
-                                                                   elem_user_output_vars.dims(1));
-      case FIELD_OUTPUT_SGH::stress:
-        // element "stress"
-        elem_stress.update_host();
-        cell_data_fields_double["stress"] = std::make_pair(&elem_stress.host(rk_level,0,0,0), 9);
-        break;
-
-      default:
-        break;
-
-    } // end switch
-  } // end if
+  // element "sspd"
+  elem_sspd.update_host();
+  cell_data_scalars_double["sspd"] = &elem_sspd.host(0);
 
   // element "mat_id" //uncomment if needed (works fine)
   //sgh_module->elem_mat_id.update_host();
@@ -752,7 +695,7 @@ void FEA_Module_SGH::write_data(std::map <std::string, const double*> &point_dat
    Prompts sorting for elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::sort_element_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
+void FEA_Module_Dynamic_Elasticity::sort_element_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
   //interface element density data
   {
   host_vec_array Element_Densities = Global_Element_Densities->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
@@ -768,7 +711,7 @@ void FEA_Module_SGH::sort_element_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_typ
    Prompts computation of elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
+void FEA_Module_Dynamic_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
  
 }
 
@@ -776,7 +719,7 @@ void FEA_Module_SGH::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > 
    Prompts computation of elastic response output data. For now, nodal strains.
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::compute_output(){
+void FEA_Module_Dynamic_Elasticity::compute_output(){
 
 }
 
@@ -784,7 +727,7 @@ void FEA_Module_SGH::compute_output(){
    Communicate updated nodal velocities to ghost nodes
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::comm_node_masses(){
+void FEA_Module_Dynamic_Elasticity::comm_node_masses(){
   
   //debug print of design vector
       //std::ostream &out = std::cout;
@@ -815,7 +758,7 @@ void FEA_Module_SGH::comm_node_masses(){
    Communicate updated nodal adjoint vectors to ghost nodes
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::comm_adjoint_vectors(int cycle){
+void FEA_Module_Dynamic_Elasticity::comm_adjoint_vectors(int cycle){
   
   //debug print of design vector
       //std::ostream &out = std::cout;
@@ -847,7 +790,7 @@ void FEA_Module_SGH::comm_adjoint_vectors(int cycle){
    Communicate ghosts using the current optimization design data
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
+void FEA_Module_Dynamic_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
   
   if(simparam_dynamic_opt.topology_optimization_on){
   //set density vector to the current value chosen by the optimizer
@@ -879,7 +822,7 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp){
    enforce constraints on nodes due to BCS
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lower_bound){
+void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array node_densities_lower_bound){
 
   const size_t num_dim = mesh->num_dims;
   const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
@@ -913,26 +856,22 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
 }
 
 /* ----------------------------------------------------------------------------
-   Setup SGH solver data
+   Setup elastic solver data
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::setup(){
+void FEA_Module_Dynamic_Elasticity::setup(){
 
     const size_t rk_level = simparam.rk_num_bins - 1;   
     const size_t num_fills = simparam.region_options.size();
     const size_t rk_num_bins = simparam.rk_num_bins;
     const size_t num_bcs = simparam.boundary_conditions.size();
     const size_t num_materials = simparam.material_options.size();
-    const int num_dim = simparam.num_dims;
-    const size_t num_lcs = simparam.loading.size();
-    if(num_lcs)
-      have_loading_conditions = true;
-
+    const int num_dim = simparam.num_dims;    
 
     // ---------------------------------------------------------------------
     //    obtain mesh data
     // --------------------------------------------------------------------- 
-    sgh_interface_setup(node_interface, elem_interface, corner_interface);
+    elastic_interface_setup(node_interface, elem_interface, corner_interface);
     mesh->build_corner_connectivity();
         //debug print of corner ids
         /*
@@ -1365,7 +1304,7 @@ void FEA_Module_SGH::setup(){
    
 
     // apply BC's to velocity
-    FEA_Module_SGH::boundary_velocity(*mesh, boundary, node_vel);
+    FEA_Module_Dynamic_Elasticity::boundary_velocity(*mesh, boundary, node_vel);
     
     
     // calculate the corner massess if 2D
@@ -1477,7 +1416,7 @@ void FEA_Module_SGH::setup(){
    solve function called by solver
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::module_cleanup(){
+void FEA_Module_Dynamic_Elasticity::module_cleanup(){
   cleanup_material_models();
 }
 
@@ -1485,7 +1424,7 @@ void FEA_Module_SGH::module_cleanup(){
     Deallocate memory used for  material models
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::cleanup_material_models() {
+void FEA_Module_Dynamic_Elasticity::cleanup_material_models() {
 
     const DCArrayKokkos <material_t> material = simparam.material;
 
@@ -1515,7 +1454,7 @@ void FEA_Module_SGH::cleanup_material_models() {
     val = plane value, cyl radius, sphere radius
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
+void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
               mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords){
 
@@ -1597,7 +1536,7 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
 ------------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
+size_t FEA_Module_Dynamic_Elasticity::check_bdy(const size_t patch_gid,
                  const int num_dim,
                  const int num_nodes_in_patch,
                  const int this_bc_tag,
@@ -1686,7 +1625,7 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
    Build set of nodes assigned to each boundary condition
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh){
+void FEA_Module_Dynamic_Elasticity::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh){
     
     // build boundary nodes in each boundary set
     int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
@@ -1781,8 +1720,8 @@ void FEA_Module_SGH::build_boundry_node_sets(const DCArrayKokkos <boundary_t> &b
    solve function called by solver
 ------------------------------------------------------------------------------- */
 
-int FEA_Module_SGH::solve(){
-  sgh_solve();
+int FEA_Module_Dynamic_Elasticity::solve(){
+  elastic_solve();
 
   return 0;
 }
@@ -1791,7 +1730,7 @@ int FEA_Module_SGH::solve(){
    SGH solver loop
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::sgh_solve(){
+void FEA_Module_Dynamic_Elasticity::elastic_solve(){
     Time_Variables tv = simparam.time_variables;
    
     const size_t rk_level = simparam.rk_num_bins - 1; 
@@ -2081,56 +2020,11 @@ void FEA_Module_SGH::sgh_solve(){
             double rk_alpha = 1.0/((double)rk_num_stages - (double)rk_stage);
             
             // ---- Calculate velocity diveregence for the element ----
-            if(num_dim==2){
-                get_divergence2D(elem_div,
-                                 *mesh,
-                                 node_coords,
-                                 node_vel,
-                                 elem_vol);
-            }
-            else {
                 get_divergence(elem_div,
                                *mesh,
                                node_coords,
                                node_vel,
                                elem_vol);
-            } // end if 2D
-            
-            // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
-            if(num_dim==2){
-                get_force_sgh2D(material,
-                                *mesh,
-                                node_coords,
-                                node_vel,
-                                elem_den,
-                                elem_sie,
-                                elem_pres,
-                                elem_stress,
-                                elem_sspd,
-                                elem_vol,
-                                elem_div,
-                                elem_mat_id,
-                                corner_force,
-                                rk_alpha,
-                                cycle);
-            }
-            else {
-                get_force_sgh(material,
-                              *mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              rk_alpha,
-                              cycle);
-            }
 
             /*
             debug block
@@ -2168,26 +2062,31 @@ void FEA_Module_SGH::sgh_solve(){
             */
 
             // ---- Update nodal velocities ---- //
-            update_velocity_sgh(rk_alpha,
-                              *mesh,
-                              node_vel,
-                              node_mass,
-                              corner_force);
-
-            if(have_loading_conditions){
+            get_force_elastic(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            node_mass,
+                            elem_den,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            rk_alpha,
+                            cycle);
               applied_forces(material,
-                              *mesh,
-                              node_coords,
-                              node_vel,
-                              node_mass,
-                              elem_den,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              corner_force,
-                              rk_alpha,
-                              cycle);
-            }
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            node_mass,
+                            elem_den,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            rk_alpha,
+                            cycle);
+            
             
             // ---- apply force boundary conditions to the boundary patches----
             boundary_velocity(*mesh, boundary, node_vel);
@@ -2240,18 +2139,10 @@ void FEA_Module_SGH::sgh_solve(){
                std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(rk_level,i,0) << " " << node_vel(rk_level,i,1) << " " << node_vel(rk_level,i,2) << std::endl;
              }
             */ 
-            // ---- Update specific internal energy in the elements ----
-            update_energy_sgh(rk_alpha,
-                              *mesh,
-                              node_vel,
-                              node_coords,
-                              elem_sie,
-                              elem_mass,
-                              corner_force);
             
             
             // ---- Update nodal positions ----
-            update_position_sgh(rk_alpha,
+            update_position_elastic(rk_alpha,
                                 nall_nodes,
                                 node_coords,
                                 node_vel);
@@ -2601,7 +2492,7 @@ void FEA_Module_SGH::sgh_solve(){
     }
     
     
-    auto time_2 = std::chrono::high_resolution_clock::now();
+    auto time_2 = std::chrono::system_clock::now();
     auto time_difference = time_2 - time_1;
     //double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
@@ -2667,6 +2558,6 @@ void FEA_Module_SGH::sgh_solve(){
     
     return;
     
-} // end of SGH solve
+} // end of elastic solve
 
 

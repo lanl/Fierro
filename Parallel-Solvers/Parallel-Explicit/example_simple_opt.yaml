@@ -22,6 +22,9 @@ output_options:
     write_initial: false
     write_final: false
 
+fea_modules:
+  - type: Dynamic_Elasticity
+
 material_options:
     #eos model is required
   - eos_model: ideal_gas
