@@ -44,6 +44,7 @@
 #include <string>
 #include <filesystem>
 #include <utility>
+#include <iostream>
 
 namespace Yaml {
     struct ConfigurationException : std::runtime_error {
@@ -109,17 +110,72 @@ namespace Yaml {
         return abs_path;
     }
 
+    inline void validate_subset(Node& a, Node& b);
+    inline void validate_subset_map(Node& a, Node& b) {
+        if (!a.IsMap())
+            throw ConfigurationException("Input Yaml contains dictionary where deserialized object does not.");
 
-    inline void validate_subset(Node& a, Node& b) {
         for (auto kv = b.Begin(); kv != b.End(); kv++) {
             std::string key = std::get<0>(*kv);
             Node value = std::get<1>(*kv);
-
+            
+            // Be careful.
+            // node["key"] actually creates a 'None' node
+            // under `node`. The iterator will find that.
+            // Checking for the existance of a key will modify the
+            // original node. We don't want to pick those up.
+            if (value.IsNone())
+                continue;
+            
             if (a[key].IsNone()) {
                 throw ConfigurationException("Found unexpected field: " + key);
             }
+
+            try {
+                validate_subset(a[key], value);
+            } catch (ConfigurationException& e) {
+                throw ConfigurationException(e, key);
+            }
         }
     }
+
+    inline void validate_subset_sequence(Node& a, Node& b) {
+        if (!a.IsSequence())
+            throw ConfigurationException("Input Yaml contains list where deserialized object does not.");
+        
+        auto it_a = a.Begin();
+        auto it_b = b.Begin();
+        size_t i = 0;
+        while (it_b != b.End()) {
+            if (it_a == a.End())
+                throw ConfigurationException("Not all Yaml values were loaded");
+            
+            Node a_value = std::get<1>(*it_a);
+            Node b_value = std::get<1>(*it_b);
+
+            try {
+                validate_subset(a_value, b_value);
+            } catch (ConfigurationException& e) {
+                throw ConfigurationException(e, "<" + std::to_string(i) + ">");
+            }
+
+            it_a++;
+            it_b++;
+            i++;
+        }
+    }
+
+    /**
+     * Valdates that node `b` is a subset of node `a`, in that
+     * all keys in `b` are present as keys in `a`.
+    */
+    inline void validate_subset(Node& a, Node& b) {
+        if (b.IsMap())
+            validate_subset_map(a, b);
+        if (b.IsSequence())
+            validate_subset_sequence(a, b);
+    }
+
 }
 
 #endif
