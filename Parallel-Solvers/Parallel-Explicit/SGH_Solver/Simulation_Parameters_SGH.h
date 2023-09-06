@@ -49,16 +49,30 @@
 #include "yaml-serializable.h"
 #include "Simulation_Parameters.h"
 #include "Simulation_Parameters_Base.h"
-#include "user_material_functions.h"
 
 using namespace mtr;
+
+SERIALIZABLE_ENUM(FIELD_OUTPUT_SGH,
+    velocity,
+    element_density,
+    pressure,
+    SIE,
+    volume,
+    mass,
+    sound_speed,
+    material_id,
+    user_vars,
+    stress
+)
 
 struct Simulation_Parameters_SGH : Simulation_Parameters {
   Time_Variables time_variables;
   std::vector<MaterialFill> region_options;
   std::vector<Material> material_options;
   std::vector<Boundary> boundary_conditions;
+  std::vector<Loading> loading_conditions;
   Graphics_Options graphics_options;
+  std::set<FIELD_OUTPUT_SGH> field_output;  
 
   bool gravity_flag   = false;
   bool report_runtime = true;
@@ -70,27 +84,23 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
 
   //Non-serialized fields
   int num_gauss_points = 2;
-  size_t max_num_state_vars;
-  size_t max_num_global_vars;
+  size_t max_num_global_vars = 0;
   size_t rk_num_bins;
   double time_value = 0.0;
-  DCArrayKokkos<double> state_vars;
   DCArrayKokkos<double> global_vars;
 
   DCArrayKokkos<mat_fill_t> mat_fill;
   DCArrayKokkos<material_t> material;
-  DCArrayKokkos<boundary_t> boundary; 
+  DCArrayKokkos<boundary_t> boundary;
+  DCArrayKokkos<loading_t> loading;
+
   std::vector<double> gravity_vector {9.81, 0., 0.};
 
-  void init_material_variable_arrays(size_t nstate_vars, size_t nglobal_vars) {
-    state_vars = DCArrayKokkos <double> (material_options.size(), nstate_vars);
+  void init_material_variable_arrays(size_t nglobal_vars) {
     global_vars = DCArrayKokkos <double> (material_options.size(), nglobal_vars);
 
     for (size_t i = 0; i < material_options.size(); i++) {
       auto mat = material_options[i];
-
-      for (size_t j = 0; j < mat.state_vars.size(); j++)
-        state_vars.host(i, j) = mat.state_vars[j];
 
       for (size_t j = 0; j < mat.global_vars.size(); j++)
         global_vars.host(i, j) = mat.global_vars[j];
@@ -103,30 +113,39 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
       array.host(i) = *(T*)&vec[i];
   }
   void derive_kokkos_arrays() {
-    max_num_state_vars = 0;
-    for (auto mo : material_options) 
-      max_num_state_vars = std::max(max_num_state_vars, mo.state_vars.size());
-
     max_num_global_vars = 0;
     for (auto mo : material_options) 
       max_num_global_vars = std::max(max_num_global_vars, mo.global_vars.size());
 
-    init_material_variable_arrays(max_num_state_vars, max_num_global_vars);
+    init_material_variable_arrays(max_num_global_vars);
 
     from_vector(mat_fill, region_options);
     from_vector(material, material_options);
     from_vector(boundary, boundary_conditions);
+    from_vector(loading, loading_conditions);
 
     // Send to device.
     mat_fill.update_device();
     boundary.update_device();
+    loading.update_device();
     material.update_device();
-    state_vars.update_device();
     global_vars.update_device();
 
     // Re-derive function pointers after move to device.
     for (size_t i = 0; i < material.size(); i++) {
       RUN_CLASS({ material(i).derive_function_pointers_no_exec(); });
+    }
+  }
+
+  void derive_default_field_output() {
+    if (field_output.empty()) {
+      field_output.insert(FIELD_OUTPUT_SGH::velocity);
+      field_output.insert(FIELD_OUTPUT_SGH::element_density);
+      field_output.insert(FIELD_OUTPUT_SGH::pressure);
+      field_output.insert(FIELD_OUTPUT_SGH::SIE);
+      field_output.insert(FIELD_OUTPUT_SGH::volume);
+      field_output.insert(FIELD_OUTPUT_SGH::mass);
+      field_output.insert(FIELD_OUTPUT_SGH::sound_speed);
     }
   }
 
@@ -136,14 +155,16 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
     rk_num_bins = rk_num_stages;
 
     ensure_module(FEA_MODULE_TYPE::SGH);
+
+    derive_default_field_output();
   }
   void validate() { }
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_SGH, Simulation_Parameters, 
   time_variables, material_options, region_options,
-  boundary_conditions, gravity_flag, report_runtime, rk_num_stages,
+  boundary_conditions, loading_conditions, gravity_flag, report_runtime, rk_num_stages,
   NB, NBSF, NBV,
-  graphics_options
+  graphics_options, field_output
 )
 
 #endif // end HEADER_H

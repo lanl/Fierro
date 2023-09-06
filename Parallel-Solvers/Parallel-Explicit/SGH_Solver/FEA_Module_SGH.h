@@ -49,23 +49,27 @@
 #include "Simulation_Parameters_SGH.h"
 #include "Simulation_Parameters_Elasticity.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "material_models.h"
 
-class Explicit_Solver_SGH;
+class Explicit_Solver;
 
 class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer, mesh_t& mesh, const int my_fea_module_index = 0);
+  FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
   ~FEA_Module_SGH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
-  void sgh_interface_setup(mesh_t &mesh, node_t &node, elem_t &elem, corner_t &corner);
+  void sgh_interface_setup(node_t &node, elem_t &elem, corner_t &corner);
 
   void setup();
 
-  // to allow the user strngth model interface to do all neccesary cleanup
-  void cleanup_user_strength_model();
+  void cleanup_material_models();
+
+  int solve();
+
+  void module_cleanup();
 
   void sgh_solve();
 
@@ -82,21 +86,6 @@ public:
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
                      DViewCArrayKokkos <double> &corner_force,
-                     const DViewCArrayKokkos <double> &elem_statev,
-                     const double rk_alpha,
-                     const size_t cycle);
-  
-  void get_force_elastic(const DCArrayKokkos <material_t> &material,
-                     const mesh_t &mesh,
-                     const DViewCArrayKokkos <double> &node_coords,
-                     const DViewCArrayKokkos <double> &node_vel,
-                     const DViewCArrayKokkos <double> &node_mass,
-                     const DViewCArrayKokkos <double> &elem_den,
-                     const DViewCArrayKokkos <double> &elem_vol,
-                     const DViewCArrayKokkos <double> &elem_div,
-                     const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     DViewCArrayKokkos <double> &corner_force,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
 
@@ -112,7 +101,6 @@ public:
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
 
@@ -128,7 +116,6 @@ public:
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
 
@@ -144,7 +131,6 @@ public:
                      const DViewCArrayKokkos <double> &elem_vol,
                      const DViewCArrayKokkos <double> &elem_div,
                      const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     const DViewCArrayKokkos <double> &elem_statev,
                      const double rk_alpha,
                      const size_t cycle);
 
@@ -164,7 +150,6 @@ public:
                        const DViewCArrayKokkos <double> &elem_div,
                        const DViewCArrayKokkos <size_t> &elem_mat_id,
                        DViewCArrayKokkos <double> &corner_force,
-                       const DViewCArrayKokkos <double> &elem_statev,
                        const double rk_alpha,
                        const size_t cycle);
   
@@ -342,7 +327,6 @@ public:
                     const DViewCArrayKokkos <double> &elem_vol,
                     const DViewCArrayKokkos <double> &elem_mass,
                     const DViewCArrayKokkos <size_t> &elem_mat_id,
-                    const DViewCArrayKokkos <double> &elem_statev,
                     const double rk_alpha,
                     const size_t cycle);
 
@@ -359,42 +343,8 @@ public:
                       const DViewCArrayKokkos <double> &elem_vol,
                       const DViewCArrayKokkos <double> &elem_mass,
                       const DViewCArrayKokkos <size_t> &elem_mat_id,
-                      const DViewCArrayKokkos <double> &elem_statev,
                       const double rk_alpha,
                       const size_t cycle);
-
-  KOKKOS_INLINE_FUNCTION
-  void user_eos_model(const DViewCArrayKokkos <double> &elem_pres,
-                      const DViewCArrayKokkos <double> &elem_stress,
-                      const size_t elem_gid,
-                      const size_t mat_id,
-                      const DViewCArrayKokkos <double> &elem_state_vars,
-                      const DViewCArrayKokkos <double> &elem_sspd,
-                      const double den,
-                      const double sie) const;
-
-
-  KOKKOS_INLINE_FUNCTION
-  void user_strength_model(const DViewCArrayKokkos <double> &elem_pres,
-                           const DViewCArrayKokkos <double> &elem_stress,
-                           const size_t elem_gid,
-                           const size_t mat_id,
-                           const DViewCArrayKokkos <double> &elem_state_vars,
-                           const DViewCArrayKokkos <double> &elem_sspd,
-                           const double den,
-                           const double sie,
-                           const ViewCArrayKokkos <double> &vel_grad,
-                           const ViewCArrayKokkos <size_t> &elem_node_gids,
-                           const DViewCArrayKokkos <double> &node_coords,
-                           const DViewCArrayKokkos <double> &node_vel,
-                           const double vol,
-                           const double rk_alpha) const;
-
-
-  void user_model_init(const DCArrayKokkos <double> &file_state_vars,
-                       const size_t num_state_vars,
-                       const size_t mat_id,
-                       const size_t num_elems);
 
   void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
   
@@ -423,11 +373,20 @@ public:
   void init_output();
 
   void compute_output();
+
+  void output_control();
   
   void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
 
+  void sort_element_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
+
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
+  void write_data(std::map <std::string, const double*> &point_data_scalars_double,
+  std::map <std::string, const double*> &point_data_vectors_double,
+  std::map <std::string, const double*> &cell_data_scalars_double,
+  std::map <std::string, const int*> &cell_data_scalars_int,
+  std::map <std::string, std::pair<const double*, size_t> > &cell_data_fields_double);
   
   void write_outputs (const mesh_t &mesh,
                       DViewCArrayKokkos <double> &node_coords,
@@ -478,35 +437,34 @@ public:
 
   void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
 
-  void compute_topology_optimization_gradient_full(const_vec_array design_densities, vec_array gradients);
+  void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
-  //elastic TO stuff
-  void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
-
-  void compute_stiffness_gradients(const_vec_array design_densities, vec_array gradients);
-
-  void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
-
-  void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
-  
-  void assemble_matrix();
-  
+  void applied_forces(const DCArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &node_mass,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     DViewCArrayKokkos <double> &corner_force,
+                     const double rk_alpha,
+                     const size_t cycle);
+                     
+  bool have_loading_conditions;
   bool nodal_density_flag;
   real_t penalty_power;
-  Teuchos::RCP<MAT> Global_Stiffness_Matrix;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
-  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
-  //end elastic TO data
   
   Simulation_Parameters_SGH simparam;
   Simulation_Parameters_Elasticity simparam_elasticity;
   Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
-  Explicit_Solver_SGH *Explicit_Solver_Pointer_;
+  Explicit_Solver *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;
   
-  mesh_t& mesh;
+  std::shared_ptr<mesh_t> mesh;
   //shallow copies of mesh class views
   size_t num_nodes_in_elem;
   // corner ids in node
@@ -538,17 +496,9 @@ public:
     
   // element ids in a patch
   CArrayKokkos <size_t> elems_in_patch;
-
-  // patch ids in bdy set
-  size_t num_bdy_sets;
-  DynamicRaggedRightArrayKokkos <size_t> bdy_patches_in_set;
   
   // bdy nodes
   CArrayKokkos <size_t> bdy_nodes;
-
-  // node ids in bdy_patch set
-  RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
-  DCArrayKokkos <size_t> num_bdy_nodes_in_set;
   
   //Topology optimization filter variable
   DCArrayKokkos<double> relative_element_densities;
@@ -594,6 +544,13 @@ public:
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
 
+  // ---------------------------------------------------------------------
+  //    state data type declarations (must stay in scope for output after run)
+  // ---------------------------------------------------------------------
+  node_t  node_interface;
+  elem_t  elem_interface;
+  corner_t  corner_interface;
+
   //Dual View wrappers
   // Dual Views of the individual node struct variables
   DViewCArrayKokkos <double> node_coords;
@@ -610,13 +567,19 @@ public:
   DViewCArrayKokkos <double> elem_div;    
   DViewCArrayKokkos <double> elem_mass;
   DViewCArrayKokkos <size_t> elem_mat_id;
-  DViewCArrayKokkos <double> elem_statev;
 
   // Element velocity gradient 
   DCArrayKokkos <double> elem_vel_grad;
 
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;
+
+  //elem_user_output_vars allow users to output variables of interest per element
+  DCArrayKokkos <double> elem_user_output_vars;
+
+  //material models
+  DCArrayKokkos <eos_t> elem_eos;
+  DCArrayKokkos <strength_t> elem_strength;
 
   // Dual Views of the corner struct variables
   DViewCArrayKokkos <double> corner_force;
@@ -634,10 +597,6 @@ public:
   //Global arrays with collected data used to print
   int output_velocity_index, output_strain_index, output_stress_index;
   
-  //file parameters
-  DCArrayKokkos <STRENGTH_SETUP> read_from_file;
-  DCArrayKokkos <double>file_state_vars;
-
   //parameters
   double time_value, time_final, dt, dt_max, dt_min, dt_cfl, graphics_time, graphics_dt_ival;
   size_t graphics_cyc_ival, cycle_stop, rk_num_stages, graphics_id;

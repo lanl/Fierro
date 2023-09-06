@@ -1,4 +1,4 @@
-solver_type: SGH
+solver_type: Explicit
 
 num_dims: 3
 time_variables:
@@ -18,6 +18,9 @@ output_options:
     graphics_step: 0.25
     output_file_format: vtk 
 
+fea_modules:
+  - type: SGH
+
 material_options:
     #eos model is required
   - eos_model_type: ideal_gas
@@ -26,7 +29,7 @@ material_options:
     q2: 0
     q1ex: 1.0
     q2ex: 0.0
-    state_vars:
+    global_vars:
       - 1.666666666666667
       - 1.0E-14
       - 1.0

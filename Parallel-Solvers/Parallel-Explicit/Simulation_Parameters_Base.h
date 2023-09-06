@@ -47,44 +47,9 @@
 #include "state.h"
 #include "yaml-serializable.h"
 #include "Simulation_Parameters.h"
-#include "user_material_functions.h"
+#include "material_t.h"
 
 using namespace mtr;
-
-// TODO: This should be in some header or something.
-//eos forward declaration
-typedef void eos_function_type(
-  const DViewCArrayKokkos <double> &elem_pres,
-  const DViewCArrayKokkos <double> &elem_stress,
-  const size_t elem_gid,
-  const size_t mat_id,
-  const DViewCArrayKokkos <double> &elem_state_vars,
-  const DCArrayKokkos <double> &global_vars,
-  const DViewCArrayKokkos <double> &elem_sspd,
-  const double den,
-  const double sie);
-KOKKOS_FUNCTION eos_function_type ideal_gas;
-
-typedef void strength_function_type(
-  const DViewCArrayKokkos <double> &elem_pres,
-  const DViewCArrayKokkos <double> &elem_stress,
-  const size_t elem_gid,
-  const size_t mat_id,
-  const DViewCArrayKokkos <double> &elem_state_vars,
-  const DCArrayKokkos <double> &global_vars,
-  const DViewCArrayKokkos <double> &elem_sspd,
-  const double den,
-  const double sie,
-  const ViewCArrayKokkos <double> &vel_grad,
-  const ViewCArrayKokkos <size_t>  &elem_node_gids,
-  const DViewCArrayKokkos <double> &node_coords,
-  const DViewCArrayKokkos <double> &node_vel,
-  const double vol,
-  const double dt,
-  const double alpha,
-  const size_t cycle,
-  const size_t rk_level);
-KOKKOS_FUNCTION strength_function_type user_strength_model;
 
 
 SERIALIZABLE_ENUM(VOLUME_TAG,
@@ -94,6 +59,13 @@ SERIALIZABLE_ENUM(VOLUME_TAG,
     sphere    // tag all cells inside a sphere
 )
 
+SERIALIZABLE_ENUM(TIME_OUTPUT_LEVEL,
+    none,   // output no time sequence information of forward solve
+    low,      // output just final timestep of forward solve
+    high, // output time sequence for forward solve
+    extreme    // output time sequence for all phases of solver
+)
+
 SERIALIZABLE_ENUM(BOUNDARY_HYDRO_CONDITION,
     fixed,        // zero velocity
     reflected,    // reflected or wall condition
@@ -101,6 +73,11 @@ SERIALIZABLE_ENUM(BOUNDARY_HYDRO_CONDITION,
     pressure,     // constant pressure
     acceleration, // constant acceleration
     contact       // contact surface
+)
+
+SERIALIZABLE_ENUM(LOADING_HYDRO_CONDITION,
+    body_force,
+    surface_force
 )
 
 SERIALIZABLE_ENUM(VELOCITY_TYPE,
@@ -115,14 +92,9 @@ SERIALIZABLE_ENUM(VELOCITY_TYPE,
     tg_vortex
 )
 
-SERIALIZABLE_ENUM(EOS_MODEL, ideal_gas, user_eos_model)
-SERIALIZABLE_ENUM(STRENGTH_MODEL, none, user_strength_model)
-SERIALIZABLE_ENUM(STRENGTH_TYPE, none, hypo, hyper)
-SERIALIZABLE_ENUM(STRENGTH_SETUP, input, user_input)
-SERIALIZABLE_ENUM(RUN_LOCATION, host, device)
-
 struct Time_Variables : Yaml::DerivedFields {
     double time_final = 1.0;
+    double time_initial = 0.0;
     double dt_min     = 1e-8;
     double dt_max     = 1e-2;
     double dt_start   = 1e-5;
@@ -131,6 +103,7 @@ struct Time_Variables : Yaml::DerivedFields {
     double fuzz       = 1e-16; // machine precision
     double tiny       = 1e-12; // very very small (between real_t and single)
     double small      = 1e-8;  // single precision
+    TIME_OUTPUT_LEVEL output_time_sequence_level = TIME_OUTPUT_LEVEL::high;
 
     // Non-serialized Fields
     double dt;
@@ -138,73 +111,56 @@ struct Time_Variables : Yaml::DerivedFields {
       dt = dt_start;
     }
 };
-IMPL_YAML_SERIALIZABLE_FOR(Time_Variables, 
-  time_final, dt_min, dt_max, dt_start, dt_cfl,
+IMPL_YAML_SERIALIZABLE_FOR(Time_Variables, output_time_sequence_level,
+  time_initial, time_final, dt_min, dt_max, dt_start, dt_cfl,
   cycle_stop, fuzz, tiny, small
 )
 
+struct volume_t {
+    VOLUME_TAG volume = VOLUME_TAG::sphere;
+    VELOCITY_TYPE velocity = VELOCITY_TYPE::cartesian;
+    double radius1, radius2;
+    double u,v,w;
+    double speed;
+    double sie;
+    double den;
+    
+    // TODO: These aren't set from the YAML at all
+    // They are only set in the test problems.
+    double x1, x2, y1, y2, z1, z2;
+    
+    KOKKOS_FUNCTION
+    bool contains(const double* elem_coords) { 
+      double radius;
 
-struct material_t {
-  EOS_MODEL eos_model_type           = EOS_MODEL::ideal_gas;
-  STRENGTH_TYPE strength_type        = STRENGTH_TYPE::none;
-  STRENGTH_SETUP strength_setup      = STRENGTH_SETUP::input;
-  STRENGTH_MODEL strength_model_type = STRENGTH_MODEL::none;
-  RUN_LOCATION strength_run_location = RUN_LOCATION::host;
+      switch(volume)
+      {
+        case VOLUME_TAG::global:
+          return true;
 
-  double q1;
-  double q2;
-  double q1ex;
-  double q2ex;
-  
-  size_t num_state_vars = 0;
-  size_t num_global_vars = 0;
-      
-  eos_function_type* eos_model = NULL;
-  strength_function_type* strength_model = NULL;
-  
-  KOKKOS_FUNCTION
-  void derive_function_pointers_no_exec() {
-    switch (eos_model_type) {
-      case EOS_MODEL::ideal_gas:
-        eos_model = ideal_gas;
-        break;
-      default:
-        break;
+        case VOLUME_TAG::box:
+          return ( elem_coords[0] >= x1 && elem_coords[0] <= x2
+                && elem_coords[1] >= y1 && elem_coords[1] <= y2
+                && elem_coords[2] >= z1 && elem_coords[2] <= z2 );
+
+        case VOLUME_TAG::cylinder:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] ); 
+          return ( radius >= radius1
+                && radius <= radius2 );
+
+        case VOLUME_TAG::sphere:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] +
+                         elem_coords[2]*elem_coords[2] );
+          return ( radius >= radius1
+                && radius <= radius2 );
+        
+        default:
+          return false;
+      }
     }
-
-    switch (strength_model_type) {
-      case STRENGTH_MODEL::user_strength_model:
-        strength_model = user_strength_model;
-        break;
-      default:
-        break;
-    }
-  }
-
-  void derive_function_pointers() {
-    derive_function_pointers_no_exec();
-    if (eos_model == NULL) {
-      throw Yaml::ConfigurationException("Unsupported EOS MODEL type: " + to_string(eos_model_type));
-    }
-  }
 };
-
-struct Material : Yaml::DerivedFields, material_t {
-  std::vector<double> state_vars;
-  std::vector<double> global_vars;
-
-  void derive() {
-    num_state_vars = state_vars.size();
-    num_global_vars = global_vars.size();
-    derive_function_pointers();
-  }
-};
-IMPL_YAML_SERIALIZABLE_FOR(Material, 
-  eos_model_type, strength_model_type, strength_type, strength_setup, 
-  strength_run_location,
-  q1, q2, q1ex, q2ex, 
-  state_vars, global_vars
-)
 
 struct mat_fill_t {
     size_t mat_id;
@@ -252,6 +208,7 @@ struct mat_fill_t {
       }
     }
 };
+
 struct MaterialFill : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
     std::optional<double> sie;
     std::optional<double> u;
@@ -355,6 +312,113 @@ struct Boundary : Yaml::ValidatedYaml, Yaml::DerivedFields, boundary_t {
     }
 };
 IMPL_YAML_SERIALIZABLE_FOR(Boundary, id, surface, value, condition_type, u, v, w)
+
+struct loading_t {
+    LOADING_HYDRO_CONDITION condition_type = LOADING_HYDRO_CONDITION::body_force;
+    BOUNDARY_TAG surface = BOUNDARY_TAG::sphere;
+    VOLUME_TAG volume = VOLUME_TAG::sphere;
+    double value;
+    double fx, fy, fz;
+    double radius_inner, radius_outer;
+    double xlo, xhi, ylo, yhi, zlo, zhi;
+    double origin_x, origin_y, origin_z;
+
+    KOKKOS_FUNCTION
+    bool contains(const double* elem_coords) { 
+      double radius;
+
+      switch(volume)
+      {
+        case VOLUME_TAG::global:
+          return true;
+
+        case VOLUME_TAG::box:
+          return ( elem_coords[0] >= xlo && elem_coords[0] <= xhi
+                && elem_coords[1] >= ylo && elem_coords[1] <= yhi
+                && elem_coords[2] >= zlo && elem_coords[2] <= zhi );
+
+        case VOLUME_TAG::cylinder:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] ); 
+          return ( radius >= radius_inner
+                && radius <= radius_outer );
+
+        case VOLUME_TAG::sphere:
+          radius = sqrt( elem_coords[0]*elem_coords[0] +
+                         elem_coords[1]*elem_coords[1] +
+                         elem_coords[2]*elem_coords[2] );
+          return ( radius >= radius_inner
+                && radius <= radius_outer );
+        
+        default:
+          return false;
+      }
+    }
+    
+    KOKKOS_FUNCTION
+    size_t planar_surface_index() {
+      switch (surface) {
+        case BOUNDARY_TAG::x_plane:
+          return 0;
+        case BOUNDARY_TAG::y_plane:
+          return 1;
+        case BOUNDARY_TAG::z_plane:
+          return 2;
+        default:
+          // Not sure what to do about this error case, since we can't
+          // throw on the device.
+          return -1;
+      }
+    }
+};
+
+struct Loading : Yaml::ValidatedYaml, Yaml::DerivedFields, loading_t {
+    std::string id;
+    std::optional<double> fx, fy, fz;
+    std::optional<double> xlo, xhi, ylo, yhi, zlo, zhi;
+    std::optional<double> radius_inner, radius_outer;
+    std::optional<double> origin_x, origin_y, origin_z;
+
+    void derive() {
+      loading_t::fx = fx.value_or(0);
+      loading_t::fy = fy.value_or(0);
+      loading_t::fz = fz.value_or(0);
+      loading_t::xlo = xlo.value_or(0);
+      loading_t::xhi = xhi.value_or(0);
+      loading_t::ylo = ylo.value_or(0);
+      loading_t::yhi = yhi.value_or(0);
+      loading_t::zlo = zlo.value_or(0);
+      loading_t::zhi = zhi.value_or(0);
+      loading_t::radius_inner = radius_inner.value_or(0);
+      loading_t::radius_outer = radius_outer.value_or(0);
+      loading_t::origin_x = origin_x.value_or(0);
+      loading_t::origin_y = origin_y.value_or(0);
+      loading_t::origin_z = origin_z.value_or(0);
+    }
+
+    void validate() {
+      if ( (fx.has_value() || fy.has_value() || fz.has_value())
+          && condition_type != LOADING_HYDRO_CONDITION::body_force) {
+        std::cerr << "Warning: force values (fx, fy, fz) ignored for loading condition type " << to_string(condition_type) << "." << std::endl;
+      }
+
+      if (condition_type == LOADING_HYDRO_CONDITION::body_force) {
+        switch (volume) {
+          case VOLUME_TAG::sphere:
+          case VOLUME_TAG::box:
+          case VOLUME_TAG::cylinder:
+          case VOLUME_TAG::global:
+            break;
+          default:
+            throw Yaml::ConfigurationException(
+              "Invalid volume type `" + to_string(surface) + 
+              "` with loading condition type of `" + to_string(condition_type) + "`."
+            );
+        }
+      }
+    }
+};
+IMPL_YAML_SERIALIZABLE_FOR(Loading, id, surface, volume, value, condition_type, fx, fy, fz, xlo, xhi, ylo, yhi, zlo, zhi, radius_inner, radius_outer, origin_x, origin_y, origin_z);
 
 struct Graphics_Options : Yaml::DerivedFields {
   bool output_velocity_flag = true;

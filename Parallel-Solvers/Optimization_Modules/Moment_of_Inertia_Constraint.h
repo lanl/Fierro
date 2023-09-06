@@ -99,7 +99,7 @@ private:
   //Teuchos::RCP<MV> center_of_mass_gradients_distributed;
   //Teuchos::RCP<MV> mass_gradients_distributed;
   real_t initial_moment_of_inertia, initial_Mxx, initial_Myy, initial_Mzz;
-  bool inequality_flag_;
+  bool inequality_flag_, use_initial_coords_;
   real_t constraint_value_;
   real_t current_mass;
   real_t current_center_of_mass[3];
@@ -119,12 +119,13 @@ public:
   int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Inertial";
 
-  MomentOfInertiaConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int inertia_component, real_t constraint_value = 0, bool inequality_flag=true) 
+  MomentOfInertiaConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int inertia_component, real_t constraint_value = 0, bool inequality_flag=true, bool use_initial_coords=false) 
   {
     
     FEM_ = dynamic_cast<FEA_Module_Inertial*>(FEM);
     if(inertia_component > 5) { std::cout << "SPECIFIED MOMENT OF INERTIA CONSTRAINT COMPONENT CANNOT EXCEED 5" << std::endl; }
     nodal_density_flag_ = nodal_density_flag;
+    use_initial_coords_ = use_initial_coords;
     last_comm_step = last_solve_step = -1;
     current_step = 0;
     inequality_flag_ = inequality_flag;
@@ -157,7 +158,7 @@ public:
 
     if(FEM_->mass_init) { initial_mass = FEM_->mass; }
     else{
-      FEM_->compute_element_masses(design_densities,true);
+      FEM_->compute_element_masses(design_densities,true,use_initial_coords_);
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
       FEM_->mass = initial_mass = ROL_Element_Masses->reduce(sumreduc);
@@ -204,7 +205,7 @@ public:
 
     if(FEM_->com_init[com1]) { initial_center_of_mass[com1] = FEM_->center_of_mass[com1]; }
     else{
-      FEM_->compute_element_moments(design_densities,true, com1);
+      FEM_->compute_element_moments(design_densities,true, com1, use_initial_coords_);
 
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
@@ -222,7 +223,7 @@ public:
 
     if(FEM_->com_init[com2]) { initial_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
     else{
-      FEM_->compute_element_moments(design_densities,true, com2);
+      FEM_->compute_element_moments(design_densities,true, com2, use_initial_coords_);
 
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
@@ -232,22 +233,22 @@ public:
     }
     
     
-    FEM_->compute_element_moments_of_inertia(design_densities,true, inertia_component_);
+    FEM_->compute_element_moments_of_inertia(design_densities,true, inertia_component_, use_initial_coords_);
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
     initial_moment_of_inertia = ROL_Element_Moments_of_Inertia->reduce(sumreduc);
 
     if(inertia_component_ == 3){
-      FEM_->compute_element_moments_of_inertia(design_densities,true, 0);
+      FEM_->compute_element_moments_of_inertia(design_densities,true, 0, use_initial_coords_);
       initial_Mxx = ROL_Element_Moments_of_Inertia_xx->reduce(sumreduc);
     }
     if(inertia_component_ == 4){
-      FEM_->compute_element_moments_of_inertia(design_densities,true, 0);
+      FEM_->compute_element_moments_of_inertia(design_densities,true, 0, use_initial_coords_);
       initial_Mxx = ROL_Element_Moments_of_Inertia_xx->reduce(sumreduc);
     }
     if(inertia_component_ == 5){
-      FEM_->compute_element_moments_of_inertia(design_densities,true, 2);
+      FEM_->compute_element_moments_of_inertia(design_densities,true, 2, use_initial_coords_);
       initial_Mzz = ROL_Element_Moments_of_Inertia_zz->reduce(sumreduc);
     }
     
@@ -298,7 +299,7 @@ public:
     real_t current_center_of_mass[3];
     update_com_and_mass(design_densities, current_mass, current_center_of_mass);
     
-    FEM_->compute_element_moments_of_inertia(design_densities,false,inertia_component_);
+    FEM_->compute_element_moments_of_inertia(design_densities,false,inertia_component_, use_initial_coords_);
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
@@ -426,7 +427,7 @@ public:
     }
     */
     
-    FEM_->compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_);
+    FEM_->compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_, use_initial_coords_);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
@@ -490,7 +491,7 @@ public:
     real_t current_center_of_mass[3];
     update_com_and_mass(design_densities, current_mass, current_center_of_mass);
     
-    FEM_->compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_);
+    FEM_->compute_moment_of_inertia_gradients(design_densities, constraint_gradients, inertia_component_, use_initial_coords_);
     
       if(inertia_component_ < 3){
         for(int i = 0; i < FEM_->nlocal_nodes; i++)
@@ -520,7 +521,7 @@ public:
     //compute mass
     if(FEM_->mass_update == current_step&&0) { current_mass = FEM_->mass; }
     else{
-      FEM_->compute_element_masses(design_densities,false);
+      FEM_->compute_element_masses(design_densities,false,use_initial_coords_);
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
       FEM_->mass = current_mass = ROL_Element_Masses->reduce(sumreduc);
@@ -532,7 +533,7 @@ public:
     
     if(FEM_->com_update[com1] == current_step&&0) { current_center_of_mass[com1] = FEM_->center_of_mass[com1]; }
     else{
-      FEM_->compute_element_moments(design_densities,false, com1);
+      FEM_->compute_element_moments(design_densities,false, com1,use_initial_coords_);
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
       current_moment = ROL_Element_Moments1->reduce(sumreduc);
@@ -542,7 +543,7 @@ public:
 
     if(FEM_->com_update[com2] = current_step&&0) { current_center_of_mass[com2] = FEM_->center_of_mass[com2]; }
     else{
-      FEM_->compute_element_moments(design_densities,false, com2);
+      FEM_->compute_element_moments(design_densities,false, com2,use_initial_coords_);
       //sum per element results across all MPI ranks
       ROL::Elementwise::ReductionSum<real_t> sumreduc;
       current_moment = ROL_Element_Moments2->reduce(sumreduc);

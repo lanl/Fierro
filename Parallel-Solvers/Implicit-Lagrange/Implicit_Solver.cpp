@@ -198,6 +198,10 @@ void Implicit_Solver::run(int argc, char *argv[]){
     //debug
     //return;
     init_maps();
+
+    //equate pointers for this solver
+    initial_node_coords_distributed = node_coords_distributed;
+    all_initial_node_coords_distributed = all_node_coords_distributed;
     
     std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
     
@@ -1432,7 +1436,7 @@ void Implicit_Solver::setup_optimization_problem(){
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][2]);
+        ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0]);
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Strain_Energy_Constraint){
         *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;

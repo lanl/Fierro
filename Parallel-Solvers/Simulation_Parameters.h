@@ -61,7 +61,7 @@ inline void validate_unique_vector(const std::vector<T>& vec, std::string err_ms
   }
 }
 
-SERIALIZABLE_ENUM(SOLVER_TYPE, SGH, Implicit)
+SERIALIZABLE_ENUM(SOLVER_TYPE, Explicit, Implicit)
 SERIALIZABLE_ENUM(MESH_FORMAT,
     ensight,
     tecplot,
@@ -69,11 +69,12 @@ SERIALIZABLE_ENUM(MESH_FORMAT,
     ansys_dat
 )
 
-SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk)
+SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk, vtu, none)
 SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
 
 SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
   Elasticity,
+  Dynamic_Elasticity,
   Heat_Conduction,
   SGH,
   Inertial,
@@ -143,12 +144,15 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
 };
 IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base)
 
-struct Output_Options {
+struct Output_Options : Yaml::DerivedFields {
   int graphics_step_frequency;
   double graphics_step;
   OUTPUT_FORMAT output_file_format;
+  size_t max_num_user_output_vars=0;
+  bool write_initial = true;
+  bool write_final = true;
 };
-IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format)
+IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format, write_initial, write_final, max_num_user_output_vars)
 
 
 SERIALIZABLE_ENUM(BOUNDARY_TAG, 
@@ -160,8 +164,8 @@ SERIALIZABLE_ENUM(BOUNDARY_TAG,
     readFile   // read from a file
 )
 
-SERIALIZABLE_ENUM(BOUNDARY_FEA_CONDITION, fixed_displacement, fixed_temperature)
-SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux)
+SERIALIZABLE_ENUM(BOUNDARY_FEA_CONDITION, fixed_displacement, fixed_temperature, fixed_velocity, reflection)
+SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux, body_force)
 SERIALIZABLE_ENUM(LOADING_SPECIFICATION, normal, coordinated)
 
 struct Loading_Condition : Yaml::ValidatedYaml {

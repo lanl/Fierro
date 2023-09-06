@@ -21,8 +21,7 @@
 #include "Simulation_Parameters_SGH.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
-#include "Explicit_Solver_SGH.h"
-#include "user_material_functions.h"
+#include "Explicit_Solver.h"
 
 
 // -----------------------------------------------------------------------------
@@ -40,7 +39,6 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                    const DViewCArrayKokkos <double> &elem_vol,
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
-                   const DViewCArrayKokkos <double> &elem_statev,
                    const double rk_alpha,
                    const size_t cycle
                    ){
@@ -366,7 +364,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++){
 
-                corner_vector_storage(corner_gid, dim) = -0.00001;
+                corner_vector_storage(corner_gid, dim) = -0.00000001;
                 //corner_vector_storage(corner_gid, dim) = 0;
 
             } // end loop over dimension
@@ -427,7 +425,6 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                    const DViewCArrayKokkos <double> &elem_vol,
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
-                   const DViewCArrayKokkos <double> &elem_statev,
                    const double rk_alpha,
                    const size_t cycle
                    ){
@@ -805,7 +802,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
 
 void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
-  size_t num_bdy_nodes = mesh.num_bdy_nodes;
+  size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
@@ -926,7 +923,6 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
                    const DViewCArrayKokkos <double> &elem_vol,
                    const DViewCArrayKokkos <double> &elem_div,
                    const DViewCArrayKokkos <size_t> &elem_mat_id,
-                   const DViewCArrayKokkos <double> &elem_statev,
                    const double rk_alpha,
                    const size_t cycle
                    ) {

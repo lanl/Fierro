@@ -163,7 +163,8 @@ public:
   MPI_Comm world; //stores the default communicator object (MPI_COMM_WORLD)
   Teuchos::RCP<Tpetra::Import<LO, GO>> importer; //all node comms
   Teuchos::RCP<Tpetra::Import<LO, GO>> ghost_importer; //ghost node comms
-  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //ghost node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> node_sorting_importer; //sorted node comms
+  Teuchos::RCP<Tpetra::Import<LO, GO>> element_sorting_importer; //sorted element comms
   Teuchos::RCP<Tpetra::Import<LO, GO>> dof_importer; //ghost dof comms
 
   //class Simulation_Parameters *simparam;
@@ -252,6 +253,7 @@ public:
   //file readin variables
   std::ifstream *in = NULL;
   std::streampos before_condition_header;
+  std::string filename;
   int words_per_line, elem_words_per_line;
   enum node_ordering_convention {IJK, ENSIGHT};
   node_ordering_convention active_node_ordering_convention;

@@ -1,4 +1,4 @@
-#include "Explicit_Solver_SGH.h"
+#include "Explicit_Solver.h"
 #include "Simulation_Parameters_SGH.h"
 #include "FEA_Module_SGH.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
@@ -80,53 +80,62 @@ get_design_density(
   bool topology_optimization_on,
   const Teuchos::RCP<Solver::MV> design_node_densities_distributed);
 
-
 void
-Explicit_Solver_SGH::write_outputs_new()
+Explicit_Solver::write_outputs()
 {
+  // No output for OUTPUT_FORMAT::none
+  if (simparam.output_options.output_file_format == OUTPUT_FORMAT::none)
+    return;
 
-  const size_t rk_level = simparam.rk_num_bins - 1;
+  Teuchos::RCP<CArray<double>> design_density;
+  Teuchos::RCP<CArray<int>> elem_switch;
+  Teuchos::RCP<CArray<int>> elem_proc_id;
+  Teuchos::RCP<CArray<int>> elem_gid;
+  Teuchos::RCP<CArray<double>> elem_speed;
 
-  // node "design_density"
-  auto design_density = get_design_density(map->getLocalNumElements(),
-    simparam_dynamic_opt.topology_optimization_on, design_node_densities_distributed);
-  point_data_scalars_double["design_density"] = design_density->pointer();  
+  for (const FIELD_OUTPUT_EXPLICIT& field_name : simparam.field_output) {
+    switch (field_name)
+    {
+      case FIELD_OUTPUT_EXPLICIT::design_density:
+        // node "design_density"
+        design_density = get_design_density(map->getLocalNumElements(),
+          simparam_dynamic_opt.topology_optimization_on, design_node_densities_distributed);
+        point_data_scalars_double["design_density"] = design_density->pointer();
+        break;
 
-  // node "velocity"
-  sgh_module->node_vel.update_host();
-  point_data_vectors_double["velocity"] = &sgh_module->node_vel.host(rk_level,0,0);
+      case FIELD_OUTPUT_EXPLICIT::speed:
+        // element "speed"
+        elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
+        cell_data_scalars_double["speed"] = elem_speed->pointer();
+        break;
 
-  // element "element_density"
-  sgh_module->elem_den.update_host();
-  cell_data_scalars_double["element_density"] = &sgh_module->elem_den.host(0);
-  
-  // element "pres"
-  sgh_module->elem_pres.update_host();
-  cell_data_scalars_double["pres"] = &sgh_module->elem_pres.host(0);
+      case FIELD_OUTPUT_EXPLICIT::element_switch:
+        // element "element_switch"
+        elem_switch = calculate_elem_switch(all_element_map);
+        cell_data_scalars_int["element_switch"] = elem_switch->pointer();
+        break;
 
-  // element "sie"
-  sgh_module->elem_sie.update_host();
-  cell_data_scalars_double["sie"] = &sgh_module->elem_sie.host(rk_level,0);
+      case FIELD_OUTPUT_EXPLICIT::processor_id:
+        // element "processor_id"
+        elem_proc_id = get_elem_proc_id(all_element_map, myrank);
+        cell_data_scalars_int["processor_id"] = elem_proc_id->pointer();
+        break;
 
-  // element "vol"
-  sgh_module->elem_vol.update_host();
-  cell_data_scalars_double["vol"] = &sgh_module->elem_vol.host(0);
+      case FIELD_OUTPUT_EXPLICIT::element_id:
+        // element "element_id"
+        elem_gid = get_elem_gid(all_element_map);
+        cell_data_scalars_int["element_id"] = elem_gid->pointer();
+        break;
 
-  // element "mass"
-  sgh_module->elem_mass.update_host();
-  cell_data_scalars_double["mass"] = &sgh_module->elem_mass.host(0);
+      default:
+        break;
 
-  // element "sspd"
-  sgh_module->elem_sspd.update_host();
-  cell_data_scalars_double["sspd"] = &sgh_module->elem_sspd.host(0);
+    } // end switch
+  } // end if
 
-  // element "speed"
-  auto elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
-  cell_data_scalars_double["speed"] = elem_speed->pointer();
-
-  // element "mat_id" //uncomment if needed (works fine)
-  //sgh_module->elem_mat_id.update_host();
-  //cell_data_scalars_int["mat_id"] = reinterpret_cast<int*>(&sgh_module->elem_mat_id.host(0));
+  for(int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules[imodule]->write_data(point_data_scalars_double, point_data_vectors_double, cell_data_scalars_double, cell_data_scalars_int, cell_data_fields_double);
+  }
 
   // element "elem_switch" //uncomment if needed (works fine)
   //auto elem_switch = calculate_elem_switch(all_element_map);
@@ -140,22 +149,14 @@ Explicit_Solver_SGH::write_outputs_new()
   //auto elem_gid = get_elem_gid(all_element_map);
   //cell_data_scalars_int["elem_gid"] = elem_gid->pointer();
 
-  // element "elem_statev" //uncomment if needed (works fine)
-  //sgh_module->elem_statev.update_host();
-  //cell_data_fields_double["elem_statev"] = std::make_pair(&sgh_module->elem_statev.host(0,0), 
-  //                                                        sgh_module->elem_statev.dims(1));
 
-  // element "stress" //uncomment if needed (works fine)
-  //sgh_module->elem_stress.update_host();
-  //cell_data_fields_double["stress"] = std::make_pair(&sgh_module->elem_stress.host(rk_level,0,0,0), 9);
-
-  switch (output_file_format)
+  switch (simparam.output_options.output_file_format)
   {
-    case output_file_format_type::VTK:
+    case OUTPUT_FORMAT::vtk:
       parallel_vtk_writer_new();
       break;
 
-    case output_file_format_type::VTU:
+    case OUTPUT_FORMAT::vtu:
       parallel_vtu_writer_new();
       break;
 
@@ -165,7 +166,7 @@ Explicit_Solver_SGH::write_outputs_new()
 }
 
 void
-Explicit_Solver_SGH::parallel_vtu_writer_new()
+Explicit_Solver::parallel_vtu_writer_new()
 {
   /* to be added... */
   throw std::runtime_error("parallel_vtu_writer_new() not yet implemented. use parallel_vtk_writer_new()");
@@ -190,9 +191,8 @@ construct_file_name(
 }
 
 void
-Explicit_Solver_SGH::parallel_vtk_writer_new()
+Explicit_Solver::parallel_vtk_writer_new()
 {
-  const size_t rk_level = simparam.rk_num_bins - 1;
 
   int num_dim = simparam.num_dims;
   std::stringstream str_stream;
@@ -255,9 +255,13 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
-  sgh_module->node_coords.update_host();
-  sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-    &sgh_module->node_coords.host(rk_level,0,0), map, num_dim, num_nodes, world, myfile_parallel);
+  //sgh_module->node_coords.update_host();
+  { //view scope
+  host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  double* coord_data = node_coords.data();
+  sort_and_write_data_to_file_mpi_all <array_layout,double,LO,GO,node_type> (
+    coord_data, map, num_dim, num_nodes, world, myfile_parallel);
+  }
 
 
   /*************** write CELLS ***************/
@@ -267,7 +271,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
   if(myrank == 0) {
     MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(), str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
-  CArray <size_t> nodes_in_elem (sgh_module->nodes_in_elem.dims(0), sgh_module->nodes_in_elem.dims(1));
+  CArray <size_t> nodes_in_elem (rnum_elem, max_nodes_per_element);
   { //view scope
     auto host_view = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     for (size_t ielem = 0; ielem < nodes_in_elem.dims(0); ielem++) {
@@ -396,7 +400,7 @@ Explicit_Solver_SGH::parallel_vtk_writer_new()
 
 
   /*************** write .vtk.series file ***************/
-  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = simparam.time_value;
+  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = time_value;
   if (myrank == 0) {
     FILE *myfile;
     std::string filename = vtk_dir + "outputs.vtk.series";

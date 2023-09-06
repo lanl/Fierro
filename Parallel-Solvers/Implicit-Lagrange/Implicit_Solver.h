@@ -176,7 +176,7 @@ public:
   //division functor
   class ElementWiseDivide {
     public:
-      static_assert (vec_array::Rank == 2, "ViewType1 must be a rank-2 "
+      static_assert (vec_array::rank == 2, "ViewType1 must be a rank-2 "
                   "Kokkos::View in order to use this specialization.");
 
       ElementWiseDivide (const vec_array& X,
@@ -220,7 +220,7 @@ public:
   //multiplication functor
   class ElementWiseMultiply {
     public:
-      static_assert (vec_array::Rank == 2, "ViewType1 must be a rank-2 "
+      static_assert (vec_array::rank == 2, "ViewType1 must be a rank-2 "
                  "Kokkos::View in order to use this specialization.");
 
       ElementWiseMultiply (const vec_array& X,

@@ -14,9 +14,9 @@ target_link_libraries (
     yaml_serializable
 )
 
-# New User Material Interface
-include_directories(User-Material-Interface)
-add_subdirectory(User-Material-Interface)
+# Material Models
+include_directories(Material-Models)
+add_subdirectory(Material-Models)
 
 if(BUILD_IMPLICIT_SOLVER)
     add_subdirectory(Implicit-Lagrange)

@@ -51,17 +51,17 @@ public:
 
   void compute_element_volumes();
 
-  void compute_element_masses(const_host_vec_array design_densities, bool max_flag);
+  void compute_element_masses(const_host_vec_array design_densities, bool max_flag, bool use_initial_coords = false);
 
-  void compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component);
+  void compute_element_moments(const_host_vec_array design_densities, bool max_flag, int moment_component, bool use_initial_coords = false);
 
-  void compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component);
+  void compute_element_moments_of_inertia(const_host_vec_array design_densities, bool max_flag, int inertia_component, bool use_initial_coords = false);
 
-  void compute_nodal_gradients(const_host_vec_array design_densities, host_vec_array gradients);
+  void compute_nodal_gradients(const_host_vec_array design_densities, host_vec_array gradients, bool use_initial_coords = false);
 
-  void compute_moment_gradients(const_host_vec_array design_densities, host_vec_array gradients, int moment_component);
+  void compute_moment_gradients(const_host_vec_array design_densities, host_vec_array gradients, int moment_component, bool use_initial_coords = false);
 
-  void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component);
+  void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component, bool use_initial_coords = false);
   
   //forward declare
   Simulation_Parameters_Inertial simparam;
@@ -84,6 +84,8 @@ public:
 
   //inertial properties
   real_t mass, center_of_mass[3], moments_of_inertia[6];
+
+  bool use_initial_density; //if density variable is from initial configuration then jacobian is not needed
 
   //runtime flags
   bool mass_init, com_init[3];
