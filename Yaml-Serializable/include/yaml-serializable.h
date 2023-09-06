@@ -89,12 +89,15 @@ namespace Yaml {
     void validate(T& v) {
         v.T::validate();
     }
+    
+    template<typename T>
+    void validate_required_fields(Yaml::Node& node) { }
 
     template<typename T> void serialize(const T& v, Yaml::Node& node);
-    template<typename T> void deserialize(T& v, Yaml::Node& node);
+    template<typename T> void deserialize(T& v, Yaml::Node& node, bool raw=false);
 
     template<>
-    inline void deserialize<bool>(bool& v, Yaml::Node& node) {
+    inline void deserialize<bool>(bool& v, Yaml::Node& node, bool raw) {
         if (!node.IsNone()) 
             v = node.As<bool>();
     }
@@ -102,6 +105,46 @@ namespace Yaml {
     inline void serialize<bool>(const bool& v, Yaml::Node& node) {
         node = v ? "True" : "False";
     }
+
+    namespace {
+        inline void to(Node& node) { }
+        
+        template<typename First, typename... Rest>
+        inline void to(Node& node, const First& v1, const Rest&... args) {
+            serialize(v1, node);
+            to(node, args...);
+        }
+
+        inline void from(Node& node) { }
+        template<typename First, typename... Rest>
+        inline void from(Node& node, First& v1, Rest&... args) {
+            deserialize(v1, node);
+            from(node, args...);
+        }
+        
+        inline void from_raw(Node& node) { }
+        template<typename First, typename... Rest>
+        inline void from_raw(Node& node, First& v1, Rest&... args) {
+            deserialize(v1, node, true);
+            from_raw(node, args...);
+        }
+
+        template<typename... Types>
+        inline void strict_validation(Node& node, Types&... args) {
+            from_raw(node, args...);
+
+            Node re_serialized;
+            to(re_serialized, args...);
+            validate_subset(re_serialized, node);
+        }
+    
+        template<typename First, typename... Rest>
+        inline void from_strict(Node& node, First& v1, Rest&... args) {
+            strict_validation(node, v1, args...);
+            from(node, v1, args...);
+        }
+    }
+
 
     /**
      * Implements direct string serialization for Yaml Serializable objects.
@@ -112,7 +155,7 @@ namespace Yaml {
      * the last struct's field will overwrite the previous struct's field.
     */
     template<typename First, typename... Rest>
-    std::string to_string(const First& v, const Rest&... args) {
+    inline std::string to_string(const First& v, const Rest&... args) {
         Node node;
         to(node, v, args...);
         std::string out;
@@ -120,36 +163,11 @@ namespace Yaml {
         return out;
     }
 
-    void from(Node& node) { }
-
-    template<typename First, typename... Rest>
-    void from(Node& node, First& v1, Rest&... args) {
-        deserialize(v1, node);
-        from(node, args...);
-    }
-  
-    template<typename First, typename... Rest>
-    void from_strict(Node& node, First& v1, Rest&... args) {
-        from(node, v1, args...);
-
-        Node re_serialized;
-        to(re_serialized, v1, args...);
-        validate_subset(re_serialized, node);
-    }
-    
-    void to(Node& node) { }
-    
-    template<typename First, typename... Rest>
-    void to(Node& node, const First& v1, const Rest&... args) {
-        serialize(v1, node);
-        to(node, args...);
-    }
-
     /**
      * For convenience, implement a from_string method for serilizable objects.
     */
     template<typename T>
-    T from_string(const std::string& s) {
+    inline T from_string(const std::string& s) {
         Node node;
         Parse(node, s);
         T v;
@@ -164,7 +182,7 @@ namespace Yaml {
      * were not used when creating the object.
     */
     template<typename T>
-    T from_string_strict(const std::string& s) {
+    inline T from_string_strict(const std::string& s) {
         Node node;
         Parse(node, s);
         T v;
@@ -181,7 +199,7 @@ namespace Yaml {
      * A single field from the Yaml may be loaded to multiple structs.
     */
     template<typename First, typename... Rest>
-    void from_string(const std::string& s, First& v1, Rest&... args) {
+    inline void from_string(const std::string& s, First& v1, Rest&... args) {
         Node node;
         Parse(node, s);
         from(node, v1, args...);
@@ -199,7 +217,7 @@ namespace Yaml {
      * were not used when creating any of the objects.
     */
     template<typename First, typename... Rest>
-    void from_string_strict(const std::string& s, First& v1, Rest&... args) {
+    inline void from_string_strict(const std::string& s, First& v1, Rest&... args) {
         Node node;
         Parse(node, s);
         from_strict(node, v1, args...);
@@ -210,7 +228,7 @@ namespace Yaml {
      * object.
     */
     template<typename T>
-    T from_file(const std::string& filename) {
+    inline T from_file(const std::string& filename) {
         Node node;
         // Pass c_str to get the file reading functionality.
         // If its a string it will just parse it directly.
@@ -228,7 +246,7 @@ namespace Yaml {
      * were not used when creating the object.
     */
     template<typename T>
-    T from_file_strict(const std::string& filename) {
+    inline T from_file_strict(const std::string& filename) {
         Node node;
         // Pass c_str to get the file reading functionality.
         // If its a string it will just parse it directly.
@@ -247,7 +265,7 @@ namespace Yaml {
      * A single field from the Yaml may be loaded to multiple structs.
     */
     template<typename First, typename... Rest>
-    void from_file(const std::string& filename, First& v1, Rest&... args) {
+    inline void from_file(const std::string& filename, First& v1, Rest&... args) {
         Node node;
         // Pass c_str to get the file reading functionality.
         // If its a string it will just parse it directly.
@@ -267,20 +285,14 @@ namespace Yaml {
      * were not used when creating any of the objects.
     */
     template<typename First, typename... Rest>
-    void from_file_strict(const std::string& filename, First& v1, Rest&... args) {
+    inline void from_file_strict(const std::string& filename, First& v1, Rest&... args) {
         Node node;
         // Pass c_str to get the file reading functionality.
         // If its a string it will just parse it directly.
         Parse(node, filename.c_str());
-        from(node, v1, args...);
-        
-        Node re_serialized;
-        to(re_serialized, v1, args...);
-        validate_subset(re_serialized, node);
+        from_strict(node, v1, args...);
     }
     
-    template<typename T>
-    void validate_required_fields(Yaml::Node& node) { }
 }
 
 namespace {
@@ -293,7 +305,7 @@ namespace {
 
     template<typename T, int N = 0>
     struct Impl {
-        static void deserialize(T& v, Yaml::Node& node) {
+        static void deserialize(T& v, Yaml::Node& node, bool raw) {
             if (!node.IsNone()) 
                 v = node.As<T>();
         }
@@ -312,11 +324,11 @@ namespace {
     */
     template<typename T>
     struct Impl<std::vector<T>> {
-        static void deserialize(std::vector<T>& v, Yaml::Node& node) {
+        static void deserialize(std::vector<T>& v, Yaml::Node& node, bool raw) {
             v.clear();
             for(size_t i = 0; i < node.Size(); i++) {
                 T item;
-                Yaml::deserialize(item, node[i]);
+                Yaml::deserialize(item, node[i], raw);
                 v.push_back(item);
             }
         }
@@ -335,10 +347,10 @@ namespace {
     */
     template<typename T>
     struct Impl<std::optional<T>> {
-        static void deserialize(std::optional<T>& v, Yaml::Node& node) {
+        static void deserialize(std::optional<T>& v, Yaml::Node& node, bool raw) {
             if (!node.IsNone()) {
                 T inner_value;
-                Yaml::deserialize(inner_value, node);
+                Yaml::deserialize(inner_value, node, raw);
                 v = inner_value;
             } 
         }
@@ -358,12 +370,12 @@ namespace {
     */
     template<typename T>
     struct Impl<std::set<T>> {
-        static void deserialize(std::set<T>& v, Yaml::Node& node) {
+        static void deserialize(std::set<T>& v, Yaml::Node& node, bool raw) {
             if (node.IsNone()) return;
             v.clear();
             for(size_t i = 0; i < node.Size(); i++) {
                 T item;
-                Yaml::deserialize(item, node[i]);
+                Yaml::deserialize(item, node[i], raw);
                 v.insert(item);
             }
         }
@@ -382,8 +394,8 @@ namespace Yaml {
     }
 
     template<typename T>
-    void deserialize(T& v, Yaml::Node& node) {
-        Impl<T>::deserialize(v, node);
+    void deserialize(T& v, Yaml::Node& node, bool raw) {
+        Impl<T>::deserialize(v, node, raw);
     }
 }
 
@@ -400,39 +412,39 @@ namespace Yaml {
  * The first argument should be the enum name. Subsequent arguments should
  * be the enum values.
 */
-#define SERIALIZABLE_ENUM(CLASS_TYPE, ...)                                          \
-    enum class CLASS_TYPE {                                                         \
-        __VA_ARGS__                                                                 \
-    };                                                                              \
-    inline void from_string(const std::string& s, CLASS_TYPE& v) {                  \
-        using class_name = CLASS_TYPE;                                              \
-        std::map<std::string, CLASS_TYPE> map MAP_INITIALIZER(__VA_ARGS__)          \
-        v = Yaml::validate_map(s, map);                                             \
-    }                                                                               \
-    inline std::string to_string(const CLASS_TYPE& v) {                             \
-        const std::vector<std::string> map VECTOR_INITIALIZER(__VA_ARGS__)          \
-        return map[(int)v];                                                         \
-    }                                                                               \
-    namespace Yaml {                                                                \
-        template<>                                                                  \
-        inline void deserialize<CLASS_TYPE>(CLASS_TYPE& v, Yaml::Node& node) {      \
-            if (node.IsNone()) return;                                              \
-            from_string(node.As<std::string>(), v);                                 \
-        }                                                                           \
-        template<>                                                                  \
-        inline void serialize<CLASS_TYPE>(const CLASS_TYPE& v, Yaml::Node& node) {  \
-            node = to_string(v);                                                    \
-        }                                                                           \
-    }                                                                               \
-    inline std::ostream& operator<<(std::ostream & os, const CLASS_TYPE& v) {       \
-        return os << to_string(v);                                                  \
-    }                                                                               \
-    inline std::istream& operator>>(std::istream & is, CLASS_TYPE& v) {             \
-        std::string s;                                                              \
-        is >> s;                                                                    \
-        from_string(s, v);                                                          \
-        return is;                                                                  \
-    }                                                                               \
+#define SERIALIZABLE_ENUM(CLASS_TYPE, ...)                                                    \
+    enum class CLASS_TYPE {                                                                   \
+        __VA_ARGS__                                                                           \
+    };                                                                                        \
+    inline void from_string(const std::string& s, CLASS_TYPE& v) {                            \
+        using class_name = CLASS_TYPE;                                                        \
+        std::map<std::string, CLASS_TYPE> map MAP_INITIALIZER(__VA_ARGS__)                    \
+        v = Yaml::validate_map(s, map);                                                       \
+    }                                                                                         \
+    inline std::string to_string(const CLASS_TYPE& v) {                                       \
+        const std::vector<std::string> map VECTOR_INITIALIZER(__VA_ARGS__)                    \
+        return map[(int)v];                                                                   \
+    }                                                                                         \
+    namespace Yaml {                                                                          \
+        template<>                                                                            \
+        inline void deserialize<CLASS_TYPE>(CLASS_TYPE& v, Yaml::Node& node, bool raw) {      \
+            if (node.IsNone()) return;                                                        \
+            from_string(node.As<std::string>(), v);                                           \
+        }                                                                                     \
+        template<>                                                                            \
+        inline void serialize<CLASS_TYPE>(const CLASS_TYPE& v, Yaml::Node& node) {            \
+            node = to_string(v);                                                              \
+        }                                                                                     \
+    }                                                                                         \
+    inline std::ostream& operator<<(std::ostream & os, const CLASS_TYPE& v) {                 \
+        return os << to_string(v);                                                            \
+    }                                                                                         \
+    inline std::istream& operator>>(std::istream & is, CLASS_TYPE& v) {                       \
+        std::string s;                                                                        \
+        is >> s;                                                                              \
+        from_string(s, v);                                                                    \
+        return is;                                                                            \
+    }                                                                                         \
 
 
 namespace Yaml {
@@ -489,12 +501,12 @@ namespace Yaml {
     // This means that the exception contains the path to the node.
     // TODO: Probably should have another constructor here that keeps track of the
     // nested fields. Then we can give a pretty slick error message.
-    #define YAML_DESERIALIZE_IMPL(FIELD)                                                                          \
-        try {                                                                                                     \
-            Yaml::deserialize(obj.FIELD, node[#FIELD]);                                                           \
-        } catch (const Yaml::ConfigurationException& e) {                                                         \
-            throw Yaml::ConfigurationException(e, #FIELD);                                                        \
-        }                                                                                                         \
+    #define YAML_DESERIALIZE_IMPL(FIELD)                        \
+        try {                                                   \
+            Yaml::deserialize(obj.FIELD, node[#FIELD], raw);    \
+        } catch (const Yaml::ConfigurationException& e) {       \
+            throw Yaml::ConfigurationException(e, #FIELD);      \
+        }                                                       \
     
     #define YAML_SERIALIZE(...) SWITCH(ISEMPTY(__VA_ARGS__))(YAML_SERIALIZE_IMPL, NOOP)(__VA_ARGS__)
     #define YAML_DESERIALIZE(...) SWITCH(ISEMPTY(__VA_ARGS__))(YAML_DESERIALIZE_IMPL, NOOP)(__VA_ARGS__)
@@ -526,24 +538,26 @@ namespace Yaml {
  * };
  * IMPL_YAML_SERIALIZABLE_FOR(MyStruct, my_field)
 */
-#define IMPL_YAML_SERIALIZABLE_FOR(CLASS_NAME, ...)                                 \
-    namespace Yaml {                                                                \
-        template<>                                                                  \
-        inline void serialize<CLASS_NAME>(const CLASS_NAME& obj, Yaml::Node& node) {\
-            MAP(YAML_SERIALIZE, __VA_ARGS__)                                        \
-        }                                                                           \
-        template<>                                                                  \
-        inline void deserialize<CLASS_NAME>(CLASS_NAME& obj, Yaml::Node& node) {    \
-            validate_required_fields<CLASS_NAME>(node);                             \
-            MAP(YAML_DESERIALIZE, __VA_ARGS__)                                      \
-            if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {      \
-                derive(obj);                                                        \
-            }                                                                       \
-            if constexpr (std::is_base_of<ValidatedYaml, CLASS_NAME>::value) {      \
-                validate(obj);                                                      \
-            }                                                                       \
-        }                                                                           \
-    }                                                                               \
+#define IMPL_YAML_SERIALIZABLE_FOR(CLASS_NAME, ...)                                             \
+    namespace Yaml {                                                                            \
+        template<>                                                                              \
+        inline void serialize<CLASS_NAME>(const CLASS_NAME& obj, Yaml::Node& node) {            \
+            MAP(YAML_SERIALIZE, __VA_ARGS__)                                                    \
+        }                                                                                       \
+        template<>                                                                              \
+        inline void deserialize<CLASS_NAME>(CLASS_NAME& obj, Yaml::Node& node, bool raw) {      \
+            validate_required_fields<CLASS_NAME>(node);                                         \
+            MAP(YAML_DESERIALIZE, __VA_ARGS__)                                                  \
+                                                                                                \
+            if (raw) return;                                                                    \
+            if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {                  \
+                derive(obj);                                                                    \
+            }                                                                                   \
+            if constexpr (std::is_base_of<ValidatedYaml, CLASS_NAME>::value) {                  \
+                validate(obj);                                                                  \
+            }                                                                                   \
+        }                                                                                       \
+    }                                                                                           \
 
 
 /**
@@ -570,26 +584,28 @@ namespace Yaml {
  * };
  * IMPL_YAML_SERIALIZABLE_WITH_BASE(MyStruct, MyBase, my_field)
 */
-#define IMPL_YAML_SERIALIZABLE_WITH_BASE(CLASS_NAME, BASE_CLASS, ...)               \
-    namespace Yaml {                                                                \
-        template<>                                                                  \
-        inline void serialize<CLASS_NAME>(const CLASS_NAME& obj, Yaml::Node& node) {\
-            serialize(*(BASE_CLASS*)&obj, node);                                    \
-            MAP(YAML_SERIALIZE, __VA_ARGS__)                                        \
-        }                                                                           \
-        template<>                                                                  \
-        inline void deserialize<CLASS_NAME>(CLASS_NAME& obj, Yaml::Node& node) {    \
-            validate_required_fields<CLASS_NAME>(node);                             \
-            deserialize<BASE_CLASS>(*(BASE_CLASS*)&obj, node);                      \
-            MAP(YAML_DESERIALIZE, __VA_ARGS__)                                      \
-            if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {      \
-                derive(obj);                                                        \
-            }                                                                       \
-            if constexpr (std::is_base_of<ValidatedYaml, CLASS_NAME>::value) {      \
-                validate(obj);                                                      \
-            }                                                                       \
-        }                                                                           \
-    }                                                                               \
+#define IMPL_YAML_SERIALIZABLE_WITH_BASE(CLASS_NAME, BASE_CLASS, ...)                           \
+    namespace Yaml {                                                                            \
+        template<>                                                                              \
+        inline void serialize<CLASS_NAME>(const CLASS_NAME& obj, Yaml::Node& node) {            \
+            serialize(*(BASE_CLASS*)&obj, node);                                                \
+            MAP(YAML_SERIALIZE, __VA_ARGS__)                                                    \
+        }                                                                                       \
+        template<>                                                                              \
+        inline void deserialize<CLASS_NAME>(CLASS_NAME& obj, Yaml::Node& node, bool raw) {      \
+            validate_required_fields<CLASS_NAME>(node);                                         \
+            deserialize<BASE_CLASS>(*(BASE_CLASS*)&obj, node, raw);                             \
+            MAP(YAML_DESERIALIZE, __VA_ARGS__)                                                  \
+                                                                                                \
+            if (raw) return;                                                                    \
+            if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {                  \
+                derive(obj);                                                                    \
+            }                                                                                   \
+            if constexpr (std::is_base_of<ValidatedYaml, CLASS_NAME>::value) {                  \
+                validate(obj);                                                                  \
+            }                                                                                   \
+        }                                                                                       \
+    }                                                                                           \
 
 
 /**

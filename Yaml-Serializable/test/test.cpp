@@ -198,30 +198,30 @@ struct SimpleSerializable {
 IMPL_YAML_SERIALIZABLE_FOR(SimpleSerializable, a, b, c, d, e)
 
 TEST(YamlSerailizable, StrictDeserialization) {
-    std::string input = "\
-    a: 1        \n\
-    b: 1.0      \n\
-    c: 1.01     \n\
-    d:          \n\
-      - VALUE_1 \n\
-      - VALUE_2 \n\
-      - VALUE_3 \n\
-    e:          \n\
-      - string_1\n\
-      - string_2\n\
-      - string_3\n\
-    ";
+    std::string input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+      - VALUE_2 
+      - VALUE_3 
+    e:          
+      - string_1
+      - string_2
+      - string_3
+    )";
 
-    std::string over_input = "\
-    a: 1        \n\
-    b: 1.0      \n\
-    c: 1.01     \n\
-    d:          \n\
-      - VALUE_1 \n\
-    e:          \n\
-      - string_1\n\
-    f: 5        \n\
-    ";
+    std::string over_input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+    e:          
+      - string_1
+    f: 5        
+    )";
 
     EXPECT_NO_THROW({
         Yaml::from_string_strict<SimpleSerializable>(input);
@@ -247,19 +247,19 @@ IMPL_YAML_SERIALIZABLE_FOR(MultiB, a, c)
 
 
 TEST(YamlSerializable, FromMulti) {
-    std::string input = "\
-    a: 1        \n\
-    b: 1.0      \n\
-    c: 1.01     \n\
-    d:          \n\
-      - VALUE_1 \n\
-      - VALUE_2 \n\
-      - VALUE_3 \n\
-    e:          \n\
-      - string_1\n\
-      - string_2\n\
-      - string_3\n\
-    ";
+    std::string input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+      - VALUE_2 
+      - VALUE_3 
+    e:          
+      - string_1
+      - string_2
+      - string_3
+    )";
 
     MultiA a;
     MultiB b;
@@ -272,24 +272,95 @@ TEST(YamlSerializable, FromMulti) {
 }
 
 TEST(YamlSerializable, FromMultiStrict) {
-    std::string input = "\
-    a: 1        \n\
-    b: 1.0      \n\
-    c: 1.01     \n\
-    d:          \n\
-      - VALUE_1 \n\
-      - VALUE_2 \n\
-      - VALUE_3 \n\
-    e:          \n\
-      - string_1\n\
-      - string_2\n\
-      - string_3\n\
-    ";
+    std::string input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+      - VALUE_2 
+      - VALUE_3 
+    e:          
+      - string_1
+      - string_2
+      - string_3
+    )";
 
     MultiA a;
     MultiB b;
 
+    Yaml::from_string(input, a, b);
+    EXPECT_EQ(a.a, 1);
+    EXPECT_NEAR(a.b, 1.0, 1e-8);
+    EXPECT_EQ(b.a, 1);
+    EXPECT_NEAR(b.c, 1.01, 1e-8);
+    
     EXPECT_THROW({
         Yaml::from_string_strict(input, a, b);
     }, Yaml::ConfigurationException);
 }
+
+TEST(YamlSerializable, ToMulti) {
+    std::string input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+      - VALUE_2 
+      - VALUE_3 
+    e:          
+      - string_1
+      - string_2
+      - string_3
+    )";
+
+    MultiA a;
+    MultiB b;
+    Yaml::from_string(input, a, b);
+
+    // Do this back and forth because it might serialize slightly differently than 
+    // We wrote it. 
+    // This tests that this is at least a fixed point of 
+    // de -> re serialization.
+
+    std::string new_input = Yaml::to_string(a, b);
+    MultiA a2;
+    MultiB b2;
+    Yaml::from_string(input, a2, b2);
+    std::string re_serialized = Yaml::to_string(a2, b2);
+    EXPECT_STREQ(new_input.c_str(), re_serialized.c_str());
+}
+
+
+struct Nested4 {
+    float d;
+};
+IMPL_YAML_SERIALIZABLE_FOR(Nested4, d)
+
+struct Nested3 {
+    Nested4 c;
+};
+IMPL_YAML_SERIALIZABLE_FOR(Nested3, c)
+struct Nested2 {
+    std::vector<Nested3> b;
+};
+IMPL_YAML_SERIALIZABLE_FOR(Nested2, b)
+struct NestedInvalidTest {
+    Nested2 a;
+};
+IMPL_YAML_SERIALIZABLE_FOR(NestedInvalidTest, a)
+TEST(YamlSerializable, FromStrictNested) {
+    std::string input = R"(
+    a:
+      b:
+        - c:
+            d: 1.0
+            invalid-field: not-a-value
+    )";
+    
+    EXPECT_THROW({
+        Yaml::from_string_strict<NestedInvalidTest>(input);
+    }, Yaml::ConfigurationException);
+}
+
