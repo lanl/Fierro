@@ -481,12 +481,12 @@ void setup(const CArrayKokkos <material_t> &material,
             
             ViewCArrayKokkos <double> corner_areas(&corner_areas_array[0],4);
             ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
-            
+           /* 
             get_area_weights2D(corner_areas,
                                elem_gid,
                                node_coords,
                                elem_node_gids);
-            
+            */
             // loop over the corners of the element and calculate the mass
             for (size_t corner_lid=0; corner_lid<4; corner_lid++){
                 

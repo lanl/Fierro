@@ -132,7 +132,7 @@ void user_strength_model_vpsc(const DViewCArrayKokkos <double> &elem_pres,
     ViewCArrayKokkos <double> D_tensor(D_tensor_values, num_dims, num_dims);  // D(i,j)
     ViewCArrayKokkos <double> W_tensor(W_tensor_values, num_dims, num_dims);  // W(i,j)
     
-    
+   /* 
     decompose_vel_grad(D_tensor,
                        W_tensor,
                        vel_grad,
@@ -142,7 +142,7 @@ void user_strength_model_vpsc(const DViewCArrayKokkos <double> &elem_pres,
                        node_vel,
                        vol);
     
-
+*/
     // For hypo-elastic models
     double deps_values[9];
     double dW_values[9];

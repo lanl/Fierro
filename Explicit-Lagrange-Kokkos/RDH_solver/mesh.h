@@ -83,6 +83,49 @@ void bubble_sort(size_t arr[], const size_t num){
     } // end for i
 } // end function
 
+struct zones_in_elem_t {
+    private:
+	size_t num_zones_in_elem_;
+    public:
+	zones_in_elem_t(){};
+      
+	zones_in_elem_t(const size_t num_zones_in_elem_inp){
+  		this->num_zones_in_elem_ = num_zones_in_elem_inp;
+	};
+
+       	// return global zone index for given local zone index in an element    
+       	size_t  host(const size_t elem_gid, const size_t zone_lid) const{
+       		return elem_gid*num_zones_in_elem_ + zone_lid;
+       	};
+
+       	KOKKOS_INLINE_FUNCTION	
+	size_t operator()(const size_t elem_gid, const size_t zone_lid) const{
+    		return elem_gid*num_zones_in_elem_ + zone_lid;
+	};
+};
+
+struct legendre_gauss_in_elem_t {
+	private:
+	  size_t num_leg_gauss_in_elem_;
+        public:
+	  legendre_gauss_in_elem_t(){};
+
+	  legendre_gauss_in_elem_t(const size_t num_leg_gauss_in_elem_inp){
+	  	this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
+	  };
+
+          // return global gauss index for given local gauss index in an element    
+          size_t  host(const size_t elem_gid, const size_t leg_gauss_lid) const{
+    	  	return elem_gid*num_leg_gauss_in_elem_ + leg_gauss_lid;
+          };
+
+          KOKKOS_INLINE_FUNCTION	
+	  size_t operator()(const size_t elem_gid, const size_t leg_gauss_lid) const{
+	  	return elem_gid*num_leg_gauss_in_elem_ + leg_gauss_lid;
+	  };
+};
+
+
 
 // mesh sizes and connectivity data structures
 struct mesh_t {
@@ -113,6 +156,7 @@ struct mesh_t {
     size_t num_lob_gauss_in_elem;
 
     //num_leg_gauss_in_elem = std::pow(2*Pn, num_dims); 
+    legendre_gauss_in_elem_t leg_gauss_in_elem;
     //num_lob_gauss_in_elem = std::pow(2*Pn+1, num_dims);
 
     size_t num_bdy_patches;
@@ -157,8 +201,8 @@ struct mesh_t {
     CArrayKokkos <size_t> surfs_in_elem;  // high-order mesh class
     
     // zone ids in elem
-    CArrayKokkos <size_t> zones_in_elem;     // high-order mesh class
-     
+    //CArrayKokkos <size_t> zones_in_elem;     // high-order mesh class
+    zones_in_elem_t zones_in_elem; 
     
     // ---- patches / surfaces ----
     
@@ -191,46 +235,9 @@ struct mesh_t {
     // node ids in bdy_patch set
     RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
     DCArrayKokkos <size_t> num_bdy_nodes_in_set;
+   
     
-    struct zones_in_elem {
-	
-	size_t num_zones_in_elem;
-	zones_in_elem();
-
-	zones_in_elem(const size_t num_zones_in_elem_inp){
-	  this->num_zones_in_elem = num_zones_in_elem_inp;
-	}
-
-        // return global zone index for given local zone index in an element    
-        size_t  host(const size_t elem_gid, const size_t zone_lid){
-    	    return elem_gid*num_zones_in_elem + zone_lid;
-        }
-
-        KOKKOS_INLINE_FUNCTION	
-	size_t operator()(const size_t elem_gid, const size_t zone_lid) const {
-	    return elem_gid*num_zones_in_elem + zone_lid;
-	}
-    };
-    
-    struct legendre_gauss_in_elem {
-
-	size_t num_leg_gauss_in_elem;
-	legendre_gauss_in_elem();
-	legendre_gauss_in_elem(const size_t num_leg_gauss_in_elem_inp){
-	  this->num_leg_gauss_in_elem = num_leg_gauss_in_elem_inp;
-	}
-
-        // return global gauss index for given local gauss index in an element    
-        size_t  leg_gauss_in_elem(const size_t elem_gid, const size_t leg_gauss_lid){
-    	  return elem_gid*num_leg_gauss_in_elem + leg_gauss_lid;
-        }
-
-        KOKKOS_INLINE_FUNCTION	
-	size_t operator()(const size_t elem_gid, const size_t leg_gauss_lid) const{
-	    return elem_gid*num_leg_gauss_in_elem + leg_gauss_lid;
-	}
-    };
-		    
+	    
     // initialization methods
     void initialize_nodes(const size_t num_nodes_inp)
     {
@@ -274,7 +281,7 @@ struct mesh_t {
 
         nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
-        zones_in_elem = CArrayKokkos <size_t> (num_elems, num_zones_in_elem);
+        zones_in_elem = zones_in_elem_t(num_zones_in_elem);
 	surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
 
         return;
@@ -1794,7 +1801,7 @@ void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t mat_id,
                      const size_t num_elems);
 
-
+/*
 KOKKOS_FUNCTION
 double max_Eigen3D(const ViewCArrayKokkos<double> tensor);
 
@@ -1802,7 +1809,7 @@ double max_Eigen3D(const ViewCArrayKokkos<double> tensor);
 KOKKOS_FUNCTION
 double max_Eigen2D(const ViewCArrayKokkos<double> tensor);
 
-
+*/
 
 void rdh_solve(CArrayKokkos <material_t> &material,
                CArrayKokkos <boundary_t> &boundary,
@@ -1839,7 +1846,7 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                CArray <double> &graphics_times,
                size_t &graphics_id);
 
-
+/*
 void rk_init(DViewCArrayKokkos <double> &node_coords,
              DViewCArrayKokkos <double> &node_vel,
              DViewCArrayKokkos <double> &elem_sie,
@@ -1962,13 +1969,6 @@ void get_force_tensor2D(const CArrayKokkos <material_t> &material,
                      const double rk_alpha);
 
 
-void update_momentum_rdh(double rk_alpha,
-                         double dt,
-                         const mesh_t &mesh,
-                         DViewCArrayKokkos <double> &node_vel,
-                         const DViewCArrayKokkos <double> &node_mass,
-                         const DViewCArrayKokkos <double> &corner_force);
-
 
 void update_energy_rdh(double rk_alpha,
                        double dt,
@@ -2027,7 +2027,7 @@ void get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
                         const DViewCArrayKokkos <double> &node_coords,
                         const ViewCArrayKokkos <size_t>  &elem_node_gids);
 
-
+*/
 KOKKOS_FUNCTION
 double heron(const double x1,
              const double y1,

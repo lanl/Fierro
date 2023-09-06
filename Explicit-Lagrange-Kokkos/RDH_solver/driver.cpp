@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <ctime>
 
-//#include "ref_elem.h"
+#include "ref_elem.h"
 #include "mesh.h"
 #include "state.h"
 #include "matar.h"
