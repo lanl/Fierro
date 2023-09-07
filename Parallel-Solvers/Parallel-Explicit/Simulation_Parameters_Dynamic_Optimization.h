@@ -189,7 +189,7 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
   FEA_MODULE_TYPE get_TO_module_dependency(TO_MODULE_TYPE type) {
     switch (type) {
       case TO_MODULE_TYPE::Kinetic_Energy_Minimize:
-        return FEA_MODULE_TYPE::SGH;
+        return FEA_MODULE_TYPE::Dynamic_Elasticity;
       case TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize:
         return FEA_MODULE_TYPE::Heat_Conduction;
       case TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint:
