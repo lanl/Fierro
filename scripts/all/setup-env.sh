@@ -44,7 +44,7 @@ fi
 
 export scriptdir=`pwd`
 
-cd ..
+cd ../..
 export topdir=`pwd`
 export basedir=${topdir}
 export srcdir=${basedir}/src
@@ -57,6 +57,7 @@ export builddir=${basedir}/${my_build}
 export FIERRO_BASE_DIR=${basedir}
 export FIERRO_SOURCE_DIR=${srcdir}
 export FIERRO_EXPLICIT_SOURCE_DIR=${srcdir}/Parallel-Solvers/Parallel-Explicit
+export FIERRO_IMPLICIT_SOURCE_DIR=${srcdir}/Parallel-Solvers/Implicit-Lagrange
 export FIERRO_BUILD_DIR=${builddir}
 
 #export KOKKOS_SOURCE_DIR=${matardir}/src/Kokkos/kokkos
