@@ -1273,7 +1273,7 @@ void init(int p_order, int num_dim){
             int dof_id = 0;
             for(int i = 0; i < num_gauss_lob_1d; i++){
 
-                ref_dof_positions_1d_(dof_id) = lob_nodes_1D(i);
+                ref_dof_positions_1d(dof_id) = lob_nodes_1D(i);
 
                 dof_id++;
             }  
@@ -1285,7 +1285,7 @@ void init(int p_order, int num_dim){
             int dof_id = 0;
             for(int i = 0; i < num_gauss_lob_1d; i=i+2){
 
-                ref_dof_positions_1d_(dof_id) = lob_nodes_1D(i);
+                ref_dof_positions_1d(dof_id) = lob_nodes_1D(i);
 
                 dof_id++;
             }  
@@ -1297,9 +1297,9 @@ void init(int p_order, int num_dim){
         
                     int dof_rlid = dof_rid(num_i, num_j, num_k);
 
-                    ref_dof_positions_(dof_rlid, 0) = ref_dof_positions_1d_(num_i);
-                    ref_dof_positions_(dof_rlid, 1) = ref_dof_positions_1d_(num_j);
-                    ref_dof_positions_(dof_rlid, 2) = ref_dof_positions_1d_(num_k);
+                    ref_dof_positions(dof_rlid, 0) = ref_dof_positions_1d(num_i);
+                    ref_dof_positions(dof_rlid, 1) = ref_dof_positions_1d(num_j);
+                    ref_dof_positions(dof_rlid, 2) = ref_dof_positions_1d(num_k);
                 }
             }
         }
@@ -1312,7 +1312,7 @@ void init(int p_order, int num_dim){
 
             // Get the nodal coordinates
             for(int dim = 0; dim < 3; dim++){
-                point(dim) = ref_gauss_lob_positions_(gauss_lob_rid, dim);
+                point(dim) = ref_gauss_lob_positions(gauss_lob_rid, dim);
             }
 
 
@@ -1320,7 +1320,7 @@ void init(int p_order, int num_dim){
 
             for(int basis_id = 0; basis_id < num_ref_dofs_in_elem_; basis_id++){
 
-                ref_gauss_lob_basis_(gauss_lob_rid, basis_id) = temp_nodal_basis(basis_id);
+                ref_gauss_lob_basis(gauss_lob_rid, basis_id) = temp_nodal_basis(basis_id);
             	temp_nodal_basis(basis_id) = 0.0;
             }
 
@@ -1333,7 +1333,7 @@ void init(int p_order, int num_dim){
 
             // Get the nodal coordinates
             for(int dim = 0; dim < 3; dim++){
-                point(dim) = ref_gauss_leg_positions_(gauss_leg_rid, dim);
+                point(dim) = ref_gauss_leg_positions(gauss_leg_rid, dim);
             }
 
 
@@ -1341,7 +1341,7 @@ void init(int p_order, int num_dim){
 
             for(int basis_id = 0; basis_id < num_ref_dofs_in_elem_; basis_id++){
 
-                ref_gauss_leg_basis_(gauss_leg_rid, basis_id) = temp_nodal_basis(basis_id);
+                ref_gauss_leg_basis(gauss_leg_rid, basis_id) = temp_nodal_basis(basis_id);
             	temp_nodal_basis(basis_id) = 0.0;
 	    }
 
@@ -1353,25 +1353,25 @@ void init(int p_order, int num_dim){
         auto temp_partial_eta_lob = CArray <double> (num_gauss_lob_in_elem_);
         auto temp_partial_mu_lob  = CArray <double> (num_gauss_lob_in_elem_);
 
-        for(int gauss_lob_rid = 0; gauss_lob_rid < num_gauss_lob_in_elem_; gauss_lob_rid++){
+        for(int gauss_lob_rid = 0; gauss_lob_rid < num_gauss_lob_in_elem; gauss_lob_rid++){
 
             CArray <double> point(3);
             
             // Get the lobatto coordinates
             for(int dim = 0; dim < 3; dim++){
-                point(dim) = ref_gauss_lob_positions_(gauss_lob_rid, dim);
+                point(dim) = ref_gauss_lob_positions(gauss_lob_rid, dim);
             }
 
             partial_xi_basis(temp_partial_xi_lob, point);
             partial_eta_basis(temp_partial_eta_lob, point);
             partial_mu_basis(temp_partial_mu_lob, point);
 
-            for(int basis_id = 0; basis_id < num_ref_dofs_in_elem_; basis_id++){
+            for(int basis_id = 0; basis_id < num_ref_dofs_in_elem; basis_id++){
 
 
                 ref_gauss_lob_grad_basis(gauss_lob_rid, basis_id, 0) = temp_partial_xi_lob(basis_id);
-                ref_gauss_lob_grad_basis_(gauss_lob_rid, basis_id, 1) = temp_partial_eta_lob(basis_id);
-                ref_gauss_lob_grad_basis_(gauss_lob_rid, basis_id, 2) = temp_partial_mu_lob(basis_id);
+                ref_gauss_lob_grad_basis(gauss_lob_rid, basis_id, 1) = temp_partial_eta_lob(basis_id);
+                ref_gauss_lob_grad_basis(gauss_lob_rid, basis_id, 2) = temp_partial_mu_lob(basis_id);
 
                 temp_partial_xi_lob(basis_id)  = 0.0;
                 temp_partial_eta_lob(basis_id) = 0.0;
@@ -1379,11 +1379,11 @@ void init(int p_order, int num_dim){
             }
         }
         
-        auto temp_partial_xi_leg  = CArray <double> (num_gauss_leg_in_elem_);
-        auto temp_partial_eta_leg = CArray <double> (num_gauss_leg_in_elem_);
-        auto temp_partial_mu_leg  = CArray <double> (num_gauss_leg_in_elem_);
+        auto temp_partial_xi_leg  = CArray <double> (num_gauss_leg_in_elem);
+        auto temp_partial_eta_leg = CArray <double> (num_gauss_leg_in_elem);
+        auto temp_partial_mu_leg  = CArray <double> (num_gauss_leg_in_elem);
 
-        for(int gauss_leg_rid = 0; gauss_leg_rid < num_gauss_leg_in_elem_; gauss_leg_rid++){
+        for(int gauss_leg_rid = 0; gauss_leg_rid < num_gauss_leg_in_elem; gauss_leg_rid++){
 
             CArray <double> point(3);
             
@@ -1400,8 +1400,8 @@ void init(int p_order, int num_dim){
 
 
                 ref_gauss_lob_grad_basis(gauss_leg_rid, basis_id, 0) = temp_partial_xi_leg(basis_id);
-                ref_gauss_lob_grad_basis_(gauss_leg_rid, basis_id, 1) = temp_partial_eta_leg(basis_id);
-                ref_gauss_lob_grad_basis_(gauss_leg_rid, basis_id, 2) = temp_partial_mu_leg(basis_id);
+                ref_gauss_lob_grad_basis(gauss_leg_rid, basis_id, 1) = temp_partial_eta_leg(basis_id);
+                ref_gauss_lob_grad_basis(gauss_leg_rid, basis_id, 2) = temp_partial_mu_leg(basis_id);
 
                 temp_partial_xi_leg(basis_id)  = 0.0;
                 temp_partial_eta_leg(basis_id) = 0.0;
@@ -1414,98 +1414,98 @@ void init(int p_order, int num_dim){
 
 }; // end of member function
 
-int ref_elem::num_dim() const
+int num_dim() const
 {
-    return num_dim_;
+    return num_dim;
 }
 
-int ref_elem::num_basis() const
+int num_basis() const
 {
-    return num_ref_dofs_in_elem_;
+    return num_ref_dofs_in_elem;
 } // < --- use num_ref_dofs instead??
 
-int ref_elem::num_ref_dofs() const
+int num_ref_dofs() const
 {
-    return num_ref_dofs_in_elem_;
+    return num_ref_dofs_in_elem;
 }
 
-int ref_elem::num_gauss_lob_pts() const
+int num_gauss_lob_pts() const
 {
-    return num_gauss_lob_in_elem_;
+    return num_gauss_lob_in_elem;
 }
 
-int ref_elem::num_gauss_leg_pts() const
+int num_gauss_leg_pts() const
 {
-    return num_gauss_leg_in_elem_;
+    return num_gauss_leg_in_elem;
 }
 
 // --- ref index access member functions ---
 
-int ref_elem::dof_rid(int i, int j, int k) const 
+int dof_rid(int i, int j, int k) const 
 {
-    return i + j*num_ref_dofs_1d_ + k*num_ref_dofs_1d_*num_ref_dofs_1d_;
+    return i + j*num_ref_dofs_1d + k*num_ref_dofs_1d*num_ref_dofs_1d;
 };
 
-int ref_elem::lobatto_rid(int i, int j, int k) const 
+int lobatto_rid(int i, int j, int k) const 
 {
-    return i + j*num_gauss_lob_1d_ + k*num_gauss_lob_1d_*num_gauss_lob_1d_;
+    return i + j*num_gauss_lob_1d + k*num_gauss_lob_1d*num_gauss_lob_1d;
 };
 
-int ref_elem::legendre_rid(int i, int j, int k) const 
+int legendre_rid(int i, int j, int k) const 
 {
-    return i + j*num_gauss_leg_1d_ + k*num_gauss_leg_1d_*num_gauss_leg_1d_;
+    return i + j*num_gauss_leg_1d + k*num_gauss_leg_1d*num_gauss_leg_1d;
 };
 /*
-int ref_elem::ref_surface_nodes_in_elem(int node_rlid) const
+int ref_surface_nodes_in_elem(int node_rlid) const
 {
     return ref_surface_nodes_in_elem_(node_rlid);
 };
     
-int ref_elem::num_ref_surface_nodes_in_elem() const
+int num_ref_surface_nodes_in_elem() const
 {
     return num_ref_surface_nodes_in_elem_;
 };
 */
-double ref_elem::ref_dof_positions(int dof_rid, int dim) const
+double ref_dof_positions(int dof_rid, int dim) const
 {
-    return ref_dof_positions_(dof_rid, dim);
+    return ref_dof_positions(dof_rid, dim);
 };
 
-double ref_elem::ref_dof_positions_1d(int dof_rid) const
+double ref_dof_positions_1d(int dof_rid) const
 {
-    return ref_dof_positions_1d_(dof_rid);
+    return ref_dof_positions_1d(dof_rid);
 };
 
-double ref_elem::ref_gauss_lob_weights(int lobatto_rid) const 
+double ref_gauss_lob_weights(int lobatto_rid) const 
 {
-    return  ref_gauss_lob_weights_(lobatto_rid);
+    return  ref_gauss_lob_weights(lobatto_rid);
 };
 
-double ref_elem::ref_gauss_leg_weights(int legendre_rid) const 
+double ref_gauss_leg_weights(int legendre_rid) const 
 {
-    return  ref_gauss_leg_weights_(legendre_rid);
+    return  ref_gauss_leg_weights(legendre_rid);
 };
-double& ref_elem::ref_gauss_lob_basis(int lobatto_rid, int basis_id) const
+double& ref_gauss_lob_basis(int lobatto_rid, int basis_id) const
 {
-    return ref_gauss_lob_basis_(lobatto_rid, basis_id);
+    return ref_gauss_lob_basis(lobatto_rid, basis_id);
 }
 
-double& ref_elem::ref_gauss_leg_basis(int legendre_rid, int basis_id) const
+double& ref_gauss_leg_basis(int legendre_rid, int basis_id) const
 {
-    return ref_gauss_leg_basis_(legendre_rid, basis_id);
+    return ref_gauss_leg_basis(legendre_rid, basis_id);
 }
 
-double& ref_elem::ref_gauss_lob_grad_basis(int lobatto_rid, int basis_id, int dim) const
+double& ref_gauss_lob_grad_basis(int lobatto_rid, int basis_id, int dim) const
 {
-    return ref_gauss_lob_grad_basis_(lobatto_rid, basis_id, dim);
+    return ref_gauss_lob_grad_basis(lobatto_rid, basis_id, dim);
 }
 
-double& ref_elem::ref_gauss_leg_grad_basis(int legendre_rid, int basis_id, int dim) const
+double& ref_gauss_leg_grad_basis(int legendre_rid, int basis_id, int dim) const
 {
-    return ref_gauss_leg_grad_basis_(legendre_rid, basis_id, dim);
+    return ref_gauss_leg_grad_basis(legendre_rid, basis_id, dim);
 }
 
-void ref_elem::basis(CArray <double> &basis, CArray <double> &point)
+void basis(CArray <double> &basis, CArray <double> &point)
  {
 
         auto val_1d = CArray <double> (num_ref_dofs_1d_);
@@ -1515,7 +1515,7 @@ void ref_elem::basis(CArray <double> &basis, CArray <double> &point)
         lagrange_basis_1D(val_1d, point(0));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             val_3d(i, 0) = val_1d(i);
             val_1d(i) = 0.0;
         }
@@ -1524,7 +1524,7 @@ void ref_elem::basis(CArray <double> &basis, CArray <double> &point)
         lagrange_basis_1D(val_1d, point(1));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             val_3d(i, 1) = val_1d(i);
             val_1d(i) = 0.0;
         }
@@ -1533,16 +1533,16 @@ void ref_elem::basis(CArray <double> &basis, CArray <double> &point)
         lagrange_basis_1D(val_1d, point(2));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             val_3d(i, 2) = val_1d(i);
             val_1d(i) = 0.0;
         }
         
         // Multiply the i, j, k components of the basis from each node
         // to get the tensor product basis for the node
-        for(int k = 0; k < num_ref_dofs_1d_; k++){
-            for(int j = 0; j < num_ref_dofs_1d_; j++){
-                for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int k = 0; k < num_ref_dofs_1d; k++){
+            for(int j = 0; j < num_ref_dofs_1d; j++){
+                for(int i = 0; i < num_ref_dofs_1d; i++){
 
                     int dof_rlid = dof_rid(i,j,k);
                     basis(dof_rlid) = val_3d(i, 0)*val_3d(j, 1)*val_3d(k, 2);
@@ -1551,22 +1551,22 @@ void ref_elem::basis(CArray <double> &basis, CArray <double> &point)
         }
 };
 
-void ref_elem::partial_xi_basis(CArray <double> &partial_xi, CArray <double> &point)
+void partial_xi_basis(CArray <double> &partial_xi, CArray <double> &point)
 {
 
 
-        auto val_1d = CArray <double> (num_ref_dofs_1d_);
-        auto val_3d = CArray <double> (num_ref_dofs_1d_, 3);
+        auto val_1d = CArray <double> (num_ref_dofs_1d);
+        auto val_3d = CArray <double> (num_ref_dofs_1d, 3);
 
-        auto Dval_1d = CArray <double> (num_ref_dofs_1d_);
-        auto Dval_3d = CArray <double> (num_ref_dofs_1d_, 3);
+        auto Dval_1d = CArray <double> (num_ref_dofs_1d);
+        auto Dval_3d = CArray <double> (num_ref_dofs_1d, 3);
 
         // Calculate 1D partial w.r.t. xi for the X coordinate of the point
         lagrange_derivative_1D(Dval_1d, point(0));
 
 
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             
             Dval_3d(i,0) = Dval_1d(i);
             Dval_1d(i) = 0.0;
@@ -1577,7 +1577,7 @@ void ref_elem::partial_xi_basis(CArray <double> &partial_xi, CArray <double> &po
         lagrange_basis_1D(val_1d, point(1));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             
             val_3d(i,1) = val_1d(i);
             val_1d(i) = 0.0;
@@ -1588,7 +1588,7 @@ void ref_elem::partial_xi_basis(CArray <double> &partial_xi, CArray <double> &po
         lagrange_basis_1D(val_1d, point(2));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             
             val_3d(i,2) = val_1d(i);
             val_1d(i) = 0.0;
@@ -1596,9 +1596,9 @@ void ref_elem::partial_xi_basis(CArray <double> &partial_xi, CArray <double> &po
 
         // Multiply the i, j, k components of the basis and partial_xi from each node
         // to get the tensor product partial derivatives of the basis at each node
-        for(int k = 0; k < num_ref_dofs_1d_; k++){
-            for(int j = 0; j < num_ref_dofs_1d_; j++){
-                for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int k = 0; k < num_ref_dofs_1d; k++){
+            for(int j = 0; j < num_ref_dofs_1d; j++){
+                for(int i = 0; i < num_ref_dofs_1d; i++){
                     
                     int dof_rlid = dof_rid(i,j,k);
 
@@ -1610,20 +1610,20 @@ void ref_elem::partial_xi_basis(CArray <double> &partial_xi, CArray <double> &po
         }
     };
 
-void ref_elem::partial_eta_basis(CArray <double> &partial_eta, CArray <double> &point)
+void partial_eta_basis(CArray <double> &partial_eta, CArray <double> &point)
     {   
 
-        auto val_1d = CArray <double> (num_ref_dofs_1d_);
-        auto val_3d = CArray <double> (num_ref_dofs_1d_, 3);
+        auto val_1d = CArray <double> (num_ref_dofs_1d);
+        auto val_3d = CArray <double> (num_ref_dofs_1d, 3);
 
-        auto Dval_1d = CArray <double> (num_ref_dofs_1d_);
-        auto Dval_3d = CArray <double> (num_ref_dofs_1d_, 3);
+        auto Dval_1d = CArray <double> (num_ref_dofs_1d);
+        auto Dval_3d = CArray <double> (num_ref_dofs_1d, 3);
 
         // Calculate 1D basis for the Y coordinate of the point
         lagrange_basis_1D(val_1d, point(0));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             
             val_3d(i,0) = val_1d(i);
             val_1d(i) = 0.0;
@@ -1634,7 +1634,7 @@ void ref_elem::partial_eta_basis(CArray <double> &partial_eta, CArray <double> &
         lagrange_derivative_1D(Dval_1d, point(1));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             
             Dval_3d(i,1) = Dval_1d(i);
             Dval_1d(i) = 0.0;
@@ -1645,7 +1645,7 @@ void ref_elem::partial_eta_basis(CArray <double> &partial_eta, CArray <double> &
         lagrange_basis_1D(val_1d, point(2));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             
             val_3d(i,2) = val_1d(i);
             val_1d(i) = 0.0;
@@ -1653,9 +1653,9 @@ void ref_elem::partial_eta_basis(CArray <double> &partial_eta, CArray <double> &
 
         // Multiply the i, j, k components of the basis and partial_eta from each node
         // to get the tensor product partial derivatives of the basis at each node
-        for(int k = 0; k < num_ref_dofs_1d_; k++){
-            for(int j = 0; j < num_ref_dofs_1d_; j++){
-                for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int k = 0; k < num_ref_dofs_1d; k++){
+            for(int j = 0; j < num_ref_dofs_1d; j++){
+                for(int i = 0; i < num_ref_dofs_1d; i++){
                     
                     int dof_rlid = dof_rid(i,j,k);
 
@@ -1667,20 +1667,20 @@ void ref_elem::partial_eta_basis(CArray <double> &partial_eta, CArray <double> &
         }
     };
 
-void ref_elem::partial_mu_basis(CArray <double> &partial_mu, CArray <double> &point){
+void partial_mu_basis(CArray <double> &partial_mu, CArray <double> &point){
 
 
-        auto val_1d = CArray <double> (num_ref_dofs_1d_);
-        auto val_3d = CArray <double> (num_ref_dofs_1d_, 3);
+        auto val_1d = CArray <double> (num_ref_dofs_1d);
+        auto val_3d = CArray <double> (num_ref_dofs_1d, 3);
 
-        auto Dval_1d = CArray <double> (num_ref_dofs_1d_);
-        auto Dval_3d = CArray <double> (num_ref_dofs_1d_, 3);
+        auto Dval_1d = CArray <double> (num_ref_dofs_1d);
+        auto Dval_3d = CArray <double> (num_ref_dofs_1d, 3);
 
         // Calculate 1D basis for the X coordinate of the point
         lagrange_basis_1D(val_1d, point(0));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             
             val_3d(i,0) = val_1d(i);
             val_1d(i) = 0.0;
@@ -1691,7 +1691,7 @@ void ref_elem::partial_mu_basis(CArray <double> &partial_mu, CArray <double> &po
         lagrange_basis_1D(val_1d, point(1));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             
             val_3d(i,1) = val_1d(i);
             val_1d(i) = 0.0;
@@ -1702,7 +1702,7 @@ void ref_elem::partial_mu_basis(CArray <double> &partial_mu, CArray <double> &po
         lagrange_derivative_1D(Dval_1d, point(2));
         
         // Save the basis value at the point to a temp array and zero out the temp array
-        for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int i = 0; i < num_ref_dofs_1d; i++){
             
             Dval_3d(i,2) = Dval_1d(i);
             val_1d(i) = 0.0;
@@ -1710,9 +1710,9 @@ void ref_elem::partial_mu_basis(CArray <double> &partial_mu, CArray <double> &po
 
         // Multiply the i, j, k components of the basis and partial_xi from each node
         // to get the tensor product partial derivatives of the basis at each node
-        for(int k = 0; k < num_ref_dofs_1d_; k++){
-            for(int j = 0; j < num_ref_dofs_1d_; j++){
-                for(int i = 0; i < num_ref_dofs_1d_; i++){
+        for(int k = 0; k < num_ref_dofs_1d; k++){
+            for(int j = 0; j < num_ref_dofs_1d; j++){
+                for(int i = 0; i < num_ref_dofs_1d; i++){
                     
                     int dof_rlid = dof_rid(i,j,k);
 
@@ -1724,27 +1724,27 @@ void ref_elem::partial_mu_basis(CArray <double> &partial_mu, CArray <double> &po
         }
 };
 
-void ref_elem::lagrange_basis_1D(
+void lagrange_basis_1D(
         CArray <double> &interp,    // interpolant from each basis
         const double &x_point){     // point of interest in element
                          
         
         // calculate the basis value associated with each node_i
-        for(int vert_i = 0; vert_i < num_ref_dofs_1d_; vert_i++){ 
+        for(int vert_i = 0; vert_i < num_ref_dofs_1d; vert_i++){ 
             
             double numerator = 1.0;         // placeholder numerator
             double denominator = 1.0;       // placeholder denominator
             double interpolant = 1.0;       // placeholder value of numerator/denominator
             
 
-            for(int vert_j = 0; vert_j < num_ref_dofs_1d_; vert_j++){  // looping over the verts !=vert_i
+            for(int vert_j = 0; vert_j < num_ref_dofs_1d; vert_j++){  // looping over the verts !=vert_i
                 if (vert_j != vert_i ){
                     
                     // Calculate the numerator
-                    numerator = numerator*(x_point - ref_dof_positions_1d_(vert_j));
+                    numerator = numerator*(x_point - ref_dof_positions_1d(vert_j));
                     
                     // Calculate the denominator 
-                    denominator = denominator*(ref_dof_positions_1d_(vert_i) - ref_dof_positions_1d_(vert_j));
+                    denominator = denominator*(ref_dof_positions_1d(vert_i) - ref_dof_positions_1d(vert_j));
                 
                 }//end if
                 
@@ -1758,23 +1758,23 @@ void ref_elem::lagrange_basis_1D(
         } // end loop over all nodes
 } // end of Legrange_1D function
 
-void ref_elem::lagrange_derivative_1D(
+void lagrange_derivative_1D(
         CArray <double> &derivative,    // derivative
         const double &x_point){         // point of interest in element
 
-        for(int vert_i = 0; vert_i < num_ref_dofs_1d_; vert_i++){ // looping over the nodes
+        for(int vert_i = 0; vert_i < num_ref_dofs_1d; vert_i++){ // looping over the nodes
         
 
             double denominator = 1.0;       // placeholder denominator
             double num_gradient = 0.0;      // placeholder for numerator of the gradient
             double gradient = 0.0;
 
-            for(int vert_j = 0; vert_j < num_ref_dofs_1d_; vert_j++){  // looping over the nodes !=vert_i
+            for(int vert_j = 0; vert_j < num_ref_dofs_1d; vert_j++){  // looping over the nodes !=vert_i
                 if (vert_j != vert_i ){
 
                     // Calculate the denominator that is the same for 
                     // both the basis and the gradient of the basis
-                    denominator = denominator*(ref_dof_positions_1d_(vert_i) - ref_dof_positions_1d_(vert_j));
+                    denominator = denominator*(ref_dof_positions_1d(vert_i) - ref_dof_positions_1d(vert_j));
                     
                     double product_gradient = 1.0;
                     
@@ -1804,7 +1804,5 @@ void ref_elem::lagrange_derivative_1D(
 
 
 
-// Deconstructor
-//ref_elem::~ref_elem(){
 };
 
