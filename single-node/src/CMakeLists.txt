@@ -17,6 +17,10 @@ if(NOT DEFINED PARALLEL_DIRECT_SOLVER)
   set(PARALLEL_DIRECT_SOLVER OFF)
 endif()
 
+if(NOT DEFINED BUILD_KOKKOS_RDH)
+  set(BUILD_KOKKOS_RDH OFF)
+endif()
+
 find_package(Vector)
 if (CMAKE_VECTOR_NOVEC)
   set(VECTOR_C_FLAGS "${VECTOR_NOVEC_C_FLAGS}")
@@ -49,6 +53,16 @@ if(BUILD_1D_KOKKOS_SGH)
   message("\nbuilding 1D SGH!  Here are the details: ")
 
   add_subdirectory(Explicit-Lagrange-Kokkos/1D_SGH_solver)
+endif()
+
+if(BUILD_KOKKOS_RDH)
+  include_directories(Explicit-Lagrange-Kokkos/RDG_solver)
+endif()
+
+if(BUILD_KOKKOS_RDH)
+  message("\nbuilding RDH!  Here are the details: ")
+
+  add_subdirectory(Explicit-Lagrange-Kokkos/RDH_solver)
 endif()
 
 if(BUILD_KOKKOS_SGH)
