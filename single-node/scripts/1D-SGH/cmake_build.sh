@@ -5,9 +5,17 @@ mkdir -p ${SGH_BUILD_DIR}
 cd ${SGH_BUILD_DIR}
 
 NUM_TASKS=1
+INSTALL_LIB=lib
 if [ "$1" = "hpc" ]
 then
     NUM_TASKS=32
+fi
+
+# If we have lib64 that's where we should be looking
+# Mac installs in just 'lib', this is for robustness on other systems
+if [ -d "${KOKKOS_INSTALL_DIR}/lib64" ]
+then
+    INSTALL_LIB=lib64
 fi
 
 # Kokkos flags for Cuda
@@ -72,7 +80,7 @@ OPTIONS=(
 -D BUILD_EXPLICIT_SOLVER=OFF
 -D KOKKOS=ON
 ${ADDITIONS[@]}
--D Kokkos_DIR=${KOKKOS_INSTALL_DIR}/lib64/cmake/Kokkos
+-D Kokkos_DIR=${KOKKOS_INSTALL_DIR}/${INSTALL_LIB}/cmake/Kokkos
 )
 set -x
 cmake "${OPTIONS[@]}" "${SGH_BASE_DIR:-../}"
