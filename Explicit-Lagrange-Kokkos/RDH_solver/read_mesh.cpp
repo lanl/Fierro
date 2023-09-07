@@ -170,7 +170,7 @@ void read_mesh_ensight(char* MESH,
 
 
 
-// This function reads a VTKHexN file
+// This function reads a VTKPn file
 //--------------------------------------------------------
 //
 void readVTKPn(char* MESH,
@@ -178,6 +178,7 @@ void readVTKPn(char* MESH,
                  node_t &node,
                  elem_t &elem,
                  corner_t &corner,
+                 ref_elem_t &ref_elem,
                  const size_t num_dims,
                  const size_t rk_num_bins)
 {
@@ -304,6 +305,8 @@ void readVTKPn(char* MESH,
     mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_zones_in_elem, num_surfs_in_elem, num_dims);
     elem.initialize_Pn(rk_num_bins, num_elems, num_nodes_in_elem, num_zones_in_elem, num_surfs_in_elem, 3, p); // always 3D here, even for 2D
     
+    // initialize reference element //
+    ref_elem.init(p, num_dims);
     
     // intialize corner variables
     size_t num_corners = num_elems*num_nodes_in_elem;

@@ -4,6 +4,7 @@
 
 #include "matar.h"
 #include "state.h"
+#include "ref_elem.h"
 
 #define PI 3.141592653589793
 
@@ -482,7 +483,7 @@ struct mesh_t {
         
         DCArrayKokkos <size_t> node_ordering_in_elem; // dimensions will be (num_patches_in_elem,num_nodes_in_patch);
         
-        printf("num_dims = %d \n", num_dims);
+        printf("num_dims = %zu \n", num_dims);
         
         if(num_dims == 3) {
             
@@ -494,9 +495,9 @@ struct mesh_t {
             // nodes in a patch in the element
             node_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_nodes_in_patch);
             
-            printf("num_patches_in_elem = %d \n", num_patches_in_elem);
-            printf("num_nodes_in_patch = %d \n", num_nodes_in_patch);
-            printf("num_surfaces = %d \n", num_surfs_in_elem);
+            printf("num_patches_in_elem = %zu \n", num_patches_in_elem);
+            printf("num_nodes_in_patch = %zu \n", num_nodes_in_patch);
+            printf("num_surfaces = %zu \n", num_surfs_in_elem);
             
         } else {
             num_patches_in_surf = Pn;
@@ -629,9 +630,9 @@ struct mesh_t {
                 
                 // i-plus-dir patches
                 i_patch = num_1D-1;
-                printf("num_1D = %d \n", num_1D);
+                printf("num_1D = %zu \n", num_1D);
                 printf("i_patch = %d \n", i_patch);
-                printf("num_nodes_in_elem %d \n", num_nodes_in_elem);
+                printf("num_nodes_in_elem %zu \n", num_nodes_in_elem);
                 for (int k=0; k<num_1D-1; k++){
                     for (int j=0; j<num_1D-1; j++){
                         
@@ -1559,6 +1560,7 @@ void readVTKPn(char* MESH,
                  node_t &node,
                  elem_t &elem,
                  corner_t &corner,
+                 ref_elem_t &ref_elem,
                  const size_t num_dims,
                const size_t rk_num_bins);
 

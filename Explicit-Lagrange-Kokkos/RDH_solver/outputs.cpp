@@ -548,7 +548,7 @@ void VTKHexN(const mesh_t &mesh,
     fprintf(out[0],"ASCII \n");                      // part 3
     fprintf(out[0],"DATASET UNSTRUCTURED_GRID\n\n"); // part 4
     
-    fprintf(out[0],"POINTS %d float\n", mesh.num_nodes);
+    fprintf(out[0],"POINTS %zu float\n", mesh.num_nodes);
 
     
     // write all components of the point coordinates
@@ -587,7 +587,7 @@ void VTKHexN(const mesh_t &mesh,
     } // end for
     
     fprintf(out[0],"\n");
-    fprintf(out[0],"CELL_TYPES %d \n", mesh.num_elems);
+    fprintf(out[0],"CELL_TYPES %zu \n", mesh.num_elems);
     // VTK_LAGRANGE_HEXAHEDRON: 72,
     // VTK_HIGHER_ORDER_HEXAHEDRON: 67
     // VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON = 33
@@ -766,7 +766,7 @@ void VTKHexN(const mesh_t &mesh,
     fprintf(out[0],"ASCII \n");                      // part 3
     fprintf(out[0],"DATASET UNSTRUCTURED_GRID\n\n"); // part 4
     
-    fprintf(out[0],"POINTS %d float\n", mesh.num_nodes);
+    fprintf(out[0],"POINTS %zu float\n", mesh.num_nodes);
     
     // write all components of the point coordinates
     for (size_t node_gid=0; node_gid<mesh.num_nodes; node_gid++){
@@ -804,7 +804,7 @@ void VTKHexN(const mesh_t &mesh,
     } // end for
     
     fprintf(out[0],"\n");
-    fprintf(out[0],"CELL_TYPES %d \n", mesh.num_elems);
+    fprintf(out[0],"CELL_TYPES %zu \n", mesh.num_elems);
     // VTK_LAGRANGE_HEXAHEDRON: 72,
     // VTK_HIGHER_ORDER_HEXAHEDRON: 67
     // VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON = 33
@@ -839,7 +839,7 @@ void VTKHexN(const mesh_t &mesh,
     */
     
     fprintf(out[0],"\n");
-    fprintf(out[0],"POINT_DATA %d \n", mesh.num_nodes);
+    fprintf(out[0],"POINT_DATA %zu \n", mesh.num_nodes);
     
     // vtk vector vars = (position, velocity)
     for (int var=0; var<num_vec_vars; var++){
@@ -865,7 +865,7 @@ void VTKHexN(const mesh_t &mesh,
     */
     
     fprintf(out[0],"\n");
-    fprintf(out[0],"CELL_DATA %d \n", mesh.num_elems);
+    fprintf(out[0],"CELL_DATA %zu \n", mesh.num_elems);
     
     // ensight_vars = (den, pres,...)
     for (int var=0; var<num_scalar_vars; var++){

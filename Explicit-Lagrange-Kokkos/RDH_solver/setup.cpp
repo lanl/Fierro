@@ -19,7 +19,7 @@
 #include "matar.h"
 #include "state.h"
 #include "mesh.h"
-
+#include "ref_elem.h"
 
 
 //==============================================================================
@@ -79,7 +79,6 @@ void setup(const CArrayKokkos <material_t> &material,
            const size_t num_state_vars
            ){
 
-    
     //--- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
     printf("Num BC's = %lu\n", num_bcs);
@@ -879,7 +878,7 @@ void user_voxel_init(DCArrayKokkos <size_t> &elem_values,
             num_points_i = std::stoi(v[1]);
             num_points_j = std::stoi(v[2]);
             num_points_k = std::stoi(v[3]);
-            printf("Num voxel nodes read in = %d, %d, %d\n", num_points_i, num_points_j, num_points_k);
+            printf("Num voxel nodes read in = %zu, %zu, %zu \n", num_points_i, num_points_j, num_points_k);
             
             found=true;
         } // end if
@@ -1075,7 +1074,7 @@ void user_voxel_init(DCArrayKokkos <size_t> &elem_values,
         //      CELLS num_elems size
         if(v[0] == "CELL_DATA"){
             num_elems = std::stoi(v[1]);
-            printf("Num voxel elements read in %d\n", num_elems);
+            printf("Num voxel elements read in %zu \n", num_elems);
             
             found=true;
         } // end if

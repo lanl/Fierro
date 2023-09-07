@@ -4,7 +4,7 @@
 #include "matar.h"
 #include "mesh.h"
 #include "state.h"
-//#include "ref_elem.h"
+#include "ref_elem.h"
 
 void update_position_sgh(double rk_alpha,
                          double dt,

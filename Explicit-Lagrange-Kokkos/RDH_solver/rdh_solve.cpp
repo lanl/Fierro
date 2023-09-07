@@ -1,6 +1,5 @@
 // Call cycle loop for the SGH solver
 
-
 #include "state.h"
 #include "mesh.h"
 #include <chrono>

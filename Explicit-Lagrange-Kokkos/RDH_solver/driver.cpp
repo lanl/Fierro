@@ -94,6 +94,7 @@ int main(int argc, char *argv[]){
         node_t  node;
         elem_t  elem;
 	corner_t corner;
+        ref_elem_t ref_elem;
         CArrayKokkos <material_t> material;
         CArrayKokkos <double> state_vars; // array to hold init model variables
         
@@ -146,7 +147,7 @@ int main(int argc, char *argv[]){
         else
         {
             // arbitrary order elements
-            readVTKPn(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
+            readVTKPn(argv[1], mesh, node, elem, corner, ref_elem, num_dims, rk_num_bins);
         }
         
         // write VTKPn
