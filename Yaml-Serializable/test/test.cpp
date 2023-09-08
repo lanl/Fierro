@@ -364,3 +364,73 @@ TEST(YamlSerializable, FromStrictNested) {
     }, Yaml::ConfigurationException);
 }
 
+SERIALIZABLE_ENUM(Module, A, B)
+
+struct TypedBase : Yaml::TypeDiscriminated<TypedBase, Module> {
+    virtual ~TypedBase() = default;
+};
+IMPL_YAML_SERIALIZABLE_FOR(TypedBase, type)
+
+struct DerivedA : TypedBase::Register<DerivedA, Module::A> {
+    std::string label = "DerivedA";
+};
+IMPL_YAML_SERIALIZABLE_WITH_BASE(DerivedA, TypedBase)
+
+struct DerivedB : TypedBase::Register<DerivedB, Module::B> {
+    std::string label = "DerivedB";
+};
+IMPL_YAML_SERIALIZABLE_WITH_BASE(DerivedB, TypedBase)
+
+TEST(YamlSerializable, TypeDiscrimination) {
+    std::string input = R"(
+    type: A
+    )";
+
+    std::shared_ptr<TypedBase> base_ptr;
+    Yaml::from_string(input, base_ptr);
+
+    auto a = std::dynamic_pointer_cast<DerivedA>(base_ptr);
+    EXPECT_STREQ(a->label.c_str(), "DerivedA");
+
+    
+
+    std::unique_ptr<TypedBase> base_ptr_unique;
+    Yaml::from_string(input, base_ptr_unique);
+
+    auto a_unique = dynamic_cast<DerivedA*>(base_ptr_unique.get());
+    EXPECT_STREQ(a_unique->label.c_str(), "DerivedA");
+}
+
+struct ContainerOfDiscriminated {
+    std::vector<std::shared_ptr<TypedBase>> modules;
+};
+IMPL_YAML_SERIALIZABLE_FOR(ContainerOfDiscriminated, modules)
+
+TEST(YamlSerailizable, NestedTypeDiscrimination) {
+    std::string input = R"(
+    modules:
+      - type: A
+      - type: B
+    )";
+
+    auto container = Yaml::from_string<ContainerOfDiscriminated>(input);
+
+    EXPECT_NE(container.modules.size(), 0);
+
+    std::shared_ptr<DerivedA> m_a;
+    std::shared_ptr<DerivedB> m_b;
+    for (auto m : container.modules) {
+        switch (m->type) {
+            case Module::A:
+                m_a = std::dynamic_pointer_cast<DerivedA>(m);
+                EXPECT_STREQ(m_a->label.c_str(), "DerivedA");
+                break;
+            case Module::B:
+                m_b = std::dynamic_pointer_cast<DerivedB>(m);
+                EXPECT_STREQ(m_b->label.c_str(), "DerivedB");
+                break;
+            default:
+                throw std::runtime_error("Unreachable.");
+        }
+    }
+}
