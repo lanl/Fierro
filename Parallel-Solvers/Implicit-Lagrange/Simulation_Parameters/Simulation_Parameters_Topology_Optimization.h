@@ -320,7 +320,7 @@ struct Simulation_Parameters_Topology_Optimization : public Simulation_Parameter
     
     auto fea_module = get_TO_module_dependency(type);
     if (fea_module.has_value())
-      ensure_module(fea_module.value());
+      validate_module_is_specified(fea_module.value());
   }
   std::optional<FEA_MODULE_TYPE> get_TO_module_dependency(TO_MODULE_TYPE type) {
     switch (type) {

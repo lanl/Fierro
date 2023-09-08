@@ -121,9 +121,10 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters {
   void derive() {
     derive_kokkos_arrays();
     rk_num_bins = rk_num_stages;
-    ensure_module(FEA_MODULE_TYPE::Eulerian);
   }
-  void validate() { }
+  void validate() {
+    validate_module_is_specified(FEA_MODULE_TYPE::Eulerian);
+  }
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Eulerian, Simulation_Parameters, 
   time_variables, material_options, region_options, 

@@ -16,7 +16,7 @@ input_options:
 
 output_options:
     graphics_step: 0.25
-    output_file_format: vtk 
+    output_file_format: vtk
 
 fea_modules:
   - type: SGH

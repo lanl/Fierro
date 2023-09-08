@@ -154,11 +154,11 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
  
     rk_num_bins = rk_num_stages;
 
-    ensure_module(FEA_MODULE_TYPE::SGH);
-
     derive_default_field_output();
   }
-  void validate() { }
+  void validate() {
+    validate_module_is_specified(FEA_MODULE_TYPE::SGH);
+  }
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_SGH, Simulation_Parameters, 
   time_variables, material_options, region_options,

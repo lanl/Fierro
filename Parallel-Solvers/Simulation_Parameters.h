@@ -154,7 +154,6 @@ struct Output_Options : Yaml::DerivedFields {
 };
 IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format, write_initial, write_final, max_num_user_output_vars)
 
-
 SERIALIZABLE_ENUM(BOUNDARY_TAG, 
     x_plane,   // tag an x-plane
     y_plane,   // tag an y-plane
@@ -273,6 +272,57 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
     for (auto& spec : fea_modules) {
       FEA_Modules_List.push_back(spec.type);
     }
+
+    // Include a default Inertial module 
+    // if it wasn't specified.
+    ensure_module(FEA_MODULE_TYPE::Inertial);
+  }
+  
+  /**
+   * Checks to see if a module of this type is already loaded,
+   * with or without additional configuration present.
+  */
+  bool has_module(FEA_MODULE_TYPE type) {
+    return find_module(type) != FEA_Modules_List.size();
+  }
+
+  /**
+   * Returns the index of the module in the list of modules.
+   * Returns FEA_Modules_List.size() if it isn't present.
+  */
+  size_t find_module(FEA_MODULE_TYPE type) {
+    size_t i = 0;
+    for (; i < FEA_Modules_List.size(); i++) {
+      if (FEA_Modules_List[i] == type)
+        break;
+    }
+    return i;
+  }
+
+  void validate_one_of_modules_are_specified(std::vector<FEA_MODULE_TYPE> types) {
+    bool found = false;
+    for (auto t : types) {
+      found = found | has_module(t);
+      if (found) break;
+    }
+    if (!found) {
+      std::stringstream ss;
+      ss << "One of the following FEA modules is required: {";
+      for (auto t : types)
+        ss << t << ",";
+      ss << "}";
+      throw Yaml::ConfigurationException(ss.str());
+    }
+  }
+
+  void validate_modules_are_specified(std::vector<FEA_MODULE_TYPE> types) {
+    for (auto t : types)
+      validate_module_is_specified(t);
+  }
+
+  void validate_module_is_specified(FEA_MODULE_TYPE type) {
+    if (!has_module(type))
+      throw Yaml::ConfigurationException("Missing required FEA module: " + to_string(type));
   }
 
   void validate_element_type() {
@@ -300,7 +350,7 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
       if (spec.type == type) return spec;
     return {};
   }
-
+  
   /**
    * If a module with the provided type is not present,
    * add it to the list of modules without any configuration.
@@ -309,45 +359,6 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
     size_t i = find_module(type);
     if (i == FEA_Modules_List.size())
       FEA_Modules_List.push_back(type);
-    return i;
-  }
-
-  /**
-   * Ensure that the module is provided.
-   * 
-   * If module configuration of this type is not found,
-   * add it to the module configurations.
-   * 
-   * If there is one present already, don't do anything.
-  */
-  size_t ensure_module(FEA_Module_Config default_spec) {
-    for (size_t i = 0; i < fea_modules.size(); i++) {
-      if (fea_modules[i].type == default_spec.type) 
-        return i;
-    }
-
-    fea_modules.push_back(default_spec);
-    return ensure_module(default_spec.type);
-  }
-
-  /**
-   * Checks to see if a module of this type is already loaded,
-   * with or without additional configuration present.
-  */
-  bool has_module(FEA_MODULE_TYPE type) {
-    return find_module(type) != FEA_Modules_List.size();
-  }
-
-  /**
-   * Returns the index of the module in the list of modules.
-   * Returns FEA_Modules_List.size() if it isn't present.
-  */
-  size_t find_module(FEA_MODULE_TYPE type) {
-    size_t i = 0;
-    for (; i < FEA_Modules_List.size(); i++) {
-      if (FEA_Modules_List[i] == type)
-        break;
-    }
     return i;
   }
 };
