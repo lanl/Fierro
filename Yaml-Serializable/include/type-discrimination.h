@@ -35,6 +35,10 @@ namespace Yaml {
         template<typename T, DiscriminationType DiscriminationValue>
         struct Register : Base {
             static bool registerT() {
+                if (TypeDiscriminated::data().count(DiscriminationValue) != 0)
+                    throw ConfigurationException(
+                        "Multiple type discriminated classes have been registered with the same discriminating value."
+                    );
                 TypeDiscriminated::data()[DiscriminationValue] = 
                     std::make_unique<DerivedSerializer<T>>(DerivedSerializer<T>());
                 return true;
