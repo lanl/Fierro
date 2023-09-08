@@ -45,14 +45,18 @@ namespace Yaml {
     }
 
     namespace Base {
-        template< typename T, typename U >
-        inline std::true_type isTypeDiscriminated( TypeDiscriminated<T, U> const volatile& );
-        inline std::false_type isTypeDiscriminated( ... );
+
+        template<typename Base>
+        struct IsTypeDiscriminated {
+            template<typename U>
+            static std::true_type check(TypeDiscriminated<Base, U> const volatile&);
+            static std::false_type check( ... );
+        };
 
         template<typename T>
         struct Impl<std::shared_ptr<T>> {
             static void deserialize(std::shared_ptr<T>& v, Yaml::Node& node, bool raw) {
-                if constexpr (decltype(isTypeDiscriminated(*v))::value) {
+                if constexpr (decltype(IsTypeDiscriminated<T>::check(*v))::value) {
                     v = std::move(T::deserialize_as_derived(node, raw));
                 } else {
                     T inner_v;
@@ -62,7 +66,7 @@ namespace Yaml {
             }
 
             static void serialize(const std::shared_ptr<T>& v, Yaml::Node& node) {
-                if constexpr (decltype(isTypeDiscriminated(*v))::value) {
+                if constexpr (decltype(IsTypeDiscriminated<T>::check(*v))::value) {
                     T::serialize_as_derived(v.get(), node);
                 } else {
                     Yaml::serialize(*v, node);
@@ -74,7 +78,7 @@ namespace Yaml {
         template<typename T>
         struct Impl<std::unique_ptr<T>> {
             static void deserialize(std::unique_ptr<T>& v, Yaml::Node& node, bool raw) {
-                if constexpr (decltype(isTypeDiscriminated(*v))::value) {
+                if constexpr (decltype(IsTypeDiscriminated<T>::check(*v))::value) {
                     v = std::move(T::deserialize_as_derived(node, raw));
                 } else {
                     T inner_v;
@@ -84,7 +88,7 @@ namespace Yaml {
             }
             
             static void serialize(const std::unique_ptr<T>& v, Yaml::Node& node) {
-                if constexpr (decltype(isTypeDiscriminated(*v))::value) {
+                if constexpr (decltype(IsTypeDiscriminated<T>::check(*v))::value) {
                     T::serialize_as_derived(v.get(), node);
                 } else {
                     Yaml::serialize(*v, node);
