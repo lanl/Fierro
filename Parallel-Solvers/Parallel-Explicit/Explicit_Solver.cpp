@@ -1101,7 +1101,7 @@ void Explicit_Solver::FEA_module_setup(){
       fea_modules[imodule] = new FEA_Module_Dynamic_Elasticity(this, mesh);
       module_found = true;
       //debug print
-      *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
+      *fos << " DYNAMIC ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
       
     }
     else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Inertial){
@@ -1448,7 +1448,7 @@ void Explicit_Solver::setup_optimization_problem(){
   //directions(4,0) = -0.3;
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
   ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
-  //obj->checkGradient(*rol_x, *rol_d);
+  obj->checkGradient(*rol_x, *rol_d);
   //obj->checkHessVec(*rol_x, *rol_d);
   //directions_distributed->putScalar(-0.000001);
   //obj->checkGradient(*rol_x, *rol_d);

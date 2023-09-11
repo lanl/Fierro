@@ -364,7 +364,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKok
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++){
 
-                corner_vector_storage(corner_gid, dim) = -0.00000001;
+                corner_vector_storage(corner_gid, dim) = -0;
                 //corner_vector_storage(corner_gid, dim) = 0;
 
             } // end loop over dimension
@@ -394,6 +394,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKok
     Kokkos::fence();
     
     //vec_array force_gradient_velocity_view = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+    /*
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         size_t corner_id;
         for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
@@ -404,7 +405,15 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKok
         }
     }); // end parallel for
     Kokkos::fence();
+    */
 
+    FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+        
+        Force_Gradient_Velocities(node_id*num_dims,0) = -0.00000001;
+        Force_Gradient_Velocities(node_id*num_dims+1,0) = -0.00000001;
+        Force_Gradient_Velocities(node_id*num_dims+2,0) = -0.00000001;
+    }); // end parallel for
+    Kokkos::fence();
     
     return;
     
