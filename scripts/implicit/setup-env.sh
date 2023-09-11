@@ -52,7 +52,7 @@ export basedir=${topdir}
 export srcdir=${basedir}/src
 export libdir=${topdir}/lib
 export matardir=${libdir}/Elements/matar
-export trilinosdir=${libdir}/TRILINOS
+export trilinosdir=${libdir}
 export builddir=${basedir}/${my_build}
 #export installdir=${basedir}/install-kokkos/install-kokkos-${my_device}
 
