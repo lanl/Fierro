@@ -39,7 +39,7 @@ fi
 my_build="build-Explicit"
 if [ -z $3 ]
 then
-    my_build="build-Explicit-${my_device}"
+    my_build="${my_build}-${my_device}"
 else
     my_build=$3
 fi
