@@ -1,10 +1,6 @@
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/)
 include(cmake/Modules/FindVector.cmake OPTIONAL)
 
-if(NOT DEFINED BUILD_ELEMENTS)
-  set(BUILD_ELEMENTS ON)
-endif()
-
 if(NOT DEFINED BUILD_PARALLEL_EXPLICIT_SOLVER)
   set(BUILD_PARALLEL_EXPLICIT_SOLVER OFF)
 endif()
@@ -62,19 +58,6 @@ message("End of Trilinos details\n")
 include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)
-
-if(BUILD_ELEMENTS)
-  set(ELEMENTS_DIRS matar/src elements swage common geometry slam)
-
-  foreach(DIR ${ELEMENTS_DIRS})
-    include_directories(Elements/${DIR})
-  endforeach()
-
-  foreach(DIR ${ELEMENTS_DIRS})
-    add_subdirectory(Elements/${DIR})
-  endforeach()
-  add_subdirectory(Elements/mesh_tools)
-endif()
 
 if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
   add_subdirectory(Parallel-Solvers)
