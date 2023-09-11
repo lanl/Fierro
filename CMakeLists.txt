@@ -10,7 +10,7 @@ include(cmake/Modules/TargetDistclean.cmake OPTIONAL)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-option(TEST "Build tests" ON)
+option(TEST "Build tests" OFF)
 
 if (TEST)
   include(FetchContent)
@@ -26,11 +26,30 @@ if (TEST)
   enable_testing()
 endif()
 
-
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
  # set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
+
+if(NOT DEFINED BUILD_ELEMENTS)
+  set(BUILD_ELEMENTS ON)
+endif()
+
+include_directories(lib/Elements)
+add_subdirectory(lib/Elements)
+#add_subdirectory(lib/Elements/matar)
+#if(BUILD_ELEMENTS)
+#  set(ELEMENTS_DIRS elements swage common geometry slam)
+
+#  foreach(DIR ${ELEMENTS_DIRS})
+#    include_directories(lib/Elements/${DIR})
+#  endforeach()
+
+#  foreach(DIR ${ELEMENTS_DIRS})
+#    add_subdirectory(lib/Elements/${DIR})
+#  endforeach()
+#  add_subdirectory(lib/Elements/mesh_tools)
+#endif()
 
 include_directories(src)
 add_subdirectory(src)

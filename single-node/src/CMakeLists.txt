@@ -55,16 +55,6 @@ if(BUILD_1D_KOKKOS_SGH)
   add_subdirectory(Explicit-Lagrange-Kokkos/1D_SGH_solver)
 endif()
 
-if(BUILD_KOKKOS_RDH)
-  include_directories(Explicit-Lagrange-Kokkos/RDG_solver)
-endif()
-
-if(BUILD_KOKKOS_RDH)
-  message("\nbuilding RDH!  Here are the details: ")
-
-  add_subdirectory(Explicit-Lagrange-Kokkos/RDH_solver)
-endif()
-
 if(BUILD_KOKKOS_SGH)
   message("\nbuilding SGH!  Here are the details: ")
 

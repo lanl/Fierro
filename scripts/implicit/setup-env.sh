@@ -5,6 +5,8 @@ mygcc="gcc/9.4.0"
 myclang="clang/13.0.0"
 mycuda="cuda/11.4.0"
 myrocm="rocm"
+mycmake="cmake"
+mympi="openmpi"
 
 if [ "$1" = "hpc" ]
 then
@@ -22,8 +24,8 @@ then
     else
         module load ${mygcc}
     fi
-    module load cmake
-    module load openmpi
+    module load ${mycmake}
+    module load ${mympi}
     module -t list
 fi
 

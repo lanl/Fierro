@@ -73,6 +73,6 @@ OPTIONS=(
 )
 
 cmake "${OPTIONS[@]}" "${FIERRO_BASE_DIR:-../}"
-make -j ${NUM_TASKS}
+make #-j ${NUM_TASKS}
 
 cd $basedir
