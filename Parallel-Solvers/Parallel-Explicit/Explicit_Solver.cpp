@@ -931,9 +931,9 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
 
   //flag elasticity fea module for boundary/loading conditions readin that remains
   if(!No_Conditions){
-    //look for elasticity module in Simulation Parameters data; if not declared add the module
+    // check that the input file has configured some kind of acceptable module
+    simparam.validate_module_is_specified(FEA_MODULE_TYPE::Elasticity);
     simparam.fea_module_must_read.insert(FEA_MODULE_TYPE::Elasticity);
-    simparam.ensure_module(FEA_MODULE_TYPE::Elasticity);
     // TODO: What about simparam_dynamic_opt?
   }
 
@@ -1317,7 +1317,7 @@ void Explicit_Solver::setup_optimization_problem(){
     //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
     for(int inode = 0; inode < nlocal_nodes; inode++){
       node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = simparam_dynamic_opt.optimization_options.density_epsilon;
+      node_densities_lower_bound(inode,0) = simparam_dynamic_opt.optimization_options.value().density_epsilon;
     }
 
     //set lower bounds for nodes on surfaces with boundary and loading conditions
@@ -1395,7 +1395,7 @@ void Explicit_Solver::setup_optimization_problem(){
     vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
     for(int ielem = 0; ielem < rnum_elem; ielem++){
       Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = simparam_dynamic_opt.optimization_options.density_epsilon;
+      Element_Densities_Lower_Bound(ielem,0) = simparam_dynamic_opt.optimization_options.value().density_epsilon;
     }
 
     //create global vector

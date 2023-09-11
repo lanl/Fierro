@@ -78,6 +78,8 @@ struct Optimization_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   bool method_of_moving_asymptotes;
   double simp_penalty_power;
   double density_epsilon;
+
+  void validate() { }
 };
 IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options, 
   optimization_process, optimization_objective, 
@@ -90,7 +92,7 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
   int NB  = 6; // number of boundary patch sets to tag
   int NBD = 2; //number of density boundary conditions
 
-  Optimization_Options optimization_options;
+  std::optional<Optimization_Options> optimization_options;
   
   //When on, all element nodes connected to a boundary condition patch will have their density constrained
   bool thick_condition_boundary = true;
@@ -101,41 +103,36 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
   //Topology Optimization parameters
   double penalty_power = 3.0;
 
+  bool nodal_density_flag = true;
   
   // Non-serialized fields
   bool helmholtz_filter  = false;
   double density_epsilon = 0.0001;
   //list of TO functions needed by problem
-  std::vector<TO_MODULE_TYPE> TO_Module_List {
-    TO_MODULE_TYPE::Kinetic_Energy_Minimize
-  };
-  std::vector<FUNCTION_TYPE> TO_Function_Type {
-    FUNCTION_TYPE::OBJECTIVE
-  };
+  std::vector<TO_MODULE_TYPE> TO_Module_List;
+  std::vector<FUNCTION_TYPE> TO_Function_Type;
   std::vector<int> TO_Module_My_FEA_Module;
   std::vector<std::vector<int>> FEA_Module_My_TO_Modules;
   std::vector<std::vector<double>> Function_Arguments;
 
-  // TODO: Implement a real structure here.
-  // Then we can support this stuff.
-  // std::vector<int> Multi_Objective_Modules;
-  // std::vector<real_t> Multi_Objective_Weights;
-  // int nmulti_objective_modules = 0;
-
   //Topology Optimization flags
   bool topology_optimization_on = false;
   bool shape_optimization_on    = false;
-  bool nodal_density_flag       = true;
 
-  void derive() {
-    shape_optimization_on = optimization_options.optimization_process == OPTIMIZATION_PROCESS::shape_optimization;
-    topology_optimization_on = optimization_options.optimization_process == OPTIMIZATION_PROCESS::topology_optimization;
+  void derive_from_optimization_options() {
+    if (!optimization_options.has_value())
+      return;
+    auto options = optimization_options.value();
 
-    TO_Module_List.resize(optimization_options.constraints.size());
-    TO_Function_Type.resize(optimization_options.constraints.size());
-    Function_Arguments.resize(optimization_options.constraints.size());
-    for (size_t i = 0; i < optimization_options.constraints.size(); i++) {
-      auto constraint = optimization_options.constraints[i];
+    shape_optimization_on = options.optimization_process == OPTIMIZATION_PROCESS::shape_optimization;
+    topology_optimization_on = options.optimization_process == OPTIMIZATION_PROCESS::topology_optimization;
+
+    TO_Module_List.resize(options.constraints.size());
+    TO_Function_Type.resize(options.constraints.size());
+    Function_Arguments.resize(options.constraints.size());
+
+    for (size_t i = 0; i < options.constraints.size(); i++) {
+      auto constraint = options.constraints[i];
 
       // TODO: This whole thing is pretty messed up.
       // Both FEA Modules and TO_Modules really need to be structs
@@ -149,16 +146,19 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
       if (constraint.value.has_value())
         Function_Arguments[i] = { constraint.value.value() };
     }
-    
-    // Add this TO module if we added any.
-    if (optimization_options.constraints.size() > 0) {
-      ensure_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
-    }
-  
-    // Take a pass first to ensure that all necessary modules are loaded.
-    for (auto to_module : TO_Module_List)
-      ensure_module(get_TO_module_dependency(to_module)); 
 
+    switch (options.optimization_objective) {
+      case OPTIMIZATION_OBJECTIVE::minimize_kinetic_energy:
+        add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+        break;
+      default:
+        throw Yaml::ConfigurationException("Unsupported optimization objective " 
+          + to_string(options.optimization_objective)
+        );
+    }
+  }
+
+  void map_TO_to_FEA() {
     // Now we allocate the vectors for each of the currently identified modules.
     TO_Module_My_FEA_Module.resize(TO_Module_List.size());
     FEA_Module_My_TO_Modules.resize(FEA_Modules_List.size());
@@ -169,35 +169,56 @@ struct Simulation_Parameters_Dynamic_Optimization : public Simulation_Parameters
     // instead of this vector stuff.
     for (size_t to_index = 0; to_index < TO_Module_List.size(); to_index++) {
       auto to_module = TO_Module_List[to_index];
-      size_t fea_index = find_module(get_TO_module_dependency(to_module));
+      size_t fea_index = find_TO_module_dependency(to_module);
 
       TO_Module_My_FEA_Module[to_index] = fea_index;
       FEA_Module_My_TO_Modules[fea_index].push_back(to_index);
     }
   }
-  void validate() { }
 
-  void ensure_TO_module(TO_MODULE_TYPE type, FUNCTION_TYPE function_type, std::vector<double> arguments) {
+  void derive() {
+    derive_from_optimization_options();
+    map_TO_to_FEA();
+  }
+
+  void validate() {
+    // Check that the FEA module dependencies are satisfied.
+    for (auto to_module : TO_Module_List)
+      find_TO_module_dependency(to_module); 
+  }
+
+  void add_TO_module(TO_MODULE_TYPE type, FUNCTION_TYPE function_type, std::vector<double> arguments) {
     if (std::find(TO_Module_List.begin(), TO_Module_List.end(), type) != TO_Module_List.end())
       return; // Already have it.
     
     TO_Module_List.push_back(type);
     TO_Function_Type.push_back(function_type);
     Function_Arguments.push_back(arguments);
-    ensure_module(get_TO_module_dependency(type)); 
   }
-  FEA_MODULE_TYPE get_TO_module_dependency(TO_MODULE_TYPE type) {
+
+  /**
+   * Find the TO module dependency in the FEA_Module_List list.
+   * Returns the index of the dependency satisfier. 
+   * 
+   * Throws a Yaml::ConfigurationException if one does not exist.
+  */
+  size_t find_TO_module_dependency(TO_MODULE_TYPE type) {
     switch (type) {
       case TO_MODULE_TYPE::Kinetic_Energy_Minimize:
-        return FEA_MODULE_TYPE::SGH;
+        validate_one_of_modules_are_specified({FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity});
+        return find_one_of_module({FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity});
       case TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize:
-        return FEA_MODULE_TYPE::Heat_Conduction;
+        validate_module_is_specified(FEA_MODULE_TYPE::Heat_Conduction);
+        return find_module(FEA_MODULE_TYPE::Heat_Conduction);
       case TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint:
-        return FEA_MODULE_TYPE::Heat_Conduction;
+        validate_module_is_specified(FEA_MODULE_TYPE::Heat_Conduction);
+        return find_module(FEA_MODULE_TYPE::Heat_Conduction);
       case TO_MODULE_TYPE::Mass_Constraint:
-        return FEA_MODULE_TYPE::Inertial;
+        validate_module_is_specified(FEA_MODULE_TYPE::Inertial);
+        return find_module(FEA_MODULE_TYPE::Inertial);
       case TO_MODULE_TYPE::Moment_of_Inertia_Constraint:
-        return FEA_MODULE_TYPE::Inertial;
+        validate_module_is_specified(FEA_MODULE_TYPE::Inertial);
+        return find_module(FEA_MODULE_TYPE::Inertial);
       default:
         throw Yaml::ConfigurationException(
           "Unsupported optimization module type " + to_string(type)
