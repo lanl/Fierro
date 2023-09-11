@@ -30,16 +30,16 @@ then
 fi
 
 
-my_device="serial"
+my_device="mpi"
 if [ "$2" != "none" ]
 then
     my_device="$2"
 fi
 
-my_build="build-Explicit"
+my_build="build-all"
 if [ -z $3 ]
 then
-    my_build="build-Explicit-${my_device}"
+    my_build="${my_build}-${my_device}"
 else
     my_build=$3
 fi
