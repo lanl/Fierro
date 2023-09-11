@@ -287,6 +287,14 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
   }
 
   /**
+   * Checks to see if a module of this type is already loaded,
+   * with or without additional configuration present.
+  */
+  bool has_module(std::vector<FEA_MODULE_TYPE> types) {
+    return find_one_of_module(types) != FEA_Modules_List.size();
+  }
+
+  /**
    * Returns the index of the module in the list of modules.
    * Returns FEA_Modules_List.size() if it isn't present.
   */
@@ -299,13 +307,29 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
     return i;
   }
 
-  void validate_one_of_modules_are_specified(std::vector<FEA_MODULE_TYPE> types) {
-    bool found = false;
-    for (auto t : types) {
-      found = found | has_module(t);
-      if (found) break;
+  /**
+   * Returns the first index of a module in the list of modules
+   * that is present in the provided list of types.
+   * 
+   * If no module was found FEA_Modules_List.size() is returned. 
+  */
+  size_t find_one_of_module(std::vector<FEA_MODULE_TYPE> types) {
+    size_t i = 0;
+    for (; i < FEA_Modules_List.size(); i++) {
+      for (auto t : types) {
+        if (FEA_Modules_List[i] == t)
+          return i;
+      }
     }
-    if (!found) {
+    return i;
+  }
+
+  /**
+   * Checks that at least one of the provided modules is specified. 
+   * Throws a Yaml::ConfigurationException if none are found.
+  */
+  void validate_one_of_modules_are_specified(std::vector<FEA_MODULE_TYPE> types) {
+    if (!has_module(types)) {
       std::stringstream ss;
       ss << "One of the following FEA modules is required: {";
       for (auto t : types)
@@ -315,11 +339,19 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
     }
   }
 
+  /**
+   * Checks that all of the provided modules is specified. 
+   * Throws a Yaml::ConfigurationException if not.
+  */
   void validate_modules_are_specified(std::vector<FEA_MODULE_TYPE> types) {
     for (auto t : types)
       validate_module_is_specified(t);
   }
 
+  /**
+   * Checks that the provided module is specified. 
+   * Throws a Yaml::ConfigurationException if not.
+  */
   void validate_module_is_specified(FEA_MODULE_TYPE type) {
     if (!has_module(type))
       throw Yaml::ConfigurationException("Missing required FEA module: " + to_string(type));
