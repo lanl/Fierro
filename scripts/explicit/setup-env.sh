@@ -30,7 +30,7 @@ then
 fi
 
 
-my_device="serial"
+my_device="mpi"
 if [ "$2" != "none" ]
 then
     my_device="$2"
