@@ -542,7 +542,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (int cycle = last_time_step; cycle >= 0; cycle--) {
+  for (long unsigned cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -608,7 +608,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (int cycle = last_time_step; cycle >= 0; cycle--) {
+  for (long unsigned cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -849,7 +849,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
   Kokkos::fence();
 
   //gradient contribution from kinetic energy vMv product.
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (long unsigned cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -963,7 +963,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
   Kokkos::fence();
 
   //gradient contribution from Force vector.
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (long unsigned cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -1081,7 +1081,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     Kokkos::fence();
 
     //gradient contribution from kinetic energy v(dM/drho)v product.
-    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (long unsigned cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       
@@ -1163,7 +1163,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     Kokkos::fence();
 
     //gradient contribution from time derivative of adjoint \dot{lambda}(dM/drho)v product.
-    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (long unsigned cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print

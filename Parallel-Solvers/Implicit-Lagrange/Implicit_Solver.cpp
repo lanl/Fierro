@@ -847,8 +847,8 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
 
   //flag elasticity fea module for boundary/loading conditions readin that remains
   if(!No_Conditions){
-    //look for elasticity module in Simulation Parameters data; if not declared add the module
-    simparam.ensure_module(FEA_MODULE_TYPE::Elasticity);
+    // check that the input file has configured some kind of acceptable module
+    simparam.validate_module_is_specified(FEA_MODULE_TYPE::Elasticity);
     simparam_TO.fea_module_must_read.insert(FEA_MODULE_TYPE::Elasticity);
   }
 
