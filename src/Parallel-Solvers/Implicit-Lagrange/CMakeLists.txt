@@ -44,6 +44,7 @@ target_link_libraries (fea_modules
   ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
 )
 target_link_libraries (fierro-parallel-implicit 
+  matar
   fea_modules
   ${Trilinos_LIBRARIES}
 )
