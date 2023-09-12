@@ -30,11 +30,11 @@ then
 fi
 
 
-my_device="mpi"
-if [ "$2" != "none" ]
-then
-    my_device="$2"
-fi
+#my_device="mpi"
+#if [ "$2" != "serial" ]
+#then
+my_device="mpi-$2"
+#fi
 
 my_build="build-Explicit"
 if [ -z $3 ]
@@ -68,7 +68,7 @@ export FIERRO_BUILD_DIR=${builddir}
 # Do this differently (in src tree) than other libs because
 # of compile time
 export TRILINOS_SOURCE_DIR=${trilinosdir}/Trilinos
-export TRILINOS_BUILD_DIR=${TRILINOS_SOURCE_DIR}/build
+export TRILINOS_BUILD_DIR=${TRILINOS_SOURCE_DIR}/build-${my_device}
 export TRILINOS_INSTALL_DIR=${TRILINOS_BUILD_DIR}
 
 cd $scriptdir
