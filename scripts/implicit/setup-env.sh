@@ -30,11 +30,7 @@ then
 fi
 
 
-#my_device="mpi"
-#if [ "$2" != "serial" ]
-#then
 my_device="mpi-$2"
-#fi
 
 my_build="build-Implicit"
 if [ -z $3 ]

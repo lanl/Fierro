@@ -29,10 +29,10 @@ fi
 if [ ! -e "${TRILINOS_BUILD_DIR}/CMakeCache.txt" ]
 then
 
-NUM_TASKS=1
-if [ "$1" = "hpc" ]
+NUM_TASKS=32
+if [ "$1" = "macos" ]
 then
-    NUM_TASKS=32
+    NUM_TASKS=1
 fi
 
 # Kokkos flags for Cuda
