@@ -35,13 +35,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-<<<<<<< HEAD
 #ifndef SIMULATION_PARAMETERS_SGH_H
 #define SIMULATION_PARAMETERS_SGH_H
-=======
-#ifndef SIMULATION_PARAMETERS_DYNAMIC_ELASTICITY_H
-#define SIMULATION_PARAMETERS_DYNAMIC_ELASTICITY_H
->>>>>>> 8799e4694c031c3b50d100346ca1c4f4cd6fdb3a
 
 #include "matar.h"
 #include <cmath>
@@ -57,7 +52,6 @@
 
 using namespace mtr;
 
-<<<<<<< HEAD
 SERIALIZABLE_ENUM(FIELD_OUTPUT_SGH,
     velocity,
     element_density,
@@ -72,19 +66,13 @@ SERIALIZABLE_ENUM(FIELD_OUTPUT_SGH,
 )
 
 struct Simulation_Parameters_SGH : Simulation_Parameters {
-=======
-struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
->>>>>>> 8799e4694c031c3b50d100346ca1c4f4cd6fdb3a
   Time_Variables time_variables;
   std::vector<MaterialFill> region_options;
   std::vector<Material> material_options;
   std::vector<Boundary> boundary_conditions;
   std::vector<Loading> loading_conditions;
   Graphics_Options graphics_options;
-<<<<<<< HEAD
   std::set<FIELD_OUTPUT_SGH> field_output;  
-=======
->>>>>>> 8799e4694c031c3b50d100346ca1c4f4cd6fdb3a
 
   bool gravity_flag   = false;
   bool report_runtime = true;
@@ -149,7 +137,6 @@ struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
     }
   }
 
-<<<<<<< HEAD
   void derive_default_field_output() {
     if (field_output.empty()) {
       field_output.insert(FIELD_OUTPUT_SGH::velocity);
@@ -162,14 +149,11 @@ struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
     }
   }
 
-=======
->>>>>>> 8799e4694c031c3b50d100346ca1c4f4cd6fdb3a
   void derive() {
     derive_kokkos_arrays();
  
     rk_num_bins = rk_num_stages;
 
-<<<<<<< HEAD
     derive_default_field_output();
   }
   void validate() {
@@ -181,16 +165,6 @@ IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_SGH, Simulation_Parameter
   boundary_conditions, loading_conditions, gravity_flag, report_runtime, rk_num_stages,
   NB, NBSF, NBV,
   graphics_options, field_output
-=======
-  }
-  void validate() { }
-};
-IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Dynamic_Elasticity, Simulation_Parameters, 
-  time_variables, material_options, region_options,
-  boundary_conditions, loading_conditions, gravity_flag, report_runtime, rk_num_stages,
-  NB, NBSF, NBV,
-  graphics_options
->>>>>>> 8799e4694c031c3b50d100346ca1c4f4cd6fdb3a
 )
 
 #endif // end HEADER_H

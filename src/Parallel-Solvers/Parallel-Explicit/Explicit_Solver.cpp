@@ -35,7 +35,6 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
  
-<<<<<<< HEAD
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -3378,14 +3377,3 @@ void Explicit_Solver::init_design(){
   }
 
 }
-=======
-#include "Explicit_Solver.h"
-#include <stdlib.h>
-#include <mpi.h>
-
-Explicit_Solver::Explicit_Solver() : Solver(){
-}
-
-
-Explicit_Solver::~Explicit_Solver(){}
->>>>>>> 8799e4694c031c3b50d100346ca1c4f4cd6fdb3a

@@ -41,7 +41,6 @@
 
 #include "Solver.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
-<<<<<<< HEAD
 #include "utilities.h"
 #include "Simulation_Parameters_Explicit.h"
 #include "mesh.h"
@@ -59,8 +58,6 @@
 #include <Tpetra_CrsMatrix.hpp>
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include <map>
-=======
->>>>>>> 8799e4694c031c3b50d100346ca1c4f4cd6fdb3a
 
 class Explicit_Solver: public Solver{
 
@@ -68,7 +65,6 @@ public:
   Explicit_Solver();
   ~Explicit_Solver();
 
-<<<<<<< HEAD
   virtual void run(int argc, char *argv[]);
 
   //void read_mesh_ensight(char *MESH);
@@ -179,9 +175,6 @@ public:
 
   //debug flags
   int gradient_print_sync;
-=======
-  virtual void run(int argc, char *argv[]) {}
->>>>>>> 8799e4694c031c3b50d100346ca1c4f4cd6fdb3a
 
   Teuchos::RCP<MV> initial_node_coords_distributed;
   
