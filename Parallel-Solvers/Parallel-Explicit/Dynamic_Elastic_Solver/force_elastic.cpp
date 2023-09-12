@@ -815,7 +815,8 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_vec_array 
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes+nghost_nodes, {
         for (int idim = 0; idim < num_dim; idim++){
           node_vel(rk_level,node_gid,idim) = current_velocity_vector(node_gid,idim);
-          node_coords(rk_level,node_gid,idim) = current_coordinate_vector(node_gid,idim);
+          node_coords(0,node_gid,idim) = current_coordinate_vector(node_gid,idim);
+          node_coords(rk_level,node_gid,idim) = next_coordinate_vector(node_gid,idim);
         }
       });
       Kokkos::fence();
@@ -843,14 +844,14 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_vec_array 
 
           nodal_positions(node_loop,0) = all_initial_node_coords(local_node_id,0);
           nodal_positions(node_loop,1) = all_initial_node_coords(local_node_id,1);
-          current_nodal_displacements(node_loop*num_dim) = node_coords(rk_level, local_node_id, 0)-all_initial_node_coords(local_node_id,0);
-          current_nodal_displacements(node_loop*num_dim+1) = node_coords(rk_level, local_node_id, 1)-all_initial_node_coords(local_node_id,1);
+          current_nodal_displacements(node_loop*num_dim) = (node_coords(rk_level, local_node_id, 0)-all_initial_node_coords(local_node_id,0)+node_coords(0, local_node_id, 0)-all_initial_node_coords(local_node_id,0))/2;
+          current_nodal_displacements(node_loop*num_dim+1) = (node_coords(rk_level, local_node_id, 1)-all_initial_node_coords(local_node_id,1)+node_coords(0, local_node_id, 1)-all_initial_node_coords(local_node_id,1))/2;
           current_element_adjoint(node_loop*num_dim) = (current_adjoint_vector(local_node_id,0)+next_adjoint_vector(local_node_id,0))/2;
           current_element_adjoint(node_loop*num_dim+1) = (current_adjoint_vector(local_node_id,1)+next_adjoint_vector(local_node_id,1))/2;
 
           if(num_dim==3){
           nodal_positions(node_loop,2) = all_initial_node_coords(local_node_id,2);
-          current_nodal_displacements(node_loop*num_dim+2) = node_coords(rk_level, local_node_id, 2)-all_initial_node_coords(local_node_id,2);
+          current_nodal_displacements(node_loop*num_dim+2) = (node_coords(rk_level, local_node_id, 2)-all_initial_node_coords(local_node_id,2)+node_coords(0, local_node_id, 2)-all_initial_node_coords(local_node_id,2))/2;
           current_element_adjoint(node_loop*num_dim+2) = (current_adjoint_vector(local_node_id,2)+next_adjoint_vector(local_node_id,2))/2;
           }
 
