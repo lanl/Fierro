@@ -49,6 +49,12 @@ git clone --recursive https://github.com/lanl/Fierro.git
 # Building the code
 Building the code from source allows you to compile with more targeted hardware optimizations that could offer a potentially faster executable. 
 To build it yourself, run the following from the root directory. The native CPU architecture will automatically be taken into account. 
+```
+mkdir build
+cd build
+cmake .. -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON
+make -j
+```
 
 GPU hardware will be leveraged according to the distribution of Trilinos that **Fierro** is built against.
 You are welcome to only compile one solver or the other, and the one(s) that you did compile will be available through the CLI.
@@ -60,41 +66,17 @@ As for Trilinos, we recommend installing the Anaconda package for the desired bu
 
 ## Alternative Build Workflows
 In addition to the primary build workflow described above, there are build scripts for a variety of alternative workflows. These scripts can be found under `Fierro/scripts`.
-### Building the explicit and implicit Lagrangian methods with Trilinos+Kokkos
+### Building the explicit Lagrangian methods with Kokkos
 Explicit Lagrangian codes are being added to the repository that are written using MATAR+Kokkos and run with fine-grained parallellism on multi-core CPUs and GPUs.  Build scripts are provided for each Lagrangian code, and those scripts follow those used in the [MATAR](https://github.com/lanl/MATAR/) GitHub repository. The scripts to build the Lagrangian codes (that use MATAR+Kokkos) are in the scripts folder.  The user must update the modules loaded by the build scripts (for the compiler etc.), and then type
-The build-it script can take up to 3 arguments (with a minimum of 2)
 ```
-source build-it.sh <environment type> <parallelism> <build directory name (optional)>
+source build-it.sh
 ```
-environment has two options: 'hpc' or 'macos'
-```
-    hpc: builds by loading modules and can perform parallel builds (make -j)
-    macos: does not load anything externally and expects the environment to be set up on your mac. Additionally, the builds will all be serial (make)
-```
-parallelism has four options: 'cuda', 'hip', 'openmp', 'none'
-***Note*** - all builds use Trilinos with Kokkos. The 'none' option will utilize the Kokkos serial build
-```
-    cuda: loads cuda module and a working gcc module pairing
-    hip: loads hip module and a working clang module pairing
-    openmp: loads gcc module and sets openmp environment variables
-    none: loads gcc module
-```
-***Note*** - compiler can be changed with the appropriate variables in *setup-env.sh*, the ones provided are simply known to work together
-
-All other scripts will be called with the appropriate arguments as a result of running build-it.
-
-If you need to simply rebuild Fierro without making a new Trilinos installation, simply
-```
-source cmake_build.sh <same args you passed to build-it>
-```
-If you are getting back on to a machine or allocation to continue development, you will need to run
-```
-source setup-env.sh <same args you passed to build-it>
+The build-it.sh script sources the other scripts in the folder.  The compiled code will be in a folder (named after the explicit Lagrangian method) in the Fierro directory.  A range of scripts are provided for many architectures; however, they might not be correctly configured for the user's hardware.  The CPU architecture information needs to be listed if running with the Kokkos serial, OpenMP, and pthreads backends; GPU architecture information must be listed if using a Kokkos GPU backend. We refer the user to Kokkos compiling page to see the large list of compilation options,
+``` 
+https://github.com/kokkos/kokkos/wiki/Compiling
 ```
 If the scripts fail to build a Lagrangian code, then carefully review the modules used and the computer architecture settings.  A more lenghtly discussion of the build scripts is provided in the MATAR GitHub repository. 
 
-For help with [Trilinos](https://github.com/trilinos/Trilinos/wiki/New-Trilinos-Developers)
-For help with [Kokkos](https://github.com/kokkos/kokkos/wiki/Compiling) compilation
 
 ### Updating submodules
 The ELEMENTS library and MATAR library can be updated to the newest release using
