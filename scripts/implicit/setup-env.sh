@@ -1,3 +1,15 @@
+### Make sure relevant arguments were provided
+if [ "$1" != "hpc" ] && [ "$1" != "macos" ] && [ "$1" != "linux" ]
+then
+    echo "The first argument needs to be either hpc, macos, or linux"
+    return 1
+fi
+if [ "$2" != "cuda" ] && [ "$2" != "hip" ] && [ "$2" != "openmp" ] && [ "$2" != "serial" ]
+then
+    echo "The second argument needs to be either cuda, hip, openmp, or serial"
+    return 1
+fi
+
 ### Load environment modules here
 ### Assign names as relevant
 
@@ -30,12 +42,12 @@ then
 fi
 
 
-my_device="mpi-$2"
+my_parallel="mpi-$2"
 
 my_build="build-Implicit"
 if [ -z $3 ]
 then
-    my_build="${my_build}-${my_device}"
+    my_build="${my_build}-${my_parallel}"
 else
     my_build=$3
 fi
@@ -50,7 +62,7 @@ export libdir=${topdir}/lib
 export matardir=${libdir}/Elements/matar
 export trilinosdir=${libdir}
 export builddir=${basedir}/${my_build}
-#export installdir=${basedir}/install-kokkos/install-kokkos-${my_device}
+#export installdir=${basedir}/install-kokkos/install-kokkos-${my_parallel}
 
 export FIERRO_BASE_DIR=${basedir}
 export FIERRO_SOURCE_DIR=${srcdir}
@@ -64,7 +76,7 @@ export FIERRO_BUILD_DIR=${builddir}
 # Do this differently (in src tree) than other libs because
 # of compile time
 export TRILINOS_SOURCE_DIR=${trilinosdir}/Trilinos
-export TRILINOS_BUILD_DIR=${TRILINOS_SOURCE_DIR}/build-${my_device}
+export TRILINOS_BUILD_DIR=${TRILINOS_SOURCE_DIR}/build-${my_parallel}
 export TRILINOS_INSTALL_DIR=${TRILINOS_BUILD_DIR}
 
 cd $scriptdir

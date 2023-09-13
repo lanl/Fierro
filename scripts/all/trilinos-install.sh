@@ -1,5 +1,16 @@
 #!/bin/bash -e
 
+if [ "$1" != "hpc" ] && [ "$1" != "macos" ] && [ "$1" != "linux" ]
+then
+    echo "The first argument needs to be either hpc, macos, or linux"
+    return 1
+fi
+if [ "$2" != "cuda" ] && [ "$2" != "hip" ] && [ "$2" != "openmp" ] && [ "$2" != "serial" ]
+then
+    echo "The second argument needs to be either cuda, hip, openmp, or serial"
+    return 1
+fi
+
 cd ${trilinosdir}
 
 #check if Trilinos directory exists, git clone Trilinos if it doesn't
@@ -35,12 +46,9 @@ then
     NUM_TASKS=1
 fi
 
+#-DCMAKE_CXX_FLAGS="-g -lineinfo -Xcudafe --diag_suppress=conversion_function_not_usable -Xcudafe --diag_suppress=cc_clobber_ignored -Xcudafe --diag_suppress=code_is_unreachable" \
 # Kokkos flags for Cuda
 CUDA_ADDITIONS=(
--DCMAKE_CXX_FLAGS="-g -lineinfo -Xcudafe \
---diag_suppress=conversion_function_not_usable -Xcudafe \
---diag_suppress=cc_clobber_ignored -Xcudafe \
---diag_suppress=code_is_unreachable" \
 -DTPL_ENABLE_CUDA=ON \
 -DTPL_ENABLE_CUBLAS=ON \
 -DTPL_ENABLE_CUSPARSE=ON \
