@@ -77,6 +77,7 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   importer = Solver_Pointer->importer;
   ghost_importer = Solver_Pointer->ghost_importer;
   node_sorting_importer = Solver_Pointer->node_sorting_importer;
+  element_sorting_importer = Solver_Pointer->element_sorting_importer;
   dof_importer = Solver_Pointer->dof_importer;
 
   //obtain node and element maps
@@ -94,6 +95,8 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   node_nconn_distributed = Solver_Pointer->node_nconn_distributed; //how many elements a node is connected to
   node_coords_distributed = Solver_Pointer->node_coords_distributed;
   all_node_coords_distributed = Solver_Pointer->all_node_coords_distributed;
+  initial_node_coords_distributed = Solver_Pointer->node_coords_distributed;
+  all_initial_node_coords_distributed = Solver_Pointer->all_node_coords_distributed;
   design_node_densities_distributed = Solver_Pointer->design_node_densities_distributed;
   filtered_node_densities_distributed = Solver_Pointer->filtered_node_densities_distributed;
   test_node_densities_distributed = Solver_Pointer->test_node_densities_distributed;

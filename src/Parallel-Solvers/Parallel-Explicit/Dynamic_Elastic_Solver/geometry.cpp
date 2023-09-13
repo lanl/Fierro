@@ -4,10 +4,10 @@
 #include "matar.h"
 #include "mesh.h"
 #include "state.h"
-#include "FEA_Module_SGH.h"
-#include "Simulation_Parameters_SGH.h"
+#include "FEA_Module_Dynamic_Elasticity.h"
+#include "Simulation_Parameters_Dynamic_Elasticity.h"
 
-void FEA_Module_SGH::update_position_sgh(double rk_alpha,
+void FEA_Module_Dynamic_Elasticity::update_position_elastic(double rk_alpha,
                          const size_t num_nodes,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
@@ -40,7 +40,7 @@ void FEA_Module_SGH::update_position_sgh(double rk_alpha,
 //   B_p is the OUTWARD corner area normal at node p
 //------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
+void FEA_Module_Dynamic_Elasticity::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
                  const ViewCArrayKokkos <size_t>  &elem_node_gids,
@@ -241,7 +241,7 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
    Compute Volume of each finite element
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::get_vol(){
+void FEA_Module_Dynamic_Elasticity::get_vol(){
 
     const size_t rk_level = simparam.rk_num_bins - 1;
     const size_t num_dims = mesh->num_dims;
@@ -274,7 +274,7 @@ void FEA_Module_SGH::get_vol(){
 
 // Exact volume for a hex element
 KOKKOS_INLINE_FUNCTION
-void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
+void FEA_Module_Dynamic_Elasticity::get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
                  const ViewCArrayKokkos <size_t>  &elem_node_gids,
@@ -318,7 +318,7 @@ void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
 
 
 KOKKOS_FUNCTION
-void FEA_Module_SGH::get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
+void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
@@ -387,7 +387,7 @@ void FEA_Module_SGH::get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
 
 // true volume of a quad in RZ coords
 KOKKOS_INLINE_FUNCTION
-void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
+void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
                   const size_t elem_gid,
                   const DViewCArrayKokkos <double> &node_coords,
                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
@@ -448,7 +448,7 @@ void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos <double> &elem_vol,
 
 // element facial area
 KOKKOS_FUNCTION
-double FEA_Module_SGH::get_area_quad(const size_t elem_gid,
+double FEA_Module_Dynamic_Elasticity::get_area_quad(const size_t elem_gid,
                      const DViewCArrayKokkos <double> &node_coords,
                      const ViewCArrayKokkos <size_t>  &elem_node_gids,
                      const size_t rk_level) const {
@@ -483,7 +483,7 @@ double FEA_Module_SGH::get_area_quad(const size_t elem_gid,
 
 
 KOKKOS_INLINE_FUNCTION
-double FEA_Module_SGH::heron(const double x1,
+double FEA_Module_Dynamic_Elasticity::heron(const double x1,
              const double y1,
              const double x2,
              const double y2,
@@ -509,7 +509,7 @@ double FEA_Module_SGH::heron(const double x1,
   
 
 KOKKOS_FUNCTION
-void FEA_Module_SGH::get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
+void FEA_Module_Dynamic_Elasticity::get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
                         const size_t elem_gid,
                         const DViewCArrayKokkos <double> &node_coords,
                         const ViewCArrayKokkos <size_t>  &elem_node_gids,

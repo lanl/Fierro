@@ -18,16 +18,16 @@
 #include "swage.h"
 #include "matar.h"
 #include "utilities.h"
-#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Dynamic_Elasticity.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
-#include "FEA_Module_SGH.h"
+#include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
 
 
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &material,
+void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
@@ -364,7 +364,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++){
 
-                corner_vector_storage(corner_gid, dim) = -0.00000001;
+                corner_vector_storage(corner_gid, dim) = -0;
                 //corner_vector_storage(corner_gid, dim) = 0;
 
             } // end loop over dimension
@@ -394,6 +394,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
     Kokkos::fence();
     
     //vec_array force_gradient_velocity_view = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+    /*
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         size_t corner_id;
         for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
@@ -404,7 +405,15 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
         }
     }); // end parallel for
     Kokkos::fence();
+    */
 
+    FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+        
+        Force_Gradient_Velocities(node_id*num_dims,0) = -0.00000001;
+        Force_Gradient_Velocities(node_id*num_dims+1,0) = -0.00000001;
+        Force_Gradient_Velocities(node_id*num_dims+2,0) = -0.00000001;
+    }); // end parallel for
+    Kokkos::fence();
     
     return;
     
@@ -413,7 +422,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &material,
+void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
@@ -800,7 +809,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
 // Computes corner contribution of gradient of force with respect to the design variable
 //---------------------------------------------------------------------------------------
 
-void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
+void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
@@ -911,7 +920,7 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &material,
+void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(const DCArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,

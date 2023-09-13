@@ -31,9 +31,9 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Dynamic_Elasticity.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
-#include "FEA_Module_SGH.h"
+#include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
 
 //optimization
@@ -56,7 +56,7 @@
    Compute new system response due to the design variable update
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
+void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> zp){
   const size_t rk_level = simparam.rk_num_bins - 1;
   //local variable for host view in the dual view
   int num_dim = simparam.num_dims;
@@ -411,7 +411,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
    
     
     // apply BC's to velocity
-    FEA_Module_SGH::boundary_velocity(*mesh, boundary, node_vel);
+    FEA_Module_Dynamic_Elasticity::boundary_velocity(*mesh, boundary, node_vel);
     
     
     // calculate the corner massess if 2D
@@ -498,11 +498,11 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
 
     //update stiffness matrix
     if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
-      //assemble_matrix();
+      assemble_matrix();
     }
     
     //execute solve
-    sgh_solve();
+    elastic_solve();
 
 }
 
@@ -510,7 +510,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
    Compute average density of an element from nodal densities
 ---------------------------------------------------------------------------------------------- */
 
-double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const CArray<double> current_element_densities) const
+double FEA_Module_Dynamic_Elasticity::average_element_density(const int nodes_per_elem, const CArray<double> current_element_densities) const
 {
   double result = 0;
   for(int i=0; i < nodes_per_elem; i++){
@@ -525,7 +525,7 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
    when force does not depend on u and v.
 ------------------------------------------------------------------------------------------------------------------ */
 
-void FEA_Module_SGH::compute_topology_optimization_adjoint(){
+void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint(){
   
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
@@ -542,7 +542,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (long unsigned cycle = last_time_step; cycle >= 0; cycle--) {
+  for (int cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -589,7 +589,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint(){
   Coupled adjoint problem for the kinetic energy minimization problem
 --------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
+void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full(){
   const size_t rk_level = simparam.rk_num_bins - 1;
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
@@ -608,7 +608,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (long unsigned cycle = last_time_step; cycle >= 0; cycle--) {
+  for (int cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -624,74 +624,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       } // end if
     }
-    //else if (cycle==1){
-      //if(myrank==0)
-        //printf("cycle = %lu, time = %f, time step = %f \n", cycle-1, time_data[cycle-1], global_dt);
-    //} // end if
-
-    //compute adjoint vector for this data point; use velocity midpoint
-    //view scope
-    /*
-    {
-      const_vec_array previous_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-
-      get_force_vgradient_sgh(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              1,
-                              cycle);
-
-      get_force_ugradient_sgh(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              1,
-                              cycle);
-
-      //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
-      const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      //const_vec_array current_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array previous_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      //const_vec_array current_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      //compute gradient of force with respect to velocity
-  
-      const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-
-      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-        real_t rate_of_change;
-        for (int idim = 0; idim < num_dim; idim++){
-          rate_of_change = previous_velocity_vector(node_gid,idim)- 
-                            previous_adjoint_vector(node_gid,idim)*previous_force_gradient_velocity(node_gid,idim)/node_mass(node_gid)-
-                            phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
-          current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
-          rate_of_change = -previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim);
-          phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
-        } 
-      }); // end parallel for
-      Kokkos::fence();
-    } //end view scope
-    */
+    
     //view scope
     {
       
@@ -712,7 +645,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       });
       Kokkos::fence();
 
-      get_force_vgradient_sgh(material,
+      get_force_vgradient_elastic(material,
                               *mesh,
                               node_coords,
                               node_vel,
@@ -726,22 +659,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_mat_id,
                               1,
                               cycle);
-
-     /* get_force_ugradient_sgh(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              1,
-                              cycle);
-      */
 
       //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
       const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
@@ -825,7 +742,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
    Gradient calculation for the kinetic energy minimization problem
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients){
+void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
@@ -849,7 +766,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
   Kokkos::fence();
 
   //gradient contribution from kinetic energy vMv product.
-  for (long unsigned cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -963,7 +880,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
   Kokkos::fence();
 
   //gradient contribution from Force vector.
-  for (long unsigned cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -1051,7 +968,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient(const_vec_array desi
    Gradient for the (unsimplified) kinetic energy minimization problem
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed){
+void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
@@ -1081,7 +998,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     Kokkos::fence();
 
     //gradient contribution from kinetic energy v(dM/drho)v product.
-    for (long unsigned cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       
@@ -1163,7 +1080,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     Kokkos::fence();
 
     //gradient contribution from time derivative of adjoint \dot{lambda}(dM/drho)v product.
-    for (long unsigned cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print
@@ -1298,7 +1215,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
   {
     host_vec_array host_design_gradients = design_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array host_design_variables = design_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    //compute_stiffness_gradients(host_design_variables, host_design_gradients);
+    compute_stiffness_gradients(host_design_variables, host_design_gradients);
   }//end view scope
 
 }
@@ -1306,7 +1223,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
 /* ----------------------------------------------------------------------
    Initialize global vectors and array maps needed for matrix assembly
 ------------------------------------------------------------------------- */
-void FEA_Module_SGH::init_assembly(){
+void FEA_Module_Dynamic_Elasticity::init_assembly(){
   int num_dim = simparam.num_dims;
   //const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   Gradient_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Gradient_Matrix_Strides");
@@ -1544,7 +1461,7 @@ void FEA_Module_SGH::init_assembly(){
     Gradient_Matrix_Strides(idof) = num_dim*Graph_Matrix_Strides(idof/num_dim);
   }); // end parallel for
 
-  Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
+  Stiffness_Matrix = Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   Force_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Gradient_Matrix_Strides);
 
@@ -1557,6 +1474,7 @@ void FEA_Module_SGH::init_assembly(){
     }
   }); // end parallel for
 
+  Stiffness_Matrix_Strides = Gradient_Matrix_Strides;
   
   /*
   //construct distributed gradient matrix from local kokkos data

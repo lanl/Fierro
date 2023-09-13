@@ -2,17 +2,17 @@
 #include <math.h>  // fmin, fmax, abs note: fminl is long
 #include "mesh.h"
 #include "state.h"
-#include "FEA_Module_SGH.h"
+#include "FEA_Module_Dynamic_Elasticity.h"
 #include "Simulation_Parameters_Elasticity.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
-#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Dynamic_Elasticity.h"
 #include "Tpetra_Import.hpp"
 #include "Tpetra_Import_Util2.hpp"
 
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_SGH::get_force_elastic(const DCArrayKokkos <material_t> &material,
+void FEA_Module_Dynamic_Elasticity::get_force_elastic(const DCArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
@@ -76,7 +76,7 @@ void FEA_Module_SGH::get_force_elastic(const DCArrayKokkos <material_t> &materia
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
-void FEA_Module_SGH::applied_forces(const DCArrayKokkos <material_t> &material,
+void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos <material_t> &material,
                    const mesh_t &mesh,
                    const DViewCArrayKokkos <double> &node_coords,
                    const DViewCArrayKokkos <double> &node_vel,
@@ -151,7 +151,7 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos <material_t> &material,
    Assemble the Sparse Stiffness Matrix
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::assemble_matrix(){
+void FEA_Module_Dynamic_Elasticity::assemble_matrix(){
   int num_dim = simparam.num_dims;
   int nodes_per_elem;
   int current_row_n_nodes_scanned;
@@ -277,7 +277,7 @@ void FEA_Module_SGH::assemble_matrix(){
    Retrieve material properties associated with a finite element
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
+void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam.unit_scaling;
   real_t penalty_product = 1;
   real_t density_epsilon = simparam_dynamic_opt.density_epsilon;
@@ -294,7 +294,7 @@ void FEA_Module_SGH::Element_Material_Properties(size_t ielem, real_t &Element_M
    Retrieve derivative of material properties with respect to local density
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
+void FEA_Module_Dynamic_Elasticity::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam.unit_scaling;
   real_t penalty_product = 1;
   real_t density_epsilon = simparam_dynamic_opt.density_epsilon;
@@ -312,7 +312,7 @@ void FEA_Module_SGH::Gradient_Element_Material_Properties(size_t ielem, real_t &
    Construct the local stiffness matrix
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
+void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
@@ -705,7 +705,7 @@ void FEA_Module_SGH::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array
    Compute the gradient of strain energy with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::compute_stiffness_gradients(const_vec_array design_variables, vec_array design_gradients){
+void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_vec_array design_variables, vec_array design_gradients){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   

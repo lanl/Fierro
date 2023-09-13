@@ -35,8 +35,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#ifndef SIMULATION_PARAMETERS_SGH_H
-#define SIMULATION_PARAMETERS_SGH_H
+#ifndef SIMULATION_PARAMETERS_DYNAMIC_ELASTICITY_H
+#define SIMULATION_PARAMETERS_DYNAMIC_ELASTICITY_H
 
 #include "matar.h"
 #include <cmath>
@@ -52,27 +52,13 @@
 
 using namespace mtr;
 
-SERIALIZABLE_ENUM(FIELD_OUTPUT_SGH,
-    velocity,
-    element_density,
-    pressure,
-    SIE,
-    volume,
-    mass,
-    sound_speed,
-    material_id,
-    user_vars,
-    stress
-)
-
-struct Simulation_Parameters_SGH : Simulation_Parameters {
+struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
   Time_Variables time_variables;
   std::vector<MaterialFill> region_options;
   std::vector<Material> material_options;
   std::vector<Boundary> boundary_conditions;
   std::vector<Loading> loading_conditions;
   Graphics_Options graphics_options;
-  std::set<FIELD_OUTPUT_SGH> field_output;  
 
   bool gravity_flag   = false;
   bool report_runtime = true;
@@ -137,34 +123,19 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
     }
   }
 
-  void derive_default_field_output() {
-    if (field_output.empty()) {
-      field_output.insert(FIELD_OUTPUT_SGH::velocity);
-      field_output.insert(FIELD_OUTPUT_SGH::element_density);
-      field_output.insert(FIELD_OUTPUT_SGH::pressure);
-      field_output.insert(FIELD_OUTPUT_SGH::SIE);
-      field_output.insert(FIELD_OUTPUT_SGH::volume);
-      field_output.insert(FIELD_OUTPUT_SGH::mass);
-      field_output.insert(FIELD_OUTPUT_SGH::sound_speed);
-    }
-  }
-
   void derive() {
     derive_kokkos_arrays();
  
     rk_num_bins = rk_num_stages;
 
-    derive_default_field_output();
   }
-  void validate() {
-    validate_module_is_specified(FEA_MODULE_TYPE::SGH);
-  }
+  void validate() { }
 };
-IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_SGH, Simulation_Parameters, 
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Dynamic_Elasticity, Simulation_Parameters, 
   time_variables, material_options, region_options,
   boundary_conditions, loading_conditions, gravity_flag, report_runtime, rk_num_stages,
   NB, NBSF, NBV,
-  graphics_options, field_output
+  graphics_options
 )
 
 #endif // end HEADER_H

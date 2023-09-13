@@ -297,47 +297,58 @@ struct Simulation_Parameters_Topology_Optimization : public Simulation_Parameter
     // instead of this vector stuff.
     for (size_t to_index = 0; to_index < TO_Module_List.size(); to_index++) {
       auto to_module = TO_Module_List[to_index];
-      auto fea_module = get_TO_module_dependency(to_module);
-      if (!fea_module.has_value())
+      auto fea_index = find_TO_module_dependency(to_module);
+      if (!fea_index.has_value())
         continue;
-
-      size_t fea_index = find_module(fea_module.value());
-
-      TO_Module_My_FEA_Module[to_index] = fea_index;
-      FEA_Module_My_TO_Modules[fea_index].push_back(to_index);
+      TO_Module_My_FEA_Module[to_index] = fea_index.value();
+      FEA_Module_My_TO_Modules[fea_index.value()].push_back(to_index);
     }
   }
 
   void validate() {
     validate_unique_vector(TO_Module_List, "Duplicate Topology Optimization Module listed: ");
     validate_unique_vector(FEA_Modules_List, "Duplicate FEA Module listed: ");
+    for (auto t : TO_Module_List) {
+      find_TO_module_dependency(t);
+    }
   }
 
   void add_TO_module(TO_MODULE_TYPE type, FUNCTION_TYPE function_type, std::vector<double> arguments) {
     TO_Module_List.push_back(type);
     TO_Function_Type.push_back(function_type);
     Function_Arguments.push_back(arguments);
-    
-    auto fea_module = get_TO_module_dependency(type);
-    if (fea_module.has_value())
-      ensure_module(fea_module.value());
   }
-  std::optional<FEA_MODULE_TYPE> get_TO_module_dependency(TO_MODULE_TYPE type) {
+
+  /**
+   * Returns the index of the FEA dependency found in the 
+   * FEA_Module_List vector. 
+   * 
+   * If dependencies are not satisfied, an exception will be thrown.
+   * If there are no dependencies, -1 will be returned.
+  */
+  std::optional<size_t> find_TO_module_dependency(TO_MODULE_TYPE type) {
     switch (type) {
       case TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize:
-        return FEA_MODULE_TYPE::Heat_Conduction;
+        validate_module_is_specified(FEA_MODULE_TYPE::Heat_Conduction);
+        return find_module(FEA_MODULE_TYPE::Heat_Conduction);
       case TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint:
-        return FEA_MODULE_TYPE::Heat_Conduction;
+        validate_module_is_specified(FEA_MODULE_TYPE::Heat_Conduction);
+        return find_module(FEA_MODULE_TYPE::Heat_Conduction);
       case TO_MODULE_TYPE::Mass_Constraint:
-        return FEA_MODULE_TYPE::Inertial;
+        validate_module_is_specified(FEA_MODULE_TYPE::Inertial);
+        return find_module(FEA_MODULE_TYPE::Inertial);
       case TO_MODULE_TYPE::Moment_of_Inertia_Constraint:
-        return FEA_MODULE_TYPE::Inertial;
+        validate_module_is_specified(FEA_MODULE_TYPE::Inertial);
+        return find_module(FEA_MODULE_TYPE::Inertial);
       case TO_MODULE_TYPE::Strain_Energy_Minimize:
-        return FEA_MODULE_TYPE::Elasticity;
+        validate_module_is_specified(FEA_MODULE_TYPE::Elasticity);
+        return find_module(FEA_MODULE_TYPE::Elasticity);
       case TO_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize:
-        return FEA_MODULE_TYPE::Heat_Conduction;
+        validate_module_is_specified(FEA_MODULE_TYPE::Heat_Conduction);
+        return find_module(FEA_MODULE_TYPE::Heat_Conduction);
       case TO_MODULE_TYPE::Strain_Energy_Constraint:
-        return FEA_MODULE_TYPE::Elasticity;
+        validate_module_is_specified(FEA_MODULE_TYPE::Elasticity);
+        return find_module(FEA_MODULE_TYPE::Elasticity);
       default:
         return {};
     }

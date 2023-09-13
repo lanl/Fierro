@@ -35,8 +35,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#ifndef SIMULATION_PARAMETERS_SGH_H
-#define SIMULATION_PARAMETERS_SGH_H
+#ifndef SIMULATION_PARAMETERS_EXPLICIT_H
+#define SIMULATION_PARAMETERS_EXPLICIT_H
 
 #include "matar.h"
 #include <cmath>
@@ -52,27 +52,22 @@
 
 using namespace mtr;
 
-SERIALIZABLE_ENUM(FIELD_OUTPUT_SGH,
-    velocity,
-    element_density,
-    pressure,
-    SIE,
-    volume,
-    mass,
-    sound_speed,
-    material_id,
-    user_vars,
-    stress
+SERIALIZABLE_ENUM(FIELD_OUTPUT_EXPLICIT,
+    speed,
+    design_density,
+    element_switch,
+    processor_id,
+    element_id
 )
 
-struct Simulation_Parameters_SGH : Simulation_Parameters {
+struct Simulation_Parameters_Explicit : Simulation_Parameters {
   Time_Variables time_variables;
   std::vector<MaterialFill> region_options;
   std::vector<Material> material_options;
   std::vector<Boundary> boundary_conditions;
   std::vector<Loading> loading_conditions;
   Graphics_Options graphics_options;
-  std::set<FIELD_OUTPUT_SGH> field_output;  
+  std::set<FIELD_OUTPUT_EXPLICIT> field_output;  
 
   bool gravity_flag   = false;
   bool report_runtime = true;
@@ -139,13 +134,7 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
 
   void derive_default_field_output() {
     if (field_output.empty()) {
-      field_output.insert(FIELD_OUTPUT_SGH::velocity);
-      field_output.insert(FIELD_OUTPUT_SGH::element_density);
-      field_output.insert(FIELD_OUTPUT_SGH::pressure);
-      field_output.insert(FIELD_OUTPUT_SGH::SIE);
-      field_output.insert(FIELD_OUTPUT_SGH::volume);
-      field_output.insert(FIELD_OUTPUT_SGH::mass);
-      field_output.insert(FIELD_OUTPUT_SGH::sound_speed);
+      field_output.insert(FIELD_OUTPUT_EXPLICIT::speed);
     }
   }
 
@@ -156,11 +145,9 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
 
     derive_default_field_output();
   }
-  void validate() {
-    validate_module_is_specified(FEA_MODULE_TYPE::SGH);
-  }
+  void validate() { }
 };
-IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_SGH, Simulation_Parameters, 
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Explicit, Simulation_Parameters, 
   time_variables, material_options, region_options,
   boundary_conditions, loading_conditions, gravity_flag, report_runtime, rk_num_stages,
   NB, NBSF, NBV,

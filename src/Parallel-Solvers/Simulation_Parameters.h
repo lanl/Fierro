@@ -61,7 +61,7 @@ inline void validate_unique_vector(const std::vector<T>& vec, std::string err_ms
   }
 }
 
-SERIALIZABLE_ENUM(SOLVER_TYPE, SGH, Implicit)
+SERIALIZABLE_ENUM(SOLVER_TYPE, Explicit, Implicit)
 SERIALIZABLE_ENUM(MESH_FORMAT,
     ensight,
     tecplot,
@@ -69,11 +69,12 @@ SERIALIZABLE_ENUM(MESH_FORMAT,
     ansys_dat
 )
 
-SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk, vtu)
+SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk, vtu, none)
 SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
 
 SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
   Elasticity,
+  Dynamic_Elasticity,
   Heat_Conduction,
   SGH,
   Inertial,
@@ -143,7 +144,7 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
 };
 IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base)
 
-struct Output_Options {
+struct Output_Options : Yaml::DerivedFields {
   int graphics_step_frequency;
   double graphics_step;
   OUTPUT_FORMAT output_file_format;
@@ -152,7 +153,6 @@ struct Output_Options {
   bool write_final = true;
 };
 IMPL_YAML_SERIALIZABLE_FOR(Output_Options, graphics_step_frequency, graphics_step, output_file_format, write_initial, write_final, max_num_user_output_vars)
-
 
 SERIALIZABLE_ENUM(BOUNDARY_TAG, 
     x_plane,   // tag an x-plane
@@ -163,8 +163,8 @@ SERIALIZABLE_ENUM(BOUNDARY_TAG,
     readFile   // read from a file
 )
 
-SERIALIZABLE_ENUM(BOUNDARY_FEA_CONDITION, fixed_displacement, fixed_temperature)
-SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux)
+SERIALIZABLE_ENUM(BOUNDARY_FEA_CONDITION, fixed_displacement, fixed_temperature, fixed_velocity, reflection)
+SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux, body_force)
 SERIALIZABLE_ENUM(LOADING_SPECIFICATION, normal, coordinated)
 
 struct Loading_Condition : Yaml::ValidatedYaml {
@@ -272,6 +272,89 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
     for (auto& spec : fea_modules) {
       FEA_Modules_List.push_back(spec.type);
     }
+
+    // Include a default Inertial module 
+    // if it wasn't specified.
+    ensure_module(FEA_MODULE_TYPE::Inertial);
+  }
+  
+  /**
+   * Checks to see if a module of this type is already loaded,
+   * with or without additional configuration present.
+  */
+  bool has_module(FEA_MODULE_TYPE type) {
+    return find_module(type) != FEA_Modules_List.size();
+  }
+
+  /**
+   * Checks to see if a module of this type is already loaded,
+   * with or without additional configuration present.
+  */
+  bool has_module(std::vector<FEA_MODULE_TYPE> types) {
+    return find_one_of_module(types) != FEA_Modules_List.size();
+  }
+
+  /**
+   * Returns the index of the module in the list of modules.
+   * Returns FEA_Modules_List.size() if it isn't present.
+  */
+  size_t find_module(FEA_MODULE_TYPE type) {
+    size_t i = 0;
+    for (; i < FEA_Modules_List.size(); i++) {
+      if (FEA_Modules_List[i] == type)
+        break;
+    }
+    return i;
+  }
+
+  /**
+   * Returns the first index of a module in the list of modules
+   * that is present in the provided list of types.
+   * 
+   * If no module was found FEA_Modules_List.size() is returned. 
+  */
+  size_t find_one_of_module(std::vector<FEA_MODULE_TYPE> types) {
+    size_t i = 0;
+    for (; i < FEA_Modules_List.size(); i++) {
+      for (auto t : types) {
+        if (FEA_Modules_List[i] == t)
+          return i;
+      }
+    }
+    return i;
+  }
+
+  /**
+   * Checks that at least one of the provided modules is specified. 
+   * Throws a Yaml::ConfigurationException if none are found.
+  */
+  void validate_one_of_modules_are_specified(std::vector<FEA_MODULE_TYPE> types) {
+    if (!has_module(types)) {
+      std::stringstream ss;
+      ss << "One of the following FEA modules is required: {";
+      for (auto t : types)
+        ss << t << ",";
+      ss << "}";
+      throw Yaml::ConfigurationException(ss.str());
+    }
+  }
+
+  /**
+   * Checks that all of the provided modules is specified. 
+   * Throws a Yaml::ConfigurationException if not.
+  */
+  void validate_modules_are_specified(std::vector<FEA_MODULE_TYPE> types) {
+    for (auto t : types)
+      validate_module_is_specified(t);
+  }
+
+  /**
+   * Checks that the provided module is specified. 
+   * Throws a Yaml::ConfigurationException if not.
+  */
+  void validate_module_is_specified(FEA_MODULE_TYPE type) {
+    if (!has_module(type))
+      throw Yaml::ConfigurationException("Missing required FEA module: " + to_string(type));
   }
 
   void validate_element_type() {
@@ -299,7 +382,7 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
       if (spec.type == type) return spec;
     return {};
   }
-
+  
   /**
    * If a module with the provided type is not present,
    * add it to the list of modules without any configuration.
@@ -308,45 +391,6 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
     size_t i = find_module(type);
     if (i == FEA_Modules_List.size())
       FEA_Modules_List.push_back(type);
-    return i;
-  }
-
-  /**
-   * Ensure that the module is provided.
-   * 
-   * If module configuration of this type is not found,
-   * add it to the module configurations.
-   * 
-   * If there is one present already, don't do anything.
-  */
-  size_t ensure_module(FEA_Module_Config default_spec) {
-    for (size_t i = 0; i < fea_modules.size(); i++) {
-      if (fea_modules[i].type == default_spec.type) 
-        return i;
-    }
-
-    fea_modules.push_back(default_spec);
-    return ensure_module(default_spec.type);
-  }
-
-  /**
-   * Checks to see if a module of this type is already loaded,
-   * with or without additional configuration present.
-  */
-  bool has_module(FEA_MODULE_TYPE type) {
-    return find_module(type) != FEA_Modules_List.size();
-  }
-
-  /**
-   * Returns the index of the module in the list of modules.
-   * Returns FEA_Modules_List.size() if it isn't present.
-  */
-  size_t find_module(FEA_MODULE_TYPE type) {
-    size_t i = 0;
-    for (; i < FEA_Modules_List.size(); i++) {
-      if (FEA_Modules_List[i] == type)
-        break;
-    }
     return i;
   }
 };

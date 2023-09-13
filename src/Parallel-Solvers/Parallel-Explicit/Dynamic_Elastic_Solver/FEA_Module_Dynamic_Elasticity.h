@@ -35,8 +35,8 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#ifndef FEA_MODULE_SGH_H
-#define FEA_MODULE_SGH_H
+#ifndef FEA_MODULE_DYNAMIC_ELASTICITY_H
+#define FEA_MODULE_DYNAMIC_ELASTICITY_H
 
 #include "mesh.h"
 #include "state.h"
@@ -46,22 +46,22 @@
 #include "Solver.h"
 #include "FEA_Module.h"
 #include "Simulation_Parameters.h"
-#include "Simulation_Parameters_SGH.h"
+#include "Simulation_Parameters_Dynamic_Elasticity.h"
 #include "Simulation_Parameters_Elasticity.h"
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "material_models.h"
 
 class Explicit_Solver;
 
-class FEA_Module_SGH: public FEA_Module{
+class FEA_Module_Dynamic_Elasticity: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
-  ~FEA_Module_SGH();
+  FEA_Module_Dynamic_Elasticity(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
+  ~FEA_Module_Dynamic_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
-  void sgh_interface_setup(node_t &node, elem_t &elem, corner_t &corner);
+  void elastic_interface_setup(node_t &node, elem_t &elem, corner_t &corner);
 
   void setup();
 
@@ -71,25 +71,9 @@ public:
 
   void module_cleanup();
 
-  void sgh_solve();
+  void elastic_solve();
 
-  void get_force_sgh(const DCArrayKokkos <material_t> &material,
-                     const mesh_t &mesh,
-                     const DViewCArrayKokkos <double> &node_coords,
-                     const DViewCArrayKokkos <double> &node_vel,
-                     const DViewCArrayKokkos <double> &elem_den,
-                     const DViewCArrayKokkos <double> &elem_sie,
-                     const DViewCArrayKokkos <double> &elem_pres,
-                     DViewCArrayKokkos <double> &elem_stress,
-                     const DViewCArrayKokkos <double> &elem_sspd,
-                     const DViewCArrayKokkos <double> &elem_vol,
-                     const DViewCArrayKokkos <double> &elem_div,
-                     const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     DViewCArrayKokkos <double> &corner_force,
-                     const double rk_alpha,
-                     const size_t cycle);
-
-  void get_force_vgradient_sgh(const DCArrayKokkos <material_t> &material,
+  void get_force_vgradient_elastic(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -104,7 +88,7 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
-  void get_force_ugradient_sgh(const DCArrayKokkos <material_t> &material,
+  void get_force_ugradient_elastic(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -119,7 +103,7 @@ public:
                      const double rk_alpha,
                      const size_t cycle);
 
-  void get_force_dgradient_sgh(const DCArrayKokkos <material_t> &material,
+  void get_force_dgradient_elastic(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
                      const DViewCArrayKokkos <double> &node_vel,
@@ -135,25 +119,8 @@ public:
                      const size_t cycle);
 
   void force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
-
-
-  void get_force_sgh2D(const DCArrayKokkos <material_t> &material,
-                       const mesh_t &mesh,
-                       const DViewCArrayKokkos <double> &node_coords,
-                       const DViewCArrayKokkos <double> &node_vel,
-                       const DViewCArrayKokkos <double> &elem_den,
-                       const DViewCArrayKokkos <double> &elem_sie,
-                       const DViewCArrayKokkos <double> &elem_pres,
-                       const DViewCArrayKokkos <double> &elem_stress,
-                       const DViewCArrayKokkos <double> &elem_sspd,
-                       const DViewCArrayKokkos <double> &elem_vol,
-                       const DViewCArrayKokkos <double> &elem_div,
-                       const DViewCArrayKokkos <size_t> &elem_mat_id,
-                       DViewCArrayKokkos <double> &corner_force,
-                       const double rk_alpha,
-                       const size_t cycle);
   
-  void update_position_sgh(double rk_alpha,
+  void update_position_elastic(double rk_alpha,
                            const size_t num_nodes,
                            DViewCArrayKokkos <double> &node_coords,
                            const DViewCArrayKokkos <double> &node_vel);
@@ -261,13 +228,6 @@ public:
                           const DViewCArrayKokkos <double> &node_coords,
                           const DViewCArrayKokkos <double> &node_vel,
                           const double vol) const;
-
-
-  void update_velocity_sgh(double rk_alpha,
-                           const mesh_t &mesh,
-                           DViewCArrayKokkos <double> &node_vel,
-                           const DViewCArrayKokkos <double> &node_mass,
-                           const DViewCArrayKokkos <double> &corner_force);
   
   void tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
                 mesh_t &mesh,
@@ -306,14 +266,6 @@ public:
                       DViewCArrayKokkos <double> &node_vel,
                       DViewCArrayKokkos <double> &elem_sspd,
                       DViewCArrayKokkos <double> &elem_vol);
-  
-  void update_energy_sgh(double rk_alpha,
-                         const mesh_t &mesh,
-                         const DViewCArrayKokkos <double> &node_vel,
-                         const DViewCArrayKokkos <double> &node_coords,
-                         DViewCArrayKokkos <double> &elem_sie,
-                         const DViewCArrayKokkos <double> &elem_mass,
-                         const DViewCArrayKokkos <double> &corner_force);
                    
   void update_state(const DCArrayKokkos <material_t> &material,
                     const mesh_t &mesh,
@@ -373,8 +325,6 @@ public:
   void init_output();
 
   void compute_output();
-
-  void output_control();
   
   void sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map);
 
@@ -382,11 +332,10 @@ public:
 
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
-  void write_data(std::map <std::string, const double*> &point_data_scalars_double,
-  std::map <std::string, const double*> &point_data_vectors_double,
-  std::map <std::string, const double*> &cell_data_scalars_double,
-  std::map <std::string, const int*> &cell_data_scalars_int,
-  std::map <std::string, std::pair<const double*, size_t> > &cell_data_fields_double);
+  void write_data(std::map <std::string, const double*> point_data_scalars_double,
+  std::map <std::string, const double*> point_data_vectors_double,
+  std::map <std::string, const double*> cell_data_scalars_double,
+  std::map <std::string, const int*> cell_data_scalars_int);
   
   void write_outputs (const mesh_t &mesh,
                       DViewCArrayKokkos <double> &node_coords,
@@ -439,6 +388,20 @@ public:
 
   void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
+  //elastic TO stuff
+  void get_force_elastic(const DCArrayKokkos <material_t> &material,
+                     const mesh_t &mesh,
+                     const DViewCArrayKokkos <double> &node_coords,
+                     const DViewCArrayKokkos <double> &node_vel,
+                     const DViewCArrayKokkos <double> &node_mass,
+                     const DViewCArrayKokkos <double> &elem_den,
+                     const DViewCArrayKokkos <double> &elem_vol,
+                     const DViewCArrayKokkos <double> &elem_div,
+                     const DViewCArrayKokkos <size_t> &elem_mat_id,
+                     DViewCArrayKokkos <double> &corner_force,
+                     const double rk_alpha,
+                     const size_t cycle);
+
   void applied_forces(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
                      const DViewCArrayKokkos <double> &node_coords,
@@ -451,13 +414,26 @@ public:
                      DViewCArrayKokkos <double> &corner_force,
                      const double rk_alpha,
                      const size_t cycle);
-                     
-  bool have_loading_conditions;
+  
+  void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+
+  void compute_stiffness_gradients(const_vec_array design_densities, vec_array gradients);
+
+  void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
+
+  void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
+  
+  void assemble_matrix();
+  
   bool nodal_density_flag;
   real_t penalty_power;
+  Teuchos::RCP<MAT> Global_Stiffness_Matrix;
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
+  //end elastic TO data
   
-  Simulation_Parameters_SGH simparam;
+  Simulation_Parameters_Dynamic_Elasticity simparam;
   Simulation_Parameters_Elasticity simparam_elasticity;
   Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
   Explicit_Solver *Explicit_Solver_Pointer_;

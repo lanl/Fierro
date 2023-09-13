@@ -93,7 +93,7 @@ private:
   Teuchos::RCP<MV> constraint_gradients_distributed;
   real_t initial_mass;
   real_t current_mass;
-  bool inequality_flag_, use_initial_density_;
+  bool inequality_flag_, use_initial_coords_;
   real_t constraint_value_;
 
   ROL::Ptr<const MV> getVector( const V& x ) {
@@ -109,11 +109,11 @@ public:
   int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Inertial";
 
-  MassConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, real_t constraint_value=0, bool inequality_flag=true, bool use_initial_density=false) 
+  MassConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, real_t constraint_value=0, bool inequality_flag=true, bool use_initial_coords=false) 
   {
     FEM_ = dynamic_cast<FEA_Module_Inertial*>(FEM);
     nodal_density_flag_ = nodal_density_flag;
-    use_initial_density_ = use_initial_density;
+    use_initial_coords_ = use_initial_coords;
     last_comm_step = last_solve_step = -1;
     current_step = 0;
     inequality_flag_ = inequality_flag;
@@ -121,7 +121,7 @@ public:
     ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
     const_host_vec_array design_densities = FEM_->design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     
-    FEM_->compute_element_masses(design_densities,true,use_initial_density_);
+    FEM_->compute_element_masses(design_densities,true,use_initial_coords_);
     FEM_->mass_init = true;
     
     //sum per element results across all MPI ranks
@@ -177,7 +177,7 @@ public:
       last_comm_step = current_step;
     }
     */
-    FEM_->compute_element_masses(design_densities,false,use_initial_density_);
+    FEM_->compute_element_masses(design_densities,false,use_initial_coords_);
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
@@ -222,7 +222,7 @@ public:
     int rnum_elem = FEM_->rnum_elem;
 
     if(nodal_density_flag_){
-      FEM_->compute_nodal_gradients(design_densities, constraint_gradients);
+      FEM_->compute_nodal_gradients(design_densities, constraint_gradients, use_initial_coords_);
       //debug print of gradient
       //std::ostream &out = std::cout;
       //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));

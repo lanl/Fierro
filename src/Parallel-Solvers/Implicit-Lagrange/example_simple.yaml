@@ -25,8 +25,7 @@ fea_modules:
         component_x: 500
         component_y: 0
         component_z: 0
-
-fea_modules:
+  
   - type: Heat_Conduction
     # Dirichlet conditions
     boundary_conditions:
