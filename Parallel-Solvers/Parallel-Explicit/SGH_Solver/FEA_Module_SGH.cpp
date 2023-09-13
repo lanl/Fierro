@@ -153,6 +153,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
     ghost_node_masses_distributed = Teuchos::rcp(new MV(ghost_node_map, 1));
     adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
     phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
+    psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_element_map, 1));
   }
   
   //setup output
@@ -189,12 +190,14 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
     forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
+    psi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     //assign a multivector of corresponding size to each new timestep in the buffer
     for(int istep = 0; istep < max_time_steps+1; istep++){
       (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
       (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
       (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
       (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*psi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
     }
     
   }
@@ -1847,12 +1850,14 @@ void FEA_Module_SGH::sgh_solve(){
         forward_solve_coordinate_data->resize(max_time_steps+1);
         adjoint_vector_data->resize(max_time_steps+1);
         phi_adjoint_vector_data->resize(max_time_steps+1);
+        psi_adjoint_vector_data->resize(max_time_steps+1);
         //assign a multivector of corresponding size to each new timestep in the buffer
         for(int istep = old_max_forward_buffer; istep < max_time_steps+1; istep++){
           (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
           (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
           (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
           (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+          (*psi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
         }
       }
     }
@@ -2438,6 +2443,7 @@ void FEA_Module_SGH::sgh_solve(){
             (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
             (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
             (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+            (*psi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
           }
         }
 
