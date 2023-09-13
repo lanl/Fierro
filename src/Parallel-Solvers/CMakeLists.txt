@@ -12,9 +12,6 @@ target_link_libraries (
     parallel_base_src PUBLIC
     ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
     yaml_serializable
-    matar
-    common
-    elements
 )
 
 # Material Models

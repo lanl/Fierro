@@ -13,6 +13,5 @@ endif()
 
 set(SRC_Files material_models.cpp)
 add_library(material_models ${SRC_Files})
-target_link_libraries(material_models matar)
 target_link_libraries(material_models ideal_gas_models)
 target_link_libraries(material_models user_material_models)
