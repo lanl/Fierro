@@ -697,6 +697,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
             matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
           }
           rate_of_change = -matrix_contribution;
+          //rate_of_change = -0.001*previous_adjoint_vector(node_gid,idim);
           phi_midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
@@ -725,6 +726,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
             matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
           }
           rate_of_change = -matrix_contribution;
+          //rate_of_change = -0.001*previous_adjoint_vector(node_gid,idim);
           phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
@@ -1102,11 +1104,15 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
         {
           const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+          const_vec_array current_phi_adjoint_vector = (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           const_vec_array next_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+          const_vec_array next_phi_adjoint_vector = (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           
+          const real_t damping_constant = simparam.damping_constant;
           FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
-            real_t lambda_dot;
+            real_t lambda_dot_current;
+            real_t lambda_dot_next;
             size_t node_id;
             size_t corner_id;
             real_t inner_product;
@@ -1125,8 +1131,10 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
             for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
               node_id = nodes_in_elem(elem_id, ifill);
               for(int idim=0; idim < num_dim; idim++){
-                lambda_dot = (next_adjoint_vector(node_id,idim)-current_adjoint_vector(node_id,idim))/global_dt;
-                inner_product += elem_mass(elem_id)*lambda_dot*current_element_velocities(ifill,idim);
+                //lambda_dot = (next_adjoint_vector(node_id,idim)-current_adjoint_vector(node_id,idim))/global_dt;
+                lambda_dot_current = current_velocity_vector(node_id,idim) + damping_constant*current_adjoint_vector(node_id,idim)/node_mass(node_id) - current_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
+                lambda_dot_next = next_velocity_vector(node_id,idim) + damping_constant*next_adjoint_vector(node_id,idim)/node_mass(node_id) - next_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
+                inner_product += elem_mass(elem_id)*(lambda_dot_current+lambda_dot_next)*current_element_velocities(ifill,idim)/2;
               }
             }
 

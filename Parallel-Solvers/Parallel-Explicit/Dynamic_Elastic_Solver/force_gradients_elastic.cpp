@@ -406,12 +406,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKok
     }); // end parallel for
     Kokkos::fence();
     */
-
+    
+    const real_t damping_constant = simparam.damping_constant;
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         
-        Force_Gradient_Velocities(node_id*num_dims,0) = -0.00000001;
-        Force_Gradient_Velocities(node_id*num_dims+1,0) = -0.00000001;
-        Force_Gradient_Velocities(node_id*num_dims+2,0) = -0.00000001;
+        Force_Gradient_Velocities(node_id*num_dims,0) = -damping_constant;
+        Force_Gradient_Velocities(node_id*num_dims+1,0) = -damping_constant;
+        Force_Gradient_Velocities(node_id*num_dims+2,0) = -damping_constant;
     }); // end parallel for
     Kokkos::fence();
     
@@ -793,9 +794,9 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
         size_t corner_id;
         for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
             corner_id = corners_in_node(node_id,icorner);
-            Force_Gradient_Positions(node_id*num_dims,0) += corner_vector_storage(corner_id, 0);
-            Force_Gradient_Positions(node_id*num_dims+1,0) += corner_vector_storage(corner_id, 1);
-            Force_Gradient_Positions(node_id*num_dims+2,0) += corner_vector_storage(corner_id, 2);
+            Force_Gradient_Positions(node_id*num_dims,0) += -0.001;
+            Force_Gradient_Positions(node_id*num_dims+1,0) += -0.001;
+            Force_Gradient_Positions(node_id*num_dims+2,0) += -0.001;
         }
     }); // end parallel for
     Kokkos::fence();
