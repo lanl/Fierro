@@ -738,6 +738,48 @@ Show Events Carousel
   content: '\f061';
 }
 
+.owl-carousel .owl-stage {
+  display: flex;
+  align-items: center;
+}
+
+.fadein img {
+  position: absolute;
+  top: -90px;
+  /* left:-65px; */
+  -webkit-animation-name: fade;
+  -webkit-animation-iteration-count: infinite;
+  -webkit-animation-duration: 15s;
+  animation-name: fade;
+  animation-iteration-count: infinite;
+  animation-duration: 15s;
+}
+
+@-webkit-keyframes fade {
+  0% {opacity: 0;}
+  20% {opacity: 1;}
+  33% {opacity: 1;}
+  53% {opacity: 0;}
+  100% {opacity: 0;}
+}
+@keyframes fade {
+  0% {opacity: 0;}
+  20% {opacity: 1;}
+  33% {opacity: 1;}
+  53% {opacity: 0;}
+  100% {opacity: 0;}
+}
+
+#f1 {
+  -webkit-animation-delay: -5s;
+}
+#f2 {
+  -webkit-animation-delay: -10s;
+}
+#f3 {
+}
+
+
 
 /*
 ---------------------------------------------
@@ -960,8 +1002,8 @@ footer p.copyright {
 }
 
 footer .backlink {
-  margin-top: auto;
-  margin-bottom: auto;
+  margin: auto;
+  max-width: 255px;
 }
 
 .sub-footer {
