@@ -1554,7 +1554,7 @@ void FEA_Module_SGH::init_assembly(){
   //needs different graph of node to elem rather than node to node
   DOF_to_Elem_Matrix_Strides.get_kokkos_dual_view().d_view = elems_in_node.mystrides_;
   DOF_to_Elem_Matrix_Strides.update_host();
-  Force_Gradient_Energies = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Node_to_Elem_Matrix_Strides);
+  Force_Gradient_Energies = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(DOF_to_Elem_Matrix_Strides);
   Power_Gradient_Energies = CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits>(rnum_elem,num_nodes_in_elem*num_dim);
 
   //set stiffness Matrix Graph
