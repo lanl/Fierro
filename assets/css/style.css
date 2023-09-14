@@ -107,7 +107,7 @@ global styles
 }
 @font-face {
   font-family: acumin-black;
-  src: url(/assets/fonts/acumin-pro-black.ttf);
+  src: url(../fonts/acumin-pro-black.ttf);
 }
 
 html,
