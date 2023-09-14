@@ -279,7 +279,6 @@ header
 
 .header-area .main-nav .logo {
   font-size: 36pt;
-  line-height: 80px;
   color: #ffffff;
   float: left;
   -webkit-transition: all 0.3s ease 0s;
@@ -289,8 +288,12 @@ header
 }
 
 .logo > img {
-  width: 10em;
+  background: var(--color-light-grey);
+  height: 67px;
+  padding-top: 2px;
+  border-radius: 3px;
 }
+
 .header-area .main-nav .logo em {
   font-style: normal;
   font-weight: 900;
@@ -1070,6 +1073,10 @@ CLI Guide
 
 .field-description thead th {
   text-align: center;
+}
+
+.uml-diagram {
+  width: 100%;
 }
 
 /* 
