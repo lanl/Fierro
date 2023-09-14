@@ -575,9 +575,10 @@ public:
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Energies;
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Positions;
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Velocities;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Energies;
+  CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits> Power_Gradient_Energies;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Gradient_Matrix_Strides;
-  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Node_to_Elem_Gradient_Matrix_Strides;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> DOF_to_Elem_Matrix_Strides;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Elem_to_Elem_Matrix_Strides;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
   RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Gradient_Entries;
   RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Gradient_Entry_Indices;

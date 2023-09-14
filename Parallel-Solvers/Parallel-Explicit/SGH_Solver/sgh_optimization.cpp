@@ -1310,6 +1310,8 @@ void FEA_Module_SGH::init_assembly(){
   int num_dim = simparam.num_dims;
   //const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   Gradient_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Gradient_Matrix_Strides");
+  DOF_to_Elem_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Gradient_Matrix_Strides");
+  Elem_to_Elem_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits> (rnum_elem, "Gradient_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
   int local_node_index, current_column_index;
@@ -1544,11 +1546,16 @@ void FEA_Module_SGH::init_assembly(){
     Gradient_Matrix_Strides(idof) = num_dim*Graph_Matrix_Strides(idof/num_dim);
   }); // end parallel for
 
+  Gradient_Matrix_Strides.update_host();
+  
+  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Gradient_Matrix_Strides);
   Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   Force_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   //needs different graph of node to elem rather than node to node
-  Force_Gradient_Energies = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Node_to_Elem_Gradient_Matrix_Strides);
-  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Gradient_Matrix_Strides);
+  DOF_to_Elem_Matrix_Strides.get_kokkos_dual_view().d_view = elems_in_node.mystrides_;
+  DOF_to_Elem_Matrix_Strides.update_host();
+  Force_Gradient_Energies = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Node_to_Elem_Matrix_Strides);
+  Power_Gradient_Energies = CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits>(rnum_elem,num_nodes_in_elem*num_dim);
 
   //set stiffness Matrix Graph
   //debug print
