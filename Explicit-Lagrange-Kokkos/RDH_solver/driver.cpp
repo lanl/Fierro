@@ -147,6 +147,7 @@ int main(int argc, char *argv[]){
         else
         {
             // arbitrary order elements
+            //printf("Calling readVTKPn \n");
             readVTKPn(argv[1], mesh, node, elem, corner, ref_elem, num_dims, rk_num_bins);
         }
         
@@ -173,7 +174,8 @@ int main(int argc, char *argv[]){
         const size_t num_elems = mesh.num_elems;
         const size_t num_corners = mesh.num_corners;
         const size_t num_zones = mesh.num_elems*mesh.num_zones_in_elem;
-
+        const size_t num_lob_pts = elem.num_lob_pts*num_elems;
+        const size_t num_leg_pts = elem.num_leg_pts*num_elems;
         
         // allocate elem_statev
         elem.statev = CArray <double> (num_elems, num_state_vars);
@@ -209,7 +211,7 @@ int main(int argc, char *argv[]){
                                             num_nodes);
         
         
-        // create Dual Views of the individual zone struct variables
+        // create Dual Views of the individual elem struct variables
         DViewCArrayKokkos <double> elem_den(&elem.den(0),
                                             num_zones);
 
@@ -229,7 +231,6 @@ int main(int argc, char *argv[]){
                                             rk_num_bins,
                                             num_zones);
 
-	// same for elem struct variables
         DViewCArrayKokkos <double> elem_div(&elem.div(0),
                                             num_elems);
 
@@ -247,6 +248,32 @@ int main(int argc, char *argv[]){
                                                num_elems,
                                                num_state_vars );
         
+	DViewCArrayKokkos <double> lobatto_jacobian(&elem.gauss_lobatto_jacobian(0,0,0),
+                                                    num_lob_pts,
+                                                    num_dims,
+                                                    num_dims);
+	
+	DViewCArrayKokkos <double> legendre_jacobian(&elem.gauss_legendre_jacobian(0,0,0),
+                                                    num_leg_pts,
+                                                    num_dims,
+                                                    num_dims);
+
+	DViewCArrayKokkos <double> lobatto_jacobian_inverse(&elem.gauss_lobatto_jacobian_inverse(0,0,0),
+                                                            num_lob_pts,
+                                                            num_dims,
+                                                            num_dims);
+	
+	DViewCArrayKokkos <double> legendre_jacobian_inverse(&elem.gauss_legendre_jacobian_inverse(0,0,0),
+                                                            num_leg_pts,
+                                                            num_dims,
+                                                            num_dims);
+	
+	DViewCArrayKokkos <double> lobatto_det(&elem.gauss_lobatto_det_j(0),
+                                               num_lob_pts);
+
+	DViewCArrayKokkos <double> legendre_det(&elem.gauss_legendre_det_j(0),
+                                               num_leg_pts);
+
         // create Dual Views of the corner struct variables
         DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
                                                 num_corners, 
@@ -261,10 +288,23 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         node_coords.update_device();
         Kokkos::fence();
-        
-        
-        get_vol(elem_vol, node_coords, mesh);
 
+        get_gauss_leg_pt_jacobian(mesh,
+                                  elem,
+                                  ref_elem,
+                                  node_coords,
+                                  legendre_jacobian,
+                                  legendre_det,
+                                  legendre_jacobian_inverse);
+        
+        get_vol(elem_vol, node_coords, mesh, elem, ref_elem);
+         
+        double vol_check = 0.0;
+        for (int i = 0; i < mesh.num_elems; i++){
+           vol_check += elem_vol(i);
+        }
+        printf("calculated volume is: %f", vol_check); 
+        printf(" ");
 
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
@@ -323,7 +363,7 @@ int main(int argc, char *argv[]){
         
 
         // ---------------------------------------------------------------------
-        //   Calculate the SGH solution
+        //   Calculate the RDH solution
         // ---------------------------------------------------------------------
         rdh_solve(material,
                   boundary,

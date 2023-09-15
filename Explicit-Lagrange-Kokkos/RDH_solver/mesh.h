@@ -105,13 +105,13 @@ struct zones_in_elem_t {
 	};
 };
 
-struct legendre_gauss_in_elem_t {
+struct legendre_in_elem_t {
 	private:
 	  size_t num_leg_gauss_in_elem_;
         public:
-	  legendre_gauss_in_elem_t(){};
+	  legendre_in_elem_t(){};
 
-	  legendre_gauss_in_elem_t(const size_t num_leg_gauss_in_elem_inp){
+	  legendre_in_elem_t(const size_t num_leg_gauss_in_elem_inp){
 	  	this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
 	  };
 
@@ -127,6 +127,26 @@ struct legendre_gauss_in_elem_t {
 };
 
 
+struct lobatto_in_elem_t {
+	private:
+	  size_t num_lob_gauss_in_elem_;
+        public:
+	  lobatto_in_elem_t(){};
+
+	  lobatto_in_elem_t(const size_t num_lob_gauss_in_elem_inp){
+	  	this->num_lob_gauss_in_elem_ = num_lob_gauss_in_elem_inp;
+	  };
+
+          // return global gauss index for given local gauss index in an element    
+          size_t  host(const size_t elem_gid, const size_t lob_gauss_lid) const{
+    	  	return elem_gid*num_lob_gauss_in_elem_ + lob_gauss_lid;
+          };
+
+          KOKKOS_INLINE_FUNCTION	
+	  size_t operator()(const size_t elem_gid, const size_t lob_gauss_lid) const{
+	  	return elem_gid*num_lob_gauss_in_elem_ + lob_gauss_lid;
+	  };
+};
 
 // mesh sizes and connectivity data structures
 struct mesh_t {
@@ -157,7 +177,7 @@ struct mesh_t {
     size_t num_lob_gauss_in_elem;
 
     //num_leg_gauss_in_elem = std::pow(2*Pn, num_dims); 
-    legendre_gauss_in_elem_t leg_gauss_in_elem;
+    //legendre_in_elem_t legendre_in_elem;
     //num_lob_gauss_in_elem = std::pow(2*Pn+1, num_dims);
 
     size_t num_bdy_patches;
@@ -205,6 +225,11 @@ struct mesh_t {
     //CArrayKokkos <size_t> zones_in_elem;     // high-order mesh class
     zones_in_elem_t zones_in_elem; 
     
+
+    // gauss points in elem
+    lobatto_in_elem_t lobatto_in_elem;
+    legendre_in_elem_t legendre_in_elem;
+
     // ---- patches / surfaces ----
     
     // node ids in a patch
@@ -1583,10 +1608,20 @@ void input(CArrayKokkos <material_t> &material,
            size_t &cycle_stop,
            size_t &rk_num_stages);
 
+KOKKOS_FUNCTION
+void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
+                               const elem_t &elem,
+                               const ref_elem_t &ref_elem,
+                               const DViewCArrayKokkos <double> &node_coords,
+                               const DViewCArrayKokkos <double> &gauss_legendre_jacobian,
+                               const DViewCArrayKokkos <double> &gauss_legendre_det_j,
+                               const DViewCArrayKokkos <double> &gauss_legendre_jacobian_inverse);
 
 void get_vol(const DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
-             const mesh_t &mesh);
+             const mesh_t &mesh,
+             const elem_t &elem,
+             const ref_elem_t &ref_elem);
 
 
 KOKKOS_FUNCTION

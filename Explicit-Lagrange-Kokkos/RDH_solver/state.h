@@ -94,6 +94,11 @@ struct elem_t {
     
     CArray <double> gauss_lobatto_det_j;
     CArray <double> gauss_legendre_det_j;
+    
+    size_t num_leg_pts;
+    size_t num_lob_pts;
+    
+    size_t num_zones;
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
@@ -120,11 +125,11 @@ struct elem_t {
 		       size_t num_dims, 
 		       size_t p_order)
     {
-	size_t num_leg_pts = std::pow( num_elems*(2*p_order), 3 );// discontinuous index across mesh
-	size_t num_lob_pts = std::pow( num_elems*(2*p_order+1), 3 );// discontinuous index across mesh
+	num_leg_pts = std::pow( num_elems*(2*p_order), 3 );// discontinuous index across mesh
+	num_lob_pts = std::pow( num_elems*(2*p_order+1), 3 );// discontinuous index across mesh
         
 	// thermodynamic variables are internal to the element and located at the zone centers
-	size_t num_zones = num_elems*num_zones_in_elem; // to keep things global.
+	num_zones = num_elems*num_zones_in_elem; // to keep things global.
 
         this->sie = CArray <double> (num_rk, num_zones);
 

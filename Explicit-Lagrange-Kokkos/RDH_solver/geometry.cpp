@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// This code handles the geometric information for the mesh for the SHG solver
+// This code handles the geometric information for the mesh for the hydro solver
 //------------------------------------------------------------------------------
 #include "matar.h"
 #include "mesh.h"
@@ -27,7 +27,7 @@ void update_position_sgh(double rk_alpha,
 
 
 // -----------------------------------------------------------------------------
-//  This function claculates
+//  This function calculates
 //    B_p =  J^{-T} \cdot (\nabla_{xi} \phi_p w
 //  where
 //    \phi_p is the basis function for vertex p
@@ -234,10 +234,62 @@ void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 } // end subroutine
 
 
+// node coords are hard coded for 2nd order explicit time integration. 
+KOKKOS_FUNCTION
+void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
+                               const elem_t &elem,
+                               const ref_elem_t &ref_elem,
+                               const DViewCArrayKokkos <double> &node_coords, 
+                               const DViewCArrayKokkos <double> &gauss_legendre_jacobian,
+                               const DViewCArrayKokkos <double> &gauss_legendre_det_j,
+                               const DViewCArrayKokkos <double> &gauss_legendre_jacobian_inverse){
 
+    // loop over the mesh
+    for(int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
+        
+        for(int gauss_lid = 0; gauss_lid < elem.num_leg_pts; gauss_lid++){
+
+            int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+
+            for(int dim_i = 0; dim_i < mesh.num_dims; dim_i++){
+                for(int dim_j = 0; dim_j < mesh.num_dims; dim_j++){
+
+                    gauss_legendre_jacobian(gauss_gid, dim_i, dim_j) = 0.0;
+                    
+                    // Sum over the basis functions and vertices where they are defined
+                    for(int node_lid = 0; node_lid < ref_elem.num_basis; node_lid++){
+                        
+                        size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                        //printf(" node_coord : %f \n", node_coords(0, node_gid, dim_i));
+                        gauss_legendre_jacobian(gauss_gid, dim_i, dim_j) += 
+                            ref_elem.ref_gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) * node_coords(1, node_gid , dim_i);
+
+                    }// end loop node_id
+                } // end dim_j
+            } // end dim_i
+
+            gauss_legendre_det_j(gauss_gid) =
+                gauss_legendre_jacobian(gauss_gid, 0, 0) * (gauss_legendre_jacobian(gauss_gid, 1, 1) * gauss_legendre_jacobian(gauss_gid, 2, 2) - gauss_legendre_jacobian(gauss_gid, 2, 1) * gauss_legendre_jacobian(gauss_gid, 1, 2)) -
+                gauss_legendre_jacobian(gauss_gid, 0, 1) * (gauss_legendre_jacobian(gauss_gid, 1, 0) * gauss_legendre_jacobian(gauss_gid, 2, 2) - gauss_legendre_jacobian(gauss_gid, 1, 2) * gauss_legendre_jacobian(gauss_gid, 2, 0)) +
+                gauss_legendre_jacobian(gauss_gid, 0, 2) * (gauss_legendre_jacobian(gauss_gid, 1, 0) * gauss_legendre_jacobian(gauss_gid, 2, 1) - gauss_legendre_jacobian(gauss_gid, 1, 1) * gauss_legendre_jacobian(gauss_gid, 2, 0)); 
+            
+            printf(" leg determinant : %f \n", gauss_legendre_det_j(gauss_gid));
+            
+            //auto J = ViewCArray <real_t> (&elem.gauss_legendre_jacobian(gauss_gid, 0, 0), mesh.num_dim(), mesh.num_dim());
+            //auto J_inv = ViewCArray <real_t> (&elem.gauss_legendre_jacobian_inverse(gauss_gid, 0, 0), mesh.num_dim(), mesh.num_dim());
+
+            //elements::mat_inverse(J_inv, J);
+            
+        } // end loop over gauss in element
+    } // end loop over elements
+} // end subroutine
+
+KOKKOS_FUNCTION
 void get_vol(const DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
-             const mesh_t &mesh){
+             const mesh_t &mesh,
+             const elem_t &elem,
+             const ref_elem_t &ref_elem){
     
     const size_t num_dims = mesh.num_dims;
     
@@ -255,9 +307,20 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
             
             // cut out the node_gids for this element
-            ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
-            elem_vol(elem_gid) = 1.0/mesh.num_elems;// get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids);//  
-            
+            //ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+            //printf("number of legendre points : %d \n", elem.num_leg_pts); 
+            for (int gauss_lid = 0; gauss_lid < elem.num_leg_pts; gauss_lid++){
+              int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
+              
+              //printf("legendre weight : %f\n", ref_elem.ref_gauss_leg_weights(gauss_lid));
+              printf("legendre J det : %f\n", elem.gauss_legendre_det_j(gauss_gid));
+              //printf("legendre gid : %d\n", gauss_gid);
+
+              elem_vol(elem_gid) += ref_elem.ref_gauss_leg_weights(gauss_lid)*elem.gauss_legendre_det_j(gauss_gid);
+            }
+
+            //get_vol_jacobi(elem_vol, elem_gid, node_coords, elem_node_gids);//  
+        
         });
         Kokkos::fence();
     } // end if
@@ -266,15 +329,15 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
     
 } // end subroutine
 
+
 // Volume from jacobian for a HexN element
 KOKKOS_FUNCTION
 void get_vol_jacobi(const DViewCArrayKokkos <double> &elem_vol,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
                  const ViewCArrayKokkos <size_t>  &elem_node_gids){
-
-    return;
-    
+  
+   return; 
 } // end subroutine
 
 

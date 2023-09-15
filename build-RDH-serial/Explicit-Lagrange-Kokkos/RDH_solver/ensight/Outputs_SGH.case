@@ -1,0 +1,23 @@
+FORMAT
+type: ensight gold
+GEOMETRY
+model: data/Outputs_SGH.*****.geo
+VARIABLE
+scalar per element: den data/Outputs_SGH.*****.den
+scalar per element: pres data/Outputs_SGH.*****.pres
+scalar per element: sie data/Outputs_SGH.*****.sie
+scalar per element: vol data/Outputs_SGH.*****.vol
+scalar per element: mass data/Outputs_SGH.*****.mass
+scalar per element: sspd data/Outputs_SGH.*****.sspd
+scalar per element: speed data/Outputs_SGH.*****.speed
+scalar per element: mat_id data/Outputs_SGH.*****.mat_id
+scalar per element: elem_switch data/Outputs_SGH.*****.elem_switch
+vector per node: pos data/Outputs_SGH.*****.pos
+vector per node: vel data/Outputs_SGH.*****.vel
+TIME
+time set: 1
+number of steps:    1
+filename start number: 0
+filename increment: 1
+time values: 
+ 0.00000e+00

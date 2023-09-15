@@ -301,12 +301,13 @@ void readVTKPn(char* MESH,
     num_zones_in_elem = int(std::pow(p, 3)); // one order lower than nodal index space
     num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
     
+    // initialize reference element //
+    ref_elem.init(p, num_dims);
+    
     // intialize elem mesh
     mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_zones_in_elem, num_surfs_in_elem, num_dims);
     elem.initialize_Pn(rk_num_bins, num_elems, num_nodes_in_elem, num_zones_in_elem, num_surfs_in_elem, 3, p); // always 3D here, even for 2D
     
-    // initialize reference element //
-    ref_elem.init(p, num_dims);
     
     // intialize corner variables
     size_t num_corners = num_elems*num_nodes_in_elem;
