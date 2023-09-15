@@ -73,6 +73,7 @@ struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
   size_t max_num_global_vars = 0;
   size_t rk_num_bins;
   double time_value = 0.0;
+  real_t damping_constant = 0.00000001;
   DCArrayKokkos<double> global_vars;
 
   DCArrayKokkos<mat_fill_t> mat_fill;

@@ -2414,7 +2414,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
           double ke = 0;
           for (size_t dim=0; dim<num_dim; dim++){
             //midpoint integration approximation
-            ke += (node_velocities_interface(node_gid,dim)+node_velocities_interface(node_gid,dim))*(node_velocities_interface(node_gid,dim)+node_velocities_interface(node_gid,dim))/4; // 1/2 at end
+            ke += (node_velocities_interface(node_gid,dim)+previous_node_velocities_interface(node_gid,dim))*(node_velocities_interface(node_gid,dim)+previous_node_velocities_interface(node_gid,dim))/4; // 1/2 at end
           } // end for
         
           if(num_dim==2){
