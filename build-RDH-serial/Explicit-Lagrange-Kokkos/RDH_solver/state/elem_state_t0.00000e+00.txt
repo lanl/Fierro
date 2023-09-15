@@ -1,3 +1,0 @@
-# state dump file
-# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass 
-0.500000	 0.500000	 0.500000	 0.707107	 0.866025	 1.000000	 0.000000	 0.000000	 0.000011	 1.000000	 1.000000	 
