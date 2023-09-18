@@ -14,6 +14,8 @@ then
     return 1
 fi
 
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
 source setup-env.sh ${SYSTEM} ${PARALLEL} ${CUSTOM_BUILD}
 source trilinos-install.sh ${SYSTEM} ${PARALLEL}
 source cmake_build.sh ${SYSTEM} ${PARALLEL}
