@@ -1,4 +1,4 @@
 [submodule "lib/Elements"]
 	path = lib/Elements
-	url = git@github.com:lanl/ELEMENTS.git
+	url = https://github.com:lanl/ELEMENTS.git
     branch = master

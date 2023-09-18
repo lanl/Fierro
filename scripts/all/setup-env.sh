@@ -19,6 +19,8 @@ mycuda="cuda/11.4.0"
 myrocm="rocm"
 mycmake="cmake"
 mympi="openmpi"
+#myintel="intel/20.0.2"
+#mympi="openmpi/4.1.1-intel_20.0.2"
 
 if [ "$1" = "hpc" ]
 then
@@ -31,7 +33,7 @@ then
     elif [ "$2" = "hip" ]
     then
         module purge
-        module load ${myclang}
+        module load ${myintel}
         module load ${myrocm}
     else
         module load ${mygcc}

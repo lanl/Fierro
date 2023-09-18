@@ -47,35 +47,37 @@ then
 fi
 
 #-DCMAKE_CXX_FLAGS="-g -lineinfo -Xcudafe --diag_suppress=conversion_function_not_usable -Xcudafe --diag_suppress=cc_clobber_ignored -Xcudafe --diag_suppress=code_is_unreachable" \
+#-D CMAKE_CXX_FLAGS="-g -lineinfo -Xcudafe --diag_suppress=conversion_function_not_usable -Xcudafe --diag_suppress=cc_clobber_ignored -Xcudafe --diag_suppress=code_is_unreachable"
 # Kokkos flags for Cuda
 CUDA_ADDITIONS=(
--DTPL_ENABLE_CUDA=ON \
--DTPL_ENABLE_CUBLAS=ON \
--DTPL_ENABLE_CUSPARSE=ON \
--DKokkos_ENABLE_CUDA=ON \
--DKokkos_ENABLE_CUDA_LAMBDA=ON \
--DKokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=ON \
--DKokkos_ENABLE_DEPRECATED_CODE=OFF \
--DKokkos_ENABLE_CUDA_UVM=OFF \
--DTrilinos_ENABLE_KokkosKernels=ON \
--DKokkosKernels_ENABLE_TPL_CUBLAS=ON \
--DKokkosKernels_ENABLE_TPL_CUSPARSE=ON \
--DTpetra_ENABLE_CUDA=ON \
--DXpetra_ENABLE_Kokkos_Refactor=ON \
--DMueLu_ENABLE_Kokkos_Refactor=ON \
+-D TPL_ENABLE_CUDA=ON
+-D TPL_ENABLE_CUBLAS=ON
+-D TPL_ENABLE_CUSPARSE=ON
+-D Kokkos_ENABLE_CUDA=ON
+-D Kokkos_ENABLE_CUDA_LAMBDA=ON
+-D Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=ON
+-D Kokkos_ENABLE_DEPRECATED_CODE=OFF
+-D Kokkos_ENABLE_CUDA_UVM=OFF
+-D Trilinos_ENABLE_KokkosKernels=ON
+-D KokkosKernels_ENABLE_TPL_CUBLAS=ON
+-D KokkosKernels_ENABLE_TPL_CUSPARSE=ON
+-D Tpetra_ENABLE_CUDA=ON
+-D Xpetra_ENABLE_Kokkos_Refactor=ON
+-D MueLu_ENABLE_Kokkos_Refactor=ON
 )
 
 # Kokkos flags for Hip
 HIP_ADDITIONS=(
 export OMPI_CXX=hipcc
--DKokkos_ENABLE_HIP=ON \
--DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=ON \
--DKokkos_ENABLE_DEPRECATED_CODE=OFF \
--DTrilinos_ENABLE_KokkosKernels=ON \
--DKokkosKernels_ENABLE_TPL_CUBLAS=OFF \
--DKokkosKernels_ENABLE_TPL_CUSPARSE=OFF \
--DTpetra_INST_HIP=ON \
--DXpetra_ENABLE_Kokkos_Refactor=ON \
+-D Kokkos_ENABLE_HIP=ON
+-D Kokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=ON
+-D Kokkos_ENABLE_DEPRECATED_CODE=OFF
+-D Kokkos_ARCH_VEGA90A=ON
+-D Trilinos_ENABLE_KokkosKernels=ON
+-D KokkosKernels_ENABLE_TPL_CUBLAS=OFF
+-D KokkosKernels_ENABLE_TPL_CUSPARSE=OFF
+-D Tpetra_INST_HIP=ON
+-D Xpetra_ENABLE_Kokkos_Refactor=ON
 )
 
 # Kokkos flags for OpenMP
