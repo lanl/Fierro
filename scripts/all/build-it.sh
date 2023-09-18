@@ -1,7 +1,7 @@
 #!/bin/bash -e
 SYSTEM=$1
 PARALLEL=$2
-CUSTOM_BUILD=$3
+BUILD_CORES=$3
 
 if [ "$1" != "hpc" ] && [ "$1" != "macos" ] && [ "$1" != "linux" ]
 then
@@ -16,6 +16,6 @@ fi
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
-source setup-env.sh ${SYSTEM} ${PARALLEL} ${CUSTOM_BUILD}
-source trilinos-install.sh ${SYSTEM} ${PARALLEL}
-source cmake_build.sh ${SYSTEM} ${PARALLEL}
+source setup-env.sh ${SYSTEM} ${PARALLEL}
+source trilinos-install.sh ${PARALLEL} ${BUILD_CORES}
+source cmake_build.sh ${PARALLEL} ${BUILD_CORES}

@@ -1,11 +1,6 @@
 #!/bin/bash -e
 
-if [ "$1" != "hpc" ] && [ "$1" != "macos" ] && [ "$1" != "linux" ]
-then
-    echo "The first argument needs to be either hpc, macos, or linux"
-    return 1
-fi
-if [ "$2" != "cuda" ] && [ "$2" != "hip" ] && [ "$2" != "openmp" ] && [ "$2" != "serial" ]
+if [ "$1" != "cuda" ] && [ "$1" != "hip" ] && [ "$1" != "openmp" ] && [ "$1" != "serial" ]
 then
     echo "The second argument needs to be either cuda, hip, openmp, or serial"
     return 1
@@ -40,10 +35,10 @@ fi
 if [ ! -e "${TRILINOS_BUILD_DIR}/CMakeCache.txt" ]
 then
 
-NUM_TASKS=32
-if [ "$1" = "macos" ]
+NUM_TASKS=1
+if [ ! -z $2 ]
 then
-    NUM_TASKS=1
+    NUM_TASKS=$2
 fi
 
 #-DCMAKE_CXX_FLAGS="-g -lineinfo -Xcudafe --diag_suppress=conversion_function_not_usable -Xcudafe --diag_suppress=cc_clobber_ignored -Xcudafe --diag_suppress=code_is_unreachable" \
@@ -86,18 +81,18 @@ OPENMP_ADDITIONS=(
 )
 
 # Empty those lists if not building
-if [ "$2" = "cuda" ]
+if [ "$1" = "cuda" ]
 then
     export OMPI_CXX=${TRILINOS_SOURCE_DIR}/packages/kokkos/bin/nvcc_wrapper
     export CUDA_LAUNCH_BLOCKING=1
     HIP_ADDITIONS=() 
     OPENMP_ADDITIONS=()
-elif [ "$2" = "hip" ]
+elif [ "$1" = "hip" ]
 then
     export OMPI_CXX=hipcc
     CUDA_ADDITIONS=()
     OPENMP_ADDITIONS=()
-elif [ "$2" = "openmp" ]
+elif [ "$1" = "openmp" ]
 then
     HIP_ADDITIONS=() 
     CUDA_ADDITIONS=()

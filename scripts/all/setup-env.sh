@@ -44,13 +44,7 @@ fi
 
 my_parallel="$2"
 
-my_build="build-all"
-if [ -z $3 ]
-then
-    my_build="${my_build}-${my_parallel}"
-else
-    my_build=$3
-fi
+my_build="build-all-${my_parallel}"
 
 export scriptdir=`pwd`
 
