@@ -207,12 +207,16 @@ void init(int p_order, int num_dim_inp){
             }
 
             get_basis(temp_nodal_basis, val_1d, val_3d, point);
-             
+            
+            //double check_basis = 0.0;
+
             for(int basis_id = 0; basis_id < num_ref_dofs_in_elem; basis_id++){
 
                 ref_gauss_lob_basis(gauss_lob_rid, basis_id) = temp_nodal_basis(basis_id);
+                //check_basis += temp_nodal_basis(basis_id);
             	temp_nodal_basis(basis_id) = 0.0;
             }
+            //printf(" basis tally = %f \n", check_basis );
 
         });
 
@@ -225,14 +229,17 @@ void init(int p_order, int num_dim_inp){
             }
 
             get_basis(temp_nodal_basis, val_1d, val_3d, point);
+            
+            //double check_basis = 0.0;
 
             for(int basis_id = 0; basis_id < num_ref_dofs_in_elem; basis_id++){
 
                 ref_gauss_leg_basis(gauss_leg_rid, basis_id) = temp_nodal_basis(basis_id);
-            	//printf(" basis value : %f \n ", ref_gauss_leg_basis(gauss_leg_rid, basis_id) );
+              //  check_basis += temp_nodal_basis(basis_id);
                 temp_nodal_basis(basis_id) = 0.0;
 	    }
 
+            //printf(" basis tally = %f \n", check_basis );
         });
 
         // --- evaluate grad_basis functions at the lobatto points ---
@@ -251,6 +258,9 @@ void init(int p_order, int num_dim_inp){
                 point(dim) = ref_gauss_lob_positions(gauss_lob_rid, dim);
             }
 
+            //double check[3];
+            //for (int i = 0; i < 3; i++) check[i] = 0.0;
+
             partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
             partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
             partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
@@ -261,11 +271,17 @@ void init(int p_order, int num_dim_inp){
                 ref_gauss_lob_grad_basis(gauss_lob_rid, basis_id, 0) = temp_partial_xi(basis_id);
                 ref_gauss_lob_grad_basis(gauss_lob_rid, basis_id, 1) = temp_partial_eta(basis_id);
                 ref_gauss_lob_grad_basis(gauss_lob_rid, basis_id, 2) = temp_partial_mu(basis_id);
+                
+              //  check[0] += temp_partial_xi(basis_id);
+              //  check[1] += temp_partial_eta(basis_id);
+              //  check[2] += temp_partial_mu(basis_id);
 
                 temp_partial_xi(basis_id)  = 0.0;
                 temp_partial_eta(basis_id) = 0.0;
                 temp_partial_mu(basis_id)  = 0.0;
             }
+            
+            //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
         });
 
 
@@ -280,8 +296,8 @@ void init(int p_order, int num_dim_inp){
             partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
             partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
             
-            double check[3];
-            for (int i = 0; i < 3; i++) check[i] = 0.0;
+            //double check[3];
+            //for (int i = 0; i < 3; i++) check[i] = 0.0;
 
             for(int basis_id = 0; basis_id < num_ref_dofs_in_elem; basis_id++){
 
@@ -292,14 +308,17 @@ void init(int p_order, int num_dim_inp){
                 //printf(" grad basis value : %f \n ", ref_gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) );
                 ref_gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) = temp_partial_mu(basis_id);
                 //printf(" grad basis value : %f \n ", ref_gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) );
-                check[0] += temp_partial_xi(basis_id);
-                check[1] += temp_partial_eta(basis_id);
-                check[2] += temp_partial_mu(basis_id);
+              
+              //  check[0] += temp_partial_xi(basis_id);
+              //  check[1] += temp_partial_eta(basis_id);
+              //  check[2] += temp_partial_mu(basis_id);
+                
                 temp_partial_xi(basis_id)  = 0.0;
                 temp_partial_eta(basis_id) = 0.0;
                 temp_partial_mu(basis_id)  = 0.0;
             }
-            printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
+            
+            //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
         });
         
         
@@ -1417,7 +1436,9 @@ void get_basis(const CArrayKokkos <double> &basis,
 
         for (int i =0; i< num_ref_dofs_1d; i++){
           val_1d(i) = 0.0;
-          val_3d(i) = 0.0;
+          val_3d(i,0) = 0.0;
+          val_3d(i,1) = 0.0;
+          val_3d(i,2) = 0.0;
         }
 };
 
@@ -1489,9 +1510,13 @@ void partial_xi_basis(const CArrayKokkos <double> &partial_xi,
 
         for (int i =0; i< num_ref_dofs_1d; i++){
           val_1d(i) = 0.0;
-          val_3d(i) = 0.0;
+          val_3d(i,0) = 0.0;
+          val_3d(i,1) = 0.0;
+          val_3d(i,2) = 0.0;
           Dval_1d(i) = 0.0;
-          Dval_3d(i) = 0.0;
+          Dval_3d(i,0) = 0.0;
+          Dval_3d(i,1) = 0.0;
+          Dval_3d(i,2) = 0.0;
         }
     };
 
@@ -1557,9 +1582,13 @@ void partial_eta_basis(const CArrayKokkos <double> &partial_eta,
 
         for (int i =0; i< num_ref_dofs_1d; i++){
           val_1d(i) = 0.0;
-          val_3d(i) = 0.0;
+          val_3d(i,0) = 0.0;
+          val_3d(i,1) = 0.0;
+          val_3d(i,2) = 0.0;
           Dval_1d(i) = 0.0;
-          Dval_3d(i) = 0.0;
+          Dval_3d(i,0) = 0.0;
+          Dval_3d(i,1) = 0.0;
+          Dval_3d(i,2) = 0.0;
         }
     };
 
@@ -1627,9 +1656,13 @@ void partial_mu_basis(const CArrayKokkos <double> &partial_mu,
 
         for (int i =0; i< num_ref_dofs_1d; i++){
           val_1d(i) = 0.0;
-          val_3d(i) = 0.0;
+          val_3d(i,0) = 0.0;
+          val_3d(i,1) = 0.0;
+          val_3d(i,2) = 0.0;
           Dval_1d(i) = 0.0;
-          Dval_3d(i) = 0.0;
+          Dval_3d(i,0) = 0.0;
+          Dval_3d(i,1) = 0.0;
+          Dval_3d(i,2) = 0.0;
         }
 };
 
@@ -1667,7 +1700,7 @@ void lagrange_basis_1D(
             interp(vert_i)   = interpolant;           // Interpolant value at given point
 
         } // end loop over all nodes
-} // end of Legrange_1D function
+} // end of Lagrange_1D function
 
 
 KOKKOS_INLINE_FUNCTION

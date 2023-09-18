@@ -298,14 +298,53 @@ int main(int argc, char *argv[]){
                                   legendre_jacobian_inverse);
         
         get_vol(elem_vol, node_coords, mesh, elem, ref_elem);
-         
+        
+        /* 
         double vol_check = 0.0;
         for (int i = 0; i < mesh.num_elems; i++){
            vol_check += elem_vol(i);
         }
-        printf("calculated volume is: %f", vol_check); 
-        printf(" ");
-
+        printf("calculated volume is: %f \n", vol_check); 
+        */
+       /* 
+        // check jacobian inverse works //
+        double temp_left = 0.0;
+        double temp_right = 0.0;
+        
+        std::cout << "left inverse " << std::endl;
+        for (int i = 0; i < num_leg_pts; i++){
+          std::cout << " At gauss pt " << i << std::endl;
+          std::cout << " ######################## " << std::endl;
+          for (int dim_1 = 0; dim_1 < mesh.num_dims; dim_1++){
+            for (int dim_2 = 0; dim_2 < mesh.num_dims; dim_2++){
+              for (int k = 0; k < mesh.num_dims; k++){
+                temp_left += legendre_jacobian_inverse(i,dim_1,k)*legendre_jacobian(i, k, dim_2); 
+              }
+              std::cout<<  temp_left << ", ";
+              temp_left = 0.0;
+            }
+            std::cout<< " "<< std::endl;
+          }
+          std::cout << " ######################## " << std::endl;
+        }
+        
+        std::cout << "right inverse " << std::endl;
+        for (int i = 0; i < num_leg_pts; i++){
+          std::cout << " At gauss pt " << i << std::endl;
+          std::cout << " ######################## " << std::endl;
+          for (int dim_1 = 0; dim_1 < mesh.num_dims; dim_1++){
+            for (int dim_2 = 0; dim_2 < mesh.num_dims; dim_2++){
+              for (int k = 0; k < mesh.num_dims; k++){
+                temp_right += legendre_jacobian(i,dim_1,k)*legendre_jacobian_inverse(i, k, dim_2); 
+              }
+              std::cout<< temp_right <<", ";
+              temp_right = 0.0;
+            }
+            std::cout<< " "<< std::endl;
+          }
+          std::cout << " ######################## " << std::endl;
+        }
+        */
         // ---------------------------------------------------------------------
         //   setup the IC's and BC's
         // ---------------------------------------------------------------------

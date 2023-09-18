@@ -245,7 +245,7 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                                const DViewCArrayKokkos <double> &gauss_legendre_jacobian_inverse){
 
     // loop over the mesh
-    for(int elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++){
+    FOR_ALL(elem_gid, 0, mesh.num_elems,{
         
         for(int gauss_lid = 0; gauss_lid < elem.num_leg_pts; gauss_lid++){
 
@@ -273,15 +273,23 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                 gauss_legendre_jacobian(gauss_gid, 0, 1) * (gauss_legendre_jacobian(gauss_gid, 1, 0) * gauss_legendre_jacobian(gauss_gid, 2, 2) - gauss_legendre_jacobian(gauss_gid, 1, 2) * gauss_legendre_jacobian(gauss_gid, 2, 0)) +
                 gauss_legendre_jacobian(gauss_gid, 0, 2) * (gauss_legendre_jacobian(gauss_gid, 1, 0) * gauss_legendre_jacobian(gauss_gid, 2, 1) - gauss_legendre_jacobian(gauss_gid, 1, 1) * gauss_legendre_jacobian(gauss_gid, 2, 0)); 
             
-            printf(" leg determinant : %f \n", gauss_legendre_det_j(gauss_gid));
+//            printf(" leg determinant : %f \n", gauss_legendre_det_j(gauss_gid));
             
-            //auto J = ViewCArray <real_t> (&elem.gauss_legendre_jacobian(gauss_gid, 0, 0), mesh.num_dim(), mesh.num_dim());
-            //auto J_inv = ViewCArray <real_t> (&elem.gauss_legendre_jacobian_inverse(gauss_gid, 0, 0), mesh.num_dim(), mesh.num_dim());
+           real_t invdet = 1.0 / gauss_legendre_det_j(gauss_gid);
+ 
+           gauss_legendre_jacobian_inverse(gauss_gid, 0, 0) = ( gauss_legendre_jacobian(gauss_gid, 1, 1) * gauss_legendre_jacobian(gauss_gid, 2, 2) - gauss_legendre_jacobian(gauss_gid, 2, 1) * gauss_legendre_jacobian(gauss_gid, 1, 2)) * invdet;
+           gauss_legendre_jacobian_inverse(gauss_gid, 0, 1) = ( gauss_legendre_jacobian(gauss_gid, 0, 2) * gauss_legendre_jacobian(gauss_gid, 2, 1) - gauss_legendre_jacobian(gauss_gid, 0, 1) * gauss_legendre_jacobian(gauss_gid, 2, 2)) * invdet;
+           gauss_legendre_jacobian_inverse(gauss_gid, 0, 2) = ( gauss_legendre_jacobian(gauss_gid, 0, 1) * gauss_legendre_jacobian(gauss_gid, 1, 2) - gauss_legendre_jacobian(gauss_gid, 0, 2) * gauss_legendre_jacobian(gauss_gid, 1, 1)) * invdet;
+           
+           gauss_legendre_jacobian_inverse(gauss_gid, 1, 0) = ( gauss_legendre_jacobian(gauss_gid, 1, 2) * gauss_legendre_jacobian(gauss_gid, 2, 0) - gauss_legendre_jacobian(gauss_gid, 1, 0) * gauss_legendre_jacobian(gauss_gid, 2, 2)) * invdet;
+           gauss_legendre_jacobian_inverse(gauss_gid, 1, 1) = ( gauss_legendre_jacobian(gauss_gid, 0, 0) * gauss_legendre_jacobian(gauss_gid, 2, 2) - gauss_legendre_jacobian(gauss_gid, 0, 2) * gauss_legendre_jacobian(gauss_gid, 2, 0)) * invdet;
+           gauss_legendre_jacobian_inverse(gauss_gid, 1, 2) = ( gauss_legendre_jacobian(gauss_gid, 1, 0) * gauss_legendre_jacobian(gauss_gid, 0, 2) - gauss_legendre_jacobian(gauss_gid, 0, 0) * gauss_legendre_jacobian(gauss_gid, 1, 2)) * invdet;
+           gauss_legendre_jacobian_inverse(gauss_gid, 2, 0) = ( gauss_legendre_jacobian(gauss_gid, 1, 0) * gauss_legendre_jacobian(gauss_gid, 2, 1) - gauss_legendre_jacobian(gauss_gid, 2, 0) * gauss_legendre_jacobian(gauss_gid, 1, 1)) * invdet;
+           gauss_legendre_jacobian_inverse(gauss_gid, 2, 1) = ( gauss_legendre_jacobian(gauss_gid, 2, 0) * gauss_legendre_jacobian(gauss_gid, 0, 1) - gauss_legendre_jacobian(gauss_gid, 0, 0) * gauss_legendre_jacobian(gauss_gid, 2, 1)) * invdet;
+           gauss_legendre_jacobian_inverse(gauss_gid, 2, 2) = ( gauss_legendre_jacobian(gauss_gid, 0, 0) * gauss_legendre_jacobian(gauss_gid, 1, 1) - gauss_legendre_jacobian(gauss_gid, 1, 0) * gauss_legendre_jacobian(gauss_gid, 0, 1)) * invdet;
 
-            //elements::mat_inverse(J_inv, J);
-            
         } // end loop over gauss in element
-    } // end loop over elements
+    }); // end FOR_ALL over elements
 } // end subroutine
 
 KOKKOS_FUNCTION
@@ -313,7 +321,7 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
               int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
               
               //printf("legendre weight : %f\n", ref_elem.ref_gauss_leg_weights(gauss_lid));
-              printf("legendre J det : %f\n", elem.gauss_legendre_det_j(gauss_gid));
+              //printf("legendre J det : %f\n", elem.gauss_legendre_det_j(gauss_gid));
               //printf("legendre gid : %d\n", gauss_gid);
 
               elem_vol(elem_gid) += ref_elem.ref_gauss_leg_weights(gauss_lid)*elem.gauss_legendre_det_j(gauss_gid);
