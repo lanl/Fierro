@@ -42,7 +42,7 @@ then
 fi
 
 
-my_parallel="mpi-$2"
+my_parallel="$2"
 
 my_build="build-Implicit"
 if [ -z $3 ]
