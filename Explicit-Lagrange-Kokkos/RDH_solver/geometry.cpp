@@ -262,7 +262,7 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                         size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
                         //printf(" node_coord : %f \n", node_coords(0, node_gid, dim_i));
                         gauss_legendre_jacobian(gauss_gid, dim_i, dim_j) += 
-                            ref_elem.ref_gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) * node_coords(1, node_gid , dim_i);
+                            ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) * node_coords(1, node_gid , dim_i);
 
                     }// end loop node_id
                 } // end dim_j
@@ -320,11 +320,11 @@ void get_vol(const DViewCArrayKokkos <double> &elem_vol,
             for (int gauss_lid = 0; gauss_lid < elem.num_leg_pts; gauss_lid++){
               int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
               
-              //printf("legendre weight : %f\n", ref_elem.ref_gauss_leg_weights(gauss_lid));
+              //printf("legendre weight : %f\n", ref_elem.gauss_leg_weights(gauss_lid));
               //printf("legendre J det : %f\n", elem.gauss_legendre_det_j(gauss_gid));
               //printf("legendre gid : %d\n", gauss_gid);
 
-              elem_vol(elem_gid) += ref_elem.ref_gauss_leg_weights(gauss_lid)*elem.gauss_legendre_det_j(gauss_gid);
+              elem_vol(elem_gid) += ref_elem.gauss_leg_weights(gauss_lid)*elem.gauss_legendre_det_j(gauss_gid);
             }
 
             //get_vol_jacobi(elem_vol, elem_gid, node_coords, elem_node_gids);//  
