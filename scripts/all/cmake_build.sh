@@ -6,6 +6,17 @@ then
     return 1
 fi
 
+#inititialize submodules if they aren't downloaded
+[ -d "${libdir}/Elements/elements" ] && echo "Elements submodule exists"
+[ -d "${libdir}Elements/matar/src" ] && echo "matar submodule exists"
+
+
+if { [ ! -d "${libdir}Elements/elements" ] || [ ! -d "${libdir}Elements/matar/src" ] ;}
+then
+  echo "Missing submodules, downloading them...."
+  git submodule update --init --recursive
+fi
+
 rm -rf ${FIERRO_BUILD_DIR}
 mkdir -p ${FIERRO_BUILD_DIR}
 cd ${FIERRO_BUILD_DIR}
