@@ -236,6 +236,11 @@ public:
   void boundary_velocity(const mesh_t &mesh,
                          const DCArrayKokkos <boundary_t> &boundary,
                          DViewCArrayKokkos <double> &node_vel);
+
+  void boundary_adjoint(const mesh_t &mesh,
+                         const DCArrayKokkos <boundary_t> &boundary,
+                          vec_array &node_adjoint,
+                          vec_array &node_phi_adjoint);
   
   KOKKOS_INLINE_FUNCTION 
   size_t check_bdy(const size_t patch_gid,

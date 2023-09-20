@@ -595,6 +595,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
   const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
+  const real_t damping_constant = simparam.damping_constant;
   real_t global_dt;
   size_t current_data_index, next_data_index;
   Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
@@ -697,11 +698,13 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
             matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
           }
           rate_of_change = -matrix_contribution;
-          //rate_of_change = -0.001*previous_adjoint_vector(node_gid,idim);
+          //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
           phi_midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
       Kokkos::fence();
+
+      boundary_adjoint(*mesh, boundary,midpoint_adjoint_vector, phi_midpoint_adjoint_vector);
 
       //full step update with midpoint gradient for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -726,11 +729,14 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
             matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
           }
           rate_of_change = -matrix_contribution;
-          //rate_of_change = -0.001*previous_adjoint_vector(node_gid,idim);
+          //rate_of_change = -0.0000001*midpoint_adjoint_vector(node_gid,idim);
           phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
       Kokkos::fence();
+
+      
+      boundary_adjoint(*mesh, boundary,current_adjoint_vector, phi_current_adjoint_vector);
 
     } //end view scope
 
@@ -1530,3 +1536,64 @@ void FEA_Module_Dynamic_Elasticity::init_assembly(){
   //distributed_force_gradient_positions->describe(*fos,Teuchos::VERB_EXTREME);
   //distributed_force_gradient_velocities->describe(*fos,Teuchos::VERB_EXTREME);
 }
+
+void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
+                       const DCArrayKokkos <boundary_t> &boundary,
+                       vec_array &node_adjoint,
+                       vec_array &node_phi_adjoint){
+
+    //error and debug flag
+    //DCArrayKokkos<bool> print_flag(1, "print_flag");
+    //print_flag.host(0) = false;
+    //print_flag.update_device();
+   
+    const size_t rk_level = simparam.rk_num_bins - 1; 
+    int num_dims = simparam.num_dims;
+    // Loop over boundary sets
+    for (size_t bdy_set=0; bdy_set<num_bdy_sets; bdy_set++){
+        
+        // Loop over boundary nodes in a boundary set
+        FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
+                
+            // reflected (boundary array is on the device)
+            if (boundary(bdy_set).condition_type == BOUNDARY_HYDRO_CONDITION::reflected){
+            
+                // directions with hydro_bc:
+                // x_plane  = 0,
+                // y_plane  = 1,
+                // z_plane  = 2,
+                size_t direction = boundary(bdy_set).planar_surface_index();
+                
+                size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
+                    
+                // Set velocity to zero in that directdion
+                node_adjoint(bdy_node_gid, direction) = 0.0;
+                //node_phi_adjoint(bdy_node_gid, direction) = 0.0;
+                        
+            }
+            else if (boundary(bdy_set).condition_type == BOUNDARY_HYDRO_CONDITION::fixed){
+                
+                size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
+                
+                //debug clause
+                //if(bdy_node_gid==549412) print_flag(0) = true;
+
+                for(size_t dim=0; dim < num_dims; dim++){
+                    // Set velocity to zero
+                  node_adjoint(bdy_node_gid, dim) = 0.0;
+                  //node_phi_adjoint(bdy_node_gid, dim) = 0.0;
+                }
+                
+            }
+            
+            
+                
+        }); // end for bdy_node_lid
+	    
+    } // end for bdy_set
+    
+    //debug check
+    //print_flag.update_host();
+    //if(print_flag.host(0)) std::cout << "found boundary node with id 549412" << std::endl;
+    return;
+} // end boundary_velocity function
