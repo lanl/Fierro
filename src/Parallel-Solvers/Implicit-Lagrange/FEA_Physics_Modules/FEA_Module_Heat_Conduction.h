@@ -64,7 +64,7 @@ class Implicit_Solver;
 class FEA_Module_Heat_Conduction: public FEA_Module{
 
 public:
-  FEA_Module_Heat_Conduction(Solver *Solver_Pointer, const int my_fea_module_index = 0);
+  FEA_Module_Heat_Conduction(std::shared_ptr<FEA_Module_Parameters> parameters, Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Heat_Conduction();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -129,8 +129,8 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
-  Simulation_Parameters_Thermal simparam;
-  Simulation_Parameters_Topology_Optimization simparam_TO;
+  Simulation_Parameters simparam;
+  Thermal_Parameters parameters;
   Implicit_Solver *Implicit_Solver_Pointer_;
   
   //Local FEA data

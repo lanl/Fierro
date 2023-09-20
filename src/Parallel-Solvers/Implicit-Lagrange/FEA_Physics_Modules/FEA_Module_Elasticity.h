@@ -39,8 +39,8 @@
 #define FEA_MODULE_ELASTICITY_H
 
 #include "FEA_Module.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
+#include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
 
 //forward declare
 namespace MueLu{
@@ -64,7 +64,7 @@ class Implicit_Solver;
 class FEA_Module_Elasticity: public FEA_Module{
 
 public:
-  FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index = 0);
+  FEA_Module_Elasticity(std::shared_ptr<FEA_Module_Parameters> parameters, Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -133,8 +133,8 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  Simulation_Parameters_Elasticity simparam;
-  Simulation_Parameters_Topology_Optimization simparam_TO;
+  Simulation_Parameters simparam;
+  Elasticity_Parameters parameters;
   Implicit_Solver *Implicit_Solver_Pointer_;
   
   //Local FEA data

@@ -99,7 +99,11 @@
 using namespace utils;
 
 
-FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(
+    std::shared_ptr<FEA_Module_Parameters> parameter_ptr,
+    Solver *Solver_Pointer, 
+    const int my_fea_module_index
+  ) : FEA_Module(Solver_Pointer){
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
@@ -108,19 +112,14 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Solver *Solver_Pointer, c
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
 
-  //create parameter object
-  simparam = Simulation_Parameters_Thermal();
-
-  //acquire base class data from existing simparam in solver (gets yaml options etc.)
-  *(Simulation_Parameters*)&simparam = Implicit_Solver_Pointer_->simparam;
-  
-  //sets base class simparam pointer to avoid instancing the base simparam twice
-  FEA_Module::simparam = simparam;
+  parameters = *std::dynamic_pointer_cast<Elasticity_Parameters>(parameter_ptr);
+  simparam = Implicit_Solver_Pointer_->simparam;
   
   //TO parameters
-  simparam_TO = Implicit_Solver_Pointer_->simparam_TO;
-  penalty_power = simparam_TO.optimization_options.simp_penalty_power;
-  nodal_density_flag = simparam_TO.nodal_density_flag;
+  if (simparam.optimization_options.has_value()) {
+    penalty_power = simparam.optimization_options.value().simp_penalty_power;
+    nodal_density_flag = simparam;
+  }
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -1447,7 +1446,7 @@ void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density
 void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_t &Element_Conductivity, real_t density){
   real_t unit_scaling = simparam.unit_scaling;
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam_TO.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam.optimization_options.density_epsilon;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;

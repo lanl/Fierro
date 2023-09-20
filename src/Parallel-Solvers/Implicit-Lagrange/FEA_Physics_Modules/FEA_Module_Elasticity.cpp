@@ -71,6 +71,7 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters_Elasticity.h"
+#include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
 #include "Simulation_Parameters_Topology_Optimization.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
@@ -100,7 +101,11 @@
 using namespace utils;
 
 
-FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+FEA_Module_Elasticity::FEA_Module_Elasticity(
+    std::shared_ptr<FEA_Module_Parameters> parameter_ptr,
+    Solver *Solver_Pointer, 
+    const int my_fea_module_index
+  ) :FEA_Module(Solver_Pointer){
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
@@ -109,19 +114,12 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer, const int m
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
 
-  //create parameter object
-  simparam = Simulation_Parameters_Elasticity();
-
-  //acquire base class data from existing simparam in solver (gets yaml options etc.)
-  *(Simulation_Parameters*)&simparam = Implicit_Solver_Pointer_->simparam;
-
-  //sets base class simparam pointer to avoid instancing the base simparam twice
-  FEA_Module::simparam = simparam;
+  parameters = *std::dynamic_pointer_cast<Elasticity_Parameters>(parameter_ptr);
+  simparam = Implicit_Solver_Pointer_->simparam;
   
   //TO parameters
-  simparam_TO = Implicit_Solver_Pointer_->simparam_TO;
-  penalty_power = simparam_TO.optimization_options.simp_penalty_power;
-  nodal_density_flag = simparam_TO.nodal_density_flag;
+  penalty_power = simparam.optimization_options.simp_penalty_power;
+  nodal_density_flag = simparam.nodal_density_flag;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
