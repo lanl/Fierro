@@ -2154,6 +2154,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
             
             
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+            /*
             if(num_dim==2){
                 update_state2D(material,
                                *mesh,
@@ -2186,6 +2187,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
                              rk_alpha,
                              cycle);
             }
+            */
             // ----
             // Notes on strength:
             //    1) hyper-elastic strength models are called in update_state
