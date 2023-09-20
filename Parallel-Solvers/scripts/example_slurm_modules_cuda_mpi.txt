@@ -1,3 +1,0 @@
-module load gcc openmpi cuda cmake
-
-

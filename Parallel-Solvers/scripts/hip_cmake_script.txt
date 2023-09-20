@@ -1,3 +1,0 @@
-#!/bin/bash
-export OMPI_CXX=hipcc
-cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON .

@@ -1,3 +1,0 @@
-#!/bin/bash
-export OMPI_CXX=hipcc
-make -j4
