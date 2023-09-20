@@ -1,0 +1,69 @@
+# input file
+solver_type: SGH
+
+solver_options:
+    num_dims: 3
+    rk_num_stages: 1
+    mesh_file_format: ensight
+    mesh_file_name: /vast/home/cyenusah/github/Fierro/EVPFFT/input_files/mesh_single_element.geo
+    time_variables:
+        time_final: 1.0e+8  #[ms]
+        dt_min: 1.e-11  #[ms]
+        dt_max: 1.e-3  #[ms]
+        dt_start: 1.e-6  #[ms]
+        dt_cfl: 0.4
+        cycle_stop: 200000000
+
+output_options:
+  graphics_step: 1.0e+3  #[ms]
+
+material_options:
+    num_materials: 1
+    max_num_state_var: 5
+    max_num_global_var: 0
+    material_1:
+        #eos model is required
+        eos_model: user_eos_model
+        strength_model: user_strength_model
+        strength_type: hypo
+        strength_setup: user_init
+        strength_run_location: host
+        q1: 1.0
+        q2: 1.3333
+        q1ex: 1.0
+        q2ex: 0.0
+
+        num_state_vars: 5
+        num_global_vars: 0
+
+region_options:
+    num_fills: 1
+    #global initial conditions
+    mat_fill_1:
+        volume: global
+        mat_id: 0
+        den: 16.640e-3  #[g/mm3]
+        sie: 1.0e-9  #[N-mm]
+            
+        velocity: cartesian
+        u: 0.0  #[mm/ms]
+        v: 0.0  #[mm/ms]
+        w: 0.0  #[mm/ms]
+    
+boundary_condition_options:
+    num_bcs: 2
+    # Tag Z plane
+    boundary_condition_1:
+        surface: z_plane
+        value: 0.0
+        condition_type: fixed
+            
+    # Tag Z plane
+    boundary_condition_2:
+        surface: z_plane
+        value: 1.0
+        condition_type: velocity
+        u: 0.0  #[mm/ms]
+        v: 0.0  #[mm/ms]
+        w: 1.0  #[mm/ms]
+

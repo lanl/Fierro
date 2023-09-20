@@ -1,0 +1,4 @@
+export OMP_PROC_BIND=spread
+export OMP_NUM_THREADS=1
+export OMP_PLACES=threads
+mpirun -np 4 --bind-to core valgrind ./fierro-parallel-explicit ../Explicit-Lagrange/meshes/mesh_Sedov_8.geo

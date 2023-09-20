@@ -1,0 +1,21 @@
+add_library(yaml_serializable src/Yaml.cpp)
+target_include_directories(yaml_serializable PUBLIC include)
+if (NOT APPLE)
+    target_link_libraries(yaml_serializable PUBLIC stdc++fs)
+endif()
+
+install(
+  TARGETS yaml_serializable
+)
+
+if (TEST) 
+  add_executable(yaml-serializable-tests test/test.cpp)
+  target_link_libraries(
+      yaml-serializable-tests
+      GTest::gtest_main
+      yaml_serializable
+  )
+
+  include(GoogleTest)
+  gtest_discover_tests(yaml-serializable-tests)
+endif()
