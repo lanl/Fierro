@@ -2154,6 +2154,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
             
             
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+            /*
             if(num_dim==2){
                 update_state2D(material,
                                *mesh,
@@ -2186,6 +2187,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
                              rk_alpha,
                              cycle);
             }
+            */
             // ----
             // Notes on strength:
             //    1) hyper-elastic strength models are called in update_state
@@ -2412,7 +2414,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
           double ke = 0;
           for (size_t dim=0; dim<num_dim; dim++){
             //midpoint integration approximation
-            ke += (node_velocities_interface(node_gid,dim)+node_velocities_interface(node_gid,dim))*(node_velocities_interface(node_gid,dim)+node_velocities_interface(node_gid,dim))/4; // 1/2 at end
+            ke += (node_velocities_interface(node_gid,dim)+previous_node_velocities_interface(node_gid,dim))*(node_velocities_interface(node_gid,dim)+previous_node_velocities_interface(node_gid,dim))/4; // 1/2 at end
           } // end for
         
           if(num_dim==2){

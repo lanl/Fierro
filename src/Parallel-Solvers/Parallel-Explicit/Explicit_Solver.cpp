@@ -1438,10 +1438,11 @@ void Explicit_Solver::setup_optimization_problem(){
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-  directions_distributed->putScalar(1);
+  directions_distributed->putScalar(-0.1);
   //directions_distributed->randomize(-0.8,1);
-  //real_t normd = directions_distributed->norm2();
-  //directions_distributed->scale(normd);
+  Kokkos::View <real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm",1);
+  directions_distributed->norm2(direction_norm);
+  directions_distributed->scale(1/direction_norm(0));
   //set all but first component to 0 for debug
   host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //for(int init = 1; init < nlocal_nodes; init++)
