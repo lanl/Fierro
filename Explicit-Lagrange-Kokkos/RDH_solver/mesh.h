@@ -148,6 +148,27 @@ struct lobatto_in_elem_t {
 	  };
 };
 
+struct nodes_in_zone_t {
+    private:
+	size_t num_nodes_in_zone_;
+    public:
+	nodes_in_zone_t(){};
+      
+	nodes_in_zone_t(const size_t num_nodes_in_zone_inp){
+  		this->num_nodes_in_zone_ = num_nodes_in_zone_inp;
+	};
+
+       	// return global zone index for given local zone index in an element    
+       	size_t  host(const size_t zone_gid, const size_t node_lid) const{
+       		return zone_gid*num_nodes_in_zone_ + node_lid;
+       	};
+
+       	KOKKOS_INLINE_FUNCTION	
+	size_t operator()(const size_t zone_gid, const size_t node_lid) const{
+    		return zone_gid*num_nodes_in_zone_ + node_lid;
+	};
+};
+
 // mesh sizes and connectivity data structures
 struct mesh_t {
     
@@ -1662,6 +1683,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <mat_fill_t> &mat_fill,
            const CArrayKokkos <boundary_t> &boundary,
            mesh_t &mesh,
+           elem_t &elem,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
            DViewCArrayKokkos <double> &node_mass,

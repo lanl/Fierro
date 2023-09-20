@@ -138,9 +138,9 @@ struct elem_t {
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
 
-        this->den    = CArray <double> (num_leg_pts);// move to gauss 
-        this->pres   = CArray <double> (num_leg_pts);// move to gauss
-        this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);// move to gauss points
+        this->den    = CArray <double> (num_leg_pts); 
+        this->pres   = CArray <double> (num_leg_pts);
+        this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);
         this->sspd = CArray <double> (num_leg_pts);
 	
 	this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);

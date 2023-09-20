@@ -299,6 +299,14 @@ int main(int argc, char *argv[]){
         
         get_vol(elem_vol, node_coords, mesh, elem, ref_elem);
         
+        /*
+        for (int elem_gid  = 0; elem_gid < mesh.num_elems; elem_gid++){
+          for (int i = 0; i < mesh.num_nodes_in_elem; i++){
+            std::cout << mesh.nodes_in_elem(elem_gid, i) << std::endl;
+          }
+        }
+        */
+
         /* 
         double vol_check = 0.0;
         for (int i = 0; i < mesh.num_elems; i++){
@@ -352,6 +360,7 @@ int main(int argc, char *argv[]){
               mat_fill,
               boundary,
               mesh,
+              elem,
               node_coords,
               node_vel,
               node_mass,

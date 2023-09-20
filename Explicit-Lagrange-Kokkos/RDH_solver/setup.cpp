@@ -58,6 +58,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <mat_fill_t> &mat_fill,
            const CArrayKokkos <boundary_t> &boundary,
            mesh_t &mesh,
+           elem_t &elem,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
            DViewCArrayKokkos <double> &node_mass,
@@ -190,7 +191,7 @@ void setup(const CArrayKokkos <material_t> &material,
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
             const size_t rk_level = 1;
-
+           
             // calculate the coordinates and radius of the element
             double elem_coords[3]; // note:initialization with a list won't work
             elem_coords[0] = 0.0;
@@ -291,12 +292,13 @@ void setup(const CArrayKokkos <material_t> &material,
                 //printf( "volume in elem %d is %f \n", elem_gid, elem_vol(elem_gid) ); 
                 
                 // mass
-		elem_mass(elem_gid) = elem_den(elem_gid)*1.0/mesh.num_elems;//elem_vol(elem_gid);
-                //printf( "mass in elem %d is %f \n", elem_gid, elem_mass(elem_gid) ); 
+		elem_mass(elem_gid) = elem_den(elem_gid)/elem_vol(elem_gid);
+                printf( "mass in elem %d is %f \n", elem_gid, elem_mass(elem_gid) ); 
 
                 
                 // specific internal energy
-                elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
+                elem_sie( 0, elem_gid) = mat_fill(f_id).sie;
+                elem_sie( 1, elem_gid) = mat_fill(f_id).sie;
 		
                 elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
@@ -323,7 +325,8 @@ void setup(const CArrayKokkos <material_t> &material,
                 // always 3D even for 2D-RZ
                 for (size_t i=0; i<3; i++){
                     for (size_t j=0; j<3; j++){
-                        elem_stress(rk_level,elem_gid,i,j) = 0.0;
+                        elem_stress( 0,elem_gid,i,j) = 0.0;
+                        elem_stress( 1,elem_gid,i,j) = 0.0;
                     }        
                 }  // end for
                 
@@ -353,10 +356,13 @@ void setup(const CArrayKokkos <material_t> &material,
                         case init_conds::cartesian:
                         {
                         
-                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).u;
-                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).v;
-                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).w;
+                            node_vel(0, node_gid, 0) = mat_fill(f_id).u;
+                            node_vel(0, node_gid, 1) = mat_fill(f_id).v;
+                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = mat_fill(f_id).w;
                             
+                            node_vel(1, node_gid, 0) = mat_fill(f_id).u;
+                            node_vel(1, node_gid, 1) = mat_fill(f_id).v;
+                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = mat_fill(f_id).w;
                         
                             break;
                         }
@@ -384,9 +390,13 @@ void setup(const CArrayKokkos <material_t> &material,
                             } // end for
                         
                         
-                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).speed*dir[0];
-                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = 0.0;
+                            node_vel(0, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(0, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = 0.0;
+                            
+                            node_vel(1, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(1, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = 0.0;
                             
                             break;
                         }
@@ -415,10 +425,13 @@ void setup(const CArrayKokkos <material_t> &material,
                                 }
                             } // end for
                         
-                            node_vel(rk_level, node_gid, 0) = mat_fill(f_id).speed*dir[0];
-                            node_vel(rk_level, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = mat_fill(f_id).speed*dir[2];
+                            node_vel(0, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(0, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = mat_fill(f_id).speed*dir[2];
 
+                            node_vel(1, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(1, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = mat_fill(f_id).speed*dir[2];
                             break;
                         }
                         case init_conds::radial_linear:
@@ -434,10 +447,13 @@ void setup(const CArrayKokkos <material_t> &material,
                         case init_conds::tg_vortex:
                         {
                         
-                            node_vel(rk_level, node_gid, 0) = sin(PI * node_coords(rk_level,node_gid, 0)) * cos(PI * node_coords(rk_level,node_gid, 1)); 
-                            node_vel(rk_level, node_gid, 1) =  -1.0*cos(PI * node_coords(rk_level,node_gid, 0)) * sin(PI * node_coords(rk_level,node_gid, 1)); 
-                            if (mesh.num_dims == 3) node_vel(rk_level, node_gid, 2) = 0.0;
+                            node_vel(0, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
+                            node_vel(0, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
+                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = 0.0;
 
+                            node_vel(1, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
+                            node_vel(1, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
+                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = 0.0;
                             break;
                         }
                     } // end of switch
@@ -447,13 +463,18 @@ void setup(const CArrayKokkos <material_t> &material,
                 
                 if(mat_fill(f_id).velocity == init_conds::tg_vortex)
                 {
-                    elem_pres(elem_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;
+                  // p = rho*ie*(gamma - 1)
+                  size_t mat_id = f_id;
+                  double gamma = elem_statev(elem_gid,4); // gamma value
+
+                  for (int leg_lid = 0; leg_lid < elem.num_leg_pts; leg_lid++){
+                    size_t leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
+                    elem_pres(leg_gid) = 0.25*( cos(2.0*PI*elem_coords[0]) + cos(2.0*PI*elem_coords[1]) ) + 1.0;
+                  }
                 
-                    // p = rho*ie*(gamma - 1)
-                    size_t mat_id = f_id;
-                    double gamma = elem_statev(elem_gid,4); // gamma value
-                    elem_sie(rk_level, elem_gid) =
-                                    elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
+                  elem_sie(0, elem_gid) = elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
+                  elem_sie(1, elem_gid) = elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
+
                 } // end if
 
             } // end if fill
