@@ -392,8 +392,6 @@ TEST(YamlSerializable, TypeDiscrimination) {
     auto a = std::dynamic_pointer_cast<DerivedA>(base_ptr);
     EXPECT_STREQ(a->label.c_str(), "DerivedA");
 
-    
-
     std::unique_ptr<TypedBase> base_ptr_unique;
     Yaml::from_string(input, base_ptr_unique);
 

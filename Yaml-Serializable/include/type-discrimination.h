@@ -54,6 +54,8 @@ namespace Yaml {
             Register() { }
         };
 
+        virtual ~TypeDiscriminated() { };
+
         // friend + private constructor
         // Means that you can only derive from this
         // class using CRTP
