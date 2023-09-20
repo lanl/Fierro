@@ -7,11 +7,12 @@ then
 fi
 
 #inititialize submodules if they aren't downloaded
-[ -d "${libdir}/Elements/elements" ] && echo "Elements submodule exists"
-[ -d "${libdir}Elements/matar/src" ] && echo "matar submodule exists"
+cd ${libdir}
+[ -d "Elements/elements" ] && echo "Elements submodule exists"
+[ -d "Elements/matar/src" ] && echo "matar submodule exists"
 
 
-if { [ ! -d "${libdir}Elements/elements" ] || [ ! -d "${libdir}Elements/matar/src" ] ;}
+if { [ ! -d "Elements/elements" ] || [ ! -d "Elements/matar/src" ] ;}
 then
   echo "Missing submodules, downloading them...."
   git submodule update --init --recursive
