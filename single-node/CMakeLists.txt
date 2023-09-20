@@ -10,6 +10,7 @@ include(cmake/Modules/TargetDistclean.cmake OPTIONAL)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+#Set to off because of errors inside of Matar
 option(TEST "Build tests" OFF)
 
 if (TEST)
@@ -26,30 +27,14 @@ if (TEST)
   enable_testing()
 endif()
 
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
  # set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
 
-if(NOT DEFINED BUILD_ELEMENTS)
-  set(BUILD_ELEMENTS ON)
-endif()
-
-if(BUILD_ELEMENTS)
-#  include_directories(lib/Elements)
-#  add_subdirectory(lib/Elements)
-  set(ELEMENTS_DIRS matar/src elements swage common geometry slam)
-
-  foreach(DIR ${ELEMENTS_DIRS})
-    include_directories(lib/Elements/${DIR})
-  endforeach()
-
-  foreach(DIR ${ELEMENTS_DIRS})
-    add_subdirectory(lib/Elements/${DIR})
-  endforeach()
-  add_subdirectory(lib/Elements/mesh_tools)
-endif()
-
+include_directories(../lib/Elements/matar)
+add_subdirectory(../lib/Elements/matar cbin)
 include_directories(src)
 add_subdirectory(src)
 
