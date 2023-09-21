@@ -52,7 +52,7 @@ https://www.tooplate.com/view/2125-artxibition
                 <div class="col-lg-12">
                     <div class="main-content">
                         <h2><em>Fierro</em></h2>
-                        <h3>Massively Parallel Topology Optimization and Material Dynamics Simulation</h3>
+                        <h3>Parallel Multiscale Multiphysics Computational Mechanics Software for Assessment and Optimal Design </h3>
                         <div class="main-button">
                             <a href="installation.html">Install</a>
                         </div>
@@ -98,26 +98,30 @@ https://www.tooplate.com/view/2125-artxibition
                     <div class="left-content">
                         <h4>Project Description</h4>
                         <p>
-                            Fierro (LANL code number C21030) is a modern C++ code designed to simulate quasi-static solid mechanics problems and transient, 
-                            compressible material dynamic problems with Lagrangian methods, which have meshes with constant mass elements that move with the material, 
-                            or with Eulerian methods, which have stationary meshes. 
+                            Fierro (LANL code number C21030) mechanics is a modern C++ code that offers novel capabilities to simulate quasi-static solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, which have meshes with constant mass elements that move with the material. Multiscale material models are coupled to world-leading numerical methods inside Fierro to simulate the performance of parts accounting for the underlying microstructure in the part. Fierro supports hybrid parallelism, using MPI for coarse-grained parallelism plus a range of hardware-specific languages for fine-grained parallelism to leverage diverse GPUs for efficient simulation runtimes.
                         </p>
                         <br/>
-                        
-                        Fierro is designed to aid 
+                        Fierro is designed for:
                         <ul>
-                            <li>Material model research that has historically been done using commercial implicit and explicit finite element codes</li>
+                            <li>Multiphysics multiscale assessments </li>
+                            <li>Multiphysics multiconstraint topology optimization </li>
+                            <li>Multiscale modeling </li>
+                            <li>Material model research </li>
                             <li>Numerical methods research</li>
                             <li>Computer science research</li>
                         </ul>
                         <br/>
                         <p>
-                            The linear Lagrangian finite element methods in Fierro supports user developed material models. Fierro is built on the ELEMENTS library that supports 
-                            a diverse suite of element types, including high-order elements, and quadrature rules. The mesh class within the ELEMENTS library is designed for 
-                            efficient calculations on unstructured meshes and to minimize memory usage. Fierro is designed to readily accommodate a range of numerical methods 
-                            including continuous finite element, finite volume, and discontinuous Galerkin methods. Fierro is designed to support explicit and implicit time 
-                            integration methods as well as implicit optimization methods.
-                        </p>
+                            Fierro is built on the ELEMENTS library that supports a diverse suite of element types, including high-order elements, and quadrature rules. The mesh class within the ELEMENTS library is designed for efficient calculations on unstructured meshes and to minimize memory usage. Fierro is designed to readily accommodate a range of numerical methods including continuous finite element, finite volume, and discontinuous Galerkin methods. Fierro is designed to support explicit and implicit time integration methods as well as optimization methods.
+                        <p>
+                        <br/>
+                            The linear Lagrangian finite element method for material dynamics in Fierro supports user developed material models and multiscale models for microstructure-aware simulations.  These multiscale models can also be run in a stand-alone manner to establish structure-property relationships.
+                        <p>
+                        <br/>
+                            Fierro uniquely offers several compact-stencil, arbitrary-order Lagrangian finite element method for more efficient simulations.  These schemes use meshes that edges that can bend to accurately track large deformations in material dynamics.
+                        <p>
+                        <br/>
+                            The implicit finite solver in Fierro is to simulate static or quasistatic thermal and mechanical applications.  Higher-order optimization methods work in concert with the thermal-mechanical implicit solvers for multiphysics topology optimization that satisfies multiple constraints.
                     </div>
                 </div>
                 <div class="col-lg-3">
@@ -176,7 +180,7 @@ https://www.tooplate.com/view/2125-artxibition
                             </div>
                             <div class="right-content">
                                 <h4>Command Line Interface</h4>
-                                <p>The Fierro CLI offers a modular interface into each piece of functionality.</p>
+                                <p>The Fierro command line interface offers a modular interface into each piece of functionality.</p>
                             </div> 
                         </div>
                     </div>

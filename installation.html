@@ -37,14 +37,13 @@
             <!-- main content area -->
             <div class="col-sm-9 text-content">
                 <h1>Installation</h1>
-                <p><em>Fierro</em> backend is designed to run on almost harware you might want to run it on. We support 
-                    three CPU architectures (x86_64, arm64, ppc64le), as well as CUDA GPUs through nvcc and AMD GPUs through HIP. 
-                    Additionally, we support both Linux and MacOS. To run <em>Fierro</em> on Windows we recommend making use of 
+                <p><em>Fierro</em> backend is designed to run on almost all hardware you might want to use for a simulation. We support three CPU architectures (x86_64, arm64, ppc64le), as well as CUDA GPUs through nvcc and AMD GPUs through HIP.
+                    Additionally, we support both Linux and MacOS. To run <em>Fierro</em> on Windows we recommend making use of the
                     <a href="https://learn.microsoft.com/en-us/windows/wsl/install">Windows Subsystem for Linux</a>.
                 </p>
                 <p>
-                    To make the installation process as simple as possible, we offer several pre-compile binaries through <a href="https://www.anaconda.com/">Anaconda</a> 
-                    for the backend software. The builds for <em>Fierro</em> as well as its primary dependencies can be found <a href="https://anaconda.org/kwelsh-lanl">here</a> for all supported platforms.
+                    To make the installation process as simple as possible, we offer several pre-compiled binaries through <a href="https://www.anaconda.com/">Anaconda</a>
+                    for the backend software. The builds for <em>Fierro</em>, as well as its primary dependencies, can be found <a href="https://anaconda.org/kwelsh-lanl">here</a> for all supported platforms.
                     Anaconda will automatically select the right build for your OS and CPU architecture, however, you must select the correct build based on which GPU hardware is present.
                     This can be seen in the package prefix (-cpu, -cuda, -hip).
                 </p>
@@ -128,7 +127,7 @@
                     is not already built with the correct packages/configuration on your machine we provide scripts for downloading a compatible version of 
                     <a href="https://trilinos.github.io/">Trilinos</a> and building it inside of <em>Fierro</em> in addition to building <em>Fierro</em>.
                     These scripts can be found in and should be executed from the <code>Fierro/Parallel-Solvers/scripts</code> folder. These scripts
-                    will check for the presence of Trilinos under <code>Fierro/Trilinos</code> and if it isn't found will download and build it with the 
+                    will check for the presence of Trilinos under <code>Fierro/Trilinos</code>, and if it isn't found, will download and build it with the
                     correct arguments for the version of <em>Fierro</em> selected. Then it will invoke the top level CMakeLists.txt and build <em>Fierro</em>.
                     Because this includes building <a href="https://trilinos.github.io/">Trilinos</a>, this can take quite some time.
                 </p>
