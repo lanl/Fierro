@@ -297,8 +297,11 @@ header
 .logo > img {
   background: var(--color-light-grey);
   height: 67px;
-  padding-top: 2px;
   border-radius: 3px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  ms-transform: translateY(-50%);
 }
 
 .header-area .main-nav .logo em {
