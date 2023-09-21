@@ -422,7 +422,7 @@ public:
   
   void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
-  void compute_stiffness_gradients(const_host_vec_array design_densities, host_vec_array gradients);
+  void compute_stiffness_gradients(const_host_vec_array &design_densities, host_vec_array &gradients);
 
   void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 

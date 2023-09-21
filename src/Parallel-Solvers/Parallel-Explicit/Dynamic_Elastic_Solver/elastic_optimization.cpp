@@ -698,7 +698,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
             matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
           }
           rate_of_change = -matrix_contribution;
-          //rate_of_change = -0.001*previous_adjoint_vector(node_gid,idim);
+          //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
           phi_midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
@@ -729,7 +729,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
             matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
           }
           rate_of_change = -matrix_contribution;
-          //rate_of_change = -0.001*previous_adjoint_vector(node_gid,idim);
+          //rate_of_change = -0.0000001*midpoint_adjoint_vector(node_gid,idim);
           phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
@@ -1567,7 +1567,8 @@ void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                     
                 // Set velocity to zero in that directdion
-                node_adjoint(bdy_node_gid, direction) = 0.0;
+                if(bdy_node_gid<nlocal_nodes)
+                  node_adjoint(bdy_node_gid, direction) = 0.0;
                 //node_phi_adjoint(bdy_node_gid, direction) = 0.0;
                         
             }
@@ -1580,7 +1581,8 @@ void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
 
                 for(size_t dim=0; dim < num_dims; dim++){
                     // Set velocity to zero
-                  node_adjoint(bdy_node_gid, dim) = 0.0;
+                  if(bdy_node_gid<nlocal_nodes)
+                    node_adjoint(bdy_node_gid, dim) = 0.0;
                   //node_phi_adjoint(bdy_node_gid, dim) = 0.0;
                 }
                 
