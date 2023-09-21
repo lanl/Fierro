@@ -96,7 +96,7 @@ namespace Yaml {
         if (map.find(value) != map.end())
             return map.at(value);
 
-        throw ConfigurationException("Provided value, " + value + " was not of allowed values: " + _to_string(map));
+        throw ConfigurationException("Provided value, `" + value + "` was not of allowed values: " + _to_string(map));
     }
 
     /**
