@@ -754,38 +754,6 @@ void FEA_Module_Dynamic_Elasticity::comm_node_masses(){
   //}
 }
 
-/* ----------------------------------------------------------------------
-   Communicate updated nodal adjoint vectors to ghost nodes
-------------------------------------------------------------------------- */
-
-void FEA_Module_Dynamic_Elasticity::comm_adjoint_vectors(int cycle){
-  
-  //debug print of design vector
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(myrank==0)
-      //*fos << "Density data :" << std::endl;
-      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
-
-  //communicate design densities
-  //create import object using local node indices map and all indices map
-  //Tpetra::Import<LO, GO> importer(map, all_node_map);
-  
-  //comms to get ghosts
-  (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
-  (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
-  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
-  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  
-  //update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
-}
-
 /* -------------------------------------------------------------------------------------------
    Communicate ghosts using the current optimization design data
 ---------------------------------------------------------------------------------------------- */

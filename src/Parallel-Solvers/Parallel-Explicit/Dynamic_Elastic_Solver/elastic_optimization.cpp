@@ -669,11 +669,9 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
       //compute gradient of force with respect to velocity
   
       const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      vec_array midpoint_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      vec_array phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array midpoint_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       //half step update for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -705,6 +703,12 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
       Kokkos::fence();
 
       boundary_adjoint(*mesh, boundary,midpoint_adjoint_vector, phi_midpoint_adjoint_vector);
+      comm_adjoint_vectors(cycle);
+      //swap names to get ghost nodes for the midpoint vectors
+      vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      midpoint_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       //full step update with midpoint gradient for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -1537,6 +1541,10 @@ void FEA_Module_Dynamic_Elasticity::init_assembly(){
   //distributed_force_gradient_velocities->describe(*fos,Teuchos::VERB_EXTREME);
 }
 
+/* ----------------------------------------------------------------------
+   Enforce boundary conditions on the adjoint vectors
+------------------------------------------------------------------------- */
+
 void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
                        const DCArrayKokkos <boundary_t> &boundary,
                        vec_array &node_adjoint,
@@ -1599,3 +1607,35 @@ void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
     //if(print_flag.host(0)) std::cout << "found boundary node with id 549412" << std::endl;
     return;
 } // end boundary_velocity function
+
+/* ----------------------------------------------------------------------
+   Communicate updated nodal adjoint vectors to ghost nodes
+------------------------------------------------------------------------- */
+
+void FEA_Module_Dynamic_Elasticity::comm_adjoint_vectors(int cycle){
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  //Tpetra::Import<LO, GO> importer(map, all_node_map);
+  
+  //comms to get ghosts
+  (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
+}
