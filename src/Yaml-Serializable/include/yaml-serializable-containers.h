@@ -60,6 +60,15 @@ namespace Yaml {
             static std::true_type check(TypeDiscriminated<Base, U> const volatile&);
             static std::false_type check( ... );
         };
+
+        template<typename T>
+        void deserialize_from_indexed_item(T& item, Node& node, bool raw, int i) {
+            try {
+                Yaml::deserialize(item, node[i], raw);
+            } catch (const Yaml::ConfigurationException& e) {
+                throw Yaml::ConfigurationException(e, "<" + std::to_string(i) + ">");
+            }
+        }
     }
 
     namespace Containers {
@@ -88,7 +97,7 @@ namespace Yaml {
                 v.clear();
                 for(size_t i = 0; i < node.Size(); i++) {
                     T item;
-                    Yaml::deserialize(item, node[i], raw);
+                    deserialize_from_indexed_item(item, node, raw, i);
                     v.push_back(item);
                 }
             }
@@ -135,7 +144,7 @@ namespace Yaml {
                 v.clear();
                 for(size_t i = 0; i < node.Size(); i++) {
                     T item;
-                    Yaml::deserialize(item, node[i], raw);
+                    deserialize_from_indexed_item(item, node, raw, i);
                     v.insert(item);
                 }
             }
