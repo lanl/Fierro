@@ -131,10 +131,6 @@ struct Simulation_Parameters_SGH : Simulation_Parameters {
     material.update_device();
     global_vars.update_device();
 
-    // Re-derive function pointers after move to device.
-    for (size_t i = 0; i < material.size(); i++) {
-      RUN_CLASS({ material(i).derive_function_pointers_no_exec(); });
-    }
   }
 
   void derive_default_field_output() {

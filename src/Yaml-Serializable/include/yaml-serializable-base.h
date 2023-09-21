@@ -33,78 +33,27 @@
  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- **********************************************************************************************/
  
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <mpi.h>
-#include "Solver.h"
-#include <Kokkos_Core.hpp>
-#include "Implicit_Solver.h"
-#include "Simulation_Parameters.h"
-#include <memory>
+ Author: Kevin Welsh (kwelsh@lanl.gov)
+ **********************************************************************************************/
+#pragma once
+#ifndef YAML_BASE_H
+#define YAML_BASE_H
 
-void solver_setup(int argc, char *argv[]);
+#include "Yaml.hpp"
 
-//==============================================================================
-//    Main
-//==============================================================================
-
-int main(int argc, char *argv[]){
-  
-  //initialize MPI
-  MPI_Init(&argc,&argv);
-  
-  Kokkos::initialize();
-  if(argc<2){
-    int myrank;
-    MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-    if(myrank==0)
-      std::cout << "Fierro requires a yaml setup file as a command line argument" << std::endl;
-  }
-  else{
-    solver_setup(argc, argv);
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  Kokkos::finalize();
-  MPI_Finalize();
-  
-  return 0;
+namespace Yaml {
+    template<typename T> void serialize(const T& v, Yaml::Node& node);
+    template<typename T> void deserialize(T& v, Yaml::Node& node, bool raw=false);
+    
+    template<>
+    inline void deserialize<bool>(bool& v, Yaml::Node& node, bool raw) {
+        if (!node.IsNone()) 
+            v = node.As<bool>();
+    }
+    template<>
+    inline void serialize<bool>(const bool& v, Yaml::Node& node) {
+        node = v ? "True" : "False";
+    }
 }
-
-void solver_setup(int argc, char *argv[]){
-  int myrank;
-  MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-
-  Simulation_Parameters simparam = Simulation_Parameters();
-  std::string filename = std::string(argv[1]);
-  bool load_yaml = false;
-
-  if (filename.find(".yaml") != std::string::npos) {
-    Yaml::from_file(filename, simparam);
-    load_yaml = true;
-  }
-  
-  std::shared_ptr<Solver> solver;
-  switch (simparam.solver_type) {
-    case SOLVER_TYPE::Implicit:
-      solver = std::make_shared<Implicit_Solver>(Implicit_Solver());
-      if (load_yaml)
-        Yaml::from_file(filename, solver->simparam);
-      break;
-    default:
-      if (myrank == 0)
-        std::cerr << "Invalid solver type" << std::endl;
-      exit(1);
-  }
-  //checks for optional solver routines
-  if(solver->setup_flag) solver->solver_setup();
-  // invoke solver's run function (should perform most of the computation)
-  solver->run(argc, argv);
-  //invoke optional finalize function
-  if(solver->finalize_flag) solver->solver_finalize();
-}
+#endif
