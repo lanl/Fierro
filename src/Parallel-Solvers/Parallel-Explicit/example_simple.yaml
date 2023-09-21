@@ -24,7 +24,7 @@ fea_modules:
 material_options:
     #eos model is required
   - eos_model: ideal_gas
-    strength_model_type: none
+    strength_model: none
     q1: 1.0
     q2: 0
     q1ex: 1.0
