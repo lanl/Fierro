@@ -87,7 +87,7 @@ namespace Yaml {
 
     inline std::string validate_value(std::string value, const std::set<std::string>& allowed_values, const std::string field_name="value") {
         if (allowed_values.find(value) == allowed_values.end())
-            throw ConfigurationException("Provided " + field_name + " was not of allowed types: " + _to_string(allowed_values));
+            throw ConfigurationException("Provided `" + field_name + "` was not of allowed types: " + _to_string(allowed_values));
         return value;
     }
 
@@ -96,7 +96,7 @@ namespace Yaml {
         if (map.find(value) != map.end())
             return map.at(value);
 
-        throw ConfigurationException("Provided value, " + value + " was not of allowed values: " + _to_string(map));
+        throw ConfigurationException("Provided value, `" + value + "` was not of allowed values: " + _to_string(map));
     }
 
     /**
