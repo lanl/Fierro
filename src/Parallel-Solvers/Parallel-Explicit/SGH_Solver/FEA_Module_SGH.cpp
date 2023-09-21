@@ -656,7 +656,7 @@ void FEA_Module_SGH::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sor
 }
 
 /* -------------------------------------------------------------------------------------------
-   Prompts sorting for elastic response output data. For now, nodal strains.
+   populate requests this module makes for output data
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::write_data(std::map <std::string, const double*> &point_data_scalars_double,
