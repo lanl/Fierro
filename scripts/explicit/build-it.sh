@@ -18,4 +18,4 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 source setup-env.sh ${SYSTEM} ${PARALLEL}
 source trilinos-install.sh ${PARALLEL} ${BUILD_CORES}
-#source cmake_build.sh ${PARALLEL} ${BUILD_CORES}
+source cmake_build.sh ${PARALLEL} ${BUILD_CORES}
