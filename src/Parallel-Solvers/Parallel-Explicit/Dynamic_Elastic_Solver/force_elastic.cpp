@@ -54,13 +54,15 @@ void FEA_Module_Dynamic_Elasticity::get_force_elastic(const DCArrayKokkos <mater
         } // end for corner_lid
 
         // loop over dimension
+        
         for (size_t idim = 0; idim < num_dim; idim++){
+          
             for(int idof = 0; idof < Stiffness_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
               dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
               node_force[idim] += -(node_coords(rk_level, dof_id/num_dim, dof_id%num_dim)-all_initial_node_coords(dof_id/num_dim, dof_id%num_dim))*Stiffness_Matrix(node_gid*num_dim+idim%num_dim,idof);
             }
           
-          //node_force[idim] += -0.001*(node_coords(rk_level, dof_id/num_dim, dof_id%num_dim)-all_initial_node_coords(dof_id/num_dim, dof_id%num_dim));
+          //node_force[idim] += -0.0000001*(node_coords(rk_level, node_gid, idim)-0.6);
         } // end for dim
         
         // update the velocity
@@ -288,7 +290,7 @@ void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, re
     penalty_product *= density;
   //relationship between density and stiffness
   Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*simparam_elasticity.Elastic_Modulus/unit_scaling/unit_scaling;
-  //Element_Modulus = density*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
+  //Element_Modulus = simparam_elasticity.Elastic_Modulus/unit_scaling/unit_scaling;
   Poisson_Ratio = simparam_elasticity.Poisson_Ratio;
 }
 
@@ -316,7 +318,7 @@ void FEA_Module_Dynamic_Elasticity::Gradient_Element_Material_Properties(size_t 
 
 void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
   //local variable for host view in the dual view
-  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
   
@@ -386,9 +388,9 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
   //acquire set of nodes for this local element
   for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
     local_node_id = nodes_in_elem.host(ielem, node_loop);
-    nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
-    nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
-    nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+    nodal_positions(node_loop,0) = all_initial_node_coords(local_node_id,0);
+    nodal_positions(node_loop,1) = all_initial_node_coords(local_node_id,1);
+    nodal_positions(node_loop,2) = all_initial_node_coords(local_node_id,2);
     if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
     /*
     if(myrank==1&&nodal_positions(node_loop,2)>10000000){
@@ -707,7 +709,7 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
    Compute the gradient of strain energy with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_array design_variables, host_vec_array design_gradients){
+void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_array &design_variables, host_vec_array &design_gradients){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
@@ -1107,7 +1109,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
             
             //debug print
             //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-            design_gradients(local_node_id,0) -= -inner_product*Elastic_Constant*weight_multiply*invJacobian*global_dt/nodes_per_elem;
+            design_gradients(local_node_id,0) -= -inner_product*Elastic_Constant*weight_multiply*invJacobian*global_dt/num_nodes_in_elem;
           }
 
           //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient

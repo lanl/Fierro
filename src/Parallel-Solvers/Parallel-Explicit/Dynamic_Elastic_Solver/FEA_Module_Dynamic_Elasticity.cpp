@@ -822,7 +822,7 @@ void FEA_Module_Dynamic_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
    enforce constraints on nodes due to BCS
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array node_densities_lower_bound){
+void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array &node_densities_lower_bound){
 
   const size_t num_dim = mesh->num_dims;
   const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);

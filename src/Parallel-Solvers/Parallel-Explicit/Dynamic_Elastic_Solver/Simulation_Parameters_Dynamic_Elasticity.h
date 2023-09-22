@@ -85,7 +85,7 @@ struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
   size_t max_num_global_vars = 0;
   size_t rk_num_bins;
   double time_value = 0.0;
-  real_t damping_constant = 0.00000001;
+  real_t damping_constant = 0.0000001;
   DCArrayKokkos<double> global_vars;
 
   DCArrayKokkos<mat_fill_t> mat_fill;
@@ -138,11 +138,11 @@ struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
 
   void derive_default_field_output() {
     if (field_output.empty()) {
-      field_output.insert(FIELD_OUTPUT_SGH::velocity);
-      field_output.insert(FIELD_OUTPUT_SGH::element_density);
-      field_output.insert(FIELD_OUTPUT_SGH::pressure);
-      field_output.insert(FIELD_OUTPUT_SGH::volume);
-      field_output.insert(FIELD_OUTPUT_SGH::mass);
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::velocity);
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::element_density);
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::pressure);
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::volume);
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::mass);
     }
   }
 
