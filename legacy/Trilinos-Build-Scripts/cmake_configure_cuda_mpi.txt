@@ -1,0 +1,41 @@
+#!/bin/bash
+export scriptdir=`pwd`
+cd ..
+export trilinosdir=`pwd`
+cd -
+export OMPI_CXX=${trilinosdir}/packages/kokkos/bin/nvcc_wrapper
+export CUDA_LAUNCH_BLOCKING=1
+cmake -DCMAKE_BUILD_TYPE=RELEASE \
+-DCMAKE_CXX_STANDARD:STRING=17 \
+-DTrilinos_MUST_FIND_ALL_TPL_LIBS=TRUE \
+-DTPL_ENABLE_MPI=ON \
+-DCMAKE_CXX_FLAGS="-g -lineinfo -Xcudafe \
+--diag_suppress=conversion_function_not_usable -Xcudafe \
+--diag_suppress=cc_clobber_ignored -Xcudafe \
+--diag_suppress=code_is_unreachable" \
+-DTrilinos_ENABLE_Kokkos=ON \
+-DTrilinos_ENABLE_OpenMP=OFF \
+-DTPL_ENABLE_CUDA=ON \
+-DTPL_ENABLE_CUBLAS=ON \
+-DTPL_ENABLE_CUSPARSE=ON \
+-DKokkos_ENABLE_CUDA=ON \
+-DKokkos_ENABLE_CUDA_LAMBDA=ON \
+-DKokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=ON \
+-DKokkos_ENABLE_DEPRECATED_CODE=OFF \
+-DKokkos_ENABLE_CUDA_UVM=OFF \
+-DTrilinos_ENABLE_KokkosKernels=ON \
+-DKokkosKernels_ENABLE_TPL_CUBLAS=ON \
+-DKokkosKernels_ENABLE_TPL_CUSPARSE=ON \
+-DTrilinos_ENABLE_Amesos2=ON \
+-DTrilinos_ENABLE_Belos=ON \
+-DTrilinos_ENABLE_MueLu=ON \
+-DTpetra_ENABLE_CUDA=ON \
+-DXpetra_ENABLE_Kokkos_Refactor=ON \
+-DMueLu_ENABLE_Kokkos_Refactor=ON \
+-DTrilinos_ENABLE_ROL=ON \
+-DTrilinos_ENABLE_Ifpack2=ON \
+-DTrilinos_ENABLE_Zoltan2=ON \
+-DMueLu_ENABLE_TESTS=OFF \
+-DTrilinos_ENABLE_ALL_PACKAGES=OFF -DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF -DTrilinos_ENABLE_TESTS=OFF \
+-DCMAKE_INSTALL_PREFIX=. \
+..

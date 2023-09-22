@@ -1,0 +1,12 @@
+build
+CMakeFiles
+Makefile
+CMakeCache.txt
+cmake_install.cmake
+.vscode
+*.swp
+evpfft_heffte_*
+hdf5
+heffte
+kokkos
+MATAR

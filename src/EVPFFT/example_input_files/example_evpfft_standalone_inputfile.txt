@@ -1,0 +1,41 @@
+1                      number of phases (nph)                         
+1.  1.  1.             RVE dimensions (delt)
+* name and path of microstructure file (filetext)                                
+/absolute/path/to/random_microstructure_8x8x8.txt
+*INFORMATION ABOUT PHASE #1
+0                          igas(iph)
+* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)  
+/absolute/path/to/example_plastic_parameters.txt
+/absolute/path/to/example_elastic_parameters.txt
+*INFORMATION ABOUT TEST CONDITIONS                                                            
+* boundary conditions                                                     
+    0       1       1           iudot     |    flag for vel.grad. 
+    1       0       1                     |    (0:unknown-1:known)        
+    1       1       1                     |            
+                                          |                               
+   -0.35     0.        0.          udot    |    vel.grad                   
+    0.      -0.35      0.                  |                               
+    0.       0.         1.0                |                               
+                                          |                               
+    1       0        0           iscau    |    flag for Cauchy            
+            1        0                    |                               
+                     0                    |                               
+                                          |                               
+    0.      0.       0.          scauchy  |    Cauchy stress              
+            0.       0.                   |                               
+                     0.                   @                               
+* other                                                                   
+0.00005         eqincr (if ictrl>=0) or tdot (if ictrl=-1)
+-1              ictrl (1-6: strain comp, 0: VM eq, -1: tdot)              
+*INFORMATION ABOUT RUN CONDITIONS                                         
+30              nsteps                                                     
+0.0000001         err                                                        
+50              itmax                                                      
+0               IRECOVER read grain states from STRESS.IN  (1) or not (0)?      
+0               ISAVE write grain states in STRESS.OUT (1) or not (0)?                    
+1               IUPDATE update tex & RVE dim (1) or not (0)?
+1               IUPHARD
+1               IWTEX
+1 30            IWFIELDS,IWSTEP
+0               ITHERMO (if ithermo=1, next line is filethermo) 
+dummy 
