@@ -730,7 +730,6 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
   GO current_global_index;
   
   real_t global_dt;
-  bool element_constant_density = true;
   size_t current_data_index, next_data_index;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem*num_dim);
 
@@ -804,26 +803,17 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     //view scope
     {
       //const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
       //set velocity and position for this timestep
-      const_vec_array next_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array next_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
       
-      const_vec_array next_coordinate_vector = (*forward_solve_coordinate_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array current_coordinate_vector = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array next_coordinate_vector = (*forward_solve_coordinate_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      const_vec_array current_coordinate_vector = (*forward_solve_coordinate_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
       //interface of arrays for current implementation of force calculation
-
-      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes+nghost_nodes, {
-        for (int idim = 0; idim < num_dim; idim++){
-          node_vel(rk_level,node_gid,idim) = current_velocity_vector(node_gid,idim);
-          node_coords(0,node_gid,idim) = current_coordinate_vector(node_gid,idim);
-          node_coords(rk_level,node_gid,idim) = next_coordinate_vector(node_gid,idim);
-        }
-      });
-      Kokkos::fence();
 
       for(size_t ielem = 0; ielem < rnum_elem; ielem++){
         nodes_per_elem = elem->num_basis();
@@ -848,14 +838,14 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
 
           nodal_positions(node_loop,0) = all_initial_node_coords(local_node_id,0);
           nodal_positions(node_loop,1) = all_initial_node_coords(local_node_id,1);
-          current_nodal_displacements(node_loop*num_dim) = (node_coords(rk_level, local_node_id, 0)-all_initial_node_coords(local_node_id,0)+node_coords(0, local_node_id, 0)-all_initial_node_coords(local_node_id,0))/2;
-          current_nodal_displacements(node_loop*num_dim+1) = (node_coords(rk_level, local_node_id, 1)-all_initial_node_coords(local_node_id,1)+node_coords(0, local_node_id, 1)-all_initial_node_coords(local_node_id,1))/2;
+          current_nodal_displacements(node_loop*num_dim) = (next_coordinate_vector(local_node_id, 0)-all_initial_node_coords(local_node_id,0)+current_coordinate_vector(local_node_id, 0)-all_initial_node_coords(local_node_id,0))/2;
+          current_nodal_displacements(node_loop*num_dim+1) = (next_coordinate_vector(local_node_id, 1)-all_initial_node_coords(local_node_id,1)+current_coordinate_vector(local_node_id, 1)-all_initial_node_coords(local_node_id,1))/2;
           current_element_adjoint(node_loop*num_dim) = (current_adjoint_vector(local_node_id,0)+next_adjoint_vector(local_node_id,0))/2;
           current_element_adjoint(node_loop*num_dim+1) = (current_adjoint_vector(local_node_id,1)+next_adjoint_vector(local_node_id,1))/2;
 
           if(num_dim==3){
           nodal_positions(node_loop,2) = all_initial_node_coords(local_node_id,2);
-          current_nodal_displacements(node_loop*num_dim+2) = (node_coords(rk_level, local_node_id, 2)-all_initial_node_coords(local_node_id,2)+node_coords(0, local_node_id, 2)-all_initial_node_coords(local_node_id,2))/2;
+          current_nodal_displacements(node_loop*num_dim+2) = (next_coordinate_vector(local_node_id, 2)-all_initial_node_coords(local_node_id,2)+current_coordinate_vector(local_node_id, 2)-all_initial_node_coords(local_node_id,2))/2;
           current_element_adjoint(node_loop*num_dim+2) = (current_adjoint_vector(local_node_id,2)+next_adjoint_vector(local_node_id,2))/2;
           }
 
