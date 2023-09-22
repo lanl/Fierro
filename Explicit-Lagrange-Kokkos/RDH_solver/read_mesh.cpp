@@ -178,7 +178,7 @@ void readVTKPn(char* MESH,
                  node_t &node,
                  elem_t &elem,
                  corner_t &corner,
-                 ref_elem_t &ref_elem,
+                 fe_ref_elem_t &ref_elem,
                  const size_t num_dims,
                  const size_t rk_num_bins)
 {

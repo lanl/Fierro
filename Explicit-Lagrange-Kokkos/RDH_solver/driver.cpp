@@ -94,7 +94,7 @@ int main(int argc, char *argv[]){
         node_t  node;
         elem_t  elem;
 	corner_t corner;
-        ref_elem_t ref_elem;
+        fe_ref_elem_t ref_elem;
         CArrayKokkos <material_t> material;
         CArrayKokkos <double> state_vars; // array to hold init model variables
         

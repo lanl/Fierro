@@ -11,7 +11,7 @@ using namespace mtr;
 // Kinematic basis will be referenced as basis
 // Thermodynamic basis is referenced as elem_basis, since the thermodynamic quantities are internal to the elements
 
-struct ref_elem_t{
+struct fe_ref_elem_t{
     
     size_t num_dim;
     

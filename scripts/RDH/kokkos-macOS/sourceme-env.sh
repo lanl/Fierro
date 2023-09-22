@@ -9,7 +9,7 @@ export scriptdir=`pwd`
 cd ../../..
 export basedir=`pwd`
 
-export matardir=${basedir}/Elements/matar
+export matardir=${basedir}/lib/Elements/matar
 
 export srcdir=${basedir}/Explicit-Lagrange-Kokkos/RDH_solver
 export builddir=${basedir}/build-RDH-serial

@@ -8,3 +8,6 @@ cmake_install.cmake
 Trilinos
 main
 .vscode
+build-RDH-serial
+build-all-serial
+lib
