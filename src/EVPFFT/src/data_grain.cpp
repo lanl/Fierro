@@ -171,10 +171,10 @@ void EVPFFT::read_classic_los_alamos_texture_file(const std::string & filetext, 
           i = ii - local_start1 + 1;
           j = jj - local_start2 + 1;
           k = kk - local_start3 + 1;
-          ph_array(i,j,k) = 0.0; //ph;
-          th_array(i,j,k) = 0.0; //th;
-          om_array(i,j,k) = 0.0; //om;
-          jgrain(i,j,k)   = 1; //jgr;
+          ph_array(i,j,k) = ph;
+          th_array(i,j,k) = th;
+          om_array(i,j,k) = om;
+          jgrain(i,j,k)   = jgr;
           jphase.host(i,j,k)   = jph;
         }
         
