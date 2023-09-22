@@ -5,7 +5,7 @@ include_directories(../../Yaml-Serializable/include)
 add_subdirectory(Ideal-Gas-Models)
 
 if (BUILD_EVPFFT_FIERRO)
-  add_subdirectory(../../EVPFFT EVPFFT)
+  add_subdirectory(../../EVPFFT/src EVPFFT)
 else()
   # Default do-nothing user material models
   add_subdirectory(User-Material-Models)
