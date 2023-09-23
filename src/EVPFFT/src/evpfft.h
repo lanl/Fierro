@@ -246,8 +246,9 @@ public:
   void step_texture_rve_update();
   void update_orient();
   void harden(int imicro);
-  void read_classic_los_alamos_texture_file(const std::string & filetext, int & nph1);
-  void read_hdf5_texture_file(const std::string & filetext, int & nph1);
+  void read_classic_los_alamos_texture_file(const std::string & filetext);
+  void read_hdf5_texture_file(const std::string & filetext);
+  void read_vtk_lattice_structure(const std::string & filetext);
   void calculate_eel(MatrixTypeRealDual &eel);
   void write_macro_state();
   void write_micro_state();
