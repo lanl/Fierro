@@ -805,10 +805,6 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
       //const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
       const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-
-      //set velocity and position for this timestep
-      const_vec_array next_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-      const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
       
       const_vec_array next_coordinate_vector = (*forward_solve_coordinate_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
       const_vec_array current_coordinate_vector = (*forward_solve_coordinate_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1099,27 +1095,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
             
             //debug print
             //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-            design_gradients(local_node_id,0) -= -inner_product*Elastic_Constant*weight_multiply*invJacobian*global_dt/num_nodes_in_elem;
-          }
-
-          //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
-          if(body_term_flag){
-            //look up element material properties at this point as a function of density
-            Gradient_Body_Term(ielem, current_density, gradient_force_density);
-            for(int igradient=0; igradient < nodes_per_elem; igradient++){
-              if(!map->isNodeLocalElement(nodes_in_elem.host(ielem, igradient))) continue;
-              local_node_id = nodes_in_elem.host(ielem, igradient);
-              
-              //compute inner product for this quadrature point contribution
-              inner_product = 0;
-              for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-                inner_product += gradient_force_density[ifill%num_dim]*current_nodal_displacements(ifill)*basis_values(ifill/num_dim);
-              }
-              
-              //debug print
-              //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-              design_gradients(local_node_id,0) += inner_product*weight_multiply*Jacobian*global_dt/nodes_per_elem;
-            }
+            design_gradients(local_node_id,0) -= -inner_product*Elastic_Constant*weight_multiply*invJacobian*global_dt/((double)num_nodes_in_elem);
           }
         }
       }
