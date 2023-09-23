@@ -13,16 +13,19 @@ int get_dataset_rank(hid_t hdf5_file_id, const char *dataset_name);
 
 void EVPFFT::data_grain(const std::string & filetext)
 {
-  int nph1 = 0;
 
   switch (cmd.micro_filetype)
   {
     case 0:
-    read_classic_los_alamos_texture_file(filetext, nph1);
+    read_classic_los_alamos_texture_file(filetext);
     break;
 
     case 1:
-    read_hdf5_texture_file(filetext, nph1);
+    read_hdf5_texture_file(filetext);
+    break;
+
+    case 2:
+    read_vtk_lattice_structure(filetext);
     break;
 
     default:
@@ -38,6 +41,7 @@ void EVPFFT::data_grain(const std::string & filetext)
   mpi_io_int->write_ascii("debug_jph.txt", jphase.host_pointer(), "");
 #endif
 
+  int nph1 = 0;
   for (int kk = 1; kk <= npts3; kk++) {
     for (int jj = 1; jj <= npts2; jj++) {
       for (int ii = 1; ii <= npts1; ii++) {
@@ -58,6 +62,9 @@ void EVPFFT::data_grain(const std::string & filetext)
       th  = th_array(ii,jj,kk);
       om  = om_array(ii,jj,kk);
       jph = jphase.host(ii,jj,kk);
+
+      if (jph == 1) nph1 = nph1 + 1;
+      if (igas.host(jph) == 1) continue; // nothing needs to be done if gas phase
            
       // CALCULATES THE TRANSFORMATION MATRIX AA WHICH TRANSFORMS FROM
       // SAMPLE TO CRYSTAL. STORES AG, WHICH TRANSFORMS FROM CRYSTAL TO SAMPLE.
@@ -149,7 +156,7 @@ void EVPFFT::data_grain(const std::string & filetext)
 }
 
 
-void EVPFFT::read_classic_los_alamos_texture_file(const std::string & filetext, int & nph1)
+void EVPFFT::read_classic_los_alamos_texture_file(const std::string & filetext)
 {
   std::ifstream ur2;
   ur2.open(filetext);
@@ -178,9 +185,6 @@ void EVPFFT::read_classic_los_alamos_texture_file(const std::string & filetext, 
           jphase.host(i,j,k)   = jph;
         }
         
-        if (jph == 1) nph1 = nph1 + 1;
-        if (igas.host(jph) == 1) exit(1); // this got broken when the read loop got split
-              
       }
     }
   }
@@ -192,7 +196,7 @@ void EVPFFT::read_classic_los_alamos_texture_file(const std::string & filetext, 
   ur2.close();
 }
 
-void EVPFFT::read_hdf5_texture_file(const std::string & filetext, int & nph1)
+void EVPFFT::read_hdf5_texture_file(const std::string & filetext)
 {
   // open hdf5 file
   hid_t hdf5_file_id = open_hdf5_file(filetext.c_str(), mpi_comm);
@@ -270,11 +274,8 @@ void EVPFFT::read_hdf5_texture_file(const std::string & filetext, int & nph1)
         th_array(ii,jj,kk) = th;
         om_array(ii,jj,kk) = om;
         jgrain(ii,jj,kk)   = jgr;
-        jphase.host(ii,jj,kk)   = jph;
+        jphase.host(ii,jj,kk) = jph;
         
-        if (jph == 1) nph1 = nph1 + 1;
-        if (igas.host(jph) == 1) exit(1); // this got broken when the read loop got split
-              
       }
     }
   }
@@ -295,3 +296,50 @@ int get_dataset_rank(hid_t hdf5_file_id, const char *dataset_name)
   H5Dclose(dataset);
   return dataset_rank;
 }
+
+void EVPFFT::read_vtk_lattice_structure(const std::string & filetext)
+{
+  std::ifstream ur2;
+  ur2.open(filetext);
+  check_that_file_is_open(ur2, filetext.c_str());
+
+  // Skip header lines
+  std::string line;
+  while (std::getline(ur2, line)) {
+    if (line == "LOOKUP_TABLE default") {
+      break;
+    }
+  }
+
+  int i,j,k;
+  double grid_value;
+  for (int kk = 0; kk < npts3_g; kk++) {
+    for (int jj = 0; jj < npts2_g; jj++) {
+      for (int ii = 0; ii < npts1_g; ii++) {
+      
+        ur2 >> grid_value; CLEAR_LINE(ur2);
+        if ( (ii >= local_start1 and ii <= local_end1) and
+             (jj >= local_start2 and jj <= local_end2) and
+             (kk >= local_start3 and kk <= local_end3) )
+        {
+          i = ii - local_start1 + 1;
+          j = jj - local_start2 + 1;
+          k = kk - local_start3 + 1;
+          ph_array(i,j,k)    = 0;
+          th_array(i,j,k)    = 0;
+          om_array(i,j,k)    = 0;
+          jgrain(i,j,k)      = grid_value;
+          jphase.host(i,j,k) = grid_value + 1;
+        }
+
+      }
+    }
+  }
+  // update device
+  jphase.update_device();
+  Kokkos::fence();
+
+  ur2.close();
+
+}
+
