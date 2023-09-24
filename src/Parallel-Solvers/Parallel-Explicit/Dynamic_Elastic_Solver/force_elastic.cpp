@@ -59,7 +59,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_elastic(const DCArrayKokkos <mater
           
             for(int idof = 0; idof < Stiffness_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
               dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-              node_force[idim] += -(node_coords(rk_level, dof_id/num_dim, dof_id%num_dim)-all_initial_node_coords(dof_id/num_dim, dof_id%num_dim))*Stiffness_Matrix(node_gid*num_dim+idim%num_dim,idof);
+              node_force[idim] += -(node_coords(rk_level, dof_id/num_dim, dof_id%num_dim)-all_initial_node_coords(dof_id/num_dim, dof_id%num_dim))*Stiffness_Matrix(node_gid*num_dim+idim,idof);
             }
           
           //node_force[idim] += -0.0000001*(node_coords(rk_level, node_gid, idim)-0.6);
@@ -367,17 +367,17 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_density(elem->num_basis());
 
   size_t Brows;
   if(num_dim==2) Brows = 3;
   if(num_dim==3) Brows = 6;
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
+  FArrayKokkos<real_t, array_layout, HostSpace, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
+  FArrayKokkos<real_t, array_layout, HostSpace, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> C_matrix(Brows,Brows);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -713,7 +713,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   
-  const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+  const_host_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
   const_host_vec_array all_node_densities;
@@ -731,7 +731,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
   
   real_t global_dt;
   size_t current_data_index, next_data_index;
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem*num_dim);
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_nodes_in_elem*num_dim);
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Element_Modulus_Gradient, Poisson_Ratio, gradient_force_density[3];
@@ -762,19 +762,19 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
   ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_density(elem->num_basis());
 
   size_t Brows;
   if(num_dim==2) Brows = 3;
   if(num_dim==3) Brows = 6;
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
-  FArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> C_matrix(Brows,Brows);
-  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Matrix_Contribution(num_dim*nodes_per_elem,num_dim*nodes_per_elem);
+  FArrayKokkos<real_t, array_layout, HostSpace, memory_traits> B_matrix_contribution(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> B_matrix(Brows,num_dim*elem->num_basis());
+  FArrayKokkos<real_t, array_layout, HostSpace, memory_traits> CB_matrix_contribution(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> CB_matrix(Brows,num_dim*elem->num_basis());
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> C_matrix(Brows,Brows);
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> Local_Matrix_Contribution(num_dim*nodes_per_elem,num_dim*nodes_per_elem);
 
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
@@ -783,6 +783,12 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
   real_t current_density = 1;
 
   //loop through each element and assign the contribution to compliance gradient for each of its local nodes
+  if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+      if(myrank==0){
+          std::cout << "gradient term derivative of force" << std::endl;
+        }
+  }
+
   for (int cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
@@ -803,14 +809,13 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     //view scope
     {
       //const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-      const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      const_host_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      const_host_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
       
-      const_vec_array next_coordinate_vector = (*forward_solve_coordinate_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-      const_vec_array current_coordinate_vector = (*forward_solve_coordinate_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      const_host_vec_array next_coordinate_vector = (*forward_solve_coordinate_data)[cycle+1]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+      const_host_vec_array current_coordinate_vector = (*forward_solve_coordinate_data)[cycle]->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
       //interface of arrays for current implementation of force calculation
-
       for(size_t ielem = 0; ielem < rnum_elem; ielem++){
         nodes_per_elem = elem->num_basis();
 
@@ -834,15 +839,15 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
 
           nodal_positions(node_loop,0) = all_initial_node_coords(local_node_id,0);
           nodal_positions(node_loop,1) = all_initial_node_coords(local_node_id,1);
-          current_nodal_displacements(node_loop*num_dim) = (next_coordinate_vector(local_node_id, 0)-all_initial_node_coords(local_node_id,0)+current_coordinate_vector(local_node_id, 0)-all_initial_node_coords(local_node_id,0))/2;
-          current_nodal_displacements(node_loop*num_dim+1) = (next_coordinate_vector(local_node_id, 1)-all_initial_node_coords(local_node_id,1)+current_coordinate_vector(local_node_id, 1)-all_initial_node_coords(local_node_id,1))/2;
-          current_element_adjoint(node_loop*num_dim) = (current_adjoint_vector(local_node_id,0)+next_adjoint_vector(local_node_id,0))/2;
-          current_element_adjoint(node_loop*num_dim+1) = (current_adjoint_vector(local_node_id,1)+next_adjoint_vector(local_node_id,1))/2;
+          current_nodal_displacements(node_loop*num_dim) = 0.5*(next_coordinate_vector(local_node_id, 0)-all_initial_node_coords(local_node_id,0)+current_coordinate_vector(local_node_id, 0)-all_initial_node_coords(local_node_id,0));
+          current_nodal_displacements(node_loop*num_dim+1) = 0.5*(next_coordinate_vector(local_node_id, 1)-all_initial_node_coords(local_node_id,1)+current_coordinate_vector(local_node_id, 1)-all_initial_node_coords(local_node_id,1));
+          current_element_adjoint(node_loop*num_dim) = 0.5*(current_adjoint_vector(local_node_id,0)+next_adjoint_vector(local_node_id,0));
+          current_element_adjoint(node_loop*num_dim+1) = 0.5*(current_adjoint_vector(local_node_id,1)+next_adjoint_vector(local_node_id,1));
 
           if(num_dim==3){
           nodal_positions(node_loop,2) = all_initial_node_coords(local_node_id,2);
-          current_nodal_displacements(node_loop*num_dim+2) = (next_coordinate_vector(local_node_id, 2)-all_initial_node_coords(local_node_id,2)+current_coordinate_vector(local_node_id, 2)-all_initial_node_coords(local_node_id,2))/2;
-          current_element_adjoint(node_loop*num_dim+2) = (current_adjoint_vector(local_node_id,2)+next_adjoint_vector(local_node_id,2))/2;
+          current_nodal_displacements(node_loop*num_dim+2) = 0.5*(next_coordinate_vector(local_node_id, 2)-all_initial_node_coords(local_node_id,2)+current_coordinate_vector(local_node_id, 2)-all_initial_node_coords(local_node_id,2));
+          current_element_adjoint(node_loop*num_dim+2) = 0.5*(current_adjoint_vector(local_node_id,2)+next_adjoint_vector(local_node_id,2));
           }
 
           if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
@@ -1077,11 +1082,8 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
           //compute inner product for this quadrature point contribution
           inner_product = 0;
           for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-            for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
-              if(ifill==jfill)
+            for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
                 inner_product += Local_Matrix_Contribution(ifill, jfill)*current_element_adjoint(ifill)*current_nodal_displacements(jfill);
-              else
-                inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_element_adjoint(ifill)*current_nodal_displacements(jfill);
               //debug
               //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
               //inner_product += Local_Matrix_Contribution(ifill, jfill);

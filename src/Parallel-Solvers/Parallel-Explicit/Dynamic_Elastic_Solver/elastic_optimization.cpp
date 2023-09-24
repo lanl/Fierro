@@ -1010,13 +1010,18 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
     Kokkos::fence();
 
     //gradient contribution from kinetic energy v(dM/drho)v product.
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+        if(myrank==0){
+          std::cout << "v*dM/drho*v term" << std::endl;
+        }
+    }
+
     for (int cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       
       //print
       if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
-
         if (cycle==0){
           if(myrank==0)
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -1092,12 +1097,17 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
     Kokkos::fence();
 
     //gradient contribution from time derivative of adjoint \dot{lambda}(dM/drho)v product.
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+        if(myrank==0){
+          std::cout << "gradient term involving adjoint derivative" << std::endl;
+        }
+    }
+
     for (int cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print
       if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
-
         if (cycle==0){
           if(myrank==0)
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -1141,7 +1151,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
             for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
               node_id = nodes_in_elem(elem_id, ifill);
               for(int idim=0; idim < num_dim; idim++){
-                //lambda_dot = (next_adjoint_vector(node_id,idim)-current_adjoint_vector(node_id,idim))/global_dt;
+                //lambda_dot_current = lambda_dot_next = (next_adjoint_vector(node_id,idim)-current_adjoint_vector(node_id,idim))/global_dt;
                 lambda_dot_current = current_velocity_vector(node_id,idim) + damping_constant*current_adjoint_vector(node_id,idim)/node_mass(node_id) - current_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
                 lambda_dot_next = next_velocity_vector(node_id,idim) + damping_constant*next_adjoint_vector(node_id,idim)/node_mass(node_id) - next_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
                 inner_product += elem_mass(elem_id)*(lambda_dot_current+lambda_dot_next)*current_element_velocities(ifill,idim)/2;
@@ -1228,7 +1238,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
 
   }//end view scope
   
-  //force_design_gradient_term(design_variables, design_gradients);\
+  //force_design_gradient_term(design_variables, design_gradients);
   //view scope
   {
     host_vec_array host_design_gradients = design_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
