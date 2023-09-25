@@ -681,19 +681,22 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
         for (int idim = 0; idim < num_dim; idim++){
           matrix_contribution = 0;
           //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim%num_dim,idof);
+          /*
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim,idof);
           }
+          */
+          matrix_contribution = -damping_constant*previous_adjoint_vector(node_gid,idim);
           rate_of_change = previous_velocity_vector(node_gid,idim)- 
                             matrix_contribution/node_mass(node_gid)-
                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + previous_adjoint_vector(node_gid,idim);
           matrix_contribution = 0;
           //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
           }
           rate_of_change = -matrix_contribution;
           //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
@@ -718,19 +721,22 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
         for (int idim = 0; idim < num_dim; idim++){
           matrix_contribution = 0;
           //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim%num_dim,idof);
+          /*
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim,idof);
           }
+          */
+          matrix_contribution = -damping_constant*midpoint_adjoint_vector(node_gid,idim);
           rate_of_change =  (previous_velocity_vector(node_gid,idim) + current_velocity_vector(node_gid,idim))/2- 
                             matrix_contribution/node_mass(node_gid)-
                             phi_midpoint_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
           matrix_contribution = 0;
           //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
           }
           rate_of_change = -matrix_contribution;
           //rate_of_change = -0.0000001*midpoint_adjoint_vector(node_gid,idim);
