@@ -27,7 +27,7 @@ bool is_close(float a, float b) {
     return std::fabs(a - b) <= tolerance;
 }
 bool is_close(double a, double b) {
-    const double tolerance = 1e-6 * (a + b) / 2.0;
+    const double tolerance = 1e-6 * (std::fabs(a) + std::fabs(b)) / 2.0;
     return std::fabs(a - b) < tolerance;
 }
 
@@ -186,3 +186,249 @@ struct EmptyBase { };
 IMPL_YAML_SERIALIZABLE_FOR(EmptyBase)
 struct EmptyDerived : EmptyBase { };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(EmptyDerived, EmptyBase)
+
+
+struct SimpleSerializable {
+    int a;
+    float b;
+    double c;
+    std::set<TEST_ENUM> d;
+    std::vector<std::string> e;
+};
+IMPL_YAML_SERIALIZABLE_FOR(SimpleSerializable, a, b, c, d, e)
+
+TEST(YamlSerailizable, StrictDeserialization) {
+    std::string input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+      - VALUE_2 
+      - VALUE_3 
+    e:          
+      - string_1
+      - string_2
+      - string_3
+    )";
+
+    std::string over_input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+    e:          
+      - string_1
+    f: 5        
+    )";
+
+    EXPECT_NO_THROW({
+        Yaml::from_string_strict<SimpleSerializable>(input);
+    });
+    
+    EXPECT_THROW({
+        Yaml::from_string_strict<SimpleSerializable>(over_input);
+    }, Yaml::ConfigurationException);
+}
+
+
+struct MultiA {
+    int a = 100;
+    float b = 100.5;
+};
+IMPL_YAML_SERIALIZABLE_FOR(MultiA, a, b)
+
+struct MultiB {
+    int a = 100;
+    double c = 100.5;
+};
+IMPL_YAML_SERIALIZABLE_FOR(MultiB, a, c)
+
+
+TEST(YamlSerializable, FromMulti) {
+    std::string input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+      - VALUE_2 
+      - VALUE_3 
+    e:          
+      - string_1
+      - string_2
+      - string_3
+    )";
+
+    MultiA a;
+    MultiB b;
+
+    Yaml::from_string(input, a, b);
+    EXPECT_EQ(a.a, 1);
+    EXPECT_NEAR(a.b, 1.0, 1e-8);
+    EXPECT_EQ(b.a, 1);
+    EXPECT_NEAR(b.c, 1.01, 1e-8);
+}
+
+TEST(YamlSerializable, FromMultiStrict) {
+    std::string input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+      - VALUE_2 
+      - VALUE_3 
+    e:          
+      - string_1
+      - string_2
+      - string_3
+    )";
+
+    MultiA a;
+    MultiB b;
+
+    Yaml::from_string(input, a, b);
+    EXPECT_EQ(a.a, 1);
+    EXPECT_NEAR(a.b, 1.0, 1e-8);
+    EXPECT_EQ(b.a, 1);
+    EXPECT_NEAR(b.c, 1.01, 1e-8);
+    
+    EXPECT_THROW({
+        Yaml::from_string_strict(input, a, b);
+    }, Yaml::ConfigurationException);
+}
+
+TEST(YamlSerializable, ToMulti) {
+    std::string input = R"(
+    a: 1        
+    b: 1.0      
+    c: 1.01     
+    d:          
+      - VALUE_1 
+      - VALUE_2 
+      - VALUE_3 
+    e:          
+      - string_1
+      - string_2
+      - string_3
+    )";
+
+    MultiA a;
+    MultiB b;
+    Yaml::from_string(input, a, b);
+
+    // Do this back and forth because it might serialize slightly differently than 
+    // We wrote it. 
+    // This tests that this is at least a fixed point of 
+    // de -> re serialization.
+
+    std::string new_input = Yaml::to_string(a, b);
+    MultiA a2;
+    MultiB b2;
+    Yaml::from_string(input, a2, b2);
+    std::string re_serialized = Yaml::to_string(a2, b2);
+    EXPECT_STREQ(new_input.c_str(), re_serialized.c_str());
+}
+
+
+struct Nested4 {
+    float d;
+};
+IMPL_YAML_SERIALIZABLE_FOR(Nested4, d)
+
+struct Nested3 {
+    Nested4 c;
+};
+IMPL_YAML_SERIALIZABLE_FOR(Nested3, c)
+struct Nested2 {
+    std::vector<Nested3> b;
+};
+IMPL_YAML_SERIALIZABLE_FOR(Nested2, b)
+struct NestedInvalidTest {
+    Nested2 a;
+};
+IMPL_YAML_SERIALIZABLE_FOR(NestedInvalidTest, a)
+TEST(YamlSerializable, FromStrictNested) {
+    std::string input = R"(
+    a:
+      b:
+        - c:
+            d: 1.0
+            invalid-field: not-a-value
+    )";
+    
+    EXPECT_THROW({
+        Yaml::from_string_strict<NestedInvalidTest>(input);
+    }, Yaml::ConfigurationException);
+}
+
+SERIALIZABLE_ENUM(Module, A, B)
+
+struct TypedBase : Yaml::TypeDiscriminated<TypedBase, Module> {
+    virtual ~TypedBase() = default;
+};
+IMPL_YAML_SERIALIZABLE_FOR(TypedBase, type)
+
+struct DerivedA : TypedBase::Register<DerivedA, Module::A> {
+    std::string label = "DerivedA";
+};
+IMPL_YAML_SERIALIZABLE_WITH_BASE(DerivedA, TypedBase)
+
+struct DerivedB : TypedBase::Register<DerivedB, Module::B> {
+    std::string label = "DerivedB";
+};
+IMPL_YAML_SERIALIZABLE_WITH_BASE(DerivedB, TypedBase)
+
+TEST(YamlSerializable, TypeDiscrimination) {
+    std::string input = R"(
+    type: A
+    )";
+
+    std::shared_ptr<TypedBase> base_ptr;
+    Yaml::from_string(input, base_ptr);
+
+    auto a = std::dynamic_pointer_cast<DerivedA>(base_ptr);
+    EXPECT_STREQ(a->label.c_str(), "DerivedA");
+
+    std::unique_ptr<TypedBase> base_ptr_unique;
+    Yaml::from_string(input, base_ptr_unique);
+
+    auto a_unique = dynamic_cast<DerivedA*>(base_ptr_unique.get());
+    EXPECT_STREQ(a_unique->label.c_str(), "DerivedA");
+}
+
+struct ContainerOfDiscriminated {
+    std::vector<std::shared_ptr<TypedBase>> modules;
+};
+IMPL_YAML_SERIALIZABLE_FOR(ContainerOfDiscriminated, modules)
+
+TEST(YamlSerailizable, NestedTypeDiscrimination) {
+    std::string input = R"(
+    modules:
+      - type: A
+      - type: B
+    )";
+
+    auto container = Yaml::from_string<ContainerOfDiscriminated>(input);
+
+    EXPECT_NE(container.modules.size(), 0);
+
+    std::shared_ptr<DerivedA> m_a;
+    std::shared_ptr<DerivedB> m_b;
+    for (auto m : container.modules) {
+        switch (m->type) {
+            case Module::A:
+                m_a = std::dynamic_pointer_cast<DerivedA>(m);
+                EXPECT_STREQ(m_a->label.c_str(), "DerivedA");
+                break;
+            case Module::B:
+                m_b = std::dynamic_pointer_cast<DerivedB>(m);
+                EXPECT_STREQ(m_b->label.c_str(), "DerivedB");
+                break;
+            default:
+                throw std::runtime_error("Unreachable.");
+        }
+    }
+}

@@ -1,0 +1,74 @@
+solver_type: Explicit
+
+fea_modules:
+  - type: SGH
+
+num_dims: 3
+rk_num_stages: 1
+
+time_variables:
+    time_final: 1.0e+8  #[s]
+    dt_min: 1.e-11  #[s]
+    dt_max: 1.e-4  #[s]
+    dt_start: 1.e-6  #[s]
+    dt_cfl: 0.5
+    cycle_stop: 200000000
+timer_output_level: thorough
+
+input_options:
+    mesh_file_format: ensight
+    mesh_file_name: /vast/home/cyenusah/github/Fierro/EVPFFT/input_files/mesh_single_element.geo
+    element_type: hex8
+
+output_options:
+  graphics_step: 1.0e-1  #[s]
+  output_file_format: vtk
+
+#field_output:
+  #- velocity
+  #- processor_id
+  #- element_id
+  #- stress
+  #- user_vars
+
+material_options:
+  - eos_model: user_eos_model
+    eos_run_location: device
+    strength_model: user_strength_model
+    strength_type: hypo
+    strength_run_location: host
+    q1: 1.0
+    q2: 1.3333
+    q1ex: 1.0
+    q2ex: 0.0
+    global_vars:
+      - 8 #N1
+      - 8 #N2
+      - 8 #N3
+      - 0.0001 #udotAccTh
+      - 100000 #2400000 #[mm/s] ref sound speed
+
+region_options:
+  - volume: global
+    mat_id: 0
+    den: 8.96e-9 #[tonne/mm3]
+    sie: 1.0e-12  #[mJ]
+        
+    velocity: cartesian
+    u: 0.0
+    v: 0.0
+    w: 0.0  #[mm/s]
+
+boundary_conditions:
+  # Tag Z plane
+  - surface: z_plane
+    value: 0.0
+    condition_type: fixed
+            
+  # Tag Z plane
+  - surface: z_plane
+    value: 1.0
+    condition_type: velocity
+    u: 0.0  #[mm/s]
+    v: 0.0  #[mm/s]
+    w: 1.0  #[mm/s]
