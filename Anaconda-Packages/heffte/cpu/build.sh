@@ -9,7 +9,7 @@ if [ $(uname) == Linux ]; then
     export MPI_FLAGS="$MPI_FLAGS;-mca;plm;isolated"
 fi
 
-source "${RECIPE_DIR}/../../add-compiler-flags.sh"
+source "$RECIPE_DIR/../../add-compiler-flags.sh"
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D BUILD_SHARED_LIBS=ON \
@@ -18,9 +18,10 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D Heffte_ENABLE_FFTW=ON \
       $CMAKE_ARGS \
       $SRC_DIR \
-      -D MPI_C_COMPILER="${BUILD_PREFIX}/bin/mpicc" \
-      -D MPI_CXX_COMPILER="${BUILD_PREFIX}/bin/mpicxx" \
+      -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
+      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
 
 make -j 10 install
 
-source "${RECIPE_DIR}/../make-relocatable.sh"
+source "$RECIPE_DIR/../make-relocatable.sh"

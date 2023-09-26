@@ -9,13 +9,14 @@ if [ $(uname) == Linux ]; then
     export MPI_FLAGS="$MPI_FLAGS;-mca;plm;isolated"
 fi
 
-source "${RECIPE_DIR}/../../add-compiler-flags.sh"
+source "$RECIPE_DIR/../../add-compiler-flags.sh"
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
       -D CMAKE_CXX_STANDARD:STRING=17 \
-      -D VECTOR_ARCH_FLAGS="${VECTOR_ARCH_FLAGS}" \
+      -D VECTOR_ARCH_FLAGS="$VECTOR_ARCH_FLAGS" \
       $CMAKE_ARGS \
-      $SRC_DIR
+      $SRC_DIR \
+      -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
 
 make -j 10 install

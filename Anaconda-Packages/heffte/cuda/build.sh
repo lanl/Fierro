@@ -9,7 +9,7 @@ if [ $(uname) == Linux ]; then
     export MPI_FLAGS="$MPI_FLAGS;-mca;plm;isolated"
 fi
 
-source "${RECIPE_DIR}/../../add-compiler-flags.sh"
+source "$RECIPE_DIR/../../add-compiler-flags.sh"
 
 export OMPI_CXX=nvcc
 
@@ -18,12 +18,13 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
       -D CMAKE_CXX_STANDARD:STRING=17 \
       -D Heffte_ENABLE_CUDA=ON \
+      -D Heffte_DISABLE_GPU_AWARE_MPI=ON \
       $CMAKE_ARGS \
       $SRC_DIR \
-      -D MPI_C_COMPILER="${BUILD_PREFIX}/bin/mpicc" \
-      -D MPI_CXX_COMPILER="${BUILD_PREFIX}/bin/mpicxx" \
-      -D Heffte_DISABLE_GPU_AWARE_MPI=ON \
+      -D CMAKE_CXX_FLAGS=$PATCHED_CXXFLAGS \
+      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
 
 make -j 10 install
 
-source "${RECIPE_DIR}/../make-relocatable.sh"
+source "$RECIPE_DIR/../make-relocatable.sh"
