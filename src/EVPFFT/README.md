@@ -120,3 +120,23 @@ The EVPFFT `CMakeLists.txt` uses the following default values to build EVPFFT:
 
 To change these default options include the `-D OPTION=<value>` in the `cmake` option, E.g. `-D NSYSMX=24` in the `build_evpfft.sh`.
 
+# Using EVPFFT for Lattice Structure Homogenization
+
+To use EVPFFT for lattice structure homogenization compile with the following flags
+```
+  -D NPHMX=2
+  -D NMODMX=0
+  -D NTWMMX=0
+  -D NSYSMX=0
+```
+
+Example for input files needed to run EVPFFT for lattice structure homogenization is shown in `example_input_files/lattice_input_files`. In that file you will see how to set up evpft input file, elastic and plastic parameter files.
+
+Provide a `STRUCTURED_POINTS` vtk file type that contains information about which grid point is solid (1) or void (0), example is shown in `example_input_files/lattice_input_files/void_in_solid.vtk`.
+
+Run EVPFFT as:
+```
+  mpirun -n 1 --bind-to core evpfft -x 32 -y 32 -z 32 -m 2 -f evpfft_lattice_input.txt
+```
+the `-m 2` option tells EVPFFT to use the vtk lattice file microstructure file type.
+
