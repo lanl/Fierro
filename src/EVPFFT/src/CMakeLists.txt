@@ -60,7 +60,7 @@ add_definitions(-DNPHMX=${NPHMX}
                  -DNMODMX=${NMODMX}
                  -DNTWMMX=${NTWMMX}
                  -DNSYSMX=${NSYSMX})
-
+                 
 if(TWO_SIGN_SLIP_SYSTEMS)
   add_definitions(-DTWO_SIGN_SLIP_SYSTEMS=1)
 endif()
@@ -81,6 +81,9 @@ endif()
 add_definitions(-DHAVE_KOKKOS=1)
 
 if (NOT BUILD_EVPFFT_FIERRO)
+  if (USE_CUFFT)
+    find_package(CUDAToolkit REQUIRED)
+  endif()
   find_package(Kokkos REQUIRED)
 endif()
 find_package(MPI REQUIRED)
@@ -138,6 +141,10 @@ else ()
   target_link_libraries(${This} PRIVATE Kokkos::kokkos)
 endif ()
 target_link_libraries(${This} PRIVATE Heffte::Heffte MPI::MPI_CXX ${HDF5_LIBRARIES})
+
+install(
+  TARGETS ${This}
+)
 
 if (USE_FFTW)
   add_definitions(-DUSE_FFTW=1)
