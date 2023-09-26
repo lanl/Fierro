@@ -5,7 +5,6 @@
 
 struct CommandLineArgs
 {
-    std::array<int,3> nn = {0,0,0};
     std::string input_filename; // name and path of input file (./fft.in)
 
     // micro_filetype = 0 means classic Los Alamos FFT ASCII microstructure filetype

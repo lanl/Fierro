@@ -24,32 +24,37 @@ public:
   ChgBasis cb;
   std::shared_ptr<FFT3D_R2C<heffte_backend,real_t>> fft;
 
-  const int npts1_g;   // global array size in x dim.
-  const int npts2_g;   // global array size in y dim.
-  const int npts3_g;   // global array size in z dim.
-  const int npts1;     // local per rank array size in x dim.
-  const int npts2;     // local per rank array size in y dim.
-  const int npts3;     // local per rank array size in z dim.
-  const int local_start1; // start index of local array in x dim.
-  const int local_start2; // start index of local array in y dim.
-  const int local_start3; // start index of local array in z dim.
-  const int local_end1;   // end index of local array in x dim.
-  const int local_end2;   // end index of local array in y dim.
-  const int local_end3;   // end index of local array in z dim.
-  const real_t wgt;
+  int npts1_g;   // global array size in x dim.
+  int npts2_g;   // global array size in y dim.
+  int npts3_g;   // global array size in z dim.
+  int npts1;     // local per rank array size in x dim.
+  int npts2;     // local per rank array size in y dim.
+  int npts3;     // local per rank array size in z dim.
+  int local_start1; // start index of local array in x dim.
+  int local_start2; // start index of local array in y dim.
+  int local_start3; // start index of local array in z dim.
+  int local_end1;   // end index of local array in x dim.
+  int local_end2;   // end index of local array in y dim.
+  int local_end3;   // end index of local array in z dim.
+  real_t wgt;
 
-  const int npts1_g_cmplx;   // complex global array size in x dim.
-  const int npts2_g_cmplx;   // complex global array size in y dim.
-  const int npts3_g_cmplx;   // complex global array size in z dim.
-  const int npts1_cmplx;     // complex local per rank array size in x dim.
-  const int npts2_cmplx;     // complex local per rank array size in y dim.
-  const int npts3_cmplx;     // complex local per rank array size in z dim.
-  const int local_start1_cmplx; // complex start index of local array in x dim.
-  const int local_start2_cmplx; // complex start index of local array in y dim.
-  const int local_start3_cmplx; // complex start index of local array in z dim.
-  const int local_end1_cmplx;   // complex end index of local array in x dim.
-  const int local_end2_cmplx;   // complex end index of local array in y dim.
-  const int local_end3_cmplx;   // complex end index of local array in z dim.
+  int npts1_g_cmplx;   // complex global array size in x dim.
+  int npts2_g_cmplx;   // complex global array size in y dim.
+  int npts3_g_cmplx;   // complex global array size in z dim.
+  int npts1_cmplx;     // complex local per rank array size in x dim.
+  int npts2_cmplx;     // complex local per rank array size in y dim.
+  int npts3_cmplx;     // complex local per rank array size in z dim.
+  int local_start1_cmplx; // complex start index of local array in x dim.
+  int local_start2_cmplx; // complex start index of local array in y dim.
+  int local_start3_cmplx; // complex start index of local array in z dim.
+  int local_end1_cmplx;   // complex end index of local array in x dim.
+  int local_end2_cmplx;   // complex end index of local array in y dim.
+  int local_end3_cmplx;   // complex end index of local array in z dim.
+
+  int NPHMX;    //Maximum number of phases
+  int NMODMX;   //Maximum number of active SL+TW modes in any phase
+  int NTWMMX;   //Maximum number of active twin modes in any phase
+  int NSYSMX;   //Maximum number of active SL+TW systems in any phase
 
   MatrixTypeRealDual udot;
   MatrixTypeRealHost dsim;
@@ -100,10 +105,8 @@ public:
   int nelem;
   int iphbot;
   int iphtop;
-  int ngr;
   
   const real_t pi;
-  int jran;
 
   real_t error;
   real_t fact2;
@@ -135,7 +138,6 @@ public:
   real_t svm1;
   MatrixTypeRealHost scauav1;
 
-  const int num_crystals; //# OF Crystals (grains) in the input texture
   MatrixTypeRealHost eth;
   int ithermo;
 
@@ -196,10 +198,17 @@ public:
   double dtAcc;
 
   // For file management
+  std::string hdf5_filename;
   OutputFileManager ofile_mgr;
   std::shared_ptr<Manager_MPI_IO<real_t,MPI_ORDER_FORTRAN>> mpi_io_real_t;
   std::shared_ptr<Manager_MPI_IO<int,MPI_ORDER_FORTRAN>> mpi_io_int;
   std::shared_ptr<MicroOutputWriter<MPI_ORDER_FORTRAN>> micro_writer;
+
+  // Device memory space
+  MatrixTypeRealDevice  rss;
+  MatrixTypeRealDevice rss1;
+  MatrixTypeRealDevice rss2;
+
 //-----------------------------------------------
 // End Of EVPFFT Data Members
 //-----------------------------------------------
@@ -221,6 +230,7 @@ public:
   void evolve();
   void check_macrostress();
   void print_vel_grad();
+  void allocate_memory();
 
   void set_some_voxels_arrays_to_zero();
   void init_ept();
