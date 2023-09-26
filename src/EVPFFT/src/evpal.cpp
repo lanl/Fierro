@@ -53,16 +53,6 @@ void EVPFFT::evpal(int imicro)
     real_t strainceq6_[6];
     real_t res_[6];
     real_t xjacobinv_[6*6];
-    real_t rss_[NSYSMX];
-    real_t rss1_[NSYSMX];
-    real_t rss2_[NSYSMX];
-    real_t sc_[5*NSYSMX];
-    real_t taux_[NSYSMX*2];
-    real_t nrsx_[NSYSMX];
-#ifdef NON_SCHMID_EFFECTS
-    real_t scnon_[5*NSYSMX];
-#endif
-    real_t xkinaux_[NSYSMX];
 
     // create views of thread private arrays
     ViewMatrixTypeReal xlambda(xlambda_,3,3);
@@ -82,17 +72,6 @@ void EVPFFT::evpal(int imicro)
     ViewMatrixTypeReal strainceq6(strainceq6_,6);
     ViewMatrixTypeReal res(res_,6);
     ViewMatrixTypeReal xjacobinv(xjacobinv_,6,6);
-    ViewMatrixTypeReal rss(rss_,NSYSMX);
-    ViewMatrixTypeReal rss1(rss1_,NSYSMX);
-    ViewMatrixTypeReal rss2(rss2_,NSYSMX);
-    ViewMatrixTypeReal sc(sc_,5,NSYSMX);
-    ViewMatrixTypeReal taux(taux_,NSYSMX,2);
-    ViewMatrixTypeReal nrsx(nrsx_,NSYSMX);
-#ifdef NON_SCHMID_EFFECTS
-    ViewMatrixTypeReal scnon(scnon_,5,NSYSMX);
-#endif
-    ViewMatrixTypeReal xkinaux(xkinaux_,NSYSMX);
-
 
     jph = jphase(i,j,k);
 
@@ -147,26 +126,6 @@ void EVPFFT::evpal(int imicro)
 
           if (ithermo != 1 || imicro != 1) {
          
-            for (int is = 1; is <= nsyst(jph); is++) {
-              nrsx(is) = nrs(is,jph);
-
-              taux(is,1) = crss(is,1,i,j,k);
-              taux(is,2) = crss(is,2,i,j,k);
-
-              xkinaux(is) = xkin(is,i,j,k);
-
-              for (int jj = 1; jj <= 5; jj++) {
-                sc(jj,is) = sch(jj,is,i,j,k);
-              } // end for jj
-
-#ifdef NON_SCHMID_EFFECTS
-              for (int jj = 1; jj <= 5; jj++) {
-                scnon(jj,is) = schnon(jj,is,i,j,k);
-              }
-#endif
-
-            } // end for is
-
             //     GET RESOLVED SHEAR STRESSES 'rss' AND SHEAR RATES 'gamdot'.
             //     SIGN(GAMDOT)=SIGN(RSS).
             //     NRS CAN BE EVEN OR ODD.
@@ -174,46 +133,46 @@ void EVPFFT::evpal(int imicro)
 
             for (int is = 1; is <= nsyst(jph); is++) {
 #ifdef NON_SCHMID_EFFECTS
-              rss(is) = scnon(1,is)*sg6(1) + 
-                        scnon(2,is)*sg6(2) + 
-                        scnon(3,is)*sg6(3) + 
-                        scnon(4,is)*sg6(4) + 
-                        scnon(5,is)*sg6(5);
+              rss(is,i,j,k) = schnon(1,is,,i,j,k)*sg6(1) + 
+                        schnon(2,is,i,j,k)*sg6(2) + 
+                        schnon(3,is,i,j,k)*sg6(3) + 
+                        schnon(4,is,i,j,k)*sg6(4) + 
+                        schnon(5,is,i,j,k)*sg6(5);
 #else
-              rss(is) = sc(1,is)*sg6(1) +
-                        sc(2,is)*sg6(2) + 
-                        sc(3,is)*sg6(3) + 
-                        sc(4,is)*sg6(4) + 
-                        sc(5,is)*sg6(5);
+              rss(is,i,j,k) = sch(1,is,i,j,k)*sg6(1) +
+                        sch(2,is,i,j,k)*sg6(2) + 
+                        sch(3,is,i,j,k)*sg6(3) + 
+                        sch(4,is,i,j,k)*sg6(4) + 
+                        sch(5,is,i,j,k)*sg6(5);
 #endif
               isign = 1;
-              if ( (rss(is)-xkinaux(is)) < 0.0 ) {
+              if ( (rss(is,i,j,k)-xkin(is,i,j,k)) < 0.0 ) {
                 isign = 2;
               }
    
-              rss(is) = (rss(is)-xkinaux(is))/taux(is,isign);
+              rss(is,i,j,k) = (rss(is,i,j,k)-xkin(is,i,j,k))/crss(is,isign,i,j,k);
 
 #ifdef TWO_SIGN_SLIP_SYSTEMS
-              if ( rss(is) < 0.0 ) {
-                rss(is) = 0.0;
+              if ( rss(is,i,j,k) < 0.0 ) {
+                rss(is,i,j,k) = 0.0;
               }
 #endif
 
 #ifdef TWO_SIGN_SLIP_SYSTEMS
-              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(PowIntExpo(rss(is),(nrsx(is)-1))) / taux(is,isign);
-              rss2(is) = gamd0(is,jph) * ABS(PowIntExpo(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
+              rss1(is,i,j,k) = gamd0(is,jph) * nrs(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),(nrs(is,jph)-1))) / crss(is,isign,i,j,k);
+              rss2(is,i,j,k) = gamd0(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),nrs(is,jph))) * COPYSIGN(1.0,rss(is,i,j,k));
 #else
-              rss1(is) = gamd0(is,jph) * nrsx(is) * ABS(PowIntExpo(rss(is),(nrsx(is)-1))) / taux(is,isign);
-              rss2(is) = gamd0(is,jph) * ABS(PowIntExpo(rss(is),nrsx(is))) * COPYSIGN(1.0,rss(is));
+              rss1(is,i,j,k) = gamd0(is,jph) * nrs(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),(nrs(is,jph)-1))) / crss(is,isign,i,j,k);
+              rss2(is,i,j,k) = gamd0(is,jph) * ABS(PowIntExpo(rss(is,i,j,k),nrs(is,jph))) * COPYSIGN(1.0,rss(is,i,j,k));
 #endif
 
-              gamdot(is,i,j,k) = rss2(is);
+              gamdot(is,i,j,k) = rss2(is,i,j,k);
             } // end for is
 
             for (int ii = 1; ii <= 5; ii++) {
               edotp6(ii) = 0.0;
               for (int k1 = 1; k1 <= nsyst(jph); k1++) {
-                edotp6(ii) += sc(ii,k1) * rss2(k1);
+                edotp6(ii) += sch(ii,k1,i,j,k) * rss2(k1,i,j,k);
               }
             }
             edotp6(6) = 0.0;
@@ -225,9 +184,9 @@ void EVPFFT::evpal(int imicro)
 
                 for (int k1 = 1; k1 <= nsyst(jph); k1++) {         
 #ifdef NON_SCHMID_EFFECTS   
-                  dedotp66(ii,jj) += sc(ii,k1)*scnon(jj,k1)*rss1(k1);
+                  dedotp66(ii,jj) += sch(ii,k1,i,j,k)*schnon(jj,k1,i,j,k)*rss1(k1,i,j,k);
 #else
-                  dedotp66(ii,jj) += sc(ii,k1)*sc(jj,k1)*rss1(k1);
+                  dedotp66(ii,jj) += sch(ii,k1,i,j,k)*sch(jj,k1,i,j,k)*rss1(k1,i,j,k);
 #endif
                 } // end for k1
 

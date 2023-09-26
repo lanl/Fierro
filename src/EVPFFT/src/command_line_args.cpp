@@ -8,11 +8,8 @@ CommandLineArgs::CommandLineArgs()
 
 void CommandLineArgs::parse_command_line(int argc, char *argv[])
 {
-    const char* const short_opts = "x:y:z:f:m:e:g:p:u:h";
-    const option long_opts[] = {{"x-dim", required_argument, nullptr, 'x'},
-                                {"y-dim", required_argument, nullptr, 'y'},
-                                {"z-dim", required_argument, nullptr, 'z'},
-                                {"infile", required_argument, nullptr, 'f'},
+    const char* const short_opts = "f:m:e:g:p:u:h";
+    const option long_opts[] = {{"infile", required_argument, nullptr, 'f'},
                                 {"micro-filetype", required_argument, nullptr, 'm'},
                                 {"euler-angles", required_argument, nullptr, 'e'},
                                 {"feature-ids", required_argument, nullptr, 'g'},
@@ -30,17 +27,6 @@ void CommandLineArgs::parse_command_line(int argc, char *argv[])
 
         switch (opt)
         {
-        case 'x': 
-          nn[0] = atoi(optarg);
-          break;
-
-        case 'y': 
-          nn[1] = atoi(optarg); 
-          break;
-
-        case 'z': 
-          nn[2] = atoi(optarg);
-          break;
 
         case 'f':
           input_filename = optarg;
@@ -85,11 +71,7 @@ void CommandLineArgs::parse_command_line(int argc, char *argv[])
 
 void CommandLineArgs::check_cmd_args()
 {
-    if (nn[0] == 0 or 
-        nn[1] == 0 or 
-        nn[2] == 0 or
-        input_filename.size() == 0)
-    {
+    if (input_filename.size() == 0) {
       print_help();
     }
 
@@ -107,13 +89,10 @@ void CommandLineArgs::check_cmd_args()
 void CommandLineArgs::print_help()
 {
 std::cout << "Required arguments:\n"
-             "  -x, --x-dim    <value>    x dimension of RVE\n"
-             "  -y, --y-dim    <value>    y dimension of RVE\n"
-             "  -z, --z-dim    <value>    z dimension of RVE\n"
-             "  -f, --infile   <path>     input file (full path)\n"
+            "  -f, --infile   <path>     input file (full path)\n"
              "\n"
              "Optional arguments:\n"
-             "  -m, --micro-filetype <value>    microstructure file type (0: ASCII, 1: HDF5)\n"
+             "  -m, --micro-filetype <value>    microstructure file type (0: ASCII, 1: HDF5, 2: VTK)\n"
              "  -e, --euler-angles   <path>     full path to euler angles dataset in HDF5 file\n"
              "  -g, --feature-ids    <path>     full path to feature ids dataset in HDF5 file\n"
              "  -p, --phase-ids      <path>     full path to phase ids dataset in HDF5 file\n"
@@ -122,10 +101,10 @@ std::cout << "Required arguments:\n"
              "\n"
             "Examples:\n"
              "  Los Alamos FFT ASCII microstructure filetype:\n"
-             "    ./executable -x 16 -y 16 -z 16 -f <inputfile_path>\n"
-             "    ./executable --x-dim=16 --y-dim=16 --z-dim=16 --infile=<inputfile_path>\n"
+             "    ./executable -f <inputfile_path>\n"
+             "    ./executable --infile=<inputfile_path>\n"
              "  HDF5 microstructure filetype:\n"
-             "    ./executable -x 16 -y 16 -z 16 -f <inputfile_path> -m 1 -e <eulerAngles_path> -g <featureIds_path> -p <phaseIds_path> -u 1\n";
+             "    ./executable -f <inputfile_path> -m 1 -e <eulerAngles_path> -g <featureIds_path> -p <phaseIds_path> -u 1\n";
     
    exit(1);
 }
