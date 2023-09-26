@@ -5,8 +5,8 @@
 ##   set the CONDA_OVERRIDE_CUDA flag to 12.0 . This will mark __cuda (the cuda virtual package) as installed. 
 ####
 
-# These flag variables are set by anaconda.
-source "${RECIPE_DIR}/../../add-compiler-flags.sh"
+# Patch the cxx variables for cross-compilation
+source "$RECIPE_DIR/../../add-compiler-flags.sh"
 
 # MPICXX -> nvcc_wrapper -> nvcc -> $GXX
 #           ^ Passes $NVCC_WRAPPER_DEFAULT_COMPILER as the host compiler to nvcc
@@ -22,8 +22,9 @@ cmake ../src/ \
     -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
     -D USE_CUFFT=1 \
     $CMAKE_ARGS \
+    -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
     -D CUDAToolkit_ROOT=$PREFIX/bin \
     -D CMAKE_CXX_COMPILER=$BUILD_PREFIX/bin/mpicxx \
-    -D CMAKE_C_COMPILER=$BUILD_PREFIX/bin/mpicc
+    -D CMAKE_C_COMPILER=$BUILD_PREFIX/bin/mpicc \
 
 make install
