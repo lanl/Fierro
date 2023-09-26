@@ -4,5 +4,5 @@ cxx_compiler:
   - gxx
 target_platform:
   - linux-64
-  #- linux-aarch64
-  #- linux-ppc64le
+  - linux-aarch64
+  - linux-ppc64le
