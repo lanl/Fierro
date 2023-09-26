@@ -51,21 +51,16 @@ void EVPFFT::vpsc_input()
   ur0.open(cmd.input_filename);
   check_that_file_is_open(ur0, cmd.input_filename.c_str());
 
-  // SEED FOR RANDOM NUMBER GENERATOR (RAN2) (USED FOR TWINNING AND RX)
-  jran = -1;
+  ur0 >> NPHMX >> NMODMX >> NTWMMX >> NSYSMX; CLEAR_LINE(ur0);
+  ur0 >> npts1_g >> npts2_g >> npts3_g; CLEAR_LINE(ur0);
+
+  allocate_memory();
+
   ur0 >> nph; CLEAR_LINE(ur0);
 
   // THE FOLLOWING REQUIRED FOR SEVERAL ROUTINES WITH 'do iph=iphbot,iphtop'
   iphbot = 1;
   iphtop = nph;
-
-  if (nph > NPHMX) {
-    printf("\n number of phases nph=%d, exceeds max. multiphase dimens, NPHMX=%d !! \n", nph, NPHMX);
-    printf("--> Recompile EVPFFT with -DNPHMX=<max_nph>\n");
-    exit(1);
-  }
-
-  ngr = npts1 * npts2 * npts3;
 
   // RVE DIMENSIONS
   ur0 >> delt(1) >> delt(2) >> delt(3); CLEAR_LINE(ur0);
@@ -198,6 +193,7 @@ void EVPFFT::vpsc_input()
 
   ur0 >> ithermo; CLEAR_LINE(ur0);
   if (ithermo == 1) {
+    int num_crystals = 200000; // maximum number of crystals/grains
     eth = MatrixTypeRealHost (3,3,num_crystals);
 
     ur0 >> filethermo; CLEAR_LINE(ur0);
