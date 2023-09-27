@@ -14,144 +14,19 @@ EVPFFT::EVPFFT(const MPI_Comm mpi_comm_, const CommandLineArgs cmd_, const real_
   , root (0)
   , my_rank (get_mpi_comm_rank(mpi_comm))
   , num_ranks (get_mpi_comm_size(mpi_comm))
-  , cb ()
-  , fft (std::make_shared<FFT3D_R2C<heffte_backend,real_t>>(mpi_comm_, cmd.nn))
+  , cb()
 
-  , npts1_g (cmd.nn[0])
-  , npts2_g (cmd.nn[1])
-  , npts3_g (cmd.nn[2])
-  , npts1 (fft->localRealBoxSizes[my_rank][0])
-  , npts2 (fft->localRealBoxSizes[my_rank][1])
-  , npts3 (fft->localRealBoxSizes[my_rank][2])
-  , local_start1 (fft->localRealBoxes[my_rank].low[0])
-  , local_start2 (fft->localRealBoxes[my_rank].low[1])
-  , local_start3 (fft->localRealBoxes[my_rank].low[2])
-  , local_end1 (fft->localRealBoxes[my_rank].high[0])
-  , local_end2 (fft->localRealBoxes[my_rank].high[1])
-  , local_end3 (fft->localRealBoxes[my_rank].high[2])
-  , wgt (real_t(1.0) / real_t(npts1_g*npts2_g*npts3_g))
-
-  , npts1_g_cmplx (fft->globalComplexBoxSize[0])
-  , npts2_g_cmplx (fft->globalComplexBoxSize[0])
-  , npts3_g_cmplx (fft->globalComplexBoxSize[0])
-  , npts1_cmplx (fft->localComplexBoxSizes[my_rank][0])
-  , npts2_cmplx (fft->localComplexBoxSizes[my_rank][1])
-  , npts3_cmplx (fft->localComplexBoxSizes[my_rank][2])
-  , local_start1_cmplx (fft->localComplexBoxes[my_rank].low[0])
-  , local_start2_cmplx (fft->localComplexBoxes[my_rank].low[1])
-  , local_start3_cmplx (fft->localComplexBoxes[my_rank].low[2])
-  , local_end1_cmplx (fft->localComplexBoxes[my_rank].high[0])
-  , local_end2_cmplx (fft->localComplexBoxes[my_rank].high[1])
-  , local_end3_cmplx (fft->localComplexBoxes[my_rank].high[2])
-
-  , udot (3,3)
-  , dsim (3,3)
-  , scauchy (3,3)
-  , sdeviat (3,3)
-  , tomtot (3,3)
-  //, dbar5 (5)
-  //, dbar6 (6)
-  , delt (3)
-
-  , disgradmacro (3,3)
-  , ddisgradmacro (3,3)
-  , scauav (3,3)
-  , ddisgradmacroacum (3,3)
-  , velmax (3)
-  , iudot (3,3)
-  , idsim (6)
-  , iscau (6)
   , nsteps (0)
-
-  , dnca (3,NSYSMX,NPHMX)
-  , dbca (3,NSYSMX,NPHMX)
-  , schca (5,NSYSMX,NPHMX)
-  , tau (NSYSMX,3,NPHMX)
-  , hard (NSYSMX,NSYSMX,NPHMX)
-  , thet (NSYSMX,2,NPHMX)
-  , nrs (NSYSMX,NPHMX)
-  , gamd0 (NSYSMX,NPHMX)
-#ifdef NON_SCHMID_EFFECTS
-  , dtca (3,NSYSMX,NPHMX)
-  , cns (5,NMODMX,NPHMX)
-  , schcnon (5,NSYSMX,NPHMX)
-#endif
-
-  , twsh (NSYSMX,NPHMX)
-  , nsm (NMODMX,NPHMX)
-  , nmodes (NPHMX)
-  , nsyst (NPHMX)
-  , ntwmod (NPHMX)
-  , ntwsys (NPHMX)
-  , isectw (NSYSMX,NPHMX)
-  , icryst (NPHMX)
-
   , pi (4.0*atan(1.0))
-
-  , igas (NPHMX)
-
-  , cc (3,3,3,3,NPHMX)
-  , c0 (3,3,3,3)
-  , s0 (3,3,3,3)
-  , c066 (6,6)
-
-  , scauav1 (3,3)
-
-  , num_crystals (200000)
-  //, eth (3,3,num_crystals) // eth will be allocated if ithermo==1
-
-  , xk_gb (npts1)
-  , yk_gb (npts2)
-  , zk_gb (npts3)
-
-  , sg (3, 3, npts1, npts2, npts3)
-  , disgrad (3, 3, npts1, npts2, npts3)
-  , velgrad (3, 3, npts1, npts2, npts3)
-  , edotp (3, 3, npts1, npts2, npts3)
-  , cg66 (6, 6, npts1, npts2, npts3)
-  , ept (3, 3, npts1, npts2, npts3)
-  , ag (3, 3, npts1, npts2, npts3)
-  , crss (NSYSMX, 2, npts1, npts2, npts3)
-  , sch (5, NSYSMX, npts1, npts2, npts3)
-#ifdef NON_SCHMID_EFFECTS
-  , schnon (5, NSYSMX, npts1, npts2, npts3)
-#endif
-
-  , gamdot (NSYSMX, npts1, npts2, npts3)
-  , gacumgr (npts1, npts2, npts3)
-  //, trialtau (NSYSMX, 2, npts1, npts2, npts3)
-  , xkin (NSYSMX, npts1, npts2, npts3)
-
-  , ph_array (npts1, npts2, npts3)
-  , th_array (npts1, npts2, npts3)
-  , om_array (npts1, npts2, npts3)
-  , jphase (npts1, npts2, npts3)
-  , jgrain (npts1, npts2, npts3)
-
-  , work (3, 3, npts1, npts2, npts3)
-  , workim (3, 3, npts1_cmplx, npts2_cmplx, npts3_cmplx)
-  , data (npts1, npts2, npts3)
-  , data_cmplx (2, npts1_cmplx, npts2_cmplx, npts3_cmplx)
-
   , imicro(0)
-  , epav (3,3)
-  , edotpav (3,3)
-  , disgradmacroactual (3,3)
-  , disgradmacrot (3,3)
-  , velgradmacro (3,3)
 
   , active(false)
   , stress_scale(stress_scale_)
   , time_scale(time_scale_)
-  , M66 (6,6)
-  , edotp_avg (3,3)
-  , dedotp66_avg (6,6)
-  , cg66_avg (6,6)
-  , sg66_avg (6,6)
-  , udotAcc(3,3)
   , dtAcc(0.0)
 
   , ofile_mgr ()
+  , hdf5_filename ("micro_state_evpfft.h5")
 //-----------------------------------------------
 // End Of EVPFFT Data Members
 //-----------------------------------------------
@@ -159,8 +34,8 @@ EVPFFT::EVPFFT(const MPI_Comm mpi_comm_, const CommandLineArgs cmd_, const real_
   Profiler profiler(__FUNCTION__);
 
   // Reading and initialization of arrays and parameters
-  set_some_voxels_arrays_to_zero();
   vpsc_input();
+  //set_some_voxels_arrays_to_zero();
   init_after_reading_input_data();
 
   //... For file management
@@ -168,15 +43,6 @@ EVPFFT::EVPFFT(const MPI_Comm mpi_comm_, const CommandLineArgs cmd_, const real_
     ofile_mgr.open_files();
   }
 
-  mpi_io_real_t = std::make_shared<Manager_MPI_IO<real_t,MPI_ORDER_FORTRAN>>
-    (mpi_comm, fft->globalRealBoxSize, fft->localRealBoxSizes[my_rank], fft->localRealBoxes[my_rank].low, 3, 0);
-
-  mpi_io_int = std::make_shared<Manager_MPI_IO<int,MPI_ORDER_FORTRAN>>
-    (mpi_comm, fft->globalRealBoxSize, fft->localRealBoxSizes[my_rank], fft->localRealBoxes[my_rank].low, 3, 0);
-
-  micro_writer = std::make_shared<MicroOutputWriter<MPI_ORDER_FORTRAN>>
-    (mpi_comm, "micro_state_evpfft.h5", 3, fft->globalRealBoxSize.data(), fft->localRealBoxSizes[my_rank].data(),
-     fft->localRealBoxes[my_rank].low.data());
   //...
 }
 

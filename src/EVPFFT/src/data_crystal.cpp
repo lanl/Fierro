@@ -47,12 +47,6 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
   }
   CLEAR_LINE(ur1);
 
-  if (nmodes(iph) > NMODMX) {
-    printf("nmodes IN PHASE %d IS %d, which exceeds NMODMX=%d\n", iph, nmodes(iph), NMODMX);
-    printf("Recompile EVPFFT with -DNMODMX=<max_nmode>\n");
-    exit(1);
-  }
-
   ntwmod(iph) = 0;
   nsyst.host(iph)  = 0;
   ntwsys(iph) = 0;
@@ -136,12 +130,6 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
       nsm(kount,iph) = nsmx;
       if (twshx != 0) ntwmod(iph) = ntwmod(iph) + 1;
 
-      if (ntwmod(iph) > NTWMMX) {
-        printf("NTWMOD IN PHASE %d IS %d, which exceeds NTWMMX=%d\n", iph, ntwmod(iph), NTWMMX);
-        printf("Recompile EVPFFT with -DNTWMMX=<max_ntwmod>\n");
-        exit(1);
-      }
-
 #ifdef NON_SCHMID_EFFECTS
     //===============non_schmid_effects ===================================    
     // NOTE: the reading sequence here might be wrong.
@@ -163,13 +151,6 @@ void EVPFFT::data_crystal(int iph, const std::string & filecryspl)
         nsyst.host(iph) = nsyst.host(iph) + 1;
         nsysx = nsyst.host(iph);
         if (twshx != 0) ntwsys(iph) = ntwsys(iph) + 1;
-
-        if (nsyst.host(iph) > NSYSMX) {
-          printf("NSYST IN PHASE %d IS %d, which exceeds NSYSMX=%d\n", iph, nsyst.host(iph), NSYSMX);
-          printf("Recompile EVPFFT with -DNSYSMX=<max_nsyst>\n");
-          exit(1);
-        }
-
 
         //
         //   DEFINES RATE SENSITIVITY AND CRSS FOR EACH SYSTEM IN THE MODE
