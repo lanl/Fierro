@@ -553,6 +553,7 @@ public:
   Teuchos::RCP<MV> adjoint_vector_distributed;
   Teuchos::RCP<MV> phi_adjoint_vector_distributed;
   Teuchos::RCP<MV> psi_adjoint_vector_distributed;
+  Teuchos::RCP<MV> element_internal_energy_distributed;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_internal_energy_data;

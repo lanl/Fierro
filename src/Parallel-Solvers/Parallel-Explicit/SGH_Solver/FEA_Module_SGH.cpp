@@ -186,6 +186,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
   if(simparam_dynamic_opt.topology_optimization_on){
     max_time_steps = BUFFER_GROW;
     time_data.resize(max_time_steps+1);
+    element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
     forward_solve_velocity_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     forward_solve_internal_energy_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
@@ -2004,6 +2005,7 @@ void FEA_Module_SGH::sgh_solve(){
       const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array element_internal_energy = element_internal_energy_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
@@ -2022,9 +2024,16 @@ void FEA_Module_SGH::sgh_solve(){
         }
       }); // end parallel for
       Kokkos::fence();
+      
+      
+    //interface for element internal energies
+      FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+        element_internal_energy(elem_gid,0) = elem_sie(rk_level,elem_gid);
+      }); // end parallel for
+      Kokkos::fence();
     } //end view scope
-        
 
+    (*forward_solve_internal_energy_data)[0]->assign(*element_internal_energy_distributed);
     (*forward_solve_velocity_data)[0]->assign(*Explicit_Solver_Pointer_->all_node_velocities_distributed);
     (*forward_solve_coordinate_data)[0]->assign(*Explicit_Solver_Pointer_->all_node_coords_distributed);
   }
@@ -2495,6 +2504,7 @@ void FEA_Module_SGH::sgh_solve(){
           const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+          vec_array element_internal_energy = element_internal_energy_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
           const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
@@ -2513,12 +2523,20 @@ void FEA_Module_SGH::sgh_solve(){
             }
           }); // end parallel for
           Kokkos::fence();
+
+          //interface for element internal energies
+          FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+            element_internal_energy(elem_gid,0) = elem_sie(rk_level,elem_gid);
+          }); // end parallel for
+          Kokkos::fence();
         } //end view scope
 
         double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
         Explicit_Solver_Pointer_->host2dev_time += comm_time4-comm_time3;
         Explicit_Solver_Pointer_->communication_time += comm_time4-comm_time1;
         
+
+        (*forward_solve_internal_energy_data)[cycle+1]->assign(*element_internal_energy_distributed);
         (*forward_solve_velocity_data)[cycle+1]->assign(*Explicit_Solver_Pointer_->all_node_velocities_distributed);
         (*forward_solve_coordinate_data)[cycle+1]->assign(*Explicit_Solver_Pointer_->all_node_coords_distributed);
 
