@@ -470,12 +470,8 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
-  void compute_topology_optimization_adjoint(); //Force does not depend on node coords and velocity
-
   void compute_topology_optimization_adjoint_full(); //Force depends on node coords and velocity
-
-  void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
-
+  
   void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
   void applied_forces(const DCArrayKokkos <material_t> &material,
@@ -559,6 +555,7 @@ public:
   Teuchos::RCP<MV> psi_adjoint_vector_distributed;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_internal_energy_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> adjoint_vector_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> phi_adjoint_vector_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> psi_adjoint_vector_data;
@@ -573,8 +570,8 @@ public:
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Positions;
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Velocities;
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Energies;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Positions;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Velocities;
+  CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits> Power_Gradient_Positions;
+  CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits> Power_Gradient_Velocities;
   CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits> Power_Gradient_Energies;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Gradient_Matrix_Strides;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> DOF_to_Elem_Matrix_Strides;

@@ -146,14 +146,14 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
     corner_value_storage = Solver_Pointer->corner_value_storage;
     corner_vector_storage = Solver_Pointer->corner_vector_storage;
     relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
+    adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
+    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
+    psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_element_map, 1));
   }
 
   if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on||simparam.num_dims==2){
     node_masses_distributed = Teuchos::rcp(new MV(map, 1));
     ghost_node_masses_distributed = Teuchos::rcp(new MV(ghost_node_map, 1));
-    adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
-    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
-    psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_element_map, 1));
   }
   
   //setup output
@@ -185,9 +185,10 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
 
   if(simparam_dynamic_opt.topology_optimization_on){
     max_time_steps = BUFFER_GROW;
-    forward_solve_velocity_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     time_data.resize(max_time_steps+1);
+    forward_solve_velocity_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
+    forward_solve_internal_energy_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     psi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
@@ -195,6 +196,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
     for(int istep = 0; istep < max_time_steps+1; istep++){
       (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
       (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*forward_solve_internal_energy_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
       (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
       (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
       (*psi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
@@ -1848,6 +1850,7 @@ void FEA_Module_SGH::sgh_solve(){
         time_data.resize(max_time_steps+1);
         forward_solve_velocity_data->resize(max_time_steps+1);
         forward_solve_coordinate_data->resize(max_time_steps+1);
+        forward_solve_internal_energy_data->resize(max_time_steps+1);
         adjoint_vector_data->resize(max_time_steps+1);
         phi_adjoint_vector_data->resize(max_time_steps+1);
         psi_adjoint_vector_data->resize(max_time_steps+1);
@@ -1855,6 +1858,7 @@ void FEA_Module_SGH::sgh_solve(){
         for(int istep = old_max_forward_buffer; istep < max_time_steps+1; istep++){
           (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
           (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+          (*forward_solve_internal_energy_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
           (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
           (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
           (*psi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
@@ -2435,12 +2439,15 @@ void FEA_Module_SGH::sgh_solve(){
           time_data.resize(max_time_steps + BUFFER_GROW +1);
           forward_solve_velocity_data->resize(max_time_steps + BUFFER_GROW +1);
           forward_solve_coordinate_data->resize(max_time_steps + BUFFER_GROW +1);
+          forward_solve_internal_energy_data->resize(max_time_steps + BUFFER_GROW +1);
           adjoint_vector_data->resize(max_time_steps + BUFFER_GROW +1);
           phi_adjoint_vector_data->resize(max_time_steps + BUFFER_GROW +1);
+          psi_adjoint_vector_data->resize(max_time_steps + BUFFER_GROW +1);
           //assign a multivector of corresponding size to each new timestep in the buffer
           for(int istep = old_max_forward_buffer; istep < max_time_steps + BUFFER_GROW +1; istep++){
             (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
             (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+            (*forward_solve_internal_energy_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
             (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
             (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
             (*psi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
