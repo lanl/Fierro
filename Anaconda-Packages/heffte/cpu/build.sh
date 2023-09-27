@@ -12,11 +12,16 @@ fi
 source "$RECIPE_DIR/../../add-compiler-flags.sh"
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
+      -D BUILD_SHARED_LIBS=ON \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
       -D CMAKE_CXX_STANDARD:STRING=17 \
-      -D VECTOR_ARCH_FLAGS="$VECTOR_ARCH_FLAGS" \
+      -D Heffte_ENABLE_FFTW=ON \
       $CMAKE_ARGS \
       $SRC_DIR \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
+      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
 
 make -j 10 install
+
+source "$RECIPE_DIR/../make-relocatable.sh"

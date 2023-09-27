@@ -11,12 +11,20 @@ fi
 
 source "$RECIPE_DIR/../../add-compiler-flags.sh"
 
+export OMPI_CXX=nvcc
+
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
+      -D BUILD_SHARED_LIBS=ON \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
       -D CMAKE_CXX_STANDARD:STRING=17 \
-      -D VECTOR_ARCH_FLAGS="$VECTOR_ARCH_FLAGS" \
+      -D Heffte_ENABLE_CUDA=ON \
+      -D Heffte_DISABLE_GPU_AWARE_MPI=ON \
       $CMAKE_ARGS \
       $SRC_DIR \
-      -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
+      -D CMAKE_CXX_FLAGS=$PATCHED_CXXFLAGS \
+      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
 
 make -j 10 install
+
+source "$RECIPE_DIR/../make-relocatable.sh"

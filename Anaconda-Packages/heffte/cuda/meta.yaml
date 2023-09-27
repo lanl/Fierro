@@ -2,15 +2,16 @@
 {% set compiler_version = "10.4.0" %}
 
 package:
-  name: fierro-cpu
+  name: fierro-heffte-cuda
   version: {{ version }}
 
 source:
-  git_url: https://github.com/lanl/Fierro.git
+  git_url: https://github.com/icl-utk-edu/heffte.git
   git_depth: 1
 
 build:
   number: 1
+  noarch: False
   script_env:
     - PLATFORM={{ target_platform }}
 
@@ -19,17 +20,18 @@ requirements:
     - cmake >=3.17.0
     - {{ compiler('c') }} ={{ compiler_version }}
     - {{ compiler('cxx') }} ={{ compiler_version }}
+    - cuda-toolkit
     - openmpi
   host:
-    - _openmp_mutex
+    - cuda-cudart-dev
+    - libcublas-dev
+    - libcufft-dev
     - openmpi
-    - fierro-trilinos-cpu
-    - elements
   run:
-    - fierro-trilinos-cpu
-    - mpi
-
-#TODO: Add tests
+    - cuda-cudart
+    - libcufft
+    - libcublas
+    - openmpi
 
 about:
   home: https://github.com/lanl/Fierro
@@ -37,7 +39,7 @@ about:
   license_family: BSD
   license_file: LICENSE
   summary:
-    LANL's software for simulating quasi-static solid mechanics.
+    LANL Fierro's dependency for EVPFFT solutions
   description:
     Fierro (LANL code number C21030) is a modern C++ code designed to simulate quasi-static 
     solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, 

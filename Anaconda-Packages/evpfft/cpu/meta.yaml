@@ -2,7 +2,7 @@
 {% set compiler_version = "10.4.0" %}
 
 package:
-  name: fierro-cpu
+  name: fierro-evpfft
   version: {{ version }}
 
 source:
@@ -21,13 +21,19 @@ requirements:
     - {{ compiler('cxx') }} ={{ compiler_version }}
     - openmpi
   host:
-    - _openmp_mutex
     - openmpi
-    - fierro-trilinos-cpu
+    - fierro-heffte
+    - fftw=*=mpi_openmpi_hdeb57f9_6
+    - kokkos
+    - hdf5=*=mpi_openmpi_h457a7a6_3
     - elements
   run:
-    - fierro-trilinos-cpu
-    - mpi
+    - openmpi
+    - fierro-heffte
+    - fftw=*=mpi_openmpi_hdeb57f9_6
+    - kokkos
+    - hdf5=*=mpi_openmpi_h457a7a6_3
+    - elements
 
 #TODO: Add tests
 
@@ -37,12 +43,7 @@ about:
   license_family: BSD
   license_file: LICENSE
   summary:
-    LANL's software for simulating quasi-static solid mechanics.
   description:
-    Fierro (LANL code number C21030) is a modern C++ code designed to simulate quasi-static 
-    solid mechanics problems and transient, compressible material dynamic problems with Lagrangian methods, 
-    which have meshes with constant mass elements that move with the material, 
-    or with Eulerian methods, which have stationary meshes. 
   dev_url: https://github.com/lanl/Fierro
 
 extra:

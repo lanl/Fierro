@@ -16,7 +16,7 @@ fi
 # To compile for shared libs, ensure that -fno-visibility-inlines-hidden is set.
 # The default "-fvisibility-inlines-hidden" will not-export class-inlined functions. 
 # This causes certain Kokkos symbols to not be loaded correctly.
-source "${RECIPE_DIR}/../../add-compiler-flags.sh"
+source "$RECIPE_DIR/../../add-compiler-flags.sh"
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
@@ -38,15 +38,16 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D Trilinos_ENABLE_ALL_PACKAGES=OFF \
       -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF \
       -D Trilinos_ENABLE_TESTS=OFF \
-      -D MPI_C_COMPILER="${BUILD_PREFIX}/bin/mpicc" \
-      -D MPI_CXX_COMPILER="${BUILD_PREFIX}/bin/mpicxx" \
+      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
       $CMAKE_ARGS \
       $SRC_DIR \
+      -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
+      -D VECTOR_ARCH_FLAGS="$VECTOR_ARCH_FLAGS" \
       -D HAVE_TEUCHOS_LAPACKLARND=0 \
       -D HAVE_TEUCHOS_BLASFLOAT=0 \
       -D HAVE_GCC_ABI_DEMANGLE=0 \
       -D KOKKOSKERNELS_TPL_BLAS_RETURN_COMPLEX_EXITCODE=0 \
-      -D VECTOR_ARCH_FLAGS="${VECTOR_ARCH_FLAGS}"
 
 
 # These *=0 variables are set to override the 
