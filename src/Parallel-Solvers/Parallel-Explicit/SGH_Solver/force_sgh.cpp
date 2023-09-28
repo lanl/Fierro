@@ -330,22 +330,18 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         phi = pow(phi, n_coef);
 
         //  Mach number shock detector
-        double omega = 20.0;//20.0;    // weighting factor on Mach number
+        double omega = 20.0;    // weighting factor on Mach number
         double third = 1.0/3.0;
         double c_length = pow(vol, third); // characteristic length
         double alpha = fmin(1.0, omega * (c_length * fabs(div))/(elem_sspd(elem_gid) + fuzz) );
-        
-        // use Mach based detector with standard shock detector
 
-        // turn off dissipation in expansion
-        //alpha = fmax(-fabs(div0)/div0 * alpha, 0.0);  // this should be if(div0<0) alpha=alpha else alpha=0
-        
-        phi = alpha*phi;
-        
         // curl limiter on Q
-        double phi_curl = fmin(1.0, 1.0*fabs(div)/(mag_curl + fuzz));  // disable Q when vorticity is high
-        //phi = phi_curl*phi;
-        phi = 1;
+        double omega_curl = 1.0;  // increase this to increase robustness, but as it increases, additional dissipation will be introduce, blocking bending
+        double phi_curl = fmin(1.0, omega_curl*fabs(div)/(mag_curl + fuzz));  // disable Q when vorticity is high
+
+        phi = 1.0;  // for the future case of using a slope limiter approach
+        phi = fmin(phi_curl*phi, alpha*phi);// if noise arrises in simulation on really smooth flows, then try something like
+        phi = fmax(phi,0.001);  // ensuring a very small amount of dissipation for stability and robustness
 
         // ---- Calculate the Riemann force on each node ----
 
