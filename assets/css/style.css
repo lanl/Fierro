@@ -649,6 +649,11 @@ Banner
   opacity: .4;
 }
 
+.main-banner .container {
+  position: relative;
+  z-index: 10;
+}
+
 .main-banner h6 {
   font-size: 14px;
   color: #fff;
