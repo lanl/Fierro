@@ -106,7 +106,7 @@ export FIERRO_BUILD_CORES=$build_cores
 cd $scriptdir
 
 # Call the appropriate script to load modules based on the machine
-source "machines/$machine-env.sh"
+source machines/$machine-env.sh ${2}
 
 
 

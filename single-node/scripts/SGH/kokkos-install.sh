@@ -118,7 +118,7 @@ elif [ "$kokkos_build_type" = "hip" ]; then
 fi
 
 # Print CMake options for reference
-echo "CMake Options: ${cmake_options[@]}"
+echo "CMake Options: ${OPTIONS[@]}"
 
 # Configure Kokkos
 cmake "${OPTIONS[@]}" "${KOKKOS_SOURCE_DIR:-../}"

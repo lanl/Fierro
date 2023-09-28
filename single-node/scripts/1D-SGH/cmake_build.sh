@@ -99,7 +99,7 @@ OPTIONS=(
 -D BUILD_1D_KOKKOS_SGH=ON
 -D BUILD_EXPLICIT_SOLVER=OFF
 -D KOKKOS=ON
-#-D Kokkos_DIR=${KOKKOS_INSTALL_DIR}/${INSTALL_LIB}/cmake/Kokkos
+#-D Kokkos_DIR=${KOKKOS_INSTALL_DIR}/lib64/cmake/Kokkos
 -D CMAKE_PREFIX_PATH=${KOKKOS_INSTALL_DIR}
 )
 
@@ -122,7 +122,7 @@ elif [ "$kokkos_build_type" = "hip" ]; then
 fi
 
 # Print CMake options for reference
-echo "CMake Options: ${cmake_options[@]}"
+echo "CMake Options: ${OPTIONS[@]}"
 
 # Configure Kokkos
 echo "Building Kokkos..."
