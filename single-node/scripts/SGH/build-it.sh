@@ -72,6 +72,8 @@ fi
 
 echo "Your options of $machine $kokkos_build_type are valid! Let's start building"
 
-source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
-source kokkos-install.sh ${kokkos_build_type}
-source cmake_build.sh ${kokkos_build_type}
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
+source setup-env.sh ${1} ${2} ${3}
+source kokkos-install.sh ${2}
+source cmake_build.sh ${2}
