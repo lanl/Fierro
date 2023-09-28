@@ -12,8 +12,8 @@
     <link href="https://fonts.googleapis.com/css?family=Poppins:100,100i,200,200i,300,300i,400,400i,500,500i,600,600i,700,700i,800,800i,900,900i&display=swap" rel="stylesheet">
 
     <!-- Additional CSS Files -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css"/>
-    <!-- <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css"> -->
+    <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
+    <script src="assets/js/bootstrap.min.js"></script>
     
     <link rel="stylesheet" type="text/css" href="assets/css/font-awesome.css">
     
@@ -27,39 +27,36 @@
     <div class="container">
         <div class="row">
             <!-- sidebar, which will move to the top on a small screen -->
-            <div class="col-sm-3">
+            <!-- <div class="col-sm-3">
                 <nav id="toc" data-toggle="toc" class="sticky-top"></nav>
-            </div>
+            </div> -->
             <!-- main content area -->
-            <div class="col-sm-9">
-                <h1>Research</h1>
-                <div class="panel-group" id="citations">
-                    <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="panel-title">
-                          <a data-toggle="collapse" data-parent="#citations" href="#collapse0">
-                            Parallel 3D topology optimization with multiple constraints and objectives
-                          </a>
-                        </div>
+            <div class="col-sm-9 no-toc-content">
+                <h1 style="text-align: center;">Publications</h1>
+                <div class="accordion" id="citations">
+                    <div class="accordion-item">
+                      <div class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse0">
+                          Parallel 3D topology optimization with multiple constraints and objectives
+                        </button>
                       </div>
-                      <div id="collapse0" class="panel-collapse collapse in">
-                        <p class="panel-body">
+                      <div id="collapse0" class="accordion-collapse collapse show" data-bs-parent="#citations">
+                        <p class="accordion-body">
                           Diaz, A., Morgan, N., & Bernardin, J. (2023). Parallel 3D topology optimization with multiple constraints and objectives. 
                           In Optimization and Engineering. Springer Science and Business Media LLC. https://doi.org/10.1007/s11081-023-09852-6 
                           DOI: <a href="https://doi.org/10.1007/s11081-023-09852-6">10.1007/s11081-023-09852-6</a>.
                         </p>
                       </div>
                     </div>
-                    <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="panel-title">
-                          <a data-toggle="collapse" data-parent="#citations" href="#collapse1">
+
+                    <div class="accordion-item">
+                      <div class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1">
                             A Parallel Multi-Constraint Topology Optimization Solver
-                          </a>
+                          </button>
                         </div>
-                      </div>
-                      <div id="collapse1" class="panel-collapse collapse">
-                        <p class="panel-body">
+                        <div id="collapse1" class="accordion-collapse collapse" data-bs-parent="#citations">
+                          <p class="accordion-body">
                           Diaz, A., Morgan, N., & Bernardin, J. (2022). A Parallel Multi-Constraint Topology Optimization Solver. 
                           In Volume 2: 42nd Computers and Information in Engineering Conference (CIE). 
                           ASME 2022 International Design Engineering Technical Conferences and Computers and Information in Engineering Conference. 
@@ -68,16 +65,15 @@
                         </p>
                       </div>
                     </div>
-                    <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="panel-title">
-                          <a data-toggle="collapse" data-parent="#citations" href="#collapse2">
+
+                    <div class="accordion-item">
+                      <div class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2">
                             SWAGE: A 3D Arbitrary-Order Element Mesh Library to Support Diverse Numerical Methods
-                          </a>
-                          </div>
-                      </div>
-                      <div id="collapse2" class="panel-collapse collapse">
-                        <p class="panel-body">
+                          </button>
+                        </div>
+                        <div id="collapse2" class="accordion-collapse collapse" data-bs-parent="#citations">
+                          <p class="accordion-body">
                           Morgan, N. R., Moore, J., Kiviaho, J., & Diaz, A. (2022). 
                           SWAGE: A 3D Arbitrary-Order Element Mesh Library to Support Diverse Numerical Methods. 
                           In Volume 2: 42nd Computers and Information in Engineering Conference (CIE). 
@@ -87,16 +83,15 @@
                         </p>
                       </div>
                     </div>
-                    <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="panel-title">
-                          <a data-toggle="collapse" data-parent="#citations" href="#collapse3">
+
+                    <div class="accordion-item">
+                      <div class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3">
                             MATAR: A performance portability and productivity implementation of data-oriented design with Kokkos
-                          </a>
-                          </div>
-                      </div>
-                      <div id="collapse3" class="panel-collapse collapse">
-                        <p class="panel-body">
+                          </button>
+                        </div>
+                        <div id="collapse3" class="accordion-collapse collapse" data-bs-parent="#citations">
+                          <p class="accordion-body">
                           Dunning, D. J., Morgan, N. R., Moore, J. L., Nelluvelil, E., Tafolla, T. V., & Robey, R. W. (2021). 
                           MATAR: A performance portability and productivity implementation of data-oriented design with Kokkos. 
                           In Journal of Parallel and Distributed Computing (Vol. 157, pp. 86–104). Elsevier BV. 
@@ -104,16 +99,15 @@
                         </p>
                       </div>
                     </div>
-                    <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="panel-title">
-                          <a data-toggle="collapse" data-parent="#citations" href="#collapse4">
+
+                    <div class="accordion-item">
+                      <div class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse4">
                             Viscoplastic self-consistent formulation as generalized material model for solid mechanics applications
-                          </a>
-                          </div>
-                      </div>
-                      <div id="collapse4" class="panel-collapse collapse">
-                        <p class="panel-body">
+                          </button>
+                        </div>
+                        <div id="collapse4" class="accordion-collapse collapse" data-bs-parent="#citations">
+                          <p class="accordion-body">
                           Zecevic, M., Lebensohn, R. A., Rogers, M., Moore, J., Chiravalle, V., Lieberman, E., Dunning, D., Shipman, G., Knezevic, M., & Morgan, N. (2021). 
                           Viscoplastic self-consistent formulation as generalized material model for solid mechanics applications. In Applications in Engineering Science (Vol. 6, p. 100040). 
                           Elsevier BV. 
@@ -122,16 +116,14 @@
                       </div>
                     </div>
                     
-                    <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="panel-title">
-                          <a data-toggle="collapse" data-parent="#citations" href="#collapse5">
+                    <div class="accordion-item">
+                      <div class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse5">
                             ELEMENTS: A high-order finite element library in C++
-                          </a>
-                          </div>
-                      </div>
-                      <div id="collapse5" class="panel-collapse collapse">
-                        <p class="panel-body">
+                          </button>
+                        </div>
+                        <div id="collapse5" class="accordion-collapse collapse" data-bs-parent="#citations">
+                          <p class="accordion-body">
                           Moore, J. L., Morgan, N. R., & Horstemeyer, M. F. (2019). ELEMENTS: A high-order finite element library in C++ 
                           In SoftwareX (Vol. 10, p. 100257). Elsevier BV.
                           DOI: <a href="https://doi.org/10.1016/j.softx.2019.100257">10.1016/j.softx.2019.100257</a>. 
@@ -139,15 +131,14 @@
                       </div>
                     </div>
                     
-                    <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="panel-title">
-                          <a data-toggle="collapse" data-parent="#citations" href="#collapse6">
+                    <div class="accordion-item">
+                      <div class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse6">
                             Multidimensional Staggered Grid Residual Distribution Scheme for Lagrangian Hydrodynamics
-                          </a>
-                          </div>
-                      </div>
-                      <div id="collapse6" class="panel-collapse collapse">
+                          </button>
+                        </div>
+                        <div id="collapse6" class="accordion-collapse collapse" data-bs-parent="#citations">
+                          <p class="accordion-body">
                         <p class="panel-body">Abgrall, R., Lipnikov, K., Morgan, N., & Tokareva, S. (2020).
                           Multidimensional Staggered Grid Residual Distribution Scheme for Lagrangian Hydrodynamics. In SIAM Journal on Scientific Computing (Vol. 42, Issue 1, pp. A343–A370). 
                           Society for Industrial & Applied Mathematics (SIAM). 
@@ -156,16 +147,14 @@
                       </div>
                     </div>
                     
-                    <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="panel-title">
-                          <a data-toggle="collapse" data-parent="#citations" href="#collapse7">
+                    <div class="accordion-item">
+                      <div class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse7">
                             A 3D finite element ALE method using an approximate Riemann solution
-                          </a>
-                          </div>
-                      </div>
-                      <div id="collapse7" class="panel-collapse collapse">
-                        <p class="panel-body">
+                          </button>
+                        </div>
+                        <div id="collapse7" class="accordion-collapse collapse" data-bs-parent="#citations">
+                          <p class="accordion-body">
                           Abgrall, R., Lipnikov, K., Morgan, N., & Tokareva, S. (2020).
                           Chiravalle, V. P., & Morgan, N. R. (2016). 
                           A 3D finite element ALE method using an approximate Riemann solution. In International Journal for Numerical Methods in Fluids (Vol. 83, Issue 8, pp. 642–663). Wiley. 
@@ -174,16 +163,14 @@
                       </div>
                     </div>
                     
-                    <div class="panel panel-default">
-                      <div class="panel-heading">
-                        <div class="panel-title">
-                          <a data-toggle="collapse" data-parent="#citations" href="#collapse8">
+                    <div class="accordion-item">
+                      <div class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse8">
                             A Lagrangian staggered grid Godunov-like approach for hydrodynamics
-                          </a>
-                          </div>
-                      </div>
-                      <div id="collapse8" class="panel-collapse collapse">
-                        <p class="panel-body">
+                          </button>
+                        </div>
+                        <div id="collapse8" class="accordion-collapse collapse" data-bs-parent="#citations">
+                          <p class="accordion-body">
                           Morgan, N. R., Lipnikov, K. N., Burton, D. E., & Kenamond, M. A. (2014). 
                           A Lagrangian staggered grid Godunov-like approach for hydrodynamics. 
                           In Journal of Computational Physics (Vol. 259, pp. 568–597). 
@@ -210,7 +197,5 @@
 
     <!-- Bootstrap -->
     <script src="assets/js/popper.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
-    <script src="assets/js/bootstrap-toc.min.js"></script>
 </body>
 </html>

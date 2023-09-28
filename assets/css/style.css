@@ -832,6 +832,26 @@ Project Description
 }
 
 /*
+Research
+*/
+
+.accordion-button {
+  font-size: 18px;
+  font-weight: 200;
+  background-color: ghostwhite;
+}
+
+.accordion-body {
+  padding-left: 3em;
+  font-weight: 100;
+}
+
+.no-toc-content {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/*
 ---------------------------------------------
 User Groups
 ---------------------------------------------
