@@ -567,76 +567,17 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
 
     //compute adjoint vector for this data point; use velocity midpoint
     //view scope
-    /*
-    {
-      const_vec_array previous_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-
-      get_force_vgradient_sgh(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              1,
-                              cycle);
-
-      get_force_ugradient_sgh(material,
-                              mesh,
-                              node_coords,
-                              node_vel,
-                              elem_den,
-                              elem_sie,
-                              elem_pres,
-                              elem_stress,
-                              elem_sspd,
-                              elem_vol,
-                              elem_div,
-                              elem_mat_id,
-                              1,
-                              cycle);
-
-      //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
-      const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      //const_vec_array current_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      const_vec_array previous_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      //const_vec_array current_force_gradient_velocity = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      //compute gradient of force with respect to velocity
-  
-      const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-
-      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-        real_t rate_of_change;
-        for (int idim = 0; idim < num_dim; idim++){
-          rate_of_change = previous_velocity_vector(node_gid,idim)- 
-                            previous_adjoint_vector(node_gid,idim)*previous_force_gradient_velocity(node_gid,idim)/node_mass(node_gid)-
-                            phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
-          current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
-          rate_of_change = -previous_adjoint_vector(node_gid,idim)*previous_force_gradient_position(node_gid,idim);
-          phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
-        } 
-      }); // end parallel for
-      Kokkos::fence();
-    } //end view scope
-    */
-    //view scope
     {
       
-      //set velocity and position for this timestep
+      //set velocity, internal energy, and position for this timestep
       const_vec_array previous_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       
       const_vec_array previous_coordinate_vector = (*forward_solve_coordinate_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       const_vec_array current_coordinate_vector = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      
+      const_vec_array previous_element_internal_energy = (*forward_solve_internal_energy_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      const_vec_array current_element_internal_energy = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
       //interface of arrays for current implementation of force calculation
 
@@ -645,6 +586,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
           node_vel(rk_level,node_gid,idim) = previous_velocity_vector(node_gid,idim);
           node_coords(rk_level,node_gid,idim) = previous_coordinate_vector(node_gid,idim);
         }
+      });
+      Kokkos::fence();
+
+      FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+        elem_sie(rk_level,elem_gid) = previous_element_internal_energy(elem_gid,0);
       });
       Kokkos::fence();
 
@@ -663,8 +609,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               1,
                               cycle);
 
-     /* get_force_ugradient_sgh(material,
-                              mesh,
+      get_force_ugradient_sgh(material,
+                              *mesh,
                               node_coords,
                               node_vel,
                               elem_den,
@@ -677,7 +623,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_mat_id,
                               1,
                               cycle);
-      */
+      
 
       //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
       const_vec_array previous_force_gradient_position = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadOnly);
@@ -687,11 +633,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       //compute gradient of force with respect to velocity
   
       const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      vec_array midpoint_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      vec_array phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      const_vec_array psi_previous_adjoint_vector =  (*psi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+      vec_array midpoint_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array psi_midpoint_adjoint_vector =  psi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       //half step update for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -701,25 +647,37 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         for (int idim = 0; idim < num_dim; idim++){
           matrix_contribution = 0;
           //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim%num_dim,idof);
+          /*
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim,idof);
           }
+          */
+          matrix_contribution = previous_adjoint_vector(node_gid,idim);
           rate_of_change = previous_velocity_vector(node_gid,idim)- 
                             matrix_contribution/node_mass(node_gid)-
                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + previous_adjoint_vector(node_gid,idim);
           matrix_contribution = 0;
           //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
           }
           rate_of_change = -matrix_contribution;
+          //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
           phi_midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
       Kokkos::fence();
+
+      boundary_adjoint(*mesh, boundary,midpoint_adjoint_vector, phi_midpoint_adjoint_vector, psi_midpoint_adjoint_vector);
+      comm_adjoint_vectors(cycle);
+      //swap names to get ghost nodes for the midpoint vectors
+      vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      midpoint_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       //full step update with midpoint gradient for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -729,25 +687,32 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         for (int idim = 0; idim < num_dim; idim++){
           matrix_contribution = 0;
           //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim%num_dim,idof);
+          /*
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim,idof);
           }
+          */
+          matrix_contribution = midpoint_adjoint_vector(node_gid,idim);
           rate_of_change =  (previous_velocity_vector(node_gid,idim) + current_velocity_vector(node_gid,idim))/2- 
                             matrix_contribution/node_mass(node_gid)-
                             phi_midpoint_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
           matrix_contribution = 0;
           //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
           }
           rate_of_change = -matrix_contribution;
+          //rate_of_change = -0.0000001*midpoint_adjoint_vector(node_gid,idim);
           phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
       Kokkos::fence();
+
+      
+      boundary_adjoint(*mesh, boundary,current_adjoint_vector, phi_current_adjoint_vector, psi_midpoint_adjoint_vector);
 
     } //end view scope
 
@@ -1323,4 +1288,105 @@ void FEA_Module_SGH::init_assembly(){
   */
   //distributed_force_gradient_positions->describe(*fos,Teuchos::VERB_EXTREME);
   //distributed_force_gradient_velocities->describe(*fos,Teuchos::VERB_EXTREME);
+}
+
+/* ----------------------------------------------------------------------
+   Enforce boundary conditions on the adjoint vectors
+------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
+                       const DCArrayKokkos <boundary_t> &boundary,
+                       vec_array &node_adjoint,
+                       vec_array &node_phi_adjoint,
+                       vec_array &node_psi_adjoint){
+
+    //error and debug flag
+    //DCArrayKokkos<bool> print_flag(1, "print_flag");
+    //print_flag.host(0) = false;
+    //print_flag.update_device();
+   
+    const size_t rk_level = simparam.rk_num_bins - 1; 
+    int num_dims = simparam.num_dims;
+    // Loop over boundary sets
+    for (size_t bdy_set=0; bdy_set<num_bdy_sets; bdy_set++){
+        
+        // Loop over boundary nodes in a boundary set
+        FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
+                
+            // reflected (boundary array is on the device)
+            if (boundary(bdy_set).condition_type == BOUNDARY_HYDRO_CONDITION::reflected){
+            
+                // directions with hydro_bc:
+                // x_plane  = 0,
+                // y_plane  = 1,
+                // z_plane  = 2,
+                size_t direction = boundary(bdy_set).planar_surface_index();
+                
+                size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
+                    
+                // Set velocity to zero in that directdion
+                if(bdy_node_gid<nlocal_nodes)
+                  node_adjoint(bdy_node_gid, direction) = 0.0;
+                //node_phi_adjoint(bdy_node_gid, direction) = 0.0;
+                        
+            }
+            else if (boundary(bdy_set).condition_type == BOUNDARY_HYDRO_CONDITION::fixed){
+                
+                size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
+                
+                //debug clause
+                //if(bdy_node_gid==549412) print_flag(0) = true;
+
+                for(size_t dim=0; dim < num_dims; dim++){
+                    // Set velocity to zero
+                  if(bdy_node_gid<nlocal_nodes)
+                    node_adjoint(bdy_node_gid, dim) = 0.0;
+                  //node_phi_adjoint(bdy_node_gid, dim) = 0.0;
+                }
+                
+            }
+            
+            
+                
+        }); // end for bdy_node_lid
+	    
+    } // end for bdy_set
+    
+    //debug check
+    //print_flag.update_host();
+    //if(print_flag.host(0)) std::cout << "found boundary node with id 549412" << std::endl;
+    return;
+} // end boundary_velocity function
+
+/* ----------------------------------------------------------------------
+   Communicate updated nodal adjoint vectors to ghost nodes
+------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::comm_adjoint_vectors(int cycle){
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  //Tpetra::Import<LO, GO> importer(map, all_node_map);
+  
+  //comms to get ghosts
+  (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  (*psi_adjoint_vector_data)[cycle]->doImport(*psi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
 }
