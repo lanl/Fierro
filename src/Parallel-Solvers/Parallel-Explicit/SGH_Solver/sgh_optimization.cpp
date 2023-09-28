@@ -644,30 +644,66 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         real_t rate_of_change;
         real_t matrix_contribution;
         size_t dof_id;
+        size_t elem_id;
         for (int idim = 0; idim < num_dim; idim++){
+
+          //EQUATION 1
           matrix_contribution = 0;
           //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-          /*
           for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
             dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
             matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim,idof);
           }
-          */
-          matrix_contribution = previous_adjoint_vector(node_gid,idim);
+
+          //compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+          for(int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid*num_dim+idim); ielem++){
+            elem_id = elems_in_node(node_gid,ielem);
+            matrix_contribution += psi_previous_adjoint_vector(elem_id,0)*Power_Gradient_Velocities(node_gid*num_dim+idim,ielem);
+          }
+          
           rate_of_change = previous_velocity_vector(node_gid,idim)- 
                             matrix_contribution/node_mass(node_gid)-
                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + previous_adjoint_vector(node_gid,idim);
+
+          //EQUATION 2
           matrix_contribution = 0;
           //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
           for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
             dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
-            matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
+            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
           }
+
+          //compute resulting row of transpose of power gradient w.r.t displacement matrix right multiplied by psi adjoint vector
+          for(int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid*num_dim+idim); ielem++){
+            elem_id = elems_in_node(node_gid,ielem);
+            matrix_contribution += psi_previous_adjoint_vector(elem_id,0)*Power_Gradient_Positions(node_gid*num_dim+idim,ielem);
+          }
+          
           rate_of_change = -matrix_contribution;
           //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
           phi_midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + phi_previous_adjoint_vector(node_gid,idim);
+
         } 
+      }); // end parallel for
+      Kokkos::fence();
+
+      //half step update for RK2 scheme
+      FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+        real_t rate_of_change;
+        real_t matrix_contribution;
+        size_t dof_id;
+        size_t elem_id;
+        //EQUATION 3
+        matrix_contribution = 0;
+        //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
+        for(int idof = 0; idof < num_nodes_in_elem*num_dim; idof++){
+          dof_id = nodes_in_elem(elem_gid,idof/num_dim)*num_dim + idof%num_dim;
+          matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Energies(elem_gid,idof);
+        }
+        rate_of_change = -(matrix_contribution + psi_previous_adjoint_vector(elem_gid,0)*Power_Gradient_Energies(elem_gid))/elem_mass(elem_gid);
+        //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
+        psi_midpoint_adjoint_vector(elem_gid,0) = -rate_of_change*global_dt/2 + psi_previous_adjoint_vector(elem_gid,0);
       }); // end parallel for
       Kokkos::fence();
 
@@ -676,38 +712,75 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       //swap names to get ghost nodes for the midpoint vectors
       vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array psi_current_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       midpoint_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      psi_midpoint_adjoint_vector =  (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       //full step update with midpoint gradient for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         real_t rate_of_change;
         real_t matrix_contribution;
         size_t dof_id;
+        size_t elem_id;
         for (int idim = 0; idim < num_dim; idim++){
+          //EQUATION 1
           matrix_contribution = 0;
           //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-          /*
+          
           for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
             dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
             matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim,idof);
           }
-          */
-          matrix_contribution = midpoint_adjoint_vector(node_gid,idim);
+
+          //compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
+          for(int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid*num_dim+idim); ielem++){
+            elem_id = elems_in_node(node_gid,ielem);
+            matrix_contribution += psi_midpoint_adjoint_vector(elem_id,0)*Power_Gradient_Velocities(node_gid*num_dim+idim,ielem);
+          }
+          
           rate_of_change =  (previous_velocity_vector(node_gid,idim) + current_velocity_vector(node_gid,idim))/2- 
                             matrix_contribution/node_mass(node_gid)-
                             phi_midpoint_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
+
+          //EQUATION 2
           matrix_contribution = 0;
           //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
           for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
             dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
-            matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
+            matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
           }
+
+          //compute resulting row of transpose of power gradient w.r.t displacement matrix right multiplied by psi adjoint vector
+          for(int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid*num_dim+idim); ielem++){
+            elem_id = elems_in_node(node_gid,ielem);
+            matrix_contribution += psi_midpoint_adjoint_vector(elem_id,0)*Power_Gradient_Positions(node_gid*num_dim+idim,ielem);
+          }
+
           rate_of_change = -matrix_contribution;
           //rate_of_change = -0.0000001*midpoint_adjoint_vector(node_gid,idim);
           phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
-        } 
+        }
+      }); // end parallel for
+      Kokkos::fence();
+
+      //half step update for RK2 scheme
+      FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+        real_t rate_of_change;
+        real_t matrix_contribution;
+        size_t dof_id;
+        size_t elem_id;
+        //EQUATION 3
+        matrix_contribution = 0;
+        //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
+        for(int idof = 0; idof < num_nodes_in_elem*num_dim; idof++){
+          dof_id = nodes_in_elem(elem_gid,idof/num_dim)*num_dim + idof%num_dim;
+          matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Energies(elem_gid,idof);
+        }
+        rate_of_change = -(matrix_contribution + psi_midpoint_adjoint_vector(elem_gid,0)*Power_Gradient_Energies(elem_gid))/elem_mass(elem_gid);
+        //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
+        psi_current_adjoint_vector(elem_gid,0) = -rate_of_change*global_dt/2 + psi_midpoint_adjoint_vector(elem_gid,0);
       }); // end parallel for
       Kokkos::fence();
 
@@ -1222,16 +1295,23 @@ void FEA_Module_SGH::init_assembly(){
 
   Gradient_Matrix_Strides.update_host();
   
-  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Gradient_Matrix_Strides);
+  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits>(Gradient_Matrix_Strides);
   Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   Force_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   //needs different graph of node to elem rather than node to node
-  DOF_to_Elem_Matrix_Strides.get_kokkos_dual_view().d_view = elems_in_node.mystrides_;
+  //DOF_to_Elem_Matrix_Strides.get_kokkos_dual_view().d_view = elems_in_node.mystrides_;
+  Kokkos::View<size_t *,array_layout, device_type, memory_traits> node_to_elem_strides = elems_in_node.mystrides_;
+  DOF_to_Elem_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes*num_dim);
+  FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
+    for(int idim = 0; idim < num_dim; idim++){
+      DOF_to_Elem_Matrix_Strides(inode*num_dim + idim) = node_to_elem_strides(inode);
+    }
+  }); // end parallel for
   DOF_to_Elem_Matrix_Strides.update_host();
-  Force_Gradient_Energies = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(DOF_to_Elem_Matrix_Strides);
+  Force_Gradient_Energies = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem, num_nodes_in_elem*num_dim);
   Power_Gradient_Energies = CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits>(rnum_elem);
-  Power_Gradient_Positions = CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits>(rnum_elem, num_nodes_in_elem);
-  Power_Gradient_Velocities = CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits>(rnum_elem, num_nodes_in_elem);
+  Power_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(DOF_to_Elem_Matrix_Strides);
+  Power_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(DOF_to_Elem_Matrix_Strides);
 
   //set stiffness Matrix Graph
   //debug print
@@ -1380,7 +1460,6 @@ void FEA_Module_SGH::comm_adjoint_vectors(int cycle){
   //comms to get ghosts
   (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
   (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
-  (*psi_adjoint_vector_data)[cycle]->doImport(*psi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
   
