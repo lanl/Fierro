@@ -64,7 +64,7 @@ echo "Heffte Build Type: $heffte_build_type"
 echo "Kokkos Build Type: $kokkos_build_type"
 
 # Determine the directory of the current script
-SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 echo "Script directory: ${SCRIPT_DIR}"
 
 # Determine the parent directory of the script's directory
@@ -98,6 +98,7 @@ HEFFTE_INSTALL_DIR="$PARENT_DIR/heffte/install_heffte_$heffte_build_type"
 KOKKOS_INSTALL_DIR="$PARENT_DIR/kokkos/install_kokkos_$kokkos_build_type"
 HDF5_INSTALL_DIR="$PARENT_DIR/hdf5/install"
 MATAR_SOURCE_DIR="$PARENT_DIR/MATAR/src"
+
 
 # Configure EVPFFT using CMake
 cmake_options=(

@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # Determine the script's directory
-SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 echo "Script location: $SCRIPT_DIR"
 
 # Determine the parent directory of the script's directory
