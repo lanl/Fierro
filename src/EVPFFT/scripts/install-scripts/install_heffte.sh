@@ -73,7 +73,7 @@ cmake_options=(
 
 if [ "$build_type" == "fftw" ]; then
     cmake_options+=(
-        -D Heffte_ENABLE_AVX=ON
+        #-D Heffte_ENABLE_AVX=ON
         #-D Heffte_ENABLE_AVX512=ON
         -D Heffte_ENABLE_FFTW=ON
         #-D FFTW_ROOT="$FFTW_DIR"
