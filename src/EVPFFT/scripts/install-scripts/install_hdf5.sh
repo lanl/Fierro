@@ -1,7 +1,41 @@
 #!/bin/bash -e
 
+show_help() {
+    echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
+    echo "Valid options:"
+    echo "  --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)"
+    echo "  --help: Display this help message"
+    return 1
+}
+
+# Initialize variables with default values
+num_jobs=1
+
+# Parse command line arguments
+for arg in "$@"; do
+    case "$arg" in
+        --num_jobs=*)
+            num_jobs="${arg#*=}"
+            if ! [[ "$num_jobs" =~ ^[0-9]+$ ]]; then
+                echo "Error: Invalid --num_jobs value. Must be a positive integer."
+                show_help
+                return 1
+            fi
+            ;;
+        --help)
+            show_help
+            return 1
+            ;;
+        *)
+            echo "Error: Invalid argument or value specified."
+            show_help
+            return 1
+            ;;
+    esac
+done
+
 # Determine the script's directory
-SCRIPT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "Script location: $SCRIPT_DIR"
 
 # Determine the parent directory of the script's directory
@@ -44,7 +78,7 @@ cmake "${cmake_options[@]}" -B "$HDF5_BUILD_DIR" -S "$HDF5_SOURCE_DIR"
 
 # Build hdf5
 echo "Building hdf5..."
-make -C "$HDF5_BUILD_DIR" -j
+make -C "$HDF5_BUILD_DIR" -j"$num_jobs"
 
 # Install hdf5
 echo "Installing hdf5..."

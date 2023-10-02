@@ -43,12 +43,6 @@ message("  NON_SCHMID_EFFECTS: ${NON_SCHMID_EFFECTS}")
 message("  ABSOLUTE_NO_OUTPUT: ${ABSOLUTE_NO_OUTPUT}")
 message("  ENABLE_PROFILING: ${ENABLE_PROFILING}")
 
-# Use the options in your CMake configuration as needed
-add_definitions(-DNPHMX=${NPHMX}
-                 -DNMODMX=${NMODMX}
-                 -DNTWMMX=${NTWMMX}
-                 -DNSYSMX=${NSYSMX})
-
 if(TWO_SIGN_SLIP_SYSTEMS)
   add_definitions(-DTWO_SIGN_SLIP_SYSTEMS=1)
 endif()
