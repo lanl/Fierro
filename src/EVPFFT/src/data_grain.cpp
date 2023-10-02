@@ -317,7 +317,7 @@ void EVPFFT::read_vtk_lattice_structure(const std::string & filetext)
     for (int jj = 0; jj < npts2_g; jj++) {
       for (int ii = 0; ii < npts1_g; ii++) {
       
-        ur2 >> grid_value; CLEAR_LINE(ur2);
+        ur2 >> grid_value;
         if ( (ii >= local_start1 and ii <= local_end1) and
              (jj >= local_start2 and jj <= local_end2) and
              (kk >= local_start3 and kk <= local_end3) )
