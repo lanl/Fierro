@@ -118,7 +118,7 @@ To change these default options include the `-D OPTION=<value>` in the `cmake` o
 
 Example for input files needed to run EVPFFT for lattice structure homogenization is shown in `example_input_files/lattice_input_files`. In that file you will see how to set up evpft input file, elastic and plastic parameter files.
 
-Provide a `STRUCTURED_POINTS` vtk file type that contains information about which grid point is solid (1) or void (0), example is shown in `example_input_files/lattice_input_files/void_in_solid.vtk`.
+Provide a vtk file type that contains information about which grid point is solid (1) or void (0), example is shown in `example_input_files/lattice_input_files/void_in_solid.vtk`.
 
 Run EVPFFT as:
 ```
