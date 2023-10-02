@@ -1,10 +1,10 @@
 #!/bin/bash -e
-cd ${basdir}
+cd ${basedir}
 
 # Check if the 'hdf5' directory exists and is not empty in the parent directory; if not, clone it
-if [ ! -d "$HDF5_SOURCE_DIR" ] && [ ! -z "$(ls -A ${HDF5_SOURCE_DIR})" ]; then
+if [ ! -d "${HDF5_SOURCE_DIR}" ]; then
   echo "Directory 'hdf5' does not exist in '${basedir}', downloading 'hdf5'...."
-  git clone https://github.com/HDFGroup/hdf5.git
+  git clone https://github.com/HDFGroup/hdf5.git ${HDF5_SOURCE_DIR}
 else
   echo "Directory 'hdf5' exists in '${basedir}', skipping 'hdf5' download"
 fi
@@ -29,7 +29,8 @@ cmake_options=(
 echo "CMake Options: ${cmake_options[@]}"
 
 # Configure hdf5
-cmake "${cmake_options[@]}" "${HDF5_SOURCE_DIR:-../}"
+#cmake "${cmake_options[@]}" "${HDF5_SOURCE_DIR:-../}"
+cmake "${cmake_options[@]}" -B "${HDF5_BUILD_DIR}" -S "${HDF5_SOURCE_DIR}"
 
 # Build hdf5
 echo "Building hdf5..."

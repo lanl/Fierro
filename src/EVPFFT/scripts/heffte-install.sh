@@ -12,8 +12,8 @@ show_help() {
 }
 
 # Check for the number of arguments
-if [ $# -ne 1 ]; then
-    echo "Error: Please provide exactly one argument."
+if [ $# -ne 2 ]; then
+    echo "Error: Please provide exactly two arguments."
     show_help
     return 1
 fi
@@ -65,11 +65,11 @@ done
 echo "Heffte build type will be: $heffte_build_type"
 
 # Check if the 'heffte' directory exists and is not empty in the parent directory; if not, clone it
-if [ ! -d "$HEFFTE_SOURCE_DIR" ] && [ ! -z "$(ls -A ${HEFFTE_SOURCE_DIR})" ]; then
+if [ ! -d "${HEFFTE_SOURCE_DIR}" ] && [ -z "$(ls -A ${HEFFTE_SOURCE_DIR})" ]; then
   echo "Directory 'heffte' does not exist in '${basedir}', downloading 'heffte'...."
   git clone https://github.com/icl-utk-edu/heffte.git
 else
-  echo "Directory 'heffte' exists in '$PARENT_DIR', skipping 'heffte' download"
+  echo "Directory 'heffte' exists in '${HEFFTE_SOURCE_DIR}', skipping 'heffte' download"
 fi
 
 echo "Removing stale heffte build and installation directory since these are machine dependant and don't take long to build/install"

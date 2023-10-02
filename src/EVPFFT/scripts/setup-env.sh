@@ -103,23 +103,23 @@ export basedir=${topdir}
 export srcdir=${basedir}/src
 export matardir=${basedir}/matar
 export builddir=${basedir}/${my_build}
-export installdir=${basedir}/install-kokkos/install-kokkos-${my_device}
+export installdir=${basedir}/install
 
 export EVPFFT_BASE_DIR=${basedir}
-export EVPFFT_SOURCE_DIR=${srcdir}
+export EVPFFT_SOURCE_DIR=${EVPFFT_BASE_DIR}/src
 export EVPFFT_BUILD_DIR=${builddir}
 
 export KOKKOS_SOURCE_DIR=${matardir}/src/Kokkos/kokkos
 export KOKKOS_BUILD_DIR=${builddir}/kokkos
-export KOKKOS_INSTALL_DIR=${installdir}/kokkos
+export KOKKOS_INSTALL_DIR=${installdir}/install-kokkos-${my_device}
 
 export HEFFTE_SOURCE_DIR=${basedir}/heffte
 export HEFFTE_BUILD_DIR=${builddir}/heffte
 export HEFFTE_INSTALL_DIR=${installdir}/heffte
 
-export HDF5_SOURCE_DIR=${basedir}/hdft
-export HDF5_BUILD_DIR=${builddir}/hdft
-export HDF5_INSTALL_DIR=${installdir}/hdft
+export HDF5_SOURCE_DIR=${basedir}/hdf5
+export HDF5_BUILD_DIR=${builddir}/hdf5
+export HDF5_INSTALL_DIR=${installdir}/hdf5
 
 export EVPFFT_BUILD_CORES=$build_cores
 

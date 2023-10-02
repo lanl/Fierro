@@ -59,16 +59,18 @@ fi
 ### Assign names as relevant
 
 mygcc="gcc/9.4.0"
-myclang="clang/13.0.0"
+#myclang="clang/13.0.0"
 mycuda="cuda/11.4.0"
 myrocm="rocm"
+mympi="mpich/3.3.2-gcc_9.4.0"
 
 module purge
+module load ${mympi}
 if [ "$kokkos_build_type" = "cuda" ]; then
     module load ${mygcc}
     module load ${mycuda}
 elif [ "$kokkos_build_type" = "hip" ]; then
-    module load ${myclang}
+    module load ${mygcc}
     module load ${myrocm}
 else
     module load ${mygcc}

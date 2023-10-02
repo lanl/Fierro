@@ -1,5 +1,5 @@
 #!/bin/bash -e
-cd ${basdir}
+cd ${basedir}
 
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
@@ -61,12 +61,13 @@ fi
 # If all arguments are valid, you can use them in your script as needed
 echo "Kokkos Build Type: $kokkos_build_type"
 
-# Check if the 'kokkos' directory exists and is not empty in the parent directory; if not, clone it
-if [ ! -d "$KOKKOS_SOURCE_DIR" ] && [ ! -z "$(ls -A ${KOKKOS_SOURCE_DIR})" ]; then
-  echo "Directory 'kokkos' does not exist in '${basedir}', downloading 'kokkos'...."
-  git clone https://github.com/kokkos/kokkos.git
+# Check if the 'kokkos' directory exists (in the Matar directory) and is not empty in the parent directory; if not, clone it
+#if [ ! -d "$KOKKOS_SOURCE_DIR" ] && [ ! -z "$(ls -A ${KOKKOS_SOURCE_DIR})" ]; then
+if [ ! -d "$KOKKOS_SOURCE_DIR" ]; then
+  echo "Directory 'kokkos' does not exist in '${KOKKOS_SOURCE_DIR}', downloading 'kokkos' here: ${PWD}...."
+  git clone --recursive https://github.com/lanl/MATAR.git ${matardir}
 else
-  echo "Directory 'kokkos' exists in '${basedir}', skipping 'kokkos' download"
+  echo "Directory 'kokkos' exists in '${KOKKOS_SOURCE_DIR}', skipping 'kokkos' download"
 fi
 
 echo "Removing stale Kokkos build and installation directory since these are machine dependant and don't take long to build/install"
