@@ -1004,8 +1004,6 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
 
   compute_topology_optimization_adjoint_full();
 
-  
-
   { //view scope
     vec_array design_gradients = design_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     const_vec_array design_densities = design_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
@@ -1185,9 +1183,6 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
           Kokkos::fence();
           
         } //end view scope
-
-        
-      
     }
 
     //compute initial condition contribution
