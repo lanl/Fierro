@@ -8,7 +8,6 @@ if [ ! -d "${HDF5_SOURCE_DIR}" ]; then
 else
   echo "Directory 'hdf5' exists in '${basedir}', skipping 'hdf5' download"
 fi
-cd ${HDF5_BUILD_DIR}
 
 # Check to avoid reinstalling HDF5 which might take time
 if [ -d "$HDF5_INSTALL_DIR" ]; then
@@ -31,6 +30,8 @@ echo "CMake Options: ${cmake_options[@]}"
 # Configure hdf5
 #cmake "${cmake_options[@]}" "${HDF5_SOURCE_DIR:-../}"
 cmake "${cmake_options[@]}" -B "${HDF5_BUILD_DIR}" -S "${HDF5_SOURCE_DIR}"
+
+cd ${HDF5_BUILD_DIR}
 
 # Build hdf5
 echo "Building hdf5..."

@@ -62,7 +62,8 @@ mygcc="gcc/9.4.0"
 #myclang="clang/13.0.0"
 mycuda="cuda/11.4.0"
 myrocm="rocm"
-mympi="mpich/3.3.2-gcc_9.4.0"
+#mympi="mpich/3.3.2-gcc_9.4.0"
+mympi="openmpi/3.1.6-gcc_9.4.0"
 
 module purge
 module load ${mympi}
