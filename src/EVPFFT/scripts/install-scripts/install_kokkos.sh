@@ -1,51 +1,66 @@
 #!/bin/bash -e
 
-# Function to display the help message
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
-    echo "  --serial        : Build kokkos serial version"
-    echo "  --openmp        : Build kokkos openmp verion"
-    echo "  --cuda          : Build kokkos CUDA version"
-    echo "  --hip           : Build kokkos HIP version"
-    echo "  --cuda-ampere   : Build kokkos CUDA Ampere version"
-    echo "  --help          : Display this help message"
+    echo "  --kokkos_build_type=<serial|openmp|cuda|cuda-ampere|hip>"
+    echo "  --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)"
+    echo "  --help: Display this help message"
     return 1
 }
 
-# Check for the number of arguments
-if [ $# -ne 1 ]; then
-    echo "Error: Please provide exactly one argument."
+# Initialize variables with default values
+kokkos_build_type=""
+num_jobs=1
+
+# Define arrays of valid options
+valid_kokkos_build_types=("serial" "openmp" "cuda" "cuda-ampere" "hip")
+
+# Parse command line arguments
+for arg in "$@"; do
+    case "$arg" in
+        --kokkos_build_type=*)
+            option="${arg#*=}"
+            if [[ " ${valid_kokkos_build_types[*]} " == *" $option "* ]]; then
+                kokkos_build_type="$option"
+            else
+                echo "Error: Invalid --kokkos_build_type specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --num_jobs=*)
+            num_jobs="${arg#*=}"
+            if ! [[ "$num_jobs" =~ ^[0-9]+$ ]]; then
+                echo "Error: Invalid --num_jobs value. Must be a positive integer."
+                show_help
+                return 1
+            fi
+            ;;
+        --help)
+            show_help
+            return 1
+            ;;
+        *)
+            echo "Error: Invalid argument or value specified."
+            show_help
+            return 1
+            ;;
+    esac
+done
+
+# Check if required options are specified
+if [ -z "$kokkos_build_type" ]; then
+    echo "Error: --kokkos_build_type is a required options."
     show_help
     return 1
 fi
 
-# Check if the argument is a valid option
-case "$1" in
-    --serial|--openmp|--cuda|--hip|--cuda-ampere)
-        # Valid option
-        selected_option="$1"
-        # Create a new variable build_type by stripping "--" from selected_option
-        build_type="${selected_option/--/}"
-        ;;
-    --help)
-        # Display help message
-        show_help
-        return 1
-        ;;
-    *)
-        # Invalid option
-        echo "Error: Invalid argument. Please choose one of the valid options:"
-        show_help
-        return 1
-        ;;
-esac
-
-# Now you can use $build_type in your code or build commands
-echo "Kokkos build type will be: $build_type"
+# Now you can use $kokkos_build_type in your code or build commands
+echo "Kokkos build type will be: $kokkos_build_type"
 
 # Determine the script's directory
-SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "Script location: $SCRIPT_DIR"
 
 # Determine the parent directory of the script's directory
@@ -62,8 +77,8 @@ fi
 
 # Define kokkos directories
 KOKKOS_SOURCE_DIR="$PARENT_DIR/kokkos"
-KOKKOS_INSTALL_DIR="$PARENT_DIR/kokkos/install_kokkos_$build_type"
-KOKKOS_BUILD_DIR="$PARENT_DIR/kokkos/build_kokkos_$build_type"
+KOKKOS_INSTALL_DIR="$PARENT_DIR/kokkos/install_kokkos_$kokkos_build_type"
+KOKKOS_BUILD_DIR="$PARENT_DIR/kokkos/build_kokkos_$kokkos_build_type"
 
 # Configure kokkos using CMake
 cmake_options=(
@@ -75,11 +90,11 @@ cmake_options=(
     -D BUILD_TESTING=OFF
 )
 
-if [ "$build_type" == "openmp" ]; then
+if [ "$kokkos_build_type" == "openmp" ]; then
     cmake_options+=(
         -D Kokkos_ENABLE_OPENMP=ON
     )
-elif [ "$build_type" == "cuda" ]; then
+elif [ "$kokkos_build_type" == "cuda" ]; then
     cmake_options+=(
         -D Kokkos_ENABLE_CUDA=ON
         -D Kokkos_ARCH_VOLTA70=ON
@@ -87,7 +102,7 @@ elif [ "$build_type" == "cuda" ]; then
         -D Kokkos_ENABLE_CUDA_LAMBDA=ON
         -D Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=ON
     )
-elif [ "$build_type" == "hip" ]; then
+elif [ "$kokkos_build_type" == "hip" ]; then
     cmake_options+=(
         -D CMAKE_CXX_COMPILER=hipcc
         -D Kokkos_ENABLE_HIP=ON
@@ -95,7 +110,7 @@ elif [ "$build_type" == "hip" ]; then
         -D Kokkos_ARCH_VEGA906=ON
         -D Kokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=ON
     )
-elif [ "$build_type" == "cuda-ampere" ]; then
+elif [ "$kokkos_build_type" == "cuda-ampere" ]; then
     cmake_options+=(
         -D Kokkos_ENABLE_CUDA=ON
         -D Kokkos_ARCH_AMPERE80=ON
@@ -112,7 +127,7 @@ cmake "${cmake_options[@]}" -B "$KOKKOS_BUILD_DIR" -S "$KOKKOS_SOURCE_DIR"
 
 # Build kokkos
 echo "Building kokkos..."
-make -C "$KOKKOS_BUILD_DIR" -j
+make -C "$KOKKOS_BUILD_DIR" -j"$num_jobs"
 
 # Install kokkos
 echo "Installing kokkos..."
