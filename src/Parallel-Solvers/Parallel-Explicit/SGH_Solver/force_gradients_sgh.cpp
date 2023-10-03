@@ -1196,6 +1196,7 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
   real_t global_dt;
   bool element_constant_density = true;
   size_t current_data_index, next_data_index;
+  const size_t rk_level = simparam.rk_num_bins - 1;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
 
   //gradient contribution from gradient of Force vector with respect to design variable.
@@ -1232,7 +1233,7 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
         const_vec_array next_element_internal_energy = (*forward_solve_internal_energy_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array next_coord_vector = (*forward_solve_coordinate_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        
+
         //first half of integration step calculation
         FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
           for (int idim = 0; idim < num_dim; idim++){
@@ -1300,13 +1301,28 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
                           cycle);
         }
 
+        get_force_dgradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+
         //accumulate node values from corner storage
         //multiply
         FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         size_t corner_id;
         for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
             corner_id = corners_in_node(node_id,icorner);
-            design_gradients(node_id,0) += -corner_value_storage(corner_id);
+            design_gradients(node_id,0) += -corner_value_storage(corner_id)*global_dt;
         }
         }); // end parallel for
         Kokkos::fence();

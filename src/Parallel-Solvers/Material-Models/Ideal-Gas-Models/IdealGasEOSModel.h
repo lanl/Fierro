@@ -31,7 +31,43 @@ public:
     const double sie) override;
 
   KOKKOS_FUNCTION
+  double calc_sound_speed_gradient_internal_energy(
+    const DViewCArrayKokkos <double> &elem_pres,
+    const DViewCArrayKokkos <double> &elem_stress,
+    const size_t elem_gid,
+    const size_t mat_id,
+    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &elem_user_output_vars,
+    const DViewCArrayKokkos <double> &elem_sspd,
+    const double den,
+    const double sie) override;
+
+  KOKKOS_FUNCTION
   int calc_pressure(
+    const DViewCArrayKokkos <double> &elem_pres,
+    const DViewCArrayKokkos <double> &elem_stress,
+    const size_t elem_gid,
+    const size_t mat_id,
+    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &elem_user_output_vars,
+    const DViewCArrayKokkos <double> &elem_sspd,
+    const double den,
+    const double sie) override;
+
+  KOKKOS_FUNCTION
+  double calc_pressure_gradient_density(
+    const DViewCArrayKokkos <double> &elem_pres,
+    const DViewCArrayKokkos <double> &elem_stress,
+    const size_t elem_gid,
+    const size_t mat_id,
+    const DCArrayKokkos <double> &global_vars,
+    const DCArrayKokkos <double> &elem_user_output_vars,
+    const DViewCArrayKokkos <double> &elem_sspd,
+    const double den,
+    const double sie) override;
+
+  KOKKOS_FUNCTION
+  double calc_pressure_gradient_internal_energy(
     const DViewCArrayKokkos <double> &elem_pres,
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
