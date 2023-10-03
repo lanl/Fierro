@@ -1149,12 +1149,13 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
 
   }//end view scope design gradients
   
-  //force_design_gradient_term(design_variables, design_gradients);\
   //view scope
   {
-    host_vec_array host_design_gradients = design_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    const_host_vec_array host_design_variables = design_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    //compute_stiffness_gradients(host_design_variables, host_design_gradients);
+    //host_vec_array host_design_gradients = design_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    //const_host_vec_array host_design_variables = design_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    vec_array design_gradients = design_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+    const_vec_array design_variables = design_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+    force_design_gradient_term(design_variables, design_gradients);
   }//end view scope
 
 }
