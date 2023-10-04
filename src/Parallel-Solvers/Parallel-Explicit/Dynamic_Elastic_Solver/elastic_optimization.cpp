@@ -1071,7 +1071,8 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
             for (int inode = 0; inode < num_nodes_in_elem; inode++){
               //compute gradient of local element contribution to v^t*M*v product
               corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = inner_product*global_dt;
+              //division by design ratio recovers nominal element mass used in the gradient operator
+              corner_value_storage(corner_id) = inner_product*global_dt/relative_element_densities(elem_id);
             }
             
           }); // end parallel for
@@ -1165,7 +1166,8 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
             for (int inode = 0; inode < num_nodes_in_elem; inode++){
               //compute gradient of local element contribution to v^t*M*v product
               corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = inner_product*global_dt;
+              //division by design ratio recovers nominal element mass used in the gradient operator
+              corner_value_storage(corner_id) = inner_product*global_dt/relative_element_densities(elem_id);
             }
             
           }); // end parallel for
@@ -1218,7 +1220,8 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
         for (int inode = 0; inode < num_nodes_in_elem; inode++){
           //compute gradient of local element contribution to v^t*M*v product
           corner_id = elem_id*num_nodes_in_elem + inode;
-          corner_value_storage(corner_id) = inner_product;
+          //division by design ratio recovers nominal element mass used in the gradient operator
+          corner_value_storage(corner_id) = inner_product/relative_element_densities(elem_id);
         }
         
       }); // end parallel for
