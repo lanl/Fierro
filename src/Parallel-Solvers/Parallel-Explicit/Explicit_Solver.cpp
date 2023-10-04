@@ -70,7 +70,7 @@
 #include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module.h"
 #include "FEA_Module_SGH.h"
-#include "FEA_Module_RDH.h"
+//#include "FEA_Module_RDH.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "FEA_Module_Inertial.h"
 #include "Explicit_Solver.h"
