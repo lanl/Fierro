@@ -212,7 +212,7 @@ namespace {
     }
 }
 
-Mesh MeshIO::read_vtk(std::string filename) {
+Mesh MeshIO::read_vtk(std::string filename, bool verbose) {
     std::ifstream in(filename);
     auto mesh = Mesh();
 
@@ -260,11 +260,14 @@ Mesh MeshIO::read_vtk(std::string filename) {
     return mesh;
 }
 
-void MeshIO::write_vtk(std::string filename, const Mesh& mesh) {
+void MeshIO::write_vtk(std::string filename, const Mesh& mesh, bool verbose) {
     IOUtilities::mkdir("vtk");
     auto path = std::filesystem::path("vtk") / (filename + ".vtk");
 
     FILE* out = fopen(path.c_str(), "w");
+    if (verbose)
+        std::cout << "Creating file: " << path.string() << std::endl;
+        
     write_geometry(out, mesh);
     write_nodal_variables(out, mesh);
     write_vector_variables(out, mesh);

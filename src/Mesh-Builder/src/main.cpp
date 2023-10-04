@@ -35,10 +35,10 @@ int main(int argc, char *argv[]) {
 
     switch (input->file_type) {
         case FileType::Ensight:
-            MeshIO::write_ensight(input->name, mesh);
+            MeshIO::write_ensight(input->name, mesh, true);
             break;
         case FileType::VTK:
-            MeshIO::write_vtk(input->name, mesh);
+            MeshIO::write_vtk(input->name, mesh, true);
             break;
     }
     return 0;

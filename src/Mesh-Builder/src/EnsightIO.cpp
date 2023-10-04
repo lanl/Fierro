@@ -106,11 +106,11 @@ namespace {
     }
 }
 
-Mesh MeshIO::read_ensight(std::string filename) {
+Mesh MeshIO::read_ensight(std::string filename, bool verbose) {
     throw std::runtime_error("Unimplemented");
 }
 
-void MeshIO::write_ensight(std::string filename, const Mesh& mesh) {
+void MeshIO::write_ensight(std::string filename, const Mesh& mesh, bool verbose) {
     if (mesh.p_order > 1)
         throw std::runtime_error("Cannot write a high order mesh to Ensight format.");
 
@@ -122,16 +122,19 @@ void MeshIO::write_ensight(std::string filename, const Mesh& mesh) {
     // 1 is required because Ensight dump 1 is the t=0 dump
     sprintf(name, "%s.%05d.geo", filename.c_str(), 1);
     fp = std::filesystem::path("ensight") / "data" / name;
-    std::cout << fp << std::endl;
+    if (verbose)
+        std::cout << "Creating file: " << fp << std::endl;
     write_geometry(fp.c_str(), mesh);
     
     sprintf(name, "%s.%05d.var", filename.c_str(), 1);
     fp = std::filesystem::path("ensight") / "data" / name;
-    std::cout << fp << std::endl;
+    if (verbose)
+        std::cout << "Creating file: " << fp << std::endl;
     write_variables(fp.c_str(), mesh);
     
     sprintf(name, "%s.case", filename.c_str());
     fp = std::filesystem::path("ensight") / name;
-    std::cout << fp << std::endl;
+    if (verbose)
+        std::cout << "Creating file: " << fp << std::endl;
     write_case(fp.c_str(), filename, mesh);
 }

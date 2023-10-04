@@ -19,11 +19,11 @@ namespace MeshIO {
         VTK
     };
 
-    Mesh read_vtk(std::string filename);
-    void write_vtk(std::string filename, const Mesh& mesh);
+    Mesh read_vtk(std::string filename, bool verbose=false);
+    void write_vtk(std::string filename, const Mesh& mesh, bool verbose=false);
 
-    Mesh read_ensight(std::string filename);
-    void write_ensight(std::string filename, const Mesh& mesh);
+    Mesh read_ensight(std::string filename, bool verbose=false);
+    void write_ensight(std::string filename, const Mesh& mesh, bool verbose=false);
 
     namespace _Impl {
         inline std::vector<std::string> split(std::string s, std::string delimiter) {
