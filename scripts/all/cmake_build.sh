@@ -1,10 +1,29 @@
 #!/bin/bash -e
+cd ${basedir}
 
-if [ "$1" != "cuda" ] && [ "$1" != "hip" ] && [ "$1" != "openmp" ] && [ "$1" != "serial" ]
-then
-    echo "The second argument needs to be either cuda, hip, openmp, or serial"
+# Function to display the help message
+show_help() {
+    echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
+    echo "Valid options:"
+    echo "  --help          : Display this help message"
     return 1
-fi
+}
+
+# Check for the number of arguments
+#    echo "Error: Please provide zero arguments."
+#    show_help
+#    return 1
+#fi
+
+# Parse command line arguments
+for arg in "$@"; do
+    case "$arg" in
+        --help)
+            show_help
+            return 1
+            ;;
+    esac
+done
 
 #inititialize submodules if they aren't downloaded
 cd ${libdir}
@@ -22,19 +41,27 @@ rm -rf ${FIERRO_BUILD_DIR}
 mkdir -p ${FIERRO_BUILD_DIR}
 cd ${FIERRO_BUILD_DIR}
 
-NUM_TASKS=1
-if [ ! -z $2 ]
-then
-    NUM_TASKS=$2
-fi
+echo "Removing stale build directory"
+rm -rf ${FIERRO_BUILD_DIR}
+mkdir -p ${FIERRO_BUILD_DIR}
+echo "Changing directories into Fierro build directory"
+cd ${FIERRO_BUILD_DIR}
 
-OPTIONS=(
--D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
--D BUILD_IMPLICIT_SOLVER=ON
--D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
+# Configure EVPFFT using CMake
+cmake_options=(
+    -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
+    -D BUILD_IMPLICIT_SOLVER=ON
+    -D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
 )
 
-cmake "${OPTIONS[@]}" "${FIERRO_BASE_DIR:-../}"
-make -j ${NUM_TASKS}
+# Print CMake options for reference
+echo "CMake Options: ${cmake_options[@]}"
+
+# Configure FIERRO
+cmake "${cmake_options[@]}" "${FIERRO_BASE_DIR:-../}"
+
+# Build FIERRO
+echo "Building Fierro..."
+make -j${FIERRO_BUILD_CORES}
 
 cd $basedir

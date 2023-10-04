@@ -12,6 +12,7 @@ fi
 # Check to avoid reinstalling HDF5 which might take time
 if [ -d "$HDF5_INSTALL_DIR" ]; then
     echo "HDF5 already installed, to reinstall HDF5 delete $HDF5_INSTALL_DIR and $HDF5_BUILD_DIR"
+    cd $scriptdir
     return 0
 fi
 
