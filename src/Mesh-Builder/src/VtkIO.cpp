@@ -1,6 +1,7 @@
 #include "MeshIO.h"
 #include "Mesh.h"
 #include "IOUtilities.h"
+#include <iostream>
 #include <fstream>
 #include <vector>
 #include <filesystem>
@@ -8,22 +9,20 @@
 #include "VtkIO.h"
 
 namespace {
-    void write_geometry(FILE* out, const Mesh& mesh) {
-        fprintf(out, "# vtk DataFile Version 2.0\n");  // part 2
-        fprintf(out, "Mesh for Fierro\n");             // part 2
-        fprintf(out, "ASCII \n");                      // part 3
-        fprintf(out, "DATASET UNSTRUCTURED_GRID\n\n"); // part 4
+    void write_geometry(std::ostream& out, const Mesh& mesh) {
+        out << "# vtk DataFile Version 2.0" << std::endl;  // part 2
+        out << "Mesh for Fierro" << std::endl;             // part 2
+        out << "ASCII" << std::endl;                       // part 3
+        out << "DATASET UNSTRUCTURED_GRID" << std::endl;   // part 4
+        out << std::endl;
         
-        fprintf(out, "POINTS %ld float\n", mesh.points.dims(0));
+        out << "POINTS " << mesh.points.dims(0) << " float" << std::endl;
 
         // write all components of the point coordinates
         for (size_t i = 0; i < mesh.points.dims(0); i++){
-            fprintf(out, 
-                "%f %f %f\n",
-                mesh.points(i, 0),
-                mesh.points(i, 1),
-                mesh.num_dim > 2 ? mesh.points(i, 2) : 0.
-            );
+            for (size_t j = 0; j < mesh.points.dims(1); j++)
+                out << mesh.points(i, j) << " ";
+            out << std::endl;
         }
         
         /*
@@ -32,77 +31,77 @@ namespace {
         ---------------------------------------------------------------------------
         */
         int num_elems = mesh.element_point_index.dims(0);
-        fprintf(out, "\n");
-        fprintf(out, "CELLS %d %ld\n", num_elems, num_elems + num_elems * mesh.element_point_index.dims(1));  
+        out << std::endl;
+        auto size = num_elems + num_elems * mesh.element_point_index.dims(1);
+        out << "CELLS " << num_elems << " " << size << std::endl;
         // size=all printed values
         
         auto lagrange_map = VtkIO::lagrange_to_ijk(mesh.num_dim, mesh.p_order);
         auto& linear_map = MeshIO::_Impl::fea_to_ijk();
 
         // write all global point numbers for this elem
-        for (size_t i=0; i < num_elems; i++) {
+        for (size_t i = 0; i < num_elems; i++) {
             int num_points_in_elem = mesh.element_point_index.dims(1);
             
             // Print number of points in the element
-            fprintf(out, "%d ", num_points_in_elem);
+            out << num_points_in_elem << " ";
             for (size_t j = 0; j < num_points_in_elem; j++) {
                 size_t j_reordered;
                 if (VtkIO::is_lagrange_ordered(mesh.element_types(i)))
                     j_reordered = lagrange_map[j];
                 else
                     j_reordered = linear_map[j];
-                fprintf(out, "%d ", mesh.element_point_index(i, j_reordered));
+                out << mesh.element_point_index(i, j_reordered) << " ";
             }
-            fprintf(out, "\n");
+            out << std::endl;
         }
         
-        fprintf(out, "\n");
-        fprintf(out, "CELL_TYPES %d \n", num_elems);
+        out << std::endl;
+        out << "CELL_TYPES " << num_elems << std::endl;
         for (size_t i = 0; i < num_elems; i++) {
-            fprintf(out, "%d \n", mesh.element_types(i));
+            out << mesh.element_types(i) << std::endl;
         }
     }
 
-    void write_nodal_variables(FILE* out, const Mesh& mesh) {
+    void write_nodal_variables(std::ostream& out, const Mesh& mesh) {
         size_t num_points = mesh.points.dims(0);
-        fprintf(out, "\n");
-        fprintf(out, "POINT_DATA %ld \n", num_points);
-        fprintf(out, "SCALARS point_var float 1\n"); // the 1 is number of scalar components [1:4]
-        fprintf(out, "LOOKUP_TABLE default\n");
+        out << std::endl;
+        out << "POINT_DATA " << num_points << std::endl;
+        out << "SCALARS " << "point_var " << "float " << "1" << std::endl; // the 1 is number of scalar components [1:4]
+        out << "LOOKUP_TABLE " << "default" << std::endl;
 
         // TODO: Eventually allow for mesh data here.
         for (size_t i = 0; i < num_points; i++) {
-            fprintf(out, "%f\n", (double)i);
+            out << i << std::endl;
         }
     }
 
-    void write_vector_variables(FILE* out, const Mesh& mesh) {
-        fprintf(out, "\n");
-        fprintf(out, "VECTORS point_vec float\n");
+    void write_vector_variables(std::ostream& out, const Mesh& mesh) {
+        out << std::endl;
+        out << "VECTORS point_vec float" << std::endl;
         // TODO: Pull from real mesh data.
         for (size_t i = 0; i < mesh.points.dims(0); i++) {
             double var1=0;
             double var2=1;
             double var3=2;
-            fprintf(out, "%f %f %f\n", var1, var2, var3);
+            out << var1 << " " << var2 << " " << var3 << std::endl;
         }
     }
 
-    void write_element_variables(FILE* out, const Mesh& mesh) {
+    void write_element_variables(std::ostream& out, const Mesh& mesh) {
         size_t num_elems = mesh.element_point_index.dims(0);
-        fprintf(out, "\n");
-        fprintf(out, "CELL_DATA %ld \n", num_elems);
-        fprintf(out, "SCALARS elem_var float 1\n"); // the 1 is number of scalar components [1:4]
-        fprintf(out, "LOOKUP_TABLE default\n");
+        out << std::endl;
+        out << "CELL_DATA " << num_elems << std::endl;
+        out << "SCALARS " << "elem_var " << "float " << "1" << std::endl; // the 1 is number of scalar components [1:4]
+        out << "LOOKUP_TABLE " << "default " << std::endl;
         for (size_t i = 0; i < num_elems; i++) {
-            fprintf(out, "%f\n", (double)i);
+            out << i << std::endl;
         }
-        
-        fprintf(out, "\n");
-        fprintf(out, "SCALARS elem_var2 float 1\n"); // the 1 is number of scalar components [1:4]
-        fprintf(out, "LOOKUP_TABLE default\n");
+        out << std::endl;
+        out << "SCALARS " << "elem_var2 " << "float " << "1" << std::endl; // the 1 is number of scalar components [1:4]
+        out << "LOOKUP_TABLE " << "default " << std::endl;
         for (size_t i = 0; i < num_elems; i++) {
-            fprintf(out, "%f\n", -(double)i);
+            out << -i << std::endl;
         }
     }
 
@@ -128,16 +127,15 @@ namespace {
     std::vector<T> parse_line(const std::string& line) {
         std::vector<T> result;
         std::stringstream ss(line);
-        while (!ss.eof()) {
-            T v;
-            ss >> v;
+        T v;
+        while (ss >> v) {
             result.push_back(v);
         }
         return result;
     }
 
     template<typename T>
-    void for_n_lines(std::ifstream& in, const size_t n, T f) {
+    void for_n_lines(std::istream& in, const size_t n, T f) {
         std::string line;
         for (size_t i = 0; i < n; i++) {
             std::getline(in, line);
@@ -146,7 +144,7 @@ namespace {
     }
 
     template<typename T>
-    std::vector<std::vector<T>> read_2darray(std::ifstream& in, const size_t length) {
+    std::vector<std::vector<T>> read_2darray(std::istream& in, const size_t length) {
         std::vector<std::vector<T>> data;
         for_n_lines(in, length, [&](const size_t i, const std::string& line) {
             data.push_back(parse_line<T>(line));
@@ -155,7 +153,7 @@ namespace {
     } 
 
     template<typename T>
-    mtr::CArray<T> read_1darray(std::ifstream& in, const size_t length) {
+    mtr::CArray<T> read_1darray(std::istream& in, const size_t length) {
         mtr::CArray<T> data = mtr::CArray<int>(length);
         for_n_lines(in, length, [&](const size_t i, const std::string& line) {
             data(i) = parse_line<T>(line)[0];
@@ -163,7 +161,7 @@ namespace {
         return data;
     }
 
-    bool read_points(std::ifstream& in, const std::vector<std::string>& header_tokens, Mesh& mesh) {
+    bool read_points(std::istream& in, const std::vector<std::string>& header_tokens, Mesh& mesh) {
         if (header_tokens[0] != "POINTS" || header_tokens[2] != "float")
             return false;
         
@@ -180,7 +178,7 @@ namespace {
         return true;
     }
 
-    bool read_cells(std::ifstream& in, const std::vector<std::string>& header_tokens, Mesh& mesh) {
+    bool read_cells(std::istream& in, const std::vector<std::string>& header_tokens, Mesh& mesh) {
         if (header_tokens[0] != "CELLS")
             return false;
         
@@ -199,8 +197,8 @@ namespace {
         return true;
     }
 
-    bool read_cell_types(std::ifstream& in, const std::vector<std::string>& header_tokens, Mesh& mesh) {
-        if (header_tokens[0] != "CELLS")
+    bool read_cell_types(std::istream& in, const std::vector<std::string>& header_tokens, Mesh& mesh) {
+        if (header_tokens[0] != "CELL_TYPES")
             return false;
         
         int num_elems = stoi(header_tokens[1]);
@@ -212,8 +210,7 @@ namespace {
     }
 }
 
-Mesh MeshIO::read_vtk(std::string filename, bool verbose) {
-    std::ifstream in(filename);
+Mesh MeshIO::read_vtk(std::istream& in, bool verbose) {
     auto mesh = Mesh();
 
     bool found_points     = false,
@@ -237,7 +234,8 @@ Mesh MeshIO::read_vtk(std::string filename, bool verbose) {
             found_cell_types = true;
     }
 
-    in.close();
+    if (found_points && found_cells)
+        mesh.p_order = std::pow(mesh.element_point_index.dims(1), 1.0 / mesh.num_dim);
 
     if (!mesh.validate()) {
         throw std::runtime_error("Invalid mesh constructed.");
@@ -256,21 +254,32 @@ Mesh MeshIO::read_vtk(std::string filename, bool verbose) {
             );
         }
     }
-    
     return mesh;
+}
+
+Mesh MeshIO::read_vtk(std::string filename, bool verbose) {
+    std::ifstream in(filename);
+    
+    auto mesh = read_vtk(in, verbose);
+
+    in.close();
+    return mesh;
+}
+
+void MeshIO::write_vtk(std::ostream& out, const Mesh& mesh) {
+    write_geometry(out, mesh);
+    write_nodal_variables(out, mesh);
+    write_vector_variables(out, mesh);
+    write_element_variables(out, mesh);
 }
 
 void MeshIO::write_vtk(std::string filename, const Mesh& mesh, bool verbose) {
     IOUtilities::mkdir("vtk");
     auto path = std::filesystem::path("vtk") / (filename + ".vtk");
 
-    FILE* out = fopen(path.c_str(), "w");
+    std::ofstream out(path.c_str(), std::ofstream::out);
     if (verbose)
         std::cout << "Creating file: " << path.string() << std::endl;
-        
-    write_geometry(out, mesh);
-    write_nodal_variables(out, mesh);
-    write_vector_variables(out, mesh);
-    write_element_variables(out, mesh);
-    fclose(out);
+    
+    out.close();
 }

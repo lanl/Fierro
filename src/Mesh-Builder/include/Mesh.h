@@ -22,7 +22,6 @@ struct Mesh {
     int num_dim;
     int p_order;
 
-
     bool validate() {
         return (num_dim == 2 || num_dim == 3)
         && (element_point_index.dims(0) == element_types.dims(0))

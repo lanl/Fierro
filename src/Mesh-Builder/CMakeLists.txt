@@ -16,3 +16,15 @@ target_link_libraries(fierro-mesh-builder PUBLIC
 install(
   TARGETS fierro-mesh-builder
 )
+
+if (TEST) 
+  add_executable(mesh-builder-tests test/test.cpp)
+  target_link_libraries(
+      mesh-builder-tests
+      GTest::gtest_main
+      mesh_builder
+  )
+
+  include(GoogleTest)
+  gtest_discover_tests(mesh-builder-tests)
+endif()
