@@ -1182,9 +1182,9 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
     
 } // end of routine
 
-// --------------------------------------------------------------------------------------
-// Computes corner contribution of gradient of force with respect to the design variable
-//---------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------
+// Computes term objective derivative term involving gradient of power with respect to the design variable
+//---------------------------------------------------------------------------------------------------------
 
 void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
@@ -1315,6 +1315,30 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
                               elem_mat_id,
                               1.0,
                               cycle);
+
+        //derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
+        FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+            size_t node_id;
+            size_t corner_id;
+            real_t inner_product;
+
+            inner_product = 0;
+            for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
+                node_id = nodes_in_elem(elem_id, ifill);
+                corner_id = elem_id*num_nodes_in_elem + ifill;
+                for(int idim=0; idim < num_dim; idim++){
+                    inner_product += corner_vector_storage(corner_id,idim)*current_adjoint_vector(node_id,idim);
+                }
+            }
+
+            for (int inode = 0; inode < num_nodes_in_elem; inode++){
+                //compute gradient of local element contribution to v^t*M*v product
+                corner_id = elem_id*num_nodes_in_elem + inode;
+                corner_value_storage(corner_id) = inner_product;
+            }
+            
+        }); // end parallel for
+        Kokkos::fence();
 
         //accumulate node values from corner storage
         //multiply
@@ -1462,6 +1486,7 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
         // add the pressure
         for (int i = 0; i < num_dims; i++){
             tau(i, i) -= elem_pres(elem_gid);
+            tau_gradient(i, i) -= elem_pres(elem_gid)/num_nodes_in_elem;
         } // end for
         
         
@@ -1547,13 +1572,13 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
                 muc(node_lid) = elem_den(elem_gid) *
                                (material(mat_id).q1*elem_sspd(elem_gid) + material(mat_id).q2*mag_vel);
                 
-                muc_gradient(node_lid) = elem_den(elem_gid) *
+                muc_gradient(node_lid) = elem_den(elem_gid)/relative_element_densities(elem_gid)/num_nodes_in_elem *
                                (material(mat_id).q1*elem_sspd(elem_gid) + material(mat_id).q2*mag_vel);
             }
             else { // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
                                (material(mat_id).q1ex*elem_sspd(elem_gid) + material(mat_id).q2ex*mag_vel);
-                muc_gradient(node_lid) = elem_den(elem_gid) *
+                muc_gradient(node_lid) = elem_den(elem_gid)/relative_element_densities(elem_gid)/num_nodes_in_elem *
                                (material(mat_id).q1ex*elem_sspd(elem_gid) + material(mat_id).q2ex*mag_vel);
             } // end if on divergence sign
            
