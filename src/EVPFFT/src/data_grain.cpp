@@ -328,7 +328,7 @@ void EVPFFT::read_vtk_lattice_structure(const std::string & filetext)
           ph_array(i,j,k)    = 0;
           th_array(i,j,k)    = 0;
           om_array(i,j,k)    = 0;
-          jgrain(i,j,k)      = grid_value;
+          jgrain(i,j,k)      = grid_value + 1;
           jphase.host(i,j,k) = grid_value + 1;
         }
 
