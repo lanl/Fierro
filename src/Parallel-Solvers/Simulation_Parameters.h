@@ -77,6 +77,7 @@ SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
   Dynamic_Elasticity,
   Heat_Conduction,
   SGH,
+  RDH,
   Inertial,
   Thermo_Elasticity,
   Eulerian
@@ -84,7 +85,8 @@ SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
 
 SERIALIZABLE_ENUM(ELEMENT_TYPE, 
   quad4, quad8, quad12,
-  hex8, hex20, hex32
+  hex8, hex20, hex32,
+  hexN
 )
 
 struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
