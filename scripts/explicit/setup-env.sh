@@ -70,6 +70,22 @@ if [ -z "$machine" ] || [ -z "$kokkos_build_type" ]; then
     return 1
 fi
 
+# Check for correct combos with mac
+if [ $machine = "mac" ] && [ $kokkos_build_type == "cuda" ]; then
+    echo "Error: Mac cannot build with Kokkos Cuda backend"
+    show_help
+    return 1
+fi
+if [ $machine = "mac" ] && [ $kokkos_build_type == "hip" ]; then
+    echo "Error: Mac cannot build with Kokkos HIP backend"
+    show_help
+    return 1
+fi
+if [ $machine = "mac" ] && [ $build_cores -ne 1 ]; then
+    echo "Error: Mac cannot be built in parallel. Setting build cores to default 1"
+fi
+
+
 # If all arguments are valid, you can use them in your script as needed
 echo "Build for machine: $machine"
 echo "Kokkos Build Type: $kokkos_build_type"

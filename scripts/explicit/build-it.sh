@@ -69,6 +69,22 @@ if [ -z "$machine" ] || [ -z "$kokkos_build_type" ]; then
     show_help
     return 1
 fi
+
+# Check for correct combos with mac
+if [ $machine = "mac" ] && [ $kokkos_build_type == "cuda" ]; then
+    echo "Error: Mac cannot build with Kokkos Cuda backend"
+    show_help
+    return 1
+fi
+if [ $machine = "mac" ] && [ $kokkos_build_type == "hip" ]; then
+    echo "Error: Mac cannot build with Kokkos HIP backend"
+    show_help
+    return 1
+fi
+if [ $machine = "mac" ] && [ $build_cores -ne 1 ]; then
+    echo "Error: Mac cannot be built in parallel. Setting build cores to default 1"
+fi
+
 echo "Your options of $machine $kokkos_build_type are valid! Let's start building"
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
