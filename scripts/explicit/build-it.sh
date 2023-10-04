@@ -43,7 +43,7 @@ for arg in "$@"; do
             ;;
         --build_cores=*)
             option="${arg#*=}"
-            if [ $option -ge 0 ] && [ $option -le 32 ]; then
+            if [ $option -ge 1 ] && [ $option -le 32 ]; then
                 build_cores="$option"
             else
                 echo "Error: Invalid --build_cores specified."

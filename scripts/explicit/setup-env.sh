@@ -43,7 +43,7 @@ for arg in "$@"; do
             ;;
         --build_cores=*)
             option="${arg#*=}"
-            if [ $option -ge 0 ] && [ $option -le 32 ]; then
+            if [ $option -ge 1 ] && [ $option -le 32 ]; then
                 build_cores="$option"
             else
                 echo "Error: Invalid --build_cores specified."
@@ -108,7 +108,7 @@ export TRILINOS_SOURCE_DIR=${trilinosdir}/Trilinos
 export TRILINOS_BUILD_DIR=${TRILINOS_SOURCE_DIR}/build-${my_device}
 export TRILINOS_INSTALL_DIR=${TRILINOS_BUILD_DIR}
 
-export EVPFFT_BUILD_CORES=$build_cores
+export FIERRO_BUILD_CORES=$build_cores
 
 cd $scriptdir
 
