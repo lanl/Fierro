@@ -117,22 +117,6 @@ int get_id(int i, int j, int k, int num_i, int num_j) {
 
 Mesh build_rectilinear(const Input_Rectilinear& input) {
     int num_points_in_elem = std::pow(input.p_order + 1, input.num_dims);
-
-    std::cout << "Creating a " << input.num_dims << "D box mesh." << std::endl;
-    
-    // --- mesh node ordering ---
-    // Convert ijk index system to the finite element numbering convention
-    // for vertices in elem
-    auto convert_point_number = CArray <int> (8);
-    convert_point_number(0) = 0;
-    convert_point_number(1) = 1;
-    convert_point_number(2) = 3;
-    convert_point_number(3) = 2;
-    convert_point_number(4) = 4;
-    convert_point_number(5) = 5;
-    convert_point_number(6) = 7;
-    convert_point_number(7) = 6;
-            
     
     auto mesh = Mesh();
     mesh.num_dim = input.num_dims;
