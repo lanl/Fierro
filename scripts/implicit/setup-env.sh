@@ -13,6 +13,9 @@ show_help() {
 machine=""
 kokkos_build_type=""
 build_cores="1"
+fullmachine=""
+fullkokkos=""
+fullcores=""
 
 # Define arrays of valid options
 valid_machines=("darwin" "chicoma" "linux" "mac")
@@ -22,6 +25,7 @@ valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 for arg in "$@"; do
     case "$arg" in
         --machine=*)
+            fullmachine=$arg
             option="${arg#*=}"
             if [[ " ${valid_machines[*]} " == *" $option "* ]]; then
                 machine="$option"
@@ -32,6 +36,7 @@ for arg in "$@"; do
             fi
             ;;
         --kokkos_build_type=*)
+            fullkokkos=$arg
             option="${arg#*=}"
             if [[ " ${valid_kokkos_build_types[*]} " == *" $option "* ]]; then
                 kokkos_build_type="$option"
@@ -42,6 +47,7 @@ for arg in "$@"; do
             fi
             ;;
         --build_cores=*)
+            fullcores=$arg
             option="${arg#*=}"
             if [ $option -ge 1 ] && [ $option -le 32 ]; then
                 build_cores="$option"
@@ -128,7 +134,7 @@ export FIERRO_BUILD_CORES=$build_cores
 cd $scriptdir
 
 # Call the appropriate script to load modules based on the machine
-source machines/$machine-env.sh ${2}
+source machines/$machine-env.sh ${fullkokkos}
 
 
 
