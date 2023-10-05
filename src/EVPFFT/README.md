@@ -37,7 +37,7 @@ To build EVPFFT you would need to provide both the `--heffte_build_type` and `--
 source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=serial
 ```
 
-This will build EVPFFT in the folder `evpfft_heffte_{fftw}_kokkos_{serial}`. The binary, `evpfft` is found in that folder
+This will build EVPFFT in the folder `evpfft_{fftw}_{serial}`. The binary, `evpfft` is found in that folder
 
 # Using EVPFFT as a standalone program
 
