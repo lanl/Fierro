@@ -88,19 +88,19 @@ cmake_options=(
     -D BUILD_SHARED_LIBS=ON
 )
 
-if [ "$heffte_build_type" == "fftw" ]; then
+if [ "$heffte_build_type" = "fftw" ]; then
     cmake_options+=(
         #-D Heffte_ENABLE_AVX=ON
         #-D Heffte_ENABLE_AVX512=ON
         -D Heffte_ENABLE_FFTW=ON
         #-D FFTW_ROOT="$FFTW_DIR"
     )
-elif [ "$heffte_build_type" == "cufft" ]; then
+elif [ "$heffte_build_type" = "cufft" ]; then
     cmake_options+=(
         -D Heffte_ENABLE_CUDA=ON
         -D Heffte_DISABLE_GPU_AWARE_MPI=ON
     )
-elif [ "$heffte_build_type" == "rocfft" ]; then
+elif [ "$heffte_build_type" = "rocfft" ]; then
     cmake_options+=(
         -D CMAKE_CXX_COMPILER=hipcc
         -D Heffte_ENABLE_ROCM=ON

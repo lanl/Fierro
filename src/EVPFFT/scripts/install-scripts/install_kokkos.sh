@@ -3,7 +3,7 @@
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
-    echo "  --kokkos_build_type=<serial|openmp|cuda|cuda-ampere|hip>"
+    echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>"
     echo "  --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)"
     echo "  --help: Display this help message"
     return 1
@@ -14,7 +14,7 @@ kokkos_build_type=""
 num_jobs=1
 
 # Define arrays of valid options
-valid_kokkos_build_types=("serial" "openmp" "cuda" "cuda-ampere" "hip")
+valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 
 # Parse command line arguments
 for arg in "$@"; do
@@ -86,36 +86,31 @@ cmake_options=(
     -D CMAKE_INSTALL_PREFIX="${KOKKOS_INSTALL_DIR}"
     -D CMAKE_CXX_STANDARD=17
     -D Kokkos_ENABLE_SERIAL=ON
+    -D Kokkos_ARCH_NATIVE=ON
     -D Kokkos_ENABLE_TESTS=OFF
     -D BUILD_TESTING=OFF
 )
 
-if [ "$kokkos_build_type" == "openmp" ]; then
+if [ "$kokkos_build_type" = "openmp" ]; then
     cmake_options+=(
         -D Kokkos_ENABLE_OPENMP=ON
     )
-elif [ "$kokkos_build_type" == "cuda" ]; then
+elif [ "$kokkos_build_type" = "pthreads" ]; then
+    cmake_options+=(
+        -D Kokkos_ENABLE_THREADS=ON
+    )
+elif [ "$kokkos_build_type" = "cuda" ]; then
     cmake_options+=(
         -D Kokkos_ENABLE_CUDA=ON
-        -D Kokkos_ARCH_VOLTA70=ON
         -D Kokkos_ENABLE_CUDA_CONSTEXPR=ON
         -D Kokkos_ENABLE_CUDA_LAMBDA=ON
         -D Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=ON
     )
-elif [ "$kokkos_build_type" == "hip" ]; then
+elif [ "$kokkos_build_type" = "hip" ]; then
     cmake_options+=(
         -D CMAKE_CXX_COMPILER=hipcc
         -D Kokkos_ENABLE_HIP=ON
-        -D Kokkos_ARCH_ZEN=ON
-        -D Kokkos_ARCH_VEGA906=ON
         -D Kokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=ON
-    )
-elif [ "$kokkos_build_type" == "cuda-ampere" ]; then
-    cmake_options+=(
-        -D Kokkos_ENABLE_CUDA=ON
-        -D Kokkos_ARCH_AMPERE80=ON
-        -D Kokkos_ENABLE_CUDA_LAMBDA=ON
-        -D Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=ON
     )
 fi
 
