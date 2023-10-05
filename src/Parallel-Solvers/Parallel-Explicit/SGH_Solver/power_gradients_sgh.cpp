@@ -20,7 +20,7 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
   size_t current_data_index, next_data_index;
   const size_t rk_level = simparam.rk_num_bins - 1;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
-
+  DCArrayKokkos<real_t> elem_power_dgradients(rnum_elem);
   //gradient contribution from gradient of Force vector with respect to design variable.
   if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
     if(myrank==0){
@@ -50,11 +50,11 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
         const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array current_element_internal_energy = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array current_coord_vector = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array current_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array next_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array next_element_internal_energy = (*forward_solve_internal_energy_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
         const_vec_array next_coord_vector = (*forward_solve_coordinate_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
+        const_vec_array next_psi_adjoint_vector = (*psi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
         //first half of integration step calculation
         FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
@@ -123,6 +123,42 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
                           cycle);
         }
 
+        // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
+        if(num_dim==2){
+            get_force_sgh2D(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            elem_den,
+                            elem_sie,
+                            elem_pres,
+                            elem_stress,
+                            elem_sspd,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            1.0,
+                            cycle);
+        }
+        else {
+            get_force_sgh(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_sie,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_vol,
+                        elem_div,
+                        elem_mat_id,
+                        corner_force,
+                        1.0,
+                        cycle);
+        }
+
         get_force_dgradient_sgh(material,
                               *mesh,
                               node_coords,
@@ -138,20 +174,22 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
                               1.0,
                               cycle);
 
+        get_power_dgradient_sgh(1.0,
+                            *mesh,
+                            node_vel,
+                            node_coords,
+                            elem_sie,
+                            elem_mass,
+                            corner_force,
+                            elem_power_dgradients);
+
         //derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
         FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
             size_t node_id;
             size_t corner_id;
             real_t inner_product;
 
-            inner_product = 0;
-            for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-                node_id = nodes_in_elem(elem_id, ifill);
-                corner_id = elem_id*num_nodes_in_elem + ifill;
-                for(int idim=0; idim < num_dim; idim++){
-                    inner_product += corner_vector_storage(corner_id,idim)*current_adjoint_vector(node_id,idim);
-                }
-            }
+            inner_product = current_psi_adjoint_vector(elem_id,0)*elem_power_dgradients(elem_id);
 
             for (int inode = 0; inode < num_nodes_in_elem; inode++){
                 //compute gradient of local element contribution to v^t*M*v product
@@ -177,6 +215,60 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
   }
 
 }
+
+// ---------------------------------------------------------------------------------------
+// This function calculates the gradient for element power with respect to design variable
+//----------------------------------------------------------------------------------------
+
+void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
+                       const mesh_t &mesh,
+                       const DViewCArrayKokkos <double> &node_vel,
+                       const DViewCArrayKokkos <double> &node_coords,
+                       DViewCArrayKokkos <double> &elem_sie,
+                       const DViewCArrayKokkos <double> &elem_mass,
+                       const DViewCArrayKokkos <double> &corner_force,
+                       DCArrayKokkos<real_t> elem_power_dgradients){
+   
+    const size_t rk_level = simparam.rk_num_bins - 1; 
+    int num_dims = simparam.num_dims;
+
+    // loop over all the elements in the mesh
+    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
+
+        double elem_power = 0.0;
+
+        // --- tally the contribution from each corner to the element ---
+
+        // Loop over the nodes in the element
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+            
+            size_t corner_lid = node_lid;
+            
+            // Get node global id for the local node id
+            size_t node_gid = nodes_in_elem(elem_gid, node_lid);
+            
+            // Get the corner global id for the local corner id
+            size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
+            
+            double node_radius = 1;
+            if(num_dims==2){
+                node_radius = node_coords(rk_level,node_gid,1);
+            }
+
+            // calculate the Power=F dot V for this corner
+            for (size_t dim=0; dim<num_dims; dim++){
+                
+                double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
+                elem_power_dgradients(elem_gid) += corner_vector_storage(corner_gid, dim)*node_radius*half_vel;
+                
+            } // end for dim
+            
+        } // end for node_lid
+
+    }); // end parallel loop over the elements
+    
+    return;
+} // end subroutine
 
 // -----------------------------------------------------------------------------
 // This function calculates the gradient for element power with respect to position
