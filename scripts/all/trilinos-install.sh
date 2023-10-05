@@ -60,15 +60,13 @@ fi
 # If all arguments are valid, you can use them in your script as needed
 echo "Trilinos Kokkos Build Type: $kokkos_build_type"
 
-cd ${trilinosdir}
-
 #check if Trilinos directory exists, git clone Trilinos if it doesn't
 [ -d "${TRILINOS_SOURCE_DIR}" ] && echo "Directory Trilinos exists, skipping Trilinos download"
 
 if [ ! -d "${TRILINOS_SOURCE_DIR}" ]
 then
   echo "Directory Trilinos does not exist, downloading Trilinos...."
-  git clone https://github.com/trilinos/Trilinos.git
+  git clone https://github.com/trilinos/Trilinos.git ${TRILINOS_SOURCE_DIR}
 fi
 
 #check if Trilinos build directory exists, create Trilinos/build if it doesn't
@@ -166,23 +164,20 @@ fi
 if [ ! -d "${TRILINOS_BUILD_DIR}/lib" ]
 then
   echo "Directory Trilinos/build/lib does not exist, compiling Trilinos (this might take a while)...."
-  cd ${TRILINOS_BUILD_DIR}
   # Print CMake options for reference
   echo "CMake Options: ${cmake_options[@]}"
 
   # Configure Trilinos
-  cmake "${cmake_options[@]}" "${TRILINOS_SOURCE_DIR:-../}"
+  cmake "${cmake_options[@]}" -B "${TRILINOS_BUILD_DIR}" -S "${TRILINOS_SOURCE_DIR}"
 
   # Build Trilinos
   echo "Building Trilinos..."
-  make -j${FIERRO_BUILD_CORES}
+  make -C "${TRILINOS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
 
   # Install Trilinos
   echo "Installing Trilinos..."
-  make install all
+  make -C "${TRILINOS_BUILD_DIR}" install all
 
   echo "Trilinos installation complete."
 fi
 fi
-
-cd $scriptdir
