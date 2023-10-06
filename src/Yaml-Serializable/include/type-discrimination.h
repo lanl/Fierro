@@ -71,7 +71,7 @@ namespace Yaml {
         }
 
         template<typename T, DiscriminationType DiscriminationValue>
-        struct Register : Base {
+        struct Register : virtual Base {
             static bool registerT() {
                 if (TypeDiscriminated::data().count(DiscriminationValue) != 0)
                     throw ConfigurationException(
