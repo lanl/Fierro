@@ -661,8 +661,16 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              1,
+                              1.0,
                               cycle);
+
+      get_power_egradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
 
       get_force_vgradient_sgh(material,
                               *mesh,
@@ -676,8 +684,16 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              1,
+                              1.0,
                               cycle);
+      
+      get_power_vgradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
 
       get_force_ugradient_sgh(material,
                               *mesh,
@@ -691,8 +707,16 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                               elem_vol,
                               elem_div,
                               elem_mat_id,
-                              1,
+                              1.0,
                               cycle);
+
+      get_power_ugradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
       
 
       //force_gradient_velocity->describe(*fos,Teuchos::VERB_EXTREME);
@@ -953,7 +977,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
           for (int inode = 0; inode < num_nodes_in_elem; inode++){
             //compute gradient of local element contribution to v^t*M*v product
             corner_id = elem_id*num_nodes_in_elem + inode;
-            corner_value_storage(corner_id) = inner_product*global_dt;
+            corner_value_storage(corner_id) = inner_product*global_dt/relative_element_densities(elem_id);
           }
           
         }); // end parallel for
@@ -1044,7 +1068,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
             for (int inode = 0; inode < num_nodes_in_elem; inode++){
               //compute gradient of local element contribution to v^t*M*v product
               corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = inner_product*global_dt;
+              corner_value_storage(corner_id) = inner_product*global_dt/relative_element_densities(elem_id);
             }
             
           }); // end parallel for
@@ -1109,7 +1133,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
             for (int inode = 0; inode < num_nodes_in_elem; inode++){
               //compute gradient of local element contribution to v^t*M*v product
               corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = inner_product*global_dt;
+              corner_value_storage(corner_id) = inner_product*global_dt/relative_element_densities(elem_id);
             }
             
           }); // end parallel for
@@ -1162,7 +1186,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         for (int inode = 0; inode < num_nodes_in_elem; inode++){
           //compute gradient of local element contribution to v^t*M*v product
           corner_id = elem_id*num_nodes_in_elem + inode;
-          corner_value_storage(corner_id) = inner_product;
+          corner_value_storage(corner_id) = inner_product/relative_element_densities(elem_id);
         }
         
       }); // end parallel for
@@ -1198,7 +1222,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         for (int inode = 0; inode < num_nodes_in_elem; inode++){
           //compute gradient of local element contribution to v^t*M*v product
           corner_id = elem_id*num_nodes_in_elem + inode;
-          corner_value_storage(corner_id) = inner_product;
+          corner_value_storage(corner_id) = inner_product/relative_element_densities(elem_id);
         }
         
       }); // end parallel for
