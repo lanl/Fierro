@@ -431,14 +431,24 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
 
     const size_t rk_level = simparam.rk_num_bins - 1;
     const size_t num_dims = simparam.num_dims;
+
+    //initialize gradient matrix
+    FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+        //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
+        for(int idof = 0; idof < num_nodes_in_elem*num_dims; idof++){
+          Force_Gradient_Energies(elem_gid,idof) = 0;
+        }
+    }); // end parallel for
+    Kokkos::fence();
+
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
-        
         const size_t num_nodes_in_elem = 8;
-        
+        real_t gradient_result[num_dims];
         // total Cauchy stress
         double tau_array[9];
+        double tau_gradient_array[9];
         
         // corner area normals
         double area_normal_array[24];
@@ -451,6 +461,7 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         
         // corner shock impeadance x |corner area normal dot shock_dir|
         double muc_array[8];
+        double muc_gradient_array[8];
         
         // Riemann velocity
         double vel_star_array[3];
@@ -461,14 +472,17 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         // --- Create views of arrays to aid the force calculation ---
     
         ViewCArrayKokkos <double> tau(tau_array, num_dims, num_dims);
+        ViewCArrayKokkos <double> tau_gradient(tau_gradient_array, num_dims, num_dims);
         ViewCArrayKokkos <double> area_normal(area_normal_array, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> shock_dir(shock_dir_array, num_dims);
         ViewCArrayKokkos <double> sum(sum_array, 4);
         ViewCArrayKokkos <double> muc(muc_array, num_nodes_in_elem);
+        ViewCArrayKokkos <double> muc_gradient(muc_gradient_array, num_nodes_in_elem);
         ViewCArrayKokkos <double> vel_star(vel_star_array, num_dims);
         ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
 
-        
+        EOSParent* eos_model = elem_eos(elem_gid).model;
+
         // --- abviatations of variables ---
         
         // element volume
@@ -536,6 +550,15 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         // add the pressure
         for (int i = 0; i < num_dims; i++){
             tau(i, i) -= elem_pres(elem_gid);
+            tau_gradient(i, i) = eos_model->calc_pressure(elem_pres,
+                                 elem_stress,
+                                 elem_gid,
+                                 elem_mat_id(elem_gid),
+                                 global_vars,
+                                 elem_user_output_vars,
+                                 elem_sspd,
+                                 elem_den(elem_gid),
+                                 elem_sie(rk_level,elem_gid));
         } // end for
         
         
@@ -556,6 +579,7 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
 
             // Get node gloabl index and create view of nodal velocity
             int node_gid = nodes_in_elem(elem_gid, node_lid);
+
             
             ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
             
@@ -628,6 +652,7 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
 
             size_t use_shock_dir = 0;
             double mu_term;
+            double mu_term_gradient;
             
             // Coding to use shock direction
             if (use_shock_dir == 1){
@@ -750,8 +775,11 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++){
 
-                corner_vector_storage(corner_gid, dim) = -0.00000001;
-                //corner_vector_storage(corner_gid, dim) = 0;
+               Force_Gradient_Energies(elem_gid,node_lid*num_dims+dim) = corner_vector_storage(corner_gid, dim) = 
+                          area_normal(node_lid, 0)*tau_gradient(0, dim)
+                        + area_normal(node_lid, 1)*tau_gradient(1, dim)
+                        + area_normal(node_lid, 2)*tau_gradient(2, dim)
+                        + phi*muc(node_lid)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
 
             } // end loop over dimension
 
@@ -767,30 +795,23 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         
 
     }); // end parallel for loop over elements
-
-    //accumulate node values from corner storage
-    //force_gradient_velocity->putScalar(0);
-    //force_gradient_position->putScalar(0);
-    //set back to zero
-    FOR_ALL_CLASS(idof, 0, nlocal_nodes*num_dims, {
-        for(int jdof = 0; jdof < Gradient_Matrix_Strides(idof); jdof++){
-            Force_Gradient_Velocities(idof,jdof) = 0;
-        }
-    }); // end parallel for
-    Kokkos::fence();
     
-    //vec_array force_gradient_velocity_view = force_gradient_velocity->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+    /*
+    //accumulate node values from corner storage
+    force_gradient_design->putScalar(0);
+    
+    vec_array force_gradient_design_view = force_gradient_design->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         size_t corner_id;
         for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
             corner_id = corners_in_node(node_id,icorner);
-            Force_Gradient_Velocities(node_id*num_dims,0) += corner_vector_storage(corner_id, 0);
-            Force_Gradient_Velocities(node_id*num_dims+1,0) += corner_vector_storage(corner_id, 1);
-            Force_Gradient_Velocities(node_id*num_dims+2,0) += corner_vector_storage(corner_id, 2);
+            force_gradient_design_view(node_id,0) += corner_vector_storage(corner_id, 0);
+            force_gradient_design_view(node_id,1) += corner_vector_storage(corner_id, 1);
+            force_gradient_design_view(node_id,2) += corner_vector_storage(corner_id, 2);
         }
     }); // end parallel for
     Kokkos::fence();
-
+    */
     
     return;
     
@@ -1486,7 +1507,7 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
         // add the pressure
         for (int i = 0; i < num_dims; i++){
             tau(i, i) -= elem_pres(elem_gid);
-            tau_gradient(i, i) -= elem_pres(elem_gid)/num_nodes_in_elem;
+            tau_gradient(i, i) -= elem_pres(elem_gid)/num_nodes_in_elem/relative_element_densities(elem_gid);
         } // end for
         
         

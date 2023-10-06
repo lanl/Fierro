@@ -594,6 +594,76 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       });
       Kokkos::fence();
 
+      //set state according to phase data at this timestep
+
+      get_vol();
+
+      // ---- Calculate velocity diveregence for the element ----
+      if(num_dim==2){
+          get_divergence2D(elem_div,
+                          *mesh,
+                          node_coords,
+                          node_vel,
+                          elem_vol);
+      }
+      else {
+          get_divergence(elem_div,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_vol);
+      } // end if 2D
+
+      // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+      if(num_dim==2){
+          update_state2D(material,
+                          *mesh,
+                          node_coords,
+                          node_vel,
+                          elem_den,
+                          elem_pres,
+                          elem_stress,
+                          elem_sspd,
+                          elem_sie,
+                          elem_vol,
+                          elem_mass,
+                          elem_mat_id,
+                          1.0,
+                          cycle);
+      }
+      else{
+          update_state(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_sie,
+                        elem_vol,
+                        elem_mass,
+                        elem_mat_id,
+                        1.0,
+                        cycle);
+      }
+
+      //compute gradient matrices
+      get_force_egradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1,
+                              cycle);
+
       get_force_vgradient_sgh(material,
                               *mesh,
                               node_coords,
@@ -1156,6 +1226,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     vec_array design_gradients = design_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     const_vec_array design_variables = design_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
     force_design_gradient_term(design_variables, design_gradients);
+    power_design_gradient_term(design_variables, design_gradients);
   }//end view scope
 
 }
