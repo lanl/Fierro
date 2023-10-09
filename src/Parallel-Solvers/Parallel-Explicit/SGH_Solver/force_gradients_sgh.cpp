@@ -599,6 +599,18 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         double mag;       // magnitude of the area normal
         double mag_vel;   // magnitude of velocity
 
+        // --- Sound speed ---
+        real_t sound_speed_gradient_energy = 
+        eos_model->calc_sound_speed_gradient_internal_energy(elem_pres,
+                                                            elem_stress,
+                                                            elem_gid,
+                                                            elem_mat_id(elem_gid),
+                                                            global_vars,
+                                                            elem_user_output_vars,
+                                                            elem_sspd,
+                                                            elem_den(elem_gid),
+                                                            elem_sie(rk_level,elem_gid));
+
         // loop over the nodes of the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
 
@@ -643,10 +655,14 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
             if (div < 0){ // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                (material(mat_id).q1*elem_sspd(elem_gid) + material(mat_id).q2*mag_vel);
+                muc_gradient(node_lid) = elem_den(elem_gid)/relative_element_densities(elem_gid)/num_nodes_in_elem *
+                               (material(mat_id).q1*sound_speed_gradient_energy + material(mat_id).q2*mag_vel);
             }
             else { // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
                                (material(mat_id).q1ex*elem_sspd(elem_gid) + material(mat_id).q2ex*mag_vel);
+                muc_gradient(node_lid) = elem_den(elem_gid)/relative_element_densities(elem_gid)/num_nodes_in_elem *
+                               (material(mat_id).q1ex*sound_speed_gradient_energy + material(mat_id).q2ex*mag_vel);
             } // end if on divergence sign
            
 
@@ -775,11 +791,11 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++){
 
-               Force_Gradient_Energies(elem_gid,node_lid*num_dims+dim) = corner_vector_storage(corner_gid, dim) = 
+               Force_Gradient_Energies(elem_gid,node_lid*num_dims+dim) = corner_vector_storage(corner_gid, dim) =
                           area_normal(node_lid, 0)*tau_gradient(0, dim)
                         + area_normal(node_lid, 1)*tau_gradient(1, dim)
                         + area_normal(node_lid, 2)*tau_gradient(2, dim)
-                        + phi*muc(node_lid)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
+                        + phi*muc_gradient(node_lid)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
 
             } // end loop over dimension
 
@@ -1733,10 +1749,6 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
                           area_normal(node_lid, 0)*tau_gradient(0, dim)
                         + area_normal(node_lid, 1)*tau_gradient(1, dim)
                         + area_normal(node_lid, 2)*tau_gradient(2, dim)
-                        + phi*muc(node_lid)*(vel_star(dim) - node_vel(rk_level, node_gid, dim))
-                        + area_normal(node_lid, 0)*tau(0, dim)
-                        + area_normal(node_lid, 1)*tau(1, dim)
-                        + area_normal(node_lid, 2)*tau(2, dim)
                         + phi*muc_gradient(node_lid)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
 
             } // end loop over dimension
