@@ -1,40 +1,89 @@
 #!/bin/bash -e
 
-if [ "$1" != "cuda" ] && [ "$1" != "hip" ] && [ "$1" != "openmp" ] && [ "$1" != "serial" ]
-then
-    echo "The second argument needs to be either cuda, hip, openmp, or serial"
+# Function to display the help message
+show_help() {
+    echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
+    echo "Valid options:"
+    echo "  --heffte_build_type=<fftw|cufft|rocfft>"
+    echo "  --help          : Display this help message"
+    return 1
+}
+
+# Check for the number of arguments
+if [ $# -ne 1 ]; then
+    echo "Error: Please provide exactly one argument."
+    show_help
     return 1
 fi
 
-#inititialize submodules if they aren't downloaded
-cd ${libdir}
-[ -d "Elements/elements" ] && echo "Elements submodule exists"
-[ -d "Elements/matar/src" ] && echo "matar submodule exists"
+# Initialize variables with default values
+heffte_build_type=""
 
+# Define arrays of valid options
+valid_heffte_build_types=("fftw" "cufft" "rocfft")
 
-if { [ ! -d "Elements/elements" ] || [ ! -d "Elements/matar/src" ] ;}
-then
-  echo "Missing submodules, downloading them...."
-  git submodule update --init --recursive
-fi
+# Parse command line arguments
+for arg in "$@"; do
+    case "$arg" in
+        --heffte_build_type=*)
+            option="${arg#*=}"
+            if [[ " ${valid_heffte_build_types[*]} " == *" $option "* ]]; then
+                heffte_build_type="$option"
+            else
+                echo "Error: Invalid --heffte_build_type specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --help)
+            show_help
+            return 1
+            ;;
+        *)
+            echo "Error: Invalid argument or value specified."
+            show_help
+            return 1
+            ;;
+    esac
+done
 
-rm -rf ${FIERRO_BUILD_DIR}
-mkdir -p ${FIERRO_BUILD_DIR}
-cd ${FIERRO_BUILD_DIR}
+# Now you can use $build_type in your code or build commands
+echo "Heffte build type will be: $heffte_build_type"
 
-NUM_TASKS=1
-if [ ! -z $2 ]
-then
-    NUM_TASKS=$2
-fi
+echo "Removing stale build directory"
+rm -rf ${EVPFFT_BUILD_DIR}
+mkdir -p ${EVPFFT_BUILD_DIR}
 
-OPTIONS=(
--D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
--D BUILD_IMPLICIT_SOLVER=ON
--D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
+# Configure EVPFFT using CMake
+cmake_options=(
+    -D CMAKE_BUILD_TYPE=Release
+    -D CMAKE_PREFIX_PATH="$HEFFTE_INSTALL_DIR;$KOKKOS_INSTALL_DIR;$HDF5_INSTALL_DIR"
+    -D CMAKE_CXX_FLAGS="-I${matardir}/src"
+    -D ENABLE_PROFILING=ON
 )
 
-cmake "${OPTIONS[@]}" "${FIERRO_BASE_DIR:-../}"
-make -j ${NUM_TASKS}
+if [ "$heffte_build_type" == "fftw" ]; then
+    cmake_options+=(
+        -D USE_FFTW=ON
+    )   
+elif [ "$heffte_build_type" == "cufft" ]; then
+    cmake_options+=(
+        -D USE_CUFFT=ON
+    )   
+elif [ "$heffte_build_type" == "rocfft" ]; then
+    cmake_options+=(
+      -D USE_ROCFFT=ON
+    )   
+fi
+
+# Print CMake options for reference
+echo "CMake Options: ${cmake_options[@]}"
+
+# Configure EVPFFT
+cmake "${cmake_options[@]}" -B "${EVPFFT_BUILD_DIR}" -S "${EVPFFT_SOURCE_DIR}"
+
+# Build EVPFFT
+echo "Building EVPFFT..."
+make -C ${EVPFFT_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
 
 cd $basedir
