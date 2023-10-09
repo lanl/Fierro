@@ -23,16 +23,16 @@ requirements:
   host:
     - openmpi
     - fierro-heffte
-    - fftw=*=mpi_openmpi_hdeb57f9_6
+    - fftw=*=mpi_openmpi_*
     - kokkos
-    - hdf5=*=mpi_openmpi_h457a7a6_3
+    - hdf5=*=mpi_openmpi_*
     - elements
   run:
     - openmpi
     - fierro-heffte
-    - fftw=*=mpi_openmpi_hdeb57f9_6
+    - fftw=*=mpi_openmpi_*
     - kokkos
-    - hdf5=*=mpi_openmpi_h457a7a6_3
+    - hdf5=*=mpi_openmpi_*
     - elements
 
 #TODO: Add tests
