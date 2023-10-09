@@ -5,7 +5,7 @@ show_help() {
     echo "  --machine=<darwin|chicoma|linux|mac>"
     echo "  --heffte_build_type=<fftw|cufft|rocfft>"
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>"
-    echo "  --build_cores=<Integers with inclusive range of 1-32>. This argument is optional, default is set to 1"
+    echo "  --build_cores=<Integers greater than 0>. This argument is optional, default is set to 1"
     echo "  --help: Display this help message"
     return 1
 }
@@ -56,7 +56,7 @@ for arg in "$@"; do
             ;;
         --build_cores=*)
             option="${arg#*=}"
-            if [ $option -ge 0 ] && [ $option -le 32 ]; then
+            if [ $option -ge 1 ]; then
                 build_cores="$option"
             else
                 echo "Error: Invalid --build_cores specified."
