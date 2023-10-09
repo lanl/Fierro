@@ -116,52 +116,6 @@ IMPL_YAML_SERIALIZABLE_FOR(Time_Variables, output_time_sequence_level,
   cycle_stop, fuzz, tiny, small
 )
 
-struct volume_t {
-    VOLUME_TAG volume = VOLUME_TAG::sphere;
-    VELOCITY_TYPE velocity = VELOCITY_TYPE::cartesian;
-    double radius1, radius2;
-    double u,v,w;
-    double speed;
-    double sie;
-    double den;
-    
-    // TODO: These aren't set from the YAML at all
-    // They are only set in the test problems.
-    double x1, x2, y1, y2, z1, z2;
-    
-    KOKKOS_FUNCTION
-    bool contains(const double* elem_coords) { 
-      double radius;
-
-      switch(volume)
-      {
-        case VOLUME_TAG::global:
-          return true;
-
-        case VOLUME_TAG::box:
-          return ( elem_coords[0] >= x1 && elem_coords[0] <= x2
-                && elem_coords[1] >= y1 && elem_coords[1] <= y2
-                && elem_coords[2] >= z1 && elem_coords[2] <= z2 );
-
-        case VOLUME_TAG::cylinder:
-          radius = sqrt( elem_coords[0]*elem_coords[0] +
-                         elem_coords[1]*elem_coords[1] ); 
-          return ( radius >= radius1
-                && radius <= radius2 );
-
-        case VOLUME_TAG::sphere:
-          radius = sqrt( elem_coords[0]*elem_coords[0] +
-                         elem_coords[1]*elem_coords[1] +
-                         elem_coords[2]*elem_coords[2] );
-          return ( radius >= radius1
-                && radius <= radius2 );
-        
-        default:
-          return false;
-      }
-    }
-};
-
 struct mat_fill_t {
     size_t mat_id;
     VOLUME_TAG volume = VOLUME_TAG::sphere;
@@ -211,6 +165,7 @@ struct mat_fill_t {
 
 struct MaterialFill : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
     std::optional<double> sie;
+    std::optional<double> ie;
     std::optional<double> u;
     std::optional<double> v;
     std::optional<double> w;
