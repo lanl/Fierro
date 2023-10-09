@@ -1,5 +1,4 @@
 #!/bin/bash -e
-cd ${basedir}
 
 # Function to display the help message
 show_help() {
@@ -65,9 +64,9 @@ done
 echo "Heffte build type will be: $heffte_build_type"
 
 # Check if the 'heffte' directory exists and is not empty in the parent directory; if not, clone it
-if [ ! -d "${HEFFTE_SOURCE_DIR}" ] && [ -z "$(ls -A ${HEFFTE_SOURCE_DIR})" ]; then
+if [ ! -d "${HEFFTE_SOURCE_DIR}" ]; then
   echo "Directory 'heffte' does not exist in '${basedir}', downloading 'heffte'...."
-  git clone https://github.com/icl-utk-edu/heffte.git
+  git clone https://github.com/icl-utk-edu/heffte.git ${HEFFTE_SOURCE_DIR}
 else
   echo "Directory 'heffte' exists in '${HEFFTE_SOURCE_DIR}', skipping 'heffte' download"
 fi
@@ -75,8 +74,6 @@ fi
 echo "Removing stale heffte build and installation directory since these are machine dependant and don't take long to build/install"
 rm -rf ${HEFFTE_BUILD_DIR} ${HEFFTE_INSTALL_DIR}
 mkdir -p ${HEFFTE_BUILD_DIR} 
-echo "Changing directories into heffte build directory"
-cd ${HEFFTE_BUILD_DIR}
 
 
 # Configure heffte using CMake
@@ -112,16 +109,14 @@ fi
 echo "CMake Options: ${cmake_options[@]}"
 
 # Configure HeFFTe
-cmake "${cmake_options[@]}" "${HEFFTE_SOURCE_DIR:-../}"
+cmake "${cmake_options[@]}" -B "${HEFFTE_BUILD_DIR}" -S "${HEFFTE_SOURCE_DIR}"
 
 # Build HeFFTe
 echo "Building HeFFTe..."
-make -j${EVPFFT_BUILD_CORES}
+make -C ${HEFFTE_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
 
 # Install HeFFTe
 echo "Installing HeFFTe..."
-make install
+make -C ${HEFFTE_BUILD_DIR} install
 
 echo "HeFFTe installation complete."
-
-cd $scriptdir

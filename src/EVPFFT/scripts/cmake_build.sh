@@ -1,5 +1,4 @@
 #!/bin/bash -e
-cd ${basedir}
 
 # Function to display the help message
 show_help() {
@@ -54,8 +53,6 @@ echo "Heffte build type will be: $heffte_build_type"
 echo "Removing stale build directory"
 rm -rf ${EVPFFT_BUILD_DIR}
 mkdir -p ${EVPFFT_BUILD_DIR}
-echo "Changing directories into EVPFFT build directory"
-cd ${EVPFFT_BUILD_DIR}
 
 # Configure EVPFFT using CMake
 cmake_options=(
@@ -83,10 +80,10 @@ fi
 echo "CMake Options: ${cmake_options[@]}"
 
 # Configure EVPFFT
-cmake "${cmake_options[@]}" "${EVPFFT_SOURCE_DIR:-../}"
+cmake "${cmake_options[@]}" -B "${EVPFFT_BUILD_DIR}" -S "${EVPFFT_SOURCE_DIR}"
 
 # Build EVPFFT
 echo "Building EVPFFT..."
-make -j${EVPFFT_BUILD_CORES}
+make -C ${EVPFFT_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
 
 cd $basedir

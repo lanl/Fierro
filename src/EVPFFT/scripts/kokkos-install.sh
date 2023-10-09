@@ -1,5 +1,4 @@
 #!/bin/bash -e
-cd ${basedir}
 
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
@@ -62,9 +61,8 @@ fi
 echo "Kokkos Build Type: $kokkos_build_type"
 
 # Check if the 'kokkos' directory exists (in the Matar directory) and is not empty in the parent directory; if not, clone it
-#if [ ! -d "$KOKKOS_SOURCE_DIR" ] && [ ! -z "$(ls -A ${KOKKOS_SOURCE_DIR})" ]; then
 if [ ! -d "$KOKKOS_SOURCE_DIR" ]; then
-  echo "Directory 'kokkos' does not exist in '${KOKKOS_SOURCE_DIR}', downloading 'kokkos' here: ${PWD}...."
+  echo "Directory 'kokkos' does not exist in '${KOKKOS_SOURCE_DIR}', downloading 'kokkos' here: ${matardir}/src/Kokkos...."
   git clone --recursive https://github.com/lanl/MATAR.git ${matardir}
 else
   echo "Directory 'kokkos' exists in '${KOKKOS_SOURCE_DIR}', skipping 'kokkos' download"
@@ -73,8 +71,6 @@ fi
 echo "Removing stale Kokkos build and installation directory since these are machine dependant and don't take long to build/install"
 rm -rf ${KOKKOS_BUILD_DIR} ${KOKKOS_INSTALL_DIR}
 mkdir -p ${KOKKOS_BUILD_DIR} 
-echo "Changing directories into Kokkos build directory"
-cd ${KOKKOS_BUILD_DIR}
 
 # Kokkos flags for Cuda
 CUDA_ADDITIONS=(
@@ -134,16 +130,14 @@ fi
 echo "CMake Options: ${cmake_options[@]}"
 
 # Configure kokkos
-cmake "${cmake_options[@]}" "${KOKKOS_SOURCE_DIR:-../}"
+cmake "${cmake_options[@]}" -B "${KOKKOS_BUILD_DIR}" -S "${KOKKOS_SOURCE_DIR}"
 
 # Build kokkos
 echo "Building kokkos..."
-make -j${EVPFFT_BUILD_CORES}
+make -C ${KOKKOS_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
 
 # Install kokkos
 echo "Installing kokkos..."
-make install
+make -C ${KOKKOS_BUILD_DIR} install
 
 echo "kokkos installation complete."
-
-cd $scriptdir

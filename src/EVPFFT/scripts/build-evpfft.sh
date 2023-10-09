@@ -15,10 +15,6 @@ machine=""
 heffte_build_type=""
 kokkos_build_type=""
 build_cores="1"
-fullmachine=""
-fullheffte=""
-fullkokkos=""
-fullcores=""
 
 # Define arrays of valid options
 valid_machines=("darwin" "chicoma" "linux" "mac")
@@ -29,7 +25,6 @@ valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 for arg in "$@"; do
     case "$arg" in
         --machine=*)
-            fullmachine=$arg
             option="${arg#*=}"
             if [[ " ${valid_machines[*]} " == *" $option "* ]]; then
                 machine="$option"
@@ -40,7 +35,6 @@ for arg in "$@"; do
             fi
             ;;
         --heffte_build_type=*)
-            fullheffte=$arg
             option="${arg#*=}"
             if [[ " ${valid_heffte_build_types[*]} " == *" $option "* ]]; then
                 heffte_build_type="$option"
@@ -51,7 +45,6 @@ for arg in "$@"; do
             fi
             ;;
         --kokkos_build_type=*)
-            fullkokkos=$arg
             option="${arg#*=}"
             if [[ " ${valid_kokkos_build_types[*]} " == *" $option "* ]]; then
                 kokkos_build_type="$option"
@@ -62,7 +55,6 @@ for arg in "$@"; do
             fi
             ;;
         --build_cores=*)
-            fullcores=$arg
             option="${arg#*=}"
             if [ $option -ge 0 ] && [ $option -le 32 ]; then
                 build_cores="$option"
@@ -94,8 +86,8 @@ echo "Your options of $machine $heffte_build_type $kokkos_build_type are valid! 
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
-source setup-env.sh ${fullmachine} ${fullheffte} ${fullkokkos} ${fullcores}
-source heffte-install.sh ${fullmachine} ${fullheffte}
-source kokkos-install.sh ${fulltkokkos}
+source setup-env.sh --machine=${machine} --heffte_build_type=${heffte_build_type} --kokkos_build_type=${kokkos_build_type} --build_cores=${build_cores}
+source heffte-install.sh --machine=${machine} --heffte_build_type=${heffte_build_type}
+source kokkos-install.sh --kokkos_build_type=${kokkos_build_type}
 source hdf5-install.sh
-source cmake_build.sh ${fullheffte}
+source cmake_build.sh --heffte_build_type=${heffte_build_type}

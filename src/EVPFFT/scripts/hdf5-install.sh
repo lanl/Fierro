@@ -1,5 +1,4 @@
 #!/bin/bash -e
-cd ${basedir}
 
 # Check if the 'hdf5' directory exists and is not empty in the parent directory; if not, clone it
 if [ ! -d "${HDF5_SOURCE_DIR}" ]; then
@@ -12,7 +11,6 @@ fi
 # Check to avoid reinstalling HDF5 which might take time
 if [ -d "$HDF5_INSTALL_DIR" ]; then
     echo "HDF5 already installed, to reinstall HDF5 delete $HDF5_INSTALL_DIR and $HDF5_BUILD_DIR"
-    cd $scriptdir
     return 0
 fi
 
@@ -29,19 +27,14 @@ cmake_options=(
 echo "CMake Options: ${cmake_options[@]}"
 
 # Configure hdf5
-#cmake "${cmake_options[@]}" "${HDF5_SOURCE_DIR:-../}"
 cmake "${cmake_options[@]}" -B "${HDF5_BUILD_DIR}" -S "${HDF5_SOURCE_DIR}"
-
-cd ${HDF5_BUILD_DIR}
 
 # Build hdf5
 echo "Building hdf5..."
-make -j${EVPFFT_BUILD_CORES}
+make -C ${HDF5_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
 
 # Install hdf5
 echo "Installing hdf5..."
-make install
+make -C ${HDF5_BUILD_DIR} install
 
 echo "hdf5 installation complete."
-
-cd $scriptdir
