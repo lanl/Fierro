@@ -128,5 +128,3 @@ cd $scriptdir
 # Call the appropriate script to load modules based on the machine
 source machines/$machine-env.sh --kokkos_build_type=${kokkos_build_type}
 
-
-
