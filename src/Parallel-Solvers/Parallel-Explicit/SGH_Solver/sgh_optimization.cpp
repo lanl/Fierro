@@ -1266,6 +1266,7 @@ void FEA_Module_SGH::init_assembly(){
   Elem_to_Elem_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits> (rnum_elem, "Gradient_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
+  CArrayKokkos <size_t> count_saved_corners_in_node(nall_nodes, "count_saved_corners_in_node");
   int local_node_index, current_column_index;
   size_t max_stride = 0;
   size_t nodes_per_element;
@@ -1277,9 +1278,13 @@ void FEA_Module_SGH::init_assembly(){
   DCArrayKokkos <size_t, array_layout, device_type, memory_traits> Dual_Graph_Matrix_Strides_initial(nlocal_nodes, "Host_Graph_Matrix_Strides_initial");
   Graph_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes, "Graph_Matrix_Strides");
 
-  //allocate storage for the sparse stiffness matrix map used in the assembly process
-  Global_Stiffness_Matrix_Assembly_Map = Global_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
+  //allocate storage for the sparse gradient matrix map for node to node connectivity
+  Global_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
                                          max_nodes_per_element,max_nodes_per_element, "Global_Gradient_Matrix_Assembly_Map");
+  
+  //allocate storage for the sparse gradient matrix map for node to element connectivity
+  Element_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
+                                         max_nodes_per_element, "Element_Gradient_Matrix_Assembly_Map");
 
   //allocate array used to determine global node repeats in the sparse graph later
   DCArrayKokkos <int, array_layout, device_type, memory_traits> node_indices_used(nall_nodes, "node_indices_used");
@@ -1301,6 +1306,7 @@ void FEA_Module_SGH::init_assembly(){
   FOR_ALL_CLASS(inode, 0, nall_nodes, {
     node_indices_used(inode) = 0;
     column_index(inode) = 0;
+    count_saved_corners_in_node(inode) = 0;
   }); // end parallel for
   Kokkos::fence();
   
@@ -1528,6 +1534,25 @@ void FEA_Module_SGH::init_assembly(){
   }); // end parallel for
 
   
+  //build inverse map for element gradient assembly
+  for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++){
+      FOR_ALL_CLASS(node_lid, 0, num_nodes_in_elem, {
+          
+          // get the global_id of the node
+          size_t node_gid = nodes_in_elem(elem_gid, node_lid);
+          
+          // the column index is the num corners saved
+          size_t j = count_saved_corners_in_node(node_gid);
+          
+          Element_Gradient_Matrix_Assembly_Map(elem_gid, node_lid) = j;
+
+          // increment the number of corners saved to this node_gid
+          count_saved_corners_in_node(node_gid)++;
+
+      });  // end FOR_ALL over nodes in element
+  } // end for elem_gid
+  Kokkos::fence();  
+
   /*
   //construct distributed gradient matrix from local kokkos data
   //build column map for the global gradient matrix

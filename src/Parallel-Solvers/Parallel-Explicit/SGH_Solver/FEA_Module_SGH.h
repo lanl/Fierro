@@ -508,7 +508,6 @@ public:
   bool have_loading_conditions;
   bool nodal_density_flag;
   real_t penalty_power;
-  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   
   Simulation_Parameters_SGH simparam;
   Simulation_Parameters_Elasticity simparam_elasticity;
@@ -583,7 +582,8 @@ public:
   Teuchos::RCP<MV> force_gradient_velocity;
 
   //Local FEA data
-  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Gradient_Matrix_Assembly_Map;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Gradient_Matrix_Assembly_Map; //Maps element local nodes to columns on ragged right node connectivity graph
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Element_Gradient_Matrix_Assembly_Map; //Maps element-node pair to columns on ragged right node to element connectivity
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Positions;
