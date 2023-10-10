@@ -55,83 +55,25 @@ if [ -z "$kokkos_build_type" ]; then
     show_help
     return 1
 fi
+### Load environment modules here
+### Assign names as relevant
 
-# If all arguments are valid, you can use them in your script as needed
-echo "Kokkos Build Type: $kokkos_build_type"
+mygcc="gcc/9.4.0"
+myclang="clang/13.0.0"
+mycuda="cuda/11.4.0"
+myrocm="rocm"
 
-echo "Removing old Kokkos build and installation directory"
-rm -rf ${SGH_BUILD_DIR}
-mkdir -p ${SGH_BUILD_DIR}
-echo "Changing directories into Kokkos build directory"
-cd ${SGH_BUILD_DIR}
-
-
-# If we have lib64 that's where we should be looking
-# Mac installs in just 'lib', this is for robustness on other systems
-#if [ -d "${KOKKOS_INSTALL_DIR}/lib64" ]
-#then
-#    INSTALL_LIB=lib64
-#fi
-
-# Kokkos flags for Cuda
-CUDA_ADDITIONS=(
--D CUDA=ON
--D CMAKE_CXX_COMPILER=${KOKKOS_INSTALL_DIR}/bin/nvcc_wrapper
-)
-
-# Kokkos flags for Hip
-HIP_ADDITIONS=(
--D HIP=ON
--D CMAKE_CXX_COMPILER=hipcc
-)
-
-# Kokkos flags for OpenMP
-OPENMP_ADDITIONS=(
--D OPENMP=ON
-)
-
-# Kokkos flags for PThreads
-PTHREADS_ADDITIONS=(
--D THREADS=ON
-)
-
-OPTIONS=(
--D BUILD_1D_KOKKOS_SGH=ON
--D BUILD_EXPLICIT_SOLVER=OFF
--D KOKKOS=ON
-#-D Kokkos_DIR=${KOKKOS_INSTALL_DIR}/lib64/cmake/Kokkos
--D CMAKE_PREFIX_PATH=${KOKKOS_INSTALL_DIR}
-)
-
-if [ "$kokkos_build_type" = "openmp" ]; then
-    OPTIONS+=(
-        ${OPENMP_ADDITIONS[@]}
-    )
-elif [ "$kokkos_build_type" = "pthreads" ]; then
-    OPTIONS+=(
-        ${PTHREADS_ADDITIONS[@]}
-    )
-elif [ "$kokkos_build_type" = "cuda" ]; then
-    OPTIONS+=(
-        ${CUDA_ADDITIONS[@]}
-    )
+module purge
+if [ "$kokkos_build_type" = "cuda" ]; then
+    module load ${mygcc}
+    module load ${mycuda}
 elif [ "$kokkos_build_type" = "hip" ]; then
-    OPTIONS+=(
-        ${HIP_ADDITIONS[@]}
-    )
+    module load ${myclang}
+    module load ${myrocm}
+else
+    module load ${mygcc}
 fi
+module load cmake
+module -t list
 
-# Print CMake options for reference
-echo "CMake Options: ${OPTIONS[@]}"
-
-# Configure Kokkos
-echo "Building Kokkos..."
-cmake "${OPTIONS[@]}" "${SGH_BASE_DIR:-../}"
-
-# Install Kokkos
-echo "Installing Kokkos..."
-make -j${FIERRO_BUILD_CORES}
-
-echo "Kokkos installation complete."
-
-cd $basedir
+echo ${PATH}
