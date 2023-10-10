@@ -134,31 +134,51 @@ struct mat_fill_t {
     bool contains(const double* elem_coords) { 
       double radius;
 
-      switch(volume)
-      {
-        case VOLUME_TAG::global:
-          return true;
+      switch(volume) {
+      case VOLUME_TAG::global:
+        return true;
 
-        case VOLUME_TAG::box:
-          return ( elem_coords[0] >= x1 && elem_coords[0] <= x2
-                && elem_coords[1] >= y1 && elem_coords[1] <= y2
-                && elem_coords[2] >= z1 && elem_coords[2] <= z2 );
+      case VOLUME_TAG::box:
+        return ( elem_coords[0] >= x1 && elem_coords[0] <= x2
+              && elem_coords[1] >= y1 && elem_coords[1] <= y2
+              && elem_coords[2] >= z1 && elem_coords[2] <= z2 );
 
-        case VOLUME_TAG::cylinder:
-          radius = sqrt( elem_coords[0]*elem_coords[0] +
-                         elem_coords[1]*elem_coords[1] ); 
-          return ( radius >= radius1
-                && radius <= radius2 );
+      case VOLUME_TAG::cylinder:
+        radius = sqrt( elem_coords[0]*elem_coords[0] +
+                        elem_coords[1]*elem_coords[1] ); 
+        return ( radius >= radius1
+              && radius <= radius2 );
 
-        case VOLUME_TAG::sphere:
-          radius = sqrt( elem_coords[0]*elem_coords[0] +
-                         elem_coords[1]*elem_coords[1] +
-                         elem_coords[2]*elem_coords[2] );
-          return ( radius >= radius1
-                && radius <= radius2 );
-        
-        default:
-          return false;
+      case VOLUME_TAG::sphere:
+        radius = sqrt( elem_coords[0]*elem_coords[0] +
+                        elem_coords[1]*elem_coords[1] +
+                        elem_coords[2]*elem_coords[2] );
+        return ( radius >= radius1
+              && radius <= radius2 );
+      
+      default:
+        return false;
+      }
+    }
+
+    KOKKOS_FUNCTION
+    double get_volume() {
+      switch(volume) {
+      case VOLUME_TAG::global:
+        throw std::runtime_error("Cannot evaluate the volume of an unbounded region.");
+
+      case VOLUME_TAG::box:
+        return (x2 - x1) * (y2 - y1) * (z2 - z1);
+
+      case VOLUME_TAG::cylinder:
+        // 2D cylinder
+        return M_PI * (std::pow(radius2, 2) - std::pow(radius1, 2));
+
+      case VOLUME_TAG::sphere:
+        return (4.0 / 3.0) * M_PI * (std::pow(radius2, 3) - std::pow(radius1, 3));
+      
+      default:
+        throw std::runtime_error("Unsupported volume type: " + to_string(volume));
       }
     }
 };
@@ -188,25 +208,24 @@ struct MaterialFill : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
     }
 
     void derive() {
-      if (volume == VOLUME_TAG::sphere) {
-        if (radius2.has_value()) {
-          if (sie.has_value())
-            std::cerr << "Warning: sie value being overwritten" << std::endl;
-          sie = (963.652344 * std::pow((1.2 / 30.0), 3)) / std::pow(radius2.value(), 3);
-        }
-      }
+      if (sie.has_value() == ie.has_value())
+        throw Yaml::ConfigurationException("Specify values for exactly one of: energy (ie) or specific energy (sie).");
 
       mat_fill_t::radius1 = radius1.value_or(0);
       mat_fill_t::radius2 = radius2.value_or(0);
-      mat_fill_t::sie = sie.value_or(0);
       mat_fill_t::u = u.value_or(0);
       mat_fill_t::v = v.value_or(0);
       mat_fill_t::w = w.value_or(0);
+
+      if (ie.has_value())
+        sie = ie.value()  / (den * get_volume());
+
+      mat_fill_t::sie = sie.value_or(0);
     }
 };
 IMPL_YAML_SERIALIZABLE_FOR(
   MaterialFill, volume, mat_id, 
-  den, sie, velocity, u, v, w, 
+  den, sie, ie, velocity, u, v, w, 
   radius1, radius2, speed
 )
 
