@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 project(mesh-builder)
 
+
 SET(CMAKE_CXX_STANDARD 17)
 
 add_library(mesh_builder src/MeshBuilder.cpp src/EnsightIO.cpp src/VtkIO.cpp)
