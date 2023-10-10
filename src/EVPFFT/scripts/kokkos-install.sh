@@ -1,4 +1,5 @@
 #!/bin/bash -e
+
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
@@ -59,11 +60,17 @@ fi
 # If all arguments are valid, you can use them in your script as needed
 echo "Kokkos Build Type: $kokkos_build_type"
 
-echo "Removing old Kokkos build and installation directory"
+# Check if the 'kokkos' directory exists (in the Matar directory) and is not empty in the parent directory; if not, clone it
+if [ ! -d "$KOKKOS_SOURCE_DIR" ]; then
+  echo "Directory 'kokkos' does not exist in '${KOKKOS_SOURCE_DIR}', downloading 'kokkos' here: ${matardir}/src/Kokkos...."
+  git clone --recursive https://github.com/lanl/MATAR.git ${matardir}
+else
+  echo "Directory 'kokkos' exists in '${KOKKOS_SOURCE_DIR}', skipping 'kokkos' download"
+fi
+
+echo "Removing stale Kokkos build and installation directory since these are machine dependant and don't take long to build/install"
 rm -rf ${KOKKOS_BUILD_DIR} ${KOKKOS_INSTALL_DIR}
 mkdir -p ${KOKKOS_BUILD_DIR} 
-echo "Changing directories into Kokkos build directory"
-cd ${KOKKOS_BUILD_DIR}
 
 # Kokkos flags for Cuda
 CUDA_ADDITIONS=(
@@ -90,47 +97,47 @@ PTHREADS_ADDITIONS=(
 -D Kokkos_ENABLE_THREADS=ON
 )
 
-OPTIONS=(
--D CMAKE_BUILD_TYPE=Release
--D CMAKE_INSTALL_PREFIX="${KOKKOS_INSTALL_DIR}"
--D CMAKE_CXX_STANDARD=17
--D Kokkos_ENABLE_SERIAL=ON
--D Kokkos_ARCH_NATIVE=ON
--D BUILD_TESTING=OFF
+# Configure kokkos using CMake
+cmake_options=(
+    -D CMAKE_BUILD_TYPE=Release
+    -D CMAKE_INSTALL_PREFIX="${KOKKOS_INSTALL_DIR}"
+    -D CMAKE_CXX_STANDARD=17
+    -D Kokkos_ENABLE_SERIAL=ON
+    -D Kokkos_ARCH_NATIVE=ON
+    -D Kokkos_ENABLE_TESTS=OFF
+    -D BUILD_TESTING=OFF
 )
 
 if [ "$kokkos_build_type" = "openmp" ]; then
-    OPTIONS+=(
+    cmake_options+=(
         ${OPENMP_ADDITIONS[@]}
     )
 elif [ "$kokkos_build_type" = "pthreads" ]; then
-    OPTIONS+=(
+    cmake_options+=(
         ${PTHREADS_ADDITIONS[@]}
     )
 elif [ "$kokkos_build_type" = "cuda" ]; then
-    OPTIONS+=(
+    cmake_options+=(
         ${CUDA_ADDITIONS[@]}
     )
 elif [ "$kokkos_build_type" = "hip" ]; then
-    OPTIONS+=(
+    cmake_options+=(
         ${HIP_ADDITIONS[@]}
     )
 fi
 
 # Print CMake options for reference
-echo "CMake Options: ${OPTIONS[@]}"
+echo "CMake Options: ${cmake_options[@]}"
 
-# Configure Kokkos
-cmake "${OPTIONS[@]}" "${KOKKOS_SOURCE_DIR:-../}"
+# Configure kokkos
+cmake "${cmake_options[@]}" -B "${KOKKOS_BUILD_DIR}" -S "${KOKKOS_SOURCE_DIR}"
 
-# Build Kokkos
-echo "Building Kokkos..."
-make -j${FIERRO_BUILD_CORES}
+# Build kokkos
+echo "Building kokkos..."
+make -C ${KOKKOS_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
 
-# Install Kokkos
-echo "Installing Kokkos..."
-make install
+# Install kokkos
+echo "Installing kokkos..."
+make -C ${KOKKOS_BUILD_DIR} install
 
-echo "Kokkos installation complete."
-
-cd $scriptdir
+echo "kokkos installation complete."

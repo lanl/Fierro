@@ -26,7 +26,8 @@ Which outputs:
 Usage: source build_evpfft.sh [OPTION]
 Valid options:
   --heffte_build_type=<fftw|cufft|rocfft>
-  --kokkos_build_type=<serial|cuda|hip>
+  --kokkos_build_type=<serial|openmp|cuda|cuda-ampere|hip>
+  --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)
   --help: Display this help message
 ```
 
@@ -36,7 +37,7 @@ To build EVPFFT you would need to provide both the `--heffte_build_type` and `--
 source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=serial
 ```
 
-This will build EVPFFT in the folder `evpfft_heffte_{fftw}_kokkos_{serial}`. The binary, `evpfft` is found in that folder
+This will build EVPFFT in the folder `evpfft_{fftw}_{serial}`. The binary, `evpfft` is found in that folder
 
 # Using EVPFFT as a standalone program
 
@@ -117,7 +118,7 @@ To change these default options include the `-D OPTION=<value>` in the `cmake` o
 
 Example for input files needed to run EVPFFT for lattice structure homogenization is shown in `example_input_files/lattice_input_files`. In that file you will see how to set up evpft input file, elastic and plastic parameter files.
 
-Provide a `STRUCTURED_POINTS` vtk file type that contains information about which grid point is solid (1) or void (0), example is shown in `example_input_files/lattice_input_files/void_in_solid.vtk`.
+Provide a vtk file type that contains information about which grid point is solid (1) or void (0), example is shown in `example_input_files/lattice_input_files/void_in_solid.vtk`.
 
 Run EVPFFT as:
 ```

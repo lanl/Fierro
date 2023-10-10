@@ -62,36 +62,44 @@ As for Trilinos, we recommend installing the Anaconda package for the desired bu
 In addition to the primary build workflow described above, there are build scripts for a variety of alternative workflows. These scripts can be found under `Fierro/scripts`.
 ### Building the explicit and implicit Lagrangian methods with Trilinos+Kokkos
 Explicit Lagrangian codes are being added to the repository that are written using MATAR+Kokkos and run with fine-grained parallellism on multi-core CPUs and GPUs.  Build scripts are provided for each Lagrangian code, and those scripts follow those used in the [MATAR](https://github.com/lanl/MATAR/) GitHub repository. The scripts to build the Lagrangian codes (that use MATAR+Kokkos) are in the scripts folder.  The user must update the modules loaded by the build scripts (for the compiler etc.), and then type
+Immediate help with all scripts can be had running
+```
+<script> --help
+```
 The build-it script can take up to 3 arguments (with a minimum of 2)
 ```
-source build-it.sh <environment type> <parallelism> <build directory name (optional)>
+source build-it.sh --machine=<arg> --kokkos_build_type=<arg> (optional)--build_cores=<arg>
 ```
-environment has two options: 'hpc' or 'macos'
+machine currently has three options: darwin,linux,mc
 ```
-    hpc: builds by loading modules and can perform parallel builds (make -j)
-    macos: does not load anything externally and expects the environment to be set up on your mac. Additionally, the builds will all be serial (make)
+    darwin: builds by loading modules on the darwin cluster. and can perform parallel builds (make -j). Changes can be made to scripts/[solver]/machines/darwin-setup.sh to reflect your machine.
+    linux: does not load any modules and instead sources some paths related to your loaded software. Additionally, the builds can be parallel (make -j <build_cores>)
+    macos: does not load any modules and instead sources some paths related to your loaded software. Additionally, the builds will be forced to beserial (make)
+For Mac builds, please see the ***BUILD.md*** file for more info
 ```
-parallelism has four options: 'cuda', 'hip', 'openmp', 'none'
-***Note*** - all builds use Trilinos with Kokkos. The 'none' option will utilize the Kokkos serial build
+kokkos_build_type  has four options: 'cuda', 'hip', 'openmp', 'serial'
+***Note*** - all builds use Trilinos with Kokkos. The 'serial' option will utilize the Kokkos serial build
 ```
     cuda: loads cuda module and a working gcc module pairing
     hip: loads hip module and a working clang module pairing
     openmp: loads gcc module and sets openmp environment variables
-    none: loads gcc module
+    serial: loads gcc module
 ```
 ***Note*** - compiler can be changed with the appropriate variables in *setup-env.sh*, the ones provided are simply known to work together
+If running on Mac, only the openmp and serial options are enabled
 
 All other scripts will be called with the appropriate arguments as a result of running build-it.
 
 If you need to simply rebuild Fierro without making a new Trilinos installation, simply
 ```
-source cmake_build.sh <same args you passed to build-it>
+source cmake_build.sh
 ```
 If you are getting back on to a machine or allocation to continue development, you will need to run
 ```
 source setup-env.sh <same args you passed to build-it>
 ```
-If the scripts fail to build a Lagrangian code, then carefully review the modules used and the computer architecture settings.  A more lenghtly discussion of the build scripts is provided in the MATAR GitHub repository. 
+If the scripts fail to build a Lagrangian code, then carefully review the modules used and the computer architecture settings.  
+#A more lenghtly discussion of the build scripts is provided in the MATAR GitHub repository. 
 
 For help with [Trilinos](https://github.com/trilinos/Trilinos/wiki/New-Trilinos-Developers)
 For help with [Kokkos](https://github.com/kokkos/kokkos/wiki/Compiling) compilation
