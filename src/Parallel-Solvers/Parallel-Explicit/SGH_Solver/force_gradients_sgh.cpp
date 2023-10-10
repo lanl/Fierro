@@ -45,6 +45,15 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
 
     const size_t rk_level = simparam.rk_num_bins - 1;
     const size_t num_dims = simparam.num_dims;
+
+    //initialize gradient matrix
+    FOR_ALL_CLASS(dof_gid, 0, nlocal_nodes*num_dims, {
+      for(int idof = 0; idof < Gradient_Matrix_Strides(dof_gid); idof++){
+        Force_Gradient_Velocities(dof_gid,idof) = 0;
+      }
+    }); // end parallel for loop over nodes
+    Kokkos::fence();
+
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
@@ -365,6 +374,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             
             size_t corner_lid = node_lid;
+            size_t column_index;
 
             // Get corner gid
             size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
@@ -374,18 +384,22 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
    
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++){
-
                 corner_vector_storage(corner_gid, dim) = phi*muc(node_lid)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
-
+                //assign gradient of corner contribution of force to relevant matrix entries with non-zero node velocity gradient
+                for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
+                  size_t gradient_node_gid = nodes_in_elem(elem_gid, igradient);
+                  column_index = num_dims*Global_Gradient_Matrix_Assembly_Map(elem_gid, igradient, node_lid);
+                  if(node_lid==igradient)
+                    Force_Gradient_Velocities(gradient_node_gid*num_dims+dim, num_dims*node_gid+dim) += phi*muc(node_lid)*(vel_star_gradient(dim) - 1);
+                  else
+                    Force_Gradient_Velocities(gradient_node_gid*num_dims+dim, num_dims*node_gid+dim) += phi*muc(node_lid)*(vel_star_gradient(dim));
+                }
             } // end loop over dimension
 
         } // end for loop over nodes in elem
         
-        
-        
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a hypo model
-        
         size_t mat_id = elem_mat_id(elem_gid);
         
         

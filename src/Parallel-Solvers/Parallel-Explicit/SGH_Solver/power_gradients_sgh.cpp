@@ -342,6 +342,14 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
     const size_t rk_level = simparam.rk_num_bins - 1; 
     int num_dims = simparam.num_dims;
 
+    //initialize gradient matrix
+    FOR_ALL_CLASS(dof_gid, 0, nlocal_nodes*num_dims, {
+      for(int idof = 0; idof < DOF_to_Elem_Matrix_Strides(dof_gid); idof++){
+        Power_Gradient_Velocities(dof_gid,idof) = 0;
+      }
+    }); // end parallel for loop over nodes
+    Kokkos::fence();
+
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
