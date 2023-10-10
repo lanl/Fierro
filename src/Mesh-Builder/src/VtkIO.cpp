@@ -6,6 +6,7 @@
 #include <vector>
 #include <filesystem>
 #include <sstream>
+#include <cmath>
 #include "VtkIO.h"
 
 namespace {
