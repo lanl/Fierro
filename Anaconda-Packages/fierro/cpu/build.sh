@@ -9,7 +9,7 @@ if [ $(uname) == Linux ]; then
 fi
 
 # These flag variables are set by anaconda.
-source "${RECIPE_DIR}/../../add-compiler-flags.sh"
+source "$RECIPE_DIR/../../add-compiler-flags.sh"
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
@@ -18,11 +18,11 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D BUILD_IMPLICIT_SOLVER=ON \
       -D BUILD_ELEMENTS=OFF \
       -D DISTRIBUTION=True \
-      -D CMAKE_CXX_FLAGS=" -fopenmp " \
       $CMAKE_ARGS \
       $SRC_DIR \
-      -D MPI_C_COMPILER="${BUILD_PREFIX}/bin/mpicc" \
-      -D MPI_CXX_COMPILER="${BUILD_PREFIX}/bin/mpicxx" \
-      -D VECTOR_ARCH_FLAGS="${VECTOR_ARCH_FLAGS}"
+      -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS -fopenmp" \
+      -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
+      -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
+      -D VECTOR_ARCH_FLAGS="$VECTOR_ARCH_FLAGS" \
 
 make -j 10 install

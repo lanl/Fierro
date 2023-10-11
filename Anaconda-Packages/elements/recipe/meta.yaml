@@ -6,9 +6,8 @@ package:
   version: {{ version }}
 
 source:
-  # Assume this recipe is in
-  # Fierro/Anaconda-Packages/elements/recipe
-  path: ../../../Elements # Back to Elements/
+  - git_url: https://github.com/lanl/ELEMENTS.git
+    git_depth: 1
 
 build:
   number: 1

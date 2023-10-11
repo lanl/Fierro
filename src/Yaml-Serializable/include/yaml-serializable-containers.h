@@ -45,6 +45,7 @@
 #include "type-discrimination.h"
 #include <set>
 #include <vector>
+#include <sstream>
 
 namespace Yaml {
     namespace {
@@ -67,6 +68,41 @@ namespace Yaml {
                 Yaml::deserialize(item, node[i], raw);
             } catch (const Yaml::ConfigurationException& e) {
                 throw Yaml::ConfigurationException(e, "<" + std::to_string(i) + ">");
+            }
+        }
+
+        std::vector<std::string> tokenizer(std::string s, char delimeter) {
+            s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+                return !std::isspace(ch) && ch != '[';
+            }));
+            s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+                return !std::isspace(ch) && ch != ']';
+            }).base(), s.end());
+            std::vector<std::string> result;
+            std::stringstream ss(s);
+            std::string word;
+            while (!ss.eof()) {
+                std::getline(ss, word, delimeter);
+                result.push_back(word);
+            }
+            return result;
+        }
+
+        template<typename T, typename F>
+        void deserialize_to_iterable(Node& node, bool raw, F inserter) {
+            Yaml::Node sequence_node;
+            if (node.IsScalar()) {
+                for (auto token : tokenizer(node.As<std::string>(), ','))
+                    sequence_node.PushBack() = token;
+            }
+            if (node.IsSequence()) {
+                sequence_node = node;
+            }
+
+            for(size_t i = 0; i < sequence_node.Size(); i++) {
+                T item;
+                deserialize_from_indexed_item(item, sequence_node, raw, i);
+                inserter(item);
             }
         }
     }
@@ -94,12 +130,9 @@ namespace Yaml {
         template<typename T>
         struct Impl<std::vector<T>> {
             static void deserialize(std::vector<T>& v, Yaml::Node& node, bool raw) {
+                if (node.IsNone()) return;
                 v.clear();
-                for(size_t i = 0; i < node.Size(); i++) {
-                    T item;
-                    deserialize_from_indexed_item(item, node, raw, i);
-                    v.push_back(item);
-                }
+                deserialize_to_iterable<T>(node, raw, [&](const T& item) {v.push_back(item);});
             }
             static void serialize(const std::vector<T>& v, Yaml::Node& node) {
                 set_node_to_empty_sequence(node);
@@ -142,11 +175,7 @@ namespace Yaml {
             static void deserialize(std::set<T>& v, Yaml::Node& node, bool raw) {
                 if (node.IsNone()) return;
                 v.clear();
-                for(size_t i = 0; i < node.Size(); i++) {
-                    T item;
-                    deserialize_from_indexed_item(item, node, raw, i);
-                    v.insert(item);
-                }
+                deserialize_to_iterable<T>(node, raw, [&](const T& item) {v.insert(item);});
             }
             static void serialize(const std::set<T>& v, Yaml::Node& node) {
                 set_node_to_empty_sequence(node);

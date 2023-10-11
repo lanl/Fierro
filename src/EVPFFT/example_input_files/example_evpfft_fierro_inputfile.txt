@@ -1,3 +1,5 @@
+1 1 1 12               NPHMX, NMODMX, NTWMMX, NSYSMX
+8 8 8                  x-dim, y-dim, z-dim
 1                      number of phases (nph)                         
 1.  1.  1.             RVE dimensions (delt)
 * name and path of microstructure file (filetext)                                
