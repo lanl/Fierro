@@ -219,6 +219,7 @@ public:
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_vector_storage;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_gradient_storage;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;

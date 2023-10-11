@@ -145,6 +145,7 @@ FEA_Module_SGH::FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
     force_gradient_design = Teuchos::rcp(new MV(all_node_map, 1));
     corner_value_storage = Solver_Pointer->corner_value_storage;
     corner_vector_storage = Solver_Pointer->corner_vector_storage;
+    corner_gradient_storage = Solver_Pointer->corner_vector_storage;
     relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
     adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
     phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));

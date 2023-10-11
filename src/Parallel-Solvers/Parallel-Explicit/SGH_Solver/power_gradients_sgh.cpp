@@ -361,7 +361,8 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
             
             size_t corner_lid = node_lid;
-            
+            size_t column_id;
+            size_t gradient_node_id;
             // Get node global id for the local node id
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
             
@@ -375,10 +376,17 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
 
             // calculate the Power=F dot V for this corner
             for (size_t dim=0; dim<num_dims; dim++){
-                
-                double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
-                elem_power += corner_force(corner_gid, dim)*node_radius*half_vel;
-                
+                for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
+                    column_id = Element_Gradient_Matrix_Assembly_Map(elem_gid,node_lid);
+                    gradient_node_id = nodes_in_elem(elem_gid,igradient);
+                    if(node_lid==igradient){
+                        Power_Gradient_Velocities(gradient_node_id*num_dims+dim, column_id) += corner_gradient_storage(corner_gid,igradient*num_dims+dim)*node_vel(rk_level, node_gid, dim)*node_radius+
+                                                                                                            corner_force(corner_gid, dim)*node_radius;
+                    }
+                    else{
+                        Power_Gradient_Velocities(gradient_node_id*num_dims+dim, column_id) += corner_gradient_storage(corner_gid,igradient*num_dims+dim)*node_vel(rk_level, node_gid, dim)*node_radius;
+                    }
+                }
             } // end for dim
             
         } // end for node_lid

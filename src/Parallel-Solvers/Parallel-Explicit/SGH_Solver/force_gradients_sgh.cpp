@@ -384,15 +384,18 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
    
             // loop over dimension
             for (int dim = 0; dim < num_dims; dim++){
-                corner_vector_storage(corner_gid, dim) = phi*muc(node_lid)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
                 //assign gradient of corner contribution of force to relevant matrix entries with non-zero node velocity gradient
                 for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
                   size_t gradient_node_gid = nodes_in_elem(elem_gid, igradient);
                   column_index = num_dims*Global_Gradient_Matrix_Assembly_Map(elem_gid, igradient, node_lid);
-                  if(node_lid==igradient)
+                  if(node_lid==igradient){
                     Force_Gradient_Velocities(gradient_node_gid*num_dims+dim, num_dims*node_gid+dim) += phi*muc(node_lid)*(vel_star_gradient(dim) - 1);
-                  else
+                    corner_gradient_storage(corner_gid,igradient) = phi*muc(node_lid)*(vel_star_gradient(dim) - 1);
+                  }
+                  else{
                     Force_Gradient_Velocities(gradient_node_gid*num_dims+dim, num_dims*node_gid+dim) += phi*muc(node_lid)*(vel_star_gradient(dim));
+                    corner_gradient_storage(corner_gid,igradient*num_dims+dim) = phi*muc(node_lid)*(vel_star_gradient(dim));
+                  }
                 }
             } // end loop over dimension
 
