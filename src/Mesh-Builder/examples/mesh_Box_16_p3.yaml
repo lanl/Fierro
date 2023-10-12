@@ -1,0 +1,20 @@
+###
+# This file will generate a rectangle mesh
+# with 16 elements along each axis, a side length of 1, 
+# and with the center of the mesh at (0.5, 0.5, 0.5).
+#
+# Each element will have 4 nodes per side, as indicated by the p_order: 3.
+# Higher order meshes are output with in VTK Lagrange connectivity ordering
+# and generating high order meshes is only supported with VTK output.
+##
+
+output:
+  name: mesh
+  file_type: VTK
+
+input:
+  type: Box
+  length: [1, 1, 1]
+  num_elems: [16, 16, 16]
+  origin: [0, 0, 0]
+  p_order: 3
