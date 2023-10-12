@@ -32,7 +32,7 @@ UserStrengthModel::UserStrengthModel(
     real_t time_scale = 1.0; // 1.0e+6; // used to convert second to microsecond
 
     CommandLineArgs cmd;
-    cmd.nn = {N1,N2,N3};
+    //cmd.nn = {N1,N2,N3};
     cmd.input_filename = filename; //"evpfft.in";
     cmd.micro_filetype = 0;
     cmd.check_cmd_args();

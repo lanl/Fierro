@@ -1,10 +1,8 @@
 #!/bin/bash -e
 
-build_action="$1"
-solver="$2"
-machine="$3"
-kokkos_build_type="$4"
-build_cores="$5"
+machine="$1"
+kokkos_build_type="$2"
+build_cores="$3"
 
 my_build="build-fierro-${kokkos_build_type}"
 
@@ -18,13 +16,21 @@ export libdir=${topdir}/lib
 export matardir=${libdir}/Elements/matar
 export trilinosdir=${libdir}
 export builddir=${basedir}/${my_build}
-#export installdir=${basedir}/install
+export installdir=${basedir}/install
 
 export FIERRO_BASE_DIR=${basedir}
 export FIERRO_SOURCE_DIR=${srcdir}
 export FIERRO_EXPLICIT_SOURCE_DIR=${srcdir}/Parallel-Solvers/Parallel-Explicit
 export FIERRO_IMPLICIT_SOURCE_DIR=${srcdir}/Parallel-Solvers/Implicit-Lagrange
 export FIERRO_BUILD_DIR=${builddir}
+
+export HEFFTE_SOURCE_DIR=${libdir}/heffte
+export HEFFTE_BUILD_DIR=${builddir}/heffte
+export HEFFTE_INSTALL_DIR=${installdir}/heffte
+
+export HDF5_SOURCE_DIR=${libdir}/hdf5
+export HDF5_BUILD_DIR=${builddir}/hdf5
+export HDF5_INSTALL_DIR=${installdir}/hdf5
 
 #export KOKKOS_SOURCE_DIR=${matardir}/src/Kokkos/kokkos
 #export KOKKOS_BUILD_DIR=${builddir}/kokkos
