@@ -281,6 +281,6 @@ void MeshIO::write_vtk(std::string filename, const Mesh& mesh, bool verbose) {
     std::ofstream out(path.c_str(), std::ofstream::out);
     if (verbose)
         std::cout << "Creating file: " << path.string() << std::endl;
-    
+    write_vtk(out, mesh);
     out.close();
 }
