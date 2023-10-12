@@ -179,7 +179,7 @@ if [ "$build_action" = "full-app" ]; then
     source trilinos-install.sh ${kokkos_build_type}
     if [ "$solver" = "explicit-evpfft" ]; then
         source hdf5-install.sh
-        source heffte-install.sh ${heffte_build_type}
+        source heffte-install.sh ${heffte_build_type} ${machine}
     fi
     source cmake_build.sh ${solver}
 elif [ "$build_action" = "install-trilinos" ]; then
@@ -187,7 +187,7 @@ elif [ "$build_action" = "install-trilinos" ]; then
 elif [ "$build_action" = "install-hdf5" ]; then
     source hdf5-install.sh
 elif [ "$build_action" = "install-heffte" ]; then
-    source heffte-install.sh ${heffte_build_type}
+    source heffte-install.sh ${heffte_build_type} ${machine}
 elif [ "$build_action" = "fierro" ]; then
     source cmake_build.sh ${solver} ${heffte_build_type}
 else
