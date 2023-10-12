@@ -2168,7 +2168,6 @@ void Solver::Get_Boundary_Patches(){
 
   
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_node_order(max_nodes_per_element);
   if((active_node_ordering_convention == ENSIGHT && num_dim==3)||(active_node_ordering_convention == IJK && num_dim==2)){
     convert_node_order(0) = 0;
     convert_node_order(1) = 1;

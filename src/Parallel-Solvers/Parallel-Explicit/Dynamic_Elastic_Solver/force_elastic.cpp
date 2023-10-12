@@ -8,6 +8,7 @@
 #include "Simulation_Parameters_Dynamic_Elasticity.h"
 #include "Tpetra_Import.hpp"
 #include "Tpetra_Import_Util2.hpp"
+#include "Explicit_Solver.h"
 
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
@@ -382,12 +383,38 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+  Solver::node_ordering_convention active_node_ordering_convention = Explicit_Solver_Pointer_->active_node_ordering_convention;
 
   real_t current_density = 1;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
+  }
+  else if((active_node_ordering_convention == Solver::IJK && num_dim==3)||(active_node_ordering_convention == Solver::ENSIGHT && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
+  }
 
   //acquire set of nodes for this local element
   for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-    local_node_id = nodes_in_elem.host(ielem, node_loop);
+    local_node_id = nodes_in_elem.host(ielem, convert_node_order(node_loop));
     nodal_positions(node_loop,0) = all_initial_node_coords(local_node_id,0);
     nodal_positions(node_loop,1) = all_initial_node_coords(local_node_id,1);
     nodal_positions(node_loop,2) = all_initial_node_coords(local_node_id,2);
@@ -779,9 +806,35 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-  
-  real_t current_density = 1;
+  Solver::node_ordering_convention active_node_ordering_convention = Explicit_Solver_Pointer_->active_node_ordering_convention;
 
+  real_t current_density = 1;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
+  }
+  else if((active_node_ordering_convention == Solver::IJK && num_dim==3)||(active_node_ordering_convention == Solver::ENSIGHT && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
+  }
+  
   //loop through each element and assign the contribution to compliance gradient for each of its local nodes
   if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if(myrank==0){
@@ -832,8 +885,8 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
 
         //acquire set of nodes and nodal displacements for this local element
         for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
-          local_node_id = nodes_in_elem.host(ielem, node_loop);
-          local_dof_idx = nodes_in_elem.host(ielem, node_loop)*num_dim;
+          local_node_id = nodes_in_elem.host(ielem, convert_node_order(node_loop));
+          local_dof_idx = nodes_in_elem.host(ielem, convert_node_order(node_loop))*num_dim;
           local_dof_idy = local_dof_idx + 1;
           local_dof_idz = local_dof_idx + 2;
 
