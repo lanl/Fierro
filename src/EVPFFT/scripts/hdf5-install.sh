@@ -4,6 +4,9 @@
 if [ ! -d "${HDF5_SOURCE_DIR}" ]; then
   echo "Directory 'hdf5' does not exist in '${basedir}', downloading 'hdf5'...."
   git clone https://github.com/HDFGroup/hdf5.git ${HDF5_SOURCE_DIR}
+  cd ${HDF5_SOURCE_DIR}
+  git checkout 6f56d06f6af371b8b8c58079d8200647df249ee2
+  cd ${scriptdir}
 else
   echo "Directory 'hdf5' exists in '${basedir}', skipping 'hdf5' download"
 fi
