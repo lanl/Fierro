@@ -1,5 +1,3 @@
-project(parallel-solvers)
-
 find_package(Vector)
 if (CMAKE_VECTOR_NOVEC)
   set(VECTOR_C_FLAGS "${VECTOR_NOVEC_C_FLAGS}")
