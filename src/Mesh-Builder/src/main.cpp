@@ -20,25 +20,25 @@ int main(int argc, char *argv[]) {
     std::string command = argv[1];
     if (command == "Box") {
         std::cout << "Example box input file: " << std::endl;
-        std::cout << Yaml::to_string(Input_Rectilinear()) << std::endl;
+        std::cout << MeshBuilderConfig::example_box() << std::endl;
         return 0;
     } else if (command == "Cylinder") {
         std::cout << "Example cylinder input file: " << std::endl;
-        std::cout << Yaml::to_string(Input_Cylinder()) << std::endl;
+        std::cout << MeshBuilderConfig::example_cylinder() << std::endl;
         return 0;
     }
     
-    std::shared_ptr<MeshBuilderInput> input;
-    Yaml::from_file_strict(argv[1], input);
+    MeshBuilderConfig config;
+    Yaml::from_file_strict(argv[1], config);
 
-    Mesh mesh = MeshBuilder::build_mesh(input);
+    Mesh mesh = MeshBuilder::build_mesh(config.input);
 
-    switch (input->file_type) {
+    switch (config.output.file_type) {
         case FileType::Ensight:
-            MeshIO::write_ensight(input->name, mesh, true);
+            MeshIO::write_ensight(config.output.name, mesh, true);
             break;
         case FileType::VTK:
-            MeshIO::write_vtk(input->name, mesh, true);
+            MeshIO::write_vtk(config.output.name, mesh, true);
             break;
     }
     return 0;

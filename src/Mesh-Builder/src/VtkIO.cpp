@@ -244,12 +244,12 @@ Mesh MeshIO::read_vtk(std::istream& in, bool verbose) {
     
     if (mesh.element_types.dims(0) > 0) {
         if (VtkIO::is_lagrange_ordered(mesh.element_types(0))) {
-            _Impl::redorder_columns(
+            _Impl::reorder_columns(
                 mesh.element_point_index,
                 VtkIO::ijk_to_lagrange(mesh.num_dim, mesh.p_order).data()
             );
         } else {
-            _Impl::redorder_columns(
+            _Impl::reorder_columns(
                 mesh.element_point_index, 
                 _Impl::ijk_to_fea().data()
             );
@@ -281,6 +281,6 @@ void MeshIO::write_vtk(std::string filename, const Mesh& mesh, bool verbose) {
     std::ofstream out(path.c_str(), std::ofstream::out);
     if (verbose)
         std::cout << "Creating file: " << path.string() << std::endl;
-    
+    write_vtk(out, mesh);
     out.close();
 }

@@ -5,8 +5,6 @@
 #include <iostream>
 #include <cmath>
 
-#define PI 3.141592653589793
-
 namespace {
     inline bool all_equal(std::vector<size_t> values) {
         if (values.size() == 0) return true;
@@ -28,17 +26,30 @@ SERIALIZABLE_ENUM(FileType,
     VTK
 )
 
-struct MeshBuilderInput 
+struct MeshBuilderOutput {
+    FileType file_type = FileType::VTK;
+    std::string name = "mesh";
+};
+IMPL_YAML_SERIALIZABLE_FOR(MeshBuilderOutput, name, file_type)
+
+struct MeshBuilderInput
     : Yaml::TypeDiscriminated<MeshBuilderInput, MeshType>, 
       Yaml::ValidatedYaml, 
       Yaml::DerivedFields {
-
-    FileType file_type = FileType::VTK;
-    std::string name = "mesh";
     std::vector<double> origin {0., 0., 0.};
 };
-YAML_ADD_REQUIRED_FIELDS_FOR(MeshBuilderInput, type, file_type, origin)
-IMPL_YAML_SERIALIZABLE_FOR(MeshBuilderInput, type, name, file_type, origin)
+YAML_ADD_REQUIRED_FIELDS_FOR(MeshBuilderInput, type, origin)
+IMPL_YAML_SERIALIZABLE_FOR(MeshBuilderInput, type, origin)
+
+struct MeshBuilderConfig {
+    MeshBuilderOutput output;
+    std::shared_ptr<MeshBuilderInput> input;
+    
+    static inline std::string example_box();
+    static inline std::string example_cylinder();
+};
+YAML_ADD_REQUIRED_FIELDS_FOR(MeshBuilderConfig, input, output)
+IMPL_YAML_SERIALIZABLE_FOR(MeshBuilderConfig, input, output)
 
 
 struct Input_Rectilinear
@@ -62,6 +73,7 @@ struct Input_Rectilinear
     int num_dims;
     
     void derive_delta() {
+        delta.resize(std::min(length.size(), num_elems.size()));
         for (size_t i = 0; i < std::min(length.size(), num_elems.size()); i++) {
             delta[i] = (upper_bound[i] - lower_bound[i]) / (double)(p_order * num_elems[i]);
         }
@@ -72,7 +84,6 @@ struct Input_Rectilinear
 
         lower_bound = {0, 0, 0};
         upper_bound = length;
-        delta.resize(std::min(length.size(), num_elems.size()));
         derive_delta();
         
         for (auto nm : num_elems)
@@ -87,6 +98,9 @@ struct Input_Rectilinear
 
         // Embed in 3D for easier downstream code.
         if (num_dims == 2) {
+            origin.push_back(0);
+            length.push_back(0);
+            upper_bound.push_back(0);
             num_elems.push_back(1);
             num_points.push_back(1);
         }
@@ -126,9 +140,9 @@ struct Input_Cylinder
             total_points *= num_points[i];
         }
         
-        start_angle    *= PI / 180.;
-        length[1]      *= PI / 180.;
-        upper_bound[1] *= PI / 180.;
+        start_angle    *= M_PI / 180.;
+        length[1]      *= M_PI / 180.;
+        upper_bound[1] *= M_PI / 180.;
         
         lower_bound[0] += inner_radius;
         upper_bound[0] += inner_radius;
@@ -143,3 +157,16 @@ struct Input_Cylinder
     }
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Input_Cylinder, Input_Rectilinear, inner_radius, start_angle)
+
+
+inline std::string MeshBuilderConfig::example_box() {
+    MeshBuilderConfig config;
+    config.input = std::make_shared<MeshBuilderInput>(Input_Rectilinear());
+    return Yaml::to_string(config);
+}
+
+inline std::string MeshBuilderConfig::example_cylinder() {
+    MeshBuilderConfig config;
+    config.input = std::make_shared<MeshBuilderInput>(Input_Cylinder());
+    return Yaml::to_string(config);
+}
