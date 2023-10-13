@@ -48,7 +48,7 @@
                 <p>
                     This will list as subcommands all of the available backend applications.
                 </p>
-                
+
                 <h3>Parallel Solvers</h3>
                 <p>
                     Both the implicit static solver, and the explicit dynamics integrator take similar arguments in the form of a a Yaml configuration file.
@@ -155,6 +155,49 @@ optimization_options:
 
                     When invoking the explicit solver, you should provide it with a single Yaml file corresponding to the <b>Simulation Parameters Dynamic</b> spec.
                 </p>
+
+                
+                <h3>Mesh Builder</h3>
+                <p>
+                    Included in <em>Fierro</em> is a tool for generating small, simple meshes for running test problems. This can be accessed through
+                </p>
+<pre><code>fierro mesh-builder</code></pre>
+                <p>
+                    The Mesh Builder is able to output .geo meshes in either a rectangular or cylindrical shape in 2 or 3 dimensions. Like other <em>Fierro</em> tools,
+                    the Mesh Builder accepts an input configuration file. 
+
+                    As an example, the following YAML text can be used to generate a 1x1x1 box mesh:
+                </p>
+<pre><code>output:
+  name: mesh
+  file_type: Ensight
+
+input:
+  type: Box
+  length: [1, 1, 1]
+  num_elems: [1, 1, 1]
+  origin: [0, 0, 0]
+  p_order: 1</code></pre>
+                <p>
+                    Additional examples of these inputs can be found under the <code>Fierro/src/Mesh-Builder/examples</code> folder, 
+                    and a trivial example can be generated for cylinders and boxes using the <code>--box-help</code> and <code>--cylinder-help</code> flags in the command line tool.
+
+                    In addition to generating standlone mesh files, this tool is built into the <em>Fierro</em> solvers so you can run simple tests without a mesh file at all.
+                    To use the mesh builder instead of loading a mesh, replace the <code>input_options</code> field with a <code>mesh_generation_options</code> field that corresponds
+                    to the mesh builder <code>input</code> field shown above:
+                </p>
+<pre><code># input_options:
+#    mesh_file_format: ensight
+#    mesh_file_name: TO_small_beam.geo
+    
+mesh_generation_options:
+   type: Box
+   length: [10, 10, 100]
+   num_elems: [10, 10, 100]
+   origin: [0, 0, 0]
+   p_order: 1
+</code></pre>
+                
             </div>
         </div>
     </div>
