@@ -23,6 +23,7 @@ struct material_t {
   double q2ex;
   
   size_t num_global_vars = 0;
+  bool maximum_limiter = false;
 };
 
 struct Material : material_t {
@@ -32,7 +33,7 @@ YAML_ADD_REQUIRED_FIELDS_FOR(Material, eos_model)
 IMPL_YAML_SERIALIZABLE_FOR(Material, 
   eos_model, strength_model, strength_type,
   strength_run_location, eos_run_location,
-  q1, q2, q1ex, q2ex, 
+  q1, q2, q1ex, q2ex, maximum_limiter,
   global_vars
 )
 
