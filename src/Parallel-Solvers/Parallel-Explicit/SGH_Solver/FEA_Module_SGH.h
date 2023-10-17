@@ -175,6 +175,8 @@ public:
 
   void get_vol();
 
+  void get_vol_ugradient(const size_t gradient_node_id, const size_t gradient_dim);
+
   void init_assembly();
 
   KOKKOS_INLINE_FUNCTION
@@ -182,6 +184,15 @@ public:
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                   const size_t rk_level) const;
+
+  KOKKOS_INLINE_FUNCTION
+  double get_vol_hex_ugradient(const DViewCArrayKokkos <double> &elem_vol,
+                   const size_t elem_gid,
+                   const DViewCArrayKokkos <double> &node_coords,
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                   const size_t gradient_node_id,
+                   const size_t gradient_dim,
                    const size_t rk_level) const;
 
 
