@@ -874,6 +874,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +y(5)*( +z(0) -z(2) +z(4) -z(6) )
     //                   +y(6)*( -z(2) +z(5) ) )*twelth;
 
+    //y derivative
     gradient_terms(0,0) = z(2) + z(3) - z(4) - z(5);
     gradient_terms(0,1) = 0;
     gradient_terms(0,2) = -z(0) -z(3) + z(5) + z(6);
@@ -906,6 +907,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +y(6)*( +z(1) -z(3) +z(5) -z(7) )
     //                   +y(7)*( -z(3) +z(6) ) )*twelth;
 
+    //y derivative
     gradient_terms(0,0) = -z(1) + z(3);
     gradient_terms(0,1) = z(0) + z(3) - z(5) - z(6);
     gradient_terms(0,2) = 0;
@@ -938,6 +940,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +y(6)*( +z(2) -z(7) )
     //                   +y(7)*( -z(0) +z(2) -z(4) +z(6) ) )*twelth;
 
+    //y derivative
     gradient_terms(0,0) = -z(1) - z(2) + z(4) + z(7);
     gradient_terms(0,1) = z(0) - z(2);
     gradient_terms(0,2) = z(0) + z(1) - z(6) - z(7);
@@ -970,6 +973,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +y(6)*( -z(5) +z(7) )
     //                   +y(7)*( +z(0) +z(3) -z(5) -z(6) ) )*twelth;
 
+    //y derivative
     gradient_terms(0,0) = z(1) - z(3) + z(5) - z(7);
     gradient_terms(0,1) = -z(0) + z(5);
     gradient_terms(0,2) = 0;
@@ -1002,6 +1006,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +y(6)*( -z(1) -z(2) +z(4) +z(7) )
     //                   +y(7)*( +z(4) -z(6) ) )*twelth;
 
+    //y derivative
     gradient_terms(0,0) = z(1) -z(4);
     gradient_terms(0,1) = -z(0) +z(2) -z(4) +z(6);
     gradient_terms(0,2) = -z(1) +z(6);
@@ -1033,7 +1038,8 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +y(4)*( +z(5) -z(7) )
     //                   +y(5)*( +z(1) +z(2) -z(4) -z(7) )
     //                   +y(7)*( -z(2) -z(3) +z(4) +z(5) ) )*twelth;
-
+    
+    //y derivative
     gradient_terms(0,0) = 0;
     gradient_terms(0,1) = z(2) - z(5);
     gradient_terms(0,2) = -z(1) + z(3) - z(5) + z(7);
@@ -1066,6 +1072,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +y(5)*( -z(4) +z(6) )
     //                   +y(6)*( +z(2) +z(3) -z(4) -z(5) ) )*twelth;
 
+    //y derivative
     gradient_terms(0,0) = -z(3) +z(4);
     gradient_terms(0,1) = 0;
     gradient_terms(0,2) = z(3) -z(6);
@@ -1098,12 +1105,64 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +z(5)*( -x(1) +x(4) )
     //                   +z(7)*( +x(3) -x(4) ) )*twelth;
 
+    //x derivative
+    gradient_terms(0,0) = 0;
+    gradient_terms(0,1) = z(2) + z(3) - z(4) - z(5);
+    gradient_terms(0,2) = -z(1) + z(3);
+    gradient_terms(0,3) = -z(1) - z(2) + z(4) + z(7);
+    gradient_terms(0,4) = z(1) - z(3) + z(5) - z(7);
+    gradient_terms(0,5) = z(1) - z(4);
+    gradient_terms(0,6) = 0;
+    gradient_terms(0,7) = -z(3) + z(4);
+    
+    //z derivative
+    gradient_terms(1,0) = 0;
+    gradient_terms(1,1) = -x(2) - x(3) + x(4) + x(5);
+    gradient_terms(1,2) = x(1) - x(3);
+    gradient_terms(1,3) = x(1) + x(2) - x(4) - x(7);
+    gradient_terms(1,4) = -x(1) + x(3) - x(5) + x(7);
+    gradient_terms(1,5) = -x(1) + x(4);
+    gradient_terms(1,6) = 0;
+    gradient_terms(1,7) = x(3) - x(4);
+
+    for(int inode = 0; inode < 8; inode++){
+        B_matrix_gradients(0,1,inode,0) = gradient_terms(0,inode)*twelth;
+        B_matrix_gradients(0,1,inode,1) = 0;
+        B_matrix_gradients(0,1,inode,2) = gradient_terms(1,inode)*twelth;
+    }
+
     // B_matrix(1,1) = ( +z(0)*( +x(2) +x(3) -x(4) -x(5) )
     //                   +z(2)*( -x(0) -x(3) +x(5) +x(6) )
     //                   +z(3)*( -x(0) +x(2) )
     //                   +z(4)*( +x(0) -x(5) )
     //                   +z(5)*( +x(0) -x(2) +x(4) -x(6) )
     //                   +z(6)*( -x(2) +x(5) ) )*twelth;
+
+    //x derivative
+    gradient_terms(0,0) = -z(2) - z(3) +z(4) + z(5);
+    gradient_terms(0,1) = 0;
+    gradient_terms(0,2) = z(0) + z(3) - z(5) - z(6);
+    gradient_terms(0,3) = z(0) - z(2);
+    gradient_terms(0,4) = -z(0) + z(5);
+    gradient_terms(0,5) = -z(0) + z(2) - z(4) + z(6);
+    gradient_terms(0,6) = z(2) - z(5);
+    gradient_terms(0,7) = 0;
+    
+    //z derivative
+    gradient_terms(1,0) = x(2) + x(3) - x(4) - x(5);
+    gradient_terms(1,1) = 0;
+    gradient_terms(1,2) = -x(0) -x(3) + x(5) + x(6);
+    gradient_terms(1,3) = -x(0) + x(2);
+    gradient_terms(1,4) = x(0) - x(5);
+    gradient_terms(1,5) = x(0) - x(2) + x(4) - x(6);
+    gradient_terms(1,6) = -x(2) + x(5);
+    gradient_terms(1,7) = 0;
+
+    for(int inode = 0; inode < 8; inode++){
+        B_matrix_gradients(1,1,inode,0) = gradient_terms(0,inode)*twelth;
+        B_matrix_gradients(1,1,inode,1) = 0;
+        B_matrix_gradients(1,1,inode,2) = gradient_terms(1,inode)*twelth;
+    }
 
     // B_matrix(2,1) = ( +z(0)*( -x(1) +x(3) )
     //                   +z(1)*( +x(0) +x(3) -x(5) -x(6) )
@@ -1112,12 +1171,64 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +z(6)*( +x(1) -x(3) +x(5) -x(7) )
     //                   +z(7)*( -x(3) +x(6) ) )*twelth;
 
+    //x derivative
+    gradient_terms(0,0) = z(1) - z(3);
+    gradient_terms(0,1) = -z(0) - z(3) +z(5) + z(6);
+    gradient_terms(0,2) = 0;
+    gradient_terms(0,3) = z(0) + z(1) - z(6) - z(7);
+    gradient_terms(0,4) = 0;
+    gradient_terms(0,5) = -z(1) + z(6);
+    gradient_terms(0,6) = -z(1) + z(3) - z(5) + z(7);
+    gradient_terms(0,7) = z(3) - z(6);
+    
+    //z derivative
+    gradient_terms(1,0) = -x(1) + x(3);
+    gradient_terms(1,1) = x(0) + x(3) - x(5) - x(6);
+    gradient_terms(1,2) = 0;
+    gradient_terms(1,3) = -x(0) - x(1) + x(6) + x(7);
+    gradient_terms(1,4) = 0;
+    gradient_terms(1,5) = x(1) - x(6);
+    gradient_terms(1,6) = x(1) - x(3) + x(5) - x(7);
+    gradient_terms(1,7) = -x(3) + x(6);
+
+    for(int inode = 0; inode < 8; inode++){
+        B_matrix_gradients(2,1,inode,0) = gradient_terms(0,inode)*twelth;
+        B_matrix_gradients(2,1,inode,1) = 0;
+        B_matrix_gradients(2,1,inode,2) = gradient_terms(1,inode)*twelth;
+    }
+
     // B_matrix(3,1) = ( +z(0)*( -x(1) -x(2) +x(4) +x(7) )
     //                   +z(1)*( +x(0) -x(2) )
     //                   +z(2)*( +x(0) +x(1) -x(6) -x(7) )
     //                   +z(4)*( -x(0) +x(7) )
     //                   +z(6)*( +x(2) -x(7) )
     //                   +z(7)*( -x(0) +x(2) -x(4) +x(6) ) )*twelth;
+
+    //x derivative
+    gradient_terms(0,0) = z(1) + z(2) - z(4) - z(7);
+    gradient_terms(0,1) = -z(0) + z(2);
+    gradient_terms(0,2) = -z(0) - z(1) + z(6) + z(7);
+    gradient_terms(0,3) = 0;
+    gradient_terms(0,4) = z(0) - z(7);
+    gradient_terms(0,5) = 0;
+    gradient_terms(0,6) = -z(2) + z(7);
+    gradient_terms(0,7) = z(0) - z(2) + z(4) - z(6);
+    
+    //z derivative
+    gradient_terms(1,0) = -x(1) - x(2) + x(4) + x(7);
+    gradient_terms(1,1) = x(0) - x(2);
+    gradient_terms(1,2) = x(0) + x(1) - x(6) - x(7);
+    gradient_terms(1,3) = 0;
+    gradient_terms(1,4) = -x(0) + x(7);
+    gradient_terms(1,5) = 0;
+    gradient_terms(1,6) = x(2) - x(7);
+    gradient_terms(1,7) = -x(0) + x(2) - x(4) + x(6);
+
+    for(int inode = 0; inode < 8; inode++){
+        B_matrix_gradients(3,1,inode,0) = gradient_terms(0,inode)*twelth;
+        B_matrix_gradients(3,1,inode,1) = 0;
+        B_matrix_gradients(3,1,inode,2) = gradient_terms(1,inode)*twelth;
+    }
 
     // B_matrix(4,1) = ( +z(0)*( +x(1) -x(3) +x(5) -x(7) )
     //                   +z(1)*( -x(0) +x(5) )
@@ -1126,12 +1237,64 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +z(6)*( -x(5) +x(7) )
     //                   +z(7)*( +x(0) +x(3) -x(5) -x(6) ) )*twelth;
 
+    //x derivative
+    gradient_terms(0,0) = -z(1) + z(3) - z(5) + z(7);
+    gradient_terms(0,1) = z(0) - z(5);
+    gradient_terms(0,2) = 0;
+    gradient_terms(0,3) = -z(0) + z(7);
+    gradient_terms(0,4) = 0;
+    gradient_terms(0,5) = z(0) + z(1) - z(6) - z(7);
+    gradient_terms(0,6) = z(5) - z(7);
+    gradient_terms(0,7) = -z(0) - z(3) + z(5) + z(6);
+    
+    //z derivative
+    gradient_terms(1,0) = x(1) - x(3) + x(5) - x(7);
+    gradient_terms(1,1) = -x(0) + x(5);
+    gradient_terms(1,2) = 0;
+    gradient_terms(1,3) = x(0) -x(7);
+    gradient_terms(1,4) = 0;
+    gradient_terms(1,5) = -x(0) - x(1) + x(6) + x(7);
+    gradient_terms(1,6) = -x(5) + x(7);
+    gradient_terms(1,7) = x(0) + x(3) - x(5) - x(6);
+
+    for(int inode = 0; inode < 8; inode++){
+        B_matrix_gradients(4,1,inode,0) = gradient_terms(0,inode)*twelth;
+        B_matrix_gradients(4,1,inode,1) = 0;
+        B_matrix_gradients(4,1,inode,2) = gradient_terms(1,inode)*twelth;
+    }
+
     // B_matrix(5,1) = ( +z(0)*( +x(1) -x(4) )
     //                   +z(1)*( -x(0) +x(2) -x(4) +x(6) )
     //                   +z(2)*( -x(1) +x(6) )
     //                   +z(4)*( +x(0) +x(1) -x(6) -x(7) )
     //                   +z(6)*( -x(1) -x(2) +x(4) +x(7) )
     //                   +z(7)*( +x(4) -x(6) ) )*twelth;
+
+    //x derivative
+    gradient_terms(0,0) = -z(1) + z(4);
+    gradient_terms(0,1) = z(0) - z(2) + z(4) - z(6);
+    gradient_terms(0,2) = z(1) - z(6);
+    gradient_terms(0,3) = 0;
+    gradient_terms(0,4) = -z(0) - z(1) + z(6) + z(7);
+    gradient_terms(0,5) = 0;
+    gradient_terms(0,6) = z(1) + z(2) - z(4) - z(7);
+    gradient_terms(0,7) = -z(4) + z(6);
+    
+    //z derivative
+    gradient_terms(1,0) = x(1) - x(4);
+    gradient_terms(1,1) = -x(0) + x(2) -x(4) + x(6);
+    gradient_terms(1,2) = -x(1) + x(6);
+    gradient_terms(1,3) = 0;
+    gradient_terms(1,4) = x(0) + x(1) - x(6) - x(7);
+    gradient_terms(1,5) = 0;
+    gradient_terms(1,6) = -x(1) - x(2) + x(4) + x(7);
+    gradient_terms(1,7) = x(4) - x(6);
+
+    for(int inode = 0; inode < 8; inode++){
+        B_matrix_gradients(5,1,inode,0) = gradient_terms(0,inode)*twelth;
+        B_matrix_gradients(5,1,inode,1) = 0;
+        B_matrix_gradients(5,1,inode,2) = gradient_terms(1,inode)*twelth;
+    }
 
     // B_matrix(6,1) = ( +z(1)*( +x(2) -x(5) )
     //                   +z(2)*( -x(1) +x(3) -x(5) +x(7) )
@@ -1140,6 +1303,32 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +z(5)*( +x(1) +x(2) -x(4) -x(7) )
     //                   +z(7)*( -x(2) -x(3) +x(4) +x(5) ) )*twelth;
 
+    //x derivative
+    gradient_terms(0,0) = 0;
+    gradient_terms(0,1) = -z(2) + z(5);
+    gradient_terms(0,2) = z(1) - z(3) + z(5) - z(7);
+    gradient_terms(0,3) = z(2) - z(7);
+    gradient_terms(0,4) = -z(5) + z(7);
+    gradient_terms(0,5) = -z(1) - z(2) +z(4) +z(7);
+    gradient_terms(0,6) = 0;
+    gradient_terms(0,7) = z(2) + z(3) - z(4) - z(5);
+    
+    //z derivative
+    gradient_terms(1,0) = 0;
+    gradient_terms(1,1) = x(2) - x(5);
+    gradient_terms(1,2) = -x(1) + x(3) - x(5) + x(7);
+    gradient_terms(1,3) = -x(2) + x(7);
+    gradient_terms(1,4) = x(5) - x(7);
+    gradient_terms(1,5) = x(1) + x(2) - x(4) - x(7);
+    gradient_terms(1,6) = 0;
+    gradient_terms(1,7) = -x(2) - x(3) + x(4) + x(5);
+
+    for(int inode = 0; inode < 8; inode++){
+        B_matrix_gradients(6,1,inode,0) = gradient_terms(0,inode)*twelth;
+        B_matrix_gradients(6,1,inode,1) = 0;
+        B_matrix_gradients(6,1,inode,2) = gradient_terms(1,inode)*twelth;
+    }
+
     // B_matrix(7,1) = ( +z(0)*( -x(3) +x(4) )
     //                   +z(2)*( +x(3) -x(6) )
     //                   +z(3)*( +x(0) -x(2) +x(4) -x(6) )
@@ -1147,12 +1336,64 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_ma
     //                   +z(5)*( -x(4) +x(6) )
     //                   +z(6)*( +x(2) +x(3) -x(4) -x(5) ) )*twelth;
 
+    //x derivative
+    gradient_terms(0,0) = z(3) - z(4);
+    gradient_terms(0,1) = 0;
+    gradient_terms(0,2) = -z(3) + z(6);
+    gradient_terms(0,3) = -z(0) + z(2) - z(4) + z(6);
+    gradient_terms(0,4) = z(0) + z(3) - z(5) - z(6);
+    gradient_terms(0,5) = z(4) - z(6);
+    gradient_terms(0,6) = -z(2) - z(3) + z(4) + z(5);
+    gradient_terms(0,7) = 0;
+    
+    //z derivative
+    gradient_terms(1,0) = -x(3) + x(4);
+    gradient_terms(1,1) = 0;
+    gradient_terms(1,2) = x(3) - x(6);
+    gradient_terms(1,3) = x(0) - x(2) + x(4) - x(6);
+    gradient_terms(1,4) = -x(0) - x(3) + x(5) + x(6);
+    gradient_terms(1,5) = -x(4) + x(6);
+    gradient_terms(1,6) = x(2) + x(3) -x(4) - x(5);
+    gradient_terms(1,7) = 0;
+
+    for(int inode = 0; inode < 8; inode++){
+        B_matrix_gradients(7,1,inode,0) = gradient_terms(0,inode)*twelth;
+        B_matrix_gradients(7,1,inode,1) = 0;
+        B_matrix_gradients(7,1,inode,2) = gradient_terms(1,inode)*twelth;
+    }
+
     // B_matrix(0,2) = ( +x(1)*( -y(2) -y(3) +y(4) +y(5) )
     //                   +x(2)*( +y(1) -y(3) )
     //                   +x(3)*( +y(1) +y(2) -y(4) -y(7) )
     //                   +x(4)*( -y(1) +y(3) -y(5) +y(7) )
     //                   +x(5)*( -y(1) +y(4) )
     //                   +x(7)*( +y(3) -y(4) ) )*twelth;
+
+    //x derivative
+    gradient_terms(0,0) = 0;
+    gradient_terms(0,1) = -y(2) - y(3) + y(4) + y(5);
+    gradient_terms(0,2) = y(1) - y(3);
+    gradient_terms(0,3) = y(1) + y(2) - y(4) - y(7);
+    gradient_terms(0,4) = -y(1) + y(3) - y(5) + y(7);
+    gradient_terms(0,5) = -y(1) + y(4);
+    gradient_terms(0,6) = 0;
+    gradient_terms(0,7) = y(3) - y(4);
+    
+    //y derivative
+    gradient_terms(1,0) = 0;
+    gradient_terms(1,1) = x(2) + x(3) - x(4) - x(5);
+    gradient_terms(1,2) = -x(1) + x(3);
+    gradient_terms(1,3) = -x(1) - x(2) + x(4) + x(7);
+    gradient_terms(1,4) = x(1) - x(3) + x(5) - x(7);
+    gradient_terms(1,5) = x(1) - x(4);
+    gradient_terms(1,6) = 0;
+    gradient_terms(1,7) = -x(3) + x(4);
+
+    for(int inode = 0; inode < 8; inode++){
+        B_matrix_gradients(7,1,inode,0) = gradient_terms(0,inode)*twelth;
+        B_matrix_gradients(7,1,inode,1) = gradient_terms(1,inode)*twelth;
+        B_matrix_gradients(7,1,inode,2) = 0;
+    }
 
     // B_matrix(1,2) = ( +x(0)*( +y(2) +y(3) -y(4) -y(5) )
     //                   +x(2)*( -y(0) -y(3) +y(5) +y(6) )
