@@ -3,19 +3,22 @@ show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
     echo "  --machine=<darwin|chicoma|linux|mac>"
+    echo "  --heffte_build_type=<fftw|cufft|rocfft>"
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>"
-    echo "  --build_cores=<Integers with inclusive range of 1-32>. This argument is optional, default is set to 1"
+    echo "  --build_cores=<Integers greater than 0>. This argument is optional, default is set to 1"
     echo "  --help: Display this help message"
     return 1
 }
 
 # Initialize variables with default values
 machine=""
+heffte_build_type=""
 kokkos_build_type=""
 build_cores="1"
 
 # Define arrays of valid options
 valid_machines=("darwin" "chicoma" "linux" "mac")
+valid_heffte_build_types=("fftw" "cufft" "rocfft")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 
 # Parse command line arguments
@@ -27,6 +30,16 @@ for arg in "$@"; do
                 machine="$option"
             else
                 echo "Error: Invalid --machine specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --heffte_build_type=*)
+            option="${arg#*=}"
+            if [[ " ${valid_heffte_build_types[*]} " == *" $option "* ]]; then
+                heffte_build_type="$option"
+            else
+                echo "Error: Invalid --heffte_build_type specified."
                 show_help
                 return 1
             fi
@@ -43,7 +56,7 @@ for arg in "$@"; do
             ;;
         --build_cores=*)
             option="${arg#*=}"
-            if [ $option -ge 0 ] && [ $option -le 32 ]; then
+            if [ $option -ge 1 ]; then
                 build_cores="$option"
             else
                 echo "Error: Invalid --build_cores specified."
@@ -64,49 +77,17 @@ for arg in "$@"; do
 done
 
 # Check if required options are specified
-if [ -z "$machine" ] || [ -z "$kokkos_build_type" ]; then
-    echo "Error: --machine and --kokkos_build_type are required options."
+if [ -z "$machine" ] || [ -z "$heffte_build_type" ] || [ -z "$kokkos_build_type" ]; then
+    echo "Error: --machine, heffte_build_type and --kokkos_build_type are required options."
     show_help
     return 1
 fi
+echo "Your options of $machine $heffte_build_type $kokkos_build_type are valid! Let's start building"
 
-# If all arguments are valid, you can use them in your script as needed
-echo "Build for machine: $machine"
-echo "Kokkos Build Type: $kokkos_build_type"
-echo "Will be making builds with make -j $build_cores"
+cd "$( dirname "${BASH_SOURCE[0]}" )"
 
-# Set paths
-
-my_device="$kokkos_build_type"
-
-my_build="build-1DSGH"
-my_build="build-1DSGH-${my_device}"
-
-export scriptdir=`pwd`
-
-cd ../../..
-export topdir=`pwd`
-export basedir=${topdir}/single-node
-export srcdir=${basedir}/src
-export libdir=${topdir}/lib
-export matardir=${libdir}/Elements/matar
-export builddir=${basedir}/${my_build}
-export installdir=${basedir}/install-kokkos/install-kokkos-${my_device}
-
-export SGH_BASE_DIR=${basedir}
-export SGH_SOURCE_DIR=${srcdir}/Explicit-Lagrange-Kokkos/1D_SGH_solver
-export SGH_BUILD_DIR=${builddir}
-
-export KOKKOS_SOURCE_DIR=${matardir}/src/Kokkos/kokkos
-export KOKKOS_BUILD_DIR=${builddir}/kokkos
-export KOKKOS_INSTALL_DIR=${installdir}/kokkos
-
-export FIERRO_BUILD_CORES=$build_cores
-
-cd $scriptdir
-
-# Call the appropriate script to load modules based on the machine
-source machines/$machine-env.sh ${2}
-
-
-
+source setup-env.sh --machine=${machine} --heffte_build_type=${heffte_build_type} --kokkos_build_type=${kokkos_build_type} --build_cores=${build_cores}
+source heffte-install.sh --machine=${machine} --heffte_build_type=${heffte_build_type}
+source kokkos-install.sh --kokkos_build_type=${kokkos_build_type}
+source hdf5-install.sh
+source cmake_build.sh --heffte_build_type=${heffte_build_type}

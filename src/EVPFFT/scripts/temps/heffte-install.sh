@@ -1,14 +1,71 @@
 #!/bin/bash -e
 
-heffte_build_type="${1}"
-machine="${2}"
+# Function to display the help message
+show_help() {
+    echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
+    echo "Valid options:"
+    echo "  --machine=<darwin|chicoma|linux|mac>"
+    echo "  --heffte_build_type=<fftw|cufft|rocfft>"
+    echo "  --help          : Display this help message"
+    return 1
+}
+
+# Check for the number of arguments
+if [ $# -ne 2 ]; then
+    echo "Error: Please provide exactly two arguments."
+    show_help
+    return 1
+fi
+
+# Initialize variables with default values
+machine=""
+heffte_build_type=""
+
+# Define arrays of valid options
+valid_machines=("darwin" "chicoma" "linux" "mac")
+valid_heffte_build_types=("fftw" "cufft" "rocfft")
+
+# Parse command line arguments
+for arg in "$@"; do
+    case "$arg" in
+        --machine=*)
+            option="${arg#*=}"
+            if [[ " ${valid_machines[*]} " == *" $option "* ]]; then
+                machine="$option"
+            else
+                echo "Error: Invalid --machine specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --heffte_build_type=*)
+            option="${arg#*=}"
+            if [[ " ${valid_heffte_build_types[*]} " == *" $option "* ]]; then
+                heffte_build_type="$option"
+            else
+                echo "Error: Invalid --heffte_build_type specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --help)
+            show_help
+            return 1
+            ;;
+        *)
+            echo "Error: Invalid argument or value specified."
+            show_help
+            return 1
+            ;;
+    esac
+done
 
 # Now you can use $build_type in your code or build commands
 echo "Heffte build type will be: $heffte_build_type"
 
 # Check if the 'heffte' directory exists and is not empty in the parent directory; if not, clone it
 if [ ! -d "${HEFFTE_SOURCE_DIR}" ]; then
-  echo "Directory 'heffte' does not exist in '${libdir}', downloading 'heffte'...."
+  echo "Directory 'heffte' does not exist in '${basedir}', downloading 'heffte'...."
   git clone https://github.com/icl-utk-edu/heffte.git ${HEFFTE_SOURCE_DIR}
 else
   echo "Directory 'heffte' exists in '${HEFFTE_SOURCE_DIR}', skipping 'heffte' download"

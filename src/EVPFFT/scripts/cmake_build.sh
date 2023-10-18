@@ -1,51 +1,6 @@
 #!/bin/bash -e
 
-# Function to display the help message
-show_help() {
-    echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
-    echo "Valid options:"
-    echo "  --heffte_build_type=<fftw|cufft|rocfft>"
-    echo "  --help          : Display this help message"
-    return 1
-}
-
-# Check for the number of arguments
-if [ $# -ne 1 ]; then
-    echo "Error: Please provide exactly one argument."
-    show_help
-    return 1
-fi
-
-# Initialize variables with default values
-heffte_build_type=""
-
-# Define arrays of valid options
-valid_heffte_build_types=("fftw" "cufft" "rocfft")
-
-# Parse command line arguments
-for arg in "$@"; do
-    case "$arg" in
-        --heffte_build_type=*)
-            option="${arg#*=}"
-            if [[ " ${valid_heffte_build_types[*]} " == *" $option "* ]]; then
-                heffte_build_type="$option"
-            else
-                echo "Error: Invalid --heffte_build_type specified."
-                show_help
-                return 1
-            fi
-            ;;
-        --help)
-            show_help
-            return 1
-            ;;
-        *)
-            echo "Error: Invalid argument or value specified."
-            show_help
-            return 1
-            ;;
-    esac
-done
+heffte_build_type="${1}"
 
 # Now you can use $build_type in your code or build commands
 echo "Heffte build type will be: $heffte_build_type"

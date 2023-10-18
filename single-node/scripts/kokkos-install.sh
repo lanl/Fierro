@@ -5,14 +5,6 @@ kokkos_build_type="${1}"
 # If all arguments are valid, you can use them in your script as needed
 echo "Kokkos Build Type: $kokkos_build_type"
 
-# Check if the 'kokkos' directory exists (in the Matar directory) and is not empty in the parent directory; if not, clone it
-if [ ! -d "$KOKKOS_SOURCE_DIR" ]; then
-  echo "Directory 'kokkos' does not exist in '${KOKKOS_SOURCE_DIR}', downloading 'kokkos' here: ${matardir}/src/Kokkos...."
-  git clone --recursive https://github.com/lanl/MATAR.git ${matardir}
-else
-  echo "Directory 'kokkos' exists in '${KOKKOS_SOURCE_DIR}', skipping 'kokkos' download"
-fi
-
 echo "Removing stale Kokkos build and installation directory since these are machine dependant and don't take long to build/install"
 rm -rf ${KOKKOS_BUILD_DIR} ${KOKKOS_INSTALL_DIR}
 mkdir -p ${KOKKOS_BUILD_DIR} 
@@ -79,7 +71,7 @@ cmake "${cmake_options[@]}" -B "${KOKKOS_BUILD_DIR}" -S "${KOKKOS_SOURCE_DIR}"
 
 # Build kokkos
 echo "Building kokkos..."
-make -C ${KOKKOS_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
+make -C ${KOKKOS_BUILD_DIR} -j${FIERRO_BUILD_CORES}
 
 # Install kokkos
 echo "Installing kokkos..."

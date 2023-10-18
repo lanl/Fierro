@@ -2,11 +2,11 @@
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
+    echo "  --solver=<1DSGH|SGH>. Default is 'SGH'"
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>. Default is 'serial'"
-    echo "  --build_action=<full-app|set-env|install-kokkos|install-hdf5|install-heffte|evpfft>. Default is 'full-app'"
+    echo "  --build_action=<full-app|set-env|install-kokkos|fierro>. Default is 'full-app'"
     echo "  --machine=<darwin|chicoma|linux|mac>. Default is 'linux'"
     echo "  --build_cores=<Integers greater than 0>. Default is set 1"
-    echo "  --heffte_build_type=<fftw|cufft|rocfft>. Default is set 'fftw'"
     echo "  --help: Display this help message"
     echo " "
     echo " "
@@ -15,10 +15,13 @@ show_help() {
     echo " "
     echo "          full-app                    builds Fierro from scratch, installing dependencies where necessary."
     echo "          set-env                     set appropriate environment variables and loads software modules (if necessary)"
-    echo "          install-kokkos              builds and installs Kokkos if not already installed. Clones from github if necessary"
-    echo "          install-hdf5                builds and installs hdf5 if not already installed. Clones from github if necessary"
-    echo "          install-heffte              builds and installs heffte. Always rebuilds to avoid stale builds. If this action is being done, --heffte_build_type is necessary"        
+    echo "          install-Kokkos              builds and installs Kokkos if not already installed. Clones from github if necessary"
     echo "          fierro                      Generates CMake files and builds Fierro only (none of the dependencies)."
+    echo " "
+    echo "      --solver                        Builds the desired solver to run. The default action is 'SGH'"
+    echo " "
+    echo "          1DSGH                       builds the 1D SGH solver"
+    echo "          SGH                         builds the SGH solver"
     echo " "
     echo "      --kokkos_build_type             The desired kokkos parallel backend to use. The default is 'serial'"
     echo " "
@@ -34,25 +37,20 @@ show_help() {
     echo "          linux                       A general linux machine (that does not use modules)"
     echo "          mac                         A Mac computer. This option does not allow for cuda and hip builds, and build_cores will be set to 1"
     echo " "
-    echo "      --heffte_build_type             The build type for the heffte installation. The default is 'fftw'"
-    echo " "
-    echo "          fftw                        General heffte run type"
-    echo "          cufft                       Cuda heffte run type"
-    echo "          rocfft                      HIP heffte run type"
-    echo " "
     echo "      --build_cores                   The number of build cores to be used by make and make install commands. The default is 1" 
     return 1
 }
 
 # Initialize variables with default values
 build_action="full-app"
+solver="SGH"
 machine="linux"
 kokkos_build_type="serial"
-heffte_build_type="fftw"
 build_cores="1"
 
 # Define arrays of valid options
-valid_build_action=("full-app" "set-env" "install-kokkos" "install-hdf5" "install-heffte" "evpfft")
+valid_build_action=("full-app" "set-env" "install-kokkos" "fierro")
+valid_solver=("1DSGH" "SGH")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
 valid_machines=("darwin" "chicoma" "linux" "mac")
@@ -66,6 +64,16 @@ for arg in "$@"; do
                 build_action="$option"
             else
                 echo "Error: Invalid --build_action specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --solver=*)
+            option="${arg#*=}"
+            if [[ " ${valid_solver[*]} " == *" $option "* ]]; then
+                solver="$option"
+            else
+                echo "Error: Invalid --solver specified."
                 show_help
                 return 1
             fi
@@ -86,16 +94,6 @@ for arg in "$@"; do
                 kokkos_build_type="$option"
             else
                 echo "Error: Invalid --kokkos_build_type specified."
-                show_help
-                return 1
-            fi
-            ;;
-        --heffte_build_type=*)
-            option="${arg#*=}"
-            if [[ " ${valid_heffte_build_types[*]} " == *" $option "* ]]; then
-                heffte_build_type="$option"
-            else
-                echo "Error: Invalid --heffte_build_type specified."
                 show_help
                 return 1
             fi
@@ -143,8 +141,8 @@ fi
 
 echo "Building based on these argument options:"
 echo "Build action - ${build_action}"
+echo "Solver - ${solver}"
 echo "Kokkos backend - ${kokkos_build_type}"
-echo "HEFFTE - ${heffte_build_type}"
 echo "make -j ${build_cores}"
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
@@ -155,17 +153,11 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
     source kokkos-install.sh ${kokkos_build_type}
-    source hdf5-install.sh
-    source heffte-install.sh ${heffte_build_type} ${machine}
-    source cmake_build.sh ${heffte_build_type}
+    source cmake_build.sh ${solver}
 elif [ "$build_action" = "install-kokkos" ]; then
     source kokkos-install.sh ${kokkos_build_type}
-elif [ "$build_action" = "install-hdf5" ]; then
-    source hdf5-install.sh
-elif [ "$build_action" = "install-heffte" ]; then
-    source heffte-install.sh ${heffte_build_type} ${machine}
-elif [ "$build_action" = "evpfft" ]; then
-    source cmake_build.sh ${heffte_build_type}
+elif [ "$build_action" = "fierro" ]; then
+    source cmake_build.sh ${solver}
 else
     echo "No build action, only setup the environment."
 fi

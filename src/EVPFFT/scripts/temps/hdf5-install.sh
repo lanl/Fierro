@@ -2,10 +2,13 @@
 
 # Check if the 'hdf5' directory exists and is not empty in the parent directory; if not, clone it
 if [ ! -d "${HDF5_SOURCE_DIR}" ]; then
-  echo "Directory 'hdf5' does not exist in '${libdir}', downloading 'hdf5'...."
+  echo "Directory 'hdf5' does not exist in '${basedir}', downloading 'hdf5'...."
   git clone https://github.com/HDFGroup/hdf5.git ${HDF5_SOURCE_DIR}
+  cd ${HDF5_SOURCE_DIR}
+  git checkout 6f56d06f6af371b8b8c58079d8200647df249ee2
+  cd ${scriptdir}
 else
-  echo "Directory 'hdf5' exists in '${libdir}', skipping 'hdf5' download"
+  echo "Directory 'hdf5' exists in '${basedir}', skipping 'hdf5' download"
 fi
 
 # Check to avoid reinstalling HDF5 which might take time
@@ -31,7 +34,7 @@ cmake "${cmake_options[@]}" -B "${HDF5_BUILD_DIR}" -S "${HDF5_SOURCE_DIR}"
 
 # Build hdf5
 echo "Building hdf5..."
-make -C ${HDF5_BUILD_DIR} -j${FIERRO_BUILD_CORES}
+make -C ${HDF5_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
 
 # Install hdf5
 echo "Installing hdf5..."

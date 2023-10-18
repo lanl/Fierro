@@ -56,7 +56,7 @@ cmake "${cmake_options[@]}" -B "${HEFFTE_BUILD_DIR}" -S "${HEFFTE_SOURCE_DIR}"
 
 # Build HeFFTe
 echo "Building HeFFTe..."
-make -C ${HEFFTE_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
+make -C ${HEFFTE_BUILD_DIR} -j${FIERRO_BUILD_CORES}
 
 # Install HeFFTe
 echo "Installing HeFFTe..."
