@@ -285,6 +285,14 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
     const size_t rk_level = simparam.rk_num_bins - 1; 
     int num_dims = simparam.num_dims;
 
+    //initialize gradient matrix
+    FOR_ALL_CLASS(dof_gid, 0, nlocal_nodes*num_dims, {
+      for(int idof = 0; idof < DOF_to_Elem_Matrix_Strides(dof_gid); idof++){
+        Power_Gradient_Positions(dof_gid,idof) = 0;
+      }
+    }); // end parallel for loop over nodes
+    Kokkos::fence();
+
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
@@ -296,7 +304,8 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
             
             size_t corner_lid = node_lid;
-            
+            size_t column_id;
+            size_t gradient_node_id;
             // Get node global id for the local node id
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
             
@@ -310,17 +319,16 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
 
             // calculate the Power=F dot V for this corner
             for (size_t dim=0; dim<num_dims; dim++){
-                
-                double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
-                elem_power += corner_force(corner_gid, dim)*node_radius*half_vel;
-                
+                for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
+                    for (size_t jdim=0; jdim<num_dims; jdim++){
+                        column_id = Element_Gradient_Matrix_Assembly_Map(elem_gid,node_lid);
+                        gradient_node_id = nodes_in_elem(elem_gid,igradient);
+                        Power_Gradient_Velocities(gradient_node_id*num_dims+jdim, column_id) += corner_gradient_storage(corner_gid,igradient*num_dims+dim)*node_vel(rk_level, node_gid, dim)*node_radius;
+                    }
+                }
             } // end for dim
             
         } // end for node_lid
-
-        // update the specific energy
-        elem_sie(rk_level, elem_gid) = elem_sie(0, elem_gid) -
-                                rk_alpha*dt/elem_mass(elem_gid) * elem_power;
 
     }); // end parallel loop over the elements
     
@@ -390,10 +398,6 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
             } // end for dim
             
         } // end for node_lid
-
-        // update the specific energy
-        elem_sie(rk_level, elem_gid) = elem_sie(0, elem_gid) -
-                                rk_alpha*dt/elem_mass(elem_gid) * elem_power;
 
     }); // end parallel loop over the elements
     

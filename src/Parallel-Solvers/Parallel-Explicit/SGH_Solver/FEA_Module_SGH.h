@@ -218,6 +218,13 @@ public:
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
                    const size_t rk_level) const;
 
+  KOKKOS_FUNCTION
+  void get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_matrix_gradients,
+                   const size_t elem_gid,
+                   const DViewCArrayKokkos <double> &node_coords,
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                   const size_t rk_level) const;
+
 
   KOKKOS_FUNCTION
   void get_bmatrix2D(const ViewCArrayKokkos <double> &B_matrix,
