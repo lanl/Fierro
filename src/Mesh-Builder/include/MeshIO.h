@@ -51,7 +51,7 @@ namespace MeshIO {
          * column j -> order[j].
         */
         template<typename T>
-        inline void redorder_columns(mtr::CArray<T>& mat, const int* order) {
+        inline void reorder_columns(mtr::CArray<T>& mat, const int* order) {
             std::vector<T> temp;
             temp.resize(mat.dims(1));
             for (size_t i = 0; i < mat.dims(0); i++) {

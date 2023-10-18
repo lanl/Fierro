@@ -1,3 +1,7 @@
+cmake_minimum_required(VERSION 3.17)
+project(yaml-serializable)
+set(CMAKE_CXX_STANDARD 17)
+
 add_library(yaml_serializable src/Yaml.cpp)
 target_include_directories(yaml_serializable PUBLIC include)
 if (NOT APPLE)

@@ -142,6 +142,7 @@ Mesh build_rectilinear(const Input_Rectilinear& input) {
 
     // --- Build elems  ---
     int p_order = input.p_order;
+    size_t k_local_max = input.num_dims < 3 ? 0 : p_order;
     // populate the elem center data structures
     for (size_t k = 0; k < input.num_elems[2]; k++) {
         for (size_t j = 0; j < input.num_elems[1]; j++){
@@ -156,7 +157,7 @@ Mesh build_rectilinear(const Input_Rectilinear& input) {
                        j_offset = j * p_order,
                        k_offset = k * p_order;
 
-                for (size_t k_local = 0; k_local <= p_order; k_local++) {
+                for (size_t k_local = 0; k_local <= k_local_max; k_local++) {
                     for (size_t j_local = 0; j_local <= p_order; j_local++) {
                         for (size_t i_local = 0; i_local <= p_order; i_local++) {
                             // Modulus is included to allow for 
@@ -172,7 +173,6 @@ Mesh build_rectilinear(const Input_Rectilinear& input) {
                         }
                     }
                 }
-
             }
         }
     }

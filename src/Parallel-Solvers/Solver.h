@@ -58,6 +58,7 @@
 #include <Kokkos_Core.hpp>
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Import.hpp"
+#include "MeshBuilder.h"
 #include <map>
 #include <memory>
 
@@ -126,6 +127,8 @@ public:
   virtual void solver_finalize() {}
 
   virtual void exit_solver(int status);
+
+  virtual void generate_mesh(const std::shared_ptr<MeshBuilderInput>& mesh_generation_options);
 
   virtual void read_mesh_ensight(const char *MESH);
 

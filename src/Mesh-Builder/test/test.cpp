@@ -7,68 +7,75 @@
 
 TEST(MeshBuilderInput, BoxDeserialization) {
     std::string input = R"(
-    type: Box
-    file_type: VTK
-    p_order: 1
-    length: [1, 1, 1]
-    num_elems: [10, 10, 10]
-    origin: [0, 0, 0]
+    output:
+        file_type: VTK
+    input:
+        type: Box
+        p_order: 1
+        length: [1, 1, 1]
+        num_elems: [10, 10, 10]
+        origin: [0, 0, 0]
     )";
 
 
-    std::shared_ptr<MeshBuilderInput> in;
+    MeshBuilderConfig in;
     Yaml::from_string_strict(input, in);
 
 
-    Mesh mesh = MeshBuilder::build_mesh(in);
+    Mesh mesh = MeshBuilder::build_mesh(in.input);
 
     EXPECT_EQ(mesh.p_order, 1);
     EXPECT_EQ(mesh.element_point_index.dims(0), 10*10*10);
     EXPECT_EQ(mesh.element_point_index.dims(1), 8);
-    EXPECT_EQ(in->type, MeshType::Box);
+    EXPECT_EQ(in.input->type, MeshType::Box);
 }
 
 TEST(MeshBuilderInput, CylinderDeserialization) {
     std::string input = R"(
-    type: Cylinder
-    file_type: VTK
-    p_order: 1
-    length: [1, 1, 1]
-    num_elems: [10, 10, 10]
-    origin: [0, 0, 0]
-    inner_radius: 0.1
-    start_angle: 1
+    output:
+        file_type: VTK
+    input:
+        type: Cylinder
+        p_order: 1
+        length: [1, 1, 1]
+        num_elems: [10, 10, 10]
+        origin: [0, 0, 0]
+        inner_radius: 0.1
+        start_angle: 1
     )";
 
 
-    std::shared_ptr<MeshBuilderInput> in;
+    MeshBuilderConfig in;
     Yaml::from_string_strict(input, in);
 
-    Mesh mesh = MeshBuilder::build_mesh(in);
+    Mesh mesh = MeshBuilder::build_mesh(in.input);
 
     EXPECT_EQ(mesh.p_order, 1);
     EXPECT_EQ(mesh.element_point_index.dims(0), 10*10*10);
     EXPECT_EQ(mesh.element_point_index.dims(1), 8);
-    EXPECT_EQ(in->type, MeshType::Cylinder);
+    EXPECT_EQ(in.input->type, MeshType::Cylinder);
 }
 
 
 TEST(MeshBuilder, WriteRead) {
     std::string input = R"(
-    type: Cylinder
-    file_type: VTK
-    p_order: 1
-    length: [1, 1, 1]
-    num_elems: [1, 1, 1]
-    origin: [0, 0, 0]
-    inner_radius: 0.1
-    start_angle: 1
+    output:
+        file_type: VTK
+    input:
+        type: Cylinder
+        p_order: 1
+        length: [1, 1, 1]
+        num_elems: [1, 1, 1]
+        origin: [0, 0, 0]
+        inner_radius: 0.1
+        start_angle: 1
     )";
 
-    std::shared_ptr<MeshBuilderInput> in;
+    MeshBuilderConfig in;
     Yaml::from_string_strict(input, in);
     
-    Mesh mesh = MeshBuilder::build_mesh(in);
+    
+    Mesh mesh = MeshBuilder::build_mesh(in.input);
     std::stringstream buffer;
 
     MeshIO::write_vtk(buffer, mesh);
@@ -82,4 +89,25 @@ TEST(MeshBuilder, WriteRead) {
     for (size_t i = 0; i < mesh.element_point_index.dims(0); i++)
         for (size_t j = 0; j < mesh.element_point_index.dims(1); j++)
             EXPECT_EQ(mesh.element_point_index(i, j), read_back.element_point_index(i, j));
+}
+
+
+TEST(MeshBuilder, ExampleCylinder) {
+    std::stringstream example_yaml;
+    MeshBuilder::example_cylinder(example_yaml);
+    
+    MeshBuilderConfig in;
+    Yaml::from_string_strict(example_yaml.string(), in);
+
+    EXPECT_EQ(in.input->type, MeshType::Cylinder);
+}
+
+TEST(MeshBuilder, ExampleCylinder) {
+    std::stringstream example_yaml;
+    MeshBuilder::example_box(example_yaml);
+    
+    MeshBuilderConfig in;
+    Yaml::from_string_strict(example_yaml.string(), in);
+
+    EXPECT_EQ(in.input->type, MeshType::Box);
 }

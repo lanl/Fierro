@@ -1,0 +1,16 @@
+###
+# This file will generate a rectangle mesh
+# with 16 elements along each axis, a side length of 1, 
+# and with the center of the mesh at (0.5, 0.5, 0.5).
+##
+
+output:
+  name: mesh
+  file_type: Ensight
+
+input:
+  type: Box
+  length: [1, 1, 1]
+  num_elems: [16, 16, 16]
+  origin: [0, 0, 0]
+  p_order: 1
