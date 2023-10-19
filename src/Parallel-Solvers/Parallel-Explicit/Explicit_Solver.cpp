@@ -195,21 +195,26 @@ void Explicit_Solver::run(int argc, char *argv[]){
 
   //init time
   //time_value = simparam->time_initial;
-
-  const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
-  switch (simparam.input_options.mesh_file_format) {
-    case MESH_FORMAT::tecplot:
-      read_mesh_tecplot(mesh_file_name);
-      break;
-    case MESH_FORMAT::vtk:
-      read_mesh_vtk(mesh_file_name);
-      break;
-    case MESH_FORMAT::ansys_dat:
-      read_mesh_ansys_dat(mesh_file_name);
-      break;
-    case MESH_FORMAT::ensight:
-      read_mesh_ensight(mesh_file_name);
-      break;
+  
+  if (simparam.input_options.has_value()) {
+    const Input_Options& input_options = simparam.input_options.value();
+    const char* mesh_file_name = input_options.mesh_file_name.c_str();
+    switch (input_options.mesh_file_format) {
+      case MESH_FORMAT::tecplot:
+        read_mesh_tecplot(mesh_file_name);
+        break;
+      case MESH_FORMAT::vtk:
+        read_mesh_vtk(mesh_file_name);
+        break;
+      case MESH_FORMAT::ansys_dat:
+        read_mesh_ansys_dat(mesh_file_name);
+        break;
+      case MESH_FORMAT::ensight:
+        read_mesh_ensight(mesh_file_name);
+        break;
+    }
+  } else {
+    generate_mesh(simparam.mesh_generation_options.value());
   }
 
   //debug
@@ -423,6 +428,7 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   char ch;
   int num_dim = simparam.num_dims;
   int p_order = simparam.p_order;
+  Input_Options input_options = simparam.input_options.value();
   real_t unit_scaling = simparam.unit_scaling;
   bool restart_file = simparam.restart_file;
   int local_node_index, current_column_index;
@@ -559,9 +565,9 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam.input_options.words_per_line;
+  words_per_line = input_options.words_per_line;
   //if(restart_file) words_per_line++;
-  elem_words_per_line = simparam.input_options.elem_words_per_line;
+  elem_words_per_line = input_options.elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);

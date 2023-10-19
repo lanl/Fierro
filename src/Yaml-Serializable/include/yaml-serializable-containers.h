@@ -46,6 +46,7 @@
 #include <set>
 #include <vector>
 #include <sstream>
+#include <optional>
 
 namespace Yaml {
     namespace {
