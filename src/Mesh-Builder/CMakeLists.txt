@@ -1,5 +1,5 @@
-#cmake_minimum_required(VERSION 3.17)
-#project(mesh-builder)
+cmake_minimum_required(VERSION 3.17)
+project(mesh-builder)
 
 
 SET(CMAKE_CXX_STANDARD 17)
