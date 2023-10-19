@@ -52,6 +52,17 @@
 
 using namespace mtr;
 
+SERIALIZABLE_ENUM(FIELD_OUTPUT_DYNAMIC_ELASTICITY,
+    velocity,
+    element_density,
+    pressure,
+    volume,
+    mass,
+    material_id,
+    user_vars,
+    stress
+)
+
 struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
   Time_Variables time_variables;
   std::vector<MaterialFill> region_options;
@@ -59,6 +70,7 @@ struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
   std::vector<Boundary> boundary_conditions;
   std::vector<Loading> loading_conditions;
   Graphics_Options graphics_options;
+  std::set<FIELD_OUTPUT_DYNAMIC_ELASTICITY> field_output;  
 
   bool gravity_flag   = false;
   bool report_runtime = true;
@@ -73,7 +85,7 @@ struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
   size_t max_num_global_vars = 0;
   size_t rk_num_bins;
   double time_value = 0.0;
-  real_t damping_constant = 0.00000001;
+  real_t damping_constant = 0.0000001;
   DCArrayKokkos<double> global_vars;
 
   DCArrayKokkos<mat_fill_t> mat_fill;
@@ -120,19 +132,33 @@ struct Simulation_Parameters_Dynamic_Elasticity : Simulation_Parameters {
 
   }
 
+  void derive_default_field_output() {
+    if (field_output.empty()) {
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::velocity);
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::element_density);
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::pressure);
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::volume);
+      field_output.insert(FIELD_OUTPUT_DYNAMIC_ELASTICITY::mass);
+    }
+  }
+
   void derive() {
     derive_kokkos_arrays();
  
     rk_num_bins = rk_num_stages;
 
+    derive_default_field_output();
   }
-  void validate() { }
+
+  void validate() {
+    validate_module_is_specified(FEA_MODULE_TYPE::Dynamic_Elasticity);
+   }
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Dynamic_Elasticity, Simulation_Parameters, 
   time_variables, material_options, region_options,
   boundary_conditions, loading_conditions, gravity_flag, report_runtime, rk_num_stages,
   NB, NBSF, NBV,
-  graphics_options
+  graphics_options, field_output
 )
 
 #endif // end HEADER_H

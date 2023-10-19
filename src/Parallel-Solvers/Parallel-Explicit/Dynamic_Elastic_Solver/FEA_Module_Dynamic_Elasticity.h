@@ -337,10 +337,11 @@ public:
 
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
-  void write_data(std::map <std::string, const double*> point_data_scalars_double,
-  std::map <std::string, const double*> point_data_vectors_double,
-  std::map <std::string, const double*> cell_data_scalars_double,
-  std::map <std::string, const int*> cell_data_scalars_int);
+  void write_data(std::map <std::string, const double*> &point_data_scalars_double,
+  std::map <std::string, const double*> &point_data_vectors_double,
+  std::map <std::string, const double*> &cell_data_scalars_double,
+  std::map <std::string, const int*> &cell_data_scalars_int,
+  std::map <std::string, std::pair<const double*, size_t> > &cell_data_fields_double);
   
   void write_outputs (const mesh_t &mesh,
                       DViewCArrayKokkos <double> &node_coords,
@@ -383,7 +384,7 @@ public:
                   const DViewCArrayKokkos <double> &elem_mass,
                   const DViewCArrayKokkos <size_t> &elem_mat_id);
 
-  void node_density_constraints(host_vec_array node_densities_lower_bound);
+  void node_density_constraints(host_vec_array &node_densities_lower_bound);
 
   void compute_topology_optimization_adjoint(); //Force does not depend on node coords and velocity
 
@@ -422,7 +423,7 @@ public:
   
   void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
-  void compute_stiffness_gradients(const_host_vec_array design_densities, host_vec_array gradients);
+  void compute_stiffness_gradients(const_host_vec_array &design_densities, host_vec_array &gradients);
 
   void Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
