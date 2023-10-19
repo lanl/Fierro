@@ -186,13 +186,11 @@ public:
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
                    const size_t rk_level) const;
 
-  KOKKOS_INLINE_FUNCTION
-  double get_vol_hex_ugradient(const DViewCArrayKokkos <double> &elem_vol,
+  KOKKOS_FUNCTION
+  void get_vol_hex_ugradient(const ViewCArrayKokkos <double> &elem_vol_gradients,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                   const size_t gradient_node_id,
-                   const size_t gradient_dim,
                    const size_t rk_level) const;
 
 

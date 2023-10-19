@@ -27,3 +27,6 @@ build-Implicit-hip
 build-implicit-openmp
 build-implicit-cuda
 build-implicit-hip
+build-fierro-openmp
+build-fierro-cuda
+build-fierro-hip

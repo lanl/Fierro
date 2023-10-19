@@ -579,7 +579,7 @@ void FEA_Module_SGH::get_vol_ugradient(const size_t gradient_node_id, const size
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             // cut out the node_gids for this element
             ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
-            get_vol_hex_ugradient(elem_vol, elem_gid, node_coords, elem_node_gids, gradient_node_id, gradient_dim, rk_level);
+            //get_vol_hex_ugradient(elem_vol, elem_gid, node_coords, elem_node_gids, rk_level);
             
         });
         Kokkos::fence();
@@ -591,13 +591,11 @@ void FEA_Module_SGH::get_vol_ugradient(const size_t gradient_node_id, const size
 
 
 // Exact volume for a hex element
-KOKKOS_INLINE_FUNCTION
-double FEA_Module_SGH::get_vol_hex_ugradient(const DViewCArrayKokkos <double> &elem_vol,
+KOKKOS_FUNCTION
+void FEA_Module_SGH::get_vol_hex_ugradient(const ViewCArrayKokkos <double> &elem_vol_gradients,
                  const size_t elem_gid,
                  const DViewCArrayKokkos <double> &node_coords,
                  const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                   const size_t gradient_node_id,
-                   const size_t gradient_dim,
                  const size_t rk_level) const {
 
     const size_t num_nodes = 8;
@@ -622,185 +620,190 @@ double FEA_Module_SGH::get_vol_hex_ugradient(const DViewCArrayKokkos <double> &e
     double twelth = 1./12.;
         
     // element volume gradient
-    switch(num_dims*gradient_node_id + gradient_dim){
-        case 0:
-            gradient_result =
-            ((y(2)*( z(1) - z(3)) + y(7)*( z(3) - z(4)) + y(5)*(-z(1) + z(4)) + y(1)*(-z(2) - z(3) + z(4) + z(5)) + y(3)*(z(1) + z(2) - z(4) - z(7)) + y(4)*(-z(1) + z(3) - z(5) + z(7))))*twelth;
-        break;
-        case 3:
-            gradient_result =
-            ((y(3)*(-z(0) + z(2)) + y(4)*( z(0) - z(5)) + y(0)*(z(2) + z(3) - z(4) - z(5)) + y(6)*(-z(2) + z(5)) + y(5)*(z(0) - z(2) + z(4) - z(6)) + y(2)*(-z(0) - z(3) + z(5) + z(6))))*twelth;
-        break;
+    for(int inode = 0; inode < 8; inode++){
+        for(int idim = 0; idim < num_dims; idim++){
+            switch(num_dims*inode + idim){
+                case 0:
+                    gradient_result =
+                    ((y(2)*( z(1) - z(3)) + y(7)*( z(3) - z(4)) + y(5)*(-z(1) + z(4)) + y(1)*(-z(2) - z(3) + z(4) + z(5)) + y(3)*(z(1) + z(2) - z(4) - z(7)) + y(4)*(-z(1) + z(3) - z(5) + z(7))))*twelth;
+                break;
+                case 3:
+                    gradient_result =
+                    ((y(3)*(-z(0) + z(2)) + y(4)*( z(0) - z(5)) + y(0)*(z(2) + z(3) - z(4) - z(5)) + y(6)*(-z(2) + z(5)) + y(5)*(z(0) - z(2) + z(4) - z(6)) + y(2)*(-z(0) - z(3) + z(5) + z(6))))*twelth;
+                break;
 
-        case 6:
-            gradient_result =
-            ((y(0)*(-z(1) + z(3)) + y(5)*( z(1) - z(6)) + y(1)*(z(0) + z(3) - z(5) - z(6)) + y(7)*(-z(3) + z(6)) + y(6)*(z(1) - z(3) + z(5) - z(7)) + y(3)*(-z(0) - z(1) + z(6) + z(7))))*twelth;
-        break;
-        case 9:
-            gradient_result =
-            ((y(1)*( z(0) - z(2)) + y(7)*(-z(0) + z(2)  - z(4) + z(6)) + y(6)*(z(2) - z(7)) + y(2)*(z(0) + z(1) - z(6) - z(7)) + y(4)*(-z(0) + z(7)) + y(0)*(-z(1) - z(2) + z(4) + z(7))))*twelth;
-        break;
-        case 12:
-            gradient_result =
-            ((y(1)*(-z(0) + z(5)) + y(7)*( z(0) + z(3)  - z(5) - z(6)) + y(3)*(z(0) - z(7)) + y(0)*(z(1) - z(3) + z(5) - z(7)) + y(6)*(-z(5) + z(7)) + y(5)*(-z(0) - z(1) + z(6) + z(7))))*twelth;
-        break;
-        case 15:
-            gradient_result =
-            ((y(0)*( z(1) - z(4)) + y(7)*( z(4) - z(6)) + y(2)*(-z(1) + z(6)) + y(1)*(-z(0) + z(2) - z(4) + z(6)) + y(4)*(z(0) + z(1) - z(6) - z(7)) + y(6)*(-z(1) - z(2) + z(4) + z(7))))*twelth;
-        break;
-        case 18:
-            gradient_result =
-            ((y(1)*( z(2) - z(5)) + y(7)*(-z(2) - z(3)  + z(4) + z(5)) + y(5)*(z(1) + z(2) - z(4) - z(7)) + y(4)*(z(5) - z(7)) + y(3)*(-z(2) + z(7)) + y(2)*(-z(1) + z(3) - z(5) + z(7))))*twelth;
-        break;
-        case 21:
-            gradient_result =
-            ((y(0)*(-z(3) + z(4)) + y(6)*( z(2) + z(3)  - z(4) - z(5)) + y(2)*(z(3) - z(6)) + y(3)*(z(0) - z(2) + z(4) - z(6)) + y(5)*(-z(4) + z(6)) + y(4)*(-z(0) - z(3) + z(5) + z(6))))*twelth;
-        break;
-        case 1:
-            gradient_result =
-            (x(1)*((z(2) + z(3) - z(4) - z(5))) +
-            x(7)*((-z(3) + z(4))) +
-            x(3)*((-z(1) - z(2) + z(4) + z(7))) +
-            x(5)*(( z(1) - z(4))) +
-            x(2)*((-z(1) + z(3))) +
-            x(4)*((z(1) - z(3) + z(5) - z(7))))*twelth;
-        break;
-        case 4:
-            gradient_result =
-            (x(3)*(( z(0) - z(2))) +
-            x(6)*(( z(2) - z(5))) +
-            x(0)*((-z(2) - z(3) + z(4) + z(5))) +
-            x(2)*((z(0) + z(3) - z(5) - z(6))) +
-            x(4)*((-z(0) + z(5))))*twelth;
-        break;
-        case 7:
-            gradient_result =
-            (x(1)*((-z(0) - z(3) + z(5) + z(6))) +
-            x(7)*((z(3) - z(6))) +
-            x(3)*((z(0) + z(1) - z(6) - z(7))) +
-            x(5)*((-z(1) + z(6))) +
-            x(6)*((-z(1) + z(3) - z(5) + z(7))) +
-            x(0)*(( z(1) - z(3))))*twelth;
-        break;
-        case 10:
-            gradient_result =
-            (x(1)*((-z(0) + z(2))) +
-            x(7)*((z(0) - z(2) + z(4) - z(6))) +
-            x(6)*((-z(2) + z(7))) +
-            x(0)*((z(1) + z(2) - z(4) - z(7))) +
-            x(2)*((-z(0) - z(1) + z(6) + z(7))) +
-            x(4)*((z(0) - z(7))))*twelth;
-        break;
-        case 13:
-            gradient_result =
-            (x(1)*(( z(0) - z(5))) +
-            x(7)*((-z(0) - z(3) + z(5) + z(6))) +
-            x(3)*((-z(0) + z(7))) +
-            x(5)*((z(0) + z(1) - z(6) - z(7))) +
-            x(6)*((z(5) - z(7))) +
-            x(0)*((-z(1) + z(3) - z(5) + z(7))))*twelth;
-        break;
-        case 16:
-            gradient_result =
-            (x(1)*((z(0) - z(2) + z(4) - z(6))) +
-            x(7)*((-z(4) + z(6))) +
-            x(6)*((z(1) + z(2) - z(4) - z(7))) +
-            x(0)*((-z(1) + z(4))) +
-            x(2)*(( z(1) - z(6))) +
-            x(4)*((-z(0) - z(1) + z(6) + z(7))))*twelth;
-        break;
-        case 19:
-            gradient_result =
-            (x(1)*((-z(2) + z(5))) +
-            x(7)*(( z(2) + z(3)  - z(4) - z(5))) +
-            x(3)*((z(2) - z(7))) +
-            x(5)*((-z(1) - z(2) + z(4) + z(7))) +
-            x(2)*((z(1) - z(3) + z(5) - z(7))) +
-            x(4)*((-z(5) + z(7))))*twelth;
-        break;
-        case 22:
-            gradient_result =
-            (x(3)*((-z(0) + z(2)  - z(4) + z(6))) +
-            x(5)*(( z(4) - z(6))) +
-            x(6)*((-z(2) - z(3)  + z(4) + z(5))) +
-            x(0)*(( z(3) - z(4))) +
-            x(2)*((-z(3) + z(6))) +
-            x(4)*(( z(0) + z(3)  - z(5) - z(6))))*twelth;
-        break;
-        case 2:
-            gradient_result =
-            (x(1)*(-y(3) + y(4) + y(5) - y(2)) +
-            x(7)*(y(3) - y(4)) +
-            x(3)*(y(1) - y(7) + y(2) - y(4)) +
-            x(5)*(-y(1) + y(4)) +
-            x(2)*(y(1) - y(3)) +
-            x(4)*(-y(1) + y(7) + y(3) - y(5)))*twelth;
-        break;
-        case 5:
-            gradient_result =
-            (x(3)*(y(2) - y(0)) +
-            x(5)*(y(0) - y(2) + y(4) - y(6)) +
-            x(6)*(y(5) - y(2)) +
-            x(0)*(y(2) - y(5) + y(3) - y(4)) +
-            x(2)*(-y(0) + y(5) + y(6) - y(3)) +
-            x(4)*(y(0) - y(5)))*twelth;
-        break;
-        case 8:
-            gradient_result =
-            (x(1)*(y(3) + y(0) - y(6) - y(5)) +
-            x(7)*(y(6) - y(3)) +
-            x(3)*(-y(1)+ y(7) + y(6) - y(0)) +
-            x(5)*(y(1) - y(6)) +
-            x(6)*(-y(7) + y(5) - y(3)) +
-            x(0)*(-y(1) + y(3)))*twelth;
-        break;
-        case 11:
-            gradient_result =
-            (x(1)*(y(0) - y(2)) +
-            x(7)*(-y(0) + y(6) + y(2) - y(4)) +
-            x(6)*(y(7) + y(2)) +
-            x(0)*(-y(2) + y(7) - y(1) + y(4)) +
-            x(2)*(y(0) + y(1) - y(7) - y(6)) +
-            x(4)*(y(7) - y(0)))*twelth;
-        break;
-        case 14:
-            gradient_result =
-            (x(1)*(-y(0) + y(5)) +
-            x(7)*(y(0) - y(6) + y(3) - y(5)) +
-            x(3)*(-y(7)+ y(0)) +
-            x(5)*(-y(0) + y(7) - y(1)+ y(6)) +
-            x(6)*(y(7) - y(5)) +
-            x(0)*(-y(7) + y(5) + y(1) - y(3)))*twelth;
-        break;
-        case 17:
-            gradient_result =
-            (x(1)*(-y(4) - y(0) + y(6) + y(2)) +
-            x(7)*(-y(6) + y(4)) +
-            x(6)*(-y(1) + y(7)+ y(4) - y(2)) +
-            x(0)*(y(1) - y(4)) +
-            x(2)*(-y(1) + y(6)) +
-            x(4)*(y(1) - y(7) + y(0) - y(6)))*twelth;
-        break;
-        case 20:
-            gradient_result =
-            (x(1)*(-y(5) + y(2)) +
-            x(7)*(-y(2) - y(3) + y(5) + y(4)) +
-            x(3)*(y(7) - y(2)) +
-            x(5)*(-y(7) + y(2) + y(1) - y(4)) +
-            x(2)*(-y(5) - y(1) + y(7) + y(3)) +
-            x(4)*(-y(7) + y(5)))*twelth;
-        break;
-        case 23:
-            gradient_result =
-            (x(3)*(-y(6) - y(2) + y(4) + y(0)) +
-            x(5)*(-y(4) + y(6)) +
-            x(6)*(-y(5) - y(4) + y(3) + y(2)) +
-            x(0)*(-y(3) + y(4)) +
-            x(2)*(-y(6) + y(3)) +
-            x(4)*(-y(3) - y(0) + y(6) + y(5)))*twelth;
-        break;
+                case 6:
+                    gradient_result =
+                    ((y(0)*(-z(1) + z(3)) + y(5)*( z(1) - z(6)) + y(1)*(z(0) + z(3) - z(5) - z(6)) + y(7)*(-z(3) + z(6)) + y(6)*(z(1) - z(3) + z(5) - z(7)) + y(3)*(-z(0) - z(1) + z(6) + z(7))))*twelth;
+                break;
+                case 9:
+                    gradient_result =
+                    ((y(1)*( z(0) - z(2)) + y(7)*(-z(0) + z(2)  - z(4) + z(6)) + y(6)*(z(2) - z(7)) + y(2)*(z(0) + z(1) - z(6) - z(7)) + y(4)*(-z(0) + z(7)) + y(0)*(-z(1) - z(2) + z(4) + z(7))))*twelth;
+                break;
+                case 12:
+                    gradient_result =
+                    ((y(1)*(-z(0) + z(5)) + y(7)*( z(0) + z(3)  - z(5) - z(6)) + y(3)*(z(0) - z(7)) + y(0)*(z(1) - z(3) + z(5) - z(7)) + y(6)*(-z(5) + z(7)) + y(5)*(-z(0) - z(1) + z(6) + z(7))))*twelth;
+                break;
+                case 15:
+                    gradient_result =
+                    ((y(0)*( z(1) - z(4)) + y(7)*( z(4) - z(6)) + y(2)*(-z(1) + z(6)) + y(1)*(-z(0) + z(2) - z(4) + z(6)) + y(4)*(z(0) + z(1) - z(6) - z(7)) + y(6)*(-z(1) - z(2) + z(4) + z(7))))*twelth;
+                break;
+                case 18:
+                    gradient_result =
+                    ((y(1)*( z(2) - z(5)) + y(7)*(-z(2) - z(3)  + z(4) + z(5)) + y(5)*(z(1) + z(2) - z(4) - z(7)) + y(4)*(z(5) - z(7)) + y(3)*(-z(2) + z(7)) + y(2)*(-z(1) + z(3) - z(5) + z(7))))*twelth;
+                break;
+                case 21:
+                    gradient_result =
+                    ((y(0)*(-z(3) + z(4)) + y(6)*( z(2) + z(3)  - z(4) - z(5)) + y(2)*(z(3) - z(6)) + y(3)*(z(0) - z(2) + z(4) - z(6)) + y(5)*(-z(4) + z(6)) + y(4)*(-z(0) - z(3) + z(5) + z(6))))*twelth;
+                break;
+                case 1:
+                    gradient_result =
+                    (x(1)*((z(2) + z(3) - z(4) - z(5))) +
+                    x(7)*((-z(3) + z(4))) +
+                    x(3)*((-z(1) - z(2) + z(4) + z(7))) +
+                    x(5)*(( z(1) - z(4))) +
+                    x(2)*((-z(1) + z(3))) +
+                    x(4)*((z(1) - z(3) + z(5) - z(7))))*twelth;
+                break;
+                case 4:
+                    gradient_result =
+                    (x(3)*(( z(0) - z(2))) +
+                    x(6)*(( z(2) - z(5))) +
+                    x(0)*((-z(2) - z(3) + z(4) + z(5))) +
+                    x(2)*((z(0) + z(3) - z(5) - z(6))) +
+                    x(4)*((-z(0) + z(5))))*twelth;
+                break;
+                case 7:
+                    gradient_result =
+                    (x(1)*((-z(0) - z(3) + z(5) + z(6))) +
+                    x(7)*((z(3) - z(6))) +
+                    x(3)*((z(0) + z(1) - z(6) - z(7))) +
+                    x(5)*((-z(1) + z(6))) +
+                    x(6)*((-z(1) + z(3) - z(5) + z(7))) +
+                    x(0)*(( z(1) - z(3))))*twelth;
+                break;
+                case 10:
+                    gradient_result =
+                    (x(1)*((-z(0) + z(2))) +
+                    x(7)*((z(0) - z(2) + z(4) - z(6))) +
+                    x(6)*((-z(2) + z(7))) +
+                    x(0)*((z(1) + z(2) - z(4) - z(7))) +
+                    x(2)*((-z(0) - z(1) + z(6) + z(7))) +
+                    x(4)*((z(0) - z(7))))*twelth;
+                break;
+                case 13:
+                    gradient_result =
+                    (x(1)*(( z(0) - z(5))) +
+                    x(7)*((-z(0) - z(3) + z(5) + z(6))) +
+                    x(3)*((-z(0) + z(7))) +
+                    x(5)*((z(0) + z(1) - z(6) - z(7))) +
+                    x(6)*((z(5) - z(7))) +
+                    x(0)*((-z(1) + z(3) - z(5) + z(7))))*twelth;
+                break;
+                case 16:
+                    gradient_result =
+                    (x(1)*((z(0) - z(2) + z(4) - z(6))) +
+                    x(7)*((-z(4) + z(6))) +
+                    x(6)*((z(1) + z(2) - z(4) - z(7))) +
+                    x(0)*((-z(1) + z(4))) +
+                    x(2)*(( z(1) - z(6))) +
+                    x(4)*((-z(0) - z(1) + z(6) + z(7))))*twelth;
+                break;
+                case 19:
+                    gradient_result =
+                    (x(1)*((-z(2) + z(5))) +
+                    x(7)*(( z(2) + z(3)  - z(4) - z(5))) +
+                    x(3)*((z(2) - z(7))) +
+                    x(5)*((-z(1) - z(2) + z(4) + z(7))) +
+                    x(2)*((z(1) - z(3) + z(5) - z(7))) +
+                    x(4)*((-z(5) + z(7))))*twelth;
+                break;
+                case 22:
+                    gradient_result =
+                    (x(3)*((-z(0) + z(2)  - z(4) + z(6))) +
+                    x(5)*(( z(4) - z(6))) +
+                    x(6)*((-z(2) - z(3)  + z(4) + z(5))) +
+                    x(0)*(( z(3) - z(4))) +
+                    x(2)*((-z(3) + z(6))) +
+                    x(4)*(( z(0) + z(3)  - z(5) - z(6))))*twelth;
+                break;
+                case 2:
+                    gradient_result =
+                    (x(1)*(-y(3) + y(4) + y(5) - y(2)) +
+                    x(7)*(y(3) - y(4)) +
+                    x(3)*(y(1) - y(7) + y(2) - y(4)) +
+                    x(5)*(-y(1) + y(4)) +
+                    x(2)*(y(1) - y(3)) +
+                    x(4)*(-y(1) + y(7) + y(3) - y(5)))*twelth;
+                break;
+                case 5:
+                    gradient_result =
+                    (x(3)*(y(2) - y(0)) +
+                    x(5)*(y(0) - y(2) + y(4) - y(6)) +
+                    x(6)*(y(5) - y(2)) +
+                    x(0)*(y(2) - y(5) + y(3) - y(4)) +
+                    x(2)*(-y(0) + y(5) + y(6) - y(3)) +
+                    x(4)*(y(0) - y(5)))*twelth;
+                break;
+                case 8:
+                    gradient_result =
+                    (x(1)*(y(3) + y(0) - y(6) - y(5)) +
+                    x(7)*(y(6) - y(3)) +
+                    x(3)*(-y(1)+ y(7) + y(6) - y(0)) +
+                    x(5)*(y(1) - y(6)) +
+                    x(6)*(-y(7) + y(5) - y(3)) +
+                    x(0)*(-y(1) + y(3)))*twelth;
+                break;
+                case 11:
+                    gradient_result =
+                    (x(1)*(y(0) - y(2)) +
+                    x(7)*(-y(0) + y(6) + y(2) - y(4)) +
+                    x(6)*(y(7) + y(2)) +
+                    x(0)*(-y(2) + y(7) - y(1) + y(4)) +
+                    x(2)*(y(0) + y(1) - y(7) - y(6)) +
+                    x(4)*(y(7) - y(0)))*twelth;
+                break;
+                case 14:
+                    gradient_result =
+                    (x(1)*(-y(0) + y(5)) +
+                    x(7)*(y(0) - y(6) + y(3) - y(5)) +
+                    x(3)*(-y(7)+ y(0)) +
+                    x(5)*(-y(0) + y(7) - y(1)+ y(6)) +
+                    x(6)*(y(7) - y(5)) +
+                    x(0)*(-y(7) + y(5) + y(1) - y(3)))*twelth;
+                break;
+                case 17:
+                    gradient_result =
+                    (x(1)*(-y(4) - y(0) + y(6) + y(2)) +
+                    x(7)*(-y(6) + y(4)) +
+                    x(6)*(-y(1) + y(7)+ y(4) - y(2)) +
+                    x(0)*(y(1) - y(4)) +
+                    x(2)*(-y(1) + y(6)) +
+                    x(4)*(y(1) - y(7) + y(0) - y(6)))*twelth;
+                break;
+                case 20:
+                    gradient_result =
+                    (x(1)*(-y(5) + y(2)) +
+                    x(7)*(-y(2) - y(3) + y(5) + y(4)) +
+                    x(3)*(y(7) - y(2)) +
+                    x(5)*(-y(7) + y(2) + y(1) - y(4)) +
+                    x(2)*(-y(5) - y(1) + y(7) + y(3)) +
+                    x(4)*(-y(7) + y(5)))*twelth;
+                break;
+                case 23:
+                    gradient_result =
+                    (x(3)*(-y(6) - y(2) + y(4) + y(0)) +
+                    x(5)*(-y(4) + y(6)) +
+                    x(6)*(-y(5) - y(4) + y(3) + y(2)) +
+                    x(0)*(-y(3) + y(4)) +
+                    x(2)*(-y(6) + y(3)) +
+                    x(4)*(-y(3) - y(0) + y(6) + y(5)))*twelth;
+                break;
+            }
+            elem_vol_gradients(inode, idim) = gradient_result;
+        }
     }
-    return gradient_result;
+    return;
     
 } // end subroutine
 
