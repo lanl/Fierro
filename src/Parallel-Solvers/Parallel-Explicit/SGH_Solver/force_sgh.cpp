@@ -339,11 +339,14 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         double omega_curl = 1.0;  // increase this to increase robustness, but as it increases, additional dissipation will be introduce, blocking bending
         double phi_curl = fmin(1.0, omega_curl*fabs(div)/(mag_curl + fuzz));  // disable Q when vorticity is high
         
-        if(material(mat_id).maximum_limiter)
         phi = 1.0;  // for the future case of using a slope limiter approach
-        //phi = fmin(phi_curl*phi, alpha*phi);// if noise arrises in simulation on really smooth flows, then try something like
-        //phi = fmax(phi,0.001);  // ensuring a very small amount of dissipation for stability and robustness
+        phi = fmin(phi_curl*phi, alpha*phi);// if noise arrises in simulation on really smooth flows, then try something like
+        phi = fmax(phi,0.001);  // ensuring a very small amount of dissipation for stability and robustness
 
+        if(material(mat_id).maximum_limiter){
+            phi=1;
+        }
+        
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem
