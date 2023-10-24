@@ -1,0 +1,838 @@
+Starting Lagrangian SGH code
+ NUM DIM is 3
+This is the 1st description line of the EnSight Gold geometry example
+This is the 2nd description line of the EnSight Gold geometry example
+node id assign
+element id assign
+part
+         1
+Mesh
+coordinates
+declared node count: 35937
+Num nodes assigned to task 2 = 1123
+Num nodes assigned to task 4 = 1123
+Num nodes assigned to task 6 = 1123
+Num nodes assigned to task 8 = 1123
+Num nodes assigned to task 10 = 1123
+Num nodes assigned to task 12 = 1123
+Num nodes assigned to task 14 = 1123
+Num nodes assigned to task 16 = 1123
+Num nodes assigned to task 18 = 1123
+Num nodes assigned to task 20 = 1123
+Num nodes assigned to task 22 = 1123
+Num nodes assigned to task 24 = 1123
+Num nodes assigned to task 26 = 1123
+Num nodes assigned to task 28 = 1123
+Num nodes assigned to task 30 = 1123
+Num nodes assigned to task 0 = 1124
+Num nodes assigned to task 1 = 1123
+Num nodes assigned to task 3 = 1123
+Num nodes assigned to task 5 = 1123
+Num nodes assigned to task 7 = 1123
+Num nodes assigned to task 9 = 1123
+Num nodes assigned to task 11 = 1123
+Num nodes assigned to task 13 = 1123
+Num nodes assigned to task 15 = 1123
+Num nodes assigned to task 17 = 1123
+Num nodes assigned to task 19 = 1123
+Num nodes assigned to task 21 = 1123
+Num nodes assigned to task 23 = 1123
+Num nodes assigned to task 25 = 1123
+Num nodes assigned to task 27 = 1123
+Num nodes assigned to task 29 = 1123
+Num nodes assigned to task 31 = 1123
+Imbalance Metrics: (32 existing parts)
+                                min            max            avg   imbalance
+        object count          1e+03          1e+03          1e+03       1.001
+
+pass: 1.001
+
+hexa8
+declared element count: 32768
+before mesh initialization
+Num elements on process 31 = 1123
+Num elements on process 30 = 1132
+Num elements on process 1 = 1236
+Num elements on process 2 = 1132
+Num elements on process 3 = 1219
+Num elements on process 4 = 1333
+Num elements on process 5 = 1228
+Num elements on process 6 = 1131
+Num elements on process 7 = 1125
+Num elements on process 8 = 1275
+Num elements on process 9 = 1395
+Num elements on process 10 = 1273
+Num elements on process 11 = 1384
+Num elements on process 12 = 1502
+Num elements on process 13 = 1382
+Num elements on process 14 = 1273
+Num elements on process 15 = 1264
+Num elements on process 16 = 1264
+Num elements on process 17 = 1396
+Num elements on process 18 = 1281
+Num elements on process 19 = 1372
+Num elements on process 20 = 1500
+Num elements on process 21 = 1395
+Num elements on process 22 = 1280
+Num elements on process 23 = 1267
+Num elements on process 24 = 1124
+Num elements on process 25 = 1237
+Num elements on process 26 = 1131
+Num elements on process 27 = 1220
+Num elements on process 28 = 1332
+Num elements on process 29 = 1229
+End of map setup 
+Num elements on process 0 = 1123
+Starting boundary patch setup
+Done with boundary patch allocation
+Done with boundary patch flags init
+Done with boundary patch loop
+number of boundary patches on task 0 = 333
+number of boundary patches on task 6 = 342
+number of boundary patches on task 24 = 332
+number of boundary patches on task 7 = 347
+number of boundary patches on task 31 = 349
+number of boundary patches on task 2 = 325
+number of boundary patches on task 30 = 341
+number of boundary patches on task 26 = 326
+ SGH MODULE ALLOCATED AS 0
+ INERTIAL MODULE ALLOCATED AS 1
+Starting setup for FEA module 0
+number of boundary patches on task 3 = 257
+number of boundary patches on task 27 = 256
+number of boundary patches on task 5 = 258
+number of boundary patches on task 16 = 216
+number of boundary patches on task 1 = 259
+number of boundary patches on task 29 = 258
+number of boundary patches on task 8 = 219
+number of boundary patches on task 14 = 225
+number of boundary patches on task 25 = 258
+number of boundary patches on task 15 = 234
+number of boundary patches on task 23 = 233
+number of boundary patches on task 22 = 227
+number of boundary patches on task 10 = 207
+number of boundary patches on task 28 = 166
+number of boundary patches on task 19 = 117
+number of boundary patches on task 4 = 165
+Num BC's = 6
+Num BC's = 6
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 134 
+  Num bdy nodes in this set = 160 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 72 
+  Num bdy nodes in this set = 90 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 136 
+  Num bdy nodes in this set = 162 
+number of boundary patches on task 13 = 117
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 88 
+  Num bdy nodes in this set = 108 
+Boundary Condition number 0 
+  Num bdy patches in this set = 127 
+  Num bdy nodes in this set = 151 
+Boundary Condition number 1 
+  Num bdy patches in this set = 89 
+  Num bdy nodes in this set = 109 
+Boundary Condition number 2 
+  Num bdy patches in this set = 117 
+  Num bdy nodes in this set = 140 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 104 
+  Num bdy nodes in this set = 126 
+Boundary Condition number 3 
+  Num bdy patches in this set = 140 
+  Num bdy nodes in this set = 165 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+number of boundary patches on task 17 = 114
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Num BC's = 6
+number of boundary patches on task 21 = 117
+Num BC's = 6
+Num BC's = 6
+number of boundary patches on task 9 = 115
+Boundary Condition number 0 
+  Num bdy patches in this set = 141 
+  Num bdy nodes in this set = 166 
+Boundary Condition number 1 
+  Num bdy patches in this set = 88 
+  Num bdy nodes in this set = 108 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 139 
+  Num bdy nodes in this set = 166 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 88 
+  Num bdy nodes in this set = 108 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 96 
+  Num bdy nodes in this set = 117 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 131 
+  Num bdy nodes in this set = 157 
+Boundary Condition number 4 
+  Num bdy patches in this set = 137 
+  Num bdy nodes in this set = 163 
+Boundary Condition number 5 
+  Num bdy patches in this set = 81 
+  Num bdy nodes in this set = 100 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 136 
+  Num bdy nodes in this set = 162 
+Boundary Condition number 5 
+  Num bdy patches in this set = 72 
+  Num bdy nodes in this set = 90 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 130 
+  Num bdy nodes in this set = 154 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 108 
+  Num bdy nodes in this set = 130 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 64 
+  Num bdy nodes in this set = 81 
+Boundary Condition number 3 
+  Num bdy patches in this set = 141 
+  Num bdy nodes in this set = 168 
+Boundary Condition number 4 
+  Num bdy patches in this set = 136 
+  Num bdy nodes in this set = 162 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+number of boundary patches on task 11 = 117
+Starting setup for FEA module 1
+Starting solve for FEA module 0
+Writing outputs to file at 0.000000 
+number of boundary patches on task 20 = 0
+Num BC's = 6
+number of boundary patches on task 12 = 0
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 140 
+  Num bdy nodes in this set = 165 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 117 
+  Num bdy nodes in this set = 140 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 99 
+  Num bdy nodes in this set = 120 
+Boundary Condition number 2 
+  Num bdy patches in this set = 117 
+  Num bdy nodes in this set = 140 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Num BC's = 6
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 102 
+  Num bdy nodes in this set = 124 
+Boundary Condition number 2 
+  Num bdy patches in this set = 117 
+  Num bdy nodes in this set = 140 
+Num BC's = 6
+Boundary Condition number 2 
+  Num bdy patches in this set = 104 
+  Num bdy nodes in this set = 126 
+Boundary Condition number 3 
+  Num bdy patches in this set = 152 
+  Num bdy nodes in this set = 178 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 154 
+  Num bdy nodes in this set = 181 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 104 
+  Num bdy nodes in this set = 126 
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 155 
+  Num bdy nodes in this set = 183 
+Boundary Condition number 1 
+  Num bdy patches in this set = 104 
+  Num bdy nodes in this set = 126 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 141 
+  Num bdy nodes in this set = 167 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 117 
+  Num bdy nodes in this set = 140 
+Boundary Condition number 2 
+  Num bdy patches in this set = 72 
+  Num bdy nodes in this set = 90 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 153 
+  Num bdy nodes in this set = 180 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Boundary Condition number 4 
+  Num bdy patches in this set = 152 
+  Num bdy nodes in this set = 179 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 81 
+  Num bdy nodes in this set = 100 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 72 
+  Num bdy nodes in this set = 90 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 155 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 153 
+  Num bdy nodes in this set = 180 
+Boundary Condition number 5 
+  Num bdy patches in this set = 81 
+  Num bdy nodes in this set = 100 
+  Num bdy nodes in this set = 183 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 99 
+  Num bdy nodes in this set = 120 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+Num BC's = 6
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 108 
+  Num bdy nodes in this set = 130 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 104 
+  Num bdy nodes in this set = 126 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 154 
+  Num bdy nodes in this set = 182 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 117 
+  Num bdy nodes in this set = 140 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 166 
+  Num bdy nodes in this set = 194 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 165 
+  Num bdy nodes in this set = 193 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 117 
+  Num bdy nodes in this set = 140 
+Num BC's = 6
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 114 
+Boundary Condition number 1 
+  Num bdy patches in this set = 115 
+  Num bdy nodes in this set = 138 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 117 
+  Num bdy nodes in this set = 140 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+  Num bdy nodes in this set = 137 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Num BC's = 6
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 2 
+  Num bdy patches in this set = 117 
+  Num bdy nodes in this set = 140 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+number of boundary patches on task 18 = 211
+Num BC's = 6
+Boundary Condition number 0 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 1 
+  Num bdy patches in this set = 103 
+  Num bdy nodes in this set = 125 
+Boundary Condition number 2 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 3 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 4 
+  Num bdy patches in this set = 0 
+  Num bdy nodes in this set = 0 
+Boundary Condition number 5 
+  Num bdy patches in this set = 108 
+  Num bdy nodes in this set = 130 
+cycle = 0, time =  0.00000e+00, time step =  1.10000e-05 
+cycle = 20, time =  6.30025e-04, time step =  7.40025e-05 
+cycle = 40, time =  4.15128e-03, time step =  2.19302e-04 
+cycle = 60, time =  1.24919e-02, time step =  7.12289e-04 
+cycle = 80, time =  2.57854e-02, time step =  6.39699e-04 
+cycle = 100, time =  4.18954e-02, time step =  1.24163e-03 
+cycle = 120, time =  6.07528e-02, time step =  6.05467e-04 
+cycle = 140, time =  8.03045e-02, time step =  8.96972e-04 
+cycle = 160, time =  1.03228e-01, time step =  1.33731e-03 
+cycle = 180, time =  1.30190e-01, time step =  1.94696e-03 
+cycle = 200, time =  1.61004e-01, time step =  2.25720e-03 
+cycle = 220, time =  1.96558e-01, time step =  1.63581e-03 
+cycle = 240, time =  2.33602e-01, time step =  1.22704e-03 
+Writing outputs to file at 0.250000 
+cycle = 260, time =  2.61973e-01, time step =  1.94849e-03 
+cycle = 280, time =  3.06256e-01, time step =  2.63011e-03 
+cycle = 300, time =  3.53076e-01, time step =  2.23404e-03 
+cycle = 320, time =  4.04053e-01, time step =  2.05668e-03 
+cycle = 340, time =  4.58387e-01, time step =  2.17803e-03 
+Writing outputs to file at 0.500000 
+cycle = 360, time =  5.14606e-01, time step =  2.53461e-03 
+cycle = 380, time =  5.74993e-01, time step =  3.24541e-03 
+cycle = 400, time =  6.38331e-01, time step =  3.33915e-03 
+cycle = 420, time =  7.04213e-01, time step =  3.42806e-03 
+Writing outputs to file at 0.750000 
+cycle = 440, time =  7.65742e-01, time step =  3.50468e-03 
+cycle = 460, time =  8.36143e-01, time step =  3.58617e-03 
+cycle = 480, time =  9.08523e-01, time step =  3.66437e-03 
+cycle = 500, time =  9.82529e-01, time step =  3.73953e-03 
+Writing outputs to file at 1.000000 
+
+Calculation time in seconds: 10.476246 
+Time=0:   KE =    0.000000000000000, IE =    0.061673750188795, TE =    0.061673750188795 
+Time=End: KE =    0.016732238354772, IE =    0.044941511834023, TE =    0.061673750188795 
+total energy conservation error %= -2.025174e-13 
+
+Starting solve for FEA module 1
+Starting solve for FEA module 0
+ RUNTIME OF CODE ON TASK 13 is 12.5254 comms time 0.374554 host to dev time 0.0215492 dev to host time 0.0224149
+ OUTPUT TIME OF CODE ON TASK 13 is 10.0412
+ RUNTIME OF CODE ON TASK 3 is 12.5254 comms time 0.588551 host to dev time 0.0192032 dev to host time 0.0210948
+ OUTPUT TIME OF CODE ON TASK 3 is 10.0443
+ RUNTIME OF CODE ON TASK 7 is 12.5256 comms time 0.657555 host to dev time 0.0187235 dev to host time 0.0219021
+ OUTPUT TIME OF CODE ON TASK 7 is 10.0452
+ RUNTIME OF CODE ON TASK 5 is 12.5255 comms time 0.548129 host to dev time 0.0199308 dev to host time 0.0218117
+ OUTPUT TIME OF CODE ON TASK 5 is 10.0437
+ RUNTIME OF CODE ON TASK 21 is 12.5256 comms time 0.277913 host to dev time 0.0222003 dev to host time 0.023984
+ OUTPUT TIME OF CODE ON TASK 21 is 10.0411
+ RUNTIME OF CODE ON TASK 24 is 12.5256 comms time 0.454591 host to dev time 0.0211754 dev to host time 0.0229089
+ OUTPUT TIME OF CODE ON TASK 24 is 10.0461
+Starting solve for FEA module 1
+ RUNTIME OF CODE ON TASK 0 is 12.53 comms time 0.4257 host to dev time 0.0204 dev to host time 0.02411
+ OUTPUT TIME OF CODE ON TASK 0 is 10.06
+ RUNTIME OF CODE ON TASK 4 is 12.5256 comms time 0.383254 host to dev time 0.0212548 dev to host time 0.020416
+ OUTPUT TIME OF CODE ON TASK 4 is 10.0414
+ RUNTIME OF CODE ON TASK 25 is 12.5256 comms time 0.497077 host to dev time 0.0206695 dev to host time 0.022239
+ OUTPUT TIME OF CODE ON TASK 25 is 10.043
+ RUNTIME OF CODE ON TASK 23 is 12.5256 comms time 0.49382 host to dev time 0.0201721 dev to host time 0.0200641
+ OUTPUT TIME OF CODE ON TASK 23 is 10.0433
+ RUNTIME OF CODE ON TASK 15 is 12.5256 comms time 0.460328 host to dev time 0.0208485 dev to host time 0.0230575
+ OUTPUT TIME OF CODE ON TASK 15 is 10.0431
+ RUNTIME OF CODE ON TASK 30 is 12.5256 comms time 0.626963 host to dev time 0.0186687 dev to host time 0.0213153
+ OUTPUT TIME OF CODE ON TASK 30 is 10.045
+ RUNTIME OF CODE ON TASK 27 is 12.5256 comms time 0.456088 host to dev time 0.0204015 dev to host time 0.0229137
+ OUTPUT TIME OF CODE ON TASK 27 is 10.044
+ RUNTIME OF CODE ON TASK 1 is 12.5256 comms time 0.483861 host to dev time 0.0212655 dev to host time 0.0226495
+ OUTPUT TIME OF CODE ON TASK 1 is 10.0435
+ RUNTIME OF CODE ON TASK 11 is 12.5256 comms time 0.306711 host to dev time 0.0224216 dev to host time 0.0233011
+ OUTPUT TIME OF CODE ON TASK 11 is 10.039
+ RUNTIME OF CODE ON TASK 19 is 12.5256 comms time 0.345766 host to dev time 0.0210516 dev to host time 0.0224402
+ OUTPUT TIME OF CODE ON TASK 19 is 10.0422
+ RUNTIME OF CODE ON TASK 18 is 12.5255 comms time 0.448571 host to dev time 0.020864 dev to host time 0.023591
+ OUTPUT TIME OF CODE ON TASK 18 is 10.0269
+ RUNTIME OF CODE ON TASK 28 is 12.5257 comms time 0.366416 host to dev time 0.0209796 dev to host time 0.0224121
+ OUTPUT TIME OF CODE ON TASK 28 is 10.0416
+ RUNTIME OF CODE ON TASK 2 is 12.5256 comms time 0.597592 host to dev time 0.0205154 dev to host time 0.0241134
+ OUTPUT TIME OF CODE ON TASK 2 is 10.0451
+ RUNTIME OF CODE ON TASK 17 is 12.5256 comms time 0.390943 host to dev time 0.0206721 dev to host time 0.0210629
+ OUTPUT TIME OF CODE ON TASK 17 is 10.0409
+ RUNTIME OF CODE ON TASK 8 is 12.5257 comms time 0.386168 host to dev time 0.0216558 dev to host time 0.0216968
+ OUTPUT TIME OF CODE ON TASK 8 is 10.0441
+ RUNTIME OF CODE ON TASK 16 is 12.5257 comms time 0.327676 host to dev time 0.0202971 dev to host time 0.0232613
+ OUTPUT TIME OF CODE ON TASK 16 is 10.0447
+ RUNTIME OF CODE ON TASK 26 is 12.5256 comms time 0.625434 host to dev time 0.0194013 dev to host time 0.0228493
+ OUTPUT TIME OF CODE ON TASK 26 is 10.0453
+ RUNTIME OF CODE ON TASK 6 is 12.5257 comms time 0.520987 host to dev time 0.0203257 dev to host time 0.0234921
+ OUTPUT TIME OF CODE ON TASK 6 is 10.0456
+ RUNTIME OF CODE ON TASK 31 is 12.5257 comms time 0.617521 host to dev time 0.018857 dev to host time 0.022752
+ OUTPUT TIME OF CODE ON TASK 31 is 10.0454
+ RUNTIME OF CODE ON TASK 9 is 12.5257 comms time 0.408744 host to dev time 0.0207813 dev to host time 0.0217185
+ OUTPUT TIME OF CODE ON TASK 9 is 10.0408
+ RUNTIME OF CODE ON TASK 10 is 12.5256 comms time 0.3551 host to dev time 0.0216725 dev to host time 0.0238066
+ OUTPUT TIME OF CODE ON TASK 10 is 10.0428
+ RUNTIME OF CODE ON TASK 29 is 12.5258 comms time 0.539711 host to dev time 0.0191765 dev to host time 0.0214803
+ OUTPUT TIME OF CODE ON TASK 29 is 10.0437
+ RUNTIME OF CODE ON TASK 14 is 12.5257 comms time 0.467308 host to dev time 0.0208519 dev to host time 0.0228927
+ OUTPUT TIME OF CODE ON TASK 14 is 10.0434
+ RUNTIME OF CODE ON TASK 22 is 12.5258 comms time 0.425962 host to dev time 0.0210466 dev to host time 0.0232756
+ OUTPUT TIME OF CODE ON TASK 22 is 10.0431
+ RUNTIME OF CODE ON TASK 12 is 12.5259 comms time 0.176886 host to dev time 0.0239632 dev to host time 0.0217674
+ OUTPUT TIME OF CODE ON TASK 12 is 10.0392
+ RUNTIME OF CODE ON TASK 20 is 12.5261 comms time 0.19845 host to dev time 0.0229003 dev to host time 0.0226274
+ OUTPUT TIME OF CODE ON TASK 20 is 10.0395
