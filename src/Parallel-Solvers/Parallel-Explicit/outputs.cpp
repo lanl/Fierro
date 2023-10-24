@@ -250,7 +250,7 @@ Explicit_Solver::parallel_vtk_writer_new()
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   double* coord_data = node_coords.data();
   sort_and_write_data_to_file_mpi_all <array_layout,double,LO,GO,node_type> (
-    coord_data, map, num_dim, num_nodes, world, myfile_parallel, vtk_points_importer);
+    coord_data, map, num_dim, num_nodes, world, myfile_parallel, node_sorting_importer);
   }
 
 
@@ -272,7 +272,7 @@ Explicit_Solver::parallel_vtk_writer_new()
   } //end view scope
   auto cell_data = get_cell_nodes(nodes_in_elem, num_dim, active_node_ordering_convention);
   sort_and_write_data_to_file_mpi_all <CArrayLayout,int,LO,GO,node_type> (
-    cell_data->pointer(), all_element_map, cell_data->dims(1), num_elem, world, myfile_parallel, vtk_cells_importer);
+    cell_data->pointer(), all_element_map, cell_data->dims(1), num_elem, world, myfile_parallel, element_sorting_importer);
 
 
   /*************** write CELL_TYPES ***************/
@@ -287,7 +287,7 @@ Explicit_Solver::parallel_vtk_writer_new()
     for (int j = 0; j < cell_type.dims(1); j++)
       cell_type(i,j) = 12;
   sort_and_write_data_to_file_mpi_all <CArrayLayout,int,LO,GO,node_type> (
-    cell_type.pointer(), all_element_map, cell_type.dims(1), num_elem, world, myfile_parallel, vtk_cell_types_importer);
+    cell_type.pointer(), all_element_map, cell_type.dims(1), num_elem, world, myfile_parallel, element_sorting_importer);
 
 
   /*************** write POINT_DATA ***************/
@@ -310,7 +310,7 @@ Explicit_Solver::parallel_vtk_writer_new()
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-      it->second, map, 1, num_nodes, world, myfile_parallel, point_data_scalars_double_importer);
+      it->second, map, 1, num_nodes, world, myfile_parallel, node_sorting_importer);
   }
 
   //VECTORS float
@@ -323,7 +323,7 @@ Explicit_Solver::parallel_vtk_writer_new()
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-      it->second, map, num_dim, num_nodes, world, myfile_parallel, point_data_vectors_double_importer);
+      it->second, map, num_dim, num_nodes, world, myfile_parallel, node_sorting_importer);
   }
 
 
@@ -347,7 +347,7 @@ Explicit_Solver::parallel_vtk_writer_new()
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-      it->second, all_element_map, 1, num_elem, world, myfile_parallel, cell_data_scalars_double_importer);
+      it->second, all_element_map, 1, num_elem, world, myfile_parallel, element_sorting_importer);
   }
 
   //SCALARS int
@@ -361,7 +361,7 @@ Explicit_Solver::parallel_vtk_writer_new()
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,int,LO,GO,node_type> (
-      it->second, all_element_map, 1, num_elem, world, myfile_parallel, cell_data_scalars_int_importer);
+      it->second, all_element_map, 1, num_elem, world, myfile_parallel, element_sorting_importer);
   }
 
   //FIELD
@@ -382,11 +382,8 @@ Explicit_Solver::parallel_vtk_writer_new()
       MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
-    if (cell_data_fields_double_importers.find(data_num_comps) == cell_data_fields_double_importers.end()) {
-      cell_data_fields_double_importers[data_num_comps] = Teuchos::null;
-    }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-      data_ptr, all_element_map, data_num_comps, num_elem, world, myfile_parallel, cell_data_fields_double_importers[data_num_comps]);
+      data_ptr, all_element_map, data_num_comps, num_elem, world, myfile_parallel, element_sorting_importer);
   }
   
   MPI_Barrier(world);
@@ -523,11 +520,6 @@ sort_data(
   Teuchos::RCP<Tpetra::Map<LO,GO,NO>> sorted_map = 
     Teuchos::rcp(new Tpetra::Map<LO,GO,NO>(
     num_global_unique_elements, unsorted_map->getIndexBase(), unsorted_map->getComm()));
-
-  // importer
-  if (sorting_importer == Teuchos::null) {
-    sorting_importer = Teuchos::rcp(new Tpetra::Import<LO,GO,NO>(unsorted_map, sorted_map));
-  }
 
   // sorted storage
   Teuchos::RCP<Tpetra::MultiVector<SC,LO,GO,NO>> sorted_storage = 

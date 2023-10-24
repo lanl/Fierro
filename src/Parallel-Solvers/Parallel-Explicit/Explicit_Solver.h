@@ -121,17 +121,6 @@ public:
   std::map <std::string, const int*> cell_data_scalars_int;
   std::map <std::string, std::pair<const double*, size_t> > cell_data_fields_double;
  
-  // for caching importers
-  Teuchos::RCP<Tpetra::Import<LO,GO,node_type>> vtk_points_importer = Teuchos::null;
-  Teuchos::RCP<Tpetra::Import<LO,GO,node_type>> vtk_cells_importer = Teuchos::null;
-  Teuchos::RCP<Tpetra::Import<LO,GO,node_type>> vtk_cell_types_importer = Teuchos::null;
-  Teuchos::RCP<Tpetra::Import<LO,GO,node_type>> point_data_scalars_double_importer = Teuchos::null;
-  Teuchos::RCP<Tpetra::Import<LO,GO,node_type>> point_data_vectors_double_importer = Teuchos::null;
-  Teuchos::RCP<Tpetra::Import<LO,GO,node_type>> cell_data_scalars_double_importer = Teuchos::null;
-  Teuchos::RCP<Tpetra::Import<LO,GO,node_type>> cell_data_scalars_int_importer = Teuchos::null;
-  std::map<size_t, Teuchos::RCP<Tpetra::Import<LO,GO,node_type>>> cell_data_fields_double_importers; 
-
-
   //void init_boundary_sets(int num_boundary_sets);
 
   void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
