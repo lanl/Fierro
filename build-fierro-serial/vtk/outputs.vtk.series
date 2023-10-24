@@ -1,0 +1,10 @@
+{
+  "file-series-version" : "1.0",
+  "files" : [
+    { "name" : "data/VTK0.vtk", "time" :  0.00000e+00 },
+    { "name" : "data/VTK1.vtk", "time" :  2.50000e-01 },
+    { "name" : "data/VTK2.vtk", "time" :  5.00000e-01 },
+    { "name" : "data/VTK3.vtk", "time" :  7.50000e-01 },
+    { "name" : "data/VTK4.vtk", "time" :  1.00000e+00 },
+  ]
+}

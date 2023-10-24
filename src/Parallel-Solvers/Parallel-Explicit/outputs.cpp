@@ -10,7 +10,6 @@ typedef Kokkos::LayoutRight CArrayLayout;
 typedef Kokkos::LayoutLeft FArrayLayout;
 typedef Tpetra::MultiVector<>::dual_view_type::t_host::array_layout TpetraHostViewLayout;
 
-
 MPI_Offset
 mpi_get_file_position_shared(
   const MPI_Comm comm,
@@ -38,7 +37,8 @@ sort_data(
   Teuchos::RCP<Tpetra::Map<LO,GO,NO>> unsorted_map,
   size_t dim1,
   size_t num_global_unique_elements,
-  MPI_Comm comm);
+  MPI_Comm comm,
+  Teuchos::RCP<Tpetra::Import<LO,GO,NO>> &sorting_importer);
 
 template<typename ArrayLayout, typename SC, typename LO, typename GO, typename NO>
 void
@@ -48,7 +48,8 @@ sort_and_write_data_to_file_mpi_all(
   size_t dim1,
   size_t num_global_unique_elements,
   MPI_Comm comm, 
-  MPI_File file_parallel);
+  MPI_File file_parallel,
+  Teuchos::RCP<Tpetra::Import<LO,GO,NO>> &sorting_importer);
 
 Teuchos::RCP<CArray<int>>
 get_cell_nodes(
@@ -260,7 +261,7 @@ Explicit_Solver::parallel_vtk_writer_new()
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   double* coord_data = node_coords.data();
   sort_and_write_data_to_file_mpi_all <array_layout,double,LO,GO,node_type> (
-    coord_data, map, num_dim, num_nodes, world, myfile_parallel);
+    coord_data, map, num_dim, num_nodes, world, myfile_parallel, vtk_points_importer);
   }
 
 
@@ -282,7 +283,7 @@ Explicit_Solver::parallel_vtk_writer_new()
   } //end view scope
   auto cell_data = get_cell_nodes(nodes_in_elem, num_dim, active_node_ordering_convention);
   sort_and_write_data_to_file_mpi_all <CArrayLayout,int,LO,GO,node_type> (
-    cell_data->pointer(), all_element_map, cell_data->dims(1), num_elem, world, myfile_parallel);
+    cell_data->pointer(), all_element_map, cell_data->dims(1), num_elem, world, myfile_parallel, vtk_cells_importer);
 
 
   /*************** write CELL_TYPES ***************/
@@ -297,7 +298,7 @@ Explicit_Solver::parallel_vtk_writer_new()
     for (int j = 0; j < cell_type.dims(1); j++)
       cell_type(i,j) = 12;
   sort_and_write_data_to_file_mpi_all <CArrayLayout,int,LO,GO,node_type> (
-    cell_type.pointer(), all_element_map, cell_type.dims(1), num_elem, world, myfile_parallel);
+    cell_type.pointer(), all_element_map, cell_type.dims(1), num_elem, world, myfile_parallel, vtk_cell_types_importer);
 
 
   /*************** write POINT_DATA ***************/
@@ -320,7 +321,7 @@ Explicit_Solver::parallel_vtk_writer_new()
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-      it->second, map, 1, num_nodes, world, myfile_parallel);
+      it->second, map, 1, num_nodes, world, myfile_parallel, point_data_scalars_double_importer);
   }
 
   //VECTORS float
@@ -333,7 +334,7 @@ Explicit_Solver::parallel_vtk_writer_new()
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-      it->second, map, num_dim, num_nodes, world, myfile_parallel);
+      it->second, map, num_dim, num_nodes, world, myfile_parallel, point_data_vectors_double_importer);
   }
 
 
@@ -357,7 +358,7 @@ Explicit_Solver::parallel_vtk_writer_new()
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-      it->second, all_element_map, 1, num_elem, world, myfile_parallel);
+      it->second, all_element_map, 1, num_elem, world, myfile_parallel, cell_data_scalars_double_importer);
   }
 
   //SCALARS int
@@ -371,7 +372,7 @@ Explicit_Solver::parallel_vtk_writer_new()
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,int,LO,GO,node_type> (
-      it->second, all_element_map, 1, num_elem, world, myfile_parallel);
+      it->second, all_element_map, 1, num_elem, world, myfile_parallel, cell_data_scalars_int_importer);
   }
 
   //FIELD
@@ -383,15 +384,20 @@ Explicit_Solver::parallel_vtk_writer_new()
                       str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
   }
   for (auto it = cell_data_fields_double.begin(); it != cell_data_fields_double.end(); it++) {
+    auto data_name = it->first;
+    auto [data_ptr, data_num_comps] = it->second; // Structured binding C++17
     str_stream.str("");
-    str_stream << it->first << " " << it->second.second << " " << num_elem << " float" << std::endl;
+    str_stream << data_name << " " << data_num_comps << " " << num_elem << " float" << std::endl;
     current_offset = mpi_get_file_position_shared(world, myfile_parallel);
     if(myrank == 0) {
       MPI_File_write_at(myfile_parallel, current_offset, str_stream.str().c_str(),
                         str_stream.str().length(), MPI_CHAR, MPI_STATUS_IGNORE);
     }
+    if (cell_data_fields_double_importers.find(data_num_comps) == cell_data_fields_double_importers.end()) {
+      cell_data_fields_double_importers[data_num_comps] = Teuchos::null;
+    }
     sort_and_write_data_to_file_mpi_all <CArrayLayout,double,LO,GO,node_type> (
-      it->second.first, all_element_map, it->second.second, num_elem, world, myfile_parallel);
+      data_ptr, all_element_map, data_num_comps, num_elem, world, myfile_parallel, cell_data_fields_double_importers[data_num_comps]);
   }
   
   MPI_Barrier(world);
@@ -516,7 +522,8 @@ sort_data(
   Teuchos::RCP<Tpetra::Map<LO,GO,NO>> unsorted_map,
   size_t dim1,
   size_t num_global_unique_elements,
-  MPI_Comm comm)
+  MPI_Comm comm,
+  Teuchos::RCP<Tpetra::Import<LO,GO,NO>> &sorting_importer)
 {
 
   // create view of unsorted_data_ptr. not using matar here. array_layout is needed
@@ -529,7 +536,10 @@ sort_data(
     num_global_unique_elements, unsorted_map->getIndexBase(), unsorted_map->getComm()));
 
   // importer
-  Tpetra::Import<LO,GO,NO> sorting_importer(unsorted_map, sorted_map);
+  if (sorting_importer == Teuchos::null) {
+    std::cout << "making importer" << std::endl;
+    sorting_importer = Teuchos::rcp(new Tpetra::Import<LO,GO,NO>(unsorted_map, sorted_map));
+  }
 
   // sorted storage
   Teuchos::RCP<Tpetra::MultiVector<SC,LO,GO,NO>> sorted_storage = 
@@ -548,7 +558,7 @@ sort_data(
     } // for
   } //end view scope
 
-  sorted_storage->doImport(*unsorted_storage, sorting_importer, Tpetra::INSERT);
+  sorted_storage->doImport(*unsorted_storage, *sorting_importer, Tpetra::INSERT);
 
   return sorted_storage;
 }
@@ -561,11 +571,12 @@ sort_and_write_data_to_file_mpi_all(
   size_t dim1,
   size_t num_global_unique_elements,
   MPI_Comm comm, 
-  MPI_File file_parallel)
+  MPI_File file_parallel,
+  Teuchos::RCP<Tpetra::Import<LO,GO,NO>> &sorting_importer)
 {
 
   auto sorted_data = 
-    sort_data <ArrayLayout,SC,LO,GO,NO> (unsorted_data_ptr, unsorted_map, dim1, num_global_unique_elements, comm);
+    sort_data <ArrayLayout,SC,LO,GO,NO> (unsorted_data_ptr, unsorted_map, dim1, num_global_unique_elements, comm, sorting_importer);
 
   { //view scope
     auto const_host_view = sorted_data->getLocalViewHost(Tpetra::Access::ReadOnly);
