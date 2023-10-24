@@ -78,12 +78,6 @@ struct MeshBuilderBackend: public FierroBackend {
 
         return system(sys_command.c_str());
     }
-
-    void add_common_options() {
-        this->command->add_argument("config")
-            .help("The `.yaml` configuration to run fierro with.`")
-            .action(absolute_fp);
-    }
 };
 
 #endif
