@@ -15,6 +15,7 @@ CTestTestfile.cmake
 build-all-openmp
 build-all-cuda
 build-all-hip
+build-explicit-serial
 build-explicit-openmp
 build-explicit-cuda
 build-explicit-hip
