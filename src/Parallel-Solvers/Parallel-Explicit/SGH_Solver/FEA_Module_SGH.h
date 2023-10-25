@@ -45,10 +45,9 @@
 #include "node_combination.h"
 #include "Solver.h"
 #include "FEA_Module.h"
-#include "Simulation_Parameters.h"
-#include "Simulation_Parameters_SGH.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
+#include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
+#include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
 #include "material_models.h"
 
 class Explicit_Solver;
@@ -57,7 +56,7 @@ class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
+  FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, Elasticity_Parameters params, const int my_fea_module_index = 0);
   ~FEA_Module_SGH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -385,7 +384,7 @@ public:
                       const double rk_alpha,
                       const size_t cycle);
 
-  void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
+  void build_boundry_node_sets(mesh_t &mesh);
   
   void init_boundaries();
 
@@ -496,9 +495,8 @@ public:
   real_t penalty_power;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   
-  Simulation_Parameters_SGH simparam;
-  Simulation_Parameters_Elasticity simparam_elasticity;
-  Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
+  Simulation_Parameters_Explicit simparam;
+  Elasticity_Parameters fea_params;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;

@@ -1,80 +1,111 @@
 #pragma once
+
 #include "yaml-serializable.h"
 #include "Simulation_Parameters/FEA_Module/Boundary_Conditions.h"
+#include "Simulation_Parameters/Geometry.h"
 
-SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux, body_force)
+SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux, body_force, surface_force)
 SERIALIZABLE_ENUM(LOADING_SPECIFICATION, normal, coordinated)
 
-SERIALIZABLE_ENUM(FUNCTION_TYPE,
-  OBJECTIVE, 
-  MULTI_OBJECTIVE_TERM, 
-  EQUALITY_CONSTRAINT, 
-  INEQUALITY_CONSTRAINT, 
-  VECTOR_EQUALITY_CONSTRAINT, 
-  VECTOR_INEQUALITY_CONSTRAINT
-)
+struct loading_t {
+    LOADING_CONDITION_TYPE condition_type = LOADING_CONDITION_TYPE::body_force;
+    Surface surface;
+    Volume volume;
+    double x, y, z;
 
-SERIALIZABLE_ENUM(TO_MODULE_TYPE,
-  Kinetic_Energy_Minimize,
-  Multi_Objective,
-  Heat_Capacity_Potential_Minimize,
-  Strain_Energy_Minimize,
-  Mass_Constraint,
-  Moment_of_Inertia_Constraint,
-  Heat_Capacity_Potential_Constraint
-)
-
-struct Loading_Condition : Yaml::ValidatedYaml {
-  BOUNDARY_TYPE surface;
-  LOADING_CONDITION_TYPE condition_type;
-  std::optional<double> plane_position {};
-  std::optional<double> flux_value  {};
-  std::optional<double> component_x {};
-  std::optional<double> component_y {};
-  std::optional<double> component_z {};
-  std::optional<LOADING_SPECIFICATION> specification {};
-
-  void validate_surface_heat_flux() {
-    std::string type_name = to_string(LOADING_CONDITION_TYPE::surface_heat_flux);
-    if (component_x.has_value() || component_y.has_value() || component_z.has_value())
-      throw Yaml::ConfigurationException("Do not specify xyz components for " + type_name);
-
-    if (!flux_value.has_value())
-      throw Yaml::ConfigurationException("`flux_value` required for " + type_name);
-    if (!specification.has_value())
-      throw Yaml::ConfigurationException("`specification` required for " + type_name);
-  }
-
-  void validate_surface_traction() {
-    std::string type_name = to_string(LOADING_CONDITION_TYPE::surface_traction);
-    
-    if (flux_value.has_value())
-      throw Yaml::ConfigurationException("Do not specify `flux_value` for " + type_name);
-    if (specification.has_value())
-      throw Yaml::ConfigurationException("Do not provide `specification` for " + type_name);
-    
-    if (!component_x.has_value() || !component_y.has_value() || !component_z.has_value())
-      throw Yaml::ConfigurationException("`component_[x,y,z]` values required for " + type_name);
-  }
-
-  void validate() {
-    switch (condition_type) {
-      case LOADING_CONDITION_TYPE::surface_heat_flux:
-        validate_surface_heat_flux();
-        break;
-      case LOADING_CONDITION_TYPE::surface_traction:
-        validate_surface_traction();
-        break;
-      default:
-        throw Yaml::ConfigurationException(
-          "Unhandled loading condition type: " + to_string(condition_type)
-        );
+    KOKKOS_FUNCTION
+    bool contains(const double* elem_coords) {
+      return volume.contains(elem_coords);
     }
+    
+    KOKKOS_FUNCTION
+    size_t planar_surface_index() {
+      switch (surface.type) {
+        case BOUNDARY_TYPE::x_plane:
+          return 0;
+        case BOUNDARY_TYPE::y_plane:
+          return 1;
+        case BOUNDARY_TYPE::z_plane:
+          return 2;
+        default:
+          // Not sure what to do about this error case, since we can't
+          // throw on the device.
+          return -1;
+      }
+    }
+};
+
+struct Loading_Condition 
+  : virtual loading_t, 
+    Yaml::TypeDiscriminated<Loading_Condition, LOADING_CONDITION_TYPE>, 
+    Yaml::DerivedFields {
+  
+  void derive() {
+    loading_t::condition_type = type;
+  }
+
+  virtual ~Loading_Condition() { }
+};
+YAML_ADD_REQUIRED_FIELDS_FOR(Loading_Condition, type)
+IMPL_YAML_SERIALIZABLE_FOR(Loading_Condition, type)
+
+
+
+
+
+struct Surface_Loading : virtual Loading_Condition { };
+YAML_ADD_REQUIRED_FIELDS_FOR(Surface_Loading, surface)
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Surface_Loading, Loading_Condition, surface)
+
+struct Surface_Traction_Condition 
+  : Surface_Loading, Loading_Condition::Register<Surface_Traction_Condition, LOADING_CONDITION_TYPE::surface_traction> {
+  
+  double component_x;
+  double component_y;
+  double component_z;
+  
+  void derive() {
+    loading_t::x = component_x;
+    loading_t::y = component_y;
+    loading_t::z = component_z;
   }
 };
-YAML_ADD_REQUIRED_FIELDS_FOR(Loading_Condition, condition_type, surface)
-IMPL_YAML_SERIALIZABLE_FOR(Loading_Condition, 
-  surface, plane_position, condition_type,
-  flux_value, component_x, component_y, component_z,
-  specification
-)
+YAML_ADD_REQUIRED_FIELDS_FOR(Surface_Traction_Condition, component_x, component_y, component_z)
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Surface_Traction_Condition, Surface_Loading, component_x, component_y, component_z)
+
+struct Surface_Flux_Condition 
+  : Surface_Loading, Loading_Condition::Register<Surface_Flux_Condition, LOADING_CONDITION_TYPE::surface_heat_flux> {
+  
+  void derive() { }
+
+  double flux_value;
+  LOADING_SPECIFICATION specification;
+};
+YAML_ADD_REQUIRED_FIELDS_FOR(Surface_Flux_Condition, flux_value, specification)
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Surface_Flux_Condition, Surface_Loading, flux_value, specification)
+
+
+
+
+
+
+struct Volume_Loading : virtual Loading_Condition { };
+YAML_ADD_REQUIRED_FIELDS_FOR(Volume_Loading, volume)
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Volume_Loading, Loading_Condition, volume)
+
+struct Body_Force_Condition 
+  : Volume_Loading, 
+    Loading_Condition::Register<Body_Force_Condition, LOADING_CONDITION_TYPE::body_force> {
+
+  double component_x;
+  double component_y;
+  double component_z;
+  
+  void derive() {
+    loading_t::x = component_x;
+    loading_t::y = component_y;
+    loading_t::z = component_z;
+  }
+};
+YAML_ADD_REQUIRED_FIELDS_FOR(Body_Force_Condition, component_x, component_y, component_z)
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Body_Force_Condition, Volume_Loading, component_x, component_y, component_z)

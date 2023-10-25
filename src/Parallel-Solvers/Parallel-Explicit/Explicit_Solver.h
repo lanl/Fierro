@@ -40,9 +40,8 @@
 
 
 #include "Solver.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "utilities.h"
-#include "Simulation_Parameters_Explicit.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "mesh.h"
 #include "matar.h"
 #include "elements.h"
@@ -59,13 +58,15 @@
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include <map>
 
+using namespace mtr;
+
 class Explicit_Solver: public Solver{
 
 public:
-  Explicit_Solver();
+  Explicit_Solver(Simulation_Parameters_Explicit&);
   ~Explicit_Solver();
 
-  virtual void run(int argc, char *argv[]);
+  virtual void run();
 
   //void read_mesh_ensight(char *MESH);
 
@@ -177,8 +178,6 @@ public:
   int gradient_print_sync;
 
   Teuchos::RCP<MV> initial_node_coords_distributed;
-  
-  Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
 };
 
 #endif // end Header Guard

@@ -67,8 +67,8 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameter_Headers.h"
-#include "FEA_Module_Headers.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
+#include "Simulation_Parameters/FEA_Module/FEA_Module_Headers.h"
 #include "Implicit_Solver.h"
 
 //Repartition Package
@@ -115,7 +115,6 @@ each surface to use for hammering metal into to form it.
 Implicit_Solver::Implicit_Solver() : Solver(){
   //create parameter objects
   simparam = Simulation_Parameters();
-  simparam_TO = Simulation_Parameters_Topology_Optimization();
   //create ref element object
   ref_elem = std::make_shared<elements::ref_element>(elements::ref_element());
   //create mesh objects
@@ -176,8 +175,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     //if(argc < 2)
     std::string filename = std::string(argv[1]);
     if(filename.find(".yaml") != std::string::npos) {
-      simparam_TO = Yaml::from_file<Simulation_Parameters_Topology_Optimization>(filename);
-      simparam = *(Simulation_Parameters*)&simparam_TO;
+      Yaml::from_file_strict(filename, simparam);
     }
     
     const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
@@ -206,10 +204,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
     
     std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
     
-    //initialize timing
-    // TODO: This just causes issues if this is false.
-    if(simparam.report_runtime)
-      init_clock();
+    init_clock();
 
     //initialize runtime counters and timers
     int hessvec_count = 0;

@@ -2,8 +2,6 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
-#include "Simulation_Parameters_SGH.h"
-
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 //------------------------------------------------------------------------------
@@ -34,7 +32,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         }
     } 
  
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
  
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -506,7 +504,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos <material_t> &material,
                      const size_t cycle
                      ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -898,13 +896,13 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos <material_t> &material,
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;    
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;    
     const size_t num_dim = mesh.num_dims;
     const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-    const size_t num_lcs = simparam.loading.size();
+    const size_t num_lcs = fea_params.loading.size();
     
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
-    const DCArrayKokkos <loading_t> loading = simparam.loading;
+    const DCArrayKokkos <loading_t> loading = fea_params.loading;
 
     //debug check
     //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
@@ -925,16 +923,16 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos <material_t> &material,
           //debug check
           //std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
 
-          bool fill_this = loading(ilc).contains(current_node_coords);
+          bool fill_this = loading(ilc).volume.contains(current_node_coords);
           if(fill_this){
             // loop over all corners around the node and calculate the nodal force
             for (size_t corner_lid=0; corner_lid<num_corners_in_node(node_gid); corner_lid++){
             
                 // Get corner gid
                 size_t corner_gid = corners_in_node(node_gid, corner_lid);
-                applied_force[0] = loading(ilc).fx;
-                applied_force[1] = loading(ilc).fy;
-                applied_force[2] = loading(ilc).fz;
+                applied_force[0] = loading(ilc).x;
+                applied_force[1] = loading(ilc).y;
+                applied_force[2] = loading(ilc).z;
                 // loop over dimension
                 for (size_t dim = 0; dim < num_dim; dim++){
                     node_force[dim] += applied_force[dim]*(all_initial_node_coords(node_gid, 0) + all_initial_node_coords(node_gid, 1) + all_initial_node_coords(node_gid, 2))/radius;

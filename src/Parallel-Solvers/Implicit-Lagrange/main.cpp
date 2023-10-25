@@ -43,7 +43,7 @@
 #include "Solver.h"
 #include <Kokkos_Core.hpp>
 #include "Implicit_Solver.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 #include <memory>
 
 void solver_setup(int argc, char *argv[]);
@@ -90,7 +90,7 @@ void solver_setup(int argc, char *argv[]){
   }
   
   std::shared_ptr<Solver> solver;
-  switch (simparam.solver_type) {
+  switch (simparam.type) {
     case SOLVER_TYPE::Implicit:
       solver = std::make_shared<Implicit_Solver>(Implicit_Solver());
       if (load_yaml)

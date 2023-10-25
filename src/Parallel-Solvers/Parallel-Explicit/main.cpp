@@ -42,20 +42,36 @@
 #include <mpi.h>
 #include <Kokkos_Core.hpp>
 #include "Explicit_Solver.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 #include "yaml-serializable.h"
 #include <memory>
+#include <string>
 
-void solver_setup(int argc, char *argv[]);
+void solver_setup(const char* filename){
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
 
-//==============================================================================
-//    Main
-//==============================================================================
+  std::shared_ptr<Simulation_Parameters> simparam;
+  Yaml::from_file_strict(filename, simparam);
+
+  if (simparam->type != SOLVER_TYPE::Explicit) {
+      if (myrank == 0)
+        std::cerr << "Invalid solver type" << std::endl;
+      exit(1);
+  }
+
+  Explicit_Solver solver(*std::dynamic_pointer_cast<Simulation_Parameters_Explicit>(simparam));
+  //checks for optional solver routines
+  if(solver.setup_flag) solver.solver_setup();
+  // invoke solver's run function (should perform most of the computation)
+  solver.run();
+  //invoke optional finalize function
+  if(solver.finalize_flag) solver.solver_finalize();
+}
 
 int main(int argc, char *argv[]){
-  
   //initialize MPI
-  MPI_Init(&argc,&argv);
+  MPI_Init(&argc, &argv);
 
   Kokkos::initialize();
   if(argc<2){
@@ -65,7 +81,7 @@ int main(int argc, char *argv[]){
       std::cout << "Fierro requires a yaml setup file as a command line argument" << std::endl;
   }
   else{
-    solver_setup(argc, argv);
+    solver_setup(argv[1]);
   }
   
   MPI_Barrier(MPI_COMM_WORLD);
@@ -74,38 +90,4 @@ int main(int argc, char *argv[]){
   MPI_Finalize();
 
   return 0;
-}
-
-void solver_setup(int argc, char *argv[]){
-  int myrank;
-  MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-
-  Simulation_Parameters simparam = Simulation_Parameters();
-  std::string filename = std::string(argv[1]);
-  Yaml::Node node;
-  bool from_yaml = false;
-
-  if (filename.find(".yaml") != std::string::npos) {
-    Yaml::from_file(filename, simparam);
-    from_yaml = true;
-  }
-  
-  std::shared_ptr<Solver> solver;
-  switch (simparam.solver_type) {
-    case SOLVER_TYPE::Explicit:
-      solver = std::make_shared<Explicit_Solver>(Explicit_Solver());
-      if (from_yaml)
-        Yaml::from_file(filename, solver->simparam);
-      break;
-    default:
-      if (myrank == 0)
-        std::cerr << "Invalid solver type" << std::endl;
-      exit(1);
-  }
-  //checks for optional solver routines
-  if(solver->setup_flag) solver->solver_setup();
-  // invoke solver's run function (should perform most of the computation)
-  solver->run(argc, argv);
-  //invoke optional finalize function
-  if(solver->finalize_flag) solver->solver_finalize();
 }

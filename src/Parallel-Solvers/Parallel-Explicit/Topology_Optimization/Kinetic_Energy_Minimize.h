@@ -60,7 +60,6 @@
 #include "FEA_Module_SGH.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
 
 class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
   
@@ -126,7 +125,21 @@ public:
       valid_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
       valid_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
       nvalid_modules = valid_fea_modules.size();
-      FEA_Modules_List = Explicit_Solver_Pointer_->simparam.FEA_Modules_List;
+
+      const Simulation_Parameters& simparam = Explicit_Solver_Pointer_->simparam;
+      for (int ivalid = 0; ivalid < nvalid_modules; ivalid++) {
+        if (simparam.has_module(valid_fea_modules[ivalid])) {
+          int imodule = simparam.find_module(valid_fea_modules[ivalid]);
+          if(FEA_Modules_List[imodule]==FEA_MODULE_TYPE::SGH){
+            FEM_SGH_ = dynamic_cast<FEA_Module_SGH*>(Explicit_Solver_Pointer_->fea_modules[imodule]);
+            set_module_type = FEA_MODULE_TYPE::SGH;
+          }
+          if(FEA_Modules_List[imodule]==FEA_MODULE_TYPE::Dynamic_Elasticity){
+            FEM_Dynamic_Elasticity_ = dynamic_cast<FEA_Module_Dynamic_Elasticity*>(Explicit_Solver_Pointer_->fea_modules[imodule]);
+            set_module_type = FEA_MODULE_TYPE::Dynamic_Elasticity;
+          }
+        }
+      }
       for(int imodule = 0; imodule < Explicit_Solver_Pointer_->nfea_modules; imodule++){
         for(int ivalid = 0; ivalid < nvalid_modules; ivalid++){
           if(FEA_Modules_List[imodule]==FEA_MODULE_TYPE::SGH){

@@ -18,14 +18,15 @@ struct Optimization_Options {
   OPTIMIZATION_OBJECTIVE optimization_objective;
   std::vector<Optimization_Constraint> constraints;
   bool method_of_moving_asymptotes;
-  double simp_penalty_power;
+  double simp_penalty_power = 3.0;
   double density_epsilon;
   bool thick_condition_boundary = true;
   int optimization_output_freq = 200;
+  bool helmholtz_filter = false;
 };
 IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options, 
   optimization_process, optimization_objective, 
   constraints, method_of_moving_asymptotes,
   simp_penalty_power, density_epsilon, thick_condition_boundary,
-  optimization_output_freq
+  optimization_output_freq, helmholtz_filter
 )

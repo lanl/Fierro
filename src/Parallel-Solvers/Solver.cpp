@@ -66,7 +66,6 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters.h"
 #include "Solver.h"
 #include "FEA_Module.h"
 
@@ -121,8 +120,8 @@ void Solver::read_mesh_ensight(const char *MESH){
 
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
+  int p_order = simparam.input_options.p_order;
+  real_t unit_scaling = simparam.input_options.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -716,8 +715,8 @@ void Solver::read_mesh_vtk(const char *MESH){
 
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
+  int p_order = simparam.input_options.p_order;
+  real_t unit_scaling = simparam.input_options.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -1252,8 +1251,8 @@ void Solver::read_mesh_tecplot(const char *MESH){
 
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
+  int p_order = simparam.input_options.p_order;
+  real_t unit_scaling = simparam.input_options.unit_scaling;
   bool restart_file = simparam.restart_file;
   int local_node_index, current_column_index;
   size_t strain_count;
@@ -1730,8 +1729,8 @@ void Solver::read_mesh_tecplot(const char *MESH){
 void Solver::repartition_nodes(){
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
+  int p_order = simparam.input_options.p_order;
+  real_t unit_scaling = simparam.input_options.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::stringstream line_parse;
@@ -1831,8 +1830,8 @@ void Solver::repartition_nodes(){
 void Solver::init_maps(){
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
+  int p_order = simparam.input_options.p_order;
+  real_t unit_scaling = simparam.input_options.unit_scaling;
   int local_node_index, current_column_index;
   int nodes_per_element;
   GO node_gid;

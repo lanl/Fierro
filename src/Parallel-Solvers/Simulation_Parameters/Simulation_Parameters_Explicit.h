@@ -1,12 +1,14 @@
 #pragma once
 #include "Simulation_Parameters/Simulation_Parameters.h"
 #include "yaml-serializable.h"
-#include "Time_Options.h"
+#include "Dynamic_Options.h"
+#include "Graphics_Options.h"
 
 struct Simulation_Parameters_Explicit 
-    : Simulation_Parameters::Register<Simulation_Parameters_Explicit, SolverType::Explicit> {
-    Time_Options time_options;
+    : Simulation_Parameters::Register<Simulation_Parameters_Explicit, SOLVER_TYPE::Explicit> {
+    Dynamic_Options dynamic_options;
+    Graphics_Options graphics_options;
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Explicit, Simulation_Parameters,
-    time_options
+    dynamic_options, graphics_options
 )

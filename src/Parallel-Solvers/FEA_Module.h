@@ -207,6 +207,8 @@ public:
 
   Simulation_Parameters simparam;
   Solver *Solver_Pointer_;
+  int num_dim;
+  int num_gauss_points;
   int my_fea_module_index_;
   
   //Local FEA data

@@ -3,7 +3,7 @@
 #include "yaml-serializable.h"
 
 struct Heat_Conduction_Parameters 
-    : FEA_Module_Parameters::Register<Heat_Conduction_Parameters, FEA_Module_Type::Heat_Conduction> {
+    : FEA_Module_Parameters::Register<Heat_Conduction_Parameters, FEA_MODULE_TYPE::Heat_Conduction> {
     
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Heat_Conduction_Parameters, FEA_Module_Parameters)

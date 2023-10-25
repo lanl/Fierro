@@ -1,4 +1,5 @@
 #pragma once
+
 #include "yaml-serializable.h"
 #include <string>
 
@@ -17,6 +18,8 @@ SERIALIZABLE_ENUM(ELEMENT_TYPE,
 struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   std::string mesh_file_name;
   MESH_FORMAT mesh_file_format;
+  int p_order = 2;
+  double unit_scaling = 1.0;
 
   ELEMENT_TYPE element_type = ELEMENT_TYPE::hex8;
   bool zero_index_base = false;
@@ -69,4 +72,4 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
     Yaml::validate_filepath(mesh_file_name);
   }
 };
-IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base)
+IMPL_YAML_SERIALIZABLE_FOR(Input_Options, mesh_file_name, mesh_file_format, element_type, zero_index_base, p_order, unit_scaling)

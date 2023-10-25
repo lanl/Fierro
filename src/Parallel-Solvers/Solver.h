@@ -42,7 +42,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 #include "FEA_Module.h"
 #include <string>
 #include <Teuchos_ScalarTraits.hpp>
@@ -119,7 +119,7 @@ public:
   
   virtual void setup() {}
 
-  virtual void run(int argc, char *argv[]) = 0;
+  virtual void run() = 0;
 
   virtual void solver_setup() {}
 

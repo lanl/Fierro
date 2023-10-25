@@ -38,14 +38,14 @@
 #include <math.h>  // fmin, fmax, abs note: fminl is long
 #include "FEA_Module.h"
 #include "Solver.h"
-#include "Simulation_Parameters.h"
 
 #define BC_EPSILON 1.0e-8
 using namespace utils;
 
-FEA_Module::FEA_Module(Solver *Solver_Pointer){
+FEA_Module::FEA_Module(Solver *Solver_Pointer) {
 
   Solver_Pointer_ = Solver_Pointer;
+  simparam = Solver_Pointer->simparam;
 
   //obtain global and local node and element counts
   num_nodes = Solver_Pointer->num_nodes;

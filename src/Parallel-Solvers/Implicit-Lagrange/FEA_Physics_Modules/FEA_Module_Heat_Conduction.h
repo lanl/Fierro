@@ -39,8 +39,8 @@
 #define FEA_MODULE_HEAT_CONDUCTION_H
 
 #include "FEA_Module.h"
-#include "Simulation_Parameters_Thermal.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
+
+#include "Simulation_Parameters/FEA_Module/Heat_Conduction_Parameters.h"
 
 //forward declare linear solver classes
 namespace MueLu{
@@ -130,7 +130,7 @@ public:
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
   Simulation_Parameters simparam;
-  Thermal_Parameters parameters;
+  Heat_Conduction_Parameters parameters;
   Implicit_Solver *Implicit_Solver_Pointer_;
   
   //Local FEA data

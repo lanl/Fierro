@@ -1,7 +1,5 @@
 #include "Explicit_Solver.h"
-#include "Simulation_Parameters_SGH.h"
 #include "FEA_Module_SGH.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include <map>
 #include <fstream>
 #include <sys/stat.h>
@@ -93,35 +91,35 @@ Explicit_Solver::write_outputs()
   Teuchos::RCP<CArray<int>> elem_gid;
   Teuchos::RCP<CArray<double>> elem_speed;
 
-  for (const FIELD_OUTPUT_EXPLICIT& field_name : simparam.field_output) {
+  for (const SIMULATION_FIELD& field_name : simparam.output_fields) {
     switch (field_name)
     {
-      case FIELD_OUTPUT_EXPLICIT::design_density:
+      case SIMULATION_FIELD::design_density:
         // node "design_density"
         design_density = get_design_density(map->getLocalNumElements(),
-          simparam_dynamic_opt.topology_optimization_on, design_node_densities_distributed);
+          simparam.topology_optimization_on, design_node_densities_distributed);
         point_data_scalars_double["design_density"] = design_density->pointer();
         break;
 
-      case FIELD_OUTPUT_EXPLICIT::speed:
+      case SIMULATION_FIELD::speed:
         // element "speed"
         elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
         cell_data_scalars_double["speed"] = elem_speed->pointer();
         break;
 
-      case FIELD_OUTPUT_EXPLICIT::element_switch:
+      case SIMULATION_FIELD::element_switch:
         // element "element_switch"
         elem_switch = calculate_elem_switch(all_element_map);
         cell_data_scalars_int["element_switch"] = elem_switch->pointer();
         break;
 
-      case FIELD_OUTPUT_EXPLICIT::processor_id:
+      case SIMULATION_FIELD::processor_id:
         // element "processor_id"
         elem_proc_id = get_elem_proc_id(all_element_map, myrank);
         cell_data_scalars_int["processor_id"] = elem_proc_id->pointer();
         break;
 
-      case FIELD_OUTPUT_EXPLICIT::element_id:
+      case SIMULATION_FIELD::element_id:
         // element "element_id"
         elem_gid = get_elem_gid(all_element_map);
         cell_data_scalars_int["element_id"] = elem_gid->pointer();

@@ -8,7 +8,7 @@ SERIALIZABLE_ENUM(TIME_OUTPUT_LEVEL,
     extreme // output time sequence for all phases of solver
 )
 
-struct Time_Options : Yaml::DerivedFields {
+struct Dynamic_Options : Yaml::DerivedFields {
     double time_initial = 0.0;
     double time_final = 1.0;
     double dt_min     = 1e-8;
@@ -20,14 +20,22 @@ struct Time_Options : Yaml::DerivedFields {
     double tiny       = 1e-12; // very very small (between real_t and single)
     double small      = 1e-8;  // single precision
     TIME_OUTPUT_LEVEL output_time_sequence_level = TIME_OUTPUT_LEVEL::high;
+    int rk_num_stages = 2;
+    int rk_num_bins   = -1;
+    double time_value = -1;
 
     // Non-serialized Fields
     double dt;
     void derive() {
+      if (time_value < 0)
+        time_value = time_initial;
       dt = dt_start;
+
+      if (rk_num_bins < 0)
+        rk_num_bins = rk_num_stages;
     }
 };
-IMPL_YAML_SERIALIZABLE_FOR(Time_Options, output_time_sequence_level,
-  time_initial, time_final, dt_min, dt_max, dt_start, dt_cfl,
-  cycle_stop, fuzz, tiny, small
+IMPL_YAML_SERIALIZABLE_FOR(Dynamic_Options, output_time_sequence_level,
+  time_initial, time_value, time_final, dt_min, dt_max, dt_start, dt_cfl,
+  cycle_stop, fuzz, tiny, small, rk_num_stages, rk_num_bins
 )

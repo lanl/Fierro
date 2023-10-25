@@ -41,7 +41,7 @@
 #include "Solver.h"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
 #include "Tpetra_Details_EquilibrationInfo.hpp"
-#include "Simulation_Parameters_Topology_Optimization.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 
 //#include <Xpetra_Operator.hpp>
 //#include <MueLu.hpp>
@@ -120,9 +120,6 @@ public:
   
   swage::mesh_t *init_mesh;
   swage::mesh_t *mesh;
-
-  //class Simulation_Parameters *simparam;
-  Simulation_Parameters_Topology_Optimization simparam_TO;
   
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> NTopology_Condition_Patches;

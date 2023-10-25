@@ -31,8 +31,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_Dynamic_Elasticity.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
 
@@ -57,7 +56,7 @@
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> zp){
-  const size_t rk_level = simparam.rk_num_bins - 1;
+  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
   //local variable for host view in the dual view
   int num_dim = simparam.num_dims;
   int nodes_per_elem = max_nodes_per_element;
@@ -67,10 +66,10 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
   size_t access_index, row_access_index, row_counter;
   GO global_index, global_dof_index;
   LO local_dof_index;
-  const size_t num_fills = simparam.region_options.size();
-  const size_t rk_num_bins = simparam.rk_num_bins;
-  const size_t num_bcs = simparam.boundary_conditions.size();
-  const size_t num_materials = simparam.material_options.size();
+  const size_t num_fills = simparam.regions.size();
+  const size_t rk_num_bins = simparam.dynamic_options.rk_num_bins;
+  const size_t num_bcs = fea_params.boundary_conditions.size();
+  const size_t num_materials = simparam.materials.size();
   real_t objective_accumulation;
 
   // --- Read in the nodes in the mesh ---
@@ -78,11 +77,11 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
   int nranks = Explicit_Solver_Pointer_->nranks;
 
   const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
-  std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt.FEA_Module_My_TO_Modules;
+  std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam.FEA_Module_My_TO_Modules;
   problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
   ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
@@ -230,7 +229,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
             elem_coords[2] = elem_coords[2]/num_nodes_in_elem;
                 
             // default is not to fill the element
-            bool fill_this = mat_fill(f_id).contains(elem_coords);
+            bool fill_this = mat_fill(f_id).volume.contains(elem_coords);
                  
             // paint the material state on the element
             if (fill_this){
@@ -247,7 +246,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
                 // specific internal energy
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 		
-                elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
+                elem_mat_id(elem_gid) = mat_fill(f_id).material_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
                 
                 // --- stress tensor ---
@@ -497,7 +496,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
     Kokkos::fence();
 
     //update stiffness matrix
-    if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
+    if(simparam.topology_optimization_on || simparam.shape_optimization_on){
       assemble_matrix();
     }
     
@@ -528,7 +527,7 @@ double FEA_Module_Dynamic_Elasticity::average_element_density(const int nodes_pe
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint(){
   
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   real_t global_dt;
@@ -547,7 +546,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint(){
     global_dt = time_data[cycle+1] - time_data[cycle];
     
     //print
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==last_time_step){
         if(myrank==0)
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -590,12 +589,12 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint(){
 --------------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full(){
-  const size_t rk_level = simparam.rk_num_bins - 1;
+  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
-  const real_t damping_constant = simparam.damping_constant;
+  const real_t damping_constant = fea_params.damping_constant;
   real_t global_dt;
   size_t current_data_index, next_data_index;
   Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
@@ -614,7 +613,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
     global_dt = time_data[cycle+1] - time_data[cycle];
     
     //print
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==last_time_step){
         if(myrank==0)
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -753,7 +752,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
@@ -779,7 +778,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
     global_dt = time_data[cycle+1] - time_data[cycle];
     
     //print
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==0){
         if(myrank==0)
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -893,7 +892,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
     global_dt = time_data[cycle+1] - time_data[cycle];
     
     //print
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==0){
         if(myrank==0)
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -979,7 +978,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
@@ -1011,7 +1010,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
       global_dt = time_data[cycle+1] - time_data[cycle];
       
       //print
-      if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+      if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
 
         if (cycle==0){
           if(myrank==0)
@@ -1092,7 +1091,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print
-      if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+      if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
 
         if (cycle==0){
           if(myrank==0)
@@ -1115,7 +1114,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
           const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           const_vec_array next_phi_adjoint_vector = (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           
-          const real_t damping_constant = simparam.damping_constant;
+          const real_t damping_constant = fea_params.damping_constant;
           FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
             real_t lambda_dot_current;
             real_t lambda_dot_next;
@@ -1246,8 +1245,8 @@ void FEA_Module_Dynamic_Elasticity::init_assembly(){
   int local_node_index, current_column_index;
   size_t max_stride = 0;
   size_t nodes_per_element;
-  nodal_density_flag = simparam_dynamic_opt.nodal_density_flag;
-  penalty_power = simparam_dynamic_opt.penalty_power;
+  nodal_density_flag = simparam.nodal_density_flag;
+  penalty_power = simparam.optimization_options.value().simp_penalty_power;
   
   //allocate stride arrays
   CArrayKokkos <size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
@@ -1547,7 +1546,7 @@ void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
     //print_flag.host(0) = false;
     //print_flag.update_device();
    
-    const size_t rk_level = simparam.rk_num_bins - 1; 
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1; 
     int num_dims = simparam.num_dims;
     // Loop over boundary sets
     for (size_t bdy_set=0; bdy_set<num_bdy_sets; bdy_set++){
@@ -1556,22 +1555,21 @@ void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
         FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
                 
             // reflected (boundary array is on the device)
-            if (boundary(bdy_set).condition_type == BOUNDARY_HYDRO_CONDITION::reflected){
+            if (boundary(bdy_set).condition_type == BOUNDARY_CONDITION_TYPE::reflected){
             
                 // directions with hydro_bc:
                 // x_plane  = 0,
                 // y_plane  = 1,
                 // z_plane  = 2,
-                size_t direction = boundary(bdy_set).planar_surface_index();
+                size_t direction = boundary(bdy_set).surface.planar_surface_index();
                 
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                     
                 // Set velocity to zero in that directdion
                 node_adjoint(bdy_node_gid, direction) = 0.0;
                 //node_phi_adjoint(bdy_node_gid, direction) = 0.0;
-                        
             }
-            else if (boundary(bdy_set).condition_type == BOUNDARY_HYDRO_CONDITION::fixed){
+            else if (boundary(bdy_set).condition_type == BOUNDARY_CONDITION_TYPE::fixed_position){
                 
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                 
