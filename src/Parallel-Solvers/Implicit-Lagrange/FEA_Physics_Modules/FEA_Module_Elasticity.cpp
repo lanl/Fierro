@@ -93,6 +93,10 @@
 #include <MueLu_Utilities.hpp>
 #include <DriverCore.hpp>
 
+//Eigensolver
+#include "AnasaziBasicEigenproblem.hpp"
+#include "AnasaziBlockKrylovSchurSolMgr.hpp"
+
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
 #define BC_EPSILON 1.0e-6
@@ -5597,4 +5601,28 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
       }
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   Solve for modes
+------------------------------------------------------------------------- */
+
+int FEA_Module_Elasticity::eigensolve(){
+  int blocksize = 3;
+  int nev = 10;
+
+  // Create initial vectors
+  Teuchos::RCP<MV> ivec = Teuchos::rcp (new MV (map,blocksize));
+  ivec->randomize ();
+
+  // Create eigenproblem
+  Teuchos::RCP<Anasazi::BasicEigenproblem<real_t,MV,OP> > problem =
+    Teuchos::rcp (new Anasazi::BasicEigenproblem<real_t,MV,OP> (Global_Stiffness_Matrix, ivec));
+  //
+  // Inform the eigenproblem that the operator K is symmetric
+  problem->setHermitian (true);
+  //
+  // Set the number of eigenvalues requested
+  problem->setNEV (nev);
+  return 0;
 }

@@ -42,6 +42,11 @@
 #include "Simulation_Parameters_Elasticity.h"
 #include "Simulation_Parameters_Topology_Optimization.h"
 
+//Eigensolver
+#include "AnasaziConfigDefs.hpp"
+#include "AnasaziTypes.hpp"
+#include "AnasaziTpetraAdapter.hpp"
+
 //forward declare
 namespace MueLu{
   template<class floattype, class local_ind, class global_ind, class nodetype> 
@@ -64,6 +69,11 @@ class Implicit_Solver;
 class FEA_Module_Elasticity: public FEA_Module{
 
 public:
+
+  typedef Tpetra::Operator<real_t>                OP;
+  typedef Anasazi::MultiVecTraits<real_t,MV>     MVT;
+  typedef Anasazi::OperatorTraits<real_t,MV,OP>  OPT;
+
   FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Elasticity();
   
@@ -86,6 +96,8 @@ public:
   void assemble_vector();
 
   int solve();
+
+  int eigensolve();
 
   void linear_solver_parameters();
 
