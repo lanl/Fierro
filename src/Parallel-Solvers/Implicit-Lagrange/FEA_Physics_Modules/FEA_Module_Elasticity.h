@@ -174,6 +174,7 @@ public:
   Teuchos::RCP<MV> adjoint_equation_RHS_distributed;
   Teuchos::RCP<MV> all_adjoint_displacements_distributed;
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
+  Teuchos::RCP<MAT> Global_Mass_Matrix;
   Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MV> Global_Nodal_Forces;
   

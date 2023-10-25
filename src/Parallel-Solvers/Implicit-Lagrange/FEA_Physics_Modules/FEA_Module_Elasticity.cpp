@@ -95,7 +95,7 @@
 
 //Eigensolver
 #include "AnasaziBasicEigenproblem.hpp"
-#include "AnasaziBlockKrylovSchurSolMgr.hpp"
+#include "AnasaziBlockDavidsonSolMgr.hpp"
 
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
@@ -5615,7 +5615,7 @@ int FEA_Module_Elasticity::eigensolve(){
   Teuchos::RCP<MV> ivec = Teuchos::rcp (new MV (map,blocksize));
   ivec->randomize ();
 
-  // Create eigenproblem
+  // Create eigenproblem; note that OP can be a matrix type or a preconditioner operator type (as long as it inherits from Tpetra::Operator)
   Teuchos::RCP<Anasazi::BasicEigenproblem<real_t,MV,OP> > problem =
     Teuchos::rcp (new Anasazi::BasicEigenproblem<real_t,MV,OP> (Global_Stiffness_Matrix, ivec));
   //
@@ -5624,5 +5624,38 @@ int FEA_Module_Elasticity::eigensolve(){
   //
   // Set the number of eigenvalues requested
   problem->setNEV (nev);
+
+  // Eigensolver parameters
+
+  // Set verbosity level
+  int verbosity = Anasazi::Errors + Anasazi::Warnings + Anasazi::FinalSummary + Anasazi::TimingDetails;
+  /* options to select which eigenvalues to converge to for the chosen operator:
+        "LM" - largest magnitude
+				"LR" - largest real part
+				"LI" - largest imaginary part
+				"SM" - smallest magnitude
+				"SR" - smallest real part
+				"SI" - smallest imaginary part
+  */
+  std::string which("LM");
+  int NumImages = nranks;
+  int numBlocks = 3 * NumImages;
+  int maxRestarts = 50;
+  real_t tol = 1.0e-6;
+  bool insitu = false;
+
+  
+  // Create parameter list to pass into the solver manager
+  Teuchos::ParameterList MyPL;
+  MyPL.set( "Verbosity", verbosity );
+  MyPL.set( "Which", which );
+  MyPL.set( "Block Size", blocksize );
+  MyPL.set( "Num Blocks", numBlocks );
+  MyPL.set( "Maximum Restarts", maxRestarts );
+  MyPL.set( "Convergence Tolerance", tol );
+  MyPL.set( "In Situ Restarting", insitu );
+  //
+  // Create the solver manager
+  Anasazi::BlockDavidsonSolMgr<real_t,MV,OP> MySolverMgr(problem, MyPL);
   return 0;
 }
