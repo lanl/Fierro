@@ -1348,11 +1348,11 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
   real_t global_dt;
   bool element_constant_density = true;
   size_t current_data_index, next_data_index;
-  const size_t rk_level = simparam.rk_num_bins - 1;
+  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
 
   //gradient contribution from gradient of Force vector with respect to design variable.
-  if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+  if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
     if(myrank==0){
         std::cout << "gradient term involving adjoint derivative" << std::endl;
     }
@@ -1362,7 +1362,7 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     //print
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
     if (cycle==0){
         if(myrank==0)
         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);

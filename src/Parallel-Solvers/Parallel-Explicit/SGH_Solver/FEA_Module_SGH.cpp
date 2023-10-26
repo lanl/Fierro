@@ -216,8 +216,9 @@ void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream *in, std::streampos
   int num_dim = simparam.num_dims;
   int buffer_lines = 1000;
   int max_word = 30;
-  int p_order = simparam.input_options.p_order;
-  real_t unit_scaling = simparam.input_options.unit_scaling;
+  auto input_options = simparam.input_options.value();
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring, token;

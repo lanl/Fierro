@@ -1013,7 +1013,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
     Kokkos::fence();
 
     //gradient contribution from kinetic energy v(dM/drho)v product.
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
         if(myrank==0){
           std::cout << "v*dM/drho*v term" << std::endl;
         }
@@ -1102,7 +1102,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
     Kokkos::fence();
 
     //gradient contribution from time derivative of adjoint \dot{lambda}(dM/drho)v product.
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
         if(myrank==0){
           std::cout << "gradient term involving adjoint derivative" << std::endl;
         }

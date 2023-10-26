@@ -200,8 +200,9 @@ void FEA_Module_Dynamic_Elasticity::read_conditions_ansys_dat(std::ifstream *in,
   int num_dim = simparam.num_dims;
   int buffer_lines = 1000;
   int max_word = 30;
-  int p_order = simparam.input_options.p_order;
-  real_t unit_scaling = simparam.input_options.unit_scaling;
+  auto input_options = simparam.input_options.value();
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring, token;
@@ -639,52 +640,52 @@ void FEA_Module_Dynamic_Elasticity::write_data(std::map <std::string, const doub
   
   const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
 
-  for (const FIELD_OUTPUT_DYNAMIC_ELASTICITY& field_name : simparam.field_output) {
+  for (const FIELD& field_name : fea_params.output_fields) {
     switch (field_name)
     {
 
-      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::velocity:
+      case FIELD::velocity:
         // node "velocity"
         node_vel.update_host();
         point_data_vectors_double["velocity"] = &node_vel.host(rk_level,0,0);
         break;
 
-      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::element_density:
+      case FIELD::element_density:
         // element "density"
         elem_den.update_host();
         cell_data_scalars_double["element_density"] = elem_den.host_pointer();
         break;
 
-      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::pressure:  
+      case FIELD::pressure:  
         // element "pressure"
         elem_pres.update_host();
         cell_data_scalars_double["pressure"] = elem_pres.host_pointer();
         break;
 
-      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::volume:
+      case FIELD::volume:
         // element "volume"
         elem_vol.update_host();
         cell_data_scalars_double["volume"] = elem_vol.host_pointer();
         break;
 
-      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::mass:
+      case FIELD::mass:
         // element "mass"
         elem_mass.update_host();
         cell_data_scalars_double["mass"] = elem_mass.host_pointer();
         break;
 
-      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::material_id:
+      case FIELD::material_id:
         // element "material_id"
         elem_mat_id.update_host();
         cell_data_scalars_int["material_id"] = reinterpret_cast<int*>(elem_mat_id.host_pointer());
         break;
 
-      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::user_vars:
+      case FIELD::user_vars:
         // element "user_vars"
         elem_user_output_vars.update_host();
         cell_data_fields_double["user_vars"] = std::make_pair(elem_user_output_vars.host_pointer(), 
                                                                    elem_user_output_vars.dims(1));
-      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::stress:
+      case FIELD::stress:
         // element "stress"
         elem_stress.update_host();
         cell_data_fields_double["stress"] = std::make_pair(&elem_stress.host(rk_level,0,0,0), 9);

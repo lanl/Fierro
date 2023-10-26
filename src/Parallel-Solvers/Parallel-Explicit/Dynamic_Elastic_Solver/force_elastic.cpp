@@ -280,7 +280,7 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.input_options.unit_scaling;
+  real_t unit_scaling = simparam.get_unit_scaling();
   real_t penalty_product = 1;
   real_t density_epsilon = simparam.optimization_options.value().density_epsilon;
   if(density < 0) density = 0;
@@ -297,7 +297,7 @@ void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, re
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.input_options.unit_scaling;
+  real_t unit_scaling = simparam.get_unit_scaling();
   real_t penalty_product = 1;
   real_t density_epsilon = simparam.optimization_options.value().density_epsilon;
   Element_Modulus_Derivative = 0;
@@ -833,7 +833,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
   }
   
   //loop through each element and assign the contribution to compliance gradient for each of its local nodes
-  if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+  if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if(myrank==0){
           std::cout << "gradient term derivative of force" << std::endl;
         }

@@ -561,7 +561,7 @@ void FEA_Module_SGH::get_area_weights2D(const ViewCArrayKokkos <double> &corner_
 
 void FEA_Module_SGH::get_vol_ugradient(const size_t gradient_node_id, const size_t gradient_dim){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
     const size_t num_dims = mesh->num_dims;
     
     if (num_dims == 2){
