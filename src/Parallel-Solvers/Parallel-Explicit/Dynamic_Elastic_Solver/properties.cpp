@@ -79,6 +79,13 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos <material_t
             
             StrengthParent* strength_model = elem_strength(elem_gid).model;
 
+            //reinit values
+            for (size_t i=0; i<3; i++){
+                for (size_t j=0; j<3; j++){
+                    elem_stress(rk_level,elem_gid,i,j) = 0.0;
+                }        
+            }  // end for
+            
             // --- call strength model ---
             strength_model->calc_stress(elem_pres,
                                         elem_stress,

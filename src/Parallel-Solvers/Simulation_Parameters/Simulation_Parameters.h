@@ -10,6 +10,7 @@
 #include "Material.h"
 #include "Region.h"
 #include "Optimization_Options.h"
+#include "MeshBuilderInput.h"
 #include <optional>
 #include <set>
 #include <memory>
@@ -45,7 +46,8 @@ SERIALIZABLE_ENUM(SIMULATION_FIELD,
 
 struct Simulation_Parameters : Yaml::TypeDiscriminated<Simulation_Parameters, SOLVER_TYPE> {
     int num_dims = 3;
-    Input_Options input_options;
+    std::optional<Input_Options> input_options;
+    std::optional<std::shared_ptr<MeshBuilderInput>> mesh_generation_options;
     Output_Options output_options;
     TIMER_VERBOSITY timer_output_level;
     int num_gauss_points = 2;
@@ -174,7 +176,9 @@ struct Simulation_Parameters : Yaml::TypeDiscriminated<Simulation_Parameters, SO
     }
 
     void validate_element_type() {
-        auto et = input_options.element_type;
+        if (!input_options.has_value())
+        return;
+        auto et = input_options.value().element_type;
         bool invalid_et = 
             (et == ELEMENT_TYPE::quad4 || et == ELEMENT_TYPE::quad8 || et == ELEMENT_TYPE::quad12) && num_dims == 3;
         invalid_et = invalid_et ||
@@ -187,6 +191,8 @@ struct Simulation_Parameters : Yaml::TypeDiscriminated<Simulation_Parameters, SO
     }
 
     void validate() {
+        if (input_options.has_value() == mesh_generation_options.has_value())
+            throw Yaml::ConfigurationException("Specify exactly one of `input_options` and `mesh_generation_options`.");
         validate_element_type();
         // Check that the FEA module dependencies are satisfied.
         for (auto to_module : TO_Module_List)
@@ -261,6 +267,12 @@ struct Simulation_Parameters : Yaml::TypeDiscriminated<Simulation_Parameters, SO
             fea_module_parameters.push_back(module);
         return i;
     } 
+
+    double get_unit_scaling() const {
+        if (input_options.has_value())
+            return input_options.value().unit_scaling;
+        return 1.0; // Assume generated meshes have a 1.0 unit scaling.
+    }
     
     // Implement default copy constructor to avoid the compiler double moving.
     // Let it double copy instead.

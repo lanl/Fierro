@@ -6,9 +6,8 @@ package:
   version: {{ version }}
 
 source:
-  # Assume this recipe is in
-  # Fierro/Anaconda-Packages/fierro/{build_type}
-  path: ../../.. # Back to Fierro/
+  git_url: https://github.com/lanl/Fierro.git
+  git_depth: 1
 
 build:
   number: 1
@@ -17,7 +16,7 @@ build:
 
 requirements:
   build:
-    - cmake >=3.10.0
+    - cmake >=3.17.0
     - {{ compiler('c') }} ={{ compiler_version }}
     - {{ compiler('cxx') }} ={{ compiler_version }}
     - openmpi

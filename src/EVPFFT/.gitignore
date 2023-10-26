@@ -1,11 +1,12 @@
 build
-build-SGH-cuda
-build-kokkos
 CMakeFiles
 Makefile
 CMakeCache.txt
 cmake_install.cmake
-Trilinos
-main
 .vscode
 *.swp
+evpfft_heffte_*
+hdf5
+heffte
+kokkos
+MATAR

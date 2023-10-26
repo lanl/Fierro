@@ -58,6 +58,7 @@
 #include <Kokkos_Core.hpp>
 #include "Tpetra_Details_DefaultTypes.hpp"
 #include "Tpetra_Import.hpp"
+#include "MeshBuilder.h"
 #include <map>
 #include <memory>
 
@@ -127,6 +128,8 @@ public:
 
   virtual void exit_solver(int status);
 
+  virtual void generate_mesh(const std::shared_ptr<MeshBuilderInput>& mesh_generation_options);
+
   virtual void read_mesh_ensight(const char *MESH);
 
   virtual void init_design() {}
@@ -188,6 +191,7 @@ public:
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_vector_storage;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_gradient_storage;
   size_t max_nodes_per_element, max_nodes_per_patch;
   std::shared_ptr<elements::element_selector> element_select;
   std::shared_ptr<elements::ref_element>  ref_elem;

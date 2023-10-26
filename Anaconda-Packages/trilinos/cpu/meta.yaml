@@ -16,7 +16,7 @@ build:
 
 requirements:
   build:
-    - cmake >=3.10.0
+    - cmake >=3.17.0
     - {{ compiler('c') }} ={{ compiler_version }}
     - {{ compiler('cxx') }} ={{ compiler_version }}
     - {{ compiler('fortran') }} ={{ compiler_version }}

@@ -1,40 +1,52 @@
 #!/bin/bash -e
 
-if [ "$1" != "cuda" ] && [ "$1" != "hip" ] && [ "$1" != "openmp" ] && [ "$1" != "serial" ]
-then
-    echo "The second argument needs to be either cuda, hip, openmp, or serial"
+# Function to display the help message
+show_help() {
+    echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
+    echo "Valid options:"
+    echo "  --help          : Display this help message"
     return 1
-fi
+}
+
+# Parse command line arguments
+for arg in "$@"; do
+    case "$arg" in
+        --help)
+            show_help
+            return 1
+            ;;
+    esac
+done
 
 #inititialize submodules if they aren't downloaded
-cd ${libdir}
-[ -d "Elements/elements" ] && echo "Elements submodule exists"
-[ -d "Elements/matar/src" ] && echo "matar submodule exists"
+[ -d "${libdir}/Elements/elements" ] && echo "Elements submodule exists"
+[ -d "${libdir}/Elements/matar/src" ] && echo "matar submodule exists"
 
 
-if { [ ! -d "Elements/elements" ] || [ ! -d "Elements/matar/src" ] ;}
+if { [ ! -d "${libdir}/Elements/elements" ] || [ ! -d "${libdir}/Elements/matar/src" ] ;}
 then
   echo "Missing submodules, downloading them...."
   git submodule update --init --recursive
 fi
 
+# Removing stale build directory
 rm -rf ${FIERRO_BUILD_DIR}
 mkdir -p ${FIERRO_BUILD_DIR}
-cd ${FIERRO_BUILD_DIR}
 
-NUM_TASKS=1
-if [ ! -z $2 ]
-then
-    NUM_TASKS=$2
-fi
-
-OPTIONS=(
--D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
--D BUILD_IMPLICIT_SOLVER=ON
--D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
+# Configure EVPFFT using CMake
+cmake_options=(
+    -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
+    -D BUILD_IMPLICIT_SOLVER=ON
+    -D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
 )
 
-cmake "${OPTIONS[@]}" "${FIERRO_BASE_DIR:-../}"
-make -j ${NUM_TASKS}
+# Print CMake options for reference
+echo "CMake Options: ${cmake_options[@]}"
+
+# Configure FIERRO
+cmake "${cmake_options[@]}" -B "${FIERRO_BUILD_DIR}" -S "${FIERRO_BASE_DIR}"
+
+# Build FIERRO
+make -C "${FIERRO_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
 
 cd $basedir

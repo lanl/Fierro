@@ -174,10 +174,19 @@ public:
 
   void get_vol();
 
+  void get_vol_ugradient(const size_t gradient_node_id, const size_t gradient_dim);
+
   void init_assembly();
 
   KOKKOS_INLINE_FUNCTION
   void get_vol_hex(const DViewCArrayKokkos <double> &elem_vol,
+                   const size_t elem_gid,
+                   const DViewCArrayKokkos <double> &node_coords,
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                   const size_t rk_level) const;
+
+  KOKKOS_FUNCTION
+  void get_vol_hex_ugradient(const ViewCArrayKokkos <double> &elem_vol_gradients,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
@@ -201,6 +210,13 @@ public:
 
   KOKKOS_FUNCTION
   void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
+                   const size_t elem_gid,
+                   const DViewCArrayKokkos <double> &node_coords,
+                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
+                   const size_t rk_level) const;
+
+  KOKKOS_FUNCTION
+  void get_bmatrix_gradients(const ViewCArrayKokkos <double> &B_matrix_gradients,
                    const size_t elem_gid,
                    const DViewCArrayKokkos <double> &node_coords,
                    const ViewCArrayKokkos <size_t>  &elem_node_gids,
@@ -328,6 +344,18 @@ public:
                          DViewCArrayKokkos <double> &elem_sie,
                          const DViewCArrayKokkos <double> &elem_mass,
                          const DViewCArrayKokkos <double> &corner_force);
+
+  
+  void power_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
+
+  void get_power_dgradient_sgh(double rk_alpha,
+                         const mesh_t &mesh,
+                         const DViewCArrayKokkos <double> &node_vel,
+                         const DViewCArrayKokkos <double> &node_coords,
+                         DViewCArrayKokkos <double> &elem_sie,
+                         const DViewCArrayKokkos <double> &elem_mass,
+                         const DViewCArrayKokkos <double> &corner_force,
+                         DCArrayKokkos<real_t> elem_power_dgradients);
 
   void get_power_ugradient_sgh(double rk_alpha,
                          const mesh_t &mesh,
@@ -469,13 +497,15 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
-  void compute_topology_optimization_adjoint(); //Force does not depend on node coords and velocity
-
   void compute_topology_optimization_adjoint_full(); //Force depends on node coords and velocity
 
-  void compute_topology_optimization_gradient(const_vec_array design_densities, vec_array gradients);
-
   void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
+
+  void boundary_adjoint(const mesh_t &mesh,
+                         const DCArrayKokkos <boundary_t> &boundary,
+                          vec_array &node_adjoint,
+                          vec_array &node_phi_adjoint,
+                          vec_array &node_psi_adjoint);
 
   void applied_forces(const DCArrayKokkos <material_t> &material,
                      const mesh_t &mesh,
@@ -493,7 +523,6 @@ public:
   bool have_loading_conditions;
   bool nodal_density_flag;
   real_t penalty_power;
-  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   
   Simulation_Parameters_Explicit simparam;
   Elasticity_Parameters fea_params;
@@ -555,8 +584,10 @@ public:
   Teuchos::RCP<MV> adjoint_vector_distributed;
   Teuchos::RCP<MV> phi_adjoint_vector_distributed;
   Teuchos::RCP<MV> psi_adjoint_vector_distributed;
+  Teuchos::RCP<MV> element_internal_energy_distributed;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;
+  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_internal_energy_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> adjoint_vector_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> phi_adjoint_vector_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> psi_adjoint_vector_data;
@@ -565,14 +596,15 @@ public:
   Teuchos::RCP<MV> force_gradient_velocity;
 
   //Local FEA data
-  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Gradient_Matrix_Assembly_Map;
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Gradient_Matrix_Assembly_Map; //Maps element local nodes to columns on ragged right node connectivity graph
+  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Element_Gradient_Matrix_Assembly_Map; //Maps element-node pair to columns on ragged right node to element connectivity
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Positions;
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Velocities;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Energies;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Positions;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Velocities;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Force_Gradient_Energies; //transposed such that elem ids correspond to rows
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Positions; //transposed such that node dofs correspond to rows
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Velocities; //transposed such that node dofs correspond to rows
   CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits> Power_Gradient_Energies;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Gradient_Matrix_Strides;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> DOF_to_Elem_Matrix_Strides;

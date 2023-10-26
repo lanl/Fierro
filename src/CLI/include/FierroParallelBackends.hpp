@@ -5,19 +5,6 @@
 #include <string>
 #include <fstream>
 
-/**
- * Check to see if a file exists on the system.
- * Technically this will return false if it exists but you don't have permission.
-*/
-bool file_exists(std::string fname) {
-    std::fstream f(fname.c_str());
-    return f.good();
-}
-
-std::string absolute_fp(std::string fname) {
-    return std::string(std::filesystem::absolute(fname));
-}
-
 struct ParallelBackend: public FierroBackend {
     ParallelBackend(std::string name) 
         : FierroBackend(name) { }
@@ -53,11 +40,13 @@ struct ParallelBackend: public FierroBackend {
      * @return Return code of the executable.
     */
     int invoke() {
+        if (!exec_path.has_value())
+            throw std::runtime_error("Cannot invoke executable without absolute path.");
         auto err = this->validate_arguments();
         if (err.has_value()) throw ArgumentException(err.value());
 
         std::string input_file = this->command->get<std::string>("config");
-        std::string sys_command = this->name + " " + input_file;
+        std::string sys_command = this->exec_path.value().string() + " " + input_file;
 
         return system(sys_command.c_str());
     }

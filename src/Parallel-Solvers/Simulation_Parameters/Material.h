@@ -17,6 +17,7 @@ struct material_t {
     double q2;
     double q1ex;
     double q2ex;
+    bool maximum_limiter = false;
     
     // Non-serialized fields
     size_t num_global_vars = 0;
@@ -34,6 +35,6 @@ YAML_ADD_REQUIRED_FIELDS_FOR(Material, id)
 IMPL_YAML_SERIALIZABLE_FOR(Material, 
     id, eos_model, strength_model, strength_type,
     strength_run_location, eos_run_location,
-    q1, q2, q1ex, q2ex, 
+    q1, q2, q1ex, q2ex, maximum_limiter,
     global_vars
 )

@@ -42,7 +42,7 @@ struct FEA_Module_Parameters
     std::vector<FIELD> output_fields;
 
     // Non-serialized Fields
-    DCArrayKokkos <loading_t> loading;
+    DCArrayKokkos <loading_t>  loading;
     DCArrayKokkos <boundary_t> boundary;
 
     void derive() {
