@@ -225,7 +225,7 @@ namespace Yaml {
                 } else {
                     T inner_v;
                     Yaml::deserialize(inner_v, node, raw);
-                    *v = inner_v;
+                    v = std::make_unique<T>(inner_v);
                 }
             }
             
