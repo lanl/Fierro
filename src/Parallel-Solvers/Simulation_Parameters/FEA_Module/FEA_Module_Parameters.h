@@ -37,7 +37,7 @@ struct FEA_Module_Parameters
     : Yaml::TypeDiscriminated<FEA_Module_Parameters, FEA_MODULE_TYPE>,
         Yaml::DerivedFields {
     std::string region_id;
-    std::vector<std::shared_ptr<Boundary_Condition>> boundary_conditions;
+    std::vector<Boundary_Condition> boundary_conditions;
     std::vector<std::shared_ptr<Loading_Condition>> loading_conditions;
     std::vector<FIELD> output_fields;
 
@@ -54,6 +54,7 @@ struct FEA_Module_Parameters
     // Let it double copy instead.
     FEA_Module_Parameters& operator=(const FEA_Module_Parameters&) = default;
 };
+YAML_ADD_REQUIRED_FIELDS_FOR(FEA_Module_Parameters, type)
 IMPL_YAML_SERIALIZABLE_FOR(FEA_Module_Parameters, type,
     region_id, boundary_conditions, loading_conditions,
     output_fields

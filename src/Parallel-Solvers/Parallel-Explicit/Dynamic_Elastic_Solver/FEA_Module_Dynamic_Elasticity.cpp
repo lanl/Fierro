@@ -996,7 +996,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
     const DCArrayKokkos <material_t> material = simparam.material;
-    global_vars = simparam.global_variables;
+    global_vars = simparam.global_vars;
     elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options.max_num_user_output_vars); 
  
     //--- calculate bdy sets ---//
@@ -1704,7 +1704,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
     const DCArrayKokkos <material_t> material = simparam.material;
     int nTO_modules;
     int old_max_forward_buffer;
-    size_t cycle;
+    unsigned long cycle;
     const int num_dim = simparam.num_dims;
     real_t objective_accumulation, global_objective_accumulation;
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam.FEA_Module_My_TO_Modules;
@@ -2504,7 +2504,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
     if(myrank==0)
       printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
     if(myrank==0)
-      printf("total energy conservation error %= %e \n\n", 100*(TE_tend - TE_t0)/TE_t0);
+      printf("total energy conservation error = %e \n\n", 100*(TE_tend - TE_t0)/TE_t0);
 
     
     return;

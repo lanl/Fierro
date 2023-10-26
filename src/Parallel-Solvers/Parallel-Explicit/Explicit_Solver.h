@@ -60,7 +60,7 @@
 
 using namespace mtr;
 
-class Explicit_Solver: public Solver{
+class Explicit_Solver: public Solver {
 
 public:
   Explicit_Solver(Simulation_Parameters_Explicit&);

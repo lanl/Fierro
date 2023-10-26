@@ -1358,7 +1358,7 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
     }
   }
 
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     //print

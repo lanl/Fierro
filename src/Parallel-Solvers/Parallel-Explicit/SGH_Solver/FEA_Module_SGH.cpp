@@ -72,7 +72,6 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
-#include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver.h"
 
@@ -103,7 +102,7 @@ using namespace utils;
 
 FEA_Module_SGH::FEA_Module_SGH(
     Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, 
-    Elasticity_Parameters params, const int my_fea_module_index) 
+    SGH_Parameters params, const int my_fea_module_index) 
   : FEA_Module(Solver_Pointer) {
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
@@ -111,6 +110,7 @@ FEA_Module_SGH::FEA_Module_SGH(
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
   simparam = Explicit_Solver_Pointer_->simparam;
+  std::cout << simparam.mat_fill.dims(0) << std::endl;
   fea_params = params;
 
   //create ref element object
@@ -1038,7 +1038,7 @@ void FEA_Module_SGH::setup(){
     const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
     const DCArrayKokkos <material_t> material = simparam.material;
-    global_vars = simparam.global_variables;
+    global_vars = simparam.global_vars;
     elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options.max_num_user_output_vars); 
  
     //--- calculate bdy sets ---//
@@ -1135,6 +1135,7 @@ void FEA_Module_SGH::setup(){
     for (int f_id = 0; f_id < num_fills; f_id++){
             
         // parallel loop over elements in mesh
+        //for (size_t elem_gid = 0; elem_gid <= rnum_elem; elem_gid++) {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
 
             // calculate the coordinates and radius of the element
@@ -1185,7 +1186,6 @@ void FEA_Module_SGH::setup(){
                 
                 // short form for clean code
                 EOSParent * eos_model = elem_eos(elem_gid).model;
-
                 // --- Pressure ---
                 eos_model->calc_pressure(elem_pres,
                                          elem_stress,
@@ -2652,7 +2652,7 @@ void FEA_Module_SGH::sgh_solve(){
     if(myrank==0)
       printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
     if(myrank==0)
-      printf("total energy conservation error %= %e \n\n", 100*(TE_tend - TE_t0)/TE_t0);
+      printf("total energy conservation error = %e \n\n", 100*(TE_tend - TE_t0)/TE_t0);
 
     
     return;

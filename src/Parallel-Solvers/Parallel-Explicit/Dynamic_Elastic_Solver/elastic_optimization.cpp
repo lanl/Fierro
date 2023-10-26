@@ -541,7 +541,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint(){
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (int cycle = last_time_step; cycle >= 0; cycle--) {
+  for (unsigned long cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -608,7 +608,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (int cycle = last_time_step; cycle >= 0; cycle--) {
+  for (unsigned long cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -783,7 +783,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
   Kokkos::fence();
 
   //gradient contribution from kinetic energy vMv product.
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -897,7 +897,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
   Kokkos::fence();
 
   //gradient contribution from Force vector.
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -1019,7 +1019,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
         }
     }
 
-    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       
@@ -1108,7 +1108,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
         }
     }
 
-    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print

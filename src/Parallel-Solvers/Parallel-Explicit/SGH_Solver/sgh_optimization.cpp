@@ -927,7 +927,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         }
     }
 
-    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print
@@ -1010,7 +1010,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         }
     }
 
-    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print

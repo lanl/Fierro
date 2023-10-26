@@ -47,7 +47,6 @@
 #include "FEA_Module.h"
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
-#include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
 #include "material_models.h"
 
 class Explicit_Solver;
@@ -56,7 +55,7 @@ class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, Elasticity_Parameters params, const int my_fea_module_index = 0);
+  FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, SGH_Parameters params, const int my_fea_module_index = 0);
   ~FEA_Module_SGH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -525,7 +524,7 @@ public:
   real_t penalty_power;
   
   Simulation_Parameters_Explicit simparam;
-  Elasticity_Parameters fea_params;
+  SGH_Parameters fea_params;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;

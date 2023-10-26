@@ -521,7 +521,7 @@ public:
   Teuchos::RCP<MAT> distributed_force_gradient_velocities;
 
   std::vector<real_t> time_data;
-  int max_time_steps, last_time_step;
+  unsigned long max_time_steps, last_time_step;
 
   // ---------------------------------------------------------------------
   //    state data type declarations (must stay in scope for output after run)

@@ -89,7 +89,7 @@
 #define DENSITY_EPSILON 0.0001
 #define BC_EPSILON 1.0e-8
 
-Solver::Solver(){
+Solver::Solver(Simulation_Parameters& _simparam) : simparam(_simparam) {
   //default flags assume optional routines are off
   setup_flag = finalize_flag = 0;
   communication_time = dev2host_time = host2dev_time = output_time = 0;

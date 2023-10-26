@@ -121,7 +121,7 @@ each surface to use for hammering metal into to form it.
 
 */
 
-Explicit_Solver::Explicit_Solver(Simulation_Parameters_Explicit& params) : Solver() {
+Explicit_Solver::Explicit_Solver(Simulation_Parameters_Explicit& params) : Solver(params) {
   //create parameter objects
   simparam = params;
   //create ref element object
@@ -1056,7 +1056,7 @@ void Explicit_Solver::FEA_module_setup(){
 
     switch (param->type) {
     case FEA_MODULE_TYPE::SGH:
-      sgh_module = new FEA_Module_SGH(this, mesh, *std::dynamic_pointer_cast<Elasticity_Parameters>(param));
+      sgh_module = new FEA_Module_SGH(this, mesh, *std::dynamic_pointer_cast<SGH_Parameters>(param));
       fea_modules.push_back(sgh_module);
       break;
     case FEA_MODULE_TYPE::Dynamic_Elasticity:

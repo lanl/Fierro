@@ -115,7 +115,7 @@ public:
   typedef Kokkos::View<const GO**, array_layout, HostSpace, memory_traits> const_host_elem_conn_array;
   typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
 
-  Solver();
+  Solver(Simulation_Parameters& _simparam);
   virtual ~Solver();
   
   virtual void setup() {}

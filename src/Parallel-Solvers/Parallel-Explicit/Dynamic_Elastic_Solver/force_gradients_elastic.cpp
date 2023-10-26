@@ -821,7 +821,7 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
 
   //gradient contribution from gradient of Force vector with respect to design variable.
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     

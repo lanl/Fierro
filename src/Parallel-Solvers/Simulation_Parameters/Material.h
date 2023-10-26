@@ -1,13 +1,13 @@
 #pragma once
 #include "yaml-serializable.h"
 
-SERIALIZABLE_ENUM(EOS_MODEL, none, ideal_gas, user_eos_model)
+SERIALIZABLE_ENUM(EOS_MODEL, ideal_gas, user_eos_model)
 SERIALIZABLE_ENUM(STRENGTH_MODEL, none, ideal_gas, user_strength_model)
 SERIALIZABLE_ENUM(STRENGTH_TYPE, none, hypo, hyper)
 SERIALIZABLE_ENUM(RUN_LOCATION, device, host)
 
 struct material_t {
-    EOS_MODEL eos_model                = EOS_MODEL::none;
+    EOS_MODEL eos_model                = EOS_MODEL::ideal_gas;
     STRENGTH_MODEL strength_model      = STRENGTH_MODEL::none;
     STRENGTH_TYPE strength_type        = STRENGTH_TYPE::none;
     RUN_LOCATION strength_run_location = RUN_LOCATION::device;

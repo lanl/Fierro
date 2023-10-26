@@ -72,9 +72,15 @@ struct Volume : Yaml::ValidatedYaml {
     
     void validate() {
       if (type == VOLUME_TYPE::cylinder || type == VOLUME_TYPE::sphere) {
-        if (radius1 == 0 || radius2 == 0) {
+        if (radius2 < 0) {
           throw Yaml::ConfigurationException(
-            "Both the inner and outer radii (radius1, radius2) must be specified for volume type "
+            "The inner radius cannot be less than 0 for volume type: "
+              + to_string(type)
+          );
+        }
+        if (radius2 <= radius1) {
+          throw Yaml::ConfigurationException(
+            "The outer radius must be greater than the inner radius for volume type: "
               + to_string(type)
           );
         }
