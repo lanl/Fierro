@@ -1,0 +1,5 @@
+SLIP SYSTEMS FOR CUBIC CRYSTAL
+CUBIC             icryst
+   1.   1.   1.   crystal axes (cdim(i))
+   0              nmodesx (total # of modes listed in the file)
+   0              nmodes  (# of modes to be used in the calculation)

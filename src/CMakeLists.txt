@@ -11,6 +11,7 @@ endif()
 
 add_subdirectory(Yaml-Serializable)
 add_subdirectory(Mesh-Builder)
+add_subdirectory(Voxelizer)
 add_subdirectory(CLI)
 
 if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
