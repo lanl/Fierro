@@ -93,21 +93,16 @@ TEST(MeshBuilder, WriteRead) {
 
 
 TEST(MeshBuilder, ExampleCylinder) {
-    std::stringstream example_yaml;
-    MeshBuilder::example_cylinder(example_yaml);
-    
     MeshBuilderConfig in;
-    Yaml::from_string_strict(example_yaml.string(), in);
+    Yaml::from_string_strict(MeshBuilderConfig::example_cylinder(), in);
 
     EXPECT_EQ(in.input->type, MeshType::Cylinder);
 }
 
-TEST(MeshBuilder, ExampleCylinder) {
-    std::stringstream example_yaml;
-    MeshBuilder::example_box(example_yaml);
+TEST(MeshBuilder, ExampleBox) {
     
     MeshBuilderConfig in;
-    Yaml::from_string_strict(example_yaml.string(), in);
+    Yaml::from_string_strict(MeshBuilderConfig::example_box(), in);
 
     EXPECT_EQ(in.input->type, MeshType::Box);
 }
