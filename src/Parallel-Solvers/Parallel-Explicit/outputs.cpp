@@ -59,9 +59,8 @@ get_cell_nodes(
 
 Teuchos::RCP<CArray<double>>
 calculate_elem_speed(
-  const size_t rk_level,
-  DViewCArrayKokkos <double>& node_vel,
-  DCArrayKokkos <size_t>& nodes_in_elem);
+  const Teuchos::RCP<Solver::MV> all_node_vel_distributed,
+  const Teuchos::RCP<Solver::MCONN> global_nodes_in_elem_distributed);
 
 Teuchos::RCP<CArray<int>>
 calculate_elem_switch(
@@ -108,7 +107,7 @@ Explicit_Solver::write_outputs()
 
       case FIELD_OUTPUT_EXPLICIT::speed:
         // element "speed"
-        elem_speed = calculate_elem_speed(rk_level, sgh_module->node_vel, sgh_module->nodes_in_elem);
+        elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
         cell_data_scalars_double["speed"] = elem_speed->pointer();
         break;
 
@@ -606,20 +605,19 @@ get_cell_nodes(
 
 Teuchos::RCP<CArray<double>>
 calculate_elem_speed(
-  const size_t rk_level,
-  DViewCArrayKokkos <double> &node_vel,
-  DCArrayKokkos <size_t> &nodes_in_elem)
+  const Teuchos::RCP<Solver::MV> all_node_vel_distributed,
+  const Teuchos::RCP<Solver::MCONN> global_nodes_in_elem_distributed)
 {
 
-  node_vel.update_host();
-  nodes_in_elem.update_host();
-
-  size_t rnum_elems = nodes_in_elem.dims(0);
-  size_t num_nodes_in_elem = nodes_in_elem.dims(1);
-  size_t num_dims = node_vel.dims(2);
+  size_t rnum_elems = global_nodes_in_elem_distributed->getLocalLength();
+  size_t num_nodes_in_elem = global_nodes_in_elem_distributed->getNumVectors();
+  size_t num_dims = all_node_vel_distributed->getNumVectors();
 
   Teuchos::RCP<CArray<double>> elem_speed = 
     Teuchos::rcp(new CArray<double>(rnum_elems));
+
+  auto nodes_in_elem_hview = global_nodes_in_elem_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
+  auto all_node_vel_hview = all_node_vel_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
 
   for (size_t elem_gid = 0; elem_gid < rnum_elems; elem_gid++) { 
     double elem_vel[3];
@@ -628,12 +626,11 @@ calculate_elem_speed(
     elem_vel[2] = 0.0;
     // get the coordinates of the element center
     for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-      size_t node_gid = nodes_in_elem(elem_gid, node_lid);
-      ViewCArrayKokkos <double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
-      elem_vel[0] += vel(0);
-      elem_vel[1] += vel(1);
+      size_t inode = all_node_vel_distributed->getMap()->getLocalElement(nodes_in_elem_hview(elem_gid, node_lid));
+      elem_vel[0] += all_node_vel_hview(inode, 0);
+      elem_vel[1] += all_node_vel_hview(inode, 1);
       if (num_dims == 3){
-        elem_vel[2] += vel(2);
+        elem_vel[2] += all_node_vel_hview(inode, 2);
       }
       else {
         elem_vel[2] = 0.0;
