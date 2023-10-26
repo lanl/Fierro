@@ -61,6 +61,9 @@ struct Simulation_Parameters_Elasticity : public Simulation_Parameters {
   double Elastic_Modulus = 200000000000;
   double Poisson_Ratio   = 0.3;
 
+  //material density
+  double material_density = 7850;
+
   // -- Integration rule
   int num_gauss_points = 2;
 
@@ -72,6 +75,7 @@ struct Simulation_Parameters_Elasticity : public Simulation_Parameters {
   bool direct_solver_flag      = false;
   bool multigrid_timers        = false;
   bool equilibrate_matrix_flag = false;
+  bool modal_analysis          = false;
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Elasticity, Simulation_Parameters)
 
