@@ -89,7 +89,7 @@ namespace Yaml {
         
             friend T;
         private:
-            Register() { }
+            Register() { this->type = DiscriminationValue; }
         };
 
         virtual ~TypeDiscriminated() { };
@@ -121,6 +121,7 @@ namespace Yaml {
         };
 
         TypeDiscriminated() = default;
+        TypeDiscriminated(DiscriminationType _t) : type(_t) {}
         // Returning a reference to the static variable means
         // subsequent calls access the same memory.
         static auto &data() {
