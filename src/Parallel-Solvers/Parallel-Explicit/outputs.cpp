@@ -59,8 +59,10 @@ get_cell_nodes(
 
 Teuchos::RCP<CArray<double>>
 calculate_elem_speed(
-  const Teuchos::RCP<Solver::MV> all_node_vel_distributed,
-  const Teuchos::RCP<Solver::MCONN> global_nodes_in_elem_distributed);
+  const Teuchos::RCP<Solver::MV> all_node_velocities_distributed,
+  const Teuchos::RCP<Solver::MCONN> global_nodes_in_elem_distributed,
+  const Teuchos::RCP<Solver::MV> ghost_node_velocities_distributed, 
+  const Teuchos::RCP<Tpetra::Import<Solver::LO, Solver::GO>> ghost_importer);
 
 Teuchos::RCP<CArray<int>>
 calculate_elem_switch(
@@ -107,7 +109,8 @@ Explicit_Solver::write_outputs()
 
       case FIELD_OUTPUT_EXPLICIT::speed:
         // element "speed"
-        elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed);
+        elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed,
+                                          ghost_node_velocities_distributed, ghost_importer);
         cell_data_scalars_double["speed"] = elem_speed->pointer();
         break;
 
@@ -605,19 +608,38 @@ get_cell_nodes(
 
 Teuchos::RCP<CArray<double>>
 calculate_elem_speed(
-  const Teuchos::RCP<Solver::MV> all_node_vel_distributed,
-  const Teuchos::RCP<Solver::MCONN> global_nodes_in_elem_distributed)
+  const Teuchos::RCP<Solver::MV> all_node_velocities_distributed,
+  const Teuchos::RCP<Solver::MCONN> global_nodes_in_elem_distributed,
+  const Teuchos::RCP<Solver::MV> ghost_node_velocities_distributed, 
+  const Teuchos::RCP<Tpetra::Import<Solver::LO, Solver::GO>> ghost_importer)
 {
 
   size_t rnum_elems = global_nodes_in_elem_distributed->getLocalLength();
   size_t num_nodes_in_elem = global_nodes_in_elem_distributed->getNumVectors();
-  size_t num_dims = all_node_vel_distributed->getNumVectors();
+  size_t num_dims = all_node_velocities_distributed->getNumVectors();
+  size_t nall_nodes = all_node_velocities_distributed->getLocalLength();
+  size_t nghost_nodes = ghost_node_velocities_distributed->getLocalLength();
+  size_t nlocal_nodes = nall_nodes - nghost_nodes;
+
+  // fill ghost node data 
+  ghost_node_velocities_distributed->doImport(*all_node_velocities_distributed, *ghost_importer, Tpetra::INSERT);
+
+  { //view scope
+    auto ghost_node_velocities_hview = ghost_node_velocities_distributed->getLocalViewDevice (Tpetra::Access::ReadOnly);
+    auto all_node_velocities_hview = all_node_velocities_distributed->getLocalViewDevice (Tpetra::Access::ReadWrite);
+    FOR_ALL(node_gid, nlocal_nodes, nall_nodes, {
+      for (int idim = 0; idim < num_dims; idim++){
+        all_node_velocities_hview(node_gid,idim) = ghost_node_velocities_hview(node_gid-nlocal_nodes,idim);
+      }
+    }); // end parallel for
+  } //end view scope
+  Kokkos::fence();
 
   Teuchos::RCP<CArray<double>> elem_speed = 
     Teuchos::rcp(new CArray<double>(rnum_elems));
 
   auto nodes_in_elem_hview = global_nodes_in_elem_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
-  auto all_node_vel_hview = all_node_vel_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
+  auto all_node_vel_hview = all_node_velocities_distributed->getLocalViewHost(Tpetra::Access::ReadOnly);
 
   for (size_t elem_gid = 0; elem_gid < rnum_elems; elem_gid++) { 
     double elem_vel[3];
@@ -626,7 +648,7 @@ calculate_elem_speed(
     elem_vel[2] = 0.0;
     // get the coordinates of the element center
     for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-      size_t inode = all_node_vel_distributed->getMap()->getLocalElement(nodes_in_elem_hview(elem_gid, node_lid));
+      size_t inode = all_node_velocities_distributed->getMap()->getLocalElement(nodes_in_elem_hview(elem_gid, node_lid));
       elem_vel[0] += all_node_vel_hview(inode, 0);
       elem_vel[1] += all_node_vel_hview(inode, 1);
       if (num_dims == 3){
