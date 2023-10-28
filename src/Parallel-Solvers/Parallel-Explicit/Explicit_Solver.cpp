@@ -1054,7 +1054,8 @@ void Explicit_Solver::init_state_vectors(){
   initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   node_velocities_distributed = Teuchos::rcp(new MV(*all_node_velocities_distributed, map));
-  ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
+  //ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
+  ghost_node_velocities_distributed = Teuchos::rcp(new MV(*all_node_velocities_distributed, ghost_node_map, nlocal_nodes));
   if(simparam_dynamic_opt.topology_optimization_on){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   }

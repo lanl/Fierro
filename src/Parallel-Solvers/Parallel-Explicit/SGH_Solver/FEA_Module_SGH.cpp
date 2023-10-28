@@ -2207,7 +2207,6 @@ void FEA_Module_SGH::sgh_solve(){
             //view scope
             {
               vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-
               FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
                 for (int idim = 0; idim < num_dim; idim++){
                   node_vel(rk_level,node_gid,idim) = ghost_node_velocities_interface(node_gid-nlocal_nodes,idim);
