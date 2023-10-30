@@ -14,6 +14,11 @@ then
   git submodule update --init --recursive
 fi
 
+# Install Elements
+cmake -D CMAKE_INSTALL_PREFIX="$ELEMENTS_INSTALL_DIR" -B "${ELEMENTS_BUILD_DIR}" -S "${ELEMENTS_SOURCE_DIR}"
+make -C "${ELEMENTS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
+make -C "${ELEMENTS_BUILD_DIR}" install
+
 # Removing stale build directory
 rm -rf ${FIERRO_BUILD_DIR}
 mkdir -p ${FIERRO_BUILD_DIR}
@@ -21,6 +26,7 @@ mkdir -p ${FIERRO_BUILD_DIR}
 # Configure EVPFFT using CMake
 cmake_options=(
     -D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
+    -D CMAKE_PREFIX_PATH="$ELEMENTS_INSTALL_DIR"
 )
 
 if [ "$solver" = "all" ]; then
@@ -65,7 +71,6 @@ echo "CMake Options: ${cmake_options[@]}"
 
 # Configure FIERRO
 cmake "${cmake_options[@]}" -B "${FIERRO_BUILD_DIR}" -S "${FIERRO_BASE_DIR}"
-#cmake "${cmake_options[@]}" "${FIERRO_BASE_DIR:-../}"
 
 # Build FIERRO
 make -C "${FIERRO_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
