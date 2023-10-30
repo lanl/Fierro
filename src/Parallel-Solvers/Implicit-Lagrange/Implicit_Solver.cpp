@@ -287,6 +287,15 @@ void Implicit_Solver::run(int argc, char *argv[]){
         std::cout << "Linear Solver Error for module " << imodule << std::endl <<std::flush;
         return;
       }
+
+      if(fea_modules_modal_analysis[imodule])
+      {
+        int eigensolver_exit = fea_modules[imodule]->eigensolve();
+        if(solver_exit != 0){
+          std::cout << "Eigen-Solver Error for module " << imodule << std::endl <<std::flush;
+          return;
+        }
+      }
     }
 
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam.nfea_modules << std::endl;
@@ -1083,10 +1092,12 @@ void Implicit_Solver::FEA_module_setup(){
   //allocate lists to size
   fea_module_types = std::vector<FEA_MODULE_TYPE>(nfea_modules);
   fea_modules = std::vector<FEA_Module*>(nfea_modules);
+  fea_modules_modal_analysis = std::vector<bool>(nfea_modules);
   bool module_found = false;
   
   //list should not have repeats since that was checked by simulation parameters setups
   for(int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules_modal_analysis[imodule] = false;
     //decides which FEA module objects to setup based on string.
     //automate selection list later; use std::map maybe?
     if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Elasticity){

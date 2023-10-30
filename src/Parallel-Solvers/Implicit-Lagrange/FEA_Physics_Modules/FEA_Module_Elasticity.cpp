@@ -127,6 +127,9 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer, const int m
   penalty_power = simparam_TO.optimization_options.simp_penalty_power;
   nodal_density_flag = simparam_TO.nodal_density_flag;
 
+  //modal analysis flag hack
+  Implicit_Solver_Pointer_->fea_modules_modal_analysis[my_fea_module_index] = simparam.modal_analysis;
+
   //create ref element object
   //ref_elem = new elements::ref_element();
   //create mesh objects
@@ -5947,5 +5950,26 @@ int FEA_Module_Elasticity::eigensolve(){
   //
   // Create the solver manager
   Anasazi::BlockDavidsonSolMgr<real_t,MV,OP> MySolverMgr(problem, MyPL);
-  return 0;
+
+  // Solve the problem to the specified tolerances or length
+  Anasazi::ReturnType returnCode = MySolverMgr.solve();
+  bool testFailed = false;
+  if (returnCode != Anasazi::Converged) {
+    testFailed = true;
+  }
+
+  // Get the eigenvalues and eigenvectors from the eigenproblem
+  Anasazi::Eigensolution<real_t,MV> sol = problem->getSolution();
+  Teuchos::RCP<MV> evecs = sol.Evecs;
+  int numev = sol.numVecs;
+
+   *fos << "Direct residual norms computed in Tpetra_BlockDavidson_lap_test.exe" << std::endl
+       << std::setw(20) << "Eigenvalue" << std::setw(20) << "Residual  " << std::endl
+       << "----------------------------------------" << std::endl;
+    for (int i=0; i<numev; i++) {
+      *fos << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << std::endl;
+    }
+
+  if(testFailed) return -1;
+  else return 0;
 }
