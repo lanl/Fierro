@@ -640,42 +640,74 @@ void FEA_Module_Dynamic_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,n
 }
 
 /* -------------------------------------------------------------------------------------------
-   Prompts sorting for elastic response output data. For now, nodal strains.
+   populate requests this module makes for output data
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Dynamic_Elasticity::write_data(std::map <std::string, const double*> point_data_scalars_double,
-  std::map <std::string, const double*> point_data_vectors_double,
-  std::map <std::string, const double*> cell_data_scalars_double,
-  std::map <std::string, const int*> cell_data_scalars_int){
+void FEA_Module_Dynamic_Elasticity::write_data(std::map <std::string, const double*> &point_data_scalars_double,
+  std::map <std::string, const double*> &point_data_vectors_double,
+  std::map <std::string, const double*> &cell_data_scalars_double,
+  std::map <std::string, const int*> &cell_data_scalars_int,
+  std::map <std::string, std::pair<const double*, size_t> > &cell_data_fields_double){
+
+  
   const size_t rk_level = simparam.rk_num_bins - 1;
 
-  // node "velocity"
-  node_vel.update_host();
-  point_data_vectors_double["velocity"] = &node_vel.host(rk_level,0,0);
+  for (const FIELD_OUTPUT_DYNAMIC_ELASTICITY& field_name : simparam.field_output) {
+    switch (field_name)
+    {
 
-  // element "element_density"
-  elem_den.update_host();
-  cell_data_scalars_double["element_density"] = &elem_den.host(0);
-  
-  // element "pres"
-  elem_pres.update_host();
-  cell_data_scalars_double["pres"] = &elem_pres.host(0);
+      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::velocity:
+        // node "velocity"
+        node_vel.update_host();
+        point_data_vectors_double["velocity"] = &node_vel.host(rk_level,0,0);
+        break;
 
-  // element "sie"
-  elem_sie.update_host();
-  cell_data_scalars_double["sie"] = &elem_sie.host(rk_level,0);
+      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::element_density:
+        // element "density"
+        elem_den.update_host();
+        cell_data_scalars_double["element_density"] = elem_den.host_pointer();
+        break;
 
-  // element "vol"
-  elem_vol.update_host();
-  cell_data_scalars_double["vol"] = &elem_vol.host(0);
+      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::pressure:  
+        // element "pressure"
+        elem_pres.update_host();
+        cell_data_scalars_double["pressure"] = elem_pres.host_pointer();
+        break;
 
-  // element "mass"
-  elem_mass.update_host();
-  cell_data_scalars_double["mass"] = &elem_mass.host(0);
+      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::volume:
+        // element "volume"
+        elem_vol.update_host();
+        cell_data_scalars_double["volume"] = elem_vol.host_pointer();
+        break;
 
-  // element "sspd"
-  elem_sspd.update_host();
-  cell_data_scalars_double["sspd"] = &elem_sspd.host(0);
+      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::mass:
+        // element "mass"
+        elem_mass.update_host();
+        cell_data_scalars_double["mass"] = elem_mass.host_pointer();
+        break;
+
+      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::material_id:
+        // element "material_id"
+        elem_mat_id.update_host();
+        cell_data_scalars_int["material_id"] = reinterpret_cast<int*>(elem_mat_id.host_pointer());
+        break;
+
+      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::user_vars:
+        // element "user_vars"
+        elem_user_output_vars.update_host();
+        cell_data_fields_double["user_vars"] = std::make_pair(elem_user_output_vars.host_pointer(), 
+                                                                   elem_user_output_vars.dims(1));
+      case FIELD_OUTPUT_DYNAMIC_ELASTICITY::stress:
+        // element "stress"
+        elem_stress.update_host();
+        cell_data_fields_double["stress"] = std::make_pair(&elem_stress.host(rk_level,0,0,0), 9);
+        break;
+
+      default:
+        break;
+
+    } // end switch
+  } // end if
 
   // element "mat_id" //uncomment if needed (works fine)
   //sgh_module->elem_mat_id.update_host();
@@ -754,38 +786,6 @@ void FEA_Module_Dynamic_Elasticity::comm_node_masses(){
   //}
 }
 
-/* ----------------------------------------------------------------------
-   Communicate updated nodal adjoint vectors to ghost nodes
-------------------------------------------------------------------------- */
-
-void FEA_Module_Dynamic_Elasticity::comm_adjoint_vectors(int cycle){
-  
-  //debug print of design vector
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(myrank==0)
-      //*fos << "Density data :" << std::endl;
-      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
-
-  //communicate design densities
-  //create import object using local node indices map and all indices map
-  //Tpetra::Import<LO, GO> importer(map, all_node_map);
-  
-  //comms to get ghosts
-  (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
-  (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
-  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
-  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  
-  //update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
-}
-
 /* -------------------------------------------------------------------------------------------
    Communicate ghosts using the current optimization design data
 ---------------------------------------------------------------------------------------------- */
@@ -822,7 +822,7 @@ void FEA_Module_Dynamic_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
    enforce constraints on nodes due to BCS
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array node_densities_lower_bound){
+void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array &node_densities_lower_bound){
 
   const size_t num_dim = mesh->num_dims;
   const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);

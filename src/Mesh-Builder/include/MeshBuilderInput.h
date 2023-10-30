@@ -161,12 +161,12 @@ IMPL_YAML_SERIALIZABLE_WITH_BASE(Input_Cylinder, Input_Rectilinear, inner_radius
 
 inline std::string MeshBuilderConfig::example_box() {
     MeshBuilderConfig config;
-    config.input = std::make_shared<MeshBuilderInput>(Input_Rectilinear());
+    config.input = std::make_shared<Input_Rectilinear>();
     return Yaml::to_string(config);
 }
 
 inline std::string MeshBuilderConfig::example_cylinder() {
     MeshBuilderConfig config;
-    config.input = std::make_shared<MeshBuilderInput>(Input_Cylinder());
+    config.input = std::make_shared<Input_Cylinder>();
     return Yaml::to_string(config);
 }

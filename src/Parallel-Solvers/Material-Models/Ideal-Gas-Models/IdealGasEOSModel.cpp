@@ -42,6 +42,21 @@ int IdealGasEOSModel::calc_sound_speed(
 }
 
 KOKKOS_FUNCTION
+double IdealGasEOSModel::calc_sound_speed_gradient_internal_energy(
+  const DViewCArrayKokkos <double> &elem_pres,
+  const DViewCArrayKokkos <double> &elem_stress,
+  const size_t elem_gid,
+  const size_t mat_id,
+  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &elem_user_output_vars,
+  const DViewCArrayKokkos <double> &elem_sspd,
+  const double den,
+  const double sie){
+  // sound speed gradient
+  return 0.5*gamma_*(gamma_ - 1.0)/sqrt(gamma_*(gamma_ - 1.0)*sie);
+}
+
+KOKKOS_FUNCTION
 int IdealGasEOSModel::calc_pressure(
   const DViewCArrayKokkos <double> &elem_pres,
   const DViewCArrayKokkos <double> &elem_stress,
@@ -58,4 +73,37 @@ int IdealGasEOSModel::calc_pressure(
 
   return 0;
 }
+
+KOKKOS_FUNCTION
+double IdealGasEOSModel::calc_pressure_gradient_density(
+  const DViewCArrayKokkos <double> &elem_pres,
+  const DViewCArrayKokkos <double> &elem_stress,
+  const size_t elem_gid,
+  const size_t mat_id,
+  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &elem_user_output_vars,
+  const DViewCArrayKokkos <double> &elem_sspd,
+  const double den,
+  const double sie)
+{
+  // pressure
+  return (gamma_ - 1.0)*sie;
+}
+
+KOKKOS_FUNCTION
+double IdealGasEOSModel::calc_pressure_gradient_internal_energy(
+  const DViewCArrayKokkos <double> &elem_pres,
+  const DViewCArrayKokkos <double> &elem_stress,
+  const size_t elem_gid,
+  const size_t mat_id,
+  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &elem_user_output_vars,
+  const DViewCArrayKokkos <double> &elem_sspd,
+  const double den,
+  const double sie)
+{
+  // pressure
+  return (gamma_ - 1.0)*den;
+}
+
 

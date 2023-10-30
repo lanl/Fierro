@@ -191,6 +191,7 @@ public:
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_vector_storage;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_gradient_storage;
   size_t max_nodes_per_element, max_nodes_per_patch;
   std::shared_ptr<elements::element_selector> element_select;
   std::shared_ptr<elements::ref_element>  ref_elem;

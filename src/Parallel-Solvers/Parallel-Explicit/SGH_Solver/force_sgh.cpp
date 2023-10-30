@@ -187,6 +187,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
 
         double mag;       // magnitude of the area normal
         double mag_vel;   // magnitude of velocity
+        size_t mat_id = elem_mat_id(elem_gid);
 
         // loop over the nodes of the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -228,7 +229,6 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
             
 
             // cell divergence indicates compression or expansions
-            size_t mat_id = elem_mat_id(elem_gid);
             if (div < 0){ // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                (material(mat_id).q1*elem_sspd(elem_gid) + material(mat_id).q2*mag_vel);
@@ -338,11 +338,15 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         // curl limiter on Q
         double omega_curl = 1.0;  // increase this to increase robustness, but as it increases, additional dissipation will be introduce, blocking bending
         double phi_curl = fmin(1.0, omega_curl*fabs(div)/(mag_curl + fuzz));  // disable Q when vorticity is high
-
+        
         phi = 1.0;  // for the future case of using a slope limiter approach
         phi = fmin(phi_curl*phi, alpha*phi);// if noise arrises in simulation on really smooth flows, then try something like
         phi = fmax(phi,0.001);  // ensuring a very small amount of dissipation for stability and robustness
 
+        if(material(mat_id).maximum_limiter){
+            phi=1;
+        }
+        
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem
@@ -372,11 +376,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos <material_t> &material,
         } // end for loop over nodes in elem
         
         
-        
         // --- Update Stress ---
         // calculate the new stress at the next rk level, if it is a hypo model
-        
-        size_t mat_id = elem_mat_id(elem_gid);
         
         // hypo elastic plastic model
         if(material(mat_id).strength_type == STRENGTH_TYPE::hypo){
