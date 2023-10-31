@@ -135,6 +135,8 @@ public:
 
   virtual int solve() {return 0;}
 
+  virtual int eigensolve() {return 0;}
+
   virtual void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header) {}
 
   virtual void linear_solver_parameters() {}

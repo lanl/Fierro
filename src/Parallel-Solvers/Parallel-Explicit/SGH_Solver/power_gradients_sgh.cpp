@@ -323,6 +323,7 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
                     for (size_t jdim=0; jdim<num_dims; jdim++){
                         column_id = Element_Gradient_Matrix_Assembly_Map(elem_gid,node_lid);
                         gradient_node_id = nodes_in_elem(elem_gid,igradient);
+                        if(!map->isNodeLocalElement(gradient_node_id)) continue;
                         Power_Gradient_Velocities(gradient_node_id*num_dims+jdim, column_id) += corner_gradient_storage(corner_gid,dim,igradient,jdim)*node_vel(rk_level, node_gid, dim)*node_radius;
                     }
                 }
@@ -359,7 +360,8 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
     Kokkos::fence();
 
     // loop over all the elements in the mesh
-    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
+    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++){
+    //FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
         double elem_power = 0.0;
 
@@ -387,6 +389,7 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
                 for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
                     column_id = Element_Gradient_Matrix_Assembly_Map(elem_gid,node_lid);
                     gradient_node_id = nodes_in_elem(elem_gid,igradient);
+                    if(!map->isNodeLocalElement(gradient_node_id)) continue;
                     if(node_lid==igradient){
                         Power_Gradient_Velocities(gradient_node_id*num_dims+dim, column_id) += corner_gradient_storage(corner_gid,dim,igradient,dim)*node_vel(rk_level, node_gid, dim)*node_radius+
                                                                                                             corner_force(corner_gid, dim)*node_radius;
@@ -399,7 +402,8 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
             
         } // end for node_lid
 
-    }); // end parallel loop over the elements
+    //}); // end parallel loop over the elements
+    }
     
     return;
 } // end subroutine

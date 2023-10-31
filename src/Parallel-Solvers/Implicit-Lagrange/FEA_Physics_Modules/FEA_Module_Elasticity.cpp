@@ -93,6 +93,10 @@
 #include <MueLu_Utilities.hpp>
 #include <DriverCore.hpp>
 
+//Eigensolver
+#include "AnasaziBasicEigenproblem.hpp"
+#include "AnasaziBlockDavidsonSolMgr.hpp"
+
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
 #define BC_EPSILON 1.0e-6
@@ -122,6 +126,9 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer, const int m
   simparam_TO = Implicit_Solver_Pointer_->simparam_TO;
   penalty_power = simparam_TO.optimization_options.simp_penalty_power;
   nodal_density_flag = simparam_TO.nodal_density_flag;
+
+  //modal analysis flag hack
+  Implicit_Solver_Pointer_->fea_modules_modal_analysis[my_fea_module_index] = simparam.modal_analysis;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -1396,6 +1403,8 @@ void FEA_Module_Elasticity::init_assembly(){
 
   Stiffness_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Stiffness_Matrix_Strides);
   DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Stiffness_Matrix_Strides);
+  if(simparam.modal_analysis)
+    Mass_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Stiffness_Matrix_Strides);
 
   //set stiffness Matrix Graph
   //debug print
@@ -1470,6 +1479,11 @@ void FEA_Module_Elasticity::init_assembly(){
   //crs_matrix_params->set("sorted", false);
   Global_Stiffness_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view()));
   Global_Stiffness_Matrix->fillComplete();
+
+  if(simparam.modal_analysis){
+    Global_Mass_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Mass_Matrix.get_kokkos_view()));
+    Global_Mass_Matrix->fillComplete();
+  }
   
   /*
   //debug print nodal positions and indices
@@ -1537,7 +1551,10 @@ void FEA_Module_Elasticity::assemble_matrix(){
   int max_stride = 0;
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Stiffness_Matrix(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
-
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Mass_Matrix;
+  if(simparam.modal_analysis){
+    Local_Mass_Matrix = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
+  }
   //initialize stiffness Matrix entries to 0
   //debug print
     //std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
@@ -1549,6 +1566,16 @@ void FEA_Module_Elasticity::assemble_matrix(){
     }
     //debug print
     //std::cout << std::endl;
+  }
+
+  if(simparam.modal_analysis){
+    for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
+      for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
+        Mass_Matrix(idof,istride) = 0;
+      }
+      //debug print
+      //std::cout << std::endl;
+    }
   }
 
   //reset unsorted DOF Graph corresponding to assembly mapped values
@@ -1628,6 +1655,74 @@ void FEA_Module_Elasticity::assemble_matrix(){
     }
   }
 
+  
+  //Mass matrix assembly for modal analysis
+  if(simparam.modal_analysis){
+    if(num_dim==2)
+    for (int ielem = 0; ielem < rnum_elem; ielem++){
+      element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
+      nodes_per_element = elem2D->num_nodes();
+      //construct local stiffness matrix for this element
+      local_mass_matrix(ielem, Local_Mass_Matrix);
+      //assign entries of this local matrix to the sparse global matrix storage;
+      for (int inode = 0; inode < nodes_per_element; inode++){
+        //see if this node is local
+        global_node_index = nodes_in_elem(ielem,inode);
+        if(!map->isNodeGlobalElement(global_node_index)) continue;
+        //set dof row start index
+        current_row = num_dim*map->getLocalElement(global_node_index);
+        for(int jnode = 0; jnode < nodes_per_element; jnode++){
+          
+          current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
+          for (int idim = 0; idim < num_dim; idim++){
+            for (int jdim = 0; jdim < num_dim; jdim++){
+
+              //debug print
+              //if(current_row + idim==15&&current_column + jdim==4)
+              //std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
+              //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
+              //end debug
+
+              Mass_Matrix(current_row + idim, current_column + jdim) += Local_Mass_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
+            }
+          }
+        }
+      }
+    }
+
+    if(num_dim==3)
+    for (int ielem = 0; ielem < rnum_elem; ielem++){
+      element_select->choose_3Delem_type(Element_Types(ielem), elem);
+      nodes_per_element = elem->num_nodes();
+      //construct local stiffness matrix for this element
+      local_mass_matrix(ielem, Local_Mass_Matrix);
+      //assign entries of this local matrix to the sparse global matrix storage;
+      for (int inode = 0; inode < nodes_per_element; inode++){
+        //see if this node is local
+        global_node_index = nodes_in_elem(ielem,inode);
+        if(!map->isNodeGlobalElement(global_node_index)) continue;
+        //set dof row start index
+        current_row = num_dim*map->getLocalElement(global_node_index);
+        for(int jnode = 0; jnode < nodes_per_element; jnode++){
+          
+          current_column = num_dim*Global_Stiffness_Matrix_Assembly_Map(ielem,inode,jnode);
+          for (int idim = 0; idim < num_dim; idim++){
+            for (int jdim = 0; jdim < num_dim; jdim++){
+
+              //debug print
+              //if(current_row + idim==15&&current_column + jdim==4)
+              //std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
+              //Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
+              //end debug
+
+              Mass_Matrix(current_row + idim, current_column + jdim) += Local_Mass_Matrix(num_dim*inode + idim,num_dim*jnode + jdim);
+            }
+          }
+        }
+      }
+    }
+  }
+
   matrix_bc_reduced = false;
 
   
@@ -1660,6 +1755,21 @@ void FEA_Module_Elasticity::assemble_matrix(){
 
   //sort values and indices
   Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
+
+  if(simparam.modal_analysis){
+    //local indices in the graph using the constructed column map
+    CArrayKokkos<LO, array_layout, device_type, memory_traits> mass_local_indices(nnz, "mass_local_indices");
+    entrycount = 0;
+    for(int irow = 0; irow < nlocal_nodes*num_dim; irow++){
+      for(int istride = 0; istride < Stiffness_Matrix_Strides(irow); istride++){
+        mass_local_indices(entrycount) = colmap->getLocalElement(DOF_Graph_Matrix(irow,istride));
+        entrycount++;
+      }
+    }
+
+    //sort values and indices
+    Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, mass_local_indices.get_kokkos_view(), Mass_Matrix.get_kokkos_view());
+  }
 
   //set global indices for DOF graph from sorted local indices
   entrycount = 0;
@@ -2694,7 +2804,8 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
-
+  real_t unit_scaling = simparam.unit_scaling;
+  bool topology_optimization_on = simparam_TO.topology_optimization_on;
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;
@@ -2814,7 +2925,14 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
     //std::cout << "Current Density " << current_density << std::endl;
 
     //look up element material properties at this point as a function of density
-    Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
+    if(topology_optimization_on){
+      Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
+    }
+    else{
+      Element_Modulus = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
+      Poisson_Ratio = simparam.Poisson_Ratio;
+    }
+    
     Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5-Poisson_Ratio;
     Pressure_Term = 1 - Poisson_Ratio;
@@ -3068,6 +3186,193 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
         std::cout << " }"<< std::endl;
         }
       */
+}
+
+/* ----------------------------------------------------------------------
+   Construct the local mass matrix
+------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::local_mass_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix){
+  //local variable for host view in the dual view
+  const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array Element_Densities;
+  //local variable for host view of densities from the dual view
+  //bool nodal_density_flag = simparam.nodal_density_flag;
+  const_host_vec_array all_node_densities;
+  if(nodal_density_flag){
+    if(simparam_TO.helmholtz_filter)
+      all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    else
+      all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  }
+  else{
+    Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+  }
+  int num_dim = simparam.num_dims;
+  int nodes_per_elem = elem->num_basis();
+  int num_gauss_points = simparam.num_gauss_points;
+  real_t material_density = simparam.material_density;
+  int z_quad,y_quad,x_quad, direct_product_count;
+  size_t local_node_id;
+
+  direct_product_count = std::pow(num_gauss_points,num_dim);
+  real_t matrix_term;
+  real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;
+
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
+  //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
+  CArray<real_t> legendre_nodes_1D(num_gauss_points);
+  CArray<real_t> legendre_weights_1D(num_gauss_points);
+  real_t pointer_quad_coordinate[num_dim];
+  real_t pointer_quad_coordinate_weight[num_dim];
+  real_t pointer_interpolated_point[num_dim];
+  real_t pointer_JT_row1[num_dim];
+  real_t pointer_JT_row2[num_dim];
+  real_t pointer_JT_row3[num_dim];
+  ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate,num_dim);
+  ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight,num_dim);
+  ViewCArray<real_t> interpolated_point(pointer_interpolated_point,num_dim);
+  ViewCArray<real_t> JT_row1(pointer_JT_row1,num_dim);
+  ViewCArray<real_t> JT_row2(pointer_JT_row2,num_dim);
+  ViewCArray<real_t> JT_row3(pointer_JT_row3,num_dim);
+
+  real_t pointer_basis_values[elem->num_basis()];
+  real_t pointer_basis_derivative_s1[elem->num_basis()];
+  real_t pointer_basis_derivative_s2[elem->num_basis()];
+  real_t pointer_basis_derivative_s3[elem->num_basis()];
+  ViewCArray<real_t> basis_values(pointer_basis_values,elem->num_basis());
+  ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1,elem->num_basis());
+  ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2,elem->num_basis());
+  ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
+
+  //initialize weights
+  elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
+  elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+
+  real_t current_density = 1;
+
+  //acquire set of nodes for this local element
+  for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+    local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+    nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+    nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+    nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+    if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
+    /*
+    if(myrank==1&&nodal_positions(node_loop,2)>10000000){
+      std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+      std::cout << node_loop+1 <<" " << local_node_id <<" "<< nodes_in_elem(ielem, node_loop) << " "<< nodal_positions(node_loop,2) << std::endl;
+      std::fflush(stdout);
+    }
+    */
+    //std::cout << local_node_id << " " << nodes_in_elem(ielem, node_loop) << " " << nodal_positions(node_loop,0) << " " << nodal_positions(node_loop,1) << " "<< nodal_positions(node_loop,2) <<std::endl;
+  }
+
+  //initialize local stiffness matrix storage
+  for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
+      for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++)
+      Local_Matrix(ifill,jfill) = 0;
+
+  //loop over quadrature points
+  for(int iquad=0; iquad < direct_product_count; iquad++){
+
+    //set current quadrature point
+    if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
+    y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
+    x_quad = iquad % num_gauss_points;
+    quad_coordinate(0) = legendre_nodes_1D(x_quad);
+    quad_coordinate(1) = legendre_nodes_1D(y_quad);
+    if(num_dim==3)
+    quad_coordinate(2) = legendre_nodes_1D(z_quad);
+
+    //set current quadrature weight
+    quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+    quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+    if(num_dim==3)
+    quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+    else
+    quad_coordinate_weight(2) = 1;
+    weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+
+    //compute shape functions at this point for the element type
+    elem->basis(basis_values,quad_coordinate);
+    
+    //compute density
+    current_density = 0;
+    if(nodal_density_flag)
+    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+      current_density += nodal_density(node_loop)*basis_values(node_loop);
+    }
+    //default constant element density
+    else{
+      current_density = Element_Densities(ielem,0);
+    }
+
+    //compute all the necessary coordinates and derivatives at this point
+    //compute shape function derivatives
+    elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+    elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+    elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+
+    //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+    //derivative of x,y,z w.r.t s
+    JT_row1(0) = 0;
+    JT_row1(1) = 0;
+    JT_row1(2) = 0;
+    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+      JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+      JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+      JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+    }
+
+    //derivative of x,y,z w.r.t t
+    JT_row2(0) = 0;
+    JT_row2(1) = 0;
+    JT_row2(2) = 0;
+    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+      JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+      JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+      JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+    }
+
+    //derivative of x,y,z w.r.t w
+    JT_row3(0) = 0;
+    JT_row3(1) = 0;
+    JT_row3(2) = 0;
+    for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+      JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+      JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+      JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+      //debug print
+    /*if(myrank==1&&nodal_positions(node_loop,2)*basis_derivative_s3(node_loop)<-10000000){
+      std::cout << " LOCAL MATRIX DEBUG ON TASK " << myrank << std::endl;
+      std::cout << node_loop+1 << " " << JT_row3(2) << " "<< nodal_positions(node_loop,2) <<" "<< basis_derivative_s3(node_loop) << std::endl;
+      std::fflush(stdout);
+    }*/
+    }
+    
+    
+    //compute the determinant of the Jacobian
+    Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+               JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+               JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+    if(Jacobian<0) Jacobian = -Jacobian;
+    invJacobian = 1/Jacobian;
+
+    //compute the contributions of this quadrature point to all the local stiffness matrix elements
+    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
+      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+        matrix_term = basis_values(ifill/num_dim)*basis_values(jfill/num_dim);
+        Local_Matrix(ifill,jfill) += material_density*current_density*weight_multiply*matrix_term*Jacobian;
+        if(ifill!=jfill)
+          Local_Matrix(jfill,ifill) = Local_Matrix(ifill,jfill);
+      }
+    
+    } //end quad loop
+    
 }
 
 /* ----------------------------------------------------------------------
@@ -5597,4 +5902,82 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
       }
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   Solve for modes
+------------------------------------------------------------------------- */
+
+int FEA_Module_Elasticity::eigensolve(){
+  int blocksize = 3;
+  int nev = 10;
+
+  // Create initial vectors
+  Teuchos::RCP<MV> ivec = Teuchos::rcp (new MV (map,blocksize));
+  ivec->randomize ();
+
+  // Create eigenproblem; note that OP can be a matrix type or a preconditioner operator type (as long as it inherits from Tpetra::Operator)
+  Teuchos::RCP<Anasazi::BasicEigenproblem<real_t,MV,OP> > problem =
+    Teuchos::rcp (new Anasazi::BasicEigenproblem<real_t,MV,OP> (Global_Stiffness_Matrix, Global_Mass_Matrix, ivec));
+  //
+  // Inform the eigenproblem that the operator K is symmetric
+  problem->setHermitian (true);
+  //
+  // Set the number of eigenvalues requested
+  problem->setNEV (nev);
+
+  // Eigensolver parameters
+
+  // Set verbosity level
+  int verbosity = Anasazi::Errors + Anasazi::Warnings + Anasazi::FinalSummary + Anasazi::TimingDetails;
+  /* options to select which eigenvalues to converge to for the chosen operator:
+        "LM" - largest magnitude
+				"LR" - largest real part
+				"LI" - largest imaginary part
+				"SM" - smallest magnitude
+				"SR" - smallest real part
+				"SI" - smallest imaginary part
+  */
+  std::string which("LM");
+  int NumImages = nranks;
+  int numBlocks = 3 * NumImages;
+  int maxRestarts = 50;
+  real_t tol = 1.0e-6;
+  bool insitu = false;
+
+  
+  // Create parameter list to pass into the solver manager
+  Teuchos::ParameterList MyPL;
+  MyPL.set( "Verbosity", verbosity );
+  MyPL.set( "Which", which );
+  MyPL.set( "Block Size", blocksize );
+  MyPL.set( "Num Blocks", numBlocks );
+  MyPL.set( "Maximum Restarts", maxRestarts );
+  MyPL.set( "Convergence Tolerance", tol );
+  MyPL.set( "In Situ Restarting", insitu );
+  //
+  // Create the solver manager
+  Anasazi::BlockDavidsonSolMgr<real_t,MV,OP> MySolverMgr(problem, MyPL);
+
+  // Solve the problem to the specified tolerances or length
+  Anasazi::ReturnType returnCode = MySolverMgr.solve();
+  bool testFailed = false;
+  if (returnCode != Anasazi::Converged) {
+    testFailed = true;
+  }
+
+  // Get the eigenvalues and eigenvectors from the eigenproblem
+  Anasazi::Eigensolution<real_t,MV> sol = problem->getSolution();
+  Teuchos::RCP<MV> evecs = sol.Evecs;
+  int numev = sol.numVecs;
+
+   *fos << "Direct residual norms computed in Tpetra_BlockDavidson_lap_test.exe" << std::endl
+       << std::setw(20) << "Eigenvalue" << std::setw(20) << "Residual  " << std::endl
+       << "----------------------------------------" << std::endl;
+    for (int i=0; i<numev; i++) {
+      *fos << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << std::endl;
+    }
+
+  if(testFailed) return -1;
+  else return 0;
 }
