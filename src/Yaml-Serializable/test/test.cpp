@@ -432,3 +432,85 @@ TEST(YamlSerailizable, NestedTypeDiscrimination) {
         }
     }
 }
+
+
+TEST(YamlSerailizable, NestedTypeDiscriminationStrict) {
+    std::string input = R"(
+    modules:
+      - type: A
+      - type: B
+    )";
+
+    auto container = Yaml::from_string_strict<ContainerOfDiscriminated>(input);
+
+    EXPECT_NE(container.modules.size(), 0);
+
+    std::shared_ptr<DerivedA> m_a;
+    std::shared_ptr<DerivedB> m_b;
+    for (auto m : container.modules) {
+        switch (m->type) {
+            case Module::A:
+                m_a = std::dynamic_pointer_cast<DerivedA>(m);
+                EXPECT_STREQ(m_a->label.c_str(), "DerivedA");
+                break;
+            case Module::B:
+                m_b = std::dynamic_pointer_cast<DerivedB>(m);
+                EXPECT_STREQ(m_b->label.c_str(), "DerivedB");
+                break;
+            default:
+                throw std::runtime_error("Unreachable.");
+        }
+    }
+}
+
+TEST(YamlSerializable, TypeDiscriminatedApply) {
+    std::string input = R"(
+    type: A
+    )";
+
+    std::shared_ptr<TypedBase> base_ptr;
+    Yaml::from_string(input, base_ptr);
+
+    Module m = Module::B;
+    base_ptr->apply(
+        [&](const DerivedA& a) { m = a.type; },
+        [&](const DerivedB& b) { m = b.type; }
+    );
+
+    EXPECT_EQ(m, Module::A);
+}
+
+
+TEST(YamlSerializable, TypeDiscriminatedApplyThrow) {
+    std::string input = R"(
+    type: A
+    )";
+
+    std::shared_ptr<TypedBase> base_ptr;
+    Yaml::from_string(input, base_ptr);
+
+    Module m = Module::B;
+    
+    EXPECT_THROW({
+        base_ptr->apply(
+            [&](const DerivedB& b) { m = b.type; }
+        );
+    }, std::runtime_error);
+}
+
+TEST(YamlSerializable, TypeDiscriminatedTryApplyNoThrow) {
+    std::string input = R"(
+    type: A
+    )";
+
+    std::shared_ptr<TypedBase> base_ptr;
+    Yaml::from_string(input, base_ptr);
+
+    Module m = Module::B;
+    
+    EXPECT_NO_THROW({
+        base_ptr->try_apply(
+            [&](const DerivedB& b) { m = b.type; }
+        );
+    });
+}
