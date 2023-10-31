@@ -45,38 +45,145 @@
 #include "configuration-validation.h"
 #include <memory>
 #include <unordered_map>
+#include <functional>
+
+namespace {
+    template <typename T>
+    constexpr auto static_type_name() {
+        std::string_view name, prefix, suffix;
+    #ifdef __clang__
+        name = __PRETTY_FUNCTION__;
+        prefix = "auto static_type_name() [T = ";
+        suffix = "]";
+    #elif defined(__GNUC__)
+        name = __PRETTY_FUNCTION__;
+        prefix = "constexpr auto static_type_name() [with T = ";
+        suffix = "]";
+    #elif defined(_MSC_VER)
+        name = __FUNCSIG__;
+        prefix = "auto __cdecl static_type_name<";
+        suffix = ">(void)";
+    #endif
+        name.remove_prefix(prefix.size());
+        name.remove_suffix(suffix.size());
+        return name;
+    }
+
+    template<typename F, typename Ret, typename A>
+    A helper(Ret (F::*)(A));
+
+    template<typename F, typename Ret, typename A>
+    A helper(Ret (F::*)(A) const);
+
+    template<typename F>
+    struct first_argument {
+        typedef decltype( helper(&F::operator()) ) type;
+    };
+
+    template<typename T, typename K>
+    void join_keys(std::stringstream& ss, const char* sep, const std::unordered_map<T, K>& map) {
+        std::vector<T> keys;
+        for (const auto& pair : map)
+            keys.push_back(pair.first);
+        for (size_t i = 0; i < keys.size(); i++) {
+            ss << keys[i];
+            if (i < keys.size() - 1)
+                ss << sep;
+        }
+    }
+}
 
 namespace Yaml {
     template<typename Base, typename DiscriminationType>
     struct TypeDiscriminated {
+    private:
+        template<typename T>
+        bool dispatch_known_type(TypeDiscriminated* base, const std::function<void(T)>& f) {
+            try {
+                if constexpr (std::is_pointer<T>::value) {
+                    T cast = dynamic_cast<T>(base);
+                    if (cast == nullptr) return false;
+                    f(cast);
+                } else {
+                    T* cast = dynamic_cast<T*>(base);
+                    if (cast == nullptr) return false;
+                    f(*cast);
+                }
+                return true;
+            } catch (const std::bad_cast&) {
+                return false;
+            }
+        }
+
+        template<typename T>
+        bool dispatch_known_type(TypeDiscriminated* base, const std::function<void(T&)>& f) {
+            try {
+                if constexpr (std::is_pointer<T>::value) {
+                    T cast = dynamic_cast<T>(base);
+                    if (cast == nullptr) return false;
+                    f(cast);
+                } else {
+                    T* cast = dynamic_cast<T*>(base);
+                    if (cast == nullptr) return false;
+                    f(*cast);
+                }
+                return true;
+            } catch (const std::bad_cast&) {
+                return false;
+            }
+        }
+
+        template <typename T> 
+        bool dispatcher(TypeDiscriminated* base, T const& f) {
+            return dispatch_known_type(base, std::function<void(typename first_argument<T>::type)>(f));
+        }
+
+        template <typename T, typename K, typename... Rest>
+        bool dispatcher(TypeDiscriminated* base, T&& f, K&& f2, Rest&&... rest) {
+            return dispatcher(base, f) || dispatcher(base, f2, rest...);
+        }
+
+    public:
         DiscriminationType type;
         
         static std::unique_ptr<Base> deserialize_as_derived(Node& node, bool raw) {
             Base b;
+            // Hardcode required type field for type discriminated structs.
+            if (node["type"].IsNone())
+                throw ConfigurationException("Missing required field `type`");
             deserialize(b, node, raw);
-            if (data().count(b.type) == 0)
-                throw ConfigurationException(
-                    "Could not find registered derived class associated with type discriminator."
-                );
-            return data()[b.type]->deserialize(node, raw);
+
+            const auto& deserialization_map = TypeDiscriminated::data();
+            if (deserialization_map.count(b.type) == 0)
+                throw_invalid_discriminator_exception(b.type);
+            return deserialization_map.at(b.type)->deserialize(node, raw);
         }
 
         static void serialize_as_derived(const Base* b, Node& node) {
-            if (data().count(b->type) == 0)
-                throw ConfigurationException(
-                    "Could not find registered derived class associated with type discriminator."
-                );
+            const auto& serialization_map = TypeDiscriminated::data();
+            if (serialization_map.count(b->type) == 0)
+                throw_invalid_discriminator_exception(b->type);
             
-            data()[b->type]->serialize(b, node);
+            serialization_map.at(b->type)->serialize(b, node);
+        }
+
+        template<typename... Ts>
+        void apply(Ts&&... handlers) {
+            if (!dispatcher(this, handlers...)) {
+                throw std::runtime_error("Unhandled dynamic type: " + std::string(static_type_name<decltype(*this)>()));
+            }
+        }
+
+        template<typename... Ts>
+        void try_apply(Ts&&... handlers) {
+            dispatcher(this, handlers...);
         }
 
         template<typename T, DiscriminationType DiscriminationValue>
         struct Register : virtual Base {
             static bool registerT() {
                 if (TypeDiscriminated::data().count(DiscriminationValue) != 0)
-                    throw ConfigurationException(
-                        "Multiple type discriminated classes have been registered with the same discriminating value."
-                    );
+                    throw_duplicate_descriptor_exception(DiscriminationValue);
                 TypeDiscriminated::data()[DiscriminationValue] = 
                     std::make_unique<DerivedSerializer<T>>(DerivedSerializer<T>());
                 return true;
@@ -86,7 +193,7 @@ namespace Yaml {
             // static variable without this attribute.
             // This is supported on both GNU and Clang
             __attribute__((used)) static bool registered;
-        
+            
             friend T;
         private:
             Register() { this->type = DiscriminationValue; }
@@ -98,6 +205,7 @@ namespace Yaml {
         // Means that you can only derive from this
         // class using CRTP
         friend Base;
+
     private:
         struct AbstractDerivedSerializer {
             virtual std::unique_ptr<Base> deserialize(Node& node, bool raw) = 0;
@@ -130,6 +238,34 @@ namespace Yaml {
             // use.
             static std::unordered_map<DiscriminationType, std::unique_ptr<AbstractDerivedSerializer>> s;
             return s;
+        }
+
+        template<typename T>
+        static void throw_invalid_discriminator_exception(const T& value) {
+            std::stringstream ss;
+            ss << "Could not find registered derived class associated with type: ";
+            ss << value;
+            ss << " (base type: " << static_type_name<Base>() << ")";
+            ss << std::endl;
+            ss << "Allowed values: ";
+            ss << "{";
+            join_keys(ss, ",", data());
+            ss << "}";
+            throw ConfigurationException(ss.str().c_str());
+        }
+
+        template<typename T>
+        static void throw_duplicate_descriptor_exception(const T& value) {
+            std::stringstream ss;
+            ss << "Multiple type discriminated classes have been registered with the same discriminating value: ";
+            ss << value;
+            ss << " (base type: " << static_type_name<Base>() << ")";
+            ss << std::endl;
+            ss << "Registered values: ";
+            ss << "{";
+            join_keys(ss, ",", data());
+            ss << "}";
+            throw ConfigurationException(ss.str().c_str());
         }
     };
 
