@@ -5926,6 +5926,14 @@ int FEA_Module_Elasticity::eigensolve(){
   // Set the number of eigenvalues requested
   problem->setNEV (nev);
 
+  // Inform the eigenproblem that you are done passing it information
+  bool boolret = problem->setProblem ();
+  if (! boolret) {
+      *fos << "Anasazi::BasicEigenproblem::SetProblem() returned with error." << std::endl
+           << "End Result: TEST FAILED" << std::endl;
+    return -1;
+  }
+
   // Eigensolver parameters
 
   // Set verbosity level
