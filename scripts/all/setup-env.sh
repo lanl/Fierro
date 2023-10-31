@@ -2,8 +2,10 @@
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
-    echo "  --machine=<darwin|chicoma|linux|mac>"
+    echo "Required"
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>"
+    echo "Optional"
+    echo "  --machine=<darwin|chicoma|linux|mac>. This argument is optional, default is set to 'linux'"
     echo "  --build_cores=<Integers greater than 0>. This argument is optional, default is set to 1"
     echo "  --help: Display this help message"
     return 1

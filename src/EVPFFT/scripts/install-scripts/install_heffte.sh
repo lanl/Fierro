@@ -1,49 +1,38 @@
 #!/bin/bash -e
 
-# Function to display the help message
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
-    echo "  --machine=<darwin|chicoma|linux|mac>"
     echo "  --heffte_build_type=<fftw|cufft|rocfft>"
-    echo "  --help          : Display this help message"
+    echo "  --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)"
+    echo "  --help: Display this help message"
     return 1
 }
 
-# Check for the number of arguments
-if [ $# -ne 2 ]; then
-    echo "Error: Please provide exactly two arguments."
-    show_help
-    return 1
-fi
-
 # Initialize variables with default values
-machine=""
 heffte_build_type=""
+num_jobs=1
 
 # Define arrays of valid options
-valid_machines=("darwin" "chicoma" "linux" "mac")
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
 
 # Parse command line arguments
 for arg in "$@"; do
     case "$arg" in
-        --machine=*)
-            option="${arg#*=}"
-            if [[ " ${valid_machines[*]} " == *" $option "* ]]; then
-                machine="$option"
-            else
-                echo "Error: Invalid --machine specified."
-                show_help
-                return 1
-            fi
-            ;;
         --heffte_build_type=*)
             option="${arg#*=}"
             if [[ " ${valid_heffte_build_types[*]} " == *" $option "* ]]; then
                 heffte_build_type="$option"
             else
                 echo "Error: Invalid --heffte_build_type specified."
+                show_help
+                return 1
+            fi
+            ;;
+       --num_jobs=*)
+            num_jobs="${arg#*=}"
+            if ! [[ "$num_jobs" =~ ^[0-9]+$ ]]; then
+                echo "Error: Invalid --num_jobs value. Must be a positive integer."
                 show_help
                 return 1
             fi
@@ -60,20 +49,36 @@ for arg in "$@"; do
     esac
 done
 
-# Now you can use $build_type in your code or build commands
-echo "Heffte build type will be: $heffte_build_type"
-
-# Check if the 'heffte' directory exists and is not empty in the parent directory; if not, clone it
-if [ ! -d "${HEFFTE_SOURCE_DIR}" ]; then
-  echo "Directory 'heffte' does not exist in '${basedir}', downloading 'heffte'...."
-  git clone https://github.com/icl-utk-edu/heffte.git ${HEFFTE_SOURCE_DIR}
-else
-  echo "Directory 'heffte' exists in '${HEFFTE_SOURCE_DIR}', skipping 'heffte' download"
+# Check if required options are specified
+if [ -z "$heffte_build_type" ]; then
+    echo "Error: --heffte_build_type is a required option."
+    show_help
+    return 1
 fi
 
-echo "Removing stale heffte build and installation directory since these are machine dependant and don't take long to build/install"
-rm -rf ${HEFFTE_BUILD_DIR} ${HEFFTE_INSTALL_DIR}
-mkdir -p ${HEFFTE_BUILD_DIR} 
+# Now you can use $heffte_build_type in your code or build commands
+echo "Heffte build type will be: $heffte_build_type"
+
+# Determine the script's directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo "Script location: $SCRIPT_DIR"
+
+# Determine the parent directory of the script's directory
+PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
+
+# Check if the 'heffte' directory exists in the parent directory; if not, clone it
+HEFFTE_DIR="$PARENT_DIR/heffte"
+if [ ! -d "$HEFFTE_DIR" ]; then
+  echo "Directory 'heffte' does not exist in '$PARENT_DIR', downloading 'heffte'...."
+  git clone https://github.com/icl-utk-edu/heffte.git "$HEFFTE_DIR"
+else
+  echo "Directory 'heffte' exists in '$PARENT_DIR', skipping 'heffte' download"
+fi
+
+# Define HeFFTe and FFTW directories
+HEFFTE_SOURCE_DIR="$PARENT_DIR/heffte"
+HEFFTE_INSTALL_DIR="$PARENT_DIR/heffte/install_heffte_$heffte_build_type"
+HEFFTE_BUILD_DIR="$PARENT_DIR/heffte/build_heffte_$heffte_build_type"
 
 
 # Configure heffte using CMake
@@ -83,14 +88,12 @@ cmake_options=(
     -D BUILD_SHARED_LIBS=ON
 )
 
-if [ "$heffte_build_type" = "fftw" ] && [ "$machine" != "mac" ]; then
+if [ "$heffte_build_type" = "fftw" ]; then
     cmake_options+=(
-        -D Heffte_ENABLE_AVX=ON
+        #-D Heffte_ENABLE_AVX=ON
+        #-D Heffte_ENABLE_AVX512=ON
         -D Heffte_ENABLE_FFTW=ON
-    )
-elif [ "$heffte_build_type" = "fftw" ] && [ "$machine" = "mac" ]; then
-    cmake_options+=(
-        -D Heffte_ENABLE_FFTW=ON
+        #-D FFTW_ROOT="$FFTW_DIR"
     )
 elif [ "$heffte_build_type" = "cufft" ]; then
     cmake_options+=(
@@ -109,14 +112,15 @@ fi
 echo "CMake Options: ${cmake_options[@]}"
 
 # Configure HeFFTe
-cmake "${cmake_options[@]}" -B "${HEFFTE_BUILD_DIR}" -S "${HEFFTE_SOURCE_DIR}"
+cmake "${cmake_options[@]}" -B "$HEFFTE_BUILD_DIR" -S "$HEFFTE_SOURCE_DIR"
 
 # Build HeFFTe
 echo "Building HeFFTe..."
-make -C ${HEFFTE_BUILD_DIR} -j${EVPFFT_BUILD_CORES}
+make -C "$HEFFTE_BUILD_DIR" -j"$num_jobs"
 
 # Install HeFFTe
 echo "Installing HeFFTe..."
-make -C ${HEFFTE_BUILD_DIR} install
+make -C "$HEFFTE_BUILD_DIR" install
 
 echo "HeFFTe installation complete."
+
