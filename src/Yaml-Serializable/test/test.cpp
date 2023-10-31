@@ -3,6 +3,8 @@
 #include <vector>
 #include <set>
 #include <cmath>
+#include <memory>
+#include <optional>
 
 template<typename T>
 bool compare_vec(std::vector<T> a, std::vector<T> b) {
@@ -43,6 +45,8 @@ TEST(YamlSerialization, IntSerialization) {
     EXPECT_EQ(Yaml::from_string<int>("0"),          0);
     EXPECT_EQ(Yaml::from_string<int>("1e4"),        1);
     EXPECT_EQ(Yaml::from_string<int>("192837123"),  192837123);
+    EXPECT_EQ(*Yaml::from_string<std::shared_ptr<int>>("192837123"),  192837123);
+    EXPECT_EQ(*Yaml::from_string<std::unique_ptr<int>>("192837123"),  192837123);
 
     EXPECT_EQ("1\n",          Yaml::to_string(1));
     // Yaml parser will add quotes cause it has a "-".
@@ -50,6 +54,8 @@ TEST(YamlSerialization, IntSerialization) {
     EXPECT_EQ("0\n",          Yaml::to_string(0));
     EXPECT_EQ("10000\n",      Yaml::to_string(10000));
     EXPECT_EQ("192837123\n",  Yaml::to_string(192837123));
+    EXPECT_EQ("192837123\n",  Yaml::to_string(std::make_shared<int>(192837123)));
+    EXPECT_EQ("192837123\n",  Yaml::to_string(std::make_unique<int>(192837123)));
 }
 
 TEST(YamlSerialization, DoubleSerialization) {
@@ -58,16 +64,22 @@ TEST(YamlSerialization, DoubleSerialization) {
     EXPECT_EQ(Yaml::from_string<double>("0"), 0);
     EXPECT_EQ(Yaml::from_string<double>("1e4"), 10000);
     EXPECT_EQ(Yaml::from_string<double>("192837123"), 192837123);
+    EXPECT_EQ(*Yaml::from_string<std::shared_ptr<double>>("192837123"),  192837123);
+    EXPECT_EQ(*Yaml::from_string<std::unique_ptr<double>>("192837123"),  192837123);
 }
 
 TEST(YamlSerialization, EnumSerialization) {
     EXPECT_EQ(Yaml::from_string<TEST_ENUM>("VALUE_1"),  TEST_ENUM::VALUE_1);
     EXPECT_EQ(Yaml::from_string<TEST_ENUM>("VALUE_2"),  TEST_ENUM::VALUE_2);
     EXPECT_EQ(Yaml::from_string<TEST_ENUM>("VALUE_3"),  TEST_ENUM::VALUE_3);
+    EXPECT_EQ(*Yaml::from_string<std::shared_ptr<TEST_ENUM>>("VALUE_3"), TEST_ENUM::VALUE_3);
+    EXPECT_EQ(*Yaml::from_string<std::unique_ptr<TEST_ENUM>>("VALUE_3"), TEST_ENUM::VALUE_3);
 
     EXPECT_EQ("VALUE_1\n",  Yaml::to_string(TEST_ENUM::VALUE_1));
     EXPECT_EQ("VALUE_2\n",  Yaml::to_string(TEST_ENUM::VALUE_2));
     EXPECT_EQ("VALUE_3\n",  Yaml::to_string(TEST_ENUM::VALUE_3));
+    EXPECT_EQ("VALUE_3\n",  Yaml::to_string(std::make_shared<TEST_ENUM>(TEST_ENUM::VALUE_3)));
+    EXPECT_EQ("VALUE_3\n",  Yaml::to_string(std::make_unique<TEST_ENUM>(TEST_ENUM::VALUE_3)));
 
 
     TEST_ENUM v = TEST_ENUM::VALUE_3;
@@ -106,6 +118,14 @@ TEST(YamlSerialization, VectorSerialization) {
     );
     EXPECT_EQ(
         Yaml::from_string<std::vector<int>>(s_some),
+        v_some
+    );
+    EXPECT_EQ(
+        *Yaml::from_string<std::shared_ptr<std::vector<int>>>(s_some),
+        v_some
+    );
+    EXPECT_EQ(
+        *Yaml::from_string<std::unique_ptr<std::vector<int>>>(s_some),
         v_some
     );
 }
@@ -149,6 +169,45 @@ TEST(YamlSerialization, StructSerialization) {
     EXPECT_TRUE(compare_vec(obj.e, deserialized.e));
 }
 
+TEST(YamlSerialization, StructSerializationSharedPtr) {
+    auto obj = Serializable();
+    obj.a = 5;
+    // I chose some numbers here that are exact float/double representable.
+    // Don't want to worry about that.
+    obj.b = -1.25;
+    obj.c = 0.000001099999963116715662181377410888671875;
+
+    obj.d = std::set<TEST_ENUM> {TEST_ENUM::VALUE_1, TEST_ENUM::VALUE_2};
+    obj.e = std::vector<std::string> { "Hello", "World" };
+
+    std::shared_ptr<Serializable> deserialized = Yaml::from_string<std::shared_ptr<Serializable>>(Yaml::to_string(obj));
+
+    EXPECT_TRUE(obj.a == deserialized->a);
+    EXPECT_TRUE(is_close(obj.b, deserialized->b));
+    EXPECT_TRUE(is_close(obj.c, deserialized->c));
+    EXPECT_TRUE(compare_set(obj.d, deserialized->d));
+    EXPECT_TRUE(compare_vec(obj.e, deserialized->e));
+}
+
+TEST(YamlSerialization, StructSerializationSharedPtrStrict) {
+    auto obj = Serializable();
+    obj.a = 5;
+    // I chose some numbers here that are exact float/double representable.
+    // Don't want to worry about that.
+    obj.b = -1.25;
+    obj.c = 0.000001099999963116715662181377410888671875;
+
+    obj.d = std::set<TEST_ENUM> {TEST_ENUM::VALUE_1, TEST_ENUM::VALUE_2};
+    obj.e = std::vector<std::string> { "Hello", "World" };
+
+    std::shared_ptr<Serializable> deserialized = Yaml::from_string_strict<std::shared_ptr<Serializable>>(Yaml::to_string(obj));
+
+    EXPECT_TRUE(obj.a == deserialized->a);
+    EXPECT_TRUE(is_close(obj.b, deserialized->b));
+    EXPECT_TRUE(is_close(obj.c, deserialized->c));
+    EXPECT_TRUE(compare_set(obj.d, deserialized->d));
+    EXPECT_TRUE(compare_vec(obj.e, deserialized->e));
+}
 struct Derived : Serializable {
     Serializable f; // This is pretty weird but whatever.
 
@@ -368,8 +427,9 @@ SERIALIZABLE_ENUM(Module, A, B)
 
 struct TypedBase : Yaml::TypeDiscriminated<TypedBase, Module> {
     virtual ~TypedBase() = default;
+    std::optional<int> field;
 };
-IMPL_YAML_SERIALIZABLE_FOR(TypedBase, type)
+IMPL_YAML_SERIALIZABLE_FOR(TypedBase, type, field)
 
 struct DerivedA : TypedBase::Register<DerivedA, Module::A> {
     std::string label = "DerivedA";
@@ -463,6 +523,20 @@ TEST(YamlSerailizable, NestedTypeDiscriminationStrict) {
     }
 }
 
+TEST(YamlSerializable, DirectDiscriminatedSerialization) {
+    std::string input = R"(
+    type: A
+    field: 1
+    )";
+
+    std::shared_ptr<DerivedA> m_a;
+    Yaml::from_string_strict(input, m_a);
+
+    EXPECT_EQ(m_a->type,  Module::A);
+    EXPECT_EQ(m_a->field.value(), 1);
+    EXPECT_STREQ(m_a->label.c_str(), "DerivedA");
+}
+
 TEST(YamlSerializable, TypeDiscriminatedApply) {
     std::string input = R"(
     type: A
@@ -514,3 +588,4 @@ TEST(YamlSerializable, TypeDiscriminatedTryApplyNoThrow) {
         );
     });
 }
+
