@@ -2804,7 +2804,8 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
-
+  real_t unit_scaling = simparam.unit_scaling;
+  bool topology_optimization_on = simparam_TO.topology_optimization_on;
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;
@@ -2924,7 +2925,14 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
     //std::cout << "Current Density " << current_density << std::endl;
 
     //look up element material properties at this point as a function of density
-    Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
+    if(topology_optimization_on){
+      Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
+    }
+    else{
+      Element_Modulus = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
+      Poisson_Ratio = simparam.Poisson_Ratio;
+    }
+    
     Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5-Poisson_Ratio;
     Pressure_Term = 1 - Poisson_Ratio;
