@@ -5910,11 +5910,84 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
 
 int FEA_Module_Elasticity::eigensolve(){
   int blocksize = 3;
-  int nev = 10;
+  int nev = 3;
+  int num_dim = simparam.num_dims;
+  GO global_index, global_dof_index;
+  LO local_dof_index;
+  size_t local_nrows = nlocal_nodes*num_dim;
+  size_t access_index, row_access_index, row_counter;
 
   // Create initial vectors
-  Teuchos::RCP<MV> ivec = Teuchos::rcp (new MV (map,blocksize));
+  Teuchos::RCP<MV> ivec = Teuchos::rcp (new MV (local_dof_map,blocksize));
   ivec->randomize ();
+
+  Original_Stiffness_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(local_nrows);
+
+  //debug print of A matrix before applying BCS
+  //*fos << "Reduced Stiffness Matrix :" << std::endl;
+  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Stiffness_Matrix, "A_matrix", "Stores stiffness matrix values");
+
+  //first pass counts strides for storage
+  if(!matrix_bc_reduced){
+    for(LO i=0; i < local_nrows; i++){
+      Original_Stiffness_Entries_Strides(i) = 0;
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        Original_Stiffness_Entries_Strides(i) = Stiffness_Matrix_Strides(i);
+      }
+      else{
+        for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+          global_dof_index = DOF_Graph_Matrix(i,j);
+          local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+          if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+            Original_Stiffness_Entries_Strides(i)++;
+          }
+        }//stride for
+      }
+    }//row for
+    
+    //assign old stiffness matrix entries
+    LO stride_index;
+    Original_Stiffness_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+    Original_Stiffness_Entry_Indices = RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+    Original_Mass_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+    for(LO i=0; i < local_nrows; i++){
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+          global_dof_index = DOF_Graph_Matrix(i,j);
+          local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+          Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
+          Original_Mass_Entries(i,j) = Mass_Matrix(i,j);
+          Original_Stiffness_Entry_Indices(i,j) = j;
+          if(local_dof_index == i){
+            Stiffness_Matrix(i,j) = 0;
+            Mass_Matrix(i,j) = 1;
+          }
+          else{     
+            Mass_Matrix(i,j) = Stiffness_Matrix(i,j) = 0;
+          }
+        }//stride for
+      }
+      else{
+        stride_index = 0;
+        for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+          global_dof_index = DOF_Graph_Matrix(i,j);
+          local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+          if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+            Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
+            Original_Mass_Entries(i,stride_index) = Mass_Matrix(i,j);
+            Original_Stiffness_Entry_Indices(i,stride_index) = j;   
+            Mass_Matrix(i,j) = Stiffness_Matrix(i,j) = 0;
+            stride_index++;
+          }
+        }
+      }
+    }//row for
+
+    matrix_bc_reduced = true;
+  }
 
   // Create eigenproblem; note that OP can be a matrix type or a preconditioner operator type (as long as it inherits from Tpetra::Operator)
   Teuchos::RCP<Anasazi::BasicEigenproblem<real_t,MV,OP> > problem =
@@ -5985,6 +6058,18 @@ int FEA_Module_Elasticity::eigensolve(){
     for (int i=0; i<numev; i++) {
       *fos << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << std::endl;
     }
+
+  //reinsert global stiffness and mass values corresponding to BC indices to facilitate future calculation
+  if(matrix_bc_reduced){
+    for(LO i = 0; i < local_nrows; i++){
+      for(LO j = 0; j < Original_Stiffness_Entries_Strides(i); j++){
+        access_index = Original_Stiffness_Entry_Indices(i,j);
+        Stiffness_Matrix(i,access_index) = Original_Stiffness_Entries(i,j);
+        Mass_Matrix(i,access_index) = Original_Mass_Entries(i,j);
+      }
+    }//row for
+    matrix_bc_reduced = false;
+  }
 
   if(testFailed) return -1;
   else return 0;

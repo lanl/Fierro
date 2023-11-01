@@ -162,6 +162,7 @@ public:
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
   RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Stiffness_Entries;
+  RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Mass_Entries;
   RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Stiffness_Entry_Indices;
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Stiffness_Entries_Strides;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_RHS_Entries;
