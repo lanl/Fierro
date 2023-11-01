@@ -282,7 +282,7 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix(){
 void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam.get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam.optimization_options.value().density_epsilon;
+  real_t density_epsilon = simparam.optimization_options.density_epsilon;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
@@ -299,7 +299,7 @@ void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, re
 void FEA_Module_Dynamic_Elasticity::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
   real_t unit_scaling = simparam.get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam.optimization_options.value().density_epsilon;
+  real_t density_epsilon = simparam.optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power - 1; i++)
@@ -322,7 +322,7 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
   
   const_host_vec_array all_node_densities;
   if(nodal_density_flag){
-    if(simparam.optimization_options.value().helmholtz_filter)
+    if(simparam.optimization_options.density_filter == DENSITY_FILTER::hemlholtz_filter)
       all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     else
       all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);

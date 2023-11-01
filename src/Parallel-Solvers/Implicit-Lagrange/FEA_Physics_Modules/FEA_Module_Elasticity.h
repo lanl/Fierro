@@ -64,7 +64,7 @@ class Implicit_Solver;
 class FEA_Module_Elasticity: public FEA_Module{
 
 public:
-  FEA_Module_Elasticity(std::shared_ptr<FEA_Module_Parameters> parameters, Solver *Solver_Pointer, const int my_fea_module_index = 0);
+  FEA_Module_Elasticity(Elasticity_Parameters& in_params, Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads

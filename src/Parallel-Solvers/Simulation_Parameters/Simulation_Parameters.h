@@ -13,28 +13,30 @@
 #include "MeshBuilderInput.h"
 #include <optional>
 #include <set>
+#include <vector>
 #include <memory>
+
 
 SERIALIZABLE_ENUM(SOLVER_TYPE, Explicit, Implicit)
 SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
-SERIALIZABLE_ENUM(FUNCTION_TYPE,
-  OBJECTIVE, 
-  MULTI_OBJECTIVE_TERM, 
-  EQUALITY_CONSTRAINT, 
-  INEQUALITY_CONSTRAINT, 
-  VECTOR_EQUALITY_CONSTRAINT, 
-  VECTOR_INEQUALITY_CONSTRAINT
-)
+// SERIALIZABLE_ENUM(FUNCTION_TYPE,
+//   OBJECTIVE, 
+//   MULTI_OBJECTIVE_TERM, 
+//   EQUALITY_CONSTRAINT, 
+//   INEQUALITY_CONSTRAINT, 
+//   VECTOR_EQUALITY_CONSTRAINT, 
+//   VECTOR_INEQUALITY_CONSTRAINT
+// )
 
-SERIALIZABLE_ENUM(TO_MODULE_TYPE,
-  Kinetic_Energy_Minimize,
-  Multi_Objective,
-  Heat_Capacity_Potential_Minimize,
-  Strain_Energy_Minimize,
-  Mass_Constraint,
-  Moment_of_Inertia_Constraint,
-  Heat_Capacity_Potential_Constraint
-)
+// SERIALIZABLE_ENUM(TO_MODULE_TYPE,
+//   Kinetic_Energy_Minimize,
+//   Multi_Objective,
+//   Heat_Capacity_Potential_Minimize,
+//   Strain_Energy_Minimize,
+//   Mass_Constraint,
+//   Moment_of_Inertia_Constraint,
+//   Heat_Capacity_Potential_Constraint
+// )
 
 SERIALIZABLE_ENUM(SIMULATION_FIELD,
     design_density,
@@ -49,20 +51,22 @@ struct Simulation_Parameters
         Yaml::DerivedFields,
         Yaml::ValidatedYaml {
     int num_dims = 3;
+    int num_gauss_points = 2;
     std::optional<Input_Options> input_options;
     std::optional<std::shared_ptr<MeshBuilderInput>> mesh_generation_options;
+    TIMER_VERBOSITY timer_output_level = TIMER_VERBOSITY::standard;
     Output_Options output_options;
-    TIMER_VERBOSITY timer_output_level;
-    int num_gauss_points = 2;
 
     std::vector<Region> regions;
     std::vector<Material> materials;
     std::vector<std::shared_ptr<FEA_Module_Parameters>> fea_module_parameters;
-    std::optional<Optimization_Options> optimization_options;
-    bool nodal_density_flag = false;
+    Optimization_Options optimization_options;
+    bool nodal_density_flag = true;
     bool thick_condition_boundary = true;
 
     std::vector<SIMULATION_FIELD> output_fields;
+    bool gravity_flag = false;
+    std::vector<double> gravity_vector {9.81, 0, 0};
 
     // Non-serialized fields
     // TODO: implement restart files.
@@ -75,6 +79,9 @@ struct Simulation_Parameters
     std::vector<int> TO_Module_My_FEA_Module;
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules;
     std::vector<std::vector<double>> Function_Arguments;
+
+    std::vector<int> Multi_Objective_Modules;
+    std::vector<double> Multi_Objective_Weights;
 
     //Topology Optimization flags
     bool topology_optimization_on = false;
@@ -100,43 +107,81 @@ struct Simulation_Parameters
         global_vars.update_device();
     }
 
-    void derive_from_optimization_options() {
-        if (!optimization_options.has_value())
-            return;
-        auto options = optimization_options.value();
-
-        shape_optimization_on = options.optimization_process == OPTIMIZATION_PROCESS::shape_optimization;
-        topology_optimization_on = options.optimization_process == OPTIMIZATION_PROCESS::topology_optimization;
-
-        TO_Module_List.resize(options.constraints.size());
-        TO_Function_Type.resize(options.constraints.size());
-        Function_Arguments.resize(options.constraints.size());
-
-        for (size_t i = 0; i < options.constraints.size(); i++) {
-        auto constraint = options.constraints[i];
-
-        // TODO: This whole thing is pretty messed up.
-        // Both FEA Modules and TO_Modules really need to be structs
-        // of their own. ATM we are assuming a lot about the input.
-        // If the constraints aren't set correctly, we will end up with a lot
-        // of duplicate/ill defined TO module specifications.
-        if (constraint.type == CONSTRAINT_TYPE::mass)
-            TO_Module_List[i] = TO_MODULE_TYPE::Mass_Constraint;
-        if (constraint.relation == RELATION::equality)
-            TO_Function_Type[i] = FUNCTION_TYPE::EQUALITY_CONSTRAINT;
-        if (constraint.value.has_value())
-            Function_Arguments[i] = { constraint.value.value() };
+    void derive_objective_module() {
+        switch (optimization_options.optimization_objective) {
+        case OPTIMIZATION_OBJECTIVE::minimize_compliance:
+            add_TO_module(TO_MODULE_TYPE::Strain_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            break;
+        case OPTIMIZATION_OBJECTIVE::minimize_thermal_resistance:
+            add_TO_module(TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            break;
+        case OPTIMIZATION_OBJECTIVE::minimize_kinetic_energy:
+            add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+            break;
+        case OPTIMIZATION_OBJECTIVE::multi_objective:
+            add_TO_module(TO_MODULE_TYPE::Multi_Objective, FUNCTION_TYPE::OBJECTIVE, {});
+            derive_multi_objectives();
+            break;
+        default:
+            throw Yaml::ConfigurationException("Unsupported optimization objective " + to_string(optimization_options.optimization_objective));
         }
-
-        switch (options.optimization_objective) {
-            case OPTIMIZATION_OBJECTIVE::minimize_kinetic_energy:
-                add_TO_module(TO_MODULE_TYPE::Kinetic_Energy_Minimize, FUNCTION_TYPE::OBJECTIVE, {});
+    }
+    void derive_multi_objectives() {
+        if (optimization_options.optimization_objective != OPTIMIZATION_OBJECTIVE::multi_objective)
+            return;
+        
+        for (auto mod : optimization_options.multi_objective_modules) {
+            TO_MODULE_TYPE to_type;
+            switch (mod.type) {
+            case OPTIMIZATION_OBJECTIVE::minimize_compliance:
+                to_type = TO_MODULE_TYPE::Strain_Energy_Minimize;
+                break;
+            case OPTIMIZATION_OBJECTIVE::minimize_thermal_resistance:
+                to_type = TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize;
                 break;
             default:
-                throw Yaml::ConfigurationException("Unsupported optimization objective " 
-                    + to_string(options.optimization_objective)
-                );
+                throw Yaml::ConfigurationException("Unsupported sub-objective " + to_string(mod.type));
+            }
+            Multi_Objective_Modules.push_back(TO_Module_List.size());
+            Multi_Objective_Weights.push_back(mod.weight_coefficient);
+            add_TO_module(to_type, FUNCTION_TYPE::MULTI_OBJECTIVE_TERM, {});
         }
+    }
+    void derive_constraint_modules() {
+        for (auto constraint : optimization_options.constraints) {
+            FUNCTION_TYPE f_type;
+            switch (constraint.relation) {
+            case RELATION::equality:
+                f_type = FUNCTION_TYPE::EQUALITY_CONSTRAINT;
+                break;
+            default:
+                throw Yaml::ConfigurationException("Unsupported relation " + to_string(constraint.relation));
+            }
+
+            switch (constraint.type) {
+            case CONSTRAINT_TYPE::mass:
+                add_TO_module(
+                    TO_MODULE_TYPE::Mass_Constraint, 
+                    f_type, 
+                    {constraint.value}
+                );
+                break;
+            case CONSTRAINT_TYPE::moment_of_inertia:
+                add_TO_module(
+                    TO_MODULE_TYPE::Moment_of_Inertia_Constraint, 
+                    f_type, 
+                    {constraint.value, (double)component_to_int(constraint.component.value())}
+                );
+                break;
+            default:
+                throw Yaml::ConfigurationException("Unsupported constraint type " + to_string(constraint.type));
+            }
+        }
+    }
+
+    void derive_optimization_process() {
+        topology_optimization_on = optimization_options.optimization_process == OPTIMIZATION_PROCESS::topology_optimization;
+        shape_optimization_on    = optimization_options.optimization_process == OPTIMIZATION_PROCESS::shape_optimization;
     }
 
     void map_TO_to_FEA() {
@@ -150,16 +195,19 @@ struct Simulation_Parameters
         // instead of this vector stuff.
         for (size_t to_index = 0; to_index < TO_Module_List.size(); to_index++) {
             auto to_module = TO_Module_List[to_index];
-            size_t fea_index = find_module(get_TO_module_dependency(to_module));
-
-            TO_Module_My_FEA_Module[to_index] = fea_index;
-            FEA_Module_My_TO_Modules[fea_index].push_back(to_index);
+            auto fea_index = find_TO_module_dependency(to_module);
+            if (!fea_index.has_value())
+                continue;
+            TO_Module_My_FEA_Module[to_index] = fea_index.value();
+            FEA_Module_My_TO_Modules[fea_index.value()].push_back(to_index);
         }
     }
     
     void derive() {
         ensure_module(std::make_shared<Inertial_Parameters>());
-        derive_from_optimization_options();
+        derive_objective_module();
+        derive_constraint_modules();
+        derive_optimization_process();
         map_TO_to_FEA();
 
         mtr::from_vector(mat_fill, regions);
@@ -195,7 +243,7 @@ struct Simulation_Parameters
 
     void validate_element_type() {
         if (!input_options.has_value())
-        return;
+            return;
         auto et = input_options.value().element_type;
         bool invalid_et = 
             (et == ELEMENT_TYPE::quad4 || et == ELEMENT_TYPE::quad8 || et == ELEMENT_TYPE::quad12) && num_dims == 3;
@@ -214,35 +262,37 @@ struct Simulation_Parameters
         validate_element_type();
         // Check that the FEA module dependencies are satisfied.
         for (auto to_module : TO_Module_List)
-            validate_module_is_specified(get_TO_module_dependency(to_module)); 
+            find_TO_module_dependency(to_module);
     }
 
     void add_TO_module(TO_MODULE_TYPE type, FUNCTION_TYPE function_type, std::vector<double> arguments) {
-        if (std::find(TO_Module_List.begin(), TO_Module_List.end(), type) != TO_Module_List.end())
-            return; // Already have it.
-        
         TO_Module_List.push_back(type);
         TO_Function_Type.push_back(function_type);
         Function_Arguments.push_back(arguments);
     }
 
-    FEA_MODULE_TYPE get_TO_module_dependency(TO_MODULE_TYPE type) const {
-        switch (type) {
-        case TO_MODULE_TYPE::Kinetic_Energy_Minimize:
-            return FEA_MODULE_TYPE::SGH;
-        case TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize:
-            return FEA_MODULE_TYPE::Heat_Conduction;
-        case TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint:
-            return FEA_MODULE_TYPE::Heat_Conduction;
-        case TO_MODULE_TYPE::Mass_Constraint:
-            return FEA_MODULE_TYPE::Inertial;
-        case TO_MODULE_TYPE::Moment_of_Inertia_Constraint:
-            return FEA_MODULE_TYPE::Inertial;
-        default:
-            throw Yaml::ConfigurationException(
-            "Unsupported optimization module type " + to_string(type)
-            );
-        }
+    /**
+     * Returns the index of the FEA dependency found in the 
+     * FEA_Module_List vector. 
+     * 
+     * If dependencies are not satisfied, an exception will be thrown.
+     * If there are no dependencies, std::nullopt will be returned.
+     */
+    std::optional<size_t> find_TO_module_dependency(TO_MODULE_TYPE type) {
+        const static std::unordered_map<TO_MODULE_TYPE, FEA_MODULE_TYPE> map {
+            {TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize,      FEA_MODULE_TYPE::Heat_Conduction},
+            {TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint,    FEA_MODULE_TYPE::Heat_Conduction},
+            {TO_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize, FEA_MODULE_TYPE::Heat_Conduction},
+            {TO_MODULE_TYPE::Mass_Constraint,                       FEA_MODULE_TYPE::Inertial       },
+            {TO_MODULE_TYPE::Moment_of_Inertia_Constraint,          FEA_MODULE_TYPE::Inertial       },
+            {TO_MODULE_TYPE::Strain_Energy_Minimize,                FEA_MODULE_TYPE::Elasticity     },
+            {TO_MODULE_TYPE::Strain_Energy_Constraint,              FEA_MODULE_TYPE::Elasticity     },
+            {TO_MODULE_TYPE::Kinetic_Energy_Minimize,               FEA_MODULE_TYPE::SGH            },
+        };
+        if (map.count(type) == 0)
+            return {};
+        validate_module_is_specified(map.at(type));
+        return find_module(map.at(type));
     }
 
     /**
@@ -299,6 +349,7 @@ struct Simulation_Parameters
 IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters, type, 
     num_dims, input_options, output_options, materials, regions,
     timer_output_level, fea_module_parameters, optimization_options,
-    nodal_density_flag, thick_condition_boundary, num_gauss_points, output_fields
+    nodal_density_flag, thick_condition_boundary, num_gauss_points, output_fields,
+    gravity_flag, gravity_vector
 )
 #endif

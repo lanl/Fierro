@@ -25,7 +25,7 @@ void FEA_Module_Dynamic_Elasticity::boundary_velocity(const mesh_t &mesh,
         FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
                 
             // reflected (boundary array is on the device)
-            if (boundary(bdy_set).condition_type == BOUNDARY_CONDITION_TYPE::reflected){
+            if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::reflected){
             
                 // directions with hydro_bc:
                 // x_plane  = 0,
@@ -39,7 +39,7 @@ void FEA_Module_Dynamic_Elasticity::boundary_velocity(const mesh_t &mesh,
                 node_vel(rk_level, bdy_node_gid, direction) = 0.0;
                         
             }
-            else if (boundary(bdy_set).condition_type == BOUNDARY_CONDITION_TYPE::fixed_position){
+            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::fixed_position){
                 
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                 
@@ -52,7 +52,7 @@ void FEA_Module_Dynamic_Elasticity::boundary_velocity(const mesh_t &mesh,
                 }
                 
             }
-            else if (boundary(bdy_set).condition_type == BOUNDARY_CONDITION_TYPE::velocity){
+            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::velocity){
     
                 size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
     

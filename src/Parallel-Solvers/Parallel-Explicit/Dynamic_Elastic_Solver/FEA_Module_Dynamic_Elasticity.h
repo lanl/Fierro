@@ -55,7 +55,7 @@ class FEA_Module_Dynamic_Elasticity: public FEA_Module {
 
 public:
   
-  FEA_Module_Dynamic_Elasticity(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, Dynamic_Elasticity_Parameters params, const int my_fea_module_index = 0);
+  FEA_Module_Dynamic_Elasticity( Dynamic_Elasticity_Parameters& params, Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
   ~FEA_Module_Dynamic_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads

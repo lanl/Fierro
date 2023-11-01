@@ -170,7 +170,6 @@ void Explicit_Solver::run() {
 
   //initialize Trilinos communicator class
   comm = Tpetra::getDefaultComm();
-  int num_dim = simparam.num_dims;
   
   if (simparam.input_options.has_value()) {
     const Input_Options& input_options = simparam.input_options.value();
@@ -1049,32 +1048,26 @@ void Explicit_Solver::FEA_module_setup(){
   //allocate lists to size
   fea_module_types = std::vector<FEA_MODULE_TYPE>();
   fea_modules = std::vector<FEA_Module*>();
-  bool module_found = false;
 
   for (auto& param : simparam.fea_module_parameters) {
     fea_module_types.push_back(param->type);
-
-    switch (param->type) {
-    case FEA_MODULE_TYPE::SGH:
-      sgh_module = new FEA_Module_SGH(this, mesh, *std::dynamic_pointer_cast<SGH_Parameters>(param));
-      fea_modules.push_back(sgh_module);
-      break;
-    case FEA_MODULE_TYPE::Dynamic_Elasticity:
-      fea_modules.push_back(
-        new FEA_Module_Dynamic_Elasticity(this, mesh, *std::dynamic_pointer_cast<Dynamic_Elasticity_Parameters>(param))
-      );
-      break;
-    case FEA_MODULE_TYPE::Inertial:
-      fea_modules.push_back(
-        new FEA_Module_Inertial(this, *std::dynamic_pointer_cast<Inertial_Parameters>(param))
-      );
-      break;
-    default:
-      // TODO: This should be validated earlier.
-      *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" 
-            << param->type <<"\"" << std::endl;
-      exit_solver(0);
-    }
+    param->apply(
+      [&](SGH_Parameters& param) {
+        sgh_module = new FEA_Module_SGH(param, this, mesh);
+        fea_modules.push_back(sgh_module);
+      },
+      [&](Dynamic_Elasticity_Parameters& param) {
+        fea_modules.push_back(new FEA_Module_Dynamic_Elasticity(param, this, mesh));
+      },
+      [&](Inertial_Parameters& param) {
+        fea_modules.push_back(new FEA_Module_Inertial(param, this));
+      },
+      [&](const FEA_Module_Parameters& param) {
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" 
+            << param.type <<"\"" << std::endl;
+        exit_solver(0);
+      }
+    );
 
     *fos << " " << fea_module_types.back() << " MODULE ALLOCATED AS " << fea_module_types.size() - 1 << std::endl;
   }
@@ -1274,7 +1267,7 @@ void Explicit_Solver::setup_optimization_problem(){
     //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
     for(int inode = 0; inode < nlocal_nodes; inode++){
       node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = simparam.optimization_options.value().density_epsilon;
+      node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
 
     }
     //set lower bounds for nodes on surfaces with boundary and loading conditions
@@ -1352,7 +1345,7 @@ void Explicit_Solver::setup_optimization_problem(){
     vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
     for(int ielem = 0; ielem < rnum_elem; ielem++){
       Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = simparam.optimization_options.value().density_epsilon;
+      Element_Densities_Lower_Bound(ielem,0) = simparam.optimization_options.density_epsilon;
     }
 
     //create global vector
@@ -1837,17 +1830,6 @@ void Explicit_Solver::parallel_tecplot_writer(){
   int temp_convert;
   int noutput, nvector;
   bool displace_geometry = false;
-   /*
-  int displacement_index;
-  if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-    displacement_index = fea_modules[displacement_module]->displacement_index;
-  }
-  
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->compute_output();
-  }
-  */
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   
@@ -2086,17 +2068,6 @@ void Explicit_Solver::parallel_vtk_writer(){
   int buffer_size_per_node_line;
   int nlocal_sorted_nodes;
   GO first_node_global_id;
-   /*
-  int displacement_index;
-  if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-    displacement_index = fea_modules[displacement_module]->displacement_index;
-  }
-  
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->compute_output();
-  }
-  */
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   
@@ -2537,16 +2508,6 @@ void Explicit_Solver::tecplot_writer(){
   bool displace_geometry = false;
   const_host_vec_array current_collected_output;
   int displacement_index;
-  /*
-  if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-    displacement_index = fea_modules[displacement_module]->displacement_index;
-  }
-  
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->compute_output();
-  }
-  */
   collect_information();
   //set host views of the collected data to print out from
   const_host_vec_array collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);

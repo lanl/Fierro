@@ -75,7 +75,7 @@ using namespace utils;
 
 
 FEA_Module_Inertial::FEA_Module_Inertial(
-      Solver *Solver_Pointer, Inertial_Parameters params,
+      Inertial_Parameters& params, Solver *Solver_Pointer,
       const int my_fea_module_index)
     : FEA_Module(Solver_Pointer) {
   

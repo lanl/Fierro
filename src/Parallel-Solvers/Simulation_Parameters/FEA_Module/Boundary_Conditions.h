@@ -24,6 +24,7 @@ SERIALIZABLE_ENUM(BOUNDARY_CONDITION_TYPE,
 struct Surface {
     BOUNDARY_TYPE type;
     double plane_position;
+    
     KOKKOS_FUNCTION
     size_t planar_surface_index() {
       switch (type) {
@@ -45,22 +46,22 @@ IMPL_YAML_SERIALIZABLE_FOR(Surface, type, plane_position)
 
 
 struct boundary_t {
-    BOUNDARY_CONDITION_TYPE condition_type = BOUNDARY_CONDITION_TYPE::fixed_position;
+    BOUNDARY_CONDITION_TYPE type = BOUNDARY_CONDITION_TYPE::fixed_position;
     Surface surface;
     double value;
     double u, v, w;
 };
 
 struct Boundary_Condition {
-    BOUNDARY_CONDITION_TYPE condition_type;
+    BOUNDARY_CONDITION_TYPE type;
     Surface surface;
     double value;
     // TODO: these should probably just be value
     std::optional<double> temperature_value;
     std::optional<double> displacement_value;
 };
-YAML_ADD_REQUIRED_FIELDS_FOR(Boundary_Condition, surface, condition_type)
+YAML_ADD_REQUIRED_FIELDS_FOR(Boundary_Condition, surface, type)
 IMPL_YAML_SERIALIZABLE_FOR(Boundary_Condition,
-  surface, value, condition_type, 
+  surface, value, type, 
   temperature_value, displacement_value
 )

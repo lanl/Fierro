@@ -61,7 +61,6 @@ void solver_setup(const char* filename){
   }
 
   Explicit_Solver solver(*std::dynamic_pointer_cast<Simulation_Parameters_Explicit>(simparam));
-  std::cout << Yaml::to_string(simparam) << std::endl;
   //checks for optional solver routines
   if(solver.setup_flag) solver.solver_setup();
   // invoke solver's run function (should perform most of the computation)

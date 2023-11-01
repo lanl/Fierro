@@ -47,6 +47,9 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer) {
   Solver_Pointer_ = Solver_Pointer;
   simparam = Solver_Pointer->simparam;
 
+  num_dim = simparam.num_dims;
+  num_gauss_points = simparam.num_gauss_points;
+
   //obtain global and local node and element counts
   num_nodes = Solver_Pointer->num_nodes;
   num_elem = Solver_Pointer->num_elem;
@@ -120,7 +123,6 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer) {
 
   //output data
   noutput = 0;
-  displaced_mesh_flag = false;
 }
 
 FEA_Module::~FEA_Module() {}

@@ -15,6 +15,7 @@ SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
     Elasticity,
     Inertial,
     Heat_Conduction,
+    Thermo_Elastic,
     SGH,
     Eulerian,
     Dynamic_Elasticity
@@ -30,7 +31,9 @@ SERIALIZABLE_ENUM(FIELD,
     sound_speed,
     material_id,
     user_vars,
-    stress
+    stress,
+    strain,
+    displacement
 )
 
 struct FEA_Module_Parameters 
@@ -49,7 +52,7 @@ struct FEA_Module_Parameters
         mtr::from_vector(loading, loading_conditions);
         mtr::from_vector(boundary, boundary_conditions);
     }
-
+    
     // Implement default copy constructor to avoid the compiler double moving.
     // Let it double copy instead.
     FEA_Module_Parameters& operator=(const FEA_Module_Parameters&) = default;

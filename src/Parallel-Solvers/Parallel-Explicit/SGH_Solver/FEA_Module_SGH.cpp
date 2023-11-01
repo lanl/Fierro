@@ -101,8 +101,8 @@ using namespace utils;
 
 
 FEA_Module_SGH::FEA_Module_SGH(
-    Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, 
-    SGH_Parameters params, const int my_fea_module_index) 
+    SGH_Parameters& params, Solver *Solver_Pointer, 
+    std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index) 
   : FEA_Module(Solver_Pointer) {
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
@@ -558,10 +558,9 @@ void FEA_Module_SGH::output_control(){
 
 void FEA_Module_SGH::init_output(){
   //check user parameters for output
-  bool output_velocity_flag = simparam.graphics_options.output_velocity_flag;
-  displaced_mesh_flag = simparam.graphics_options.displaced_mesh_flag;
-  bool output_strain_flag = simparam.graphics_options.output_strain_flag;
-  bool output_stress_flag = simparam.graphics_options.output_stress_flag;
+  bool output_velocity_flag = simparam.output_options.output_velocity;
+  bool output_strain_flag = simparam.output_options.output_strain;
+  bool output_stress_flag = simparam.output_options.output_stress;
   int num_dim = simparam.num_dims;
   int Brows;
   if(num_dim==3) Brows = 6;
@@ -1766,8 +1765,8 @@ void FEA_Module_SGH::sgh_solve(){
     dt_max = dynamic_options.dt_max;
     dt_min = dynamic_options.dt_min;
     dt_cfl = dynamic_options.dt_cfl;
-    graphics_time = simparam.output_options.graphics_step;
-    graphics_dt_ival = simparam.output_options.graphics_step;
+    graphics_time = simparam.graphics_options.graphics_step;
+    graphics_dt_ival = simparam.graphics_options.graphics_step;
     cycle_stop = dynamic_options.cycle_stop;
     rk_num_stages = dynamic_options.rk_num_stages;
     dt = dynamic_options.dt;

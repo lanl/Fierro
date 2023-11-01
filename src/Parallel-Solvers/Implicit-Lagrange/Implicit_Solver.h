@@ -41,7 +41,7 @@
 #include "Solver.h"
 #include "Tpetra_computeRowAndColumnOneNorms_decl.hpp"
 #include "Tpetra_Details_EquilibrationInfo.hpp"
-#include "Simulation_Parameters/Simulation_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters_Implicit.h"
 
 //#include <Xpetra_Operator.hpp>
 //#include <MueLu.hpp>
@@ -67,10 +67,10 @@ namespace Xpetra{
 class Implicit_Solver: public Solver{
 
 public:
-  Implicit_Solver();
+  Implicit_Solver(Simulation_Parameters_Implicit& params);
   ~Implicit_Solver();
 
-  void run(int argc, char *argv[]);
+  void run();
 
   //void read_mesh_ensight(char *MESH, bool convert_node_order);
 

@@ -1187,7 +1187,7 @@ void FEA_Module_SGH::init_assembly(){
   size_t max_stride = 0;
   size_t nodes_per_element;
   nodal_density_flag = simparam.nodal_density_flag;
-  penalty_power = simparam.optimization_options.value().simp_penalty_power;
+  penalty_power = simparam.optimization_options.simp_penalty_power;
   
   //allocate stride arrays
   CArrayKokkos <size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
@@ -1540,7 +1540,7 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
         FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
                 
             // reflected (boundary array is on the device)
-            if (boundary(bdy_set).condition_type == BOUNDARY_CONDITION_TYPE::reflected){
+            if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::reflected){
             
                 // directions with hydro_bc:
                 // x_plane  = 0,
@@ -1556,7 +1556,7 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
                 //node_phi_adjoint(bdy_node_gid, direction) = 0.0;
                         
             }
-            else if (boundary(bdy_set).condition_type == BOUNDARY_CONDITION_TYPE::fixed_position){
+            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::fixed_position){
                 
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                 

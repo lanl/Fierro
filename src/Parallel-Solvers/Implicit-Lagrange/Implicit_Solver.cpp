@@ -67,9 +67,10 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters/Simulation_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters_Implicit.h"
 #include "Simulation_Parameters/FEA_Module/FEA_Module_Headers.h"
 #include "Implicit_Solver.h"
+#include "FEA_Modules_Headers.h"
 
 //Repartition Package
 #include <Zoltan2_XpetraMultiVectorAdapter.hpp>
@@ -112,9 +113,8 @@ each surface to use for hammering metal into to form it.
 
 */
 
-Implicit_Solver::Implicit_Solver() : Solver(){
-  //create parameter objects
-  simparam = Simulation_Parameters();
+Implicit_Solver::Implicit_Solver(Simulation_Parameters_Implicit& params) : Solver(params) {
+  simparam = params;
   //create ref element object
   ref_elem = std::make_shared<elements::ref_element>(elements::ref_element());
   //create mesh objects
@@ -150,7 +150,7 @@ Implicit_Solver::~Implicit_Solver(){
 //==============================================================================
 
 
-void Implicit_Solver::run(int argc, char *argv[]){
+void Implicit_Solver::run(){
     
     //MPI info
     world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
@@ -159,25 +159,9 @@ void Implicit_Solver::run(int argc, char *argv[]){
     
     if(myrank == 0){
       std::cout << "Running TO Solver" << std::endl;
-       // check to see of a mesh was supplied when running the code
-      if (argc == 1) {
-        std::cout << "\n\n**********************************\n\n";
-        std::cout << " ERROR:\n";
-        std::cout << " Please supply a mesh file as the second command line argument \n";
-        std::cout << "**********************************\n\n" << std::endl;
-        return;
-      }
     }
     //initialize Trilinos communicator class
     comm = Tpetra::getDefaultComm();
-
-    //error handle for file input name
-    //if(argc < 2)
-    std::string filename = std::string(argv[1]);
-    if(filename.find(".yaml") != std::string::npos) {
-      Yaml::from_file_strict(filename, simparam);
-    }
-    
     if (simparam.input_options.has_value()) {
       const Input_Options& input_options = simparam.input_options.value();
       const char* mesh_file_name = input_options.mesh_file_name.c_str();
@@ -237,7 +221,7 @@ void Implicit_Solver::run(int argc, char *argv[]){
 
       //update set options for next FEA module in loop with synchronized set options in solver's simparam class
       fea_modules[imodule]->simparam = simparam;
-      FEA_MODULE_TYPE m_type = simparam.FEA_Modules_List[imodule];
+      FEA_MODULE_TYPE m_type = simparam.fea_module_parameters[imodule]->type;
       if(fea_module_must_read.find(m_type) != fea_module_must_read.end()){
         fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
       }
@@ -302,8 +286,8 @@ void Implicit_Solver::run(int argc, char *argv[]){
     std::fflush(stdout);
     */
     //return;
-    if(simparam_TO.topology_optimization_on||simparam_TO.shape_optimization_on)
-    setup_optimization_problem();
+    if(simparam.topology_optimization_on||simparam.shape_optimization_on)
+      setup_optimization_problem();
     
     //solver_exit = solve();
     //if(solver_exit == EXIT_SUCCESS){
@@ -335,11 +319,11 @@ void Implicit_Solver::run(int argc, char *argv[]){
    Read ANSYS dat format mesh file
 ------------------------------------------------------------------------- */
 void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
+  Input_Options input_options = simparam.input_options.value();
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  Input_Options input_options = simparam.input_options.value();
-  real_t unit_scaling = simparam.unit_scaling;
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
   bool restart_file = simparam.restart_file;
   int local_node_index, current_column_index;
   size_t strain_count;
@@ -851,7 +835,7 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
   if(!No_Conditions){
     // check that the input file has configured some kind of acceptable module
     simparam.validate_module_is_specified(FEA_MODULE_TYPE::Elasticity);
-    simparam_TO.fea_module_must_read.insert(FEA_MODULE_TYPE::Elasticity);
+    simparam.fea_module_must_read.insert(FEA_MODULE_TYPE::Elasticity);
   }
 
   // Close mesh input file if no further readin is done by FEA modules for conditions
@@ -1072,62 +1056,43 @@ void Implicit_Solver::repartition_nodes(){
 ------------------------------------------------------------------------- */
 
 void Implicit_Solver::FEA_module_setup(){
-  nfea_modules = simparam_TO.FEA_Modules_List.size();
-  std::vector<FEA_MODULE_TYPE> FEA_Module_List = simparam_TO.FEA_Modules_List;
-  fea_module_must_read = simparam_TO.fea_module_must_read;
+  nfea_modules = simparam.fea_module_parameters.size();
+  fea_module_must_read = simparam.fea_module_must_read;
   //allocate lists to size
-  fea_module_types = std::vector<FEA_MODULE_TYPE>(nfea_modules);
-  fea_modules = std::vector<FEA_Module*>(nfea_modules);
+  fea_module_types = std::vector<FEA_MODULE_TYPE>();
+  fea_modules = std::vector<FEA_Module*>();
   bool module_found = false;
-  
-  //list should not have repeats since that was checked by simulation parameters setups
-  for(int imodule = 0; imodule < nfea_modules; imodule++){
-    //decides which FEA module objects to setup based on string.
-    //automate selection list later; use std::map maybe?
-    if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Elasticity){
-      fea_module_types[imodule] = FEA_MODULE_TYPE::Elasticity;
-      fea_modules[imodule] = new FEA_Module_Elasticity(this, imodule);
-      module_found = true;
-      displacement_module = imodule;
-      //debug print
-      *fos << "ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
-      
-    }
-    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Inertial){
-      fea_module_types[imodule] = FEA_MODULE_TYPE::Inertial;
-      fea_modules[imodule] = new FEA_Module_Inertial(this, imodule);
-      module_found = true;
-      //debug print
-      *fos << "INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
-      
-    }
-    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Heat_Conduction){
-      fea_module_types[imodule] = FEA_MODULE_TYPE::Heat_Conduction;
-      fea_modules[imodule] = new FEA_Module_Heat_Conduction(this, imodule);
-      module_found = true; 
-      //debug print
-      *fos << "HEAT MODULE ALLOCATED AS " <<imodule << std::endl;
-    }
-    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Thermo_Elasticity){
-
-      //ensure another momentum conservation module was not allocated
-      if(displacement_module>=0){
-        *fos << "PROGRAM IS ENDING DUE TO ERROR; MORE THAN ONE ELASTIC MODULE ALLOCATED \"" 
-              << to_string(FEA_Module_List[imodule]) << "\"" << std::endl;
+  displacement_module = -1;
+  for (auto& param : simparam.fea_module_parameters) {
+    fea_module_types.push_back(param->type);
+    param->apply(
+      [&](Elasticity_Parameters& param) {
+        displacement_module = fea_modules.size();
+        fea_modules.push_back(new FEA_Module_Elasticity(param, this, fea_modules.size()));
+      },
+      [&](Inertial_Parameters& param) {
+        fea_modules.push_back(new FEA_Module_Inertial(param, this, fea_modules.size()));
+      },
+      [&](Heat_Conduction_Parameters& param) {
+        fea_modules.push_back(new FEA_Module_Heat_Conduction(param, this, fea_modules.size()));
+      },
+      [&](Thermo_Elasticity_Parameters& param) {
+        //ensure another momentum conservation module was not allocated
+        if (displacement_module > 0){
+          *fos << "PROGRAM IS ENDING DUE TO ERROR; MORE THAN ONE ELASTIC MODULE ALLOCATED \"" 
+                << to_string(param.type) << "\"" << std::endl;
+          exit_solver(0);
+        }
+        displacement_module = fea_modules.size();
+        fea_modules.push_back(new FEA_Module_Thermo_Elasticity(param, this, fea_modules.size()));
+      },
+      [&](const FEA_Module_Parameters& param) {
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" << to_string(param.type) <<"\"" << std::endl;
         exit_solver(0);
       }
-
-      fea_module_types[imodule] = FEA_MODULE_TYPE::Thermo_Elasticity;
-      fea_modules[imodule] = new FEA_Module_Thermo_Elasticity(this, imodule);
-      module_found = true;
-      displacement_module = imodule;
-      //debug print
-      *fos << "THERMO-ELASTIC MODULE ALLOCATED AS " <<imodule << std::endl;
-    }
-    else{
-      *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" <<FEA_Module_List[imodule]<<"\"" << std::endl;
-      exit_solver(0);
-    }
+    );
+    
+    *fos << " " << fea_module_types.back() << " MODULE ALLOCATED AS " << fea_module_types.size() - 1 << std::endl;
   }
 }
 
@@ -1137,16 +1102,15 @@ void Implicit_Solver::FEA_module_setup(){
 
 void Implicit_Solver::setup_optimization_problem(){
   int num_dim = simparam.num_dims;
-  bool nodal_density_flag = simparam_TO.nodal_density_flag;
-  int nTO_modules = simparam_TO.TO_Module_List.size();
-  int nmulti_objective_modules = simparam_TO.Multi_Objective_Modules.size();
-  std::vector<TO_MODULE_TYPE> TO_Module_List = simparam_TO.TO_Module_List;
-  std::vector<FEA_MODULE_TYPE> FEA_Module_List = simparam_TO.FEA_Modules_List;
-  std::vector<int> TO_Module_My_FEA_Module = simparam_TO.TO_Module_My_FEA_Module;
-  std::vector<int> Multi_Objective_Modules = simparam_TO.Multi_Objective_Modules;
-  std::vector<real_t> Multi_Objective_Weights = simparam_TO.Multi_Objective_Weights;
-  std::vector<std::vector<real_t>> Function_Arguments = simparam_TO.Function_Arguments;
-  std::vector<FUNCTION_TYPE> TO_Function_Type = simparam_TO.TO_Function_Type;
+  bool nodal_density_flag = simparam.nodal_density_flag;
+  int nTO_modules = simparam.TO_Module_List.size();
+  int nmulti_objective_modules = simparam.Multi_Objective_Modules.size();
+  std::vector<TO_MODULE_TYPE> TO_Module_List = simparam.TO_Module_List;
+  std::vector<int> TO_Module_My_FEA_Module = simparam.TO_Module_My_FEA_Module;
+  std::vector<int> Multi_Objective_Modules = simparam.Multi_Objective_Modules;
+  std::vector<real_t> Multi_Objective_Weights = simparam.Multi_Objective_Weights;
+  std::vector<std::vector<real_t>> Function_Arguments = simparam.Function_Arguments;
+  std::vector<FUNCTION_TYPE> TO_Function_Type = simparam.TO_Function_Type;
   std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
 
   std::string constraint_base, constraint_name;
@@ -1191,10 +1155,10 @@ void Implicit_Solver::setup_optimization_problem(){
     //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
     for(int inode = 0; inode < nlocal_nodes; inode++){
       node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = simparam_TO.optimization_options.density_epsilon;
+      node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
     }
 
-    if(simparam_TO.optimization_options.method_of_moving_asymptotes){
+    if(simparam.optimization_options.method_of_moving_asymptotes){
       Teuchos::RCP<MV> mma_upper_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
       Teuchos::RCP<MV> mma_lower_bound_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
       //mma_lower_bound_node_densities_distributed->assign(*lower_bound_node_densities_distributed);
@@ -1220,7 +1184,7 @@ void Implicit_Solver::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          if(simparam_TO.thick_condition_boundary){
+          if(simparam.thick_condition_boundary){
             Surface_Nodes = Boundary_Patches(patch_id).node_set;
             current_element_index = Boundary_Patches(patch_id).element_id;
             //debug print of local surface ids
@@ -1265,7 +1229,7 @@ void Implicit_Solver::setup_optimization_problem(){
     vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
     for(int ielem = 0; ielem < rnum_elem; ielem++){
       Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = simparam_TO.optimization_options.density_epsilon;
+      Element_Densities_Lower_Bound(ielem,0) = simparam.optimization_options.density_epsilon;
     }
 
     //create global vector
@@ -1297,7 +1261,7 @@ void Implicit_Solver::setup_optimization_problem(){
       if(TO_Module_List[imodule] == TO_MODULE_TYPE::Strain_Energy_Minimize){
         //debug print
         *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        if(simparam_TO.optimization_options.method_of_moving_asymptotes){
+        if(simparam.optimization_options.method_of_moving_asymptotes){
           sub_obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
           obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
         }
@@ -1308,7 +1272,7 @@ void Implicit_Solver::setup_optimization_problem(){
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize){
         //debug print
         *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        if(simparam_TO.optimization_options.method_of_moving_asymptotes){
+        if(simparam.optimization_options.method_of_moving_asymptotes){
           sub_obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
           obj = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
         }
@@ -1326,7 +1290,7 @@ void Implicit_Solver::setup_optimization_problem(){
           if(TO_Module_List[module_id] == TO_MODULE_TYPE::Strain_Energy_Minimize){
             //debug print
             *fos << " STRAIN ENERGY OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            if(simparam_TO.optimization_options.method_of_moving_asymptotes){
+            if(simparam.optimization_options.method_of_moving_asymptotes){
               sub_obj = ROL::makePtr<StrainEnergyMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
               Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);
             }
@@ -1337,7 +1301,7 @@ void Implicit_Solver::setup_optimization_problem(){
           else if(TO_Module_List[module_id] == TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize){
             //debug print
             *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            if(simparam_TO.optimization_options.method_of_moving_asymptotes){
+            if(simparam.optimization_options.method_of_moving_asymptotes){
               sub_obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
               Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);}
             else{
@@ -1347,7 +1311,7 @@ void Implicit_Solver::setup_optimization_problem(){
           else if(TO_Module_List[module_id] == TO_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize){
             //debug print
             *fos << " HEAT CAPACITY POTENTIAL OBJECTIVE EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[module_id] << std::endl;
-            if(simparam_TO.optimization_options.method_of_moving_asymptotes){
+            if(simparam.optimization_options.method_of_moving_asymptotes){
               sub_obj = ROL::makePtr<HeatCapacityPotentialMinimize_TopOpt>(fea_modules[TO_Module_My_FEA_Module[module_id]], nodal_density_flag);
               Multi_Objective_Terms[imulti] = ROL::makePtr<ObjectiveMMA>(sub_obj, mma_bnd, x);}
             else{
@@ -1846,7 +1810,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
   bool displace_geometry = false;
   int displacement_index;
   if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displace_geometry = simparam.output_options.displaced_mesh;
     displacement_index = fea_modules[displacement_module]->displacement_index;
   }
   const_host_vec_array current_sorted_output;
@@ -2270,7 +2234,7 @@ void Implicit_Solver::tecplot_writer(){
   bool displace_geometry = false;
   int displacement_index;
   if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
+    displace_geometry = simparam.output_options.displaced_mesh;
     displacement_index = fea_modules[displacement_module]->displacement_index;
   }
   const_host_vec_array current_collected_output;
@@ -2965,13 +2929,13 @@ void Implicit_Solver::ensight_writer(){
 
 void Implicit_Solver::init_design(){
   int num_dim = simparam.num_dims;
-  bool nodal_density_flag = simparam_TO.nodal_density_flag;
+  bool nodal_density_flag = simparam.nodal_density_flag;
 
   //set densities
   if(nodal_density_flag){
     if(!simparam.restart_file){
       design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-      if(simparam_TO.helmholtz_filter)
+      if(simparam.optimization_options.density_filter == DENSITY_FILTER::hemlholtz_filter)
         filtered_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
       host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //notify that the host view is going to be modified in the file readin

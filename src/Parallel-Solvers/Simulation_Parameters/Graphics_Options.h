@@ -2,13 +2,7 @@
 #include "yaml-serializable.h"
 
 struct Graphics_Options : Yaml::DerivedFields {
-  bool output_velocity_flag = true;
-  bool output_strain_flag   = true;
-  bool output_stress_flag   = false;
-
-  bool displaced_mesh_flag  = true;
-  bool strain_max_flag      = false;
-
+  double graphics_step;
   double graphics_dt_ival   = 0.25;
 
   // Non-serialized
@@ -23,6 +17,5 @@ struct Graphics_Options : Yaml::DerivedFields {
   }
 };
 IMPL_YAML_SERIALIZABLE_FOR(Graphics_Options, 
-  output_velocity_flag, output_stress_flag, output_strain_flag,
-  strain_max_flag, displaced_mesh_flag, graphics_dt_ival
+  graphics_step, graphics_dt_ival
 )

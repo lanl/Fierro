@@ -347,10 +347,9 @@ void FEA_Module_Eulerian::Displacement_Boundary_Conditions(){
 
 void FEA_Module_Eulerian::init_output(){
   //check user parameters for output
-  bool output_velocity_flag = simparam.graphics_options.output_velocity_flag;
-  displaced_mesh_flag = simparam.graphics_options.displaced_mesh_flag;
-  bool output_strain_flag = simparam.graphics_options.output_strain_flag;
-  bool output_stress_flag = simparam.graphics_options.output_stress_flag;
+  bool output_velocity_flag = simparam.output_options.output_velocity;
+  bool output_strain_flag = simparam.output_options.output_strain;
+  bool output_stress_flag = simparam.output_options.output_stress;
   int num_dim = simparam.num_dims;
   int Brows;
   if(num_dim==3) Brows = 6;
