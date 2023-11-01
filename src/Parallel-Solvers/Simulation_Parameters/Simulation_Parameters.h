@@ -205,9 +205,11 @@ struct Simulation_Parameters
     
     void derive() {
         ensure_module(std::make_shared<Inertial_Parameters>());
-        derive_objective_module();
-        derive_constraint_modules();
         derive_optimization_process();
+        if (topology_optimization_on || shape_optimization_on) {
+            derive_objective_module();
+            derive_constraint_modules();
+        }
         map_TO_to_FEA();
 
         mtr::from_vector(mat_fill, regions);
