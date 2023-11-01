@@ -151,7 +151,11 @@ namespace Yaml {
             // Hardcode required type field for type discriminated structs.
             if (node["type"].IsNone())
                 throw ConfigurationException("Missing required field `type`");
-            deserialize(b, node, raw);
+
+            // Deserialize the base without triggering 
+            // derivation/validation so that we don't double
+            // derive when we deserialize it as the derived class later.
+            deserialize(b, node, true);
 
             const auto& deserialization_map = TypeDiscriminated::data();
             if (deserialization_map.count(b.type) == 0)
