@@ -168,6 +168,7 @@ FEA_Module_SGH::FEA_Module_SGH(
   dt_cfl = dynamic_options.dt_cfl;
   graphics_time = simparam.graphics_options.graphics_time;
   graphics_dt_ival = simparam.graphics_options.graphics_dt_ival;
+  graphics_cyc_ival = simparam.graphics_options.graphics_cyc_ival;
   cycle_stop = dynamic_options.cycle_stop;
   rk_num_stages = dynamic_options.rk_num_stages;
   dt = dynamic_options.dt;

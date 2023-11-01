@@ -2,8 +2,9 @@
 #include "yaml-serializable.h"
 
 struct Graphics_Options : Yaml::DerivedFields {
-  double graphics_step;
-  double graphics_dt_ival   = 0.25;
+  double graphics_step    = 0.25;
+  double graphics_dt_ival = 0.25;
+  int graphics_cyc_ival   = 1000000;
 
   // Non-serialized
   size_t graphics_id = 0;
@@ -17,5 +18,5 @@ struct Graphics_Options : Yaml::DerivedFields {
   }
 };
 IMPL_YAML_SERIALIZABLE_FOR(Graphics_Options, 
-  graphics_step, graphics_dt_ival
+  graphics_step, graphics_dt_ival, graphics_cyc_ival
 )
