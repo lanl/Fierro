@@ -130,7 +130,7 @@ TEST(YamlSerialization, VectorSerialization) {
     );
 }
 
-struct Serializable {
+struct Serializable : Yaml::DerivedFields {
     int a;
     float b;
     double c;
@@ -145,6 +145,13 @@ struct Serializable {
             && compare_set(d, other.d)
             && compare_vec(e, other.e)
         );
+    }
+
+    bool derived = false;
+    void derive() {
+        if (derived)
+            throw std::runtime_error("Double deriving.");
+        derived = true;
     }
 };
 IMPL_YAML_SERIALIZABLE_FOR(Serializable, a, b, c, d, e)
@@ -167,6 +174,7 @@ TEST(YamlSerialization, StructSerialization) {
     EXPECT_TRUE(is_close(obj.c, deserialized.c));
     EXPECT_TRUE(compare_set(obj.d, deserialized.d));
     EXPECT_TRUE(compare_vec(obj.e, deserialized.e));
+    EXPECT_TRUE(deserialized.derived);
 }
 
 TEST(YamlSerialization, StructSerializationSharedPtr) {
@@ -425,9 +433,16 @@ TEST(YamlSerializable, FromStrictNested) {
 
 SERIALIZABLE_ENUM(Module, A, B)
 
-struct TypedBase : Yaml::TypeDiscriminated<TypedBase, Module> {
+struct TypedBase : Yaml::TypeDiscriminated<TypedBase, Module>, Yaml::DerivedFields {
     virtual ~TypedBase() = default;
     std::optional<int> field;
+
+    bool already_derived = false;
+    void derive() {
+        if (already_derived)
+            throw std::runtime_error("Double deriving.");
+        already_derived = true;
+    }
 };
 IMPL_YAML_SERIALIZABLE_FOR(TypedBase, type, field)
 
@@ -588,4 +603,7 @@ TEST(YamlSerializable, TypeDiscriminatedTryApplyNoThrow) {
         );
     });
 }
+
+
+
 

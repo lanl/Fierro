@@ -147,12 +147,8 @@ namespace Yaml {
             MAP(YAML_DESERIALIZE, __VA_ARGS__)                                                  \
                                                                                                 \
             if (raw) return;                                                                    \
-            if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {                  \
-                derive(obj);                                                                    \
-            }                                                                                   \
-            if constexpr (std::is_base_of<ValidatedYaml, CLASS_NAME>::value) {                  \
-                validate(obj);                                                                  \
-            }                                                                                   \
+            derive<CLASS_NAME>(obj);                                                            \
+            validate(obj);                                                                      \
         }                                                                                       \
     }                                                                                           \
 
@@ -195,12 +191,8 @@ namespace Yaml {
             MAP(YAML_DESERIALIZE, __VA_ARGS__)                                                  \
                                                                                                 \
             if (raw) return;                                                                    \
-            if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {                  \
-                derive(obj);                                                                    \
-            }                                                                                   \
-            if constexpr (std::is_base_of<ValidatedYaml, CLASS_NAME>::value) {                  \
-                validate(obj);                                                                  \
-            }                                                                                   \
+            derive_with_base<CLASS_NAME, BASE_CLASS>(obj);                                      \
+            validate_with_base<CLASS_NAME, BASE_CLASS>(obj);                                    \
         }                                                                                       \
     }                                                                                           \
 
