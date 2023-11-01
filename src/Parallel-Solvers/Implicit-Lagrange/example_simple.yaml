@@ -1,27 +1,32 @@
 # input file
-solver_type: Implicit
+type: Implicit
 num_dims: 3
 input_options:
     mesh_file_format: ensight
     mesh_file_name: TO_small_beam.geo
 
-output_options:
-  graphics_step_frequency: 100
 
-fea_modules:
+output_options:
+  output_stress: false
+  output_file_format: vtk
+
+
+fea_module_parameters:
   - type: Elasticity
     # Dirichlet conditions
     boundary_conditions:
-      - surface: z_plane
-        plane_position: 0.0
-        condition_type: fixed_displacement
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: displacement
         displacement_value: 0.0
             
     # Loading/Neumann Conditions
     loading_conditions:
-      - surface: z_plane
-        plane_position: 100.0
-        condition_type: surface_traction
+      - surface: 
+          type: z_plane
+          plane_position: 100.0
+        type: surface_traction
         component_x: 500
         component_y: 0
         component_z: 0
@@ -29,16 +34,18 @@ fea_modules:
   - type: Heat_Conduction
     # Dirichlet conditions
     boundary_conditions:
-      - surface: z_plane
-        plane_position: 0.0
-        condition_type: fixed_temperature
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: temperature
         temperature_value: 293.0
 
     # Loading/Neumann Conditions
     loading_conditions:
-      - surface: z_plane
-        plane_position: 100.0
-        condition_type: surface_heat_flux
+      - surface: 
+          type: z_plane
+          plane_position: 100.0
+        type: surface_heat_flux
         #can be normal (q dot n) or coordinated (vector q) for curved surfaces
         specification: normal
         flux_value: -0.1
