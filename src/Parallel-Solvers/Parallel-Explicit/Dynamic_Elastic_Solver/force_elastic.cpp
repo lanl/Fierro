@@ -322,7 +322,7 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
   
   const_host_vec_array all_node_densities;
   if(nodal_density_flag){
-    if(simparam.optimization_options.density_filter == DENSITY_FILTER::hemlholtz_filter)
+    if(simparam.optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter)
       all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     else
       all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);

@@ -29,7 +29,7 @@ SERIALIZABLE_ENUM(OPTIMIZATION_PROCESS, none, topology_optimization, shape_optim
 SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, minimize_kinetic_energy, multi_objective, minimize_compliance, minimize_thermal_resistance)
 SERIALIZABLE_ENUM(CONSTRAINT_TYPE, mass, moment_of_inertia)
 SERIALIZABLE_ENUM(RELATION, equality)
-SERIALIZABLE_ENUM(DENSITY_FILTER, none, hemlholtz_filter)
+SERIALIZABLE_ENUM(DENSITY_FILTER, none, helmholtz_filter)
 SERIALIZABLE_ENUM(MULTI_OBJECTIVE_STRUCTURE, linear)
 SERIALIZABLE_ENUM(CONSTRAINT_COMPONENT, xx, yy, zz, xy, xz, yz)
 inline int component_to_int(CONSTRAINT_COMPONENT c) {

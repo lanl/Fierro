@@ -1491,7 +1491,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
   size_t local_node_id;
 
   real_t unit_scaling = simparam.unit_scaling;
-  bool topology_optimization_on = simparam_TO.topology_optimization_on;
+  bool topology_optimization_on = simparam.topology_optimization_on;
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;

@@ -2946,7 +2946,7 @@ void Implicit_Solver::init_design(){
   if(nodal_density_flag){
     if(!simparam.restart_file){
       design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
-      if(simparam.optimization_options.density_filter == DENSITY_FILTER::hemlholtz_filter)
+      if(simparam.optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter)
         filtered_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
       host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //notify that the host view is going to be modified in the file readin

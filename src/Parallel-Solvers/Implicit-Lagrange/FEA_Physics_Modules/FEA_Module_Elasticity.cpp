@@ -2475,7 +2475,7 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   //bool nodal_density_flag = simparam.nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag){
-    if(simparam.optimization_options.density_filter == DENSITY_FILTER::hemlholtz_filter)
+    if(simparam.optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter)
       all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     else
       all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2489,7 +2489,7 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   real_t unit_scaling = simparam.unit_scaling;
-  bool topology_optimization_on = simparam_TO.topology_optimization_on;
+  bool topology_optimization_on = simparam.topology_optimization_on;
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;
@@ -2885,7 +2885,7 @@ void FEA_Module_Elasticity::local_mass_matrix(int ielem, CArrayKokkos<real_t, ar
   //bool nodal_density_flag = simparam.nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag){
-    if(simparam_TO.helmholtz_filter)
+    if(simparam.optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter)
       all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     else
       all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);

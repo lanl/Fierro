@@ -2280,7 +2280,7 @@ void FEA_Module_Thermo_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, 
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   real_t unit_scaling = simparam.unit_scaling;
-  bool topology_optimization_on = simparam_TO.topology_optimization_on;
+  bool topology_optimization_on = simparam.topology_optimization_on;
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, invJacobian, weight_multiply;
