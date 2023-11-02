@@ -2,37 +2,26 @@
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
-    echo "  --serial        : Build kokkos serial version"
-    echo "  --openmp        : Build kokkos openmp verion"
-    echo "  --pthreads      : Build kokkos pthreads verion"
-    echo "  --cuda          : Build kokkos CUDA version"
-    echo "  --hip           : Build kokkos HIP version"
-    echo "  --help: Display this help message"
+    echo "  --env_type=<serial|openmp|pthreads|cuda|hip>"
+    echo "  --help : Display this help message"
     return 1
 }
 
-# Check for the number of arguments
-if [ $# -ne 1 ]; then
-    echo "Error: Please provide exactly one argument."
-    show_help
-    return 1
-fi
-
 # Initialize variables with default values
-kokkos_build_type=""
+env_type=""
 
 # Define arrays of valid options
-valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
+valid_env_types=("serial" "openmp" "pthreads" "cuda" "hip")
 
 # Parse command line arguments
 for arg in "$@"; do
     case "$arg" in
-        --kokkos_build_type=*)
+        --env_type=*)
             option="${arg#*=}"
-            if [[ " ${valid_kokkos_build_types[*]} " == *" $option "* ]]; then
-                kokkos_build_type="$option"
+            if [[ " ${valid_env_types[*]} " == *" $option "* ]]; then
+                env_type="$option"
             else
-                echo "Error: Invalid --kokkos_build_type specified."
+                echo "Error: Invalid --env_type specified."
                 show_help
                 return 1
             fi
@@ -50,8 +39,8 @@ for arg in "$@"; do
 done
 
 # Check if required options are specified
-if [ -z "$kokkos_build_type" ]; then
-    echo "Error: --kokkos_build_type are required options."
+if [ -z "$env_type" ]; then
+    echo "Error: --env_type are required options."
     show_help
     return 1
 fi
@@ -67,10 +56,10 @@ mympi="openmpi/3.1.6-gcc_9.4.0"
 
 module purge
 module load ${mympi}
-if [ "$kokkos_build_type" = "cuda" ]; then
+if [ "$env_type" = "cuda" ]; then
     module load ${mygcc}
     module load ${mycuda}
-elif [ "$kokkos_build_type" = "hip" ]; then
+elif [ "$env_type" = "hip" ]; then
     module load ${mygcc}
     module load ${myrocm}
 else

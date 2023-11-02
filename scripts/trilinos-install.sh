@@ -1,61 +1,6 @@
 #!/bin/bash -e
 
-show_help() {
-    echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
-    echo "Valid options:"
-    echo "  --serial        : Build kokkos serial version"
-    echo "  --openmp        : Build kokkos openmp verion"
-    echo "  --pthreads      : Build kokkos pthreads verion"
-    echo "  --cuda          : Build kokkos CUDA version"
-    echo "  --hip           : Build kokkos HIP version"
-    echo "  --help: Display this help message"
-    return 1
-}
-
-# Check for the number of arguments
-if [ $# -ne 1 ]; then
-    echo "Error: Please provide exactly one argument."
-    show_help
-    return 1
-fi
-
-# Initialize variables with default values
-kokkos_build_type=""
-
-# Define arrays of valid options
-valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
-
-# Parse command line arguments
-for arg in "$@"; do
-    case "$arg" in
-        --kokkos_build_type=*)
-            option="${arg#*=}"
-            if [[ " ${valid_kokkos_build_types[*]} " == *" $option "* ]]; then
-                kokkos_build_type="$option"
-            else
-                echo "Error: Invalid --kokkos_build_type specified."
-                show_help
-                return 1
-            fi
-            ;;
-        --help)
-            show_help
-            return 1
-            ;;
-        *)
-            echo "Error: Invalid argument or value specified."
-            show_help
-            return 1
-            ;;
-    esac
-done
-
-# Check if required options are specified
-if [ -z "$kokkos_build_type" ]; then
-    echo "Error: --kokkos_build_type are required options."
-    show_help
-    return 1
-fi
+kokkos_build_type="${1}"
 
 # If all arguments are valid, you can use them in your script as needed
 echo "Trilinos Kokkos Build Type: $kokkos_build_type"

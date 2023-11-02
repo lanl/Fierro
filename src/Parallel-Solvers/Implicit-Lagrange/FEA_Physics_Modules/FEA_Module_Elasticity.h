@@ -42,6 +42,11 @@
 #include "Simulation_Parameters/Simulation_Parameters.h"
 #include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
 
+//Eigensolver
+#include "AnasaziConfigDefs.hpp"
+#include "AnasaziTypes.hpp"
+#include "AnasaziTpetraAdapter.hpp"
+
 //forward declare
 namespace MueLu{
   template<class floattype, class local_ind, class global_ind, class nodetype> 
@@ -64,6 +69,11 @@ class Implicit_Solver;
 class FEA_Module_Elasticity: public FEA_Module{
 
 public:
+
+  typedef Tpetra::Operator<real_t>                OP;
+  typedef Anasazi::MultiVecTraits<real_t,MV>     MVT;
+  typedef Anasazi::OperatorTraits<real_t,MV,OP>  OPT;
+
   FEA_Module_Elasticity(Elasticity_Parameters& in_params, Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Elasticity();
   
@@ -87,6 +97,8 @@ public:
 
   int solve();
 
+  int eigensolve();
+
   void linear_solver_parameters();
 
   void comm_variables(Teuchos::RCP<const MV> zp);
@@ -102,6 +114,8 @@ public:
   void local_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
 
   void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
+
+  void local_mass_matrix(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits> &Local_Matrix);
 
   void Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
@@ -142,6 +156,7 @@ public:
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Stiffness_Matrix;
+  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Mass_Matrix;
   //CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Forces;
   CArrayKokkos<real_t, Kokkos::LayoutLeft, device_type, memory_traits> Nodal_Results; //result of linear solve; typically displacements and densities
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Stiffness_Matrix_Strides;
@@ -162,6 +177,7 @@ public:
   Teuchos::RCP<MV> adjoint_equation_RHS_distributed;
   Teuchos::RCP<MV> all_adjoint_displacements_distributed;
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
+  Teuchos::RCP<MAT> Global_Mass_Matrix;
   Teuchos::RCP<MV> Global_Nodal_RHS;
   Teuchos::RCP<MV> Global_Nodal_Forces;
   

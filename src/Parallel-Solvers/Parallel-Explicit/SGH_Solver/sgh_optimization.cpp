@@ -542,10 +542,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (long unsigned cycle = last_time_step; cycle >= 0; cycle--) {
+  for (int cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
-    
     //print
     if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==last_time_step){
@@ -553,7 +552,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       }
           // print time step every 10 cycles
-      else if (cycle%20==0){
+      else if (cycle%1==0){
         if(myrank==0)
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       } // end if
@@ -730,7 +729,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       vec_array midpoint_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       vec_array phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       vec_array psi_midpoint_adjoint_vector =  psi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-
+      
       //half step update for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         real_t rate_of_change;
@@ -809,6 +808,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       psi_midpoint_adjoint_vector =  (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
+      
       //full step update with midpoint gradient for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         real_t rate_of_change;
@@ -856,7 +856,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         }
       }); // end parallel for
       Kokkos::fence();
-
       //half step update for RK2 scheme
       FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
         real_t rate_of_change;
@@ -880,9 +879,14 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       boundary_adjoint(*mesh, boundary,current_adjoint_vector, phi_current_adjoint_vector, psi_midpoint_adjoint_vector);
 
     } //end view scope
+    
 
     comm_adjoint_vectors(cycle);
     //phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+    
+      //debug
+      if(cycle==0)
+      std::cout << "REACHED THIS STEP OF ADJOINT" << std::endl;
   }
 }
 

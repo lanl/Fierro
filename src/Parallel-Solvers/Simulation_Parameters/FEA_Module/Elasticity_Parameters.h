@@ -9,8 +9,10 @@ struct Elasticity_Parameters
     double Elastic_Modulus  = 200000000000;
     double Poisson_Ratio    = 0.3;
     bool strain_max_flag    = false;
+    double material_density = 7850;
+    bool modal_analysis     = false;
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Elasticity_Parameters, ImplicitModule, 
     Elastic_Modulus, Poisson_Ratio, output_fields,
-    strain_max_flag
+    strain_max_flag, material_density, modal_analysis
 )

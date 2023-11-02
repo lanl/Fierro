@@ -266,6 +266,15 @@ void Implicit_Solver::run(){
         std::cout << "Linear Solver Error for module " << imodule << std::endl <<std::flush;
         return;
       }
+
+      if(fea_modules_modal_analysis[imodule])
+      {
+        int eigensolver_exit = fea_modules[imodule]->eigensolve();
+        if(solver_exit != 0){
+          std::cout << "Eigen-Solver Error for module " << imodule << std::endl <<std::flush;
+          return;
+        }
+      }
     }
 
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam.nfea_modules << std::endl;
@@ -1061,9 +1070,11 @@ void Implicit_Solver::FEA_module_setup(){
   //allocate lists to size
   fea_module_types = std::vector<FEA_MODULE_TYPE>();
   fea_modules = std::vector<FEA_Module*>();
+  fea_modules_modal_analysis = std::vector<bool>();
   bool module_found = false;
   displacement_module = -1;
   for (auto& param : simparam.fea_module_parameters) {
+    fea_modules_modal_analysis.push_back(false);
     fea_module_types.push_back(param->type);
     param->apply(
       [&](Elasticity_Parameters& param) {
