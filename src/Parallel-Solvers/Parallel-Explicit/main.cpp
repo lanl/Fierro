@@ -48,19 +48,9 @@
 #include <string>
 
 void solver_setup(const char* filename){
-  int myrank;
-  MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-
-  std::shared_ptr<Simulation_Parameters> simparam;
-  Yaml::from_file_strict(filename, simparam);
-
-  if (simparam->type != SOLVER_TYPE::Explicit) {
-      if (myrank == 0)
-        std::cerr << "Invalid solver type" << std::endl;
-      exit(1);
-  }
-
-  Explicit_Solver solver(*std::dynamic_pointer_cast<Simulation_Parameters_Explicit>(simparam));
+  Explicit_Solver solver(
+    Yaml::from_file_strict<Simulation_Parameters_Explicit>(filename)
+  );
   //checks for optional solver routines
   if(solver.setup_flag) solver.solver_setup();
   // invoke solver's run function (should perform most of the computation)

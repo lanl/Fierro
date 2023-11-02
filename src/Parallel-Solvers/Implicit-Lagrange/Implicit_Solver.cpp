@@ -113,7 +113,7 @@ each surface to use for hammering metal into to form it.
 
 */
 
-Implicit_Solver::Implicit_Solver(Simulation_Parameters_Implicit& params) : Solver(params) {
+Implicit_Solver::Implicit_Solver(Simulation_Parameters_Implicit params) : Solver(params) {
   simparam = params;
   //create ref element object
   ref_elem = std::make_shared<elements::ref_element>(elements::ref_element());

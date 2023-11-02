@@ -17,7 +17,6 @@
 #include <memory>
 
 
-SERIALIZABLE_ENUM(SOLVER_TYPE, Explicit, Implicit)
 SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
 // SERIALIZABLE_ENUM(FUNCTION_TYPE,
 //   OBJECTIVE, 
@@ -47,9 +46,8 @@ SERIALIZABLE_ENUM(SIMULATION_FIELD,
 )
 
 struct Simulation_Parameters 
-    : Yaml::TypeDiscriminated<Simulation_Parameters, SOLVER_TYPE>,
-        Yaml::DerivedFields,
-        Yaml::ValidatedYaml {
+    : Yaml::DerivedFields,
+      Yaml::ValidatedYaml {
     int num_dims = 3;
     int num_gauss_points = 2;
     std::optional<Input_Options> input_options;
@@ -348,7 +346,7 @@ struct Simulation_Parameters
     // Let it double copy instead.
     Simulation_Parameters& operator=(const Simulation_Parameters&) = default;
 };
-IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters, type, 
+IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters, 
     num_dims, input_options, output_options, materials, regions,
     timer_output_level, fea_module_parameters, optimization_options,
     nodal_density_flag, thick_condition_boundary, num_gauss_points, output_fields,

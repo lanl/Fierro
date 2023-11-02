@@ -63,7 +63,7 @@ using namespace mtr;
 class Explicit_Solver: public Solver {
 
 public:
-  Explicit_Solver(Simulation_Parameters_Explicit&);
+  Explicit_Solver(Simulation_Parameters_Explicit);
   ~Explicit_Solver();
 
   virtual void run();

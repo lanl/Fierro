@@ -4,8 +4,7 @@
 #include "Dynamic_Options.h"
 #include "Graphics_Options.h"
 
-struct Simulation_Parameters_Explicit 
-    : Simulation_Parameters::Register<Simulation_Parameters_Explicit, SOLVER_TYPE::Explicit> {
+struct Simulation_Parameters_Explicit : Simulation_Parameters {
     Dynamic_Options dynamic_options;
     Graphics_Options graphics_options;
 };

@@ -67,7 +67,7 @@ namespace Xpetra{
 class Implicit_Solver: public Solver{
 
 public:
-  Implicit_Solver(Simulation_Parameters_Implicit& params);
+  Implicit_Solver(Simulation_Parameters_Implicit params);
   ~Implicit_Solver();
 
   void run();

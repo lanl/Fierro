@@ -121,7 +121,7 @@ each surface to use for hammering metal into to form it.
 
 */
 
-Explicit_Solver::Explicit_Solver(Simulation_Parameters_Explicit& params) : Solver(params) {
+Explicit_Solver::Explicit_Solver(Simulation_Parameters_Explicit params) : Solver(params) {
   //create parameter objects
   simparam = params;
   //create ref element object
