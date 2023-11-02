@@ -211,7 +211,7 @@ void FEA_Module_Eulerian::read_conditions_ansys_dat(std::ifstream *in, std::stre
   int buffer_lines = 1000;
   int max_word = 30;
   int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam.get_unit_scaling();
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring, token;
