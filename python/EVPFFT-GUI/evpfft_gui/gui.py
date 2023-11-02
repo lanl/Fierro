@@ -2,7 +2,7 @@ import sys
 import os
 
 def main():
-    from evpfft_gui.ui_EVPFFT_GUI_V10 import Ui_MainWindow
+    from evpfft_gui.ui_EVPFFT_GUI import Ui_MainWindow
     from PySide6.QtWidgets import QMainWindow, QApplication
     # MAIN WINDOW CLASS
     class MainWindow(QMainWindow):
