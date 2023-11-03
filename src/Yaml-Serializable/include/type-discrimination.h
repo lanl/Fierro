@@ -193,17 +193,23 @@ namespace Yaml {
                 return true;
             }
             
-            // The compiler will likely elide this 
-            // static variable without this attribute.
-            // This is supported on both GNU and Clang
-            __attribute__((used)) static bool registered;
+            // If left alone, the compiler will elide this variable.
+            // If this variable is elided, the setting of it later gets elided.
+            // If the setting gets elided, the side effect of registering the class doesn't happen.
+            // So we reference this variable in a function to force the compiler to 
+            // keep it.
+            // It would be better if we could just add "__attribute__((used))" to the variable,
+            // the spec says that should work, but clang doesn't seem to respect that.
+            // This was tested with GNU-9.4.0+ and Clang-10.0.0+ with O3 optimizations.
+            static bool registered;
+            static __attribute__((used, noinline)) void use_registered() { (void)registered; }
             
             friend T;
         private:
             Register() { this->type = DiscriminationValue; }
         };
 
-        virtual ~TypeDiscriminated() { };
+        virtual ~TypeDiscriminated() { }
 
         // friend + private constructor
         // Means that you can only derive from this
@@ -214,6 +220,8 @@ namespace Yaml {
         struct AbstractDerivedSerializer {
             virtual std::unique_ptr<Base> deserialize(Node& node, bool raw) = 0;
             virtual void serialize(const Base* b, Node& node) = 0;
+
+            virtual ~AbstractDerivedSerializer() { }
         };
 
         template<typename T>
