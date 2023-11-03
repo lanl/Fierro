@@ -81,7 +81,7 @@ FEA_Module_Inertial::FEA_Module_Inertial(
   
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
-  Module_Type = "Inertial";
+  Module_Type = FEA_MODULE_TYPE::Inertial;
 
   //acquire base class data from existing simparam in solver (gets yaml options etc.)
   module_params = params;

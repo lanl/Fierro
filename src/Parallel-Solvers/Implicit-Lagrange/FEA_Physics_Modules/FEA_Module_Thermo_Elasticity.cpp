@@ -108,7 +108,7 @@ FEA_Module_Thermo_Elasticity::FEA_Module_Thermo_Elasticity(
 
   //assign interfacing information
   my_fea_module_index_ = my_fea_module_index;
-  Module_Type = "Thermo_Elasticity";
+  Module_Type = FEA_MODULE_TYPE::Thermo_Elastic;
 
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);

@@ -111,7 +111,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
-  Module_Type = "Elasticity";
+  Module_Type = FEA_MODULE_TYPE::Elasticity;
 
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);

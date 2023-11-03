@@ -196,7 +196,7 @@ public:
   virtual void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed) {}
 
   //interfacing information
-  std::string Module_Type;
+  FEA_MODULE_TYPE Module_Type;
   int last_compute_step;
 
   //output stream

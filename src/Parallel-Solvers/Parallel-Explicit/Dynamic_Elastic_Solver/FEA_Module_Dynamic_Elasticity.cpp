@@ -106,6 +106,7 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
+  Module_Type = FEA_MODULE_TYPE::Dynamic_Elasticity;
   
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);

@@ -106,7 +106,7 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
-  Module_Type = "Heat_Conduction";
+  Module_Type = FEA_MODULE_TYPE::Heat_Conduction;
 
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
