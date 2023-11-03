@@ -279,20 +279,24 @@ struct Simulation_Parameters
      * If there are no dependencies, std::nullopt will be returned.
      */
     std::optional<size_t> find_TO_module_dependency(TO_MODULE_TYPE type) {
-        const static std::unordered_map<TO_MODULE_TYPE, FEA_MODULE_TYPE> map {
-            {TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize,      FEA_MODULE_TYPE::Heat_Conduction},
-            {TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint,    FEA_MODULE_TYPE::Heat_Conduction},
-            {TO_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize, FEA_MODULE_TYPE::Heat_Conduction},
-            {TO_MODULE_TYPE::Mass_Constraint,                       FEA_MODULE_TYPE::Inertial       },
-            {TO_MODULE_TYPE::Moment_of_Inertia_Constraint,          FEA_MODULE_TYPE::Inertial       },
-            {TO_MODULE_TYPE::Strain_Energy_Minimize,                FEA_MODULE_TYPE::Elasticity     },
-            {TO_MODULE_TYPE::Strain_Energy_Constraint,              FEA_MODULE_TYPE::Elasticity     },
-            {TO_MODULE_TYPE::Kinetic_Energy_Minimize,               FEA_MODULE_TYPE::SGH            },
+        const static std::unordered_map<TO_MODULE_TYPE, std::vector<FEA_MODULE_TYPE>> map {
+            {TO_MODULE_TYPE::Heat_Capacity_Potential_Minimize,      {FEA_MODULE_TYPE::Heat_Conduction}},
+            {TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint,    {FEA_MODULE_TYPE::Heat_Conduction}},
+            {TO_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize, {FEA_MODULE_TYPE::Heat_Conduction}},
+            {TO_MODULE_TYPE::Mass_Constraint,                       {FEA_MODULE_TYPE::Inertial       }},
+            {TO_MODULE_TYPE::Moment_of_Inertia_Constraint,          {FEA_MODULE_TYPE::Inertial       }},
+            {TO_MODULE_TYPE::Strain_Energy_Minimize,                {FEA_MODULE_TYPE::Elasticity     }},
+            {TO_MODULE_TYPE::Strain_Energy_Constraint,              {FEA_MODULE_TYPE::Elasticity     }},
+            {TO_MODULE_TYPE::Kinetic_Energy_Minimize,               {FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity}},
         };
         if (map.count(type) == 0)
             return {};
-        validate_module_is_specified(map.at(type));
-        return find_module(map.at(type));
+        validate_one_of_modules_are_specified(map.at(type));
+        for (const auto& m: map.at(type))
+            if (has_module(m))
+                return find_module(m);
+        assert(false);
+        return {};
     }
 
     /**
