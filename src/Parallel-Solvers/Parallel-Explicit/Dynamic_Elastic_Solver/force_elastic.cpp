@@ -104,7 +104,8 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos <material
     //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
 
     // walk over the nodes to update the velocity
-    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+    //FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+      for (size_t node_gid = 0; node_gid <= nlocal_nodes; node_gid++) {
         double current_node_coords[3];
         size_t dof_id;
         double node_force[3];
@@ -133,7 +134,6 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos <material
                 for (size_t dim = 0; dim < num_dim; dim++){
                     node_force[dim] += applied_force[dim]*(all_initial_node_coords(node_gid, 0) + all_initial_node_coords(node_gid, 1) + all_initial_node_coords(node_gid, 2))/radius;
                 } // end for dim
-                
             } // end for corner_lid
             
             // update the velocity
@@ -143,7 +143,8 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos <material
             } // end for dim
           }
         }
-    }); // end for parallel for over nodes
+    //}); // end for parallel for over nodes
+      }
     
     return;
     

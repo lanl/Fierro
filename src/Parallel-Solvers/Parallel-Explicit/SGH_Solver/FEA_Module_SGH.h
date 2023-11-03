@@ -307,10 +307,10 @@ public:
                          DViewCArrayKokkos <double> &node_vel);
   
   KOKKOS_INLINE_FUNCTION 
-  size_t check_bdy(const size_t patch_gid,
+  bool check_bdy(const size_t patch_gid,
                    const int num_dim,
                    const int num_nodes_in_patch,
-                   const int this_bc_tag,
+                   const BOUNDARY_TYPE this_bc_tag,
                    const double val,
                    const DViewCArrayKokkos <double> &node_coords,
                    const size_t rk_level) const;

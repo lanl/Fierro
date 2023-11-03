@@ -22,7 +22,8 @@ void FEA_Module_Dynamic_Elasticity::boundary_velocity(const mesh_t &mesh,
     for (size_t bdy_set=0; bdy_set<num_bdy_sets; bdy_set++){
         
         // Loop over boundary nodes in a boundary set
-        FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
+        // FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
+        for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes_in_set.host(bdy_set); bdy_node_lid++) {
                 
             // reflected (boundary array is on the device)
             if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::reflected){
@@ -62,10 +63,8 @@ void FEA_Module_Dynamic_Elasticity::boundary_velocity(const mesh_t &mesh,
                 //if (mesh.num_dims == 3) node_vel(rk_level, bdy_node_gid, 2) = boundary(bdy_set).w * node_coords(rk_level, bdy_node_gid, 2); 
  
             }// end if
-            
-            
-                
-        }); // end for bdy_node_lid
+        }
+        //}); // end for bdy_node_lid
 	    
     } // end for bdy_set
     

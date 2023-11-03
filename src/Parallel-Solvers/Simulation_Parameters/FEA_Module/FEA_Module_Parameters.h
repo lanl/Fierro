@@ -49,7 +49,10 @@ struct FEA_Module_Parameters
     DCArrayKokkos <boundary_t> boundary;
 
     void derive() {
-        mtr::from_vector(loading, loading_conditions);
+        std::vector<loading_t> lcs;
+        for (const auto& lc : loading_conditions)
+            lcs.push_back((loading_t)(*lc));
+        mtr::from_vector(loading, lcs);
         mtr::from_vector(boundary, boundary_conditions);
     }
     

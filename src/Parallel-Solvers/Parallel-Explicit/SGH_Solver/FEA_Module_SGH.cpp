@@ -1504,8 +1504,8 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
     FOR_ALL_CLASS(bdy_set, 0, num_bdy_sets, {
         
         // tag boundaries
-        BOUNDARY_TYPE bc_tag_id = boundary(bdy_set).surface.type;
-        double val = boundary(bdy_set).value;
+        BOUNDARY_TYPE bc_type = boundary(bdy_set).surface.type;
+        double val = boundary(bdy_set).surface.plane_position;
         
         // save the boundary patches to this set that are on the plane, spheres, etc.
         for (size_t bdy_patch_lid=0; bdy_patch_lid < nboundary_patches; bdy_patch_lid++){
@@ -1515,10 +1515,10 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
             
             
             // check to see if this patch is on the specified plane
-            size_t is_on_bdy = check_bdy(bdy_patch_gid,
+            bool is_on_bdy = check_bdy(bdy_patch_gid,
                                          num_dim,
                                          num_nodes_in_patch,
-                                         (int)bc_tag_id,
+                                         bc_type,
                                          val,
                                          node_coords,
                                          rk_level); // no=0, yes=1
@@ -1531,7 +1531,7 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
             }
             */
 
-            if (is_on_bdy == 1){
+            if (is_on_bdy){
                 
                 size_t index = bdy_patches_in_set.stride(bdy_set);
                 
@@ -1555,17 +1555,11 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
 } // end tag
 
 
-/* ----------------------------------------------------------------------------
-    routine for checking to see if a vertex is on a boundary
-    bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-    val = plane value, radius, radius
-------------------------------------------------------------------------------- */
-
 KOKKOS_INLINE_FUNCTION
-size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
+bool FEA_Module_SGH::check_bdy(const size_t patch_gid,
                  const int num_dim,
                  const int num_nodes_in_patch,
-                 const int this_bc_tag,
+                 const BOUNDARY_TYPE bc_type,
                  const double val,
                  const DViewCArrayKokkos <double> &node_coords,
                  const size_t rk_level) const {
@@ -1577,74 +1571,41 @@ size_t FEA_Module_SGH::check_bdy(const size_t patch_gid,
     double these_patch_coords[3];  // Note: cannot allocated array with num_dim
     
     // loop over the nodes on the patch
-    for (size_t patch_node_lid=0; patch_node_lid < num_nodes_in_patch; patch_node_lid++){
-        
+    for (size_t patch_node_lid=0; patch_node_lid < num_nodes_in_patch; patch_node_lid++) {
         // get the nodal_gid for this node in the patch
         //size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
         size_t node_gid = Local_Index_Boundary_Patches(patch_gid, patch_node_lid);
 
         for (size_t dim = 0; dim < num_dim; dim++){
             these_patch_coords[dim] = node_coords(rk_level, node_gid, dim);  // (rk, node_gid, dim)
-        } // end for dim
+        }
         
-        
-        // a x-plane
-        if (this_bc_tag == 0){
-            
-            if ( fabs(these_patch_coords[0] - val) <= 1.0e-7 ) is_on_bdy += 1;
-            
-        }// end if on type
-        
-        // a y-plane
-        else if (this_bc_tag == 1){
-            
-            if ( fabs(these_patch_coords[1] - val) <= 1.0e-7 ) is_on_bdy += 1;
-            
-        }// end if on type
-        
-        // a z-plane
-        else if (this_bc_tag == 2){
-            
-            if ( fabs(these_patch_coords[2] - val) <= 1.0e-7 ) is_on_bdy += 1;
-            
-        }// end if on type
-        
-        
-        // cylinderical shell where radius = sqrt(x^2 + y^2)
-        else if (this_bc_tag == 3){
-            
-            real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
-                            these_patch_coords[1]*these_patch_coords[1]);
-            
-            if ( fabs(R - val) <= 1.0e-7 ) is_on_bdy += 1;
-            
-            
-        }// end if on type
-        
-        // spherical shell where radius = sqrt(x^2 + y^2 + z^2)
-        else if (this_bc_tag == 4){
-            
-            real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
-                            these_patch_coords[1]*these_patch_coords[1] +
-                            these_patch_coords[2]*these_patch_coords[2]);
-            
-            if ( fabs(R - val) <= 1.0e-7 ) is_on_bdy += 1;
-            
-        } // end if on type
-        
-    } // end for nodes in the patch
+        if (bc_type == BOUNDARY_TYPE::x_plane) {
+          if ( fabs(these_patch_coords[0] - val) <= 1.0e-7 ) is_on_bdy += 1;
+        }
+        else if (bc_type == BOUNDARY_TYPE::y_plane) {
+          if ( fabs(these_patch_coords[1] - val) <= 1.0e-7 ) is_on_bdy += 1;
+        }
+        else if (bc_type == BOUNDARY_TYPE::z_plane) {
+          if ( fabs(these_patch_coords[2] - val) <= 1.0e-7 ) is_on_bdy += 1;
+        }
+        else if (bc_type == BOUNDARY_TYPE::cylinder){
+          real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
+                          these_patch_coords[1]*these_patch_coords[1]);
+          
+          if ( fabs(R - val) <= 1.0e-7 ) is_on_bdy += 1;
+        }
+        else if (bc_type == BOUNDARY_TYPE::sphere) {
+          real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
+                          these_patch_coords[1]*these_patch_coords[1] +
+                          these_patch_coords[2]*these_patch_coords[2]);
+          
+          if ( fabs(R - val) <= 1.0e-7 ) is_on_bdy += 1;
+        }
+    }
     
     // if all nodes in the patch are on the surface
-    if (is_on_bdy == num_nodes_in_patch){
-        is_on_bdy = 1;
-    }
-    else {
-        is_on_bdy = 0;
-    }
-    
-    
-    return is_on_bdy;
-    
+    return is_on_bdy == num_nodes_in_patch;
 } // end method to check bdy
 
 /* ----------------------------------------------------------------------------

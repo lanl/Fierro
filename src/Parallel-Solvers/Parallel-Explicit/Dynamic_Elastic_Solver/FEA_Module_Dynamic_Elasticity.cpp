@@ -1462,6 +1462,7 @@ void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos <boundary_t> &b
     
     
     FOR_ALL_CLASS(bdy_set, 0, num_bdy_sets, {
+    //for (size_t bdy_set = 0; bdy_set < num_bdy_sets; bdy_set++) {
         
         // tag boundaries
         BOUNDARY_TYPE bc_type = boundary(bdy_set).surface.type;
@@ -1504,7 +1505,7 @@ void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos <boundary_t> &b
             
             
         } // end for bdy_patch
-        
+    //}
     });  // end FOR_ALL_CLASS bdy_sets
     
     //debug check
@@ -1514,12 +1515,6 @@ void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos <boundary_t> &b
     return;
 } // end tag
 
-
-/* ----------------------------------------------------------------------------
-    routine for checking to see if a vertex is on a boundary
-    bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-    val = plane value, radius, radius
-------------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
 bool FEA_Module_Dynamic_Elasticity::check_bdy(const size_t patch_gid,
@@ -1546,12 +1541,15 @@ bool FEA_Module_Dynamic_Elasticity::check_bdy(const size_t patch_gid,
             these_patch_coords[dim] = node_coords(rk_level, node_gid, dim);  // (rk, node_gid, dim)
         }
         
-        if (bc_type == BOUNDARY_TYPE::x_plane)
+        if (bc_type == BOUNDARY_TYPE::x_plane) {
           if ( fabs(these_patch_coords[0] - val) <= 1.0e-7 ) is_on_bdy += 1;
-        else if (bc_type == BOUNDARY_TYPE::y_plane)
+        }
+        else if (bc_type == BOUNDARY_TYPE::y_plane) {
           if ( fabs(these_patch_coords[1] - val) <= 1.0e-7 ) is_on_bdy += 1;
-        else if (bc_type == BOUNDARY_TYPE::z_plane)
+        }
+        else if (bc_type == BOUNDARY_TYPE::z_plane) {
           if ( fabs(these_patch_coords[2] - val) <= 1.0e-7 ) is_on_bdy += 1;
+        }
         else if (bc_type == BOUNDARY_TYPE::cylinder){
           real_t R = sqrt(these_patch_coords[0]*these_patch_coords[0] +
                           these_patch_coords[1]*these_patch_coords[1]);
@@ -1569,7 +1567,6 @@ bool FEA_Module_Dynamic_Elasticity::check_bdy(const size_t patch_gid,
     
     // if all nodes in the patch are on the surface
     return is_on_bdy == num_nodes_in_patch;
-    
 } // end method to check bdy
 
 /* ----------------------------------------------------------------------------

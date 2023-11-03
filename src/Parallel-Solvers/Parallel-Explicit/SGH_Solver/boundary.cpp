@@ -50,7 +50,7 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
                     // Set velocity to zero
                     node_vel(rk_level, bdy_node_gid, dim) = 0.0;
                 }
-                
+
             }
             else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::velocity){
     
