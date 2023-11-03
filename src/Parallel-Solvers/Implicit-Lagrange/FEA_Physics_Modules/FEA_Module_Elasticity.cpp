@@ -116,7 +116,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
 
-  parameters = in_params;
+  module_params = in_params;
   simparam = Implicit_Solver_Pointer_->simparam;
   
   //TO parameters
@@ -124,7 +124,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(
   nodal_density_flag = simparam.nodal_density_flag;
 
   //modal analysis flag hack
-  Implicit_Solver_Pointer_->fea_modules_modal_analysis[my_fea_module_index] = simparam.modal_analysis;
+  Implicit_Solver_Pointer_->fea_modules_modal_analysis[my_fea_module_index] = module_params.modal_analysis;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -598,8 +598,8 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::init_boundaries(){
-  max_load_boundary_sets = parameters.loading_conditions.size();
-  max_disp_boundary_sets = parameters.boundary_conditions.size();
+  max_load_boundary_sets = module_params.loading_conditions.size();
+  max_disp_boundary_sets = module_params.boundary_conditions.size();
   max_boundary_sets = max_load_boundary_sets + max_disp_boundary_sets;
   int num_dim = simparam.num_dims;
   
@@ -766,7 +766,7 @@ void FEA_Module_Elasticity::generate_bcs(){
   real_t value;
   real_t fix_limits[4];
 
-  for (auto bc : parameters.boundary_conditions) {
+  for (auto bc : module_params.boundary_conditions) {
     switch (bc.surface.type) {
       case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
@@ -816,7 +816,7 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   real_t value, temp_flux;
   
   double unit_scaling = simparam.get_unit_scaling();
-  for (auto lc : parameters.loading_conditions) {
+  for (auto lc : module_params.loading_conditions) {
     switch (lc->surface.type) {
       case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
@@ -1087,7 +1087,7 @@ void FEA_Module_Elasticity::init_assembly(){
 
   Stiffness_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Stiffness_Matrix_Strides);
   DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Stiffness_Matrix_Strides);
-  if(simparam.modal_analysis)
+  if(module_params.modal_analysis)
     Mass_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Stiffness_Matrix_Strides);
 
   //set stiffness Matrix Graph
@@ -1164,7 +1164,7 @@ void FEA_Module_Elasticity::init_assembly(){
   Global_Stiffness_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view()));
   Global_Stiffness_Matrix->fillComplete();
 
-  if(simparam.modal_analysis){
+  if(module_params.modal_analysis){
     Global_Mass_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Mass_Matrix.get_kokkos_view()));
     Global_Mass_Matrix->fillComplete();
   }
@@ -1236,7 +1236,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Stiffness_Matrix(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Mass_Matrix;
-  if(simparam.modal_analysis){
+  if(module_params.modal_analysis){
     Local_Mass_Matrix = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
   }
   //initialize stiffness Matrix entries to 0
@@ -1252,7 +1252,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
     //std::cout << std::endl;
   }
 
-  if(simparam.modal_analysis){
+  if(module_params.modal_analysis){
     for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
       for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
         Mass_Matrix(idof,istride) = 0;
@@ -1341,7 +1341,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
 
   
   //Mass matrix assembly for modal analysis
-  if(simparam.modal_analysis){
+  if(module_params.modal_analysis){
     if(num_dim==2)
     for (int ielem = 0; ielem < rnum_elem; ielem++){
       element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
@@ -1440,7 +1440,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
   //sort values and indices
   Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
 
-  if(simparam.modal_analysis){
+  if(module_params.modal_analysis){
     //local indices in the graph using the constructed column map
     CArrayKokkos<LO, array_layout, device_type, memory_traits> mass_local_indices(nnz, "mass_local_indices");
     entrycount = 0;
@@ -2029,9 +2029,9 @@ void FEA_Module_Elasticity::Element_Material_Properties(size_t ielem, real_t &El
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*parameters.Elastic_Modulus/unit_scaling/unit_scaling;
+  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus = density*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = parameters.Poisson_Ratio;
+  Poisson_Ratio = module_params.Poisson_Ratio;
 }
 
 /* ----------------------------------------------------------------------
@@ -2047,9 +2047,9 @@ void FEA_Module_Elasticity::Gradient_Element_Material_Properties(size_t ielem, r
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*parameters.Elastic_Modulus/unit_scaling/unit_scaling;
+  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
   //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = parameters.Poisson_Ratio;
+  Poisson_Ratio = module_params.Poisson_Ratio;
 }
 
 /* --------------------------------------------------------------------------------
@@ -2066,10 +2066,10 @@ void FEA_Module_Elasticity::Concavity_Element_Material_Properties(size_t ielem, 
     for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and stiffness
-    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*parameters.Elastic_Modulus/unit_scaling/unit_scaling;
+    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
   }
   //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = parameters.Poisson_Ratio;
+  Poisson_Ratio = module_params.Poisson_Ratio;
 }
 
 /* ----------------------------------------------------------------------
@@ -2613,8 +2613,8 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
       Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
     }
     else{
-      Element_Modulus = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-      Poisson_Ratio = simparam.Poisson_Ratio;
+      Element_Modulus = module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+      Poisson_Ratio = module_params.Poisson_Ratio;
     }
     
     Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
@@ -2896,7 +2896,7 @@ void FEA_Module_Elasticity::local_mass_matrix(int ielem, CArrayKokkos<real_t, ar
   int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam.num_gauss_points;
-  real_t material_density = simparam.material_density;
+  real_t material_density = module_params.material_density;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
 
@@ -4051,7 +4051,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
     Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
@@ -4061,7 +4061,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   comm->barrier();
   hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
   }
   //scale by reciprocal ofdirection vector sum
@@ -4658,7 +4658,7 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
   int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam.num_gauss_points;
-  int strain_max_flag = parameters.strain_max_flag;
+  int strain_max_flag = module_params.strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
   int solve_flag, zero_strain_flag;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
@@ -5109,7 +5109,7 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::linear_solver_parameters(){
-  if(parameters.direct_solver_flag){
+  if(module_params.direct_solver_flag){
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("Amesos2"));
     auto superlu_params = Teuchos::sublist(Teuchos::rcpFromRef(*Linear_Solve_Params), "SuperLU_DIST");
     superlu_params->set("Equil", true);
@@ -5398,7 +5398,7 @@ int FEA_Module_Elasticity::solve(){
     }
   }//row for
   */
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
     Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
     Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
@@ -5457,12 +5457,12 @@ int FEA_Module_Elasticity::solve(){
   linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
 
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
   }
 
-  if(parameters.multigrid_timers){
+  if(module_params.multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
     reportParams->set("How to merge timer sets",   "Union");
     reportParams->set("alwaysWriteLocal",          false);

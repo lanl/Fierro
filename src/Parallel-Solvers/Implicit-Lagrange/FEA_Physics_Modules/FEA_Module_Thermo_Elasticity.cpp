@@ -126,7 +126,7 @@ FEA_Module_Thermo_Elasticity::FEA_Module_Thermo_Elasticity(
   if(!module_found) *fos << "PROGRAM IS ENDING DUE TO ERROR; COULD NOT FIND HEAT CONDUCTION MODULE FOR THERMO ELASTIC MODULE"  << std::endl;
 
 
-  parameters = in_params;
+  module_params = in_params;
   simparam = Implicit_Solver_Pointer_->simparam;
   
   //TO parameters
@@ -607,8 +607,8 @@ void FEA_Module_Thermo_Elasticity::read_conditions_ansys_dat(std::ifstream *in, 
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::init_boundaries(){
-  max_load_boundary_sets = parameters.loading_conditions.size();
-  max_disp_boundary_sets = parameters.boundary_conditions.size();
+  max_load_boundary_sets = module_params.loading_conditions.size();
+  max_disp_boundary_sets = module_params.boundary_conditions.size();
   max_boundary_sets = max_load_boundary_sets + max_disp_boundary_sets;
   int num_dim = simparam.num_dims;
   
@@ -774,7 +774,7 @@ void FEA_Module_Thermo_Elasticity::generate_bcs(){
   real_t value;
   real_t fix_limits[4];
 
-  for (auto bc : parameters.boundary_conditions) {
+  for (auto bc : module_params.boundary_conditions) {
     switch (bc.surface.type) {
       case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
@@ -825,7 +825,7 @@ void FEA_Module_Thermo_Elasticity::generate_applied_loads(){
   real_t value;
   
   double unit_scaling = simparam.get_unit_scaling();
-  for (auto lc : parameters.loading_conditions) {
+  for (auto lc : module_params.loading_conditions) {
     switch (lc->surface.type) {
       case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
@@ -1379,7 +1379,7 @@ void FEA_Module_Thermo_Elasticity::assemble_matrix(){
   /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
     for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      if(Stiffness_Matrix(idof,istride)<0.000000001*parameters.Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*parameters.Elastic_Modulus*density_epsilon)
+      if(Stiffness_Matrix(idof,istride)<0.000000001*module_params.Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*module_params.Elastic_Modulus*density_epsilon)
       Stiffness_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -1477,13 +1477,13 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   all_node_temperatures_distributed = Heat_Conduction_Module_Pointer_->all_node_temperatures_distributed;
   const_host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   real_t Expansion_Coefficients[6], Initial_Temperature;
-  Initial_Temperature = parameters.Initial_Temperature;
-  Expansion_Coefficients[0] = parameters.Expansion_Coefficients[0];
-  Expansion_Coefficients[1] = parameters.Expansion_Coefficients[1];
-  Expansion_Coefficients[2] = parameters.Expansion_Coefficients[2];
-  Expansion_Coefficients[3] = parameters.Expansion_Coefficients[3];
-  Expansion_Coefficients[4] = parameters.Expansion_Coefficients[4];
-  Expansion_Coefficients[5] = parameters.Expansion_Coefficients[5];
+  Initial_Temperature = module_params.Initial_Temperature;
+  Expansion_Coefficients[0] = module_params.Expansion_Coefficients[0];
+  Expansion_Coefficients[1] = module_params.Expansion_Coefficients[1];
+  Expansion_Coefficients[2] = module_params.Expansion_Coefficients[2];
+  Expansion_Coefficients[3] = module_params.Expansion_Coefficients[3];
+  Expansion_Coefficients[4] = module_params.Expansion_Coefficients[4];
+  Expansion_Coefficients[5] = module_params.Expansion_Coefficients[5];
   
   //force vector initialization
   for(int i=0; i < num_dim*nlocal_nodes; i++)
@@ -2215,9 +2215,9 @@ void FEA_Module_Thermo_Elasticity::Element_Material_Properties(size_t ielem, rea
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*parameters.Elastic_Modulus/unit_scaling/unit_scaling;
-  //Element_Modulus = density*parameters.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = parameters.Poisson_Ratio;
+  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+  //Element_Modulus = density*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+  Poisson_Ratio = module_params.Poisson_Ratio;
 }
 
 /* ----------------------------------------------------------------------
@@ -2233,9 +2233,9 @@ void FEA_Module_Thermo_Elasticity::Gradient_Element_Material_Properties(size_t i
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*parameters.Elastic_Modulus/unit_scaling/unit_scaling;
-  //Element_Modulus_Derivative = parameters.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = parameters.Poisson_Ratio;
+  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+  //Element_Modulus_Derivative = module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+  Poisson_Ratio = module_params.Poisson_Ratio;
 }
 
 /* --------------------------------------------------------------------------------
@@ -2252,10 +2252,10 @@ void FEA_Module_Thermo_Elasticity::Concavity_Element_Material_Properties(size_t 
     for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and stiffness
-    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*parameters.Elastic_Modulus/unit_scaling/unit_scaling;
+    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
   }
-  //Element_Modulus_Derivative = parameters.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = parameters.Poisson_Ratio;
+  //Element_Modulus_Derivative = module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+  Poisson_Ratio = module_params.Poisson_Ratio;
 }
 
 /* ----------------------------------------------------------------------
@@ -2374,8 +2374,8 @@ void FEA_Module_Thermo_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, 
       Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
     }
     else{
-      Element_Modulus = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-      Poisson_Ratio = simparam.Poisson_Ratio;
+      Element_Modulus = module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+      Poisson_Ratio = module_params.Poisson_Ratio;
     }
     Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5-Poisson_Ratio;
@@ -4049,7 +4049,7 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
     Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
@@ -4059,7 +4059,7 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
   comm->barrier();
   hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
   }
   //scale by reciprocal ofdirection vector sum
@@ -4656,7 +4656,7 @@ void FEA_Module_Thermo_Elasticity::compute_nodal_strains(){
   int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam.num_gauss_points;
-  int strain_max_flag = parameters.strain_max_flag;
+  int strain_max_flag = module_params.strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
   int solve_flag, zero_strain_flag;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
@@ -5107,7 +5107,7 @@ void FEA_Module_Thermo_Elasticity::compute_nodal_strains(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::linear_solver_parameters(){
-  if(parameters.direct_solver_flag){
+  if(module_params.direct_solver_flag){
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("Amesos2"));
     auto superlu_params = Teuchos::sublist(Teuchos::rcpFromRef(*Linear_Solve_Params), "SuperLU_DIST");
     superlu_params->set("Equil", true);
@@ -5396,7 +5396,7 @@ int FEA_Module_Thermo_Elasticity::solve(){
     }
   }//row for
   */
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
     Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
     Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
@@ -5455,12 +5455,12 @@ int FEA_Module_Thermo_Elasticity::solve(){
   linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
 
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
   }
 
-  if(parameters.multigrid_timers){
+  if(module_params.multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
     reportParams->set("How to merge timer sets",   "Union");
     reportParams->set("alwaysWriteLocal",          false);

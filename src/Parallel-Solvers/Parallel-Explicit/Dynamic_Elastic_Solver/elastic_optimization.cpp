@@ -68,7 +68,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
   LO local_dof_index;
   const size_t num_fills = simparam.regions.size();
   const size_t rk_num_bins = simparam.dynamic_options.rk_num_bins;
-  const size_t num_bcs = fea_params.boundary_conditions.size();
+  const size_t num_bcs = module_params.boundary_conditions.size();
   const size_t num_materials = simparam.materials.size();
   real_t objective_accumulation;
 
@@ -77,7 +77,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
   int nranks = Explicit_Solver_Pointer_->nranks;
 
   const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
-  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
@@ -527,7 +527,7 @@ double FEA_Module_Dynamic_Elasticity::average_element_density(const int nodes_pe
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint(){
   
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   real_t global_dt;
@@ -591,10 +591,10 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint(){
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full(){
   const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
-  const real_t damping_constant = fea_params.damping_constant;
+  const real_t damping_constant = module_params.damping_constant;
   real_t global_dt;
   size_t current_data_index, next_data_index;
   Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
@@ -762,7 +762,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
@@ -988,7 +988,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
@@ -1135,7 +1135,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
           const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           const_vec_array next_phi_adjoint_vector = (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
           
-          const real_t damping_constant = fea_params.damping_constant;
+          const real_t damping_constant = module_params.damping_constant;
           FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
             real_t lambda_dot_current;
             real_t lambda_dot_next;

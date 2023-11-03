@@ -1345,7 +1345,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
 void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = fea_params.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;

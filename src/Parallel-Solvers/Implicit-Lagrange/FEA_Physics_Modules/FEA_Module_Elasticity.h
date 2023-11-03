@@ -148,7 +148,7 @@ public:
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
   Simulation_Parameters simparam;
-  Elasticity_Parameters parameters;
+  Elasticity_Parameters module_params;
   Implicit_Solver *Implicit_Solver_Pointer_;
   
   //Local FEA data

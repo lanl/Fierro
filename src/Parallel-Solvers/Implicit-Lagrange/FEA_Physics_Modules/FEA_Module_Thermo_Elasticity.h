@@ -133,7 +133,7 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  Thermo_Elasticity_Parameters parameters;
+  Thermo_Elasticity_Parameters module_params;
   Simulation_Parameters simparam;
   Implicit_Solver *Implicit_Solver_Pointer_;
   FEA_Module_Heat_Conduction *Heat_Conduction_Module_Pointer_;

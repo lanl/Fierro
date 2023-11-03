@@ -88,7 +88,7 @@ Explicit_Solver::write_outputs()
   if (simparam.output_options.output_file_format == OUTPUT_FORMAT::none)
     return;
 
-  const size_t rk_level = simparam.rk_num_bins - 1;  
+  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;  
   Teuchos::RCP<CArray<double>> design_density;
   Teuchos::RCP<CArray<int>> elem_switch;
   Teuchos::RCP<CArray<int>> elem_proc_id;

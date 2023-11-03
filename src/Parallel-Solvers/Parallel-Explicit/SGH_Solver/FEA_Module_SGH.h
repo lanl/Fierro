@@ -524,7 +524,7 @@ public:
   real_t penalty_power;
   
   Simulation_Parameters_Explicit simparam;
-  SGH_Parameters fea_params;
+  SGH_Parameters module_params;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;

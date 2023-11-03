@@ -111,7 +111,7 @@ FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
 
-  parameters = in_params;
+  module_params = in_params;
   simparam = Implicit_Solver_Pointer_->simparam;
   
   //TO parameters
@@ -174,8 +174,8 @@ FEA_Module_Heat_Conduction::~FEA_Module_Heat_Conduction(){ }
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::init_boundaries(){
-  max_load_boundary_sets = parameters.loading_conditions.size();
-  max_temp_boundary_sets = parameters.boundary_conditions.size();
+  max_load_boundary_sets = module_params.loading_conditions.size();
+  max_temp_boundary_sets = module_params.boundary_conditions.size();
   max_boundary_sets = max_load_boundary_sets + max_temp_boundary_sets;
   
   // set the number of boundary sets
@@ -340,7 +340,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   real_t value, temp_temp;
   real_t fix_limits[4];
 
-  for (auto bc : parameters.boundary_conditions) {
+  for (auto bc : module_params.boundary_conditions) {
     switch (bc.surface.type) {
       case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
@@ -430,7 +430,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads() {
   bc_name = fea_module_name + bc_base + bc_index;
 
   double unit_scaling = simparam.get_unit_scaling();
-  for (auto lc : parameters.loading_conditions) {
+  for (auto lc : module_params.loading_conditions) {
     switch (lc->surface.type) {
       case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
@@ -514,7 +514,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads() {
   //Body Term Section
 
   //apply body terms
-  thermal_flag = parameters.thermal_flag;
+  thermal_flag = module_params.thermal_flag;
 
   if(electric_flag||thermal_flag) body_term_flag = true;
 
@@ -1378,7 +1378,7 @@ void FEA_Module_Heat_Conduction::Body_Term(size_t ielem, real_t density, real_t 
   //init 
   specific_internal_energy_rate = 0;
   if(thermal_flag){
-    specific_internal_energy_rate += parameters.specific_internal_energy_rate*density;
+    specific_internal_energy_rate += module_params.specific_internal_energy_rate*density;
   }
   
   /*
@@ -1404,7 +1404,7 @@ void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density
   //init 
   gradient_specific_internal_energy_rate = 0;\
   if(thermal_flag){
-    gradient_specific_internal_energy_rate += parameters.specific_internal_energy_rate;
+    gradient_specific_internal_energy_rate += module_params.specific_internal_energy_rate;
   }
   
   /*
@@ -1431,7 +1431,7 @@ void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Conductivity = (density_epsilon + (1 - density_epsilon)*penalty_product)*parameters.Thermal_Conductivity/unit_scaling;
+  Element_Conductivity = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.Thermal_Conductivity/unit_scaling;
 }
 
 /* ----------------------------------------------------------------------
@@ -1447,7 +1447,7 @@ void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t iel
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Conductivity_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*parameters.Thermal_Conductivity/unit_scaling;
+  Element_Conductivity_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.Thermal_Conductivity/unit_scaling;
 }
 
 /* --------------------------------------------------------------------------------
@@ -1464,7 +1464,7 @@ void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ie
     for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and conductivity
-    Element_Conductivity_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*parameters.Thermal_Conductivity/unit_scaling;
+    Element_Conductivity_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.Thermal_Conductivity/unit_scaling;
   }
 }
 
@@ -1613,7 +1613,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
       Element_Material_Properties((size_t) ielem,Element_Conductivity, current_density);
     }
     else{
-      Element_Conductivity = simparam.Thermal_Conductivity/unit_scaling;
+      Element_Conductivity = module_params.Thermal_Conductivity/unit_scaling;
     }
 
     //debug print
@@ -2575,7 +2575,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
     Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
@@ -2585,7 +2585,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   comm->barrier();
   hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
   }
   //scale by reciprocal ofdirection vector sum
@@ -3065,7 +3065,7 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam.num_gauss_points;
-  int flux_max_flag = parameters.flux_max_flag;
+  int flux_max_flag = module_params.flux_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
   int solve_flag, zero_flux_flag;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
@@ -3400,7 +3400,7 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::linear_solver_parameters(){
-  if(parameters.direct_solver_flag){
+  if(module_params.direct_solver_flag){
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("Amesos2"));
     auto superlu_params = Teuchos::sublist(Teuchos::rcpFromRef(*Linear_Solve_Params), "SuperLU_DIST");
     superlu_params->set("Equil", true);
@@ -3580,7 +3580,7 @@ int FEA_Module_Heat_Conduction::solve(){
     }
   }//row for
   */
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
     Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
     Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
@@ -3639,12 +3639,12 @@ int FEA_Module_Heat_Conduction::solve(){
   linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
 
-  if(parameters.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
   }
 
-  if(parameters.multigrid_timers){
+  if(module_params.multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
     reportParams->set("How to merge timer sets",   "Union");
     reportParams->set("alwaysWriteLocal",          false);
