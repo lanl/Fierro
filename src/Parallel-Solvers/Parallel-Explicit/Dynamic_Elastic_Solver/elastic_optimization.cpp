@@ -541,7 +541,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint(){
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (unsigned long cycle = last_time_step; cycle >= 0; cycle--) {
+  for (int cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -549,12 +549,12 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint(){
     if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==last_time_step){
         if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+          printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       }
           // print time step every 10 cycles
       else if (cycle%20==0){
         if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+          printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       } // end if
     }
     //else if (cycle==1){
@@ -608,7 +608,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (unsigned long cycle = last_time_step; cycle >= 0; cycle--) {
+  for (int cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -616,12 +616,12 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
     if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==last_time_step){
         if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+          printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       }
           // print time step every 10 cycles
       else if (cycle%20==0){
         if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+          printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       } // end if
     }
     
