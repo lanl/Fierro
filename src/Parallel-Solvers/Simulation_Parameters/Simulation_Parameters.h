@@ -347,7 +347,7 @@ struct Simulation_Parameters
     Simulation_Parameters& operator=(const Simulation_Parameters&) = default;
 };
 IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters, 
-    num_dims, input_options, output_options, materials, regions,
+    num_dims, input_options, mesh_generation_options, output_options, materials, regions,
     timer_output_level, fea_module_parameters, optimization_options,
     nodal_density_flag, thick_condition_boundary, num_gauss_points, output_fields,
     gravity_flag, gravity_vector
