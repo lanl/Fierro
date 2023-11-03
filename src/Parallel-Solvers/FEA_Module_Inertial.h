@@ -64,7 +64,7 @@ public:
   void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component, bool use_initial_coords = false);
   
   //forward declare
-  Inertial_Parameters fea_params;
+  Inertial_Parameters module_params;
   Simulation_Parameters simparam;
   Solver *Solver_Pointer_;
 

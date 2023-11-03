@@ -84,7 +84,7 @@ FEA_Module_Inertial::FEA_Module_Inertial(
   Module_Type = "Inertial";
 
   //acquire base class data from existing simparam in solver (gets yaml options etc.)
-  fea_params = params;
+  module_params = params;
   simparam = Solver_Pointer->simparam;
 
   //TO parameters
@@ -976,21 +976,21 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
     all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   double inertia_center[3];
-  if(fea_params.enable_inertia_center[0]){
-    inertia_center[0] = fea_params.moment_of_inertia_center[0];
+  if(module_params.enable_inertia_center[0]){
+    inertia_center[0] = module_params.moment_of_inertia_center[0];
   }
   else{
     inertia_center[0] = center_of_mass[0];
   }
-  if(fea_params.enable_inertia_center[1]){
-    inertia_center[1] = fea_params.moment_of_inertia_center[1];
+  if(module_params.enable_inertia_center[1]){
+    inertia_center[1] = module_params.moment_of_inertia_center[1];
   }
   else{
     inertia_center[1] = center_of_mass[1];
   }
   if(num_dim==3){
-    if(fea_params.enable_inertia_center[2]){
-      inertia_center[2] = fea_params.moment_of_inertia_center[2];
+    if(module_params.enable_inertia_center[2]){
+      inertia_center[2] = module_params.moment_of_inertia_center[2];
     }
     else{
       inertia_center[2] = center_of_mass[2];
@@ -1254,21 +1254,21 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
     all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   double inertia_center[3];
-  if(fea_params.enable_inertia_center[0]){
-    inertia_center[0] = fea_params.moment_of_inertia_center[0];
+  if(module_params.enable_inertia_center[0]){
+    inertia_center[0] = module_params.moment_of_inertia_center[0];
   }
   else{
     inertia_center[0] = center_of_mass[0];
   }
-  if(fea_params.enable_inertia_center[1]){
-    inertia_center[1] = fea_params.moment_of_inertia_center[1];
+  if(module_params.enable_inertia_center[1]){
+    inertia_center[1] = module_params.moment_of_inertia_center[1];
   }
   else{
     inertia_center[1] = center_of_mass[1];
   }
   if(num_dim==3){
-    if(fea_params.enable_inertia_center[2]){
-      inertia_center[2] = fea_params.moment_of_inertia_center[2];
+    if(module_params.enable_inertia_center[2]){
+      inertia_center[2] = module_params.moment_of_inertia_center[2];
     }
     else{
       inertia_center[2] = center_of_mass[2];
