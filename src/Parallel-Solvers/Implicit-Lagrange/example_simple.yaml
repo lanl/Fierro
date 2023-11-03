@@ -1,5 +1,4 @@
 # input file
-type: Implicit
 num_dims: 3
 input_options:
     mesh_file_format: ensight
@@ -8,7 +7,6 @@ input_options:
 
 output_options:
   output_stress: false
-  output_file_format: vtk
 
 
 fea_module_parameters:

@@ -24,10 +24,27 @@ output_options:
 
 fea_modules:
   - type: Dynamic_Elasticity
+    boundary_conditions:
+        # Tag X plane
+      - surface: 
+          type: x_plane
+          plane_position: 0.0
+        type: reflected
+        # Tag Y plane
+      - surface: 
+          type: y_plane
+          plane_position: 0.0
+        type: reflected
+        # Tag Z plane
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: reflected
 
-material_options:
+materials:
     #eos model is required
-  - eos_model: ideal_gas
+  - material_id: 0
+    eos_model: ideal_gas
     strength_model: none
     q1: 1.0
     q2: 0
@@ -39,8 +56,9 @@ material_options:
       - 1.0
 
 region_options:
-  - volume: global
-    mat_id: 0
+  - volume: 
+      type: global
+    material_id: 0
     den: 1.0
     sie: 1.e-10
         
@@ -49,10 +67,11 @@ region_options:
     v: 0.0
     w: 0.0
     # energy source initial conditions
-  - volume: sphere
-    mat_id: 0
-    radius1: 0.0
-    radius2: 0.1125
+  - volume: 
+      type: sphere
+      radius1: 0.0
+      radius2: 0.1125
+    material_id: 0
     den: 1.0
         
     velocity: cartesian
@@ -60,31 +79,16 @@ region_options:
     v: 0.0
     w: 0.0
     
-boundary_conditions:
-    # Tag X plane
-  - surface: x_plane
-    value: 0.0
-    condition_type: reflected
-            
-    # Tag Y plane
-  - surface: y_plane
-    value: 0.0
-    condition_type: reflected
-            
-    # Tag Z plane
-  - surface: z_plane
-    value: 0.0
-    condition_type: reflected
-
 loading_conditions:
     # Load radially around 0 0 0 corner
-  - volume: sphere
-    radius_inner: 0.0
-    radius_outer: 0.1125
-    condition_type: body_force
-    fx: 0.0001
-    fy: 0.0001
-    fz: 0.0001
+  - volume: 
+      type: sphere
+      radius_inner: 0.0
+      radius_outer: 0.1125
+    type: body_force
+    x: 0.0001
+    y: 0.0001
+    z: 0.0001
             
 optimization_options:
     optimization_process: topology_optimization

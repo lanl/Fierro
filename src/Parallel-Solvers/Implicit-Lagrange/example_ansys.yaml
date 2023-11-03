@@ -1,15 +1,9 @@
-# input file
-solver_type: Implicit
-
 num_dims: 3
 input_options:
     mesh_file_format: ansys_dat
     mesh_file_name: ANSYS_Beam.dat
 
-output_options:
-  graphics_step_frequency: 2000
-    
-fea_modules:
+fea_module_parameters:
   - type: Elasticity
 
 optimization_options:
