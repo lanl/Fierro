@@ -213,7 +213,10 @@ public:
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xB;
   Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> H;
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> Prec;
+  Teuchos::RCP<MueLu::Hierarchy<real_t,LO,GO,node_type>> eigen_H;
+  Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> eigen_Prec;
   bool Hierarchy_Constructed;
+  bool Eigen_Hierarchy_Constructed;
 
   //output dof data
   //Global arrays with collected data used to print
