@@ -5920,6 +5920,8 @@ int FEA_Module_Elasticity::eigensolve(){
   LO local_dof_index;
   size_t local_nrows = nlocal_nodes*num_dim;
   size_t access_index, row_access_index, row_counter;
+  bool free_bcs = false;
+  if(num_boundary_conditions==0) free_bcs = true;
 
   // Create initial vectors
   Teuchos::RCP<MV> ivec = Teuchos::rcp (new MV (local_dof_map,blocksize));
@@ -5935,63 +5937,63 @@ int FEA_Module_Elasticity::eigensolve(){
   //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Stiffness_Matrix, "A_matrix", "Stores stiffness matrix values");
 
   //first pass counts strides for storage
-  // if(!matrix_bc_reduced){
-  //   for(LO i=0; i < local_nrows; i++){
-  //     Original_Stiffness_Entries_Strides(i) = 0;
-  //     if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
-  //       Original_Stiffness_Entries_Strides(i) = Stiffness_Matrix_Strides(i);
-  //     }
-  //     else{
-  //       for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
-  //         global_dof_index = DOF_Graph_Matrix(i,j);
-  //         local_dof_index = all_dof_map->getLocalElement(global_dof_index);
-  //         if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
-  //           Original_Stiffness_Entries_Strides(i)++;
-  //         }
-  //       }//stride for
-  //     }
-  //   }//row for
+  if(!matrix_bc_reduced&&!free_bcs){
+    for(LO i=0; i < local_nrows; i++){
+      Original_Stiffness_Entries_Strides(i) = 0;
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        Original_Stiffness_Entries_Strides(i) = Stiffness_Matrix_Strides(i);
+      }
+      else{
+        for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+          global_dof_index = DOF_Graph_Matrix(i,j);
+          local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+          if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+            Original_Stiffness_Entries_Strides(i)++;
+          }
+        }//stride for
+      }
+    }//row for
     
-  //   //assign old stiffness matrix entries
-  //   LO stride_index;
-  //   Original_Stiffness_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
-  //   Original_Stiffness_Entry_Indices = RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
-  //   Original_Mass_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
-  //   for(LO i=0; i < local_nrows; i++){
-  //     if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
-  //       for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
-  //         global_dof_index = DOF_Graph_Matrix(i,j);
-  //         local_dof_index = all_dof_map->getLocalElement(global_dof_index);
-  //         Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
-  //         Original_Mass_Entries(i,j) = Mass_Matrix(i,j);
-  //         Original_Stiffness_Entry_Indices(i,j) = j;
-  //         if(local_dof_index == i){
-  //           Stiffness_Matrix(i,j) = 0;
-  //           Mass_Matrix(i,j) = 1;
-  //         }
-  //         else{  
-  //           Mass_Matrix(i,j) = Stiffness_Matrix(i,j) = 0;
-  //         }
-  //       }//stride for
-  //     }
-  //     else{
-  //       stride_index = 0;
-  //       for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
-  //         global_dof_index = DOF_Graph_Matrix(i,j);
-  //         local_dof_index = all_dof_map->getLocalElement(global_dof_index);
-  //         if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
-  //           Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
-  //           Original_Mass_Entries(i,stride_index) = Mass_Matrix(i,j);
-  //           Original_Stiffness_Entry_Indices(i,stride_index) = j;   
-  //           Mass_Matrix(i,j) = Stiffness_Matrix(i,j) = 0;
-  //           stride_index++;
-  //         }
-  //       }
-  //     }
-  //   }//row for
+    //assign old stiffness matrix entries
+    LO stride_index;
+    Original_Stiffness_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+    Original_Stiffness_Entry_Indices = RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+    Original_Mass_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+    for(LO i=0; i < local_nrows; i++){
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+          global_dof_index = DOF_Graph_Matrix(i,j);
+          local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+          Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
+          Original_Mass_Entries(i,j) = Mass_Matrix(i,j);
+          Original_Stiffness_Entry_Indices(i,j) = j;
+          if(local_dof_index == i){
+            Stiffness_Matrix(i,j) = 0;
+            Mass_Matrix(i,j) = 1;
+          }
+          else{  
+            Mass_Matrix(i,j) = Stiffness_Matrix(i,j) = 0;
+          }
+        }//stride for
+      }
+      else{
+        stride_index = 0;
+        for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+          global_dof_index = DOF_Graph_Matrix(i,j);
+          local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+          if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+            Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
+            Original_Mass_Entries(i,stride_index) = Mass_Matrix(i,j);
+            Original_Stiffness_Entry_Indices(i,stride_index) = j;   
+            Mass_Matrix(i,j) = Stiffness_Matrix(i,j) = 0;
+            stride_index++;
+          }
+        }
+      }
+    }//row for
 
-  //   matrix_bc_reduced = true;
-  // }
+    matrix_bc_reduced = true;
+  }
 
   //nullspace vector
   int nulldim = 6;
@@ -6173,7 +6175,7 @@ int FEA_Module_Elasticity::eigensolve(){
   //
   real_t mat_norm = std::max(Global_Stiffness_Matrix->getFrobeniusNorm(),Global_Mass_Matrix->getFrobeniusNorm());
   
-  real_t tol = 1.0e-14*mat_norm;
+  real_t tol = 1.0e-18*mat_norm;
   //tol = tol*mat_norm;
   // Create parameter list to pass into the solver manager
   Teuchos::ParameterList MyPL;
