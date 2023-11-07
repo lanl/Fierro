@@ -17,4 +17,9 @@ setup(
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     include_package_data=True,
     install_requires=install_requires,
+    entry_points={
+        'console_scripts' : [
+            'evpfft-gui = evpfft_gui.gui:main'
+        ]
+    }
 )
