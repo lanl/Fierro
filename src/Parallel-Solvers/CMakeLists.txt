@@ -17,6 +17,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${VECTOR_CXX_FLAGS}")
 
 find_package(MPI REQUIRED)
 find_package(Trilinos REQUIRED)
+find_package(Elements REQUIRED)
 
 # Assume if the CXX compiler exists, the rest do too.
 if (EXISTS ${Trilinos_CXX_COMPILER})

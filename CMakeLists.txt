@@ -35,6 +35,8 @@ if(NOT DEFINED BUILD_ELEMENTS)
   set(BUILD_ELEMENTS ON)
 endif()
 
+find_package(Elements REQUIRED)
+
 #if(BUILD_ELEMENTS)
 #  include_directories(lib/Elements)
 #  add_subdirectory(lib/Elements)
