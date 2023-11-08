@@ -5,20 +5,21 @@ dynamic_options:
   dt_max: 1.e-2
   dt_start: 1.e-5
   cycle_stop: 2000000
-timer_output_level: thorough
 
-input_options:
-  mesh_file_format: ensight
-  mesh_file_name: mesh_Sedov_32.geo
-  element_type: hex8
+mesh_generation_options:
+  type: Box
+  origin: [0, 0, 0]
+  length: [1.2, 1.2, 1.2]
+  num_elems: [32, 32, 32]
 
 output_options:
+  timer_output_level: thorough
   output_file_format: vtk
-graphics_options:
   graphics_step: 0.25
   
 fea_module_parameters:
-  - type: SGH    
+  - type: SGH
+    material_id: 0
     boundary_conditions:
       # Tag X plane
       - surface: 
@@ -60,6 +61,8 @@ materials:
   - id: 0
     eos_model: ideal_gas
     strength_model: none
+    elastic_modulus: 10
+    poisson_ratio: 0.3
     q1: 1.0
     q2: 0
     q1ex: 1.0
