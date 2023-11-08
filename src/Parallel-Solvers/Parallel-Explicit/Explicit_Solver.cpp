@@ -171,7 +171,7 @@ void Explicit_Solver::run(int argc, char *argv[]){
   
   if(myrank == 0){
     std::cout << "Starting Lagrangian SGH code" << std::endl;
-      // check to see of a mesh was supplied when running the code
+      // check to see if a mesh was supplied when running the code
     if (argc == 1) {
       std::cout << "\n\n**********************************\n\n";
       std::cout << " ERROR:\n";

@@ -68,6 +68,8 @@
 
 #include "elements.h"
 #include "swage.h"
+#include "mesh.h"
+#include "ref_elem.h"
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
@@ -87,12 +89,130 @@
 #include "ROL_Elementwise_Reduce.hpp"
 
 
+#define MAX_ELEM_NODES 8
+#define STRAIN_EPSILON 0.000000001
+#define DENSITY_EPSILON 0.0001
+#define BC_EPSILON 1.0e-6
+#define BUFFER_GROW 100
+
+using namespace utils;
+
+FEA_Module_RDH::FEA_Module_RDH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+
+  //assign interfacing index
+  my_fea_module_index_ = my_fea_module_index;
+  
+  //recast solver pointer for non-base class access
+  Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
+
+  //create parameter object
+  simparam = Simulation_Parameters_RDH();
+  simparam = Yaml::from_file<Simulation_Parameters_RDH>(Explicit_Solver_Pointer_->filename);
+  // ---- Read input file, define state and boundary conditions ---- //
+  //simparam->input();
+  
+  //TO parameters
+  simparam_dynamic_opt = Explicit_Solver_Pointer_->simparam_dynamic_opt;
+
+  //create ref element object
+  //ref_elem = new elements::ref_element();
+  //create mesh objects
+  //init_mesh = new swage::mesh_t(simparam);
+  //mesh = new swage::mesh_t(simparam);
+
+  // WARNING WARNING WARNING //
+  mesh = mesh_in;
+
+  //boundary condition data
+  max_boundary_sets = 0;
+  Local_Index_Boundary_Patches = Explicit_Solver_Pointer_->Local_Index_Boundary_Patches;
+
+  //set Tpetra vector pointers
+  initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
+  initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
+  all_initial_node_coords_distributed = Explicit_Solver_Pointer_->all_initial_node_coords_distributed;
+  node_coords_distributed = Explicit_Solver_Pointer_->node_coords_distributed;
+  node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
+  all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
+  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
+    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+    force_gradient_velocity = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+    force_gradient_position = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+    force_gradient_design = Teuchos::rcp(new MV(all_node_map, 1));
+    corner_value_storage = Solver_Pointer->corner_value_storage;
+    corner_vector_storage = Solver_Pointer->corner_vector_storage;
+    relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
+  }
+
+  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on||simparam.num_dims==2){
+    node_masses_distributed = Teuchos::rcp(new MV(map, 1));
+    ghost_node_masses_distributed = Teuchos::rcp(new MV(ghost_node_map, 1));
+    adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
+    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
+    psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_element_map, 1));
+  }
+  
+  //setup output
+  noutput = 0;
+  //init_output();
+
+  //optimization flags
+  kinetic_energy_objective = false;
+  
+
+  //set parameters
+  Time_Variables tv = simparam.time_variables;
+  time_value = simparam.time_value;
+  time_final = tv.time_final;
+  dt_max = tv.dt_max;
+  dt_min = tv.dt_min;
+  dt_cfl = tv.dt_cfl;
+  graphics_time = simparam.graphics_options.graphics_time;
+  graphics_cyc_ival = simparam.graphics_options.graphics_cyc_ival;
+  graphics_dt_ival = simparam.graphics_options.graphics_dt_ival;
+  cycle_stop = tv.cycle_stop;
+  rk_num_stages = simparam.rk_num_stages;
+  dt = tv.dt;
+  fuzz = tv.fuzz;
+  tiny = tv.tiny;
+  small = tv.small;
+  graphics_times = simparam.graphics_options.graphics_times;
+  graphics_id = simparam.graphics_options.graphics_id;
+
+  if(simparam_dynamic_opt.topology_optimization_on){
+    max_time_steps = BUFFER_GROW;
+    forward_solve_velocity_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
+    time_data.resize(max_time_steps+1);
+    forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
+    adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
+    phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
+    psi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
+    //assign a multivector of corresponding size to each new timestep in the buffer
+    for(int istep = 0; istep < max_time_steps+1; istep++){
+      (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*psi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
+    }
+    
+  }
+
+  have_loading_conditions = false;
+
+}
+
+FEA_Module_RDH::~FEA_Module_RDH(){
+   //delete simparam;
+}
+
 
 // -----------------------------------------------------------------------------
 // Interfaces read in data with the RDH solver data; currently a hack to streamline
 //------------------------------------------------------------------------------
 void FEA_Module_RDH::rdh_interface_setup(node_t &node,
                        elem_t &elem,
+                       
                        corner_t &corner){
 
     const size_t num_dim = simparam.num_dims;
@@ -112,7 +232,8 @@ void FEA_Module_RDH::rdh_interface_setup(node_t &node,
 
     // intialize node variables
     mesh->initialize_nodes(nall_nodes);
-    mesh->initialize_local_nodes(Explicit_Solver_Pointer_->nlocal_nodes);
+    // WARNING WARNING WARNING //
+    //mesh.initialize_local_nodes(Explicit_Solver_Pointer_->nlocal_nodes);
     node.initialize(rk_num_bins, nall_nodes, num_dim);
 
     //view scope
@@ -141,9 +262,9 @@ void FEA_Module_RDH::rdh_interface_setup(node_t &node,
     rnum_elem = Explicit_Solver_Pointer_->rnum_elem;
 
 // intialize elem variables
-    mesh->initialize_elems(rnum_elem, num_dim);
+    mesh.initialize_elems(rnum_elem, num_dim);
     elem.initialize(rk_num_bins, nall_nodes, 3); // always 3D here, even for 2D
-    nodes_in_elem = mesh->nodes_in_elem;
+    nodes_in_elem = mesh.nodes_in_elem;
     {
       host_elem_conn_array interface_nodes_in_elem = Explicit_Solver_Pointer_->global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       for(int ielem = 0; ielem < rnum_elem; ielem++){
@@ -173,7 +294,7 @@ void FEA_Module_RDH::rdh_interface_setup(node_t &node,
     
     // intialize corner variables
     int num_corners = rnum_elem*num_nodes_in_elem;
-    mesh->initialize_corners(num_corners);
+    mesh.initialize_corners(num_corners);
     corner.initialize(num_corners, num_dim);
     
     return;
@@ -215,7 +336,7 @@ void FEA_Module_RDH::cleanup_material_models() {
    Setup RDH solver data
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_RDH::setup(){
+void FEA_Module_RDH::setup(mesh_t &mesh){
 
     const size_t rk_level = simparam.rk_num_bins - 1;   
     const size_t num_fills = simparam.region_options.size();
@@ -231,13 +352,13 @@ void FEA_Module_RDH::setup(){
     // ---------------------------------------------------------------------
     //    obtain mesh data
     // --------------------------------------------------------------------- 
-    rdh_interface_setup(node_interface, elem_interface, corner_interface);
-    mesh->build_corner_connectivity();
-    mesh->build_elem_elem_connectivity();
-    mesh->num_bdy_patches = nboundary_patches;
+    rdh_interface_setup(node_interface, elem_interface, mesh_interface, corner_interface);
+    mesh.build_corner_connectivity();
+    mesh.build_elem_elem_connectivity();
+    mesh.num_bdy_patches = nboundary_patches;
     if(num_dim==2){
-      mesh->build_patch_connectivity();
-      mesh->build_node_node_connectivity();
+      mesh.build_patch_connectivity();
+      mesh.build_node_node_connectivity();
     }
         
       // ---------------------------------------------------------------------
@@ -245,9 +366,9 @@ void FEA_Module_RDH::setup(){
       // ---------------------------------------------------------------------
 
       // shorthand names
-    const size_t num_nodes = mesh->num_nodes;
-    const size_t num_elems = mesh->num_elems;
-    const size_t num_corners = mesh->num_corners;
+    const size_t num_nodes = mesh.num_nodes;
+    const size_t num_elems = mesh.num_elems;
+    const size_t num_corners = mesh.num_corners;
         
     // create Dual Views of the individual node struct variables
     node_coords = DViewCArrayKokkos<double>(node_interface.coords.get_kokkos_dual_view().view_host().data(),rk_num_bins,num_nodes,num_dim);
@@ -258,7 +379,7 @@ void FEA_Module_RDH::setup(){
         
         
     // create Dual Views of the individual elem struct variables
-    elem_den= DViewCArrayKokkos<double>(&elem_interface.den(0),
+    elem_den = DViewCArrayKokkos<double>(&elem_interface.den(0),
                                             num_elems);
 
     elem_pres = DViewCArrayKokkos<double>(&elem_interface.pres(0),
@@ -311,7 +432,7 @@ void FEA_Module_RDH::setup(){
     node_coords.update_device();
     Kokkos::fence();
 
-    get_vol();
+    //get_vol();
 
     //FEA_Module bc variable
     num_boundary_conditions = num_bcs;
@@ -323,54 +444,50 @@ void FEA_Module_RDH::setup(){
     elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options.max_num_user_output_vars); 
  
     //--- calculate bdy sets ---//
-    mesh->num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
-    mesh->num_patches_in_elem = 2*num_dim; // 4 (2D) or 6 (3D)
-    mesh->init_bdy_sets(num_bcs);
-    num_bdy_sets = mesh->num_bdy_sets;
+    mesh.num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
+    mesh.num_patches_in_elem = 2*num_dim; // 4 (2D) or 6 (3D)
+    mesh.init_bdy_sets(num_bcs);
+    num_bdy_sets = mesh.num_bdy_sets;
     printf("Num BC's = %lu\n", num_bcs);
 
     // patch ids in bdy set
-    bdy_patches_in_set = mesh->bdy_patches_in_set;
+    bdy_patches_in_set = mesh.bdy_patches_in_set;
     if(num_dim==2)
-      bdy_nodes = mesh->bdy_nodes;
+      bdy_nodes = mesh.bdy_nodes;
 
-    // tag boundary patches in the set
-    tag_bdys(boundary, *mesh, node_coords);
 
-    build_boundry_node_sets(boundary, *mesh);
-    
     // node ids in bdy_patch set
-    bdy_nodes_in_set = mesh->bdy_nodes_in_set;
-    num_bdy_nodes_in_set = mesh->num_bdy_nodes_in_set;
+    bdy_nodes_in_set = mesh.bdy_nodes_in_set;
+    num_bdy_nodes_in_set = mesh.num_bdy_nodes_in_set;
     
     //assign mesh views needed by the FEA module
 
     // elem ids in elem
-    elems_in_elem = mesh->elems_in_elem;
-    num_elems_in_elem = mesh->num_elems_in_elem;
+    elems_in_elem = mesh.elems_in_elem;
+    num_elems_in_elem = mesh.num_elems_in_elem;
 
     //corners
-    num_corners_in_node = mesh->num_corners_in_node;
-    corners_in_node = mesh->corners_in_node;
-    corners_in_elem = mesh->corners_in_elem;
+    num_corners_in_node = mesh.num_corners_in_node;
+    corners_in_node = mesh.corners_in_node;
+    corners_in_elem = mesh.corners_in_elem;
 
     //elem-node conn & node-node conn
-    elems_in_node = mesh->elems_in_node;
+    elems_in_node = mesh.elems_in_node;
     if(num_dim==2){
-      nodes_in_node = mesh->nodes_in_node;
-      num_nodes_in_node = mesh->num_nodes_in_node;
+      nodes_in_node = mesh.nodes_in_node;
+      num_nodes_in_node = mesh.num_nodes_in_node;
       //patch conn
     
-      patches_in_elem = mesh->patches_in_elem;
-      nodes_in_patch = mesh->nodes_in_patch;
-      elems_in_patch = mesh->elems_in_patch;
+      patches_in_elem = mesh.patches_in_elem;
+      nodes_in_patch = mesh.nodes_in_patch;
+      elems_in_patch = mesh.elems_in_patch;
     }
 
     // loop over BCs
     for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
         
         RUN_CLASS({
-            printf("Boundary Condition number %lu \n", this_bdy);
+            printf("  Boundary Condition number %lu \n", this_bdy);
             printf("  Num bdy patches in this set = %lu \n", bdy_patches_in_set.stride(this_bdy));
             printf("  Num bdy nodes in this set = %lu \n", bdy_nodes_in_set.stride(this_bdy));
         });
@@ -602,26 +719,25 @@ void FEA_Module_RDH::setup(){
         
   
     } // end for loop over fills
-   
-    } // end of
+    Kokkos::fence();
     
     
     // calculate the nodal mass
-    FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+    // FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         
-        node_mass(node_gid) = 0.0;
+    //     //node_mass(node_gid) = 0.0;
         
-        if(num_dim==3){
+    //     if(num_dim==3){
             
             
-        }// end if dims=3
-        else {
+    //     }// end if dims=3
+    //     else {
             
             
-        } // end else
+    //     } // end else
         
-    }); // end FOR_ALL_CLASS
-    Kokkos::fence();
+    // }); // end FOR_ALL_CLASS
+    //Kokkos::fence();
     
     // update host copies of arrays modified in this function
     elem_den.update_host();
@@ -670,7 +786,7 @@ void FEA_Module_RDH::rdh_solve(){
     small = tv.small;
     graphics_times = simparam.graphics_options.graphics_times;
     graphics_id = simparam.graphics_options.graphics_id;
-    size_t num_bdy_nodes = mesh->num_bdy_nodes;
+    size_t num_bdy_nodes = mesh.num_bdy_nodes;
     const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
     const DCArrayKokkos <material_t> material = simparam.material;
     int old_max_forward_buffer;

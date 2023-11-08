@@ -99,7 +99,8 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   // Non-serialized fields
   int words_per_line;
   int elem_words_per_line;
-
+  
+  
   /**
    * Determine a couple of file parsing parameters from the specified filetype.
   */

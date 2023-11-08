@@ -10,25 +10,25 @@ using namespace mtr;
 struct node_t {
 
     // Position
-    CArray <double> coords;
+    DCArrayKokkos <double> coords;
 
     // velocity
-    CArray <double> vel;
+    DCArrayKokkos <double> vel;
 
     // divergence of velocity
-    CArray <double> div;
+    DCArrayKokkos <double> div;
     
     // mass at nodes
-    CArray <double> mass;
+    DCArrayKokkos <double> mass;
 
     
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
     void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
     {
-        this->coords = CArray <double> (num_rk, num_nodes, num_dims);
-        this->vel    = CArray <double> (num_rk, num_nodes, num_dims);
-	this->div    = CArray <double> (num_rk, num_nodes);
-        this->mass   = CArray <double> (num_nodes);
+        this->coords = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
+        this->vel    = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
+	this->div    = DCArrayKokkos <double> (num_rk, num_nodes);
+        this->mass   = DCArrayKokkos <double> (num_nodes);
     }; // end method
 
 }; // end node_t
