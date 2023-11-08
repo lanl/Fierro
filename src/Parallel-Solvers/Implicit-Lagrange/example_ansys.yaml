@@ -3,8 +3,18 @@ input_options:
     mesh_file_format: ansys_dat
     mesh_file_name: ANSYS_Beam.dat
 
+materials:
+  - id: 0
+    elastic_modulus: 200000000000
+    poisson_ratio: 0.3
+    density: 7850
+    thermal_conductivity: 10
+    specific_internal_energy_rate: 1.0
+    initial_temperature: 293
+
 fea_module_parameters:
   - type: Elasticity
+    material_id: 0
 
 optimization_options:
     optimization_process: topology_optimization
@@ -21,7 +31,4 @@ optimization_options:
         relation: equality
         component: yy
         value: 0.4
-        inertia_center_x: 0
-        inertia_center_y: 0
-        inertia_center_z: 0
     

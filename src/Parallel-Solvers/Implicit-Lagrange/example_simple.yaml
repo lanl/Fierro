@@ -1,23 +1,31 @@
 # input file
 num_dims: 3
-input_options:
-    mesh_file_format: ensight
-    mesh_file_name: TO_small_beam.geo
 
+mesh_generation_options:
+    type: Box
+    origin: [0, 0, 0]
+    length: [10, 10, 100]
+    num_elems: [10, 10, 100]
 
-output_options:
-  output_stress: false
-
+materials:
+  - id: 0
+    elastic_modulus: 200000000000
+    poisson_ratio: 0.3
+    density: 7850
+    thermal_conductivity: 10
+    specific_internal_energy_rate: 1.0
+    initial_temperature: 293
 
 fea_module_parameters:
   - type: Elasticity
+    material_id: 0
     # Dirichlet conditions
     boundary_conditions:
       - surface: 
           type: z_plane
           plane_position: 0.0
         type: displacement
-        displacement_value: 0.0
+        value: 0.0
             
     # Loading/Neumann Conditions
     loading_conditions:
@@ -30,13 +38,14 @@ fea_module_parameters:
         component_z: 0
   
   - type: Heat_Conduction
+    material_id: 0
     # Dirichlet conditions
     boundary_conditions:
       - surface: 
           type: z_plane
           plane_position: 0.0
         type: temperature
-        temperature_value: 293.0
+        value: 293.0
 
     # Loading/Neumann Conditions
     loading_conditions:
