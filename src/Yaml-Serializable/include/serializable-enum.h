@@ -85,7 +85,7 @@
         inline void serialize<CLASS_TYPE>(const CLASS_TYPE& v, Yaml::Node& node) {            \
             const std::string s = to_string(v);                                               \
             if (s.length() > 0)                                                               \
-                node = to_string(v);                                                          \
+                node = s;                                                                     \
         }                                                                                     \
     }                                                                                         \
     inline std::ostream& operator<<(std::ostream & os, const CLASS_TYPE& v) {                 \
