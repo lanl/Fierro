@@ -1,0 +1,20 @@
+###
+# This file will generate a 2D arc mesh with 50 elements
+# along the radial axis and 50 elements along each arc.
+# 
+# The mesh covers 1/4 circle (as indicated by the 90 degree angular length)
+# and has fills the area from ~0 -> 1.2. The mesh is given an inner radius of 
+# 0.01 to prevent all of the nodes from intersecting at 0,0,0.
+##
+
+output:
+  name: mesh
+  file_type: Ensight
+
+input:
+  type: Cylinder
+  length: [1.19, 90]
+  num_elems: [50, 50]
+  origin: [0, 0]
+  p_order: 1
+  inner_radius: 0.01

@@ -1,0 +1,2 @@
+1                         ISO
+1   1                  YOUNG(MPa),NU (V+R/2)

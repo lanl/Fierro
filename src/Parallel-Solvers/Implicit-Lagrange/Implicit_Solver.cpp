@@ -180,20 +180,25 @@ void Implicit_Solver::run(int argc, char *argv[]){
       simparam = *(Simulation_Parameters*)&simparam_TO;
     }
     
-    const char* mesh_file_name = simparam.input_options.mesh_file_name.c_str();
-    switch (simparam.input_options.mesh_file_format) {
-      case MESH_FORMAT::tecplot:
-        read_mesh_tecplot(mesh_file_name);
-        break;
-      case MESH_FORMAT::vtk:
-        read_mesh_vtk(mesh_file_name);
-        break;
-      case MESH_FORMAT::ansys_dat:
-        read_mesh_ansys_dat(mesh_file_name);
-        break;
-      case MESH_FORMAT::ensight:
-        read_mesh_ensight(mesh_file_name);
-        break;
+    if (simparam.input_options.has_value()) {
+      const Input_Options& input_options = simparam.input_options.value();
+      const char* mesh_file_name = input_options.mesh_file_name.c_str();
+      switch (input_options.mesh_file_format) {
+        case MESH_FORMAT::tecplot:
+          read_mesh_tecplot(mesh_file_name);
+          break;
+        case MESH_FORMAT::vtk:
+          read_mesh_vtk(mesh_file_name);
+          break;
+        case MESH_FORMAT::ansys_dat:
+          read_mesh_ansys_dat(mesh_file_name);
+          break;
+        case MESH_FORMAT::ensight:
+          read_mesh_ensight(mesh_file_name);
+          break;
+      }
+    } else {
+      generate_mesh(simparam.mesh_generation_options.value());
     }
 
     //debug
@@ -282,6 +287,15 @@ void Implicit_Solver::run(int argc, char *argv[]){
         std::cout << "Linear Solver Error for module " << imodule << std::endl <<std::flush;
         return;
       }
+
+      if(fea_modules_modal_analysis[imodule])
+      {
+        int eigensolver_exit = fea_modules[imodule]->eigensolve();
+        if(solver_exit != 0){
+          std::cout << "Eigen-Solver Error for module " << imodule << std::endl <<std::flush;
+          return;
+        }
+      }
     }
 
     //std::cout << "FEA MODULES " << nfea_modules << " " << simparam.nfea_modules << std::endl;
@@ -335,10 +349,10 @@ void Implicit_Solver::run(int argc, char *argv[]){
    Read ANSYS dat format mesh file
 ------------------------------------------------------------------------- */
 void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
-
   char ch;
   int num_dim = simparam.num_dims;
   int p_order = simparam.p_order;
+  Input_Options input_options = simparam.input_options.value();
   real_t unit_scaling = simparam.unit_scaling;
   bool restart_file = simparam.restart_file;
   int local_node_index, current_column_index;
@@ -351,6 +365,8 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
   GO node_gid;
   real_t dof_value;
   host_vec_array node_densities;
+
+  
   //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
   //read the mesh
@@ -475,9 +491,9 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
   stores node data in a buffer and communicates once the buffer cap is reached
   or the data ends*/
 
-  words_per_line = simparam.input_options.words_per_line;
+  words_per_line = input_options.words_per_line;
   //if(restart_file) words_per_line++;
-  elem_words_per_line = simparam.input_options.elem_words_per_line;
+  elem_words_per_line = input_options.elem_words_per_line;
 
   //allocate read buffer
   read_buffer = CArrayKokkos<char, array_layout, HostSpace, memory_traits>(BUFFER_LINES,words_per_line,MAX_WORD);
@@ -1076,10 +1092,12 @@ void Implicit_Solver::FEA_module_setup(){
   //allocate lists to size
   fea_module_types = std::vector<FEA_MODULE_TYPE>(nfea_modules);
   fea_modules = std::vector<FEA_Module*>(nfea_modules);
+  fea_modules_modal_analysis = std::vector<bool>(nfea_modules);
   bool module_found = false;
   
   //list should not have repeats since that was checked by simulation parameters setups
   for(int imodule = 0; imodule < nfea_modules; imodule++){
+    fea_modules_modal_analysis[imodule] = false;
     //decides which FEA module objects to setup based on string.
     //automate selection list later; use std::map maybe?
     if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Elasticity){

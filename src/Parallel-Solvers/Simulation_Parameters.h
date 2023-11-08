@@ -40,6 +40,7 @@
 
 #include "yaml-serializable.h"
 #include "configuration-validation.h"
+#include "MeshBuilder.h"
 #include <set>
 #include <vector>
 #include <string>
@@ -99,7 +100,6 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   // Non-serialized fields
   int words_per_line;
   int elem_words_per_line;
-  
   
   /**
    * Determine a couple of file parsing parameters from the specified filetype.
@@ -254,7 +254,8 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
   TIMER_VERBOSITY timer_output_level;
   int num_dims = 3;
   bool restart_file = false;
-  Input_Options input_options;
+  std::optional<Input_Options> input_options;
+  std::optional<std::shared_ptr<MeshBuilderInput>> mesh_generation_options;
   Output_Options output_options;
   bool report_runtime = true;
 
@@ -361,7 +362,9 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
   }
 
   void validate_element_type() {
-    auto et = input_options.element_type;
+    if (!input_options.has_value())
+      return;
+    auto et = input_options.value().element_type;
     bool invalid_et = (et == ELEMENT_TYPE::quad4 || et == ELEMENT_TYPE::quad8 || et == ELEMENT_TYPE::quad12) && num_dims == 3;
     invalid_et = invalid_et ||
       (et == ELEMENT_TYPE::hex8 || et == ELEMENT_TYPE::hex20 || et == ELEMENT_TYPE::hex32) && num_dims == 2;
@@ -372,6 +375,8 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
       );
   }
   void validate() {
+    if (input_options.has_value() == mesh_generation_options.has_value())
+      throw Yaml::ConfigurationException("Specify exactly one of `input_options` and `mesh_generation_options`.");
     validate_element_type();
     validate_unique_vector(FEA_Modules_List, "Duplicate FEA Module Found: ");
   }
@@ -398,10 +403,10 @@ struct Simulation_Parameters : Yaml::ValidatedYaml, Yaml::DerivedFields {
   }
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Simulation_Parameters,
-  solver_type, num_dims, input_options
+  solver_type, num_dims
 )
 IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters, 
-  solver_type, restart_file, input_options, timer_output_level,
+  solver_type, restart_file, input_options, mesh_generation_options, timer_output_level,
   num_dims, output_options, fea_modules,
   report_runtime
 )

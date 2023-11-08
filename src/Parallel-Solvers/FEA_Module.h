@@ -135,6 +135,8 @@ public:
 
   virtual int solve() {return 0;}
 
+  virtual int eigensolve() {return 0;}
+
   virtual void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header) {}
 
   virtual void linear_solver_parameters() {}
@@ -219,6 +221,7 @@ public:
   CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Nodes_Per_Element_Type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_value_storage;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_vector_storage;
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> corner_gradient_storage;
 
   //Ghost data on this MPI rank
   size_t nghost_nodes;

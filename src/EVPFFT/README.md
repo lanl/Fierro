@@ -26,7 +26,8 @@ Which outputs:
 Usage: source build_evpfft.sh [OPTION]
 Valid options:
   --heffte_build_type=<fftw|cufft|rocfft>
-  --kokkos_build_type=<serial|cuda|hip>
+  --kokkos_build_type=<serial|openmp|cuda|cuda-ampere|hip>
+  --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)
   --help: Display this help message
 ```
 
@@ -36,7 +37,7 @@ To build EVPFFT you would need to provide both the `--heffte_build_type` and `--
 source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=serial
 ```
 
-This will build EVPFFT in the folder `evpfft_heffte_{fftw}_kokkos_{serial}`. The binary, `evpfft` is found in that folder
+This will build EVPFFT in the folder `evpfft_{fftw}_{serial}`. The binary, `evpfft` is found in that folder
 
 # Using EVPFFT as a standalone program
 
@@ -50,9 +51,6 @@ Which gives the following output:
 
 ```
 Required arguments:
-  -x, --x-dim    <value>    x dimension of RVE 
-  -y, --y-dim    <value>    y dimension of RVE 
-  -z, --z-dim    <value>    z dimension of RVE 
   -f, --infile   <path>     input file (full path)
 ...
 ```
@@ -67,7 +65,7 @@ We have provided example input files in the `example_input_files` directory. In 
 With all these files available you can now run EVPFFT as:
 
 ```
-mpirun -np 4 evpfft --x-dim=8 --y-dim=8 --z-dim=8 --infile=example_evpfft_standalone_inputfile.txt
+mpirun -np 4 evpfft --infile=example_evpfft_standalone_inputfile.txt
 ```
 
 # Using EVPFFT with Fierro
@@ -110,13 +108,21 @@ The EVPFFT `CMakeLists.txt` uses the following default values to build EVPFFT:
 ```
   TWO_SIGN_SLIP_SYSTEMS: OFF
   NON_SCHMID_EFFECTS: OFF
-  NPHMX: 1
-  NMODMX: 1
-  NTWMMX: 1
-  NSYSMX: 12
   ABSOLUTE_NO_OUTPUT: OFF
   ENABLE_PROFILE: OFF
 ```
 
-To change these default options include the `-D OPTION=<value>` in the `cmake` option, E.g. `-D NSYSMX=24` in the `build_evpfft.sh`.
+To change these default options include the `-D OPTION=<value>` in the `cmake` option, E.g. `-D ABSOLUTE_NO_OUTPUT=ON` in the `build_evpfft.sh`.
+
+# Using EVPFFT for Lattice Structure Homogenization
+
+Example for input files needed to run EVPFFT for lattice structure homogenization is shown in `example_input_files/lattice_input_files`. In that file you will see how to set up evpft input file, elastic and plastic parameter files.
+
+Provide a vtk file type that contains information about which grid point is solid (1) or void (0), example is shown in `example_input_files/lattice_input_files/void_in_solid.vtk`.
+
+Run EVPFFT as:
+```
+  mpirun -n 1 -f evpfft_lattice_input.txt -m 2
+```
+the `-m 2` option tells EVPFFT to use the vtk lattice file microstructure file type.
 

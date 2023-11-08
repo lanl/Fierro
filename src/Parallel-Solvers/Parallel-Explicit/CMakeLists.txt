@@ -10,7 +10,6 @@ include_directories(Dynamic_Elastic_Solver)
 #include_directories(Eulerian_Solver)
 include_directories(Topology_Optimization)
 include_directories(..)
-include_directories(${CMAKE_SOURCE_DIR}/Implicit-Lagrange)
 add_executable(fierro-parallel-explicit main.cpp Explicit_Solver.cpp outputs.cpp)
 
 if (CUDA)

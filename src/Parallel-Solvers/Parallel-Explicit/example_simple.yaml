@@ -50,6 +50,10 @@ region_options:
     radius1: 0.0
     radius2: 0.0375
     den: 1.0
+<<<<<<< HEAD
+=======
+    ie: 0.25833839995946534
+>>>>>>> main
         
     velocity: cartesian
     u: 0.0

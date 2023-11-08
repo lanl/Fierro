@@ -1,3 +1,5 @@
+bin
+_deps
 build
 build-Explicit-serial
 build-SGH-cuda
@@ -14,3 +16,27 @@ build-all-serial
 lib
 single-node/install-kokkos
 single-node/build-RDH-serial
+*.swp
+cmake_uninstall.cmake
+CTestTestfile.cmake
+build-all-openmp
+build-all-cuda
+build-all-hip
+build-explicit-serial
+build-explicit-openmp
+build-explicit-cuda
+build-explicit-hip
+build-Explicit-openmp
+build-Explicit-cuda
+build-Explicit-hip
+build-Implicit-openmp
+build-Implicit-cuda
+build-Implicit-hip
+build-implicit-openmp
+build-implicit-cuda
+build-implicit-hip
+build-fierro-serial
+build-fierro-openmp
+build-fierro-cuda
+build-fierro-hip
+>>>>>>> main

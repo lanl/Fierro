@@ -669,11 +669,9 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
       //compute gradient of force with respect to velocity
   
       const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-      vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      vec_array midpoint_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-      vec_array phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array midpoint_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       //half step update for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -683,28 +681,37 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
         for (int idim = 0; idim < num_dim; idim++){
           matrix_contribution = 0;
           //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim%num_dim,idof);
+          /*
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim,idof);
           }
+          */
+          matrix_contribution = -damping_constant*previous_adjoint_vector(node_gid,idim);
           rate_of_change = previous_velocity_vector(node_gid,idim)- 
                             matrix_contribution/node_mass(node_gid)-
                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + previous_adjoint_vector(node_gid,idim);
           matrix_contribution = 0;
           //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += -previous_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
           }
           rate_of_change = -matrix_contribution;
-          //rate_of_change = -0.001*previous_adjoint_vector(node_gid,idim);
+          //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
           phi_midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
       Kokkos::fence();
 
       boundary_adjoint(*mesh, boundary,midpoint_adjoint_vector, phi_midpoint_adjoint_vector);
+      comm_adjoint_vectors(cycle);
+      //swap names to get ghost nodes for the midpoint vectors
+      vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      midpoint_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+      phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       //full step update with midpoint gradient for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -714,22 +721,25 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
         for (int idim = 0; idim < num_dim; idim++){
           matrix_contribution = 0;
           //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim%num_dim,idof);
+          /*
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Velocities(node_gid*num_dim+idim,idof);
           }
+          */
+          matrix_contribution = -damping_constant*midpoint_adjoint_vector(node_gid,idim);
           rate_of_change =  (previous_velocity_vector(node_gid,idim) + current_velocity_vector(node_gid,idim))/2- 
                             matrix_contribution/node_mass(node_gid)-
                             phi_midpoint_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
           matrix_contribution = 0;
           //compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim%num_dim); idof++){
-            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim%num_dim,idof);
-            matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim%num_dim,idof);
+          for(int idof = 0; idof < Gradient_Matrix_Strides(node_gid*num_dim+idim); idof++){
+            dof_id = DOF_Graph_Matrix(node_gid*num_dim+idim,idof);
+            matrix_contribution += -midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Positions(node_gid*num_dim+idim,idof);
           }
           rate_of_change = -matrix_contribution;
-          //rate_of_change = -0.001*previous_adjoint_vector(node_gid,idim);
+          //rate_of_change = -0.0000001*midpoint_adjoint_vector(node_gid,idim);
           phi_current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + phi_previous_adjoint_vector(node_gid,idim);
         } 
       }); // end parallel for
@@ -994,8 +1004,6 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
 
   compute_topology_optimization_adjoint_full();
 
-  
-
   { //view scope
     vec_array design_gradients = design_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     const_vec_array design_densities = design_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
@@ -1006,13 +1014,18 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
     Kokkos::fence();
 
     //gradient contribution from kinetic energy v(dM/drho)v product.
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+        if(myrank==0){
+          std::cout << "v*dM/drho*v term" << std::endl;
+        }
+    }
+
     for (int cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       
       //print
       if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
-
         if (cycle==0){
           if(myrank==0)
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -1058,7 +1071,8 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
             for (int inode = 0; inode < num_nodes_in_elem; inode++){
               //compute gradient of local element contribution to v^t*M*v product
               corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = inner_product*global_dt;
+              //division by design ratio recovers nominal element mass used in the gradient operator
+              corner_value_storage(corner_id) = inner_product*global_dt/relative_element_densities(elem_id);
             }
             
           }); // end parallel for
@@ -1088,12 +1102,17 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
     Kokkos::fence();
 
     //gradient contribution from time derivative of adjoint \dot{lambda}(dM/drho)v product.
+    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+        if(myrank==0){
+          std::cout << "gradient term involving adjoint derivative" << std::endl;
+        }
+    }
+
     for (int cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print
       if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
-
         if (cycle==0){
           if(myrank==0)
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -1137,7 +1156,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
             for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
               node_id = nodes_in_elem(elem_id, ifill);
               for(int idim=0; idim < num_dim; idim++){
-                //lambda_dot = (next_adjoint_vector(node_id,idim)-current_adjoint_vector(node_id,idim))/global_dt;
+                //lambda_dot_current = lambda_dot_next = (next_adjoint_vector(node_id,idim)-current_adjoint_vector(node_id,idim))/global_dt;
                 lambda_dot_current = current_velocity_vector(node_id,idim) + damping_constant*current_adjoint_vector(node_id,idim)/node_mass(node_id) - current_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
                 lambda_dot_next = next_velocity_vector(node_id,idim) + damping_constant*next_adjoint_vector(node_id,idim)/node_mass(node_id) - next_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
                 inner_product += elem_mass(elem_id)*(lambda_dot_current+lambda_dot_next)*current_element_velocities(ifill,idim)/2;
@@ -1147,7 +1166,8 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
             for (int inode = 0; inode < num_nodes_in_elem; inode++){
               //compute gradient of local element contribution to v^t*M*v product
               corner_id = elem_id*num_nodes_in_elem + inode;
-              corner_value_storage(corner_id) = inner_product*global_dt;
+              //division by design ratio recovers nominal element mass used in the gradient operator
+              corner_value_storage(corner_id) = inner_product*global_dt/relative_element_densities(elem_id);
             }
             
           }); // end parallel for
@@ -1165,9 +1185,6 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
           Kokkos::fence();
           
         } //end view scope
-
-        
-      
     }
 
     //compute initial condition contribution
@@ -1203,7 +1220,8 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
         for (int inode = 0; inode < num_nodes_in_elem; inode++){
           //compute gradient of local element contribution to v^t*M*v product
           corner_id = elem_id*num_nodes_in_elem + inode;
-          corner_value_storage(corner_id) = inner_product;
+          //division by design ratio recovers nominal element mass used in the gradient operator
+          corner_value_storage(corner_id) = inner_product/relative_element_densities(elem_id);
         }
         
       }); // end parallel for
@@ -1224,7 +1242,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
 
   }//end view scope
   
-  //force_design_gradient_term(design_variables, design_gradients);\
+  //force_design_gradient_term(design_variables, design_gradients);
   //view scope
   {
     host_vec_array host_design_gradients = design_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
@@ -1537,6 +1555,10 @@ void FEA_Module_Dynamic_Elasticity::init_assembly(){
   //distributed_force_gradient_velocities->describe(*fos,Teuchos::VERB_EXTREME);
 }
 
+/* ----------------------------------------------------------------------
+   Enforce boundary conditions on the adjoint vectors
+------------------------------------------------------------------------- */
+
 void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
                        const DCArrayKokkos <boundary_t> &boundary,
                        vec_array &node_adjoint,
@@ -1567,7 +1589,8 @@ void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                     
                 // Set velocity to zero in that directdion
-                node_adjoint(bdy_node_gid, direction) = 0.0;
+                if(bdy_node_gid<nlocal_nodes)
+                  node_adjoint(bdy_node_gid, direction) = 0.0;
                 //node_phi_adjoint(bdy_node_gid, direction) = 0.0;
                         
             }
@@ -1580,7 +1603,8 @@ void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
 
                 for(size_t dim=0; dim < num_dims; dim++){
                     // Set velocity to zero
-                  node_adjoint(bdy_node_gid, dim) = 0.0;
+                  if(bdy_node_gid<nlocal_nodes)
+                    node_adjoint(bdy_node_gid, dim) = 0.0;
                   //node_phi_adjoint(bdy_node_gid, dim) = 0.0;
                 }
                 
@@ -1597,3 +1621,35 @@ void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t &mesh,
     //if(print_flag.host(0)) std::cout << "found boundary node with id 549412" << std::endl;
     return;
 } // end boundary_velocity function
+
+/* ----------------------------------------------------------------------
+   Communicate updated nodal adjoint vectors to ghost nodes
+------------------------------------------------------------------------- */
+
+void FEA_Module_Dynamic_Elasticity::comm_adjoint_vectors(int cycle){
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  //Tpetra::Import<LO, GO> importer(map, all_node_map);
+  
+  //comms to get ghosts
+  (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
+}

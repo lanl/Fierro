@@ -1,0 +1,29 @@
+{% set version = "1.0.0" %}
+{% set compiler_version = "10.4.0" %}
+
+package: 
+  name: fierro-voxelizer-py
+  version: 1
+
+source:
+  path: ../../
+  # - git_url: https://github.com/lanl/Fierro.git
+  #   depth: 1
+
+requirements:
+  build:
+    - cmake >=3.17.0
+    - {{ compiler('c') }} ={{ compiler_version }}
+    - {{ compiler('cxx') }} ={{ compiler_version }}
+    - elements
+  host:
+    - python
+    - pybind11
+    - setuptools
+  run:
+    - elements
+    - python
+
+test:
+  imports:
+    - fierro_voxelizer

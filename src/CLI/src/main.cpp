@@ -1,5 +1,7 @@
 #include "backend.hpp"
 #include "FierroParallelBackends.hpp"
+#include "MeshBuilderBackend.hpp"
+#include "VoxelizerBackend.hpp"
 #include "argparse/argparse.hpp"
 #include "argument_exception.hpp"
 #include <filesystem>
@@ -10,13 +12,15 @@
 
 std::vector<std::shared_ptr<FierroBackend>> BACKENDS {
     std::shared_ptr<FierroBackend>(new ParallelExplicit()),
-    std::shared_ptr<FierroBackend>(new ParallelImplicit())
+    std::shared_ptr<FierroBackend>(new ParallelImplicit()),
+    std::shared_ptr<FierroBackend>(new MeshBuilderBackend()),
+    std::shared_ptr<FierroBackend>(new VoxelizerBackend()),
 };
 
 std::vector<std::shared_ptr<FierroBackend>> find_fierro_backends() {
     auto found = std::vector<std::shared_ptr<FierroBackend>>();
     for(auto backend : BACKENDS) {
-        if(backend->exists()) found.push_back(backend);
+        if(backend->exec_path.has_value()) found.push_back(backend);
     }
 
     return found;

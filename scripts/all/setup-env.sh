@@ -1,50 +1,102 @@
-### Make sure relevant arguments were provided
-if [ "$1" != "hpc" ] && [ "$1" != "macos" ] && [ "$1" != "linux" ]
-then
-    echo "The first argument needs to be either hpc, macos, or linux"
+#!/bin/bash -e
+show_help() {
+    echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
+    echo "Valid options:"
+    echo "Required"
+    echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>"
+    echo "Optional"
+    echo "  --machine=<darwin|chicoma|linux|mac>. This argument is optional, default is set to 'linux'"
+    echo "  --build_cores=<Integers greater than 0>. This argument is optional, default is set to 1"
+    echo "  --help: Display this help message"
+    return 1
+}
+
+# Initialize variables with default values
+machine=""
+kokkos_build_type=""
+build_cores="1"
+
+# Define arrays of valid options
+valid_machines=("darwin" "chicoma" "linux" "mac")
+valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
+
+# Parse command line arguments
+for arg in "$@"; do
+    case "$arg" in
+        --machine=*)
+            option="${arg#*=}"
+            if [[ " ${valid_machines[*]} " == *" $option "* ]]; then
+                machine="$option"
+            else
+                echo "Error: Invalid --machine specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --kokkos_build_type=*)
+            option="${arg#*=}"
+            if [[ " ${valid_kokkos_build_types[*]} " == *" $option "* ]]; then
+                kokkos_build_type="$option"
+            else
+                echo "Error: Invalid --kokkos_build_type specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --build_cores=*)
+            option="${arg#*=}"
+            if [ $option -ge 1 ]; then
+                build_cores="$option"
+            else
+                echo "Error: Invalid --build_cores specified."
+                show_help
+                return 1
+            fi
+            ;;
+        --help)
+            show_help
+            return 1
+            ;;
+        *)
+            echo "Error: Invalid argument or value specified."
+            show_help
+            return 1
+            ;;
+    esac
+done
+
+# Check if required options are specified
+if [ -z "$machine" ] || [ -z "$kokkos_build_type" ]; then
+    echo "Error: --machine and --kokkos_build_type are required options."
+    show_help
     return 1
 fi
-if [ "$2" != "cuda" ] && [ "$2" != "hip" ] && [ "$2" != "openmp" ] && [ "$2" != "serial" ]
-then
-    echo "The second argument needs to be either cuda, hip, openmp, or serial"
+
+# Check for correct combos with mac
+if [ $machine = "mac" ] && [ $kokkos_build_type == "cuda" ]; then
+    echo "Error: Mac cannot build with Kokkos Cuda backend"
+    show_help
     return 1
 fi
-
-### Load environment modules here
-### Assign names as relevant
-
-mygcc="gcc/9.4.0"
-myclang="clang/13.0.0"
-mycuda="cuda/11.4.0"
-myrocm="rocm"
-mycmake="cmake"
-mympi="openmpi"
-
-if [ "$1" = "hpc" ]
-then
-    module purge
-    if [ "$2" = "cuda" ]
-    then
-        module purge
-        module load ${mygcc}
-        module load ${mycuda}
-    elif [ "$2" = "hip" ]
-    then
-        module purge
-        module load ${myclang}
-        module load ${myrocm}
-    else
-        module load ${mygcc}
-    fi
-    module load ${mycmake}
-    module load ${mympi}
-    module -t list
+if [ $machine = "mac" ] && [ $kokkos_build_type == "hip" ]; then
+    echo "Error: Mac cannot build with Kokkos HIP backend"
+    show_help
+    return 1
+fi
+if [ $machine = "mac" ] && [ $build_cores -ne 1 ]; then
+    echo "Error: Mac cannot be built in parallel. Setting build cores to default 1"
 fi
 
+# If all arguments are valid, you can use them in your script as needed
+echo "Build for machine: $machine"
+echo "Kokkos Build Type: $kokkos_build_type"
+echo "Will be making builds with make -j $build_cores"
 
-my_parallel="$2"
+# Set paths
 
-my_build="build-all-${my_parallel}"
+my_device="$kokkos_build_type"
+
+my_build="build-fierro-${my_device}"
 
 export scriptdir=`pwd`
 
@@ -56,7 +108,7 @@ export libdir=${topdir}/lib
 export matardir=${libdir}/Elements/matar
 export trilinosdir=${libdir}
 export builddir=${basedir}/${my_build}
-#export installdir=${basedir}/install-kokkos/install-kokkos-${my_parallel}
+#export installdir=${basedir}/install
 
 export FIERRO_BASE_DIR=${basedir}
 export FIERRO_SOURCE_DIR=${srcdir}
@@ -66,15 +118,20 @@ export FIERRO_BUILD_DIR=${builddir}
 
 #export KOKKOS_SOURCE_DIR=${matardir}/src/Kokkos/kokkos
 #export KOKKOS_BUILD_DIR=${builddir}/kokkos
-#export KOKKOS_INSTALL_DIR=${installdir}/kokkos
+#export KOKKOS_INSTALL_DIR=${installdir}/install-kokkos-${my_device}
 
 # Do this differently (in src tree) than other libs because
 # of compile time
 export TRILINOS_SOURCE_DIR=${trilinosdir}/Trilinos
-export TRILINOS_BUILD_DIR=${TRILINOS_SOURCE_DIR}/build-${my_parallel}
+export TRILINOS_BUILD_DIR=${TRILINOS_SOURCE_DIR}/build-${my_device}
 export TRILINOS_INSTALL_DIR=${TRILINOS_BUILD_DIR}
 
+export FIERRO_BUILD_CORES=$build_cores
+
 cd $scriptdir
+
+# Call the appropriate script to load modules based on the machine
+source machines/$machine-env.sh --kokkos_build_type=${kokkos_build_type}
 
 
 
