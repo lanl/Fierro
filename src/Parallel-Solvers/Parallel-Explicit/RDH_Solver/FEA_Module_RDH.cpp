@@ -210,10 +210,7 @@ FEA_Module_RDH::~FEA_Module_RDH(){
 // -----------------------------------------------------------------------------
 // Interfaces read in data with the RDH solver data; currently a hack to streamline
 //------------------------------------------------------------------------------
-void FEA_Module_RDH::rdh_interface_setup(node_t &node,
-                       elem_t &elem,
-                       
-                       corner_t &corner){
+void FEA_Module_RDH::rdh_interface_setup(node_t &node, elem_t &elem, mesh_t &mesh, corner_t &corner){
 
     const size_t num_dim = simparam.num_dims;
     const size_t rk_num_bins = simparam.rk_num_bins;
@@ -231,7 +228,7 @@ void FEA_Module_RDH::rdh_interface_setup(node_t &node,
     //printf("Num nodes assigned to MPI rank %lu is %lu\n" , myrank, nall_nodes);
 
     // intialize node variables
-    mesh->initialize_nodes(nall_nodes);
+    mesh.initialize_nodes(nall_nodes);
     // WARNING WARNING WARNING //
     //mesh.initialize_local_nodes(Explicit_Solver_Pointer_->nlocal_nodes);
     node.initialize(rk_num_bins, nall_nodes, num_dim);
@@ -786,7 +783,7 @@ void FEA_Module_RDH::rdh_solve(){
     small = tv.small;
     graphics_times = simparam.graphics_options.graphics_times;
     graphics_id = simparam.graphics_options.graphics_id;
-    size_t num_bdy_nodes = mesh.num_bdy_nodes;
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
     const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
     const DCArrayKokkos <material_t> material = simparam.material;
     int old_max_forward_buffer;

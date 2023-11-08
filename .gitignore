@@ -39,4 +39,4 @@ build-fierro-serial
 build-fierro-openmp
 build-fierro-cuda
 build-fierro-hip
->>>>>>> main
+scripts/machines/mac-env.sh
