@@ -100,7 +100,8 @@ namespace Yaml {
     // nested fields. Then we can give a pretty slick error message.
     #define YAML_DESERIALIZE_IMPL(FIELD)                        \
         try {                                                   \
-            Yaml::deserialize(obj.FIELD, node[#FIELD], raw);    \
+            if (!node[#FIELD].IsNone())                         \
+                Yaml::deserialize(obj.FIELD, node[#FIELD], raw);\
         } catch (const Yaml::ConfigurationException& e) {       \
             throw Yaml::ConfigurationException(e, #FIELD);      \
         }                                                       \
