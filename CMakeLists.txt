@@ -35,6 +35,7 @@ if(NOT DEFINED BUILD_ELEMENTS)
   set(BUILD_ELEMENTS ON)
 endif()
 
+find_package(Trilinos REQUIRED)
 find_package(Elements REQUIRED)
 
 #if(BUILD_ELEMENTS)
