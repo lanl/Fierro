@@ -78,6 +78,7 @@
 
 //Multigrid Solver
 #include <Xpetra_Operator.hpp>
+#include <MueLu_TpetraOperator.hpp>
 #include <Xpetra_Map.hpp>
 #include <Xpetra_MultiVector.hpp>
 #include <Xpetra_IO.hpp>
@@ -95,6 +96,7 @@
 //Eigensolver
 #include "AnasaziBasicEigenproblem.hpp"
 #include "AnasaziBlockDavidsonSolMgr.hpp"
+#include "AnasaziBlockKrylovSchurSolMgr.hpp"
 
 #define MAX_ELEM_NODES 8
 #define STRAIN_EPSILON 0.000000001
@@ -135,7 +137,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(
   linear_solve_time = hessvec_time = hessvec_linear_time = 0;
 
   //preconditioner construction
-  Hierarchy_Constructed = false;
+  Eigen_Hierarchy_Constructed = Hierarchy_Constructed = false;
 
   gradient_print_sync = 0;
 
@@ -3047,14 +3049,16 @@ void FEA_Module_Elasticity::local_mass_matrix(int ielem, CArrayKokkos<real_t, ar
     invJacobian = 1/Jacobian;
 
     //compute the contributions of this quadrature point to all the local stiffness matrix elements
-    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++)
-      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
-        matrix_term = basis_values(ifill/num_dim)*basis_values(jfill/num_dim);
-        Local_Matrix(ifill,jfill) += material_density*current_density*weight_multiply*matrix_term*Jacobian;
-        if(ifill!=jfill)
-          Local_Matrix(jfill,ifill) = Local_Matrix(ifill,jfill);
+    for(int ifill=0; ifill < nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < nodes_per_elem; jfill++){
+        for(int idim=0; idim < num_dim; idim++){
+          matrix_term = basis_values(ifill)*basis_values(jfill);
+          Local_Matrix(ifill*num_dim + idim,jfill*num_dim + idim) += material_density*current_density*weight_multiply*matrix_term*Jacobian;
+          if(ifill!=jfill)
+            Local_Matrix(jfill*num_dim + idim,ifill*num_dim + idim) = Local_Matrix(ifill*num_dim + idim,jfill*num_dim + idim);
+        }
       }
-    
+    }
     } //end quad loop
     
 }
@@ -5584,15 +5588,186 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
 ------------------------------------------------------------------------- */
 
 int FEA_Module_Elasticity::eigensolve(){
-  int blocksize = 3;
-  int nev = 10;
+  int nev = 9;
+  int blocksize = 1.5*nev;
+  int num_dim = simparam.num_dims;
+  GO global_index, global_dof_index;
+  LO local_dof_index;
+  size_t local_nrows = nlocal_nodes*num_dim;
+  size_t access_index, row_access_index, row_counter;
+  bool free_bcs = false;
+  if(num_boundary_conditions==0) free_bcs = true;
 
   // Create initial vectors
-  Teuchos::RCP<MV> ivec = Teuchos::rcp (new MV (map,blocksize));
+  Teuchos::RCP<MV> ivec = Teuchos::rcp (new MV (local_dof_map,blocksize));
   ivec->randomize ();
+  
+  Original_Stiffness_Entries_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(local_nrows);
 
+  //debug print of A matrix before applying BCS
+  //*fos << "Reduced Stiffness Matrix :" << std::endl;
+  //Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
+  //*fos << std::endl;
+  //Tpetra::MatrixMarket::Writer<MAT> market_writer();
+  //Tpetra::MatrixMarket::Writer<MAT>::writeSparseFile("A_matrix.txt", *Global_Stiffness_Matrix, "A_matrix", "Stores stiffness matrix values");
+
+  //first pass counts strides for storage
+  if(!matrix_bc_reduced&&!free_bcs){
+    for(LO i=0; i < local_nrows; i++){
+      Original_Stiffness_Entries_Strides(i) = 0;
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        Original_Stiffness_Entries_Strides(i) = Stiffness_Matrix_Strides(i);
+      }
+      else{
+        for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+          global_dof_index = DOF_Graph_Matrix(i,j);
+          local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+          if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+            Original_Stiffness_Entries_Strides(i)++;
+          }
+        }//stride for
+      }
+    }//row for
+    
+    //assign old stiffness matrix entries
+    LO stride_index;
+    Original_Stiffness_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+    Original_Stiffness_Entry_Indices = RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+    Original_Mass_Entries = RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits>(Original_Stiffness_Entries_Strides);
+    for(LO i=0; i < local_nrows; i++){
+      if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+        for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+          global_dof_index = DOF_Graph_Matrix(i,j);
+          local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+          Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
+          Original_Mass_Entries(i,j) = Mass_Matrix(i,j);
+          Original_Stiffness_Entry_Indices(i,j) = j;
+          if(local_dof_index == i){
+            Stiffness_Matrix(i,j) = 0;
+            Mass_Matrix(i,j) = 1;
+          }
+          else{  
+            Mass_Matrix(i,j) = Stiffness_Matrix(i,j) = 0;
+          }
+        }//stride for
+      }
+      else{
+        stride_index = 0;
+        for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+          global_dof_index = DOF_Graph_Matrix(i,j);
+          local_dof_index = all_dof_map->getLocalElement(global_dof_index);
+          if((Node_DOF_Boundary_Condition_Type(local_dof_index)==DISPLACEMENT_CONDITION)){
+            Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
+            Original_Mass_Entries(i,stride_index) = Mass_Matrix(i,j);
+            Original_Stiffness_Entry_Indices(i,stride_index) = j;   
+            Mass_Matrix(i,j) = Stiffness_Matrix(i,j) = 0;
+            stride_index++;
+          }
+        }
+      }
+    }//row for
+
+    matrix_bc_reduced = true;
+  }
+
+  //nullspace vector
+  int nulldim = 6;
+  if(num_dim == 2) nulldim = 3;
+  CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> mass_normalization(nulldim);
+  using impl_scalar_type =
+    typename Kokkos::Details::ArithTraits<real_t>::val_type;
+  using mag_type = typename Kokkos::ArithTraits<impl_scalar_type>::mag_type;
+  Teuchos::RCP<MV> tnullspace = Teuchos::rcp(new MV(local_dof_map, nulldim));
+  Teuchos::RCP<MV> Mnull_product = Teuchos::rcp(new MV(local_dof_map, nulldim));
+  //set nullspace components
+  //init
+  tnullspace->putScalar(0);
+
+  //compute center
+  // Calculate center
+  Teuchos::RCP<MV> tcoordinates = node_coords_distributed;
+	real_t cx = tcoordinates->getVector(0)->meanValue();
+	real_t cy = tcoordinates->getVector(1)->meanValue();
+  //real_t cx = center_of_mass[0];
+  //real_t cy = center_of_mass[1];
+  real_t cz;
+  int dim_index;
+  real_t node_x, node_y, node_z;
+
+  if(num_dim==3)
+	  cz = tcoordinates->getVector(2)->meanValue();
+    //cz = center_of_mass[2];
+  
+  { //dual view access scope
+    //local variable for host view in the dual view
+    const_host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    //loop through dofs and compute nullspace components for each
+    host_vec_array nullspace_view = tnullspace->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    if(num_dim==3){
+      for(LO i=0; i < local_nrows; i++){
+        dim_index = i % num_dim;
+        access_index = i/num_dim;
+        node_x = node_coords(access_index, 0);
+        node_y = node_coords(access_index, 1);
+        node_z = node_coords(access_index, 2);
+        //set translational component
+        nullspace_view(i,dim_index) = 1;
+        //set rotational components
+        if(dim_index==0){
+          nullspace_view(i,3) = -node_y + cy;
+          nullspace_view(i,5) = node_z - cz;
+        }
+        if(dim_index==1){
+          nullspace_view(i,3) = node_x - cx;
+          nullspace_view(i,4) = -node_z + cz;
+        }
+        if(dim_index==2){
+          nullspace_view(i,4) = node_y - cy;
+          nullspace_view(i,5) = -node_x + cx;
+        }
+        /*
+        if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+          nullspace_view(i,0) = 0;
+          nullspace_view(i,1) = 0;
+          nullspace_view(i,2) = 0;
+          nullspace_view(i,3) = 0;
+          nullspace_view(i,4) = 0;
+          nullspace_view(i,5) = 0;
+        }
+        */
+      }// for
+    }
+    else{
+      for(LO i=0; i < local_nrows; i++){
+        dim_index = i % num_dim;
+        access_index = i/num_dim;
+        node_x = node_coords(access_index, 0);
+        node_y = node_coords(access_index, 1);
+        //set translational component
+        nullspace_view(i,dim_index) = 1;
+        //set rotational components
+        if(dim_index==0){
+          nullspace_view(i,2) = -node_y + cy;
+        }
+        if(dim_index==1){
+          nullspace_view(i,2) = node_x - cx;
+        }
+        if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+          nullspace_view(i,0) = 0;
+          nullspace_view(i,1) = 0;
+          nullspace_view(i,2) = 0;
+        }
+      }// for
+    }
+  } //end view scope
+
+  // //normalize components
+  // Kokkos::View<mag_type*, Kokkos::HostSpace> norms2("norms2", nulldim);
+  // tnullspace->norm2(norms2);
+  
   // Create eigenproblem; note that OP can be a matrix type or a preconditioner operator type (as long as it inherits from Tpetra::Operator)
   Teuchos::RCP<Anasazi::BasicEigenproblem<real_t,MV,OP> > problem =
+    //Teuchos::rcp (new Anasazi::BasicEigenproblem<real_t,MV,OP> (Global_Stiffness_Matrix, Global_Mass_Matrix, ivec));
     Teuchos::rcp (new Anasazi::BasicEigenproblem<real_t,MV,OP> (Global_Stiffness_Matrix, Global_Mass_Matrix, ivec));
   //
   // Inform the eigenproblem that the operator K is symmetric
@@ -5601,10 +5776,61 @@ int FEA_Module_Elasticity::eigensolve(){
   // Set the number of eigenvalues requested
   problem->setNEV (nev);
 
+  //set preconditioner
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> nullspace = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tnullspace));
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> coordinates = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(tcoordinates));
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> material = Teuchos::null;
+  Teuchos::RCP<Xpetra::CrsMatrix<real_t,LO,GO,node_type>> xcrs_A = Teuchos::rcp(new Xpetra::TpetraCrsMatrix<real_t,LO,GO,node_type>(Global_Stiffness_Matrix));
+  xA = Teuchos::rcp(new Xpetra::CrsMatrixWrap<real_t,LO,GO,node_type>(xcrs_A));
+  xA->SetFixedBlockSize(num_dim);
+  comm->barrier();
+  //PreconditionerSetup(A,coordinates,nullspace,material,paramList,false,false,useML,0,H,Prec);
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
+  Teuchos::RCP<Tpetra::Vector<real_t,LO,GO,node_type>> tdiagonal = Teuchos::rcp(new Tpetra::Vector<real_t,LO,GO,node_type>(local_dof_map));
+  //Teuchos::RCP<Xpetra::Vector<real_t,LO,GO,node_type>> diagonal = Teuchos::rcp(new Xpetra::Vector<real_t,LO,GO,node_type>(tdiagonal));
+  //Global_Stiffness_Matrix->getLocalDiagCopy(*tdiagonal);
+  //tdiagonal->describe(*fos,Teuchos::VERB_EXTREME);
+  real_t current_cpu_time = Implicit_Solver_Pointer_->CPU_Time();
+  if(Eigen_Hierarchy_Constructed){
+    ReuseXpetraPreconditioner(xA, eigen_H);
+  }
+  else{
+    PreconditionerSetup(xA,coordinates,nullspace,material,*Linear_Solve_Params,false,false,false,0,eigen_H,eigen_Prec);
+    Eigen_Hierarchy_Constructed = true;
+  }
+  comm->barrier();
+  
+  Teuchos::RCP<Tpetra::Operator<real_t,LO,GO,node_type>> eigen_Prec_Pass = Teuchos::rcp(new MueLu::TpetraOperator<real_t,LO,GO,node_type>(H));
+  
+  problem->setPrec(eigen_Prec_Pass);
+
+  Kokkos::View<impl_scalar_type*, HostSpace> scaling_values("scaling_values", nulldim);
+
+  //set nullspace for eigenvalue problem
+  //tnullspace->norm2(scaling_values);
+  //compute mass matrix product with null space vector
+  Global_Mass_Matrix->apply(*tnullspace,*Mnull_product);
+  tnullspace->dot(*Mnull_product, scaling_values);
+  for(int i = 0 ; i < nulldim; i++){
+    scaling_values(i) = 1/scaling_values(i);
+  }
+  tnullspace->scale(scaling_values);
+
+  problem->setAuxVecs(tnullspace);
+
+  // Inform the eigenproblem that you are done passing it information
+  bool boolret = problem->setProblem();
+  if (! boolret) {
+      *fos << "Anasazi::BasicEigenproblem::SetProblem() returned with error." << std::endl
+           << "End Result: TEST FAILED" << std::endl;
+    return -1;
+  }
+
   // Eigensolver parameters
 
   // Set verbosity level
-  int verbosity = Anasazi::Errors + Anasazi::Warnings + Anasazi::FinalSummary + Anasazi::TimingDetails;
+  //int verbosity = Anasazi::Errors + Anasazi::Warnings + Anasazi::FinalSummary + Anasazi::TimingDetails + Anasazi::IterationDetails + Anasazi::Debug;
+  int verbosity = Anasazi::Errors + Anasazi::Warnings + Anasazi::FinalSummary + Anasazi::TimingDetails + Anasazi::Debug;
   /* options to select which eigenvalues to converge to for the chosen operator:
         "LM" - largest magnitude
 				"LR" - largest real part
@@ -5613,26 +5839,32 @@ int FEA_Module_Elasticity::eigensolve(){
 				"SR" - smallest real part
 				"SI" - smallest imaginary part
   */
-  std::string which("LM");
+  std::string which("SM");
   int NumImages = nranks;
   int numBlocks = 3 * NumImages;
   int maxRestarts = 50;
-  real_t tol = 1.0e-6;
   bool insitu = false;
-
+  std::string whenToShift = "Always";
+  //
+  // Compute the norm of the matrix
+  //
+  real_t mat_norm = std::max(Global_Stiffness_Matrix->getFrobeniusNorm(),Global_Mass_Matrix->getFrobeniusNorm());
   
+  real_t tol = 1.0e-18*mat_norm;
+  //tol = tol*mat_norm;
   // Create parameter list to pass into the solver manager
   Teuchos::ParameterList MyPL;
   MyPL.set( "Verbosity", verbosity );
   MyPL.set( "Which", which );
   MyPL.set( "Block Size", blocksize );
-  MyPL.set( "Num Blocks", numBlocks );
   MyPL.set( "Maximum Restarts", maxRestarts );
-  MyPL.set( "Convergence Tolerance", tol );
+  MyPL.set( "Convergence Tolerance", tol);
   MyPL.set( "In Situ Restarting", insitu );
+  MyPL.set("Num Blocks", numBlocks);                   // Maximum number of blocks in the subspace
   //
   // Create the solver manager
   Anasazi::BlockDavidsonSolMgr<real_t,MV,OP> MySolverMgr(problem, MyPL);
+  //Anasazi::Experimental::TraceMinDavidsonSolMgr<real_t,MV,OP> MySolverMgr(problem, MyPL);
 
   // Solve the problem to the specified tolerances or length
   Anasazi::ReturnType returnCode = MySolverMgr.solve();
@@ -5652,6 +5884,18 @@ int FEA_Module_Elasticity::eigensolve(){
     for (int i=0; i<numev; i++) {
       *fos << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << std::endl;
     }
+
+  //reinsert global stiffness and mass values corresponding to BC indices to facilitate future calculation
+  if(matrix_bc_reduced){
+    for(LO i = 0; i < local_nrows; i++){
+      for(LO j = 0; j < Original_Stiffness_Entries_Strides(i); j++){
+        access_index = Original_Stiffness_Entry_Indices(i,j);
+        Stiffness_Matrix(i,access_index) = Original_Stiffness_Entries(i,j);
+        Mass_Matrix(i,access_index) = Original_Mass_Entries(i,j);
+      }
+    }//row for
+    matrix_bc_reduced = false;
+  }
 
   if(testFailed) return -1;
   else return 0;

@@ -7,6 +7,10 @@ source:
   # - git_url: https://github.com/lanl/Fierro.git
   #   depth: 1
 
+build:
+  number: 1
+  script: cd python/EVPFFT-GUI/; python setup.py install
+
 requirements:
   host:
     - python
