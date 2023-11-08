@@ -6199,15 +6199,22 @@ int FEA_Module_Elasticity::eigensolve(){
   }
 
   // Get the eigenvalues and eigenvectors from the eigenproblem
-  Anasazi::Eigensolution<real_t,MV> sol = problem->getSolution();
-  Teuchos::RCP<MV> evecs = sol.Evecs;
-  int numev = sol.numVecs;
+  sol = problem->getSolution();
+  evecs = sol.Evecs;
+  numev = sol.numVecs;
 
    *fos << "Direct residual norms computed in Tpetra_BlockDavidson_lap_test.exe" << std::endl
        << std::setw(20) << "Eigenvalue" << std::setw(20) << "Residual  " << std::endl
        << "----------------------------------------" << std::endl;
+    
+    Teuchos::RCP<TpetraVector> current_evec;
+    Teuchos::RCP<TpetraVector> current_evecMproduct = Teuchos::rcp (new TpetraVector (local_dof_map));
+    Teuchos::RCP<TpetraVector> current_evecKproduct = Teuchos::rcp (new TpetraVector (local_dof_map));
     for (int i=0; i<numev; i++) {
-      *fos << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << std::endl;
+      current_evec = evecs->getVectorNonConst(i);
+      Global_Mass_Matrix->apply(*current_evec,*current_evecMproduct);
+      Global_Stiffness_Matrix->apply(*current_evec,*current_evecKproduct);
+      *fos << std::setw(20) << "Real Part: " << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << "Imaginary Part: " << sol.Evals[i].imagpart << std::setw(20) << std::endl;
     }
 
   //reinsert global stiffness and mass values corresponding to BC indices to facilitate future calculation
