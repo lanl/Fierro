@@ -6207,14 +6207,18 @@ int FEA_Module_Elasticity::eigensolve(){
        << std::setw(20) << "Eigenvalue" << std::setw(20) << "Residual  " << std::endl
        << "----------------------------------------" << std::endl;
     
-    Teuchos::RCP<TpetraVector> current_evec;
+    Teuchos::RCP<TpetraVector> current_evec, current_residual;
     Teuchos::RCP<TpetraVector> current_evecMproduct = Teuchos::rcp (new TpetraVector (local_dof_map));
     Teuchos::RCP<TpetraVector> current_evecKproduct = Teuchos::rcp (new TpetraVector (local_dof_map));
     for (int i=0; i<numev; i++) {
       current_evec = evecs->getVectorNonConst(i);
       Global_Mass_Matrix->apply(*current_evec,*current_evecMproduct);
       Global_Stiffness_Matrix->apply(*current_evec,*current_evecKproduct);
-      *fos << std::setw(20) << "Real Part: " << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << "Imaginary Part: " << sol.Evals[i].imagpart << std::setw(20) << std::endl;
+      current_residual = current_evecKproduct;
+      //compute residual vector
+      current_residual->update(-sol.Evals[i].realpart,*current_evecMproduct,1);
+      real_t residual_norm = current_residual->norm2();
+      *fos << std::setw(20) << "Real Part: " << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << "Imaginary Part: " << sol.Evals[i].imagpart << std::setw(20) << "Residual Norm: " << residual_norm << std::setw(20) << std::endl;
     }
 
   //reinsert global stiffness and mass values corresponding to BC indices to facilitate future calculation
