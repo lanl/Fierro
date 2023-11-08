@@ -1379,7 +1379,7 @@ void FEA_Module_Thermo_Elasticity::assemble_matrix(){
   /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
     for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      if(Stiffness_Matrix(idof,istride)<0.000000001*module_params.Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*module_params.Elastic_Modulus*density_epsilon)
+      if(Stiffness_Matrix(idof,istride)<0.000000001*module_params.material.elastic_modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*module_params.material.elastic_modulus*density_epsilon)
       Stiffness_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -1477,13 +1477,13 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   all_node_temperatures_distributed = Heat_Conduction_Module_Pointer_->all_node_temperatures_distributed;
   const_host_vec_array all_node_temperatures = all_node_temperatures_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   real_t Expansion_Coefficients[6], Initial_Temperature;
-  Initial_Temperature = module_params.Initial_Temperature;
-  Expansion_Coefficients[0] = module_params.Expansion_Coefficients[0];
-  Expansion_Coefficients[1] = module_params.Expansion_Coefficients[1];
-  Expansion_Coefficients[2] = module_params.Expansion_Coefficients[2];
-  Expansion_Coefficients[3] = module_params.Expansion_Coefficients[3];
-  Expansion_Coefficients[4] = module_params.Expansion_Coefficients[4];
-  Expansion_Coefficients[5] = module_params.Expansion_Coefficients[5];
+  Initial_Temperature = module_params.material.initial_temperature;
+  Expansion_Coefficients[0] = module_params.material.expansion_coefficients[0];
+  Expansion_Coefficients[1] = module_params.material.expansion_coefficients[1];
+  Expansion_Coefficients[2] = module_params.material.expansion_coefficients[2];
+  Expansion_Coefficients[3] = module_params.material.expansion_coefficients[3];
+  Expansion_Coefficients[4] = module_params.material.expansion_coefficients[4];
+  Expansion_Coefficients[5] = module_params.material.expansion_coefficients[5];
   
   //force vector initialization
   for(int i=0; i < num_dim*nlocal_nodes; i++)
@@ -2215,9 +2215,9 @@ void FEA_Module_Thermo_Elasticity::Element_Material_Properties(size_t ielem, rea
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
-  //Element_Modulus = density*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.Poisson_Ratio;
+  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+  //Element_Modulus = density*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+  Poisson_Ratio = module_params.material.poisson_ratio;
 }
 
 /* ----------------------------------------------------------------------
@@ -2233,9 +2233,9 @@ void FEA_Module_Thermo_Elasticity::Gradient_Element_Material_Properties(size_t i
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
-  //Element_Modulus_Derivative = module_params.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.Poisson_Ratio;
+  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+  //Element_Modulus_Derivative = module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+  Poisson_Ratio = module_params.material.poisson_ratio;
 }
 
 /* --------------------------------------------------------------------------------
@@ -2252,10 +2252,10 @@ void FEA_Module_Thermo_Elasticity::Concavity_Element_Material_Properties(size_t 
     for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and stiffness
-    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
   }
-  //Element_Modulus_Derivative = module_params.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.Poisson_Ratio;
+  //Element_Modulus_Derivative = module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+  Poisson_Ratio = module_params.material.poisson_ratio;
 }
 
 /* ----------------------------------------------------------------------
@@ -2374,8 +2374,8 @@ void FEA_Module_Thermo_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, 
       Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
     }
     else{
-      Element_Modulus = module_params.Elastic_Modulus/unit_scaling/unit_scaling;
-      Poisson_Ratio = module_params.Poisson_Ratio;
+      Element_Modulus = module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+      Poisson_Ratio = module_params.material.poisson_ratio;
     }
     Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
     Shear_Term = 0.5-Poisson_Ratio;
@@ -4414,9 +4414,9 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
 
 void FEA_Module_Thermo_Elasticity::init_output(){
   //check user parameters for output
-  bool output_displacement_flag = simparam.output_options.output_displacement;
-  bool output_strain_flag = simparam.output_options.output_strain;
-  bool output_stress_flag = simparam.output_options.output_stress;
+  bool output_displacement_flag = simparam.output(FIELD::displacement);
+  bool output_strain_flag = simparam.output(FIELD::strain);
+  bool output_stress_flag = simparam.output(FIELD::stress);
   int num_dim = simparam.num_dims;
   int Brows;
   if(num_dim==3) Brows = 6;
@@ -4488,9 +4488,9 @@ void FEA_Module_Thermo_Elasticity::init_output(){
 
 void FEA_Module_Thermo_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
   
-  bool output_displacement_flag = simparam.output_options.output_displacement;
-  bool output_strain_flag = simparam.output_options.output_strain;
-  bool output_stress_flag = simparam.output_options.output_stress;
+  bool output_displacement_flag = simparam.output(FIELD::displacement);
+  bool output_strain_flag = simparam.output(FIELD::strain);
+  bool output_stress_flag = simparam.output(FIELD::stress);
   int num_dim = simparam.num_dims;
   int strain_count;
   int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
@@ -4562,9 +4562,9 @@ void FEA_Module_Thermo_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,no
 
 void FEA_Module_Thermo_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
   
-  bool output_displacement_flag = simparam.output_options.output_displacement;
-  bool output_strain_flag = simparam.output_options.output_strain;
-  bool output_stress_flag = simparam.output_options.output_stress;
+  bool output_displacement_flag = simparam.output(FIELD::displacement);
+  bool output_strain_flag = simparam.output(FIELD::strain);
+  bool output_stress_flag = simparam.output(FIELD::stress);
   int num_dim = simparam.num_dims;
   int strain_count;
   GO nreduce_dof = 0;
@@ -4633,9 +4633,7 @@ void FEA_Module_Thermo_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::compute_output(){
-  bool output_strain_flag = simparam.output_options.output_strain;
-  bool output_stress_flag = simparam.output_options.output_stress;
-  if(output_strain_flag)
+  if(simparam.output(FIELD::strain))
     compute_nodal_strains();
 }
 
@@ -5557,7 +5555,7 @@ void FEA_Module_Thermo_Elasticity::node_density_constraints(host_vec_array node_
   int num_dim = simparam.num_dims;
   LO local_node_index;
   //simparam = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Implicit_Solver_Pointer_->simparam);
-  if(simparam.thick_condition_boundary){
+  if(simparam.optimization_options.thick_condition_boundary){
     for(int i = 0; i < nlocal_nodes*num_dim; i++){
       if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
         for(int j = 0; j < Graph_Matrix_Strides(i/num_dim); j++){

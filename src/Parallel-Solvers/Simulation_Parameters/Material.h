@@ -13,6 +13,14 @@ struct material_t {
     RUN_LOCATION strength_run_location = RUN_LOCATION::device;
     RUN_LOCATION eos_run_location      = RUN_LOCATION::device; 
 
+    double elastic_modulus  = 200000000000;
+    double poisson_ratio    = 0.3;
+    double density          = 7850;
+    double initial_temperature  = 293;
+    double thermal_conductivity = 10;
+    double specific_internal_energy_rate = 1.0;
+    std::vector<double> expansion_coefficients = { 12e-6, 12e-6, 12e-6, 0, 0, 0 }; 
+
     double q1;
     double q2;
     double q1ex;
@@ -24,7 +32,7 @@ struct material_t {
 };
 
 struct Material : Yaml::DerivedFields, material_t {
-    std::string id;
+    size_t id;
     std::vector<double> global_vars;
 
     void derive() {
@@ -36,5 +44,8 @@ IMPL_YAML_SERIALIZABLE_FOR(Material,
     id, eos_model, strength_model, strength_type,
     strength_run_location, eos_run_location,
     q1, q2, q1ex, q2ex, maximum_limiter,
-    global_vars
+    global_vars,
+    elastic_modulus, poisson_ratio,
+    density, initial_temperature, thermal_conductivity,
+    specific_internal_energy_rate, expansion_coefficients
 )

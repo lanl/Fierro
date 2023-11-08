@@ -1089,7 +1089,7 @@ void Implicit_Solver::FEA_module_setup(){
       },
       [&](Thermo_Elasticity_Parameters& param) {
         //ensure another momentum conservation module was not allocated
-        if (displacement_module > 0){
+        if (displacement_module >= 0){
           *fos << "PROGRAM IS ENDING DUE TO ERROR; MORE THAN ONE ELASTIC MODULE ALLOCATED \"" 
                 << to_string(param.type) << "\"" << std::endl;
           exit_solver(0);
@@ -1195,7 +1195,7 @@ void Implicit_Solver::setup_optimization_problem(){
                 
           // get the global id for this boundary patch
           patch_id = fea_modules[imodule]->Boundary_Condition_Patches(iboundary, bdy_patch_gid);
-          if(simparam.thick_condition_boundary){
+          if(simparam.optimization_options.thick_condition_boundary){
             Surface_Nodes = Boundary_Patches(patch_id).node_set;
             current_element_index = Boundary_Patches(patch_id).element_id;
             //debug print of local surface ids
@@ -1821,7 +1821,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
   bool displace_geometry = false;
   int displacement_index;
   if(displacement_module!=-1){
-    displace_geometry = simparam.output_options.displaced_mesh;
+    displace_geometry = simparam.output(FIELD::displaced_mesh);
     displacement_index = fea_modules[displacement_module]->displacement_index;
   }
   const_host_vec_array current_sorted_output;
@@ -2245,7 +2245,7 @@ void Implicit_Solver::tecplot_writer(){
   bool displace_geometry = false;
   int displacement_index;
   if(displacement_module!=-1){
-    displace_geometry = simparam.output_options.displaced_mesh;
+    displace_geometry = simparam.output(FIELD::displaced_mesh);
     displacement_index = fea_modules[displacement_module]->displacement_index;
   }
   const_host_vec_array current_collected_output;

@@ -7,6 +7,8 @@
 #include "Simulation_Parameters/FEA_Module/Boundary_Conditions.h"
 #include "Simulation_Parameters/FEA_Module/Loading_Conditions.h"
 #include "Simulation_Parameters/utils.h"
+#include "Simulation_Parameters/Material.h"
+#include "Simulation_Parameters/Fields.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -21,32 +23,23 @@ SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
     Dynamic_Elasticity
 )
 
-SERIALIZABLE_ENUM(FIELD,
-    velocity,
-    element_density,
-    pressure,
-    SIE,
-    volume,
-    mass,
-    sound_speed,
-    material_id,
-    user_vars,
-    stress,
-    strain,
-    displacement
-)
-
 struct FEA_Module_Parameters 
     : Yaml::TypeDiscriminated<FEA_Module_Parameters, FEA_MODULE_TYPE>,
         Yaml::DerivedFields {
-    std::string region_id;
+    size_t material_id;
     std::vector<Boundary_Condition> boundary_conditions;
     std::vector<std::shared_ptr<Loading_Condition>> loading_conditions;
-    std::vector<FIELD> output_fields;
 
     // Non-serialized Fields
     DCArrayKokkos <loading_t>  loading;
     DCArrayKokkos <boundary_t> boundary;
+
+    // The material has to be set by the simulation parameters
+    Material material;
+
+    // Default output fields to be included when running with 
+    // this module.
+    std::set<FIELD> default_output_fields;
 
     void derive() {
         std::vector<loading_t> lcs;
@@ -56,14 +49,17 @@ struct FEA_Module_Parameters
         mtr::from_vector(boundary, boundary_conditions);
     }
     
+
+    FEA_Module_Parameters() {}
+    FEA_Module_Parameters(std::initializer_list<FIELD> _default_output_fields) : default_output_fields(_default_output_fields) {}
+
     // Implement default copy constructor to avoid the compiler double moving.
     // Let it double copy instead.
     FEA_Module_Parameters& operator=(const FEA_Module_Parameters&) = default;
 };
-YAML_ADD_REQUIRED_FIELDS_FOR(FEA_Module_Parameters, type)
+YAML_ADD_REQUIRED_FIELDS_FOR(FEA_Module_Parameters, type, material_id)
 IMPL_YAML_SERIALIZABLE_FOR(FEA_Module_Parameters, type,
-    region_id, boundary_conditions, loading_conditions,
-    output_fields
+    material_id, boundary_conditions, loading_conditions
 )
 
 #endif

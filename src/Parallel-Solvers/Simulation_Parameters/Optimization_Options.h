@@ -26,7 +26,7 @@ SERIALIZABLE_ENUM(TO_MODULE_TYPE,
 
 
 SERIALIZABLE_ENUM(OPTIMIZATION_PROCESS, none, topology_optimization, shape_optimization)
-SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, minimize_kinetic_energy, multi_objective, minimize_compliance, minimize_thermal_resistance)
+SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, none, minimize_kinetic_energy, multi_objective, minimize_compliance, minimize_thermal_resistance)
 SERIALIZABLE_ENUM(CONSTRAINT_TYPE, mass, moment_of_inertia)
 SERIALIZABLE_ENUM(RELATION, equality)
 SERIALIZABLE_ENUM(DENSITY_FILTER, none, helmholtz_filter)
@@ -52,9 +52,9 @@ inline int component_to_int(CONSTRAINT_COMPONENT c) {
 }
 
 struct Optimization_Constraint {
-  CONSTRAINT_TYPE type;
-  double value;
-  RELATION relation;
+  CONSTRAINT_TYPE type = CONSTRAINT_TYPE::mass;
+  double value         = 0;
+  RELATION relation    = RELATION::equality;
   std::optional<CONSTRAINT_COMPONENT> component;
 
   // Non-serialized fields
@@ -79,21 +79,23 @@ struct MultiObjectiveModule {
 YAML_ADD_REQUIRED_FIELDS_FOR(MultiObjectiveModule, type, weight_coefficient)
 IMPL_YAML_SERIALIZABLE_FOR(MultiObjectiveModule, type, weight_coefficient)
 
-
 struct Optimization_Options {
   OPTIMIZATION_PROCESS optimization_process = OPTIMIZATION_PROCESS::none;
-  OPTIMIZATION_OBJECTIVE optimization_objective;
+  OPTIMIZATION_OBJECTIVE optimization_objective = OPTIMIZATION_OBJECTIVE::none;
   std::vector<Optimization_Constraint> constraints;
   bool method_of_moving_asymptotes = false;
   double simp_penalty_power = 3.0;
   bool thick_condition_boundary = true;
   int optimization_output_freq = 200;
-  DENSITY_FILTER density_filter = DENSITY_FILTER::none;
-  double density_epsilon;
+  DENSITY_FILTER density_filter = DENSITY_FILTER::none; 
+  double density_epsilon = 0;
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
 };
+YAML_ADD_REQUIRED_FIELDS_FOR(Optimization_Options,
+  optimization_objective
+)
 IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options, 
   optimization_process, optimization_objective, 
   constraints, method_of_moving_asymptotes,

@@ -288,9 +288,9 @@ void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, re
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
   //Element_Modulus = density*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.Poisson_Ratio;
+  Poisson_Ratio = module_params.material.poisson_ratio;
 }
 
 /* ----------------------------------------------------------------------
@@ -306,9 +306,9 @@ void FEA_Module_Dynamic_Elasticity::Gradient_Element_Material_Properties(size_t 
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.Elastic_Modulus/unit_scaling/unit_scaling;
+  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
   //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.Poisson_Ratio;
+  Poisson_Ratio = module_params.material.poisson_ratio;
 }
 
 /* ----------------------------------------------------------------------

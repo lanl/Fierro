@@ -165,17 +165,17 @@ FEA_Module_SGH::FEA_Module_SGH(
   dt_max = dynamic_options.dt_max;
   dt_min = dynamic_options.dt_min;
   dt_cfl = dynamic_options.dt_cfl;
-  graphics_time = simparam.graphics_options.graphics_time;
-  graphics_dt_ival = simparam.graphics_options.graphics_dt_ival;
-  graphics_cyc_ival = simparam.graphics_options.graphics_cyc_ival;
+  graphics_time = simparam.output_options.graphics_time;
+  graphics_dt_ival = simparam.output_options.graphics_dt_ival;
+  graphics_cyc_ival = simparam.output_options.graphics_cyc_ival;
   cycle_stop = dynamic_options.cycle_stop;
   rk_num_stages = dynamic_options.rk_num_stages;
   dt = dynamic_options.dt;
   fuzz = dynamic_options.fuzz;
   tiny = dynamic_options.tiny;
   small = dynamic_options.small;
-  graphics_times = simparam.graphics_options.graphics_times;
-  graphics_id = simparam.graphics_options.graphics_id;
+  graphics_times = simparam.output_options.graphics_times;
+  graphics_id = simparam.output_options.graphics_id;
 
   if(simparam.topology_optimization_on){
     max_time_steps = BUFFER_GROW;
@@ -558,9 +558,9 @@ void FEA_Module_SGH::output_control(){
 
 void FEA_Module_SGH::init_output(){
   //check user parameters for output
-  bool output_velocity_flag = simparam.output_options.output_velocity;
-  bool output_strain_flag = simparam.output_options.output_strain;
-  bool output_stress_flag = simparam.output_options.output_stress;
+  bool output_velocity_flag = simparam.output(FIELD::velocity);
+  bool output_strain_flag = simparam.output(FIELD::strain);
+  bool output_stress_flag = simparam.output(FIELD::stress);
   int num_dim = simparam.num_dims;
   int Brows;
   if(num_dim==3) Brows = 6;
@@ -665,7 +665,7 @@ void FEA_Module_SGH::write_data(std::map <std::string, const double*> &point_dat
   
   const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
 
-  for (const auto& field_name : module_params.output_fields) {
+  for (const auto& field_name : simparam.output_options.output_fields) {
     switch (field_name)
     {
 
@@ -1726,16 +1726,16 @@ void FEA_Module_SGH::sgh_solve(){
     dt_max = dynamic_options.dt_max;
     dt_min = dynamic_options.dt_min;
     dt_cfl = dynamic_options.dt_cfl;
-    graphics_time = simparam.graphics_options.graphics_step;
-    graphics_dt_ival = simparam.graphics_options.graphics_step;
+    graphics_time = simparam.output_options.graphics_step;
+    graphics_dt_ival = simparam.output_options.graphics_step;
     cycle_stop = dynamic_options.cycle_stop;
     rk_num_stages = dynamic_options.rk_num_stages;
     dt = dynamic_options.dt;
     fuzz = dynamic_options.fuzz;
     tiny = dynamic_options.tiny;
     small = dynamic_options.small;
-    graphics_times = simparam.graphics_options.graphics_times;
-    graphics_id = simparam.graphics_options.graphics_id;
+    graphics_times = simparam.output_options.graphics_times;
+    graphics_id = simparam.output_options.graphics_id;
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
     const DCArrayKokkos <material_t> material = simparam.material;
@@ -1790,7 +1790,7 @@ void FEA_Module_SGH::sgh_solve(){
       nTO_modules = simparam.TO_Module_List.size();
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk&&simparam.output_options.write_initial==true)
+    if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk&&simparam.output_options.write_initial)
     {
       if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
@@ -2494,7 +2494,7 @@ void FEA_Module_SGH::sgh_solve(){
       else if (cycle == cycle_stop) {
         write = 1;
       }
-      else if (time_value >= time_final&&simparam.output_options.write_final==true){
+      else if (time_value >= time_final&&simparam.output_options.write_final){
         write = 1;
       }
       else if (time_value >= graphics_time){
@@ -2515,7 +2515,7 @@ void FEA_Module_SGH::sgh_solve(){
             } //end view scope
             if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk){
               if(myrank==0){
-              printf("Writing outputs to file at %f \n", graphics_time);
+                printf("Writing outputs to file at %f \n", graphics_time);
               }
 
               double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();

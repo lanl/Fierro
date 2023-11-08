@@ -356,7 +356,7 @@ void Explicit_Solver::run() {
   std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
             << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
   
-  if(simparam.timer_output_level == TIMER_VERBOSITY::thorough){
+  if(simparam.output_options.timer_output_level == TIMER_VERBOSITY::thorough){
     std::cout << " OUTPUT TIME OF CODE ON TASK " << myrank << " is "<< output_time << std::endl;
   }
 
@@ -1279,7 +1279,7 @@ void Explicit_Solver::setup_optimization_problem(){
         num_bdy_patches_in_set = fea_modules[imodule]->bdy_patches_in_set.stride(iboundary);
 
         //loop over boundary patches for this boundary set
-        if(simparam.thick_condition_boundary){
+        if(simparam.optimization_options.thick_condition_boundary){
           for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
                   
             // get the global id for this boundary patch

@@ -45,23 +45,20 @@ YAML_ADD_REQUIRED_FIELDS_FOR(Surface, type)
 IMPL_YAML_SERIALIZABLE_FOR(Surface, type, plane_position)
 
 
+/**
+ * Device struct representation of Boundary_Condition.
+*/
 struct boundary_t {
     BOUNDARY_CONDITION_TYPE type = BOUNDARY_CONDITION_TYPE::fixed_position;
     Surface surface;
-    double value;
-    double u, v, w;
+    double value = 0;
+    double u = 0;
+    double v = 0;
+    double w = 0;
 };
 
-struct Boundary_Condition {
-    BOUNDARY_CONDITION_TYPE type;
-    Surface surface;
-    double value;
-    // TODO: these should probably just be value
-    std::optional<double> temperature_value;
-    std::optional<double> displacement_value;
-};
+// TODO: Consider using type discrimination to get different validation 
+// for different types of boundaries.
+struct Boundary_Condition : boundary_t { };
 YAML_ADD_REQUIRED_FIELDS_FOR(Boundary_Condition, surface, type)
-IMPL_YAML_SERIALIZABLE_FOR(Boundary_Condition,
-  surface, value, type, 
-  temperature_value, displacement_value
-)
+IMPL_YAML_SERIALIZABLE_FOR(Boundary_Condition, surface, value, type, u, v, w)

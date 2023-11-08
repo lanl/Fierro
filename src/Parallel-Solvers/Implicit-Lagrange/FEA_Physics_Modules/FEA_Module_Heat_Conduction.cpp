@@ -367,9 +367,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
 
     if (bc.type == BOUNDARY_CONDITION_TYPE::temperature) {
       Boundary_Condition_Type_List(num_boundary_conditions) = TEMPERATURE_CONDITION;
-    }
-    if (bc.temperature_value.has_value()) {
-      Boundary_Surface_Temperatures(num_surface_temp_sets,0) = bc.temperature_value.value();
+      Boundary_Surface_Temperatures(num_surface_temp_sets,0) = bc.value;
     }
     
     if(Boundary_Surface_Temperatures(num_surface_temp_sets,0)) nonzero_bc_flag = true;
@@ -1378,7 +1376,7 @@ void FEA_Module_Heat_Conduction::Body_Term(size_t ielem, real_t density, real_t 
   //init 
   specific_internal_energy_rate = 0;
   if(thermal_flag){
-    specific_internal_energy_rate += module_params.specific_internal_energy_rate*density;
+    specific_internal_energy_rate += module_params.material.specific_internal_energy_rate*density;
   }
   
   /*
@@ -1404,7 +1402,7 @@ void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density
   //init 
   gradient_specific_internal_energy_rate = 0;\
   if(thermal_flag){
-    gradient_specific_internal_energy_rate += module_params.specific_internal_energy_rate;
+    gradient_specific_internal_energy_rate += module_params.material.specific_internal_energy_rate;
   }
   
   /*
@@ -1431,7 +1429,7 @@ void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Conductivity = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.Thermal_Conductivity/unit_scaling;
+  Element_Conductivity = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.material.thermal_conductivity/unit_scaling;
 }
 
 /* ----------------------------------------------------------------------
@@ -1447,7 +1445,7 @@ void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t iel
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Conductivity_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.Thermal_Conductivity/unit_scaling;
+  Element_Conductivity_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.material.thermal_conductivity/unit_scaling;
 }
 
 /* --------------------------------------------------------------------------------
@@ -1464,7 +1462,7 @@ void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ie
     for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and conductivity
-    Element_Conductivity_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.Thermal_Conductivity/unit_scaling;
+    Element_Conductivity_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.material.thermal_conductivity/unit_scaling;
   }
 }
 
@@ -1613,7 +1611,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
       Element_Material_Properties((size_t) ielem,Element_Conductivity, current_density);
     }
     else{
-      Element_Conductivity = module_params.Thermal_Conductivity/unit_scaling;
+      Element_Conductivity = module_params.material.thermal_conductivity/unit_scaling;
     }
 
     //debug print
@@ -2851,9 +2849,9 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
 
 void FEA_Module_Heat_Conduction::init_output(){
   //check user parameters for output
-  bool output_temperature_flag = simparam.output_options.output_temperature;
-  bool output_temperature_gradient_flag = simparam.output_options.output_temperature_gradient;
-  bool output_heat_flux_flag = simparam.output_options.output_heat_flux;
+  bool output_temperature_flag = simparam.output(FIELD::temperature);
+  bool output_temperature_gradient_flag = simparam.output(FIELD::temperature_gradient);
+  bool output_heat_flux_flag = simparam.output(FIELD::heat_flux);
   int num_dim = simparam.num_dims;
   
   if(output_temperature_flag){
@@ -2913,9 +2911,9 @@ void FEA_Module_Heat_Conduction::init_output(){
 
 void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
   
-  bool output_temperature_flag = simparam.output_options.output_temperature;
-  bool output_temperature_gradient_flag = simparam.output_options.output_temperature_gradient;
-  bool output_heat_flux_flag = simparam.output_options.output_heat_flux;
+  bool output_temperature_flag = simparam.output(FIELD::temperature);
+  bool output_temperature_gradient_flag = simparam.output(FIELD::temperature_gradient);
+  bool output_heat_flux_flag = simparam.output(FIELD::heat_flux);
   int num_dim = simparam.num_dims;
   
   //reset modules so that host view falls out of scope
@@ -2974,9 +2972,9 @@ void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node
 
 void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
   
-  bool output_temperature_flag = simparam.output_options.output_temperature;
-  bool output_temperature_gradient_flag = simparam.output_options.output_temperature_gradient;
-  bool output_heat_flux_flag = simparam.output_options.output_heat_flux;
+  bool output_temperature_flag = simparam.output(FIELD::temperature);
+  bool output_temperature_gradient_flag = simparam.output(FIELD::temperature_gradient);
+  bool output_heat_flux_flag = simparam.output(FIELD::heat_flux);
   int num_dim = simparam.num_dims;
   
   //reset modules so that host view falls out of scope
@@ -3733,7 +3731,7 @@ void FEA_Module_Heat_Conduction::node_density_constraints(host_vec_array node_de
   LO local_node_index;
   int num_dim = simparam.num_dims;
 
-  if(simparam.thick_condition_boundary){
+  if(simparam.optimization_options.thick_condition_boundary){
     for(int i = 0; i < nlocal_nodes; i++){
       if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
         for(int j = 0; j < Graph_Matrix_Strides(i); j++){

@@ -16,35 +16,6 @@
 #include <vector>
 #include <memory>
 
-
-SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
-// SERIALIZABLE_ENUM(FUNCTION_TYPE,
-//   OBJECTIVE, 
-//   MULTI_OBJECTIVE_TERM, 
-//   EQUALITY_CONSTRAINT, 
-//   INEQUALITY_CONSTRAINT, 
-//   VECTOR_EQUALITY_CONSTRAINT, 
-//   VECTOR_INEQUALITY_CONSTRAINT
-// )
-
-// SERIALIZABLE_ENUM(TO_MODULE_TYPE,
-//   Kinetic_Energy_Minimize,
-//   Multi_Objective,
-//   Heat_Capacity_Potential_Minimize,
-//   Strain_Energy_Minimize,
-//   Mass_Constraint,
-//   Moment_of_Inertia_Constraint,
-//   Heat_Capacity_Potential_Constraint
-// )
-
-SERIALIZABLE_ENUM(SIMULATION_FIELD,
-    design_density,
-    speed,
-    element_switch,
-    processor_id,
-    element_id
-)
-
 struct Simulation_Parameters 
     : Yaml::DerivedFields,
       Yaml::ValidatedYaml {
@@ -52,7 +23,6 @@ struct Simulation_Parameters
     int num_gauss_points = 2;
     std::optional<Input_Options> input_options;
     std::optional<std::shared_ptr<MeshBuilderInput>> mesh_generation_options;
-    TIMER_VERBOSITY timer_output_level = TIMER_VERBOSITY::standard;
     Output_Options output_options;
 
     std::vector<Region> regions;
@@ -60,9 +30,7 @@ struct Simulation_Parameters
     std::vector<std::shared_ptr<FEA_Module_Parameters>> fea_module_parameters;
     Optimization_Options optimization_options;
     bool nodal_density_flag = true;
-    bool thick_condition_boundary = true;
 
-    std::vector<SIMULATION_FIELD> output_fields;
     bool gravity_flag = false;
     std::vector<double> gravity_vector {9.81, 0, 0};
 
@@ -200,6 +168,17 @@ struct Simulation_Parameters
             FEA_Module_My_TO_Modules[fea_index.value()].push_back(to_index);
         }
     }
+
+    void link_materials_with_modules() {
+        for (auto& mod : fea_module_parameters)
+            mod->material = get_material(mod->material_id);
+    }
+
+    void include_default_output_fields() {
+        for (auto& mod : fea_module_parameters) 
+            for (auto v : mod->default_output_fields)
+                output_options.output_fields.insert(v);
+    }
     
     void derive() {
         ensure_module(std::make_shared<Inertial_Parameters>());
@@ -213,6 +192,10 @@ struct Simulation_Parameters
         mtr::from_vector(mat_fill, regions);
         mtr::from_vector(material, materials);
         init_material_variable_arrays();
+        link_materials_with_modules();
+
+        if (output_options.include_default_output_fields)
+            include_default_output_fields();
     }
 
     void validate_one_of_modules_are_specified(std::vector<FEA_MODULE_TYPE> types) {
@@ -346,14 +329,34 @@ struct Simulation_Parameters
         return 1.0; // Assume generated meshes have a 1.0 unit scaling.
     }
     
+    bool output(const FIELD& field) const {
+        return output_options.output_fields.count(field) > 0;
+    }
+
+    Region get_region(const size_t region_id) const {
+        for (const auto& region : regions)
+            if (region.id == region_id)
+                return region;
+        
+        throw std::runtime_error("Could not find region with id == " + std::to_string(region_id));
+    }
+
+    Material get_material(const size_t material_id) const {
+        for (const auto& material : materials)
+            if (material.id == material_id)
+                return material;
+        
+        throw std::runtime_error("Could not find material with id == " + std::to_string(material_id));
+    }
+
     // Implement default copy constructor to avoid the compiler double moving.
     // Let it double copy instead.
     Simulation_Parameters& operator=(const Simulation_Parameters&) = default;
 };
-IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters, 
+IMPL_YAML_SERIALIZABLE_FOR(Simulation_Parameters,
     num_dims, input_options, mesh_generation_options, output_options, materials, regions,
-    timer_output_level, fea_module_parameters, optimization_options,
-    nodal_density_flag, thick_condition_boundary, num_gauss_points, output_fields,
+    fea_module_parameters, optimization_options,
+    nodal_density_flag, num_gauss_points,
     gravity_flag, gravity_vector
 )
 #endif

@@ -7,13 +7,14 @@
 struct Heat_Conduction_Parameters 
     : virtual ImplicitModule, FEA_Module_Parameters::Register<Heat_Conduction_Parameters, FEA_MODULE_TYPE::Heat_Conduction> {
     bool thermal_flag = false;
-    double specific_internal_energy_rate = 1.0;
-    double Thermal_Conductivity = 10;
     bool flux_max_flag = false;
+
+    Heat_Conduction_Parameters() : FEA_Module_Parameters({
+        FIELD::temperature,
+        FIELD::heat_flux,
+    }) { }
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Heat_Conduction_Parameters, ImplicitModule, 
-    thermal_flag, 
-    specific_internal_energy_rate,
-    Thermal_Conductivity,
+    thermal_flag,
     flux_max_flag
 )
