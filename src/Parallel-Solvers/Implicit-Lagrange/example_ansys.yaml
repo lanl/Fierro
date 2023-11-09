@@ -15,6 +15,12 @@ materials:
 fea_module_parameters:
   - type: Elasticity
     material_id: 0
+    
+  - type: Inertial
+    material_id: 0
+    inertia_center_x: 0
+    inertia_center_y: 0
+    inertia_center_z: 0
 
 optimization_options:
     optimization_process: topology_optimization

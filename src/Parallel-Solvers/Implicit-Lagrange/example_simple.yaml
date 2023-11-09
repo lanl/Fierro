@@ -17,6 +17,12 @@ materials:
     initial_temperature: 293
 
 fea_module_parameters:
+  - type: Inertial
+    material_id: 0
+    inertia_center_x: 0
+    inertia_center_y: 0
+    inertia_center_z: 0
+    
   - type: Elasticity
     material_id: 0
     # Dirichlet conditions
