@@ -89,9 +89,6 @@
 #include "ROL_Elementwise_Reduce.hpp"
 
 
-#define MAX_ELEM_NODES 8
-#define STRAIN_EPSILON 0.000000001
-#define DENSITY_EPSILON 0.0001
 #define BC_EPSILON 1.0e-6
 #define BUFFER_GROW 100
 
