@@ -39,6 +39,7 @@
 #pragma once
 #ifndef YAML_POST_PROCESSING_H
 #define YAML_POST_PROCESSING_H
+#include <cstring>
 
 namespace Yaml {
     /**
@@ -76,6 +77,29 @@ namespace Yaml {
     };
 
     namespace {
+        /** 
+         * Compares the bytes of two objects 
+         * without casting them.
+         * Only reason its here is to compare pointers to member functions with 
+         * the following class structure:
+         * 
+         * struct A { };
+         * struct B : virtual A { };
+         * struct C : B { };
+         * 
+         * (&C::function == &A::function)  ---> "error: pointer to member conversion via virtual base"
+         * compare_bytes(&C::function, &A::function) ---> Not an error
+         * 
+         * This works because typical comparison needs to cast the data to determine the correct
+         * comparator to dispatch. However, we don't need any kind of fancy comparison. Just want to 
+         * know if the pointers point to the same thing or not.
+        */
+        template<typename T, typename K>
+        bool compare_bytes(T a, K b) {
+            return (sizeof(a) == sizeof(b))
+                && (memcmp(&a, &b, sizeof(a)) == 0);
+        }
+
         template<typename T>
         void derive(T& v, std::true_type) {
             v.T::derive();
@@ -87,7 +111,7 @@ namespace Yaml {
         
         template<typename T, typename B>
         void derive_with_base(T& v, std::true_type, std::true_type) {
-            if (&T::derive == &B::derive)
+            if (compare_bytes(&T::derive, &B::derive))
                 return;
             v.T::derive();
         }
@@ -113,7 +137,7 @@ namespace Yaml {
 
         template<typename T, typename B>
         void validate_with_base(T& v, std::true_type, std::true_type) {
-            if (&T::validate == &B::validate)
+            if (compare_bytes(&T::validate, &B::validate))
                 return;
             v.T::validate();
         }
