@@ -66,7 +66,6 @@ public:
   //forward declare
   Inertial_Parameters module_params;
   Simulation_Parameters simparam;
-  Solver *Solver_Pointer_;
 
   //Global FEA data
   Teuchos::RCP<MV> mass_gradients_distributed;
