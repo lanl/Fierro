@@ -2,7 +2,6 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
-#include "Simulation_Parameters_SGH.h"
 
 // --------------------------------------------------------------------------------------------------------
 // Computes term objective derivative term involving gradient of power with respect to the design variable
@@ -11,28 +10,28 @@
 void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
   real_t global_dt;
   bool element_constant_density = true;
   size_t current_data_index, next_data_index;
-  const size_t rk_level = simparam.rk_num_bins - 1;
+  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
   DCArrayKokkos<real_t> elem_power_dgradients(rnum_elem);
   //gradient contribution from gradient of Force vector with respect to design variable.
-  if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+  if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
     if(myrank==0){
         std::cout << "gradient term involving adjoint derivative" << std::endl;
     }
   }
 
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     //print
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
     if (cycle==0){
         if(myrank==0)
         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -229,7 +228,7 @@ void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
                        const DViewCArrayKokkos <double> &corner_force,
                        DCArrayKokkos<real_t> elem_power_dgradients){
    
-    const size_t rk_level = simparam.rk_num_bins - 1; 
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1; 
     int num_dims = simparam.num_dims;
 
     // loop over all the elements in the mesh
@@ -282,7 +281,7 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
                        const DViewCArrayKokkos <double> &elem_mass,
                        const DViewCArrayKokkos <double> &corner_force){
    
-    const size_t rk_level = simparam.rk_num_bins - 1; 
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1; 
     int num_dims = simparam.num_dims;
 
     //initialize gradient matrix
@@ -348,7 +347,7 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
                        const DViewCArrayKokkos <double> &elem_mass,
                        const DViewCArrayKokkos <double> &corner_force){
    
-    const size_t rk_level = simparam.rk_num_bins - 1; 
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1; 
     int num_dims = simparam.num_dims;
 
     //initialize gradient matrix
@@ -420,7 +419,7 @@ void FEA_Module_SGH::get_power_egradient_sgh(double rk_alpha,
                        const DViewCArrayKokkos <double> &elem_mass,
                        const DViewCArrayKokkos <double> &corner_force){
    
-    const size_t rk_level = simparam.rk_num_bins - 1; 
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1; 
     int num_dims = simparam.num_dims;
 
     //initialize gradient storage

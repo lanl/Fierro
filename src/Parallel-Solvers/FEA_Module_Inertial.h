@@ -39,12 +39,12 @@
 #define FEA_MODULE_INERTIAL_H
 
 #include "FEA_Module.h"
-#include "Simulation_Parameters_Inertial.h"
+#include "Simulation_Parameters/FEA_Module/Inertial_Parameters.h"
 
 class FEA_Module_Inertial: public FEA_Module{
 
 public:
-  FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fea_module_index = 0);
+  FEA_Module_Inertial(Inertial_Parameters& params, Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Inertial();
 
   void comm_variables(Teuchos::RCP<const MV> zp);
@@ -64,8 +64,8 @@ public:
   void compute_moment_of_inertia_gradients(const_host_vec_array design_densities, host_vec_array gradients, int intertia_component, bool use_initial_coords = false);
   
   //forward declare
-  Simulation_Parameters_Inertial simparam;
-  Solver *Solver_Pointer_;
+  Inertial_Parameters module_params;
+  Simulation_Parameters simparam;
 
   //Global FEA data
   Teuchos::RCP<MV> mass_gradients_distributed;

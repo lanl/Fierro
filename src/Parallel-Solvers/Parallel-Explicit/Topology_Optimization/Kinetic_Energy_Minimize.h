@@ -60,7 +60,6 @@
 #include "FEA_Module_SGH.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
 
 class KineticEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
   
@@ -114,7 +113,6 @@ public:
   int last_comm_step, last_solve_step, current_step;
   size_t nvalid_modules;
   std::vector<FEA_MODULE_TYPE> valid_fea_modules; //modules that may interface with this objective function
-  std::vector<FEA_MODULE_TYPE> FEA_Modules_List;
   FEA_MODULE_TYPE set_module_type;
   //std::string my_fea_module = "SGH";
   real_t objective_accumulation;
@@ -126,15 +124,16 @@ public:
       valid_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
       valid_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
       nvalid_modules = valid_fea_modules.size();
-      FEA_Modules_List = Explicit_Solver_Pointer_->simparam.FEA_Modules_List;
-      for(int imodule = 0; imodule < Explicit_Solver_Pointer_->nfea_modules; imodule++){
+
+      const Simulation_Parameters& simparam = Explicit_Solver_Pointer_->simparam;
+      for (const auto& fea_module : Explicit_Solver_Pointer_->fea_modules) {
         for(int ivalid = 0; ivalid < nvalid_modules; ivalid++){
-          if(FEA_Modules_List[imodule]==FEA_MODULE_TYPE::SGH){
-            FEM_SGH_ = dynamic_cast<FEA_Module_SGH*>(Explicit_Solver_Pointer_->fea_modules[imodule]);
+          if(fea_module->Module_Type==FEA_MODULE_TYPE::SGH){
+            FEM_SGH_ = dynamic_cast<FEA_Module_SGH*>(fea_module);
             set_module_type = FEA_MODULE_TYPE::SGH;
           }
-          if(FEA_Modules_List[imodule]==FEA_MODULE_TYPE::Dynamic_Elasticity){
-            FEM_Dynamic_Elasticity_ = dynamic_cast<FEA_Module_Dynamic_Elasticity*>(Explicit_Solver_Pointer_->fea_modules[imodule]);
+          if(fea_module->Module_Type==FEA_MODULE_TYPE::Dynamic_Elasticity){
+            FEM_Dynamic_Elasticity_ = dynamic_cast<FEA_Module_Dynamic_Elasticity*>(fea_module);
             set_module_type = FEA_MODULE_TYPE::Dynamic_Elasticity;
           }
         }

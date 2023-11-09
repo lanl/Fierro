@@ -18,8 +18,6 @@
 #include "swage.h"
 #include "matar.h"
 #include "utilities.h"
-#include "Simulation_Parameters_SGH.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver.h"
 
@@ -44,7 +42,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
     const size_t num_dims = simparam.num_dims;
 
     //initialize gradient matrix
@@ -452,7 +450,7 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
     const size_t num_dims = simparam.num_dims;
 
     //initialize gradient matrix
@@ -884,7 +882,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
     const size_t num_dims = simparam.num_dims;
 
     //initialize gradient matrix
@@ -1347,28 +1345,28 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
 void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
   real_t global_dt;
   bool element_constant_density = true;
   size_t current_data_index, next_data_index;
-  const size_t rk_level = simparam.rk_num_bins - 1;
+  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
 
   //gradient contribution from gradient of Force vector with respect to design variable.
-  if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+  if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
     if(myrank==0){
         std::cout << "gradient term involving adjoint derivative" << std::endl;
     }
   }
 
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     //print
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
     if (cycle==0){
         if(myrank==0)
         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -1533,7 +1531,7 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
                    const size_t cycle
                    ) {
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
     const size_t num_dims = simparam.num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {

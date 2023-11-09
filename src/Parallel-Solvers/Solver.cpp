@@ -66,7 +66,6 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters.h"
 #include "Solver.h"
 #include "FEA_Module.h"
 #include "MeshBuilder.h"
@@ -90,7 +89,7 @@
 #define DENSITY_EPSILON 0.0001
 #define BC_EPSILON 1.0e-8
 
-Solver::Solver(){
+Solver::Solver(Simulation_Parameters& _simparam) : simparam(_simparam) {
   //default flags assume optional routines are off
   setup_flag = finalize_flag = 0;
   communication_time = dev2host_time = host2dev_time = output_time = 0;
@@ -161,7 +160,7 @@ void Solver::generate_mesh(const std::shared_ptr<MeshBuilderInput>& mesh_generat
         //set local node index in this mpi rank
         long long int node_rid = map->getLocalElement(i);
         for (long long int j = 0; j < mesh.points.dims(1); j++)
-          node_coords(node_rid, j) = mesh.points(i, j) * simparam.unit_scaling;
+          node_coords(node_rid, j) = mesh.points(i, j);
       }
     }
   }
@@ -238,9 +237,9 @@ void Solver::read_mesh_ensight(const char *MESH){
 
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
   Input_Options input_options = simparam.input_options.value();
-  real_t unit_scaling = simparam.unit_scaling;
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -834,9 +833,9 @@ void Solver::read_mesh_vtk(const char *MESH){
 
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
   Input_Options input_options = simparam.input_options.value();
-  real_t unit_scaling = simparam.unit_scaling;
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring;
@@ -1371,9 +1370,9 @@ void Solver::read_mesh_tecplot(const char *MESH){
 
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
   Input_Options input_options = simparam.input_options.value();
-  real_t unit_scaling = simparam.unit_scaling;
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
   bool restart_file = simparam.restart_file;
   int local_node_index, current_column_index;
   size_t strain_count;
@@ -1850,8 +1849,6 @@ void Solver::read_mesh_tecplot(const char *MESH){
 void Solver::repartition_nodes(){
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::stringstream line_parse;
@@ -1951,8 +1948,6 @@ void Solver::repartition_nodes(){
 void Solver::init_maps(){
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
   int local_node_index, current_column_index;
   int nodes_per_element;
   GO node_gid;
