@@ -1,6 +1,8 @@
 #pragma once
 
-#include "material_t.h"
+#include "Simulation_Parameters/Material.h"
+#include "matar.h"
+using namespace mtr;
 
 struct eos_t;
 struct strength_t;

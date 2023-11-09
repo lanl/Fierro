@@ -39,8 +39,7 @@
 #define FEA_MODULE_THERMO_ELASTICITY_H
 
 #include "FEA_Module.h"
-#include "Simulation_Parameters_Thermo_Elasticity.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
+#include "Simulation_Parameters/FEA_Module/Thermo_Elasticity_Parameters.h"
 
 //forward declare
 namespace MueLu{
@@ -65,7 +64,7 @@ class FEA_Module_Heat_Conduction;
 class FEA_Module_Thermo_Elasticity: public FEA_Module{
 
 public:
-  FEA_Module_Thermo_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index = 0);
+  FEA_Module_Thermo_Elasticity(Thermo_Elasticity_Parameters& in_params, Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Thermo_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -134,8 +133,8 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  Simulation_Parameters_Thermo_Elasticity simparam;
-  Simulation_Parameters_Topology_Optimization simparam_TO;
+  Thermo_Elasticity_Parameters module_params;
+  Simulation_Parameters simparam;
   Implicit_Solver *Implicit_Solver_Pointer_;
   FEA_Module_Heat_Conduction *Heat_Conduction_Module_Pointer_;
   

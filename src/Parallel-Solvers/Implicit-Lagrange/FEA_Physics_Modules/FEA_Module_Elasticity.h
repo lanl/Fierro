@@ -39,8 +39,8 @@
 #define FEA_MODULE_ELASTICITY_H
 
 #include "FEA_Module.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
+#include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
 
 //Eigensolver
 #include "AnasaziConfigDefs.hpp"
@@ -74,7 +74,7 @@ public:
   typedef Anasazi::MultiVecTraits<real_t,MV>     MVT;
   typedef Anasazi::OperatorTraits<real_t,MV,OP>  OPT;
 
-  FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index = 0);
+  FEA_Module_Elasticity(Elasticity_Parameters& in_params, Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -147,8 +147,8 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  Simulation_Parameters_Elasticity simparam;
-  Simulation_Parameters_Topology_Optimization simparam_TO;
+  Simulation_Parameters simparam;
+  Elasticity_Parameters module_params;
   Implicit_Solver *Implicit_Solver_Pointer_;
   
   //Local FEA data
