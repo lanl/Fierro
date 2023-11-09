@@ -70,8 +70,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_Thermal.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
+#include "Simulation_Parameters/FEA_Module/Heat_Conduction_Parameters.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Heat_Conduction.h"
@@ -99,28 +98,25 @@
 using namespace utils;
 
 
-FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+FEA_Module_Heat_Conduction::FEA_Module_Heat_Conduction(
+    Heat_Conduction_Parameters& in_params,
+    Solver *Solver_Pointer, 
+    const int my_fea_module_index
+  ) : FEA_Module(Solver_Pointer) {
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
-  Module_Type = "Heat_Conduction";
+  Module_Type = FEA_MODULE_TYPE::Heat_Conduction;
 
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
 
-  //create parameter object
-  simparam = Simulation_Parameters_Thermal();
-
-  //acquire base class data from existing simparam in solver (gets yaml options etc.)
-  *(Simulation_Parameters*)&simparam = Implicit_Solver_Pointer_->simparam;
-  
-  //sets base class simparam pointer to avoid instancing the base simparam twice
-  FEA_Module::simparam = simparam;
+  module_params = in_params;
+  simparam = Implicit_Solver_Pointer_->simparam;
   
   //TO parameters
-  simparam_TO = Implicit_Solver_Pointer_->simparam_TO;
-  penalty_power = simparam_TO.optimization_options.simp_penalty_power;
-  nodal_density_flag = simparam_TO.nodal_density_flag;
+  penalty_power = simparam.optimization_options.simp_penalty_power;
+  nodal_density_flag = simparam.nodal_density_flag;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -178,9 +174,9 @@ FEA_Module_Heat_Conduction::~FEA_Module_Heat_Conduction(){ }
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::init_boundaries(){
-  max_boundary_sets = simparam.NB;
-  max_load_boundary_sets = simparam.NBSF;
-  max_temp_boundary_sets = simparam.NBT;
+  max_load_boundary_sets = module_params.loading_conditions.size();
+  max_temp_boundary_sets = module_params.boundary_conditions.size();
+  max_boundary_sets = max_load_boundary_sets + max_temp_boundary_sets;
   
   // set the number of boundary sets
   if(myrank == 0)
@@ -344,31 +340,23 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   real_t value, temp_temp;
   real_t fix_limits[4];
 
-  auto config = simparam.get_module_config(FEA_MODULE_TYPE::Heat_Conduction);
-  if (!config.has_value()) 
-    throw std::runtime_error("Missing configuration for FEA Module " + to_string(FEA_MODULE_TYPE::Heat_Conduction));
-
-  for (auto bc : config.value().boundary_conditions) {
-
-    switch (bc.surface) {
-      case BOUNDARY_TAG::x_plane:
+  for (auto bc : module_params.boundary_conditions) {
+    switch (bc.surface.type) {
+      case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
         break;
-      case BOUNDARY_TAG::y_plane:
+      case BOUNDARY_TYPE::y_plane:
         bc_tag = 1;
         break;
-      case BOUNDARY_TAG::z_plane:
+      case BOUNDARY_TYPE::z_plane:
         bc_tag = 2;
         break;
       default:
-        throw std::runtime_error("Invalid surface type: " + to_string(bc.surface));
+        throw std::runtime_error("Invalid surface type: " + to_string(bc.surface.type));
     }
-    // TODO: Need to consolidate value and plane_position some how for the user.
-    // This should also not be optional, or else we just take value 
-    // from the last loop...
-    if (bc.plane_position.has_value()) {
-      value = bc.plane_position.value() * simparam.unit_scaling;
-    }
+
+    value = bc.surface.plane_position * simparam.get_unit_scaling();
+    
 
     fix_limits[0] = fix_limits[2] = 4;
     fix_limits[1] = fix_limits[3] = 6;
@@ -377,11 +365,9 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
     //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
     tag_boundaries(bc_tag, value, num_boundary_conditions);
 
-    if (bc.condition_type == BOUNDARY_FEA_CONDITION::fixed_temperature) {
+    if (bc.type == BOUNDARY_CONDITION_TYPE::temperature) {
       Boundary_Condition_Type_List(num_boundary_conditions) = TEMPERATURE_CONDITION;
-    }
-    if (bc.temperature_value.has_value()) {
-      Boundary_Surface_Temperatures(num_surface_temp_sets,0) = bc.temperature_value.value();
+      Boundary_Surface_Temperatures(num_surface_temp_sets,0) = bc.value;
     }
     
     if(Boundary_Surface_Temperatures(num_surface_temp_sets,0)) nonzero_bc_flag = true;
@@ -398,7 +384,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   // tag the z=0 plane,  (Direction, value, bdy_set)
   *fos << "tagging z = 0 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0.0 * simparam.unit_scaling;
+  value = 0.0 * simparam.get_unit_scaling();
   fix_limits[0] = fix_limits[2] = 4;
   fix_limits[1] = fix_limits[3] = 6;
   if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
@@ -441,61 +427,52 @@ void FEA_Module_Heat_Conduction::generate_applied_loads() {
   fea_module_name = fea_module_base + index;
   bc_name = fea_module_name + bc_base + bc_index;
 
-  
-  auto config = simparam.get_module_config(FEA_MODULE_TYPE::Heat_Conduction);
-  if (!config.has_value())
-    throw std::runtime_error("Missing configuration for FEA Module " + to_string(FEA_MODULE_TYPE::Heat_Conduction));
-
-  for (auto lc : config.value().loading_conditions) {
-    switch (lc.surface) {
-      case BOUNDARY_TAG::x_plane:
+  double unit_scaling = simparam.get_unit_scaling();
+  for (auto lc : module_params.loading_conditions) {
+    switch (lc->surface.type) {
+      case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
         break;
-      case BOUNDARY_TAG::y_plane:
+      case BOUNDARY_TYPE::y_plane:
         bc_tag = 1;
         break;
-      case BOUNDARY_TAG::z_plane:
+      case BOUNDARY_TYPE::z_plane:
         bc_tag = 2;
         break;
       default:
-        throw std::runtime_error("Invalid surface type: " + to_string(lc.surface));
+        throw std::runtime_error("Invalid surface type: " + to_string(lc->surface.type));
     }
     
-    // TODO: This should not be optional
-    if(lc.plane_position.has_value()) {
-      value = lc.plane_position.value() * simparam.unit_scaling;
-    }
-
+    value = lc->surface.plane_position * unit_scaling;
+    
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_flux_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_flux_sets+1);
     //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
     tag_boundaries(bc_tag, value, num_boundary_conditions);
-    if (lc.condition_type == LOADING_CONDITION_TYPE::surface_heat_flux) {
-      Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-    }
-
-    // TODO: This should probably also be required.
-    if (lc.specification.has_value()) {
-      if(lc.specification.value() == LOADING_SPECIFICATION::normal){
-        if(bc_tag==0){
-          dim1_other = 1;
-          dim2_other = 2;
-        }
-        else if(bc_tag==1){
-          dim1_other = 0;
-          dim2_other = 2;
-        }
-        else if(bc_tag==2){
-          dim1_other = 0;
-          dim2_other = 1;
-        }
-        if (lc.flux_value.has_value()){
-          Boundary_Surface_Heat_Flux(num_surface_flux_sets,bc_tag) = lc.flux_value.value() / simparam.unit_scaling / simparam.unit_scaling;
-          Boundary_Surface_Heat_Flux(num_surface_flux_sets,dim1_other) = 0;
-          Boundary_Surface_Heat_Flux(num_surface_flux_sets,dim2_other) = 0;
+    lc->apply(
+      [&](const Surface_Flux_Condition& lc) { 
+        Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
+        if(lc.specification == LOADING_SPECIFICATION::normal){
+          if(bc_tag==0){
+            dim1_other = 1;
+            dim2_other = 2;
+          }
+          else if(bc_tag==1){
+            dim1_other = 0;
+            dim2_other = 2;
+          }
+          else if(bc_tag==2){
+            dim1_other = 0;
+            dim2_other = 1;
+          }
+          if (lc.flux_value){
+            Boundary_Surface_Heat_Flux(num_surface_flux_sets,bc_tag) = lc.flux_value / unit_scaling / unit_scaling;
+            Boundary_Surface_Heat_Flux(num_surface_flux_sets,dim1_other) = 0;
+            Boundary_Surface_Heat_Flux(num_surface_flux_sets,dim2_other) = 0;
+          }
         }
       }
-    }
+    );
 
     *fos << "tagging " << bc_tag << " at " << value <<  std::endl;
     
@@ -523,7 +500,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads() {
   Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
   Boundary_Surface_Heat_Flux(num_surface_flux_sets,0) = 0;
   Boundary_Surface_Heat_Flux(num_surface_flux_sets,1) = 0;
-  Boundary_Surface_Heat_Flux(num_surface_flux_sets,2) = -0.1/simparam.unit_scaling/simparam.unit_scaling;
+  Boundary_Surface_Heat_Flux(num_surface_flux_sets,2) = -0.1/simparam.get_unit_scaling()/simparam.get_unit_scaling();
 
   *fos << "tagged a set " << std::endl;
   std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
@@ -535,7 +512,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads() {
   //Body Term Section
 
   //apply body terms
-  thermal_flag = simparam.thermal_flag;
+  thermal_flag = module_params.thermal_flag;
 
   if(electric_flag||thermal_flag) body_term_flag = true;
 
@@ -1393,13 +1370,13 @@ void FEA_Module_Heat_Conduction::assemble_vector(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::Body_Term(size_t ielem, real_t density, real_t &specific_internal_energy_rate){
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam.get_unit_scaling();
   int num_dim = simparam.num_dims;
   
   //init 
   specific_internal_energy_rate = 0;
   if(thermal_flag){
-    specific_internal_energy_rate += simparam.specific_internal_energy_rate*density;
+    specific_internal_energy_rate += module_params.material.specific_internal_energy_rate*density;
   }
   
   /*
@@ -1419,13 +1396,13 @@ void FEA_Module_Heat_Conduction::Body_Term(size_t ielem, real_t density, real_t 
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density, real_t &gradient_specific_internal_energy_rate){
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam.get_unit_scaling();
   int num_dim = simparam.num_dims;
   
   //init 
   gradient_specific_internal_energy_rate = 0;\
   if(thermal_flag){
-    gradient_specific_internal_energy_rate += simparam.specific_internal_energy_rate;
+    gradient_specific_internal_energy_rate += module_params.material.specific_internal_energy_rate;
   }
   
   /*
@@ -1445,14 +1422,14 @@ void FEA_Module_Heat_Conduction::Gradient_Body_Term(size_t ielem, real_t density
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_t &Element_Conductivity, real_t density){
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam.get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam_TO.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam.optimization_options.density_epsilon;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Conductivity = (density_epsilon + (1 - density_epsilon)*penalty_product)*simparam.Thermal_Conductivity/unit_scaling;
+  Element_Conductivity = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.material.thermal_conductivity/unit_scaling;
 }
 
 /* ----------------------------------------------------------------------
@@ -1460,15 +1437,15 @@ void FEA_Module_Heat_Conduction::Element_Material_Properties(size_t ielem, real_
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Conductivity_Derivative, real_t density){
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam.get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam_TO.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam.optimization_options.density_epsilon;
   Element_Conductivity_Derivative = 0;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and conductivity
-  Element_Conductivity_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*simparam.Thermal_Conductivity/unit_scaling;
+  Element_Conductivity_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.material.thermal_conductivity/unit_scaling;
 }
 
 /* --------------------------------------------------------------------------------
@@ -1476,16 +1453,16 @@ void FEA_Module_Heat_Conduction::Gradient_Element_Material_Properties(size_t iel
 ----------------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Conductivity_Derivative, real_t density){
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam.get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam_TO.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam.optimization_options.density_epsilon;
   Element_Conductivity_Derivative = 0;
   if(density < 0) density = 0;
   if(penalty_power>=2){
     for(int i = 0; i < penalty_power - 2; i++)
       penalty_product *= density;
     //relationship between density and conductivity
-    Element_Conductivity_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*simparam.Thermal_Conductivity/unit_scaling;
+    Element_Conductivity_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.material.thermal_conductivity/unit_scaling;
   }
 }
 
@@ -1511,8 +1488,8 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
 
-  real_t unit_scaling = simparam.unit_scaling;
-  bool topology_optimization_on = simparam_TO.topology_optimization_on;
+  real_t unit_scaling = simparam.get_unit_scaling();
+  bool topology_optimization_on = simparam.topology_optimization_on;
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;
@@ -1634,7 +1611,7 @@ void FEA_Module_Heat_Conduction::local_matrix(int ielem, CArrayKokkos<real_t, ar
       Element_Material_Properties((size_t) ielem,Element_Conductivity, current_density);
     }
     else{
-      Element_Conductivity = simparam.Thermal_Conductivity/unit_scaling;
+      Element_Conductivity = module_params.material.thermal_conductivity/unit_scaling;
     }
 
     //debug print
@@ -2596,7 +2573,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
-  if(simparam.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
     Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   }
@@ -2606,7 +2583,7 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   comm->barrier();
   hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
-  if(simparam.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
   }
   //scale by reciprocal ofdirection vector sum
@@ -2872,9 +2849,9 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
 
 void FEA_Module_Heat_Conduction::init_output(){
   //check user parameters for output
-  bool output_temperature_flag = simparam.output_temperature_flag;
-  bool output_temperature_gradient_flag = simparam.output_temperature_gradient_flag;
-  bool output_heat_flux_flag = simparam.output_heat_flux_flag;
+  bool output_temperature_flag = simparam.output(FIELD::temperature);
+  bool output_temperature_gradient_flag = simparam.output(FIELD::temperature_gradient);
+  bool output_heat_flux_flag = simparam.output(FIELD::heat_flux);
   int num_dim = simparam.num_dims;
   
   if(output_temperature_flag){
@@ -2934,9 +2911,9 @@ void FEA_Module_Heat_Conduction::init_output(){
 
 void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
   
-  bool output_temperature_flag = simparam.output_temperature_flag;
-  bool output_temperature_gradient_flag = simparam.output_temperature_gradient_flag;
-  bool output_heat_flux_flag = simparam.output_heat_flux_flag;
+  bool output_temperature_flag = simparam.output(FIELD::temperature);
+  bool output_temperature_gradient_flag = simparam.output(FIELD::temperature_gradient);
+  bool output_heat_flux_flag = simparam.output(FIELD::heat_flux);
   int num_dim = simparam.num_dims;
   
   //reset modules so that host view falls out of scope
@@ -2995,9 +2972,9 @@ void FEA_Module_Heat_Conduction::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node
 
 void FEA_Module_Heat_Conduction::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
   
-  bool output_temperature_flag = simparam.output_temperature_flag;
-  bool output_temperature_gradient_flag = simparam.output_temperature_gradient_flag;
-  bool output_heat_flux_flag = simparam.output_heat_flux_flag;
+  bool output_temperature_flag = simparam.output(FIELD::temperature);
+  bool output_temperature_gradient_flag = simparam.output(FIELD::temperature_gradient);
+  bool output_heat_flux_flag = simparam.output(FIELD::heat_flux);
   int num_dim = simparam.num_dims;
   
   //reset modules so that host view falls out of scope
@@ -3086,7 +3063,7 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
   int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam.num_gauss_points;
-  int flux_max_flag = simparam.flux_max_flag;
+  int flux_max_flag = module_params.flux_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
   int solve_flag, zero_flux_flag;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
@@ -3421,7 +3398,7 @@ void FEA_Module_Heat_Conduction::compute_nodal_heat_fluxes(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Heat_Conduction::linear_solver_parameters(){
-  if(simparam.direct_solver_flag){
+  if(module_params.direct_solver_flag){
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("Amesos2"));
     auto superlu_params = Teuchos::sublist(Teuchos::rcpFromRef(*Linear_Solve_Params), "SuperLU_DIST");
     superlu_params->set("Equil", true);
@@ -3601,7 +3578,7 @@ int FEA_Module_Heat_Conduction::solve(){
     }
   }//row for
   */
-  if(simparam.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
     Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
     Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
@@ -3660,12 +3637,12 @@ int FEA_Module_Heat_Conduction::solve(){
   linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
 
-  if(simparam.equilibrate_matrix_flag){
+  if(module_params.equilibrate_matrix_flag){
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
     Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
   }
 
-  if(simparam.multigrid_timers){
+  if(module_params.multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
     reportParams->set("How to merge timer sets",   "Union");
     reportParams->set("alwaysWriteLocal",          false);
@@ -3715,7 +3692,7 @@ int FEA_Module_Heat_Conduction::solve(){
 
 void FEA_Module_Heat_Conduction::comm_variables(Teuchos::RCP<const MV> zp){
   
-  if(simparam_TO.topology_optimization_on)
+  if(simparam.topology_optimization_on)
     comm_densities(zp);
 }
 
@@ -3754,7 +3731,7 @@ void FEA_Module_Heat_Conduction::node_density_constraints(host_vec_array node_de
   LO local_node_index;
   int num_dim = simparam.num_dims;
 
-  if(simparam_TO.thick_condition_boundary){
+  if(simparam.optimization_options.thick_condition_boundary){
     for(int i = 0; i < nlocal_nodes; i++){
       if(Node_DOF_Boundary_Condition_Type(i) == TEMPERATURE_CONDITION){
         for(int j = 0; j < Graph_Matrix_Strides(i); j++){

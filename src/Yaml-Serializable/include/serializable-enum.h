@@ -71,6 +71,8 @@
     }                                                                                         \
     inline std::string to_string(const CLASS_TYPE& v) {                                       \
         const std::vector<std::string> map VECTOR_INITIALIZER(__VA_ARGS__)                    \
+        if ((int)v < 0 || map.size() <= (int)v)                                               \
+            return "";                                                                        \
         return map[(int)v];                                                                   \
     }                                                                                         \
     namespace Yaml {                                                                          \
@@ -81,7 +83,9 @@
         }                                                                                     \
         template<>                                                                            \
         inline void serialize<CLASS_TYPE>(const CLASS_TYPE& v, Yaml::Node& node) {            \
-            node = to_string(v);                                                              \
+            const std::string s = to_string(v);                                               \
+            if (s.length() > 0)                                                               \
+                node = s;                                                                     \
         }                                                                                     \
     }                                                                                         \
     inline std::ostream& operator<<(std::ostream & os, const CLASS_TYPE& v) {                 \

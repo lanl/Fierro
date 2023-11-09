@@ -45,10 +45,8 @@
 #include "node_combination.h"
 #include "Solver.h"
 #include "FEA_Module.h"
-#include "Simulation_Parameters.h"
-#include "Simulation_Parameters_SGH.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
+#include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 #include "material_models.h"
 
 class Explicit_Solver;
@@ -57,7 +55,7 @@ class FEA_Module_SGH: public FEA_Module{
 
 public:
   
-  FEA_Module_SGH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
+  FEA_Module_SGH(SGH_Parameters& params, Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
   ~FEA_Module_SGH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -309,10 +307,10 @@ public:
                          DViewCArrayKokkos <double> &node_vel);
   
   KOKKOS_INLINE_FUNCTION 
-  size_t check_bdy(const size_t patch_gid,
+  bool check_bdy(const size_t patch_gid,
                    const int num_dim,
                    const int num_nodes_in_patch,
-                   const int this_bc_tag,
+                   const BOUNDARY_TYPE this_bc_tag,
                    const double val,
                    const DViewCArrayKokkos <double> &node_coords,
                    const size_t rk_level) const;
@@ -413,7 +411,7 @@ public:
                       const double rk_alpha,
                       const size_t cycle);
 
-  void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
+  void build_boundry_node_sets(mesh_t &mesh);
   
   void init_boundaries();
 
@@ -525,9 +523,8 @@ public:
   bool nodal_density_flag;
   real_t penalty_power;
   
-  Simulation_Parameters_SGH simparam;
-  Simulation_Parameters_Elasticity simparam_elasticity;
-  Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
+  Simulation_Parameters_Explicit simparam;
+  SGH_Parameters module_params;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;
