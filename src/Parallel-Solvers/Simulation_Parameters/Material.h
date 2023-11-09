@@ -21,10 +21,10 @@ struct material_t {
     double specific_internal_energy_rate = 1.0;
     std::vector<double> expansion_coefficients = { 12e-6, 12e-6, 12e-6, 0, 0, 0 }; 
 
-    double q1;
-    double q2;
-    double q1ex;
-    double q2ex;
+    double q1 = 1.0;
+    double q2 = 0.0;
+    double q1ex = 1.0;
+    double q2ex = 0.0;
     bool maximum_limiter = false;
     
     // Non-serialized fields
