@@ -7,6 +7,7 @@
 #include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
 #include "Simulation_Parameters/FEA_Module/Inertial_Parameters.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
+#include "Simulation_Parameters/FEA_Module/RDH_Parameters.h"
 #include "Simulation_Parameters/FEA_Module/Heat_Conduction_Parameters.h"
 #include "Simulation_Parameters/FEA_Module/Thermo_Elasticity_Parameters.h"
 

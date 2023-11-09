@@ -19,6 +19,7 @@ SERIALIZABLE_ENUM(FEA_MODULE_TYPE,
     Heat_Conduction,
     Thermo_Elastic,
     SGH,
+    RDH,
     Eulerian,
     Dynamic_Elasticity
 )

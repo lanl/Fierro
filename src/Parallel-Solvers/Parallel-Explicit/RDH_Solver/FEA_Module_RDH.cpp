@@ -73,9 +73,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_RDH.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
-#include "Simulation_Parameters_Elasticity.h"
+#include "Simulation_Parameters/FEA_Module/RDH_Parameters.h"
 #include "FEA_Module_RDH.h"
 #include "Explicit_Solver.h"
 
@@ -94,7 +92,7 @@
 
 using namespace utils;
 
-FEA_Module_RDH::FEA_Module_RDH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+FEA_Module_RDH::FEA_Module_RDH( RDH_Parameters& params, Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
@@ -102,22 +100,9 @@ FEA_Module_RDH::FEA_Module_RDH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
 
-  //create parameter object
-  simparam = Simulation_Parameters_RDH();
-  simparam = Yaml::from_file<Simulation_Parameters_RDH>(Explicit_Solver_Pointer_->filename);
-  // ---- Read input file, define state and boundary conditions ---- //
-  //simparam->input();
-  
-  //TO parameters
-  simparam_dynamic_opt = Explicit_Solver_Pointer_->simparam_dynamic_opt;
+  simparam = Explicit_Solver_Pointer_->simparam;
+  module_params = params;
 
-  //create ref element object
-  //ref_elem = new elements::ref_element();
-  //create mesh objects
-  //init_mesh = new swage::mesh_t(simparam);
-  //mesh = new swage::mesh_t(simparam);
-
-  // WARNING WARNING WARNING //
   mesh = mesh_in;
 
   //boundary condition data
@@ -131,71 +116,27 @@ FEA_Module_RDH::FEA_Module_RDH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> m
   node_coords_distributed = Explicit_Solver_Pointer_->node_coords_distributed;
   node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
-  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
-    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-    force_gradient_velocity = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-    force_gradient_position = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-    force_gradient_design = Teuchos::rcp(new MV(all_node_map, 1));
-    corner_value_storage = Solver_Pointer->corner_value_storage;
-    corner_vector_storage = Solver_Pointer->corner_vector_storage;
-    relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
-  }
-
-  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on||simparam.num_dims==2){
-    node_masses_distributed = Teuchos::rcp(new MV(map, 1));
-    ghost_node_masses_distributed = Teuchos::rcp(new MV(ghost_node_map, 1));
-    adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
-    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
-    psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_element_map, 1));
-  }
-  
-  //setup output
-  noutput = 0;
-  //init_output();
-
-  //optimization flags
-  kinetic_energy_objective = false;
-  
 
   //set parameters
-  Time_Variables tv = simparam.time_variables;
-  time_value = simparam.time_value;
-  time_final = tv.time_final;
-  dt_max = tv.dt_max;
-  dt_min = tv.dt_min;
-  dt_cfl = tv.dt_cfl;
-  graphics_time = simparam.graphics_options.graphics_time;
-  graphics_cyc_ival = simparam.graphics_options.graphics_cyc_ival;
-  graphics_dt_ival = simparam.graphics_options.graphics_dt_ival;
-  cycle_stop = tv.cycle_stop;
-  rk_num_stages = simparam.rk_num_stages;
-  dt = tv.dt;
-  fuzz = tv.fuzz;
-  tiny = tv.tiny;
-  small = tv.small;
-  graphics_times = simparam.graphics_options.graphics_times;
-  graphics_id = simparam.graphics_options.graphics_id;
-
-  if(simparam_dynamic_opt.topology_optimization_on){
-    max_time_steps = BUFFER_GROW;
-    forward_solve_velocity_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
-    time_data.resize(max_time_steps+1);
-    forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
-    adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
-    phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
-    psi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
-    //assign a multivector of corresponding size to each new timestep in the buffer
-    for(int istep = 0; istep < max_time_steps+1; istep++){
-      (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-      (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-      (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-      (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-      (*psi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
-    }
-    
-  }
-
-  have_loading_conditions = false;
+  Dynamic_Options dynamic_options = simparam.dynamic_options;
+  time_value = dynamic_options.time_value;
+  time_final = dynamic_options.time_final;
+  dt_max = dynamic_options.dt_max;
+  dt_min = dynamic_options.dt_min;
+  dt_cfl = dynamic_options.dt_cfl;
+  graphics_time = simparam.output_options.graphics_time;
+  graphics_dt_ival = simparam.output_options.graphics_dt_ival;
+  graphics_cyc_ival = simparam.output_options.graphics_cyc_ival;
+  cycle_stop = dynamic_options.cycle_stop;
+  rk_num_stages = dynamic_options.rk_num_stages;
+  dt = dynamic_options.dt;
+  fuzz = dynamic_options.fuzz;
+  tiny = dynamic_options.tiny;
+  small = dynamic_options.small;
+  graphics_times = simparam.output_options.graphics_times;
+  graphics_id = simparam.output_options.graphics_id;
+  //setup output
+  noutput = 0;
 
 }
 
@@ -210,7 +151,7 @@ FEA_Module_RDH::~FEA_Module_RDH(){
 void FEA_Module_RDH::rdh_interface_setup(node_t &node, elem_t &elem, mesh_t &mesh, corner_t &corner){
 
     const size_t num_dim = simparam.num_dims;
-    const size_t rk_num_bins = simparam.rk_num_bins;
+    const size_t rk_num_bins = simparam.dynamic_options.rk_num_bins;
 
     num_nodes_in_elem = 1;
     for (int dim=0; dim<num_dim; dim++){
@@ -332,13 +273,13 @@ void FEA_Module_RDH::cleanup_material_models() {
 
 void FEA_Module_RDH::setup(mesh_t &mesh){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;   
-    const size_t num_fills = simparam.region_options.size();
-    const size_t rk_num_bins = simparam.rk_num_bins;
-    const size_t num_bcs = simparam.boundary_conditions.size();
-    const size_t num_materials = simparam.material_options.size();
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;   
+    const size_t num_fills = simparam.regions.size();
+    const size_t rk_num_bins = simparam.dynamic_options.rk_num_bins;
+    const size_t num_bcs = module_params.boundary_conditions.size();
+    const size_t num_materials = simparam.materials.size();
     const int num_dim = simparam.num_dims;
-    const size_t num_lcs = simparam.loading.size();
+    const size_t num_lcs = module_params.loading.size();
     if(num_lcs)
       have_loading_conditions = true;
 
@@ -432,7 +373,7 @@ void FEA_Module_RDH::setup(mesh_t &mesh){
     num_boundary_conditions = num_bcs;
 
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
-    const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+    const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
     const DCArrayKokkos <material_t> material = simparam.material;
     global_vars = simparam.global_vars;
     elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options.max_num_user_output_vars); 
@@ -490,7 +431,7 @@ void FEA_Module_RDH::setup(mesh_t &mesh){
     }// end for
     for (int f_id = 0; f_id < num_fills; f_id++){
       FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
-        elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
+        elem_mat_id(elem_gid) = mat_fill(f_id).material_id;
       });
     }
     elem_mat_id.update_host();
@@ -541,7 +482,7 @@ void FEA_Module_RDH::setup(mesh_t &mesh){
             elem_coords[2] = elem_coords[2]/num_nodes_in_elem;
 
             // default is not to fill the element
-            bool fill_this = mat_fill(f_id).contains(elem_coords);
+            bool fill_this = mat_fill(f_id).volume.contains(elem_coords);
 
             // paint the material state on the element
             if (fill_this){
@@ -761,27 +702,27 @@ int FEA_Module_RDH::solve(){
    RDH solver loop
 ------------------------------------------------------------------------------- */
 void FEA_Module_RDH::rdh_solve(){
-    Time_Variables tv = simparam.time_variables;
+    Dynamic_Options dynamic_options = simparam.dynamic_options;
    
-    const size_t rk_level = simparam.rk_num_bins - 1; 
-    time_value = tv.time_initial;
-    time_final = tv.time_final;
-    dt_max = tv.dt_max;
-    dt_min = tv.dt_min;
-    dt_cfl = tv.dt_cfl;
+    const size_t rk_level = dynamic_options.rk_num_bins - 1; 
+    time_value = dynamic_options.time_initial;
+    time_final = dynamic_options.time_final;
+    dt_max = dynamic_options.dt_max;
+    dt_min = dynamic_options.dt_min;
+    dt_cfl = dynamic_options.dt_cfl;
     graphics_time = simparam.output_options.graphics_step;
-    graphics_cyc_ival = simparam.graphics_options.graphics_cyc_ival;
+    graphics_cyc_ival = simparam.output_options.graphics_cyc_ival;
     graphics_dt_ival = simparam.output_options.graphics_step;
-    cycle_stop = tv.cycle_stop;
-    rk_num_stages = simparam.rk_num_stages;
-    dt = tv.dt;
-    fuzz = tv.fuzz;
-    tiny = tv.tiny;
-    small = tv.small;
-    graphics_times = simparam.graphics_options.graphics_times;
-    graphics_id = simparam.graphics_options.graphics_id;
+    cycle_stop = dynamic_options.cycle_stop;
+    rk_num_stages = dynamic_options.rk_num_stages;
+    dt = dynamic_options.dt;
+    fuzz = dynamic_options.fuzz;
+    tiny = dynamic_options.tiny;
+    small = dynamic_options.small;
+    graphics_times = simparam.output_options.graphics_times;
+    graphics_id = simparam.output_options.graphics_id;
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+    const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
     const DCArrayKokkos <material_t> material = simparam.material;
     int old_max_forward_buffer;
     size_t cycle;

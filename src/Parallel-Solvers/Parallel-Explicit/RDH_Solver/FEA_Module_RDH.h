@@ -47,10 +47,10 @@
 #include "node_combination.h"
 #include "Solver.h"
 #include "FEA_Module.h"
-#include "Simulation_Parameters.h"
-#include "Simulation_Parameters_RDH.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters/FEA_Module/RDH_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
+//#include "Simulation_Parameters_Elasticity.h"
+//#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "material_models.h"
 
 class Explicit_Solver;
@@ -59,7 +59,7 @@ class FEA_Module_RDH: public FEA_Module{
 
 public:
   
-  FEA_Module_RDH(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
+  FEA_Module_RDH( RDH_Parameters& params, Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
   ~FEA_Module_RDH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -75,9 +75,8 @@ public:
 
   void rdh_solve();
 
-  Simulation_Parameters_RDH simparam;
-  Simulation_Parameters_Elasticity simparam_elasticity;
-  Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
+  Simulation_Parameters_Explicit simparam;
+  RDH_Parameters module_params;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
   //mesh_t mesh;
