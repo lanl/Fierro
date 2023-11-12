@@ -766,7 +766,7 @@ void FEA_Module_Elasticity::generate_bcs(){
   int num_bcs;
   int bc_tag;
   real_t value;
-  real_t fix_limits[4];
+  real_t surface_limits[4];
 
   for (auto bc : module_params.boundary_conditions) {
     switch (bc.surface.type) {
@@ -784,12 +784,20 @@ void FEA_Module_Elasticity::generate_bcs(){
     }
     value = bc.surface.plane_position * simparam.get_unit_scaling();
 
-    fix_limits[0] = fix_limits[2] = 4;
-    fix_limits[1] = fix_limits[3] = 6;
+    //determine if the surface has finite limits
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_disp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_disp_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(bc.surface.use_limits){
+      surface_limits[0] = bc.surface.surface_limits_sl;
+      surface_limits[1] = bc.surface.surface_limits_su;
+      surface_limits[2] = bc.surface.surface_limits_tl;
+      surface_limits[3] = bc.surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    }
+    else{
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
+    }
     if(bc.type == BOUNDARY_CONDITION_TYPE::displacement){
       Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
     }
@@ -816,6 +824,7 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   int num_dim = simparam.num_dims;
   int bc_tag;
   real_t value, temp_flux;
+  real_t surface_limits[4];
   
   double unit_scaling = simparam.get_unit_scaling();
   for (auto lc : module_params.loading_conditions) {
@@ -837,8 +846,17 @@ void FEA_Module_Elasticity::generate_applied_loads(){
 
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(lc->surface.use_limits){
+      surface_limits[0] = lc->surface.surface_limits_sl;
+      surface_limits[1] = lc->surface.surface_limits_su;
+      surface_limits[2] = lc->surface.surface_limits_tl;
+      surface_limits[3] = lc->surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    }
+    else{
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
+    }
     lc->apply(
       [&](const Surface_Traction_Condition& lc) { 
         Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION; 
@@ -2028,12 +2046,18 @@ void FEA_Module_Elasticity::Element_Material_Properties(size_t ielem, real_t &El
   real_t penalty_product = 1;
   real_t density_epsilon = simparam.optimization_options.density_epsilon;
   if(density < 0) density = 0;
-  for(int i = 0; i < penalty_power; i++)
+  if(module_params.material.SIMP_modulus){
+    for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
-  //relationship between density and stiffness
-  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
-  //Element_Modulus = density*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.material.poisson_ratio;
+    //relationship between density and stiffness
+    Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+    //Element_Modulus = density*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
+  else if(module_params.material.linear_cell_modulus){
+    Element_Modulus = module_params.material.modulus_initial + module_params.material.modulus_density_slope*density;
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
 }
 
 /* ----------------------------------------------------------------------
