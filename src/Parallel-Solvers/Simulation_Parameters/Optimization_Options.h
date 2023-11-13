@@ -86,6 +86,7 @@ struct Optimization_Options {
   bool method_of_moving_asymptotes = false;
   double simp_penalty_power = 3.0;
   bool thick_condition_boundary = true;
+  bool retain_outer_shell = false;
   int optimization_output_freq = 200;
   DENSITY_FILTER density_filter = DENSITY_FILTER::none; 
   double density_epsilon = 0.001;
@@ -102,6 +103,6 @@ IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options,
   optimization_process, optimization_objective, 
   constraints, method_of_moving_asymptotes,
   simp_penalty_power, density_epsilon, thick_condition_boundary,
-  optimization_output_freq, density_filter, minimum_density, maximum_density
-  multi_objective_modules, multi_objective_structure, density_filter
+  optimization_output_freq, density_filter, minimum_density, maximum_density,
+  multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell
 )

@@ -2070,12 +2070,19 @@ void FEA_Module_Elasticity::Gradient_Element_Material_Properties(size_t ielem, r
   real_t density_epsilon = simparam.optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
-  for(int i = 0; i < penalty_power - 1; i++)
-    penalty_product *= density;
-  //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
-  //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.material.poisson_ratio;
+  
+  if(module_params.material.SIMP_modulus){
+    for(int i = 0; i < penalty_power - 1; i++)
+      penalty_product *= density;
+    //relationship between density and stiffness
+    Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+    //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
+  else if(module_params.material.linear_cell_modulus){
+    Element_Modulus_Derivative = module_params.material.modulus_density_slope;
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
 }
 
 /* --------------------------------------------------------------------------------
@@ -2088,14 +2095,22 @@ void FEA_Module_Elasticity::Concavity_Element_Material_Properties(size_t ielem, 
   real_t density_epsilon = simparam.optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
-  if(penalty_power>=2){
-    for(int i = 0; i < penalty_power - 2; i++)
-      penalty_product *= density;
-    //relationship between density and stiffness
-    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+  
+  if(module_params.material.SIMP_modulus){
+    if(penalty_power>=2){
+      for(int i = 0; i < penalty_power - 2; i++)
+        penalty_product *= density;
+      //relationship between density and stiffness
+      Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+    }
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
+  else if(module_params.material.linear_cell_modulus){
+    Element_Modulus_Derivative = 0;
+    Poisson_Ratio = module_params.material.poisson_ratio;
   }
   //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.material.poisson_ratio;
+  
 }
 
 /* ----------------------------------------------------------------------

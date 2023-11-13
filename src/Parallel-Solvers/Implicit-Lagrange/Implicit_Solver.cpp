@@ -1165,8 +1165,18 @@ void Implicit_Solver::setup_optimization_problem(){
 
     //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
     for(int inode = 0; inode < nlocal_nodes; inode++){
-      node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
+      if(simparam.optimization_options.maximum_density<1){
+        node_densities_upper_bound(inode,0) = simparam.optimization_options.maximum_density;
+      }
+      else{
+        node_densities_upper_bound(inode,0) = 1;
+      }
+      if(simparam.optimization_options.minimum_density>simparam.optimization_options.density_epsilon){
+        node_densities_lower_bound(inode,0) = simparam.optimization_options.minimum_density;
+      }
+      else{
+        node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
+      }
     }
 
     if(simparam.optimization_options.method_of_moving_asymptotes){
@@ -1232,6 +1242,44 @@ void Implicit_Solver::setup_optimization_problem(){
       //possible to have overlap in which nodes are set with the previous loop
       fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
     }//module for
+
+    //enforce rho=1 on all boundary patches if user setting enabled
+    if(simparam.optimization_options.retain_outer_shell){
+      //loop over boundary patches for this boundary set
+        for (int bdy_patch_gid = 0; bdy_patch_gid < nboundary_patches; bdy_patch_gid++){
+          patch_id = bdy_patch_gid;
+          if(simparam.optimization_options.thick_condition_boundary){
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            current_element_index = Boundary_Patches(patch_id).element_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < max_nodes_per_element; node_loop++){
+              current_node_index = nodes_in_elem(current_element_index,node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
+          else{
+            Surface_Nodes = Boundary_Patches(patch_id).node_set;
+            local_surface_id = Boundary_Patches(patch_id).local_patch_id;
+            //debug print of local surface ids
+            //std::cout << " LOCAL SURFACE IDS " << std::endl;
+            //std::cout << local_surface_id << std::endl;
+            //acquire set of nodes for this face
+            for(int node_loop=0; node_loop < Surface_Nodes.size(); node_loop++){
+              current_node_index = Surface_Nodes(node_loop);
+              if(map->isNodeGlobalElement(current_node_index)){
+                local_node_index = map->getLocalElement(current_node_index);
+                node_densities_lower_bound(local_node_index,0) = 1;
+              }
+            }// node loop for
+          }//if
+        }//boundary patch for
+    }
   
   }
   else{
