@@ -5,7 +5,7 @@ CMakeCache.txt
 cmake_install.cmake
 .vscode
 *.swp
-evpfft_heffte_*
+evpfft_*
 hdf5
 heffte
 kokkos
