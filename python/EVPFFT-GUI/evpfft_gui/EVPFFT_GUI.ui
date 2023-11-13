@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1022</width>
-    <height>886</height>
+    <height>883</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -850,7 +850,7 @@
            <enum>QFrame::NoFrame</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>3</number>
           </property>
           <widget class="QWidget" name="TitlePage">
            <property name="minimumSize">
@@ -1254,7 +1254,7 @@
             <item>
              <widget class="QStackedWidget" name="MaterialTypeTool">
               <property name="currentIndex">
-               <number>2</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="Isotropic">
                <layout class="QFormLayout" name="formLayout_6">
@@ -2510,6 +2510,11 @@
                  <item>
                   <property name="text">
                    <string>Tension</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Compression</string>
                   </property>
                  </item>
                 </widget>
