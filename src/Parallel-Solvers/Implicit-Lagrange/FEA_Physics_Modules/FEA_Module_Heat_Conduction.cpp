@@ -338,7 +338,7 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   int num_dim = simparam.num_dims;
   int bc_tag;
   real_t value, temp_temp;
-  real_t fix_limits[4];
+  real_t surface_limits[4];
 
   for (auto bc : module_params.boundary_conditions) {
     switch (bc.surface.type) {
@@ -357,13 +357,19 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
 
     value = bc.surface.plane_position * simparam.get_unit_scaling();
     
-
-    fix_limits[0] = fix_limits[2] = 4;
-    fix_limits[1] = fix_limits[3] = 6;
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_temp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_temp_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(bc.surface.use_limits){
+      surface_limits[0] = bc.surface.surface_limits_sl;
+      surface_limits[1] = bc.surface.surface_limits_su;
+      surface_limits[2] = bc.surface.surface_limits_tl;
+      surface_limits[3] = bc.surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    }
+    else{
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
+    }
 
     if (bc.type == BOUNDARY_CONDITION_TYPE::temperature) {
       Boundary_Condition_Type_List(num_boundary_conditions) = TEMPERATURE_CONDITION;
@@ -385,11 +391,11 @@ void FEA_Module_Heat_Conduction::generate_bcs(){
   *fos << "tagging z = 0 " << std::endl;
   bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
   value = 0.0 * simparam.get_unit_scaling();
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
+  surface_limits[0] = surface_limits[2] = 4;
+  surface_limits[1] = surface_limits[3] = 6;
   if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
   if(num_surface_temp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_temp_sets+1);
-  //tag_boundaries(bc_tag, value, bdy_set_id, fix_limits);
+  //tag_boundaries(bc_tag, value, bdy_set_id, surface_limits);
   tag_boundaries(bc_tag, value, num_boundary_conditions);
   Boundary_Condition_Type_List(num_boundary_conditions) = TEMPERATURE_CONDITION;
   Boundary_Surface_Temperatures(num_surface_temp_sets,0) = 293;
@@ -414,6 +420,7 @@ void FEA_Module_Heat_Conduction::generate_applied_loads() {
   int num_dim = simparam.num_dims;
   int bc_tag, dim1_other, dim2_other;
   real_t value;
+  real_t surface_limits[4];
   
   //Surface Fluxes Section
   //find user flux settings
@@ -447,8 +454,17 @@ void FEA_Module_Heat_Conduction::generate_applied_loads() {
     
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_flux_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_flux_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(lc->surface.use_limits){
+      surface_limits[0] = lc->surface.surface_limits_sl;
+      surface_limits[1] = lc->surface.surface_limits_su;
+      surface_limits[2] = lc->surface.surface_limits_tl;
+      surface_limits[3] = lc->surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    }
+    else{
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
+    }
     lc->apply(
       [&](const Surface_Flux_Condition& lc) { 
         Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;

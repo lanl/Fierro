@@ -766,7 +766,7 @@ void FEA_Module_Elasticity::generate_bcs(){
   int num_bcs;
   int bc_tag;
   real_t value;
-  real_t fix_limits[4];
+  real_t surface_limits[4];
 
   for (auto bc : module_params.boundary_conditions) {
     switch (bc.surface.type) {
@@ -784,12 +784,20 @@ void FEA_Module_Elasticity::generate_bcs(){
     }
     value = bc.surface.plane_position * simparam.get_unit_scaling();
 
-    fix_limits[0] = fix_limits[2] = 4;
-    fix_limits[1] = fix_limits[3] = 6;
+    //determine if the surface has finite limits
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_disp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_disp_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(bc.surface.use_limits){
+      surface_limits[0] = bc.surface.surface_limits_sl;
+      surface_limits[1] = bc.surface.surface_limits_su;
+      surface_limits[2] = bc.surface.surface_limits_tl;
+      surface_limits[3] = bc.surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    }
+    else{
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
+    }
     if(bc.type == BOUNDARY_CONDITION_TYPE::displacement){
       Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
     }
@@ -816,6 +824,7 @@ void FEA_Module_Elasticity::generate_applied_loads(){
   int num_dim = simparam.num_dims;
   int bc_tag;
   real_t value, temp_flux;
+  real_t surface_limits[4];
   
   double unit_scaling = simparam.get_unit_scaling();
   for (auto lc : module_params.loading_conditions) {
@@ -837,8 +846,17 @@ void FEA_Module_Elasticity::generate_applied_loads(){
 
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(lc->surface.use_limits){
+      surface_limits[0] = lc->surface.surface_limits_sl;
+      surface_limits[1] = lc->surface.surface_limits_su;
+      surface_limits[2] = lc->surface.surface_limits_tl;
+      surface_limits[3] = lc->surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    }
+    else{
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
+    }
     lc->apply(
       [&](const Surface_Traction_Condition& lc) { 
         Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION; 
@@ -2028,12 +2046,18 @@ void FEA_Module_Elasticity::Element_Material_Properties(size_t ielem, real_t &El
   real_t penalty_product = 1;
   real_t density_epsilon = simparam.optimization_options.density_epsilon;
   if(density < 0) density = 0;
-  for(int i = 0; i < penalty_power; i++)
+  if(module_params.material.SIMP_modulus){
+    for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
-  //relationship between density and stiffness
-  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
-  //Element_Modulus = density*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.material.poisson_ratio;
+    //relationship between density and stiffness
+    Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+    //Element_Modulus = density*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
+  else if(module_params.material.linear_cell_modulus){
+    Element_Modulus = module_params.material.modulus_initial + module_params.material.modulus_density_slope*density;
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -2046,12 +2070,19 @@ void FEA_Module_Elasticity::Gradient_Element_Material_Properties(size_t ielem, r
   real_t density_epsilon = simparam.optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
-  for(int i = 0; i < penalty_power - 1; i++)
-    penalty_product *= density;
-  //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
-  //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.material.poisson_ratio;
+  
+  if(module_params.material.SIMP_modulus){
+    for(int i = 0; i < penalty_power - 1; i++)
+      penalty_product *= density;
+    //relationship between density and stiffness
+    Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+    //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
+  else if(module_params.material.linear_cell_modulus){
+    Element_Modulus_Derivative = module_params.material.modulus_density_slope;
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
 }
 
 /* --------------------------------------------------------------------------------
@@ -2064,14 +2095,22 @@ void FEA_Module_Elasticity::Concavity_Element_Material_Properties(size_t ielem, 
   real_t density_epsilon = simparam.optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
-  if(penalty_power>=2){
-    for(int i = 0; i < penalty_power - 2; i++)
-      penalty_product *= density;
-    //relationship between density and stiffness
-    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+  
+  if(module_params.material.SIMP_modulus){
+    if(penalty_power>=2){
+      for(int i = 0; i < penalty_power - 2; i++)
+        penalty_product *= density;
+      //relationship between density and stiffness
+      Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
+    }
+    Poisson_Ratio = module_params.material.poisson_ratio;
+  }
+  else if(module_params.material.linear_cell_modulus){
+    Element_Modulus_Derivative = 0;
+    Poisson_Ratio = module_params.material.poisson_ratio;
   }
   //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.material.poisson_ratio;
+  
 }
 
 /* ----------------------------------------------------------------------
@@ -5874,15 +5913,26 @@ int FEA_Module_Elasticity::eigensolve(){
   }
 
   // Get the eigenvalues and eigenvectors from the eigenproblem
-  Anasazi::Eigensolution<real_t,MV> sol = problem->getSolution();
-  Teuchos::RCP<MV> evecs = sol.Evecs;
-  int numev = sol.numVecs;
+  sol = problem->getSolution();
+  evecs = sol.Evecs;
+  numev = sol.numVecs;
 
    *fos << "Direct residual norms computed in Tpetra_BlockDavidson_lap_test.exe" << std::endl
        << std::setw(20) << "Eigenvalue" << std::setw(20) << "Residual  " << std::endl
        << "----------------------------------------" << std::endl;
+    
+    Teuchos::RCP<TpetraVector> current_evec, current_residual;
+    Teuchos::RCP<TpetraVector> current_evecMproduct = Teuchos::rcp (new TpetraVector (local_dof_map));
+    Teuchos::RCP<TpetraVector> current_evecKproduct = Teuchos::rcp (new TpetraVector (local_dof_map));
     for (int i=0; i<numev; i++) {
-      *fos << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << std::endl;
+      current_evec = evecs->getVectorNonConst(i);
+      Global_Mass_Matrix->apply(*current_evec,*current_evecMproduct);
+      Global_Stiffness_Matrix->apply(*current_evec,*current_evecKproduct);
+      current_residual = current_evecKproduct;
+      //compute residual vector
+      current_residual->update(-sol.Evals[i].realpart,*current_evecMproduct,1);
+      real_t residual_norm = current_residual->norm2();
+      *fos << std::setw(20) << "Real Part: " << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << "Imaginary Part: " << sol.Evals[i].imagpart << std::setw(20) << "Residual Norm: " << residual_norm << std::setw(20) << std::endl;
     }
 
   //reinsert global stiffness and mass values corresponding to BC indices to facilitate future calculation
