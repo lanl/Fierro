@@ -38,6 +38,9 @@ void compute_normal(float* normal, float* a, float* b, float* c) {
     normal[0] =  (ba[1] * ca[2] - ba[2] * ca[1]);
     normal[1] = -(ba[0] * ca[2] - ba[2] * ca[0]);
     normal[2] =  (ba[0] * ca[1] - ba[1] * ca[0]);
+    float l = std::sqrt(normal[0] * normal[0] + normal[0] * normal[0] + normal[0] * normal[0]);
+    for (size_t i = 0; i < 3; i++)
+        normal[i] /= l;
 }
 
 void Voxelizer::create_voxel_vtk(
