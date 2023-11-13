@@ -2,7 +2,6 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
-#include "Simulation_Parameters_Dynamic_Elasticity.h"
 
 // -----------------------------------------------------------------------------
 // This function evolves the velocity at the nodes of the mesh
@@ -224,7 +223,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos <double> &e
                     const DViewCArrayKokkos <double> &elem_vol
                     ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -304,7 +303,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos <double> 
                       const DViewCArrayKokkos <double> &elem_vol
                       ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {

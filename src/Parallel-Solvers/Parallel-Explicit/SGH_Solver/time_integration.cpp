@@ -2,7 +2,6 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
-#include "Simulation_Parameters_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function saves the variables at rk_stage = 0, which is t_n
@@ -14,7 +13,7 @@ void FEA_Module_SGH::rk_init(DViewCArrayKokkos <double> &node_coords,
              const size_t num_elems,
              const size_t num_nodes){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
     int num_dims = simparam.num_dims;
     // save elem quantities
     FOR_ALL_CLASS(elem_gid, 0, num_elems, {
@@ -60,7 +59,7 @@ void FEA_Module_SGH::get_timestep(mesh_t &mesh,
                   DViewCArrayKokkos <double> &elem_vol){
 
     
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
 
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
@@ -160,7 +159,7 @@ void FEA_Module_SGH::get_timestep2D(mesh_t &mesh,
                     DViewCArrayKokkos <double> &elem_sspd,
                     DViewCArrayKokkos <double> &elem_vol){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
 
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;

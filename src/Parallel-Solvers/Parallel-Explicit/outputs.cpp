@@ -1,7 +1,5 @@
 #include "Explicit_Solver.h"
-#include "Simulation_Parameters_SGH.h"
 #include "FEA_Module_SGH.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include <map>
 #include <fstream>
 #include <sys/stat.h>
@@ -90,43 +88,43 @@ Explicit_Solver::write_outputs()
   if (simparam.output_options.output_file_format == OUTPUT_FORMAT::none)
     return;
 
-  const size_t rk_level = simparam.rk_num_bins - 1;  
+  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;  
   Teuchos::RCP<CArray<double>> design_density;
   Teuchos::RCP<CArray<int>> elem_switch;
   Teuchos::RCP<CArray<int>> elem_proc_id;
   Teuchos::RCP<CArray<int>> elem_gid;
   Teuchos::RCP<CArray<double>> elem_speed;
 
-  for (const FIELD_OUTPUT_EXPLICIT& field_name : simparam.field_output) {
+  for (const FIELD& field_name : simparam.output_options.output_fields) {
     switch (field_name)
     {
-      case FIELD_OUTPUT_EXPLICIT::design_density:
+      case FIELD::design_density:
         // node "design_density"
         design_density = get_design_density(map->getLocalNumElements(),
-          simparam_dynamic_opt.topology_optimization_on, design_node_densities_distributed);
+          simparam.topology_optimization_on, design_node_densities_distributed);
         point_data_scalars_double["design_density"] = design_density->pointer();
         break;
 
-      case FIELD_OUTPUT_EXPLICIT::speed:
+      case FIELD::speed:
         // element "speed"
         elem_speed = calculate_elem_speed(all_node_velocities_distributed, global_nodes_in_elem_distributed,
                                           ghost_node_velocities_distributed, ghost_importer);
         cell_data_scalars_double["speed"] = elem_speed->pointer();
         break;
 
-      case FIELD_OUTPUT_EXPLICIT::element_switch:
+      case FIELD::element_switch:
         // element "element_switch"
         elem_switch = calculate_elem_switch(all_element_map);
         cell_data_scalars_int["element_switch"] = elem_switch->pointer();
         break;
 
-      case FIELD_OUTPUT_EXPLICIT::processor_id:
+      case FIELD::processor_id:
         // element "processor_id"
         elem_proc_id = get_elem_proc_id(all_element_map, myrank);
         cell_data_scalars_int["processor_id"] = elem_proc_id->pointer();
         break;
 
-      case FIELD_OUTPUT_EXPLICIT::element_id:
+      case FIELD::element_id:
         // element "element_id"
         elem_gid = get_elem_gid(all_element_map);
         cell_data_scalars_int["element_id"] = elem_gid->pointer();
@@ -212,7 +210,7 @@ Explicit_Solver::parallel_vtk_writer_new()
   MPI_Barrier(world);
 
   //construct file name
-  std::string current_file_name = construct_file_name(simparam.graphics_options.graphics_id, displacement_module);
+  std::string current_file_name = construct_file_name(simparam.output_options.graphics_id, displacement_module);
   std::string file_path = vtk_data_dir + current_file_name;
   //open mpi file
   int err = MPI_File_open(MPI_COMM_WORLD, file_path.c_str(), 
@@ -394,7 +392,7 @@ Explicit_Solver::parallel_vtk_writer_new()
 
 
   /*************** write .vtk.series file ***************/
-  simparam.graphics_options.graphics_times(simparam.graphics_options.graphics_id) = time_value;
+  simparam.output_options.graphics_times(simparam.output_options.graphics_id) = time_value;
   if (myrank == 0) {
     FILE *myfile;
     std::string filename = vtk_dir + "outputs.vtk.series";
@@ -403,10 +401,10 @@ Explicit_Solver::parallel_vtk_writer_new()
     fprintf(myfile, "{\n");
     fprintf(myfile, "  \"file-series-version\" : \"1.0\",\n");
     fprintf(myfile, "  \"files\" : [\n");
-    for (int i = 0; i <= simparam.graphics_options.graphics_id; i++) {
+    for (int i = 0; i <= simparam.output_options.graphics_id; i++) {
       std::string vtk_filename = construct_file_name(i, displacement_module);
       fprintf(myfile, "    { \"name\" : \"data/%s\", \"time\" : %12.5e },\n",
-        vtk_filename.c_str(), simparam.graphics_options.graphics_times(i));
+        vtk_filename.c_str(), simparam.output_options.graphics_times(i));
     }
     fprintf(myfile, "  ]\n");
     fprintf(myfile, "}\n");
@@ -414,7 +412,7 @@ Explicit_Solver::parallel_vtk_writer_new()
     fclose(myfile);
   }
   
-  simparam.graphics_options.graphics_id++;
+  simparam.output_options.graphics_id++;
 
 }
 

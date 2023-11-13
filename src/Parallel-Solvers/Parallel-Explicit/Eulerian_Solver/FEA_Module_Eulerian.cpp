@@ -211,7 +211,7 @@ void FEA_Module_Eulerian::read_conditions_ansys_dat(std::ifstream *in, std::stre
   int buffer_lines = 1000;
   int max_word = 30;
   int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam.get_unit_scaling();
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring, token;
@@ -347,10 +347,9 @@ void FEA_Module_Eulerian::Displacement_Boundary_Conditions(){
 
 void FEA_Module_Eulerian::init_output(){
   //check user parameters for output
-  bool output_velocity_flag = simparam.graphics_options.output_velocity_flag;
-  displaced_mesh_flag = simparam.graphics_options.displaced_mesh_flag;
-  bool output_strain_flag = simparam.graphics_options.output_strain_flag;
-  bool output_stress_flag = simparam.graphics_options.output_stress_flag;
+  bool output_velocity_flag = simparam.output_options.output_velocity;
+  bool output_strain_flag = simparam.output_options.output_strain;
+  bool output_stress_flag = simparam.output_options.output_stress;
   int num_dim = simparam.num_dims;
   int Brows;
   if(num_dim==3) Brows = 6;

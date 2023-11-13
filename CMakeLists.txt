@@ -12,6 +12,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 option(TEST "Build tests" OFF)
 
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+
 if (TEST)
   include(FetchContent)
   FetchContent_Declare(
