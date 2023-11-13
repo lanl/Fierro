@@ -2,12 +2,15 @@
 
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
-    echo "Valid options:"
+    echo "Required arguments:"
     echo "  --heffte_build_type=<fftw|cufft|rocfft>"
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>"
-    echo "  --machine=<darwin|chicoma|linux|mac>"
+    echo " "
+    echo "Optional arguments:"
+    echo "  --machine=<darwin|chicoma|linux|mac> (default: none)"
     echo "  --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)"
     echo "  --help: Display this help message"
+    echo " "
     return 1
 }
 
@@ -95,8 +98,10 @@ PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
 
 # --------setup env for machine
 if [ -n "$machine" ]; then
-    MACHINE_SCRIPT="$PARENT_DIR/scripts/machines/${machine}-env.sh"
-    source  "$MACHINE_SCRIPT" --env_type=$kokkos_build_type
+    if [ "$machine" != "linux" ]; then
+        MACHINE_SCRIPT="$PARENT_DIR/scripts/machines/${machine}-env.sh"
+        source  "$MACHINE_SCRIPT" --env_type=$kokkos_build_type
+    fi
 fi
 
 # --------building heffte

@@ -16,16 +16,16 @@ dummy
 /vast/home/cyenusah/github/Fierro/src/EVPFFT/example_input_files/lattice_input_files/elastic_parameters.txt
 *INFORMATION ABOUT TEST CONDITIONS
 * boundary conditions                                                     
-    0       1       1           iudot     |    flag for vel.grad. 
-    1       0       1                     |    (0:unknown-1:known)        
+    1       1       1           iudot     |    flag for vel.grad. 
+    1       1       1                     |    (0:unknown-1:known)        
     1       1       1                     |            
                                           |                               
-   -0.35     0.        0.          udot    |    vel.grad                   
-    0.      -0.35      0.                  |                               
-    0.       0.         1.0                |                               
+    0.0     0.0     1.0          udot     |    vel.grad                   
+    0.0     0.0     0.0                   |                               
+    1.0     0.0     0.0                   |                               
                                           |                               
-    1       0        0           iscau    |    flag for Cauchy            
-            1        0                    |                               
+    0       0        0           iscau    |    flag for Cauchy            
+            0        0                    |                               
                      0                    |                               
                                           |                               
     0.      0.       0.          scauchy  |    Cauchy stress              
