@@ -1194,6 +1194,7 @@ void Implicit_Solver::setup_optimization_problem(){
     }
 
     //set lower bounds for nodes on surfaces with boundary and loading conditions
+    if(!simparam.optimization_options.variable_outer_shell){
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
       for(int iboundary = 0; iboundary < num_boundary_sets; iboundary++){
@@ -1280,6 +1281,7 @@ void Implicit_Solver::setup_optimization_problem(){
           }//if
         }//boundary patch for
     }
+    }//if to check if shell should have any constraints
   
   }
   else{
