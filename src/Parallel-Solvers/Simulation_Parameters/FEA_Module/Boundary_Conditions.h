@@ -25,9 +25,9 @@ struct Surface {
     BOUNDARY_TYPE type;
     double plane_position;
     bool use_limits = false;
-    double surface_limits_sl = -std::numeric_limits<double>::max();
+    double surface_limits_sl = std::numeric_limits<double>::lowest();
     double surface_limits_su = std::numeric_limits<double>::max();
-    double surface_limits_tl = -std::numeric_limits<double>::max();
+    double surface_limits_tl = std::numeric_limits<double>::lowest();
     double surface_limits_tu = std::numeric_limits<double>::max();
     
     KOKKOS_FUNCTION
