@@ -20,7 +20,8 @@ mkdir -p ${FIERRO_BUILD_DIR}
 
 # Configure EVPFFT using CMake
 cmake_options=(
-    -D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
+    #-D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
+    -D CMAKE_PREFIX_PATH="${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos;${TRILINOS_INSTALL_DIR}/lib64/cmake/Trilinos"
 )
 
 if [ "$solver" = "all" ]; then
