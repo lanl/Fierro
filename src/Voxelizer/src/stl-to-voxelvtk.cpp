@@ -28,6 +28,18 @@ double sign (double x1, double y1, double v1x, double v1y, double v2x, double v2
     return (x1 - v2x) * (v1y - v2y) - (v1x - v2x) * (y1 - v2y);
 }
 
+void compute_normal(float* normal, float* a, float* b, float* c) {
+    float ba[3];
+    float ca[3];
+    for (size_t i = 0; i < 3; i++) {
+        ba[i] = b[i] - a[i];
+        ca[i] = c[i] - a[i];
+    }
+    normal[0] =  (ba[1] * ca[2] - ba[2] * ca[1]);
+    normal[1] = -(ba[0] * ca[2] - ba[2] * ca[0]);
+    normal[2] =  (ba[0] * ca[1] - ba[1] * ca[0]);
+}
+
 void Voxelizer::create_voxel_vtk(
         const char* stl_file_path, const char* vtk_file_path, 
         int gridX, int gridY, int gridZ,
@@ -192,6 +204,8 @@ std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<fl
         input.read(reinterpret_cast<char*>(ptr5), n_bytes);
         input.read(reinterpret_cast<char*>(ptr6), n_bytes);
         input.seekg(2,input.cur);
+        if (std::sqrt(normalp[0] * normalp[0] + normalp[0] * normalp[0] + normalp[0] * normalp[0]) <= (1-1e-6))
+            compute_normal(normalp, v1p, v2p, v3p);
         normalX(i) = normalp[0];
         normalY(i) = normalp[1];
         normalZ(i) = normalp[2];
@@ -463,10 +477,10 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
                 continue;
             
             std::vector<double> unique_zs;
-            for (size_t i = 0; i < zs.size(); i++)
+            for (size_t i = 0; i < zs.size(); i++) 
                 if ((i == zs.size() - 1) || (zs[i+1] - zs[i] >= 1e-5))
                     unique_zs.push_back(zs[i]);
-
+            
             for (size_t i = 0; i < unique_zs.size() - 1; i++) {
                 if (i % 2 == 1)
                     continue;
