@@ -24,9 +24,12 @@ Which outputs:
 
 ```
 Usage: source build_evpfft.sh [OPTION]
-Valid options:
+Required arguments:
   --heffte_build_type=<fftw|cufft|rocfft>
-  --kokkos_build_type=<serial|openmp|cuda|cuda-ampere|hip>
+  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>
+
+Optional arguments:
+  --machine=<darwin|chicoma|linux|mac> (default: none)
   --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)
   --help: Display this help message
 ```
