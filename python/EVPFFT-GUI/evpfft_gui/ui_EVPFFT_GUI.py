@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'EVPFFT_GUI_V14VlYOIi.ui'
+## Form generated from reading UI file 'EVPFFT_GUINIjlCa.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -23,12 +23,36 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QForm
     QSizePolicy, QSpacerItem, QSplitter, QStackedWidget,
     QStatusBar, QTabWidget, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget)
+    
+# ================== New imports =====================
+    
+import fierro_voxelizer
+import tempfile
+import os
+    
+class LocalResource:
+    FILE_PATH = os.path.abspath(
+        os.path.join(*(os.path.split(os.path.expanduser(__file__))[:-1]))
+    )
+
+    @staticmethod
+    def get_resource_name(relpath: str) -> str:
+        return os.path.join(LocalResource.FILE_PATH, relpath)
+    
+
+VTK_OUTPUT = os.path.join(tempfile.gettempdir(), 'VTK_Geometry.vtk')
+print(VTK_OUTPUT)
+ELASTIC_PARAMETERS = LocalResource.get_resource_name('elastic_parameters.txt')
+PLASTIC_PARAMETERS = LocalResource.get_resource_name('plastic_parameters.txt')
+EVPFFT_INPUT = os.path.join(tempfile.gettempdir(), 'evpfft_lattice_input.txt')
+
+# ======================================================
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1022, 886)
+        MainWindow.resize(1022, 883)
         icon = QIcon()
         icon.addFile(u"Icons/EVPFFT_logo_A2.png", QSize(), QIcon.Normal, QIcon.Off)
         MainWindow.setWindowIcon(icon)
@@ -40,20 +64,20 @@ class Ui_MainWindow(object):
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setStyleSheet(u"#TitlePage, #GeometryInformationTool, #DefineMaterialTool, #BoundaryConditionsTool, #SolverSettingsTool, #ResultsTool, #Tools, #RunOutputs, #RunOutputWindow, #Main{\n"
-"	background-color: rgb(235, 235, 235);\n"
+"    background-color: rgb(235, 235, 235);\n"
 "}\n"
 "#ParaviewFrame{\n"
-"	background-color: rgb(91, 97, 120);\n"
+"    background-color: rgb(91, 97, 120);\n"
 "}\n"
 "#BImportPart:hover, #BDefineMaterial:hover, #BApplyBC:hover, #BSolverSettings:hover, #BRunEVPFFT:hover, #BViewResults:hover{\n"
-"	background-color: rgb(192, 192, 192);\n"
-"	border-radius: 15px;\n"
+"    background-color: rgb(192, 192, 192);\n"
+"    border-radius: 15px;\n"
 "}\n"
 "#BImportPart, #BDefineMaterial, #BApplyBC, #BSolverSettings, #BRunEVPFFT, #BViewResults{\n"
-"	border-style: flat;\n"
+"    border-style: flat;\n"
 "}\n"
 "#centralwidget{\n"
-"	background-color: rgb(255, 255, 255);\n"
+"    background-color: rgb(255, 255, 255);\n"
 "}\n"
 "\n"
 "")
@@ -99,7 +123,7 @@ class Ui_MainWindow(object):
         self.BImportPart = QPushButton(self.ImportPart)
         self.BImportPart.setObjectName(u"BImportPart")
         icon1 = QIcon()
-        icon1.addFile(u"Icons/Blue/Cube.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(LocalResource.get_resource_name("Icons/Blue/Cube.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.BImportPart.setIcon(icon1)
         self.BImportPart.setIconSize(QSize(50, 50))
         self.BImportPart.setFlat(False)
@@ -166,7 +190,7 @@ class Ui_MainWindow(object):
         self.BDefineMaterial = QPushButton(self.DefineMaterial)
         self.BDefineMaterial.setObjectName(u"BDefineMaterial")
         icon2 = QIcon()
-        icon2.addFile(u"Icons/Blue/mine.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(LocalResource.get_resource_name("Icons/Blue/mine.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.BDefineMaterial.setIcon(icon2)
         self.BDefineMaterial.setIconSize(QSize(50, 50))
         self.BDefineMaterial.setFlat(True)
@@ -228,7 +252,7 @@ class Ui_MainWindow(object):
         self.BApplyBC = QPushButton(self.ApplyBC)
         self.BApplyBC.setObjectName(u"BApplyBC")
         icon3 = QIcon()
-        icon3.addFile(u"Icons/Blue/brick.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(LocalResource.get_resource_name("Icons/Blue/brick.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.BApplyBC.setIcon(icon3)
         self.BApplyBC.setIconSize(QSize(50, 50))
         self.BApplyBC.setFlat(True)
@@ -297,7 +321,7 @@ class Ui_MainWindow(object):
         self.BSolverSettings = QPushButton(self.SolverSettings)
         self.BSolverSettings.setObjectName(u"BSolverSettings")
         icon4 = QIcon()
-        icon4.addFile(u"Icons/Blue/gear.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(LocalResource.get_resource_name("Icons/Blue/gear.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.BSolverSettings.setIcon(icon4)
         self.BSolverSettings.setIconSize(QSize(50, 50))
         self.BSolverSettings.setFlat(True)
@@ -326,7 +350,7 @@ class Ui_MainWindow(object):
         self.BRunEVPFFT = QPushButton(self.RunEVPFFT)
         self.BRunEVPFFT.setObjectName(u"BRunEVPFFT")
         icon5 = QIcon()
-        icon5.addFile(u"Icons/Blue/Play.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(LocalResource.get_resource_name("Icons/Blue/Play.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.BRunEVPFFT.setIcon(icon5)
         self.BRunEVPFFT.setIconSize(QSize(40, 40))
         self.BRunEVPFFT.setFlat(True)
@@ -355,7 +379,7 @@ class Ui_MainWindow(object):
         self.BViewResults = QPushButton(self.ViewResults)
         self.BViewResults.setObjectName(u"BViewResults")
         icon6 = QIcon()
-        icon6.addFile(u"Icons/Blue/magnify.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon6.addFile(LocalResource.get_resource_name("Icons/Blue/magnify.svg"), QSize(), QIcon.Normal, QIcon.Off)
         self.BViewResults.setIcon(icon6)
         self.BViewResults.setIconSize(QSize(40, 40))
         self.BViewResults.setFlat(True)
@@ -435,7 +459,7 @@ class Ui_MainWindow(object):
         self.LosAlamosLogo = QLabel(self.TitlePage)
         self.LosAlamosLogo.setObjectName(u"LosAlamosLogo")
         self.LosAlamosLogo.setMaximumSize(QSize(16777215, 60))
-        self.LosAlamosLogo.setPixmap(QPixmap(u"Icons/LANL Logo Ultramarine.png"))
+        self.LosAlamosLogo.setPixmap(QPixmap(LocalResource.get_resource_name("Icons/LANL Logo Ultramarine.png")))
         self.LosAlamosLogo.setScaledContents(True)
 
         self.verticalLayout_2.addWidget(self.LosAlamosLogo)
@@ -448,7 +472,7 @@ class Ui_MainWindow(object):
         self.EVPFFTLogo.setObjectName(u"EVPFFTLogo")
         self.EVPFFTLogo.setMinimumSize(QSize(275, 175))
         self.EVPFFTLogo.setMaximumSize(QSize(275, 175))
-        self.EVPFFTLogo.setPixmap(QPixmap(u"Icons/EVPFFT_logo_horse_ppt.png"))
+        self.EVPFFTLogo.setPixmap(QPixmap(LocalResource.get_resource_name("Icons/EVPFFT_logo_horse_ppt.png")))
         self.EVPFFTLogo.setScaledContents(True)
         self.EVPFFTLogo.setWordWrap(False)
         self.EVPFFTLogo.setIndent(-1)
@@ -486,7 +510,7 @@ class Ui_MainWindow(object):
         self.MatarLogo = QLabel(self.AdditionalSoftwareLogos)
         self.MatarLogo.setObjectName(u"MatarLogo")
         self.MatarLogo.setMaximumSize(QSize(120, 60))
-        self.MatarLogo.setPixmap(QPixmap(u"Icons/MATAR_logo2.png"))
+        self.MatarLogo.setPixmap(QPixmap(LocalResource.get_resource_name("Icons/MATAR_logo2.png")))
         self.MatarLogo.setScaledContents(True)
 
         self.horizontalLayout_5.addWidget(self.MatarLogo)
@@ -494,7 +518,7 @@ class Ui_MainWindow(object):
         self.ParaviewLogo = QLabel(self.AdditionalSoftwareLogos)
         self.ParaviewLogo.setObjectName(u"ParaviewLogo")
         self.ParaviewLogo.setMaximumSize(QSize(130, 30))
-        self.ParaviewLogo.setPixmap(QPixmap(u"Icons/ParaView_logo.png"))
+        self.ParaviewLogo.setPixmap(QPixmap(LocalResource.get_resource_name("Icons/ParaView_logo.png")))
         self.ParaviewLogo.setScaledContents(True)
 
         self.horizontalLayout_5.addWidget(self.ParaviewLogo)
@@ -1215,6 +1239,7 @@ class Ui_MainWindow(object):
 
         self.INBoundaryCondition = QComboBox(self.BoundaryConditionsInputs)
         self.INBoundaryCondition.addItem("")
+        self.INBoundaryCondition.addItem("")
         self.INBoundaryCondition.setObjectName(u"INBoundaryCondition")
 
         self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.INBoundaryCondition)
@@ -1529,7 +1554,7 @@ class Ui_MainWindow(object):
             elif self.file_type == '.vt':
                 self.stl = pvsimple.LegacyVTKReader(FileNames = b3_filename)
                 pvsimple.SetDisplayProperties(Representation = "Surface")
-                shutil.copy(b3_filename[0],os.getcwd()+'/VTK_geometry.vtk')
+                shutil.copy(b3_filename[0], VTK_OUTPUT)
                 self.INNumberOfVoxelsX.setText(QCoreApplication.translate("MainWindow", u"32", None))
                 self.INNumberOfVoxelsY.setText(QCoreApplication.translate("MainWindow", u"32", None))
                 self.INNumberOfVoxelsZ.setText(QCoreApplication.translate("MainWindow", u"32", None))
@@ -1559,10 +1584,17 @@ class Ui_MainWindow(object):
                 else:
                     pvsimple.Delete(self.threshold)
                     
-                os.system("./voxelvtk "+b3_filename[0]+" VTK_geometry.vtk "+self.INNumberOfVoxelsX.text()+" "+self.INNumberOfVoxelsY.text()+" "+self.INNumberOfVoxelsZ.text())
+                fierro_voxelizer.create_voxel_vtk(
+                    b3_filename[0],
+                    VTK_OUTPUT,
+                    int(self.INNumberOfVoxelsX.text()),
+                    int(self.INNumberOfVoxelsY.text()),
+                    int(self.INNumberOfVoxelsZ.text()),
+                    True
+                )
                 # Paraview window
                 pvsimple.Delete(self.stl)
-                self.voxel_reader = pvsimple.LegacyVTKReader(FileNames = "VTK_geometry.vtk")
+                self.voxel_reader = pvsimple.LegacyVTKReader(FileNames = VTK_OUTPUT)
                 pvsimple.SetDisplayProperties(Representation = "Surface")
                 self.threshold = pvsimple.Threshold(Input = self.voxel_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
                 pvsimple.Show(self.threshold, render_view)
@@ -1882,7 +1914,7 @@ class Ui_MainWindow(object):
             
             # Elastic parameters file
             if self.TMaterials.item(0,1).text() == 'Isotropic':
-                elastic_parameters = open("../example_input_files/lattice_input_files/elastic_parameters.txt","w")
+                elastic_parameters = open(ELASTIC_PARAMETERS,"w")
                 iso = '1                         ISO\n'
                 elastic_parameters.write(iso)
                 Young_Nu = self.TMaterials.item(0,2).text() + '   ' + self.TMaterials.item(0,5).text() + '                  YOUNG(MPa),NU (V+R/2)\n'
@@ -1914,7 +1946,7 @@ class Ui_MainWindow(object):
                     C44 = (1/S44)
                     C55 = (1/S55)
                     C66 = (1/S66)
-                    elastic_parameters = open("../example_input_files/lattice_input_files/elastic_parameters.txt","w")
+                    elastic_parameters = open(ELASTIC_PARAMETERS,"w")
                     iso = '0\n'
                     elastic_parameters.write(iso)
                     stiffness = '  ' + str(C11) + '  ' + str(C12) + '  ' + str(C13) + '  0  0  0     Cu (MPa)\n' + '  ' + str(C12) + '  ' + str(C22) + '  ' + str(C23) + '  0  0  0\n' + '  ' + str(C13) + '  ' + str(C23) + '  ' + str(C33) + '  0  0  0\n' + '  0  0  0   ' + str(C44) + '  0  0\n' + '  0  0  0  0  ' + str(C55) + '  0\n' + '  0  0  0  0  0  ' + str(C66)
@@ -1944,7 +1976,7 @@ class Ui_MainWindow(object):
                     C44 = (1/S44)
                     C55 = (1/S55)
                     C66 = (1/S66)
-                    elastic_parameters = open("../example_input_files/lattice_input_files/elastic_parameters.txt","w")
+                    elastic_parameters = open(ELASTIC_PARAMETERS,"w")
                     iso = '0\n'
                     elastic_parameters.write(iso)
                     stiffness = '  ' + str(C11) + '  ' + str(C12) + '  ' + str(C13) + '  0  0  0     Cu (MPa)\n' + '  ' + str(C12) + '  ' + str(C22) + '  ' + str(C23) + '  0  0  0\n' + '  ' + str(C13) + '  ' + str(C23) + '  ' + str(C33) + '  0  0  0\n' + '  0  0  0   ' + str(C44) + '  0  0\n' + '  0  0  0  0  ' + str(C55) + '  0\n' + '  0  0  0  0  0  ' + str(C66)
@@ -1974,7 +2006,7 @@ class Ui_MainWindow(object):
                     C44 = (1/S44)
                     C55 = (1/S55)
                     C66 = (1/S66)
-                    elastic_parameters = open("../example_input_files/lattice_input_files/elastic_parameters.txt","w")
+                    elastic_parameters = open(ELASTIC_PARAMETERS,"w")
                     iso = '0\n'
                     elastic_parameters.write(iso)
                     stiffness = '  ' + str(C11) + '  ' + str(C12) + '  ' + str(C13) + '  0  0  0     Cu (MPa)\n' + '  ' + str(C12) + '  ' + str(C22) + '  ' + str(C23) + '  0  0  0\n' + '  ' + str(C13) + '  ' + str(C23) + '  ' + str(C33) + '  0  0  0\n' + '  0  0  0   ' + str(C44) + '  0  0\n' + '  0  0  0  0  ' + str(C55) + '  0\n' + '  0  0  0  0  0  ' + str(C66)
@@ -1999,30 +2031,47 @@ class Ui_MainWindow(object):
                     C44 = (1/S44)
                     C55 = (1/S55)
                     C66 = (1/S66)
-                    elastic_parameters = open("../example_input_files/lattice_input_files/elastic_parameters.txt","w")
+                    elastic_parameters = open(ELASTIC_PARAMETERS,"w")
                     iso = '0\n'
                     elastic_parameters.write(iso)
                     stiffness = '  ' + str(C11) + '  ' + str(C12) + '  ' + str(C13) + '  0  0  0     Cu (MPa)\n' + '  ' + str(C12) + '  ' + str(C22) + '  ' + str(C23) + '  0  0  0\n' + '  ' + str(C13) + '  ' + str(C23) + '  ' + str(C33) + '  0  0  0\n' + '  0  0  0   ' + str(C44) + '  0  0\n' + '  0  0  0  0  ' + str(C55) + '  0\n' + '  0  0  0  0  0  ' + str(C66)
                     elastic_parameters.write(stiffness)
             
             # EVPFFT lattice input parameters file
-            evpfft_lattice_input = open("../example_input_files/lattice_input_files/evpfft_lattice_input.txt","w")
+            evpfft_lattice_input = open(EVPFFT_INPUT,"w")
             modes = '2 0 0 0               NPHMX, NMODMX, NTWMMX, NSYSMX\n'
             evpfft_lattice_input.write(modes)
             dimensions = str(int(self.INNumberOfVoxelsX.text())) + ' ' + str(int(self.INNumberOfVoxelsY.text())) + ' ' + str(int(self.INNumberOfVoxelsZ.text())) + '               x-dim, y-dim, z-dim\n'
             evpfft_lattice_input.write(dimensions)
             nph_delt = '2                      number of phases (nph)\n' + '1.  1.  1.             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
             evpfft_lattice_input.write(nph_delt)
-            vtkfile = current_file_loc + '/VTK_geometry.vtk\n'
+            vtkfile = f'{VTK_OUTPUT}\n'
             evpfft_lattice_input.write(vtkfile)
-            phases = '*INFORMATION ABOUT PHASE #1\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n' + '*INFORMATION ABOUT PHASE #2\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + os.path.normpath(os.getcwd() + os.sep + os.pardir) +  '/example_input_files/lattice_input_files/plastic_parameters.txt\n' + os.path.normpath(os.getcwd() + os.sep + os.pardir) + '/example_input_files/lattice_input_files/elastic_parameters.txt\n'
+            phases = '*INFORMATION ABOUT PHASE #1\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n' + '*INFORMATION ABOUT PHASE #2\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  f'{PLASTIC_PARAMETERS}\n' + f'{ELASTIC_PARAMETERS}\n'
             evpfft_lattice_input.write(phases)
             if str(self.INBCDirection.currentText()) == "x-direction":
-                test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   1.0     0.        0.          udot    |    vel.grad\n' + '    0.      -0.35      0.                  |\n' + '    0.       0.         -0.35                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                if str(self.INBoundaryCondition.currentText()) == "Tension":
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   1.0     0.        0.          udot    |    vel.grad\n' + '    0.      -0.35      0.                  |\n' + '    0.       0.         -0.35                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                elif str(self.INBoundaryCondition.currentText()) == "Compression":
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -1.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.35      0.                  |\n' + '    0.       0.         0.35                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                else:
+                    print("INVALID BOUNDARY CONDITION")
             elif str(self.INBCDirection.currentText()) == "y-direction":
-                test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -0.35     0.        0.          udot    |    vel.grad\n' + '    0.      1.0      0.                  |\n' + '    0.       0.         -0.35                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                if str(self.INBoundaryCondition.currentText()) == "Tension":
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -0.35     0.        0.          udot    |    vel.grad\n' + '    0.      1.0      0.                  |\n' + '    0.       0.         -0.35                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                elif str(self.INBoundaryCondition.currentText()) == "Compression":
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.35     0.        0.          udot    |    vel.grad\n' + '    0.      -1.0      0.                  |\n' + '    0.       0.         0.35                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                else:
+                    print("INVALID BOUNDARY CONDITION")
+            elif str(self.INBCDirection.currentText()) == "z-direction":
+                if str(self.INBoundaryCondition.currentText()) == "Tension":
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   -0.35     0.        0.          udot    |    vel.grad\n' + '    0.      -0.35      0.                  |\n' + '    0.       0.         1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                elif str(self.INBoundaryCondition.currentText()) == "Compression":
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.35     0.        0.          udot    |    vel.grad\n' + '    0.      0.35      0.                  |\n' + '    0.       0.         -1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                else:
+                    print("INVALID BOUNDARY CONDITION")
             else:
-                test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   -0.35     0.        0.          udot    |    vel.grad\n' + '    0.      -0.35      0.                  |\n' + '    0.       0.         1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                orint("INVALID BOUNDARY CONDITION")
             evpfft_lattice_input.write(test_conditions)
             other = '* other\n' + '0.0001         eqincr (if ictrl>=0) or tdot (if ictrl=-1)\n' + '-1              ictrl (1-6: strain comp, 0: VM eq, -1: tdot)\n'
             evpfft_lattice_input.write(other)
@@ -2038,7 +2087,7 @@ class Ui_MainWindow(object):
             self.p.readyReadStandardError.connect(handle_stderr)
             self.p.stateChanged.connect(handle_state)
             self.p.finished.connect(process_finished)
-            self.p.start("./evpfft",["-f", "../example_input_files/lattice_input_files/evpfft_lattice_input.txt", "-m", "2"])
+            self.p.start("evpfft",["-f", EVPFFT_INPUT, "-m", "2"])
             self.progress_re = re.compile("       Current  Time  STEP = (\d+)")
         def simple_percent_parser(output):
             m = self.progress_re.search(output)
@@ -2195,6 +2244,7 @@ class Ui_MainWindow(object):
             message.exec()
         
     # =================================================================
+        
     # setupUi
 
     def retranslateUi(self, MainWindow):
@@ -2298,6 +2348,7 @@ class Ui_MainWindow(object):
         self.LBoundaryConditions.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">BOUNDARY CONDITIONS</span></p></body></html>", None))
         self.LBoundaryCondition.setText(QCoreApplication.translate("MainWindow", u"Boundary Condition: ", None))
         self.INBoundaryCondition.setItemText(0, QCoreApplication.translate("MainWindow", u"Tension", None))
+        self.INBoundaryCondition.setItemText(1, QCoreApplication.translate("MainWindow", u"Compression", None))
 
         self.LBCDirection.setText(QCoreApplication.translate("MainWindow", u"Direction: ", None))
         self.INBCDirection.setItemText(0, QCoreApplication.translate("MainWindow", u"x-direction", None))
