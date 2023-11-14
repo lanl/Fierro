@@ -147,8 +147,8 @@ void FEA_Module::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *pat
   //test patch limits for feasibility
   if(patch_limits != NULL){
     //test for upper bounds being greater than lower bounds
-    if(patch_limits[1] <= patch_limits[0]) std::cout << " Warning: patch limits for boundary condition are infeasible";
-    if(patch_limits[2] <= patch_limits[3]) std::cout << " Warning: patch limits for boundary condition are infeasible";
+    if(patch_limits[1] <= patch_limits[0]) std::cout << " Warning: patch limits for boundary condition are infeasible " << patch_limits[0] << " and " << patch_limits[1] << std::endl;
+    if(patch_limits[3] <= patch_limits[2]) std::cout << " Warning: patch limits for boundary condition are infeasible " << patch_limits[2] << " and " << patch_limits[3] << std::endl;
   }
     
   // save the boundary vertices to this set that are on the plane

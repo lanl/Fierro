@@ -808,7 +808,7 @@ void FEA_Module_Elasticity::generate_bcs(){
     *fos << "tagging " << bc_tag << " at " << value <<  std::endl;
     
     *fos << "tagged a set " << std::endl;
-    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    std::cout << "number of bdy patches in this bc set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
     *fos << std::endl;
     num_boundary_conditions++;
     num_surface_disp_sets++;
@@ -874,7 +874,7 @@ void FEA_Module_Elasticity::generate_applied_loads(){
     *fos << "tagging " << bc_tag << " at " << value <<  std::endl;
     
     *fos << "tagged a set " << std::endl;
-    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    std::cout << "number of bdy patches in this loading set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
     *fos << std::endl;
     num_boundary_conditions++;
     num_surface_force_sets++;

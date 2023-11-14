@@ -1217,7 +1217,7 @@ void Implicit_Solver::setup_optimization_problem(){
               current_node_index = nodes_in_elem(current_element_index,node_loop);
               if(map->isNodeGlobalElement(current_node_index)){
                 local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = 1;
+                node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
               }
             }// node loop for
           }//if
@@ -1232,7 +1232,7 @@ void Implicit_Solver::setup_optimization_problem(){
               current_node_index = Surface_Nodes(node_loop);
               if(map->isNodeGlobalElement(current_node_index)){
                 local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = 1;
+                node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
               }
             }// node loop for
           }//if
@@ -1260,7 +1260,7 @@ void Implicit_Solver::setup_optimization_problem(){
               current_node_index = nodes_in_elem(current_element_index,node_loop);
               if(map->isNodeGlobalElement(current_node_index)){
                 local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = 1;
+                node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
               }
             }// node loop for
           }//if
@@ -1275,7 +1275,7 @@ void Implicit_Solver::setup_optimization_problem(){
               current_node_index = Surface_Nodes(node_loop);
               if(map->isNodeGlobalElement(current_node_index)){
                 local_node_index = map->getLocalElement(current_node_index);
-                node_densities_lower_bound(local_node_index,0) = 1;
+                node_densities_lower_bound(local_node_index,0) = simparam.optimization_options.shell_density;
               }
             }// node loop for
           }//if
