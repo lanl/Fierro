@@ -2,6 +2,8 @@
 
 #include "yaml-serializable.h"
 #include "matar.h"
+#include <assert.h>
+
 using namespace mtr;
 
 SERIALIZABLE_ENUM(VOLUME_TYPE,
@@ -53,7 +55,7 @@ struct Volume : Yaml::ValidatedYaml {
     double get_volume() {
       switch(type) {
       case VOLUME_TYPE::global:
-        throw std::runtime_error("Cannot evaluate the volume of an unbounded region.");
+        assert(0); // Cannot evaluate the volume fo an unbounded region.
 
       case VOLUME_TYPE::box:
         return (x2 - x1) * (y2 - y1) * (z2 - z1);
@@ -66,7 +68,8 @@ struct Volume : Yaml::ValidatedYaml {
         return (4.0 / 3.0) * M_PI * (std::pow(radius2, 3) - std::pow(radius1, 3));
       
       default:
-        throw std::runtime_error("Unsupported volume type: " + to_string(type));
+        assert(0); // Unsupported volume type.
+        return 0; // Compiler complains that execution can fall out of void func.
       }
     }
     
