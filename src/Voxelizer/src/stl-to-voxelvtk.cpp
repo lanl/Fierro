@@ -16,7 +16,8 @@
 #include <vector>
 #include <algorithm>
 #include <iomanip>
-#include <stl-to-voxelvtk.h>
+#include "stl-to-voxelvtk.h"
+#include "RTree.h"
 
 using namespace mtr; // matar namespace
 
@@ -345,93 +346,19 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
     });
     double voxwidth_z = voxwidth;
 
-    // Z-DIRECTIONAL RAY EXECUTION
-    // Get the minimum and maximum x,y,z coordinates for each facet
-    CArray<float> facetXmin(n_facets);
-    CArray<float> facetXmax(n_facets);
-    CArray<float> facetYmin(n_facets);
-    CArray<float> facetYmax(n_facets);
-    CArray<float> facetZmin(n_facets);
-    CArray<float> facetZmax(n_facets);
-    
-    FOR_ALL (i,0,n_facets, {
-        // Facet minimum x-direction
-        if (v1X(i) <= v2X(i) && v1X(i) <= v3X(i)) {
-            facetXmin(i) = v1X(i);
-        } else if (v2X(i) <= v1X(i) && v2X(i) <= v3X(i)) {
-            facetXmin(i) = v2X(i);
-        } else if (v3X(i) <= v1X(i) && v3X(i) <= v2X(i)) {
-            facetXmin(i) = v3X(i);
-        }
+    RTree<int, double, 2> tree;
 
-        // Facet maximum x-direction
-        if (v1X(i) >= v2X(i) && v1X(i) >= v3X(i)) {
-            facetXmax(i) = v1X(i);
-        } else if (v2X(i) >= v1X(i) && v2X(i) >= v3X(i)) {
-            facetXmax(i) = v2X(i);
-        } else if (v3X(i) >= v1X(i) && v3X(i) >= v2X(i)) {
-            facetXmax(i) = v3X(i);
-        }
-
-        // Facet minimum y-direction
-        if (v1Y(i) <= v2Y(i) && v1Y(i) <= v3Y(i)) {
-            facetYmin(i) = v1Y(i);
-        } else if (v2Y(i) <= v1Y(i) && v2Y(i) <= v3Y(i)) {
-            facetYmin(i) = v2Y(i);
-        } else if (v3Y(i) <= v1Y(i) && v3Y(i) <= v2Y(i)) {
-            facetYmin(i) = v3Y(i);
-        }
-
-        // Facet maximum y-direction
-        if (v1Y(i) >= v2Y(i) && v1Y(i) >= v3Y(i)) {
-            facetYmax(i) = v1Y(i);
-        } else if (v2Y(i) >= v1Y(i) && v2Y(i) >= v3Y(i)) {
-            facetYmax(i) = v2Y(i);
-        } else if (v3Y(i) >= v1Y(i) && v3Y(i) >= v2Y(i)) {
-            facetYmax(i) = v3Y(i);
-        }
-
-        // Facet minimum z-direction
-        if (v1Z(i) <= v2Z(i) && v1Z(i) <= v3Z(i)) {
-            facetZmin(i) = v1Z(i);
-        } else if (v2Z(i) <= v1Z(i) && v2Z(i) <= v3Z(i)) {
-            facetZmin(i) = v2Z(i);
-        } else if (v3Z(i) <= v1Z(i) && v3Z(i) <= v2Z(i)) {
-            facetZmin(i) = v3Z(i);
-        }
-
-        // Facet maximum z-direction
-        if (v1Z(i) >= v2Z(i) && v1Z(i) >= v3Z(i)) {
-            facetZmax(i) = v1Z(i);
-        } else if (v2Z(i) >= v1Z(i) && v2Z(i) >= v3Z(i)) {
-            facetZmax(i) = v2Z(i);
-        } else if (v3Z(i) >= v1Z(i) && v3Z(i) >= v2Z(i)) {
-            facetZmax(i) = v3Z(i);
-        }
-    });
-    
-    // Create a list to record all rays that fail to voxelize
-    CArray<int> correctionLIST(n_facets,2);
-    size_t facetCROSSLISTcounter = 0;
-    size_t correctionLISTcounter = 0;
-    
-    // Find which facets could be crossed by the ray in the y-direction
-    CArray<int> possibleCROSSLISTy(n_facets,ely);
-    CArray<int> counter(1);
-    CArray<int> count1(ely);
-    counter(0) = 0;
-    FOR_ALL (loopY,0,ely,
-             i,0,n_facets,{
-        if (facetYmin(i) <= gridCOy(loopY) && facetYmax(i) >= gridCOy(loopY)) {
-            possibleCROSSLISTy(counter(0),loopY) = i;
-            counter(0)++;
-        }
-        if (i == n_facets-1) {
-            count1(loopY) = counter(0);
-            counter(0) = 0;
-        }
-    });
-    
+    for (size_t i = 0; i < n_facets; i++) {
+        double min[2] = {
+            std::min({v1X(i), v2X(i), v3X(i)}),
+            std::min({v1Y(i), v2Y(i), v3Y(i)})
+        };
+        double max[2] = {
+            std::max({v1X(i), v2X(i), v3X(i)}),
+            std::max({v1Y(i), v2Y(i), v3Y(i)})
+        };
+        tree.Insert(min, max, i);
+    }
 
     std::vector<size_t> cross_list;
     std::vector<double> zs;
@@ -445,26 +372,24 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
             cross_list.clear();
             zs.clear();
             
-            for (size_t i = 0; i < n_facets; i++) {
-                if ((facetYmin(i) <= y && y <= facetYmax(i))
-                    && (facetXmin(i) <= x && x <= facetXmax(i))) {
-                    
-                    float d1, d2, d3;
-                    bool has_neg, has_pos;
-                    float fuzz = 1e-6;
+            double loc[2] = {x, y};
+            tree.Search(loc, loc, [&](int i) {
+                float d1, d2, d3;
+                bool has_neg, has_pos;
+                float fuzz = 1e-6;
 
-                    d1 = sign(x, y, v1X(i), v1Y(i), v2X(i), v2Y(i));
-                    d2 = sign(x, y, v2X(i), v2Y(i), v3X(i), v3Y(i));
-                    d3 = sign(x, y, v3X(i), v3Y(i), v1X(i), v1Y(i));
+                d1 = sign(x, y, v1X(i), v1Y(i), v2X(i), v2Y(i));
+                d2 = sign(x, y, v2X(i), v2Y(i), v3X(i), v3Y(i));
+                d3 = sign(x, y, v3X(i), v3Y(i), v1X(i), v1Y(i));
 
-                    has_neg = (d1 < -fuzz) || (d2 < -fuzz) || (d3 < -fuzz);
-                    has_pos = (d1 > fuzz) || (d2 > fuzz) || (d3 > fuzz);
-                    
-                    if (!(has_neg && has_pos)) {
-                        cross_list.push_back(i);
-                    }
+                has_neg = (d1 < -fuzz) || (d2 < -fuzz) || (d3 < -fuzz);
+                has_pos = (d1 > fuzz) || (d2 > fuzz) || (d3 > fuzz);
+                
+                if (!(has_neg && has_pos)) {
+                    cross_list.push_back(i);
                 }
-            }
+                return true;
+            });
 
             for (size_t i : cross_list) {
                 zs.push_back(-(
