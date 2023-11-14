@@ -256,6 +256,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     MPI_Bcast(&zone_condition_type,1,MPI_INT,0,world);
     //perform readin strategy according to zone type
     if(zone_condition_type==DISPLACEMENT_CONDITION){
+      node_specified_bcs = true;
       bool per_node_flag = false;
       if(myrank==0){
         getline(*in, read_line);

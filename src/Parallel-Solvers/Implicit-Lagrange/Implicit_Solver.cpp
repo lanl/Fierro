@@ -1241,7 +1241,8 @@ void Implicit_Solver::setup_optimization_problem(){
 
       //set node conditions due to point BCS that might not show up in boundary sets
       //possible to have overlap in which nodes are set with the previous loop
-      fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
+      if(fea_modules[imodule]->node_specified_bcs)
+        fea_modules[imodule]->node_density_constraints(node_densities_lower_bound);
     }//module for
 
     //enforce rho=1 on all boundary patches if user setting enabled

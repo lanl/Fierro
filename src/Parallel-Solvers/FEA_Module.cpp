@@ -115,6 +115,7 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer) {
   //obtain boundary condition and loading data
   nboundary_patches = Solver_Pointer->nboundary_patches;
   Boundary_Patches = Solver_Pointer->Boundary_Patches;
+  node_specified_bcs = false;
   //initialize for default
   num_boundary_conditions = 0;
 
