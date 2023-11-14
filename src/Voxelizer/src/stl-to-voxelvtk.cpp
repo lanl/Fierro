@@ -39,7 +39,7 @@ void compute_normal(float* normal, float* a, float* b, float* c) {
     normal[0] =  (ba[1] * ca[2] - ba[2] * ca[1]);
     normal[1] = -(ba[0] * ca[2] - ba[2] * ca[0]);
     normal[2] =  (ba[0] * ca[1] - ba[1] * ca[0]);
-    float l = std::sqrt(normal[0] * normal[0] + normal[0] * normal[0] + normal[0] * normal[0]);
+    float l = std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
     for (size_t i = 0; i < 3; i++)
         normal[i] /= l;
 }
@@ -408,13 +408,11 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
             for (size_t i = 0; i < zs.size(); i++) 
                 if ((i == zs.size() - 1) || (zs[i+1] - zs[i] >= 1e-5))
                     unique_zs.push_back(zs[i]);
-            
             for (size_t i = 0; i < unique_zs.size() - 1; i++) {
                 if (i % 2 == 1)
                     continue;
                 size_t z1 = (unique_zs[i] - meshZmin) / voxwidth_z + 1;
                 size_t z2 = (unique_zs[i + 1] - meshZmin) / voxwidth_z + 1;
-
                 for (size_t loopZ = z1; loopZ <= z2; loopZ++) {
                     gridOUTPUT(loopX, loopY, loopZ) = 1;
                 }
