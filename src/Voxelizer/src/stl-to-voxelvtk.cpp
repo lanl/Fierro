@@ -40,7 +40,7 @@ void compute_normal(float* normal, float* a, float* b, float* c) {
     normal[2] =  (ba[0] * ca[1] - ba[1] * ca[0]);
 }
 
-void Voxelizer::create_voxel_vtk(
+std::tuple<double, double, double> Voxelizer::create_voxel_vtk(
         const char* stl_file_path, const char* vtk_file_path, 
         int gridX, int gridY, int gridZ,
         bool use_index_space) {
@@ -139,6 +139,7 @@ void Voxelizer::create_voxel_vtk(
     std::cout << "Total Time: " << duration.count() << " milliseconds" << std::endl;
 
     printf("\nfinished\n\n");
+    return {nodex(1) - nodex(0), nodey(1) - nodey(0), nodez(1) - nodez(0)};
 }
 
 // ==============================================================
