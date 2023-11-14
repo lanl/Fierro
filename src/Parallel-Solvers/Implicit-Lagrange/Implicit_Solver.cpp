@@ -220,7 +220,6 @@ void Implicit_Solver::run(){
       // TODO: This is almost certainly wrong given the changes to simparam
 
       //update set options for next FEA module in loop with synchronized set options in solver's simparam class
-      fea_modules[imodule]->simparam = simparam;
       FEA_MODULE_TYPE m_type = simparam.fea_module_parameters[imodule]->type;
       if(fea_module_must_read.find(m_type) != fea_module_must_read.end()){
         fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);

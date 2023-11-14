@@ -22,8 +22,8 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos <material_t> &material,
                   const size_t cycle
                   ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    int num_dims = simparam->num_dims;
     
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -150,8 +150,8 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos <material_t> &material,
                     const size_t cycle
                     ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    int num_dims = simparam->num_dims;
     
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {

@@ -38,6 +38,7 @@
 #include <math.h>  // fmin, fmax, abs note: fminl is long
 #include "FEA_Module.h"
 #include "Solver.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 
 #define BC_EPSILON 1.0e-8
 using namespace utils;
@@ -45,10 +46,10 @@ using namespace utils;
 FEA_Module::FEA_Module(Solver *Solver_Pointer) {
 
   Solver_Pointer_ = Solver_Pointer;
-  simparam = Solver_Pointer->simparam;
+  simparam = &Solver_Pointer->simparam;
 
-  num_dim = simparam.num_dims;
-  num_gauss_points = simparam.num_gauss_points;
+  num_dim = simparam->num_dims;
+  num_gauss_points = simparam->num_gauss_points;
 
   //obtain global and local node and element counts
   num_nodes = Solver_Pointer->num_nodes;
@@ -241,7 +242,7 @@ int FEA_Module::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, real_t
 
   //Nodes on the Patch
   auto node_list = Patch_Nodes.node_set;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   size_t nnodes = node_list.size();
   size_t node_rid;
   real_t node_coord[num_dim];

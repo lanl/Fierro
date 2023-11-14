@@ -11,8 +11,8 @@ void FEA_Module_Dynamic_Elasticity::update_position_elastic(double rk_alpha,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    int num_dims = simparam->num_dims;
 
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
@@ -242,7 +242,7 @@ void FEA_Module_Dynamic_Elasticity::get_bmatrix(const ViewCArrayKokkos <double> 
 
 void FEA_Module_Dynamic_Elasticity::get_vol(){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     const size_t num_dims = mesh->num_dims;
 
     if (num_dims == 2){

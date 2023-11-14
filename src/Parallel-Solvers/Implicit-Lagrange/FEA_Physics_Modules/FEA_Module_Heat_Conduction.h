@@ -129,7 +129,6 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
-  Simulation_Parameters simparam;
   Heat_Conduction_Parameters module_params;
   Implicit_Solver *Implicit_Solver_Pointer_;
   

@@ -66,6 +66,7 @@
 #include "utilities.h"
 #include "FEA_Module_Inertial.h"
 #include "Simulation_Parameters/FEA_Module/Inertial_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 #include "Solver.h"
 
 #define MAX_ELEM_NODES 8
@@ -85,10 +86,10 @@ FEA_Module_Inertial::FEA_Module_Inertial(
 
   //acquire base class data from existing simparam in solver (gets yaml options etc.)
   module_params = params;
-  simparam = Solver_Pointer->simparam;
+  simparam = &Solver_Pointer->simparam;
 
   //TO parameters
-  nodal_density_flag = simparam.nodal_density_flag;
+  nodal_density_flag = simparam->nodal_density_flag;
 
   //property initialization flags
   mass_init = false;

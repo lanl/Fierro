@@ -13,7 +13,7 @@ void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
                          const DViewCArrayKokkos <double> &corner_force
                          ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;    
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;    
     const size_t num_dims = mesh.num_dims;
     
     // walk over the nodes to update the velocity
@@ -222,7 +222,7 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
                     const DViewCArrayKokkos <double> &elem_vol
                     ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -302,7 +302,7 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos <double> &elem_div,
                       const DViewCArrayKokkos <double> &elem_vol
                       ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {

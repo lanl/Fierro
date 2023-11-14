@@ -523,7 +523,7 @@ public:
   bool nodal_density_flag;
   real_t penalty_power;
   
-  Simulation_Parameters_Explicit simparam;
+  Simulation_Parameters_Explicit *simparam;
   SGH_Parameters module_params;
   Explicit_Solver *Explicit_Solver_Pointer_;
 

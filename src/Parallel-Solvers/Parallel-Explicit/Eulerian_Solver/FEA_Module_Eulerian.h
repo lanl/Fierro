@@ -146,7 +146,7 @@ public:
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   //end elastic TO data
   
-  Simulation_Parameters_Eulerian simparam;
+  Simulation_Parameters_Eulerian *simparam;
   Simulation_Parameters_Elasticity simparam_elasticity;
   Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
   Explicit_Solver_Eulerian *Explicit_Solver_Pointer_;

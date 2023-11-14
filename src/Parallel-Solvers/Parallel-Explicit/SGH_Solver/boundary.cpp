@@ -16,8 +16,8 @@ void FEA_Module_SGH::boundary_velocity(const mesh_t &mesh,
     //print_flag.host(0) = false;
     //print_flag.update_device();
    
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1; 
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1; 
+    int num_dims = simparam->num_dims;
     // Loop over boundary sets
     for (size_t bdy_set=0; bdy_set<num_bdy_sets; bdy_set++){
         

@@ -207,7 +207,7 @@ public:
   elements::Element2D *elem2D;
   
 
-  Simulation_Parameters simparam;
+  Simulation_Parameters *simparam;
   Solver *Solver_Pointer_;
   int num_dim;
   int num_gauss_points;

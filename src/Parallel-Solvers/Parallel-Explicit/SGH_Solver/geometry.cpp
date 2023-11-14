@@ -11,8 +11,8 @@ void FEA_Module_SGH::update_position_sgh(double rk_alpha,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    int num_dims = simparam->num_dims;
 
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
@@ -242,7 +242,7 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 
 void FEA_Module_SGH::get_vol(){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     const size_t num_dims = mesh->num_dims;
 
     if (num_dims == 2){
@@ -561,7 +561,7 @@ void FEA_Module_SGH::get_area_weights2D(const ViewCArrayKokkos <double> &corner_
 
 void FEA_Module_SGH::get_vol_ugradient(const size_t gradient_node_id, const size_t gradient_dim){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     const size_t num_dims = mesh->num_dims;
     
     if (num_dims == 2){
@@ -598,7 +598,7 @@ void FEA_Module_SGH::get_vol_hex_ugradient(const ViewCArrayKokkos <double> &elem
                  const size_t rk_level) const {
 
     const size_t num_nodes = 8;
-    const size_t num_dims = simparam.num_dims;
+    const size_t num_dims = simparam->num_dims;
     double x_array[8];
     double y_array[8];
     double z_array[8];

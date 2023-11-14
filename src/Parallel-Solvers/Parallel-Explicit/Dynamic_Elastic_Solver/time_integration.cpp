@@ -13,8 +13,8 @@ void FEA_Module_Dynamic_Elasticity::rk_init(DViewCArrayKokkos <double> &node_coo
              const size_t num_elems,
              const size_t num_nodes){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    int num_dims = simparam->num_dims;
     // save elem quantities
     FOR_ALL_CLASS(elem_gid, 0, num_elems, {
 
@@ -59,11 +59,11 @@ void FEA_Module_Dynamic_Elasticity::get_timestep(mesh_t &mesh,
                   DViewCArrayKokkos <double> &elem_vol){
 
     
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
 
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
-    int num_dims = simparam.num_dims;
+    int num_dims = simparam->num_dims;
     double dt_lcl;
     double min_dt_calc;
     REDUCE_MIN_CLASS(elem_gid, 0, rnum_elem, dt_lcl, {
@@ -159,11 +159,11 @@ void FEA_Module_Dynamic_Elasticity::get_timestep2D(mesh_t &mesh,
                     DViewCArrayKokkos <double> &elem_sspd,
                     DViewCArrayKokkos <double> &elem_vol){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
 
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
-    int num_dims = simparam.num_dims;
+    int num_dims = simparam->num_dims;
     double dt_lcl;
     double min_dt_calc;
 

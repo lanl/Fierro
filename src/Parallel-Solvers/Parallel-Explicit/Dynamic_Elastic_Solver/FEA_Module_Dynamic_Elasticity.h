@@ -438,7 +438,7 @@ public:
   //end elastic TO data
   
   Dynamic_Elasticity_Parameters module_params;
-  Simulation_Parameters_Explicit simparam;
+  Simulation_Parameters_Explicit *simparam;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;
