@@ -377,14 +377,13 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
             tree.Search(loc, loc, [&](int i) {
                 float d1, d2, d3;
                 bool has_neg, has_pos;
-                float fuzz = 1e-6;
 
                 d1 = sign(x, y, v1X(i), v1Y(i), v2X(i), v2Y(i));
                 d2 = sign(x, y, v2X(i), v2Y(i), v3X(i), v3Y(i));
                 d3 = sign(x, y, v3X(i), v3Y(i), v1X(i), v1Y(i));
 
-                has_neg = (d1 < -fuzz) || (d2 < -fuzz) || (d3 < -fuzz);
-                has_pos = (d1 > fuzz) || (d2 > fuzz) || (d3 > fuzz);
+                has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+                has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
                 
                 if (!(has_neg && has_pos)) {
                     cross_list.push_back(i);
@@ -406,9 +405,10 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
                 continue;
             
             std::vector<double> unique_zs;
-            for (size_t i = 0; i < zs.size(); i++) 
+            for (size_t i = 0; i < zs.size(); i++)
                 if ((i == zs.size() - 1) || (zs[i+1] - zs[i] >= 1e-5))
                     unique_zs.push_back(zs[i]);
+
             for (size_t i = 0; i < unique_zs.size() - 1; i++) {
                 if (i % 2 == 1)
                     continue;
