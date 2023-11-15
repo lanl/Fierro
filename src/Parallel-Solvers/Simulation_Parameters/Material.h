@@ -31,6 +31,8 @@ struct material_t {
     double q1ex = 1.0;
     double q2ex = 0.0;
     bool maximum_limiter = false;
+
+    size_t num_state_vars = 0;
     
     // Non-serialized fields
     size_t num_global_vars = 0;
@@ -50,6 +52,7 @@ IMPL_YAML_SERIALIZABLE_FOR(Material,
     id, eos_model, strength_model, strength_type,
     strength_run_location, eos_run_location,
     q1, q2, q1ex, q2ex, maximum_limiter,
+    num_state_vars,
     global_vars,
     elastic_modulus, poisson_ratio,
     density, initial_temperature, thermal_conductivity,

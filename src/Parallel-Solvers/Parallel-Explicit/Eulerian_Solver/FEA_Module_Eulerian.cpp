@@ -575,6 +575,7 @@ void FEA_Module_Eulerian::setup(){
     const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
     const DCArrayKokkos <material_t> material = simparam.material;
     global_vars = simparam.global_vars;
+    state_vars = DCArrayKokkos <double> (rnum_elem, simparam.max_num_state_vars);
     
     //--- calculate bdy sets ---//
     mesh.num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)

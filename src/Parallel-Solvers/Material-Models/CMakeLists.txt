@@ -6,6 +6,8 @@ add_subdirectory(Ideal-Gas-Models)
 
 if (BUILD_EVPFFT_FIERRO)
   add_subdirectory(../../EVPFFT/src EVPFFT)
+elseif(BUILD_EVP_FIERRO)
+  add_subdirectory(../../EVP/src EVP)
 else()
   # Default do-nothing user material models
   add_subdirectory(User-Material-Models)
