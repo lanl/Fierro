@@ -86,7 +86,7 @@ FEA_Module_Inertial::FEA_Module_Inertial(
 
   //acquire base class data from existing simparam in solver (gets yaml options etc.)
   module_params = params;
-  simparam = &Solver_Pointer->simparam;
+  simparam = &(Solver_Pointer->simparam);
 
   //TO parameters
   nodal_density_flag = simparam->nodal_density_flag;

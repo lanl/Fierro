@@ -109,7 +109,7 @@ FEA_Module_SGH::FEA_Module_SGH(
   
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
-  simparam = &Explicit_Solver_Pointer_->simparam;
+  simparam = &(Explicit_Solver_Pointer_->simparam);
   module_params = params;
 
   //create ref element object
