@@ -1,1 +1,3 @@
 recursive-include evpfft_gui/Icons/** *
+# Distribute elastic_parameters, plastic_parameters and evpff_lattice_input
+include evpfft_gui/*.txt
