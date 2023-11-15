@@ -23,6 +23,7 @@ public:
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
+    const DCArrayKokkos <double> &state_vars,
     const DCArrayKokkos <double> &global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
@@ -35,6 +36,7 @@ public:
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
+    const DCArrayKokkos <double> &state_vars,
     const DCArrayKokkos <double> &global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
@@ -47,6 +49,7 @@ public:
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
+    const DCArrayKokkos <double> &state_vars,
     const DCArrayKokkos <double> &global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
@@ -59,6 +62,7 @@ public:
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
+    const DCArrayKokkos <double> &state_vars,
     const DCArrayKokkos <double> &global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
@@ -71,6 +75,7 @@ public:
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
+    const DCArrayKokkos <double> &state_vars,
     const DCArrayKokkos <double> &global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
@@ -83,6 +88,7 @@ public:
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
+    const DCArrayKokkos <double> &state_vars,
     const DCArrayKokkos <double> &global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
@@ -107,6 +113,7 @@ public:
     const DViewCArrayKokkos <double> &elem_stress,
     const size_t elem_gid,
     const size_t mat_id,
+    const DCArrayKokkos <double> &state_vars,
     const DCArrayKokkos <double> &global_vars,
     const DCArrayKokkos <double> &elem_user_output_vars,
     const DViewCArrayKokkos <double> &elem_sspd,
@@ -133,10 +140,19 @@ struct strength_t {
 	StrengthParent *model = nullptr;
 };
 
+void init_state_vars(
+  const DCArrayKokkos <material_t> &material,
+  const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &state_vars,
+  const DCArrayKokkos <double> &global_vars,
+  const DCArrayKokkos <double> &elem_user_output_vars,
+  const size_t num_elems);
+
 void init_strength_model(
   DCArrayKokkos <strength_t> &elem_strength,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems);
@@ -145,6 +161,7 @@ void init_eos_model(
   DCArrayKokkos <eos_t> &elem_eos,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems);
@@ -153,6 +170,7 @@ void destroy_strength_model(
   DCArrayKokkos <strength_t> &elem_strength,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> elem_user_output_vars,
   const size_t num_elems);
@@ -161,6 +179,7 @@ void destroy_eos_model(
   DCArrayKokkos <eos_t> &elem_eos,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems);

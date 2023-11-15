@@ -113,7 +113,8 @@ set( Sources
 if (BUILD_EVPFFT_FIERRO)
   list(APPEND Sources
        Fierro-EVPFFT-Link/UserStrengthModel.cpp 
-       Fierro-EVPFFT-Link/UserEOSModel.cpp)
+       Fierro-EVPFFT-Link/UserEOSModel.cpp
+       Fierro-EVPFFT-Link/init_state_vars.cpp)
 
   add_library(${This} STATIC ${Sources})
   target_link_libraries(${This} PRIVATE ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})

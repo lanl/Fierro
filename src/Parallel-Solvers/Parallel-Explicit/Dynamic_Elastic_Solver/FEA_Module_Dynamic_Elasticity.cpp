@@ -998,6 +998,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
     const DCArrayKokkos <material_t> material = simparam.material;
     global_vars = simparam.global_vars;
+    state_vars = DCArrayKokkos <double> (rnum_elem, simparam.max_num_state_vars);
     elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options.max_num_user_output_vars); 
  
     //--- calculate bdy sets ---//
@@ -1063,11 +1064,21 @@ void FEA_Module_Dynamic_Elasticity::setup(){
       });
     }
     elem_mat_id.update_host();
+
+    // function for initializing state_vars
+    init_state_vars(material,
+                    elem_mat_id,
+                    state_vars,
+                    global_vars,
+                    elem_user_output_vars,
+                    rnum_elem);
+    state_vars.update_device();
  
     // initialize strength model
     init_strength_model(elem_strength,
                         material,
                         elem_mat_id,
+                        state_vars,
                         global_vars,
                         elem_user_output_vars,
                         rnum_elem);
@@ -1076,6 +1087,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     init_eos_model(elem_eos,
                    material,
                    elem_mat_id,
+                   state_vars,
                    global_vars,
                    elem_user_output_vars,
                    rnum_elem);
@@ -1150,6 +1162,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
                                          elem_stress,
                                          elem_gid,
                                          elem_mat_id(elem_gid),
+                                         state_vars,
                                          global_vars,
                                          elem_user_output_vars,
                                          elem_sspd,
@@ -1161,6 +1174,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
                                             elem_stress,
                                             elem_gid,
                                             elem_mat_id(elem_gid),
+                                            state_vars,
                                             global_vars,
                                             elem_user_output_vars,
                                             elem_sspd,
@@ -1419,6 +1433,7 @@ void FEA_Module_Dynamic_Elasticity::cleanup_material_models() {
     destroy_strength_model(elem_strength,
                            material,
                            elem_mat_id,
+                           state_vars,
                            global_vars,
                            elem_user_output_vars,
                            rnum_elem);
@@ -1427,6 +1442,7 @@ void FEA_Module_Dynamic_Elasticity::cleanup_material_models() {
     destroy_eos_model(elem_eos,
                       material,
                       elem_mat_id,
+                      state_vars,
                       global_vars,
                       elem_user_output_vars,
                       rnum_elem);
