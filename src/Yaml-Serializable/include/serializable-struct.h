@@ -100,7 +100,8 @@ namespace Yaml {
     // nested fields. Then we can give a pretty slick error message.
     #define YAML_DESERIALIZE_IMPL(FIELD)                        \
         try {                                                   \
-            Yaml::deserialize(obj.FIELD, node[#FIELD], raw);    \
+            if (!node[#FIELD].IsNone())                         \
+                Yaml::deserialize(obj.FIELD, node[#FIELD], raw);\
         } catch (const Yaml::ConfigurationException& e) {       \
             throw Yaml::ConfigurationException(e, #FIELD);      \
         }                                                       \
@@ -147,12 +148,8 @@ namespace Yaml {
             MAP(YAML_DESERIALIZE, __VA_ARGS__)                                                  \
                                                                                                 \
             if (raw) return;                                                                    \
-            if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {                  \
-                derive(obj);                                                                    \
-            }                                                                                   \
-            if constexpr (std::is_base_of<ValidatedYaml, CLASS_NAME>::value) {                  \
-                validate(obj);                                                                  \
-            }                                                                                   \
+            derive<CLASS_NAME>(obj);                                                            \
+            validate(obj);                                                                      \
         }                                                                                       \
     }                                                                                           \
 
@@ -195,12 +192,8 @@ namespace Yaml {
             MAP(YAML_DESERIALIZE, __VA_ARGS__)                                                  \
                                                                                                 \
             if (raw) return;                                                                    \
-            if constexpr (std::is_base_of<DerivedFields, CLASS_NAME>::value) {                  \
-                derive(obj);                                                                    \
-            }                                                                                   \
-            if constexpr (std::is_base_of<ValidatedYaml, CLASS_NAME>::value) {                  \
-                validate(obj);                                                                  \
-            }                                                                                   \
+            derive_with_base<CLASS_NAME, BASE_CLASS>(obj);                                      \
+            validate_with_base<CLASS_NAME, BASE_CLASS>(obj);                                    \
         }                                                                                       \
     }                                                                                           \
 

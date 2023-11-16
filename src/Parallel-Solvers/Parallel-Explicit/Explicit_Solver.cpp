@@ -66,16 +66,15 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_Explicit.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
-#include "FEA_Module.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
+#include "Simulation_Parameters/FEA_Module/FEA_Module_Headers.h"
 #include "FEA_Module_SGH.h"
+//#include "FEA_Module_Eulerian.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "FEA_Module_Inertial.h"
 #include "Explicit_Solver.h"
 #include "mesh.h"
 #include "state.h"
-#include "Kinetic_Energy_Minimize.h"
 
 //Repartition Package
 #include <Zoltan2_XpetraMultiVectorAdapter.hpp>
@@ -102,6 +101,7 @@
 //#include "Topology_Optimization_Function_Headers.h"
 #include "Mass_Constraint.h"
 #include "Moment_of_Inertia_Constraint.h"
+#include "Kinetic_Energy_Minimize.h"
 
 #define BUFFER_LINES 20000
 #define MAX_WORD 30
@@ -111,6 +111,7 @@
 #define BC_EPSILON 1.0e-8
 
 using namespace utils;
+using namespace mtr;
 
 /*
 
@@ -120,18 +121,13 @@ each surface to use for hammering metal into to form it.
 
 */
 
-Explicit_Solver::Explicit_Solver() : Solver(){
+Explicit_Solver::Explicit_Solver(Simulation_Parameters_Explicit params) : Solver(params) {
   //create parameter objects
-  simparam = Simulation_Parameters_Explicit();
-  simparam_dynamic_opt = Simulation_Parameters_Dynamic_Optimization();
-  //simparam_TO = new Simulation_Parameters_Dynamic_Optimization();
-  // ---- Read input file, define state and boundary conditions ---- //
-  //simparam->Simulation_Parameters::input();
-
+  simparam = params;
   //create ref element object
   ref_elem = std::make_shared<elements::ref_element>();
   //create mesh objects
-  //init_mesh = new swage::mesh_t(simparam);
+  //init_mesh = new swage::mesh_t(simparaA);
   mesh = std::make_shared<mesh_t>();
 
   element_select = std::make_shared<elements::element_selector>();
@@ -161,7 +157,7 @@ Explicit_Solver::~Explicit_Solver(){
 //==============================================================================
 
 
-void Explicit_Solver::run(int argc, char *argv[]){
+void Explicit_Solver::run() {
     
   //MPI info
   world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
@@ -170,31 +166,10 @@ void Explicit_Solver::run(int argc, char *argv[]){
   
   if(myrank == 0){
     std::cout << "Starting Lagrangian SGH code" << std::endl;
-      // check to see of a mesh was supplied when running the code
-    if (argc == 1) {
-      std::cout << "\n\n**********************************\n\n";
-      std::cout << " ERROR:\n";
-      std::cout << " Please supply a mesh file as the second command line argument \n";
-      std::cout << "**********************************\n\n" << std::endl;
-      return;
-    }
   }
 
   //initialize Trilinos communicator class
   comm = Tpetra::getDefaultComm();
-  int num_dim = simparam.num_dims;
-
-  //error handle for file input name
-  //if(argc < 2)
-  //yaml file reader for simulation parameters
-  filename = std::string(argv[1]);
-  if(filename.find(".yaml") != std::string::npos){
-    simparam_dynamic_opt = Yaml::from_file<Simulation_Parameters_Dynamic_Optimization>(filename);
-    simparam = Yaml::from_file<Simulation_Parameters_Explicit>(filename);
-  }
-
-  //init time
-  //time_value = simparam->time_initial;
   
   if (simparam.input_options.has_value()) {
     const Input_Options& input_options = simparam.input_options.value();
@@ -231,10 +206,7 @@ void Explicit_Solver::run(int argc, char *argv[]){
   std::cout << "Num elements on process " << myrank << " = " << rnum_elem << std::endl;
   
   //initialize timing
-  // TODO: If this is false, we just get bad numbers. Not 
-  // no numbers.
-  if(simparam.report_runtime)
-    init_clock();
+  init_clock();
 
   //initialize runtime counters and timers
   int hessvec_count = 0;
@@ -249,9 +221,8 @@ void Explicit_Solver::run(int argc, char *argv[]){
 
   //set boundary conditions
   //generate_tcs();
-
   //initialize TO design variable storage
-  if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on)
+  if(simparam.topology_optimization_on || simparam.shape_optimization_on)
     init_design();
   //process process list of requested FEA modules to construct list of objects
   FEA_module_setup();
@@ -344,7 +315,7 @@ void Explicit_Solver::run(int argc, char *argv[]){
   //set initial saved velocities
   initial_node_velocities_distributed->assign(*node_velocities_distributed);
     
-  if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
+  if(simparam.topology_optimization_on || simparam.shape_optimization_on){
       //design_node_densities_distributed->randomize(1,1);
       setup_optimization_problem();
       //problem = ROL::makePtr<ROL::Problem<real_t>>(obj,x);
@@ -385,7 +356,7 @@ void Explicit_Solver::run(int argc, char *argv[]){
   std::cout << " RUNTIME OF CODE ON TASK " << myrank << " is "<< current_cpu-initial_CPU_time << " comms time "
             << communication_time << " host to dev time " << host2dev_time << " dev to host time " << dev2host_time << std::endl;
   
-  if(simparam.timer_output_level == TIMER_VERBOSITY::thorough){
+  if(simparam.output_options.timer_output_level == TIMER_VERBOSITY::thorough){
     std::cout << " OUTPUT TIME OF CODE ON TASK " << myrank << " is "<< output_time << std::endl;
   }
 
@@ -393,7 +364,7 @@ void Explicit_Solver::run(int argc, char *argv[]){
   
   //test forward solve call
   int ntests = 0;
-  if(simparam_dynamic_opt.topology_optimization_on){
+  if(simparam.topology_optimization_on){
     for(int itest = 0; itest < ntests; itest++){
       design_node_densities_distributed->randomize(1,1);
       //test_node_densities_distributed = Teuchos::rcp(new MV(*design_node_densities_distributed));
@@ -427,10 +398,10 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
 
   char ch;
   int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
   Input_Options input_options = simparam.input_options.value();
-  real_t unit_scaling = simparam.unit_scaling;
-  bool restart_file = simparam.restart_file;
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
+  bool restart_file = simparam.restart_file; 
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring, token;
@@ -940,7 +911,6 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
     // check that the input file has configured some kind of acceptable module
     simparam.validate_module_is_specified(FEA_MODULE_TYPE::Elasticity);
     simparam.fea_module_must_read.insert(FEA_MODULE_TYPE::Elasticity);
-    // TODO: What about simparam_dynamic_opt?
   }
 
   // Close mesh input file if no further readin is done by FEA modules for conditions
@@ -1054,11 +1024,12 @@ void Explicit_Solver::init_state_vectors(){
   initial_node_velocities_distributed = Teuchos::rcp(new MV(map, num_dim));
   all_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
   node_velocities_distributed = Teuchos::rcp(new MV(*all_node_velocities_distributed, map));
-  ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
-  if(simparam_dynamic_opt.topology_optimization_on){
+  //ghost_node_velocities_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
+  ghost_node_velocities_distributed = Teuchos::rcp(new MV(*all_node_velocities_distributed, ghost_node_map, nlocal_nodes));
+  if(simparam.topology_optimization_on){
     test_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
   }
-  if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on){
+  if(simparam.topology_optimization_on || simparam.shape_optimization_on){
     corner_value_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element);
     corner_vector_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element,num_dim);
     corner_gradient_storage = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem*max_nodes_per_element, num_dim, max_nodes_per_element, num_dim);
@@ -1072,61 +1043,35 @@ void Explicit_Solver::init_state_vectors(){
 ------------------------------------------------------------------------- */
 
 void Explicit_Solver::FEA_module_setup(){
+  nfea_modules = simparam.fea_module_parameters.size();
+  fea_module_must_read = simparam.fea_module_must_read;
 
-  std::vector<FEA_MODULE_TYPE> FEA_Module_List;
-  if(simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on){
-    FEA_Module_List = simparam.FEA_Modules_List = simparam_dynamic_opt.FEA_Modules_List;
-    nfea_modules = FEA_Module_List.size();
-    fea_module_must_read = simparam.fea_module_must_read = simparam_dynamic_opt.fea_module_must_read;
-  }
-  else{
-    //nfea_modules = simparam->nfea_modules;
-    FEA_Module_List = simparam.FEA_Modules_List;
-    nfea_modules = FEA_Module_List.size();
-    fea_module_must_read = simparam.fea_module_must_read;
-  }
   //allocate lists to size
-  fea_module_types = std::vector<FEA_MODULE_TYPE>(nfea_modules);
-  fea_modules = std::vector<FEA_Module*>(nfea_modules);
-  bool module_found = false;
-  
-  //list should not have repeats since that was checked by simulation parameters setups
-  
-  for(int imodule = 0; imodule < nfea_modules; imodule++){
-    //decides which FEA module objects to setup based on string.
-    //automate selection list later; use std::map maybe?
-    if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::SGH){
-      fea_module_types[imodule] = FEA_MODULE_TYPE::SGH;
-      fea_modules[imodule] = sgh_module = new FEA_Module_SGH(this, mesh);
-      module_found = true;
-      //debug print
-      *fos << " SGH MODULE ALLOCATED AS " <<imodule << std::endl;
-      
-    }
-    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Dynamic_Elasticity){
-      fea_module_types[imodule] = FEA_MODULE_TYPE::Dynamic_Elasticity;
-      fea_modules[imodule] = new FEA_Module_Dynamic_Elasticity(this, mesh);
-      module_found = true;
-      //debug print
-      *fos << " DYNAMIC ELASTICITY MODULE ALLOCATED AS " <<imodule << std::endl;
-      
-    }
-    else if(FEA_Module_List[imodule] == FEA_MODULE_TYPE::Inertial){
-      fea_module_types[imodule] = FEA_MODULE_TYPE::Inertial;
-      fea_modules[imodule] = new FEA_Module_Inertial(this);
-      module_found = true;
-      //debug print
-      *fos << " INERTIAL MODULE ALLOCATED AS " <<imodule << std::endl;
-      
-    }
-    else{
-      // TODO: This should be validated earlier.
-      *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" 
-            << FEA_Module_List[imodule] <<"\"" << std::endl;
-      exit_solver(0);
-    }
+  fea_module_types = std::vector<FEA_MODULE_TYPE>();
+  fea_modules = std::vector<FEA_Module*>();
+
+  for (auto& param : simparam.fea_module_parameters) {
+    fea_module_types.push_back(param->type);
+    param->apply(
+      [&](SGH_Parameters& param) {
+        sgh_module = new FEA_Module_SGH(param, this, mesh);
+        fea_modules.push_back(sgh_module);
+      },
+      [&](Dynamic_Elasticity_Parameters& param) {
+        fea_modules.push_back(new FEA_Module_Dynamic_Elasticity(param, this, mesh));
+      },
+      [&](Inertial_Parameters& param) {
+        fea_modules.push_back(new FEA_Module_Inertial(param, this));
+      },
+      [&](const FEA_Module_Parameters& param) {
+        *fos << "PROGRAM IS ENDING DUE TO ERROR; UNDEFINED FEA MODULE REQUESTED WITH NAME \"" 
+            << param.type <<"\"" << std::endl;
+        exit_solver(0);
+      }
+    );
+
+    *fos << " " << fea_module_types.back() << " MODULE ALLOCATED AS " << fea_module_types.size() - 1 << std::endl;
   }
-  
 }
 
 /* ----------------------------------------------------------------------
@@ -1135,16 +1080,15 @@ void Explicit_Solver::FEA_module_setup(){
 
 void Explicit_Solver::setup_optimization_problem(){
   int num_dim = simparam.num_dims;
-  bool nodal_density_flag = simparam_dynamic_opt.nodal_density_flag;
-  int nTO_modules = simparam_dynamic_opt.TO_Module_List.size();
-  //int nmulti_objective_modules = simparam_dynamic_opt->nmulti_objective_modules;
-  std::vector<TO_MODULE_TYPE> TO_Module_List = simparam_dynamic_opt.TO_Module_List;
-  std::vector<FEA_MODULE_TYPE> FEA_Module_List = simparam_dynamic_opt.FEA_Modules_List;
-  std::vector<int> TO_Module_My_FEA_Module = simparam_dynamic_opt.TO_Module_My_FEA_Module;
-  //std::vector<int> Multi_Objective_Modules = simparam_dynamic_opt->Multi_Objective_Modules;
-  //std::vector<real_t> Multi_Objective_Weights = simparam_dynamic_opt->Multi_Objective_Weights;
-  std::vector<std::vector<real_t>> Function_Arguments = simparam_dynamic_opt.Function_Arguments;
-  std::vector<FUNCTION_TYPE> TO_Function_Type = simparam_dynamic_opt.TO_Function_Type;
+  bool nodal_density_flag = simparam.nodal_density_flag;
+  int nTO_modules = simparam.TO_Module_List.size();
+  //int nmulti_objective_modules = simparam->nmulti_objective_modules;
+  std::vector<TO_MODULE_TYPE> TO_Module_List = simparam.TO_Module_List;
+  std::vector<int> TO_Module_My_FEA_Module = simparam.TO_Module_My_FEA_Module;
+  //std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
+  //std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
+  std::vector<std::vector<real_t>> Function_Arguments = simparam.Function_Arguments;
+  std::vector<FUNCTION_TYPE> TO_Function_Type = simparam.TO_Function_Type;
   std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
 
   std::string constraint_base, constraint_name;
@@ -1324,9 +1268,9 @@ void Explicit_Solver::setup_optimization_problem(){
     //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
     for(int inode = 0; inode < nlocal_nodes; inode++){
       node_densities_upper_bound(inode,0) = 1;
-      node_densities_lower_bound(inode,0) = simparam_dynamic_opt.optimization_options.value().density_epsilon;
-    }
+      node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
 
+    }
     //set lower bounds for nodes on surfaces with boundary and loading conditions
     for(int imodule = 0; imodule < nfea_modules; imodule++){
       num_boundary_sets = fea_modules[imodule]->num_boundary_conditions;
@@ -1335,7 +1279,7 @@ void Explicit_Solver::setup_optimization_problem(){
         num_bdy_patches_in_set = fea_modules[imodule]->bdy_patches_in_set.stride(iboundary);
 
         //loop over boundary patches for this boundary set
-        if(simparam_dynamic_opt.thick_condition_boundary){
+        if(simparam.optimization_options.thick_condition_boundary){
           for (int bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches_in_set; bdy_patch_gid++){
                   
             // get the global id for this boundary patch
@@ -1402,7 +1346,7 @@ void Explicit_Solver::setup_optimization_problem(){
     vec_array Element_Densities_Lower_Bound("Element Densities_Lower_Bound", rnum_elem, 1);
     for(int ielem = 0; ielem < rnum_elem; ielem++){
       Element_Densities_Upper_Bound(ielem,0) = 1;
-      Element_Densities_Lower_Bound(ielem,0) = simparam_dynamic_opt.optimization_options.value().density_epsilon;
+      Element_Densities_Lower_Bound(ielem,0) = simparam.optimization_options.density_epsilon;
     }
 
     //create global vector
@@ -1718,7 +1662,7 @@ void Explicit_Solver::sort_information(){
   */
 
   //sorted nodal density information
-  if(simparam_dynamic_opt.topology_optimization_on){
+  if(simparam.topology_optimization_on){
     sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
     sorted_node_densities_distributed->doImport(*design_node_densities_distributed, *node_sorting_importer, Tpetra::INSERT);
   }
@@ -1887,17 +1831,6 @@ void Explicit_Solver::parallel_tecplot_writer(){
   int temp_convert;
   int noutput, nvector;
   bool displace_geometry = false;
-   /*
-  int displacement_index;
-  if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-    displacement_index = fea_modules[displacement_module]->displacement_index;
-  }
-  
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->compute_output();
-  }
-  */
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   
@@ -1907,7 +1840,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
   const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_node_velocities = sorted_node_velocities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_node_densities;
-  if(simparam_dynamic_opt.topology_optimization_on){
+  if(simparam.topology_optimization_on){
     sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2136,17 +2069,6 @@ void Explicit_Solver::parallel_vtk_writer(){
   int buffer_size_per_node_line;
   int nlocal_sorted_nodes;
   GO first_node_global_id;
-   /*
-  int displacement_index;
-  if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-    displacement_index = fea_modules[displacement_module]->displacement_index;
-  }
-  
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->compute_output();
-  }
-  */
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
   
@@ -2159,7 +2081,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_element_densities = sorted_element_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array sorted_node_densities;
-  if(simparam_dynamic_opt.topology_optimization_on){
+  if(simparam.topology_optimization_on){
     sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
 
@@ -2443,7 +2365,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
     //convert node ordering
-    if(simparam_dynamic_opt.topology_optimization_on)
+    if(simparam.topology_optimization_on)
 		  current_line_stream << std::left << std::setw(25) << sorted_node_densities(nodeline,0) << std::endl;
     else
 		  current_line_stream << std::left << std::setw(25) << 1 << std::endl;
@@ -2587,16 +2509,6 @@ void Explicit_Solver::tecplot_writer(){
   bool displace_geometry = false;
   const_host_vec_array current_collected_output;
   int displacement_index;
-  /*
-  if(displacement_module!=-1){
-    displace_geometry = fea_modules[displacement_module]->displaced_mesh_flag;
-    displacement_index = fea_modules[displacement_module]->displacement_index;
-  }
-  
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->compute_output();
-  }
-  */
   collect_information();
   //set host views of the collected data to print out from
   const_host_vec_array collected_node_coords = collected_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3306,11 +3218,11 @@ void Explicit_Solver::ensight_writer(){
 
 void Explicit_Solver::init_design(){
   int num_dim = simparam.num_dims;
-  bool nodal_density_flag = simparam_dynamic_opt.nodal_density_flag;
+  bool nodal_density_flag = simparam.nodal_density_flag;
 
   //set densities
   if(nodal_density_flag){
-    if(!simparam.restart_file){
+    if (!simparam.restart_file) {
       design_node_densities_distributed = Teuchos::rcp(new MV(map, 1));
       host_vec_array node_densities = design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
       //notify that the host view is going to be modified in the file readin

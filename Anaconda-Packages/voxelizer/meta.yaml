@@ -15,8 +15,8 @@ requirements:
     - cmake >=3.17.0
     - {{ compiler('c') }} ={{ compiler_version }}
     - {{ compiler('cxx') }} ={{ compiler_version }}
-    - elements
   host:
+    - elements
     - python
     - pybind11
     - setuptools

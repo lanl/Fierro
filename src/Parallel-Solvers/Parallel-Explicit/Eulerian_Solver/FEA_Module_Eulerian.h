@@ -45,9 +45,9 @@
 #include "node_combination.h"
 #include "Solver.h"
 #include "FEA_Module.h"
-#include "Simulation_Parameters_Eulerian.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
+#include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
+#include "Simulation_Parameters/FEA_Module/Eulerian_Parameters.h"
 
 class Explicit_Solver_Eulerian;
 
@@ -263,6 +263,9 @@ public:
 
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;
+
+  // for storing global variables used in user material model
+  DCArrayKokkos <double> state_vars;
 
   // Dual Views of the corner struct variables
   DViewCArrayKokkos <double> corner_force;

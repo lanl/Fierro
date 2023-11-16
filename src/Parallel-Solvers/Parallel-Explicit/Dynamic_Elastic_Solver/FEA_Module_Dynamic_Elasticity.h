@@ -45,19 +45,17 @@
 #include "node_combination.h"
 #include "Solver.h"
 #include "FEA_Module.h"
-#include "Simulation_Parameters.h"
-#include "Simulation_Parameters_Dynamic_Elasticity.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "material_models.h"
 
 class Explicit_Solver;
 
-class FEA_Module_Dynamic_Elasticity: public FEA_Module{
+class FEA_Module_Dynamic_Elasticity: public FEA_Module {
 
 public:
   
-  FEA_Module_Dynamic_Elasticity(Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
+  FEA_Module_Dynamic_Elasticity( Dynamic_Elasticity_Parameters& params, Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
   ~FEA_Module_Dynamic_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -229,10 +227,6 @@ public:
                           const DViewCArrayKokkos <double> &node_vel,
                           const double vol) const;
   
-  void tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
-                mesh_t &mesh,
-                const DViewCArrayKokkos <double> &node_coords);
-
   void boundary_velocity(const mesh_t &mesh,
                          const DCArrayKokkos <boundary_t> &boundary,
                          DViewCArrayKokkos <double> &node_vel);
@@ -242,11 +236,15 @@ public:
                           vec_array &node_adjoint,
                           vec_array &node_phi_adjoint);
   
+  void tag_bdys(const DCArrayKokkos <boundary_t> &boundary,
+                mesh_t &mesh,
+                const DViewCArrayKokkos <double> &node_coords);
+
   KOKKOS_INLINE_FUNCTION 
-  size_t check_bdy(const size_t patch_gid,
+  bool check_bdy(const size_t patch_gid,
                    const int num_dim,
                    const int num_nodes_in_patch,
-                   const int this_bc_tag,
+                   const BOUNDARY_TYPE this_bc_tag,
                    const double val,
                    const DViewCArrayKokkos <double> &node_coords,
                    const size_t rk_level) const;
@@ -303,7 +301,7 @@ public:
                       const double rk_alpha,
                       const size_t cycle);
 
-  void build_boundry_node_sets(const DCArrayKokkos <boundary_t> &boundary, mesh_t &mesh);
+  void build_boundry_node_sets(mesh_t &mesh);
   
   void init_boundaries();
 
@@ -439,9 +437,8 @@ public:
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   //end elastic TO data
   
-  Simulation_Parameters_Dynamic_Elasticity simparam;
-  Simulation_Parameters_Elasticity simparam_elasticity;
-  Simulation_Parameters_Dynamic_Optimization simparam_dynamic_opt;
+  Dynamic_Elasticity_Parameters module_params;
+  Simulation_Parameters_Explicit simparam;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;
@@ -524,7 +521,7 @@ public:
   Teuchos::RCP<MAT> distributed_force_gradient_velocities;
 
   std::vector<real_t> time_data;
-  int max_time_steps, last_time_step;
+  unsigned long max_time_steps, last_time_step;
 
   // ---------------------------------------------------------------------
   //    state data type declarations (must stay in scope for output after run)
@@ -555,6 +552,9 @@ public:
 
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;
+
+  // for storing state variables used in user material model
+  DCArrayKokkos <double> state_vars;
 
   //elem_user_output_vars allow users to output variables of interest per element
   DCArrayKokkos <double> elem_user_output_vars;

@@ -10,7 +10,7 @@ source:
   md5: 24d973894e2e334c6ac9436d8b16f7cc
 
 build:
-  number: 1
+  number: 2
 
 requirements:
   build:

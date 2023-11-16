@@ -65,7 +65,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "FEA_Module_Inertial.h"
-#include "Simulation_Parameters_Inertial.h"
+#include "Simulation_Parameters/FEA_Module/Inertial_Parameters.h"
 #include "Solver.h"
 
 #define MAX_ELEM_NODES 8
@@ -74,20 +74,21 @@
 using namespace utils;
 
 
-FEA_Module_Inertial::FEA_Module_Inertial(Solver *Solver_Pointer, const int my_fea_module_index) : FEA_Module(Solver_Pointer){
+FEA_Module_Inertial::FEA_Module_Inertial(
+      Inertial_Parameters& params, Solver *Solver_Pointer,
+      const int my_fea_module_index)
+    : FEA_Module(Solver_Pointer) {
   
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
-  Module_Type = "Inertial";
+  Module_Type = FEA_MODULE_TYPE::Inertial;
 
   //acquire base class data from existing simparam in solver (gets yaml options etc.)
+  module_params = params;
   simparam = Solver_Pointer->simparam;
-  
-  //sets base class simparam pointer to avoid instancing the base simparam twice
-  FEA_Module::simparam = simparam;
 
   //TO parameters
-  nodal_density_flag = simparam.nodal_density;
+  nodal_density_flag = simparam.nodal_density_flag;
 
   //property initialization flags
   mass_init = false;
@@ -136,13 +137,10 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
     all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   const_host_vec_array all_design_densities;
-  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -180,6 +178,33 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+  
+  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
+  }
+  else{
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
+  }
 
   //loop over elements and use quadrature rule to compute volume from Jacobian determinant
   for(int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++){
@@ -188,7 +213,7 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
     if(nodal_density_flag){
     //acquire set of nodes for this local element
     for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
@@ -333,13 +358,10 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
     all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   }
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
   const_host_vec_array all_node_densities;
-  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -377,7 +399,34 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
-
+  
+  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
+  }
+  else{
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
+  }
+  
   //initialize design gradients to 0
   for(int init = 0; init < nlocal_nodes; init++)
     design_gradients(init,0) = 0;
@@ -386,7 +435,7 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
   for(int ielem = 0; ielem < rnum_elem; ielem++){
     //acquire set of nodes for this local element
     for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
@@ -515,18 +564,42 @@ void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_de
   if(use_initial_coords)
     all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_design_densities;
-  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
   GO global_element_index;
-
+  
+  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
+  }
+  else{
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
+  }
+  
   real_t Jacobian, current_density, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
@@ -568,7 +641,7 @@ void FEA_Module_Inertial::compute_element_moments(const_host_vec_array design_de
     ielem = all_element_map->getLocalElement(global_element_index);
     //acquire set of nodes for this local element
     for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
@@ -760,17 +833,42 @@ void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_v
   if(use_initial_coords)
     all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
   const_host_vec_array all_node_densities;
-  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
   GO global_element_index;
+  
+  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
+  }
+  else{
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
+  }
+  
   
   real_t Jacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -815,7 +913,7 @@ void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_v
   for(int ielem = 0; ielem < rnum_elem; ielem++){
     //acquire set of nodes for this local element
     for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
@@ -968,7 +1066,7 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
   //initialize memory for volume storage
   host_vec_array Element_Masses = Global_Element_Masses->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   host_vec_array Element_Moments_of_Inertia;
-
+  
   if(inertia_component==0) Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_xx->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   if(inertia_component==1) Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_yy->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
   if(inertia_component==2) Element_Moments_of_Inertia = Global_Element_Moments_of_Inertia_zz->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
@@ -983,34 +1081,31 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
   if(use_initial_coords)
     all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_design_densities;
-  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
-  all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    all_design_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
   double inertia_center[3];
-  if(simparam.enable_inertia_center[0]){
-    inertia_center[0] = simparam.moment_of_inertia_center[0];
+  if(module_params.enable_inertia_center[0]){
+    inertia_center[0] = module_params.moment_of_inertia_center[0];
   }
   else{
     inertia_center[0] = center_of_mass[0];
   }
-  if(simparam.enable_inertia_center[1]){
-    inertia_center[1] = simparam.moment_of_inertia_center[1];
+  if(module_params.enable_inertia_center[1]){
+    inertia_center[1] = module_params.moment_of_inertia_center[1];
   }
   else{
     inertia_center[1] = center_of_mass[1];
   }
   if(num_dim==3){
-    if(simparam.enable_inertia_center[2]){
-      inertia_center[2] = simparam.moment_of_inertia_center[2];
+    if(module_params.enable_inertia_center[2]){
+      inertia_center[2] = module_params.moment_of_inertia_center[2];
     }
     else{
       inertia_center[2] = center_of_mass[2];
     }
   }
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -1052,13 +1147,40 @@ void FEA_Module_Inertial::compute_element_moments_of_inertia(const_host_vec_arra
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
 
+  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
+  }
+  else{
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
+  }
+
   //loop over elements and use quadrature rule to compute volume from Jacobian determinant
   for(int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++){
     global_element_index = element_map->getGlobalElement(nonoverlapping_ielem);
     ielem = all_element_map->getLocalElement(global_element_index);
     //acquire set of nodes for this local element
     for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
@@ -1267,34 +1389,59 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
   if(use_initial_coords)
     all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
   double inertia_center[3];
-  if(simparam.enable_inertia_center[0]){
-    inertia_center[0] = simparam.moment_of_inertia_center[0];
+  
+  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
+  }
+  else{
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
+  }
+  
+  if(module_params.enable_inertia_center[0]){
+    inertia_center[0] = module_params.moment_of_inertia_center[0];
   }
   else{
     inertia_center[0] = center_of_mass[0];
   }
-  if(simparam.enable_inertia_center[1]){
-    inertia_center[1] = simparam.moment_of_inertia_center[1];
+  if(module_params.enable_inertia_center[1]){
+    inertia_center[1] = module_params.moment_of_inertia_center[1];
   }
   else{
     inertia_center[1] = center_of_mass[1];
   }
   if(num_dim==3){
-    if(simparam.enable_inertia_center[2]){
-      inertia_center[2] = simparam.moment_of_inertia_center[2];
+    if(module_params.enable_inertia_center[2]){
+      inertia_center[2] = module_params.moment_of_inertia_center[2];
     }
     else{
       inertia_center[2] = center_of_mass[2];
     }
   }
   const_host_vec_array all_node_densities;
-  //bool nodal_density_flag = simparam->nodal_density_flag;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -1344,7 +1491,7 @@ void FEA_Module_Inertial::compute_moment_of_inertia_gradients(const_host_vec_arr
   for(int ielem = 0; ielem < rnum_elem; ielem++){
     //acquire set of nodes for this local element
     for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
@@ -1528,9 +1675,7 @@ void FEA_Module_Inertial::compute_element_volumes(){
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   host_vec_array Element_Volumes = Global_Element_Volumes->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-  int num_dim = simparam.num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
   LO ielem;
@@ -1567,6 +1712,34 @@ void FEA_Module_Inertial::compute_element_volumes(){
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+  
+  Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+  if((active_node_ordering_convention == Solver::ENSIGHT && num_dim==3)||(active_node_ordering_convention == Solver::IJK && num_dim==2)){
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 3;
+    convert_node_order(3) = 2;
+    if(num_dim == 3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 7;
+      convert_node_order(7) = 6;
+    }
+  }
+  else{
+    convert_node_order(0) = 0;
+    convert_node_order(1) = 1;
+    convert_node_order(2) = 2;
+    convert_node_order(3) = 3;
+    if(num_dim==3){
+      convert_node_order(4) = 4;
+      convert_node_order(5) = 5;
+      convert_node_order(6) = 6;
+      convert_node_order(7) = 7;
+    }
+  }
+  
 
   //loop over elements and use quadrature rule to compute volume from Jacobian determinant
   for(int nonoverlapping_ielem = 0; nonoverlapping_ielem < nonoverlap_nelements; nonoverlapping_ielem++){
@@ -1577,7 +1750,7 @@ void FEA_Module_Inertial::compute_element_volumes(){
 
     //acquire set of nodes for this local element
     for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
-      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, convert_node_order(node_loop)));
       nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
       nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
       nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);

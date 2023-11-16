@@ -981,6 +981,7 @@ class Ui_MainWindow(object):
         self.BApplyBC.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(3))
         self.BSolverSettings.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
         self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(5))
+        self.VoxelResolution = (1., 1., 1.)
         
         # Upload Geometry
         def geometry_upload_click():
@@ -1047,7 +1048,7 @@ class Ui_MainWindow(object):
                 else:
                     pvsimple.Delete(self.threshold)
                 
-                fierro_voxelizer.create_voxel_vtk(
+                self.VoxelResolution = fierro_voxelizer.create_voxel_vtk(
                     b3_filename[0],
                     VTK_OUTPUT,
                     int(self.INNumberOfVoxelsX.text()),
@@ -1171,7 +1172,8 @@ class Ui_MainWindow(object):
             evpfft_lattice_input.write(modes)
             dimensions = str(int(self.INNumberOfVoxelsX.text())) + ' ' + str(int(self.INNumberOfVoxelsY.text())) + ' ' + str(int(self.INNumberOfVoxelsZ.text())) + '               x-dim, y-dim, z-dim\n'
             evpfft_lattice_input.write(dimensions)
-            nph_delt = '2                      number of phases (nph)\n' + '1.  1.  1.             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
+            dx, dy, dz = self.VoxelResolution
+            nph_delt = '2                      number of phases (nph)\n' + f'{dx:.4f} {dy:.4f} {dz:.4f}             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
             evpfft_lattice_input.write(nph_delt)
             evpfft_lattice_input.write(f'{VTK_OUTPUT}\n')
             phases = '*INFORMATION ABOUT PHASE #1\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n' + '*INFORMATION ABOUT PHASE #2\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + f'{PLASTIC_PARAMETERS}\n' + f'{ELASTIC_PARAMETERS}\n'

@@ -31,8 +31,6 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_SGH.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver.h"
 
@@ -57,7 +55,7 @@
 ------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
-  const size_t rk_level = simparam.rk_num_bins - 1;
+  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
   //local variable for host view in the dual view
   int num_dim = simparam.num_dims;
   int nodes_per_elem = max_nodes_per_element;
@@ -67,10 +65,10 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   size_t access_index, row_access_index, row_counter;
   GO global_index, global_dof_index;
   LO local_dof_index;
-  const size_t num_fills = simparam.region_options.size();
-  const size_t rk_num_bins = simparam.rk_num_bins;
-  const size_t num_bcs = simparam.boundary_conditions.size();
-  const size_t num_materials = simparam.material_options.size();
+  const size_t num_fills = simparam.regions.size();
+  const size_t rk_num_bins = simparam.dynamic_options.rk_num_bins;
+  const size_t num_bcs = module_params.boundary_conditions.size();
+  const size_t num_materials = simparam.materials.size();
   real_t objective_accumulation;
 
   // --- Read in the nodes in the mesh ---
@@ -78,11 +76,11 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
   int nranks = Explicit_Solver_Pointer_->nranks;
 
   const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
   
-  std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt.FEA_Module_My_TO_Modules;
+  std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam.FEA_Module_My_TO_Modules;
   problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
   ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
@@ -230,7 +228,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
             elem_coords[2] = elem_coords[2]/num_nodes_in_elem;
                 
             // default is not to fill the element
-            bool fill_this = mat_fill(f_id).contains(elem_coords);
+            bool fill_this = mat_fill(f_id).volume.contains(elem_coords);
                  
             // paint the material state on the element
             if (fill_this){
@@ -247,7 +245,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 // specific internal energy
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 		
-                elem_mat_id(elem_gid) = mat_fill(f_id).mat_id;
+                elem_mat_id(elem_gid) = mat_fill(f_id).material_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
                 
                 // --- stress tensor ---
@@ -266,6 +264,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                                          elem_stress,
                                          elem_gid,
                                          elem_mat_id(elem_gid),
+                                         state_vars,
                                          global_vars,
                                          elem_user_output_vars,
                                          elem_sspd,
@@ -277,6 +276,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                                             elem_stress,
                                             elem_gid,
                                             elem_mat_id(elem_gid),
+                                            state_vars,
                                             global_vars,
                                             elem_user_output_vars,
                                             elem_sspd,
@@ -497,7 +497,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
     Kokkos::fence();
 
     //update stiffness matrix
-    if(simparam_dynamic_opt.topology_optimization_on||simparam_dynamic_opt.shape_optimization_on){
+    if(simparam.topology_optimization_on||simparam.shape_optimization_on){
       //assemble_matrix();
     }
     
@@ -526,9 +526,9 @@ double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const C
 --------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
-  const size_t rk_level = simparam.rk_num_bins - 1;
+  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   real_t global_dt;
@@ -544,20 +544,19 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
   if(myrank==0)
     std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
 
-  for (long unsigned cycle = last_time_step; cycle >= 0; cycle--) {
+  for (int cycle = last_time_step; cycle >= 0; cycle--) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
-    
     //print
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==last_time_step){
         if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+          printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       }
           // print time step every 10 cycles
-      else if (cycle%20==0){
+      else if (cycle%1==0){
         if(myrank==0)
-          printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
+          printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       } // end if
     }
     //else if (cycle==1){
@@ -732,7 +731,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       vec_array midpoint_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       vec_array phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       vec_array psi_midpoint_adjoint_vector =  psi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
-
+      
       //half step update for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         real_t rate_of_change;
@@ -811,6 +810,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       psi_midpoint_adjoint_vector =  (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
+      
       //full step update with midpoint gradient for RK2 scheme
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         real_t rate_of_change;
@@ -858,7 +858,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         }
       }); // end parallel for
       Kokkos::fence();
-
       //half step update for RK2 scheme
       FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
         real_t rate_of_change;
@@ -882,9 +881,14 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       boundary_adjoint(*mesh, boundary,current_adjoint_vector, phi_current_adjoint_vector, psi_midpoint_adjoint_vector);
 
     } //end view scope
+    
 
     comm_adjoint_vectors(cycle);
     //phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+    
+      //debug
+      if(cycle==0)
+      std::cout << "REACHED THIS STEP OF ADJOINT" << std::endl;
   }
 }
 
@@ -895,7 +899,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
 void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
   const DCArrayKokkos <material_t> material = simparam.material;
   const int num_dim = simparam.num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
@@ -910,96 +914,12 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
 
   compute_topology_optimization_adjoint_full();
 
+  
+
   { //view scope
     vec_array design_gradients = design_gradients_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     const_vec_array design_densities = design_densities_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
     //compute design gradients
-    FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-      design_gradients(node_id,0) = 0;
-    }); // end parallel for
-    Kokkos::fence();
-
-    //gradient contribution from kinetic energy v(dM/drho)v product.
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
-        if(myrank==0){
-          std::cout << "v*dM/drho*v term" << std::endl;
-        }
-    }
-
-    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
-      //compute timestep from time data
-      global_dt = time_data[cycle+1] - time_data[cycle];
-      
-      //print
-      if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
-        if (cycle==0){
-          if(myrank==0)
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-        }
-            // print time step every 10 cycles
-        else if (cycle%20==0){
-          if(myrank==0)
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
-        } // end if
-      }
-
-      //compute adjoint vector for this data point; use velocity midpoint
-      //view scope
-      {
-        const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_velocity_vector = (*forward_solve_velocity_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle+1]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-        
-        FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
-          size_t node_id;
-          size_t corner_id;
-          real_t inner_product;
-          //std::cout << elem_mass(elem_id) <<std::endl;
-          //current_nodal_velocities
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            node_id = nodes_in_elem(elem_id, inode);
-            //midpoint rule for integration being used; add velocities and divide by 2
-            current_element_velocities(inode,0) = (current_velocity_vector(node_id,0) + next_velocity_vector(node_id,0))/2;
-            current_element_velocities(inode,1) = (current_velocity_vector(node_id,1) + next_velocity_vector(node_id,1))/2;
-            if(num_dim==3)
-            current_element_velocities(inode,2) = (current_velocity_vector(node_id,2) + next_velocity_vector(node_id,2))/2;
-          }
-
-          inner_product = 0;
-          for(int ifill=0; ifill < num_nodes_in_elem; ifill++){
-            node_id = nodes_in_elem(elem_id, ifill);
-            for(int idim=0; idim < num_dim; idim++){
-              inner_product += elem_mass(elem_id)*current_element_velocities(ifill,idim)*current_element_velocities(ifill,idim);
-            }
-          }
-
-          for (int inode = 0; inode < num_nodes_in_elem; inode++){
-            //compute gradient of local element contribution to v^t*M*v product
-            corner_id = elem_id*num_nodes_in_elem + inode;
-            corner_value_storage(corner_id) = inner_product*global_dt/relative_element_densities(elem_id);
-          }
-          
-        }); // end parallel for
-        Kokkos::fence();
-        
-        //accumulate node values from corner storage
-        //multiply
-        FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
-          size_t corner_id;
-          for(int icorner=0; icorner < num_corners_in_node(node_id); icorner++){
-            corner_id = corners_in_node(node_id,icorner);
-            design_gradients(node_id,0) += corner_value_storage(corner_id);
-          }
-        }); // end parallel for
-        Kokkos::fence();
-
-      } //end view scope
-
-    }
-    
-
-    //multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
       design_gradients(node_id,0) *=0.5/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
       //design_gradients(node_id,0) =0.00001;
@@ -1007,17 +927,18 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     Kokkos::fence();
 
     //gradient contribution from time derivative of adjoint \dot{lambda}(dM/drho)v product.
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
         if(myrank==0){
           std::cout << "gradient term involving adjoint derivative" << std::endl;
         }
     }
 
-    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print
-      if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+      if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+
         if (cycle==0){
           if(myrank==0)
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -1089,17 +1010,18 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     }
 
     //gradient contribution from time derivative of psi_adjoint \dot{psi}(dM_E/drho)e product.
-    if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
         if(myrank==0){
           std::cout << "gradient term involving adjoint derivative" << std::endl;
         }
     }
 
-    for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+    for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
       //compute timestep from time data
       global_dt = time_data[cycle+1] - time_data[cycle];
       //print
-      if(simparam.time_variables.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+      if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+
         if (cycle==0){
           if(myrank==0)
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
@@ -1270,8 +1192,8 @@ void FEA_Module_SGH::init_assembly(){
   int local_node_index, current_column_index;
   size_t max_stride = 0;
   size_t nodes_per_element;
-  nodal_density_flag = simparam_dynamic_opt.nodal_density_flag;
-  penalty_power = simparam_dynamic_opt.penalty_power;
+  nodal_density_flag = simparam.nodal_density_flag;
+  penalty_power = simparam.optimization_options.simp_penalty_power;
   
   //allocate stride arrays
   CArrayKokkos <size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
@@ -1615,7 +1537,7 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
     //print_flag.host(0) = false;
     //print_flag.update_device();
    
-    const size_t rk_level = simparam.rk_num_bins - 1; 
+    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1; 
     int num_dims = simparam.num_dims;
     // Loop over boundary sets
     for (size_t bdy_set=0; bdy_set<num_bdy_sets; bdy_set++){
@@ -1624,13 +1546,13 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
         FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
                 
             // reflected (boundary array is on the device)
-            if (boundary(bdy_set).condition_type == BOUNDARY_HYDRO_CONDITION::reflected){
+            if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::reflected){
             
                 // directions with hydro_bc:
                 // x_plane  = 0,
                 // y_plane  = 1,
                 // z_plane  = 2,
-                size_t direction = boundary(bdy_set).planar_surface_index();
+                size_t direction = boundary(bdy_set).surface.planar_surface_index();
                 
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                     
@@ -1640,7 +1562,7 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
                 //node_phi_adjoint(bdy_node_gid, direction) = 0.0;
                         
             }
-            else if (boundary(bdy_set).condition_type == BOUNDARY_HYDRO_CONDITION::fixed){
+            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::fixed_position){
                 
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                 

@@ -55,7 +55,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 
 using namespace mtr;
 
@@ -135,6 +135,8 @@ public:
 
   virtual int solve() {return 0;}
 
+  virtual int eigensolve() {return 0;}
+
   virtual void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header) {}
 
   virtual void linear_solver_parameters() {}
@@ -194,7 +196,7 @@ public:
   virtual void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed) {}
 
   //interfacing information
-  std::string Module_Type;
+  FEA_MODULE_TYPE Module_Type;
   int last_compute_step;
 
   //output stream
@@ -207,6 +209,8 @@ public:
 
   Simulation_Parameters simparam;
   Solver *Solver_Pointer_;
+  int num_dim;
+  int num_gauss_points;
   int my_fea_module_index_;
   
   //Local FEA data
@@ -320,7 +324,6 @@ public:
   //nodal DOF output data
   enum vector_styles {NODAL, DOF}; //multivector can store as ndof by 1 or nnode by vector_size
   int noutput;
-  bool displaced_mesh_flag;
   int displacement_index;
   std::vector<std::vector<std::string>> output_dof_names;
   std::vector<const_host_vec_array> module_outputs;

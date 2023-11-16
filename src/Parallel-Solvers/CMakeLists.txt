@@ -65,6 +65,7 @@ target_link_libraries (
 )
 
 # Material Models
+include_directories(.)
 include_directories(Material-Models)
 add_subdirectory(Material-Models)
 

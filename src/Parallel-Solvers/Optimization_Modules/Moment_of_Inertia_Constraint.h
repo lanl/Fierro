@@ -57,7 +57,6 @@
 #include "ROL_Constraint.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
 #include "FEA_Module_Inertial.h"
-#include "Simulation_Parameters_Inertial.h"
 
 class MomentOfInertiaConstraint_TopOpt : public ROL::Constraint<real_t> {
   

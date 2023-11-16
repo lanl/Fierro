@@ -31,9 +31,17 @@ fi
 
 # Configure EVPFFT using CMake
 cmake_options=(
-    -D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib64/cmake/Trilinos
     -D CMAKE_PREFIX_PATH="$ELEMENTS_INSTALL_DIR"
 )
+if [ ! -d "${TRILINOS_INSTALL_DIR}/lib" ]; then
+    cmake_options+=(
+        -D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib64/cmake/Trilinos
+    )
+else
+    cmake_options+=(
+        -D Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
+    )
+fi
 
 if [ "$solver" = "all" ]; then
     cmake_options+=(
@@ -52,19 +60,25 @@ elif [ "$solver" = "explicit-evpfft" ]; then
         -D BUILD_EVPFFT_FIERRO=ON
         -D CMAKE_PREFIX_PATH="$HEFFTE_INSTALL_DIR;$HDF5_INSTALL_DIR;$ELEMENTS_INSTALL_DIR"
     )
-if [ "$heffte_build_type" = "cufft" ]; then
+    if [ "$heffte_build_type" = "cufft" ]; then
+        cmake_options+=(
+            -D USE_CUFFT=ON
+        )   
+    elif [ "$heffte_build_type" = "rocfft" ]; then
+        cmake_options+=(
+            -D USE_ROCFFT=ON
+        )   
+    else
+        cmake_options+=(
+            -D USE_FFTW=ON
+        )
+    fi
+elif [ "$solver" = "explicit-evp" ]; then
     cmake_options+=(
-        -D USE_CUFFT=ON
-    )   
-elif [ "$heffte_build_type" = "rocfft" ]; then
-    cmake_options+=(
-        -D USE_ROCFFT=ON
-    )   
-else
-    cmake_options+=(
-        -D USE_FFTW=ON
+        -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
+        -D BUILD_IMPLICIT_SOLVER=OFF
+        -D BUILD_EVP_FIERRO=ON
     )
-fi
 else
     cmake_options+=(
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON

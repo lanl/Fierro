@@ -42,7 +42,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 #include "FEA_Module.h"
 #include <string>
 #include <Teuchos_ScalarTraits.hpp>
@@ -115,12 +115,12 @@ public:
   typedef Kokkos::View<const GO**, array_layout, HostSpace, memory_traits> const_host_elem_conn_array;
   typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
 
-  Solver();
+  Solver(Simulation_Parameters& _simparam);
   virtual ~Solver();
   
   virtual void setup() {}
 
-  virtual void run(int argc, char *argv[]) = 0;
+  virtual void run() = 0;
 
   virtual void solver_setup() {}
 
@@ -176,6 +176,7 @@ public:
   //set of enabled FEA modules
   std::vector<FEA_MODULE_TYPE> fea_module_types;
   std::vector<FEA_Module*> fea_modules;
+  std::vector<bool> fea_modules_modal_analysis;
   std::set<FEA_MODULE_TYPE> fea_module_must_read;
   int nfea_modules;
   int displacement_module;

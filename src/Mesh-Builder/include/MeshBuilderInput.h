@@ -55,8 +55,6 @@ IMPL_YAML_SERIALIZABLE_FOR(MeshBuilderConfig, input, output)
 struct Input_Rectilinear
     : MeshBuilderInput::Register<Input_Rectilinear, MeshType::Box> {
 
-    Input_Rectilinear() { type = MeshType::Box; }
-
     std::vector<double> length {1, 1, 1};
     std::vector<int> num_elems {5, 5, 5};
     size_t p_order = 1;
@@ -121,8 +119,6 @@ IMPL_YAML_SERIALIZABLE_WITH_BASE(Input_Rectilinear, MeshBuilderInput, length, nu
 
 struct Input_Cylinder
     : Input_Rectilinear, MeshBuilderInput::Register<Input_Cylinder, MeshType::Cylinder> {
-    
-    Input_Cylinder() { type = MeshType::Cylinder; }
 
     double inner_radius = 0.;
     double start_angle  = 0.;
