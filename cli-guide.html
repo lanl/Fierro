@@ -37,7 +37,7 @@
             <!-- main content area -->
             <div class="col-sm-9 text-content">
                 <h1>Command Line Interface Guide</h1>
-                The <em>Fierro</em> command line interface (CLI) gives you direct access to the back-end functions without a GUI. This can be useful for making and running advanced configurations as well as for use on remote computing clusters.
+                The <em>Fierro</em> command line interface (CLI) gives you direct access to the back-end functions without a GUI. This can be useful for making and running advanced configurations as well as for use on remote computing clusters without display capabilities.
                 
                 <h2>Entry Points</h2>
                 <p>
@@ -46,12 +46,12 @@
                 </p>
                 <pre><code>fierro -h</code></pre>
                 <p>
-                    This will list as subcommands all of the available backend applications.
+                    This will list as subcommands all of the available backend applications as well as some useful tools integrated into <em>Fierro</em> that can be run as standalone executables as well.
                 </p>
 
-                <h3>Parallel Solvers</h3>
+                <h3>Physics Solvers</h3>
                 <p>
-                    Both the implicit static solver, and the explicit dynamics integrator take similar arguments in the form of a a Yaml configuration file.
+                    Both the implicit static solver, and the explicit dynamics simulator take similar arguments in the form of a a Yaml configuration file.
                     The specific syntax for invoking them can be shown by running the following commands:
                 </p>
 <pre><code>fierro parallel-explicit -h
@@ -67,77 +67,104 @@ fierro parallel-implicit -h</code></pre>
                     Note that most common configuration errors are caught by <em>Fierro</em> and you should pay attention to the feedback
                     provided if your Yaml file is not accepted.
                 </p>
-<pre><code>
-solver_type: Implicit
-num_dims: 3
-input_options:
-    mesh_file_format: ensight
-    mesh_file_name: TO_small_beam.geo
+<pre><code>num_dims: 3
+dynamic_options:
+    time_final: 1.0
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 2000000
+
+mesh_generation_options:
+    type: Box
+    origin: [0, 0, 0]
+    length: [1.2, 1.2, 1.2]
+    num_elems: [32, 32, 32]
 
 output_options:
-    graphics_step_frequency: 100
-
-fea_modules:
-    - type: Elasticity
-    # Dirichlet conditions
-    boundary_conditions:
-        - surface: z_plane
-        plane_position: 0.0
-        condition_type: fixed_displacement
-        displacement_value: 0.0
-            
-    # Loading/Neumann Conditions
-    loading_conditions:
-        - surface: z_plane
-        plane_position: 100.0
-        condition_type: surface_traction
-        component_x: 500
-        component_y: 0
-        component_z: 0
+    timer_output_level: thorough
+    output_file_format: vtk
+    graphics_step: 0.25
     
-    - type: Heat_Conduction
-    # Dirichlet conditions
+fea_module_parameters:
+    - type: SGH
+    material_id: 0
     boundary_conditions:
-        - surface: z_plane
-        plane_position: 0.0
-        condition_type: fixed_temperature
-        temperature_value: 293.0
+        # Tag X plane
+        - surface: 
+            type: x_plane
+            plane_position: 0.0
+        type: reflected
+                
+        # Tag Y plane
+        - surface: 
+            type: y_plane
+            plane_position: 0.0
+        type: reflected
+                
+        # Tag Z plane
+        - surface: 
+            type: z_plane
+            plane_position: 0.0
+        type: reflected
+                
+        # Tag X plane
+        - surface: 
+            type: x_plane
+            plane_position: 1.2
+        type: reflected
+                
+        # Tag Y plane
+        - surface: 
+            type: y_plane
+            plane_position: 1.2
+        type: reflected
+                
+        # Tag Z plane
+        - surface: 
+            type: z_plane
+            plane_position: 1.2
+        type: reflected
 
-    # Loading/Neumann Conditions
-    loading_conditions:
-        - surface: z_plane
-        plane_position: 100.0
-        condition_type: surface_heat_flux
-        #can be normal (q dot n) or coordinated (vector q) for curved surfaces
-        specification: normal
-        flux_value: -0.1
+materials:
+    - id: 0
+    eos_model: ideal_gas
+    strength_model: none
+    elastic_modulus: 10
+    poisson_ratio: 0.3
+    q1: 1.0
+    q2: 0
+    q1ex: 1.0
+    q2ex: 0.0
+    global_vars:
+        - 1.666666666666667
+        - 1.0E-14
+        - 1.0
 
-optimization_options:
-    optimization_process: topology_optimization
-    method_of_moving_asymptotes: false
-    density_epsilon: 0.00001
-    simp_penalty_power: 4
-    optimization_objective: multi_objective
-    #Weight coefficients should add up to 1
-    multi_objective_structure: linear
-    multi_objective_modules:
-        - type: minimize_thermal_resistance
-        weight_coefficient: 0.25
-        - type: minimize_compliance
-        weight_coefficient: 0.75
-
-    constraints:
-        - type: mass
-        relation: equality
-        value: 0.25
-        - type: moment_of_inertia
-        relation: equality
-        component: yy
-        value: 0.35
-        - type: moment_of_inertia
-        relation: equality
-        component: xy
-        value: 0.0    
+regions:
+    - volume: 
+        type: global
+    material_id: 0
+    den: 1.0
+    sie: 1.e-10
+        
+    velocity: cartesian
+    u: 0.0
+    v: 0.0
+    w: 0.0
+    # energy source initial conditions
+    - volume: 
+        type: sphere
+        radius1: 0.0
+        radius2: 0.0375
+    material_id: 0
+    den: 1.0
+    ie: 0.25833839995946534
+        
+    velocity: cartesian
+    u: 0.0
+    v: 0.0
+    w: 0.0
 </code></pre>
 
                 

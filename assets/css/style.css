@@ -619,8 +619,16 @@ Text Content
   margin-top: 1em;
 }
 
+.text-content > h5 {
+  margin-top: 0.5em;
+}
+
 .text-content p + p {
   margin-top: 1em;
+}
+
+.text-content img {
+  max-width: 100%;
 }
 
 /* 

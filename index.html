@@ -93,7 +93,7 @@ https://www.tooplate.com/view/2125-artxibition
     <!-- *** Project Description ***-->
     <div class="project-description">
         <div class="container">
-            <div class="row">
+            <div class="row text-content">
                 <div class="col-lg-9">
                     <div class="left-content">
                         <h4>Project Description</h4>
@@ -114,14 +114,14 @@ https://www.tooplate.com/view/2125-artxibition
                         <p>
                             Fierro is built on the ELEMENTS library that supports a diverse suite of element types, including high-order elements, and quadrature rules. The mesh class within the ELEMENTS library is designed for efficient calculations on unstructured meshes and to minimize memory usage. Fierro is designed to readily accommodate a range of numerical methods including continuous finite element, finite volume, and discontinuous Galerkin methods. Fierro is designed to support explicit and implicit time integration methods as well as optimization methods.
                         <p>
-                        <br/>
                             The linear Lagrangian finite element method for material dynamics in Fierro supports user developed material models and multiscale models for microstructure-aware simulations.  These multiscale models can also be run in a stand-alone manner to establish structure-property relationships.
+                        </p>
                         <p>
-                        <br/>
                             Fierro uniquely offers several compact-stencil, arbitrary-order Lagrangian finite element method for more efficient simulations.  These schemes use meshes that edges that can bend to accurately track large deformations in material dynamics.
+                        </p>
                         <p>
-                        <br/>
                             The implicit finite solver in Fierro is for simulating static or quasistatic thermal and mechanical applications.  Higher-order optimization methods work in concert with the thermal-mechanical implicit solvers for multiphysics topology optimization that satisfies multiple constraints.
+                        </p>
                     </div>
                 </div>
                 <div class="col-lg-3">
@@ -134,6 +134,23 @@ https://www.tooplate.com/view/2125-artxibition
                         <span><a href="https://github.com/lanl/Fierro">Fierro Github</a></span>
                     </div>
                 </div>
+
+                
+                <h2>Applications</h2>
+                <p>The <em>Fierro</em> collection of software includes several separate tools for different physical simulations. Some of which have Graphical User Interfaces for ease of use.</p>
+                <h4>EVPFFT</h4>
+                <p>
+                    Our Elasto-Viscoplastic FFT method predicts the micro-mechanical response and microstructure evolution of polycrystalline materials. This tool can be used
+                    to simulate the bulk response of a polycrystalline material under desired loading conditions.
+                </p>
+                <h4>Implicit Physics Sovler</h4>
+                <p>
+                    Our implicit physics solver can solve boundary value problems over a meshed geometry with provided boundary conditions (Neumann or Dirichlet).
+                </p>
+                <h4>Explicit Physics Sovler</h4>
+                <p>
+                    Our explicit physics solver can simulate high resolution dynamic evolution on a mesh given a range of boundary conditions, external forces, and initial conditions.
+                </p>
             </div>
         </div>
     </div>

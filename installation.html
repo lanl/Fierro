@@ -37,8 +37,7 @@
             <!-- main content area -->
             <div class="col-sm-9 text-content">
                 <h1>Installation</h1>
-                <p><em>Fierro</em> backend is designed to run on almost all hardware that you might want to use for a simulation. We support three CPU architectures (x86_64, arm64, ppc64le), as well as CUDA GPUs through nvcc and AMD GPUs through HIP.
-                    Additionally, we support both Linux and MacOS. To run <em>Fierro</em> on Windows we recommend making use of the
+                <p><em>Fierro</em> backend is designed to run on almost all hardware that you might want to use for a simulation. We support three CPU architectures (x86_64, arm64, ppc64le), as well as CUDA GPUs through nvcc and AMD GPUs through HIP. Additionally, we support both Linux and MacOS. To run <em>Fierro</em> on Windows we recommend making use of the
                     <a href="https://learn.microsoft.com/en-us/windows/wsl/install">Windows Subsystem for Linux</a>.
                 </p>
                 <p>
@@ -48,11 +47,10 @@
                     This can be seen in the package prefix (-cpu, -cuda, -hip).
                 </p>
 
-                <h2>Graphical User Interface</h2>
-                The <em>Fierro</em> GUI runs on Python and is available for all systems that the <em>Feirro</em> back-end can run on.
-
                 <h2>Supported Systems</h2>
-                Officially, the <em>Fierro</em> back-end solvers are tested for the following systems:
+                <p>
+                    Officially, the <em>Fierro</em> back-end solvers are tested for the following systems:
+                </p>
                 <table class="table">
                     <thead>
                         <tr>
@@ -107,96 +105,85 @@
                     *<em>AMD Builds through HIP are supported for x86_64 CPU architectures only</em>
                 </p>
 
-                <h2>Building From Source</h2>
+                <h2>Graphical User Interfaces</h2>
                 <p>
-                    While we maintain <em>Fierro</em> distributions for a variety of hardware/OS combinations, there may be cases where you need to build both <em>Fierro</em> and 
-                    its dependencies from scratch. One example is if you have custom low-level libraries that you need to link to that are not ABI compatible with the
-                    standard versions. When you build from source, the <em>Fierro</em> backend executables will be available in either the <code>Fierro/bin</code> 
-                    or <code>Fierro/build/bin</code> folders depending on where the build command was executed.
+                    The <em>Fierro</em> GUI applications run on Python and areis available for all systems that the <em>Feirro</em> back-end can run on. They can either be installed from the Anaconda distributions, or built from source.
+                </p>
+                <h5><a id="evpfft-gui-anchor">EVPFFT-GUI</a></h5>
+                <p>
+                    Our standalone EVPFFT-GUI software can be installed with:
+                </p>
+<pre><code>conda install evpfft_gui -c kwelsh-lanl -c conda-forge</code></pre>
+                <p>
+                    This will give you access to both the <code>evpfft</code> and <code>evpfft-gui</code> commands to launch the comamnd line EVPFFT backend or the associated graphical user interface, respectively.
+                </p>
+                <p>
+                    Additionally, EVPFFT-GUI can be built from source by navigating to <code>Fierro/python/EVPFFT-GUI</code> and running <code>pip install .</code> or <code>python setup.py install</code>. This application depends on:
+                    <li>EVPFFT</li>
+                    <li>Voxelizer</li>
                 </p>
 
-
-                <h3>1. Downloading Source Code</h3>
+                <h2>Backend Applications</h2>
                 <p>
-                    <em>Fierro</em> depends on both <a href="https://github.com/lanl/ELEMENTS">Elements</a> and <a href="https://trilinos.github.io/">Trilinos</a>. The <em>Fierro</em> 
-                    repository includes <a href="https://github.com/lanl/ELEMENTS">Elements</a> as a git submodule. To download both <em>Fierro</em> and <a href="https://github.com/lanl/ELEMENTS">Elements</a>,
-                    use the following command:
+                    To drive the different simulation software in <em>Fierro</em>, we have several backend applications. In general, the collection of backend applications provides a superset of the graphical user interface functionality and it may be necessary to use these applications directly depending on your workflows. Typically, these are bundled together and made available via the <em>Fierro</em> command line interface.
                 </p>
-<pre><code>git clone https://github.com/lanl/Fierro.git --recurse-submodules</code></pre>
-
-
-                <h3>2. Comprehensive Build Scripts</h3>
+                <h5><a id="evpfft-anchor">EVPFFT</a></h5>
                 <p>
-                    If <a href="https://trilinos.github.io/">Trilinos</a>
-                    is not already built with the correct packages/configuration on your machine we provide scripts for downloading a compatible version of 
-                    <a href="https://trilinos.github.io/">Trilinos</a> and building it inside of <em>Fierro</em> in addition to building <em>Fierro</em>.
-                    These scripts can be found in and should be executed from the <code>Fierro/Parallel-Solvers/scripts</code> folder. These scripts
-                    will check for the presence of Trilinos under <code>Fierro/Trilinos</code>, and if it isn't found, will download and build it with the
-                    correct arguments for the version of <em>Fierro</em> selected. Then it will invoke the top level CMakeLists.txt and build <em>Fierro</em>.
-                    Because this includes building <a href="https://trilinos.github.io/">Trilinos</a>, this can take quite some time.
+                    The elasto-viscoplastic fast fourier transform program simulates the response of polycrystalline microstructures under multiple types of load. It is available from the <code>fierro-evpfft</code> and <code>fierro-evpfft-cuda</code> Anaconda packages. Installing these directly will pull in all necessary dependencies and give you access to the software through the <code>evpfft</code> command. Example input files for this application can be found under <code>Fierro/src/EVPFFT/example_input_files</code>.
                 </p>
                 <p>
-                    Example for installing the parallel solvers, starting from the root Fierro folder:
+                    If you wish to build this application from source, there is a comprehensive build script available to configure the environment and build all of the necessary dependencies. To invoke the script, run:
+<pre><code>git clone https://github.com/lanl/Fierro.git --recurse-submodules
+cd src/EVPFFT/scripts/build-scripts
+source build-evpfft.sh
+</code></pre>
                 </p>
-<pre><code>cd scripts/all
-./build-it.sh &lt;SYSTEM&gt; &lt;PARALLELISM&gt; &lt;NUMBER_OF_COMPILE_THREADS&gt;</code></pre>
+                <h5>Implicit Solver</h5>
                 <p>
-                    SYSTEM accepts the values: "hpc", "macos", or "linux." When setting to "hpc", modules will be loaded into your environment. 
-                    PARALLELISM accepts the values: "cuda", "hip", "openmp", "serial". This determines which parallel backends will be used.
-                    NUMBER_OF_COMPILE_THREADS accepts an integer number of processes to use to compile <em>Fierro</em> and its dependencies. It is recommended that 
-                    this is set to the largest reasonable value for your system. However, setting it too high can prevent you from using the system effectively while it is compiling.
+                    The implicit solver for solving static equations can be acquired through the <code>fierro-cpu</code>, <code>fierro-cuda</code> (coming soon), and <code>fierro-hip</code> (coming soon) Anaconda packages. Installing these directly will pull in all necessary dependencies and give you access to the software through the <code>fierro</code> command. Example input files for this application can be found under <code>Fierro/src/Parallel-Solvers/Implicit-Lagrange/example_*.yaml</code>.
                 </p>
-                <h3>3. Leveraging Existing Trilinos Builds</h3>
                 <p>
-                    If you already have a compatible build of <a href="https://trilinos.github.io/">Trilinos</a> on your system, you do not need to re-build it.
-                    You can provide the Trilinos installation directory to CMake when building <em>Fierro</em> with the following commands:
+                    If you wish to build this application from source, there is a comprehensive build script available to configure the environment and build all of the necessary dependencies. To invoke the script, run:
+<pre><code>git clone https://github.com/lanl/Fierro.git --recurse-submodules
+cd scripts/implicit
+source build-fierro.sh
+</code></pre>
+                <p>Which will provide you with instructions on how to select which hardware you would like to compile <em>Fierro</em> for.</p>
                 </p>
-<pre><code>mkdir build; cd build
-cmake .. -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON -DTrilinos_DIR=&ltTRILINOS_INSTALL_DIRECTORY&gt
-make -j &ltNUMBER_OF_COMPILE_THREADS&gt</code></pre>
-                <p style="text-align:right;">
-                    *<em>See other scripts under Parallel-Solvers/scripts for example CMake commands.</em>
-                </p>
-                <h3>4. Building Against Anaconda Packages</h3>
+                <h5>Explicit Solver</h5>
                 <p>
-                    While building the whole dependency chain might be necessary, it is often sufficient to build <em>Fierro</em> against the Anaconda packages
-                    we provide for <a href="https://github.com/lanl/ELEMENTS">Elements</a> and <a href="https://trilinos.github.io/">Trilinos</a> and avoid the cumbersome
-                    task of building them yourself. 
-                    To make use of these packages you should start by selecting or creating an Anaconda environment to install them in. To create one, run: 
+                    The explicit solver for simulating dynamic time evolution can be acquired through the <code>fierro-cpu</code>, <code>fierro-cuda</code> (coming soon), and <code>fierro-hip</code> (coming soon) Anaconda packages. Installing these directly will pull in all necessary dependencies and give you access to the software through the <code>fierro</code> command. Example input files for this application can be found under <code>Fierro/src/Parallel-Solvers/Parallel-Explicit/example_*.yaml</code>.
                 </p>
-<pre><code>conda create -n my_fierro_env
-conda activate my_fierro_env</code></pre>
                 <p>
-                    Then you can install the primary dependencies into environemnt (making sure to replace "-cpu" with your desired GPU suffix).
+                    If you wish to build this application from source, there is a comprehensive build script available to configure the environment and build all of the necessary dependencies. To invoke the script, run:
                 </p>
-<pre><code>conda install elements fierro-trilinos-cpu -c kwelsh-lanl -c conda-forge</code></pre>
+<pre><code>git clone https://github.com/lanl/Fierro.git --recurse-submodules
+cd scripts/explicit
+source build-fierro.sh
+</code></pre>
+                <p>Which will provide you with instructions on how to select which hardware you would like to compile <em>Fierro</em> for.</p>
+                <h2>Tools</h2>
                 <p>
-                    The Trilinos and Elements dependencies will now be automatically located, and you can build the <em>Fierro</em> backend executables with CMake. 
-                    The following example builds the parallel solvers 
+                    In addition to the end to end tooling provided in the main backend application, some miscellaneous tools are available should you want to use them directly for your applications. All standalone tools listed here are available under the Fierro command line interface. While these tools do not depend on <a href="https://github.com/trilinos/Trilinos">Trilinos</a>, like some of the solvers, they do depend on <a href="https://github.com/lanl/ELEMENTS">Elements</a>. So to build them from source, ensure that the Elements submodule under <code>Fierro/lib</code> is checked out recursively.
                 </p>
-<pre><code>mkdir build; cd build
-cmake -DBUILD_PARALLEL_EXPLICIT_SOLVER=ON -DBUILD_IMPLICIT_SOLVER=ON -DBUILD_ELEMENTS=OFF ..
-make -j &ltNUMBER_OF_COMPILE_THREADS&gt</code></pre>
                 <p>
-                    If CMake is having trouble linking against either of the libraries found in the package, delete the CMakeCache in the build folder and try again.
-                    Anaconda uses the LDFLAGS environment variable to let CMake know where to look for libraries, but new values of this variable are ignored
-                    if an old one was cached during a previous build attempt.
+                    To build just the fierro command line interface and the extra tools, run (from the Fierro root):
                 </p>
-
-                
-                <h2>Installing Pre-built Binaries</h2>
+<pre><code>mkdir build
+cd build
+cmake .. -DBUILD_PARALLEL_EXPLICIT_SOLVER=OFF -DBUILD_IMPLICIT_SOLVER=OFF
+make
+</code></pre>
                 <p>
-                    If you only want to download the <em>Fierro</em> backends and configure existing models, you only need to install the fierro package.
+                    This will make the command line interface and extra tools available under <code>.../Fierro/build/bin</code>.
                 </p>
-<pre><code>conda install fierro -c kwelsh-lanl -c conda-forge</code></pre>
+                <h5>Mesh Generator</h5>
                 <p>
-                    When installing the pre-built binaries, the <em>Fierro</em> backend executables will be located in
-                    you Anaconda environment path and can be invoked from anywhere.
+                    If you want to run a test problem, or just generate a simple mesh, our mesh generator can help. It accepts desired mesh configuration via a Yaml input file and can generate both low order and high order mesh structures in either a cylindrical or rectangular configuration at your desired resolutions. To see input options, run <code>fierro mesh-generator -h</code>
                 </p>
-                <h2>Limitations</h2>
+                <h5>Voxelizer</h5>
                 <p>
-                    Currently only the CPU versions of <em>Fierro</em> are being hosted for anaconda installation. For a complete, up-to-date list of the currently available 
-                    Anaconda packages visit the official <a href="https://anaconda.org/kwelsh-lanl/repo">LANL Fierro Anaconda page</a>.
+                    Our backend voxelizer was designed for use in the EVPFFT-GUI but can be run standalone as well. It requires a binary STL mesh file as an input and will produce a voxel VTK mesh file as an output. To see more details on usage, run <code>fierro voxelizer -h</code>.
                 </p>
             </div>
         </div>

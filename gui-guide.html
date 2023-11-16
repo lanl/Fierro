@@ -21,6 +21,9 @@
     <link rel="stylesheet" type="text/css" href="assets/css/owl-carousel.css">
 
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
 </head>
 
 <body data-spy="scroll" data-target="#toc">
@@ -35,47 +38,68 @@
             <div class="col-sm-9 text-content">
                 <h1>GUI Guide</h1>
                 <p>
-                    The <em>Fierro</em> graphical interface is designed to give a simple interface for the most
-                    common use cases. This guide describes the steps to use <em>Fierro</em> to simulate material dynamics from this GUI.
+                    <em>Fierro</em> comes with two separate user interfaces for different workflows. 
+                    <li>The EVPFFT-GUI can be used to run the standalone EVPFFT program</li>
+                    <li>The Fierro-GUI (Coming Soon) allows you to configure dynamic simulation or topology optimization problems.</li>
+                    <b>Note:</b> if you are running any of the graphical user interfaces through WSL on windows, you may need to install and run an "X Server" on your Windows side to connect the WSL applications to the display. For testing, we use <a href="https://sourceforge.net/projects/vcxsrv/">VcXsrv</a>. Once the X server is running on Windows, you can connect your WSL terminal application to the display by setting the DISPLAY environment variable:
+<pre><code>export DISPLAY=localhost:0.0</code></pre>
                 </p>
-                <h2>1. Generating a mesh</h2>
+                <h2>EVPFFT-GUI</h2>
                 <p>
-                    A mesh is a (potentially non-uniform) spatial grid on which computation takes place. This is layer is connected with, but
-                    distinct from the model geometry (which is also sometimes referred to as a "mesh"). Our GUI offers options for either creating 
-                    a generic, regular, rectilinear grid mesh if you don't have one, or for laoding a mesh (.geo file) if you do. For best results,
-                    we recommend using an external meshing program to create a .geo mesh file for your specific geometry.
-                </p>
-                <h2>2. Selecting a Geometry</h2>
-                <p>
-                    After selecting a mesh, you can load a model geometry (.stl) from your computer. The model geometry will define a volume
-                    that can have a material assigned to it. After you select a geometry file, you will be prompted to specify a voxel resolution.
-                    This is used for rasterizing the geometry into the underlying mesh.
-                </p>
-                <h2>3. Assigning Material Properties</h2>
-                <p>
-                    Once you have a mesh and geometry loaded, you can then create and assign materials to regions of the mesh.
-                    First, you create the materials that you might want to use and specify the material properties. 
-                    Then, on the next window you can assign those materials either to the background mesh or to the voxelized volume.
-                </p>
-                <h2>4. Specifying Boundary Conditions</h2>
-                <p>
-                    You should now see a window where your voxelized geometry is being rendered. You can now add boundary conditions
-                    to the system and view all current boundaries in the geometry viewer.
-                </p>
-                <h2>5. Solver Settings</h2>
-                <p>
-                    The last step before running <em>Fierro</em> is to check the solver settings. Here you can edit how long the solver should run
-                    in simulated time, as well as control some of the bounds for timestepping.
-                </p>
-                <h2>6. Run &amp; View</h2>
-                <p>
-                    Once you have your problem configured correctly, you can run <em>Fierro</em>. This will invoke the back-end programs, giving
-                    you intermediate information about the progress.
+                    The EVPFTT-GUI is a Python based user interface that integrates with paraview to render initial conditions and results. The recommended way to 
+                    use the gui is through the anaconda package "evpfft_gui" available on our package repository. For more detailed installation instructions, 
+                    see <a href=installation.html>our installation guide</a>.
                 </p>
                 <p>
-                    Once the execution is finished, you are able to open the resulting evolution in <a href="https://www.paraview.org/">ParaView</a>
-                        directly from the GUI. 
+                    Once the EVPFFT-GUI is installed, it can be launched by running the <code>evpfft-gui</code> command.
                 </p>
+                <h3>1. Importing a Part</h3>
+                <p>
+                    The first step to running EVPFFT is importing a part geometry for analysis. EVPFFT operates on a voxelized grid, however the EVPFFT-GUI requires a triangle mesh in a binary STL format and will do the necessary voxelization automatically. To import a part, click the "Import Part" button followed by the "Upload Geometry File" button and select the input STL file. 
+                </p>
+                <img src="/assets/images/EVPFFT-GUI-Import.png"/>
+                <h2>2. Voxelization</h2>
+                <p>
+                    After selecting your part, you should see the STL rendered in the right window. From here, you can voxelize it at the desired resolution. Be aware that your mesh might look like it is scaled differently along X, Y and Z after voxelization, however, this is just a visual artifact of the voxelization process.
+                </p>
+                <img src="/assets/images/EVPFFT-GUI-MonkeySTL.png"/>
+                <img src="/assets/images/EVPFFT-GUI-MonkeyVoxel.png"/>
+                <h2>3. Material Properties</h2>
+                <div style="display: flex;">
+                    <p>
+                        Once you have your geometry loaded, you can specify the relevant material properties in the "Define Material" tab. Currently we support specifying the Young's Modulus and Poisson's Ratio for the material. Currently the application supports one material applied to the whole geometry, but more advanced options will likely be available in the future.
+                    </p>
+                    <img src="assets/images/EVPFFT-GUI-DefineMaterial.png"/>
+                </div>
+
+                <h3>4. Boundary Conditions</h3>
+                <div style="display: flex;">
+                    <p>
+                        To complete your problem definition, you need to specify along which axes tension will be applied under the "Boundary Conditions" tab.
+                    </p>
+                    <img src="assets/images/EVPFFT-GUI-BoundaryConditions.png" /> 
+                </div>
+
+                <h3>5. Solver Settings (Optional)</h3>
+                <p>
+                    Initially, it is recommended to ignore the solver settings. If you see that your results are not converging properly, then you may need to tweaking the options here.
+                </p>
+                <h3>6. Run and View Results</h3>
+                <h4>Running</h4>
+                <p>
+                    Lastly, you can "Run EVPFFT" and view the results. While it is running, intermediate status output will be displayed in the lower panel along with the progress bar. Depending on your voxel resolution and hardware, this could take some time to finish.
+                </p>
+                <img src="assets/images/EVPFFT-GUI-RunEVPFFT.png" />
+                <h4>Results</h4>
+                <div style="display: flex;">
+                    <p>
+                        Once the process is complete, you can view some results the results directly in the EVPFFT-GUI, or open them in ParaView for more detailed analysis. Within this application, you can view the stress strain curves or examine a 3D render of your voxelized mesh with strain or stress color coding.
+                    </p>
+                    <img src="assets/images/EVPFFT-GUI-ResultsOptions.png" />
+                </div>
+                <img src="assets/images/EVPFFT-GUI-MonkeyResults.png" />
+                <h2>Fierro GUI</h2>
+                Coming soon...
             </div>
         </div>
     </div>
