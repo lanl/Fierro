@@ -2,6 +2,8 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
+#include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 
 // --------------------------------------------------------------------------------------------------------
 // Computes term objective derivative term involving gradient of power with respect to the design variable
@@ -10,7 +12,7 @@
 void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;
   const int num_dim = simparam->num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;

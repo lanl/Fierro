@@ -73,6 +73,8 @@
 #include "node_combination.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
+#include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 
 //optimization
 #include "ROL_Algorithm.hpp"
@@ -110,8 +112,8 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
   
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
-  module_params = params;
-  simparam = &Explicit_Solver_Pointer_->simparam;
+  module_params = &params;
+  simparam = &(Explicit_Solver_Pointer_->simparam);
   
   mesh = mesh_in;
 
@@ -170,6 +172,7 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
   small = dynamic_options.small;
   graphics_times = simparam->output_options.graphics_times;
   graphics_id = simparam->output_options.graphics_id;
+  rk_num_bins = simparam->dynamic_options.rk_num_bins;
 
   if(simparam->topology_optimization_on){
     max_time_steps = BUFFER_GROW;
@@ -422,7 +425,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_interface_setup(node_t &node,
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::init_boundaries() {
-  max_boundary_sets = module_params.boundary_conditions.size();
+  max_boundary_sets = module_params->boundary_conditions.size();
   int num_dim = simparam->num_dims;
   
   // set the number of boundary sets
@@ -815,10 +818,10 @@ void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array &nod
 
   const size_t num_dim = mesh->num_dims;
   const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-  const size_t num_lcs = module_params.loading_conditions.size();
+  const size_t num_lcs = module_params->loading_conditions.size();
     
   const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-  const DCArrayKokkos <loading_t> loading = module_params.loading;
+  const DCArrayKokkos <loading_t> loading = module_params->loading;
 
   //debug check
   //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
@@ -853,7 +856,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     const size_t rk_level = dynamic_options.rk_num_bins - 1;   
     const size_t num_fills = simparam->regions.size();
     const size_t rk_num_bins = dynamic_options.rk_num_bins;
-    const size_t num_bcs = module_params.boundary_conditions.size();
+    const size_t num_bcs = module_params->boundary_conditions.size();
     const size_t num_materials = simparam->materials.size();
     const int num_dim = simparam->num_dims;
 
@@ -994,7 +997,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     //FEA_Module bc variable
     num_boundary_conditions = num_bcs;
 
-    const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
+    const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos <material_t> material = simparam->material;
     global_vars = simparam->global_vars;
@@ -1698,7 +1701,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
     graphics_times = simparam->output_options.graphics_times;
     graphics_id = simparam->output_options.graphics_id;
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
+    const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
     int old_max_forward_buffer;

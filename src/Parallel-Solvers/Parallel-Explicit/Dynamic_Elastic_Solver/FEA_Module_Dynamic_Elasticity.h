@@ -43,13 +43,20 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Solver.h"
 #include "FEA_Module.h"
-#include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
-#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "material_models.h"
 
 class Explicit_Solver;
+
+class Solver;
+
+class Simulation_Parameters_Explicit;
+
+class Dynamic_Elasticity_Parameters;
+
+struct material_t;
+
+struct boundary_t;
 
 class FEA_Module_Dynamic_Elasticity: public FEA_Module {
 
@@ -437,7 +444,7 @@ public:
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Stiffness_Matrix_Assembly_Map;
   //end elastic TO data
   
-  Dynamic_Elasticity_Parameters module_params;
+  Dynamic_Elasticity_Parameters *module_params;
   Simulation_Parameters_Explicit *simparam;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
@@ -581,6 +588,7 @@ public:
   size_t graphics_cyc_ival, cycle_stop, rk_num_stages, graphics_id;
   double fuzz, tiny, small;
   CArray <double> graphics_times;
+  int rk_num_bins;
 
   //optimization flags
   bool kinetic_energy_objective;

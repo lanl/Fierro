@@ -18,6 +18,8 @@
 #include "swage.h"
 #include "matar.h"
 #include "utilities.h"
+#include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
 
@@ -405,7 +407,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKok
     Kokkos::fence();
     */
     
-    const real_t damping_constant = module_params.damping_constant;
+    const real_t damping_constant = module_params->damping_constant;
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         
         Force_Gradient_Velocities(node_id*num_dims,0) = -damping_constant;
@@ -811,7 +813,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
 void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
+  const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;
   const int num_dim = simparam->num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;

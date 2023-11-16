@@ -71,6 +71,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 #include "FEA_Module_SGH.h"
 #include "Explicit_Solver.h"
@@ -110,7 +111,7 @@ FEA_Module_SGH::FEA_Module_SGH(
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
   simparam = &(Explicit_Solver_Pointer_->simparam);
-  module_params = params;
+  module_params = &params;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -436,7 +437,7 @@ void FEA_Module_SGH::sgh_interface_setup(node_t &node,
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::init_boundaries(){
-  max_boundary_sets = module_params.boundary_conditions.size();
+  max_boundary_sets = module_params->boundary_conditions.size();
   int num_dim = simparam->num_dims;
   
   // set the number of boundary sets
@@ -851,10 +852,10 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
 
   const size_t num_dim = mesh->num_dims;
   const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-  const size_t num_lcs = module_params.loading_conditions.size();
+  const size_t num_lcs = module_params->loading_conditions.size();
     
   const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-  const DCArrayKokkos <loading_t> loading = module_params.loading;
+  const DCArrayKokkos <loading_t> loading = module_params->loading;
 
   //debug check
   //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
@@ -889,10 +890,10 @@ void FEA_Module_SGH::setup(){
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;   
     const size_t num_fills = simparam->regions.size();
     const size_t rk_num_bins = simparam->dynamic_options.rk_num_bins;
-    const size_t num_bcs = module_params.boundary_conditions.size();
+    const size_t num_bcs = module_params->boundary_conditions.size();
     const size_t num_materials = simparam->materials.size();
     const int num_dim = simparam->num_dims;
-    const size_t num_lcs = module_params.loading.size();
+    const size_t num_lcs = module_params->loading.size();
     if(num_lcs)
       have_loading_conditions = true;
 
@@ -1034,7 +1035,7 @@ void FEA_Module_SGH::setup(){
     //FEA_Module bc variable
     num_boundary_conditions = num_bcs;
 
-    const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
+    const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos <material_t> material = simparam->material;
     global_vars = simparam->global_vars;
@@ -1737,7 +1738,7 @@ void FEA_Module_SGH::sgh_solve(){
     graphics_times = simparam->output_options.graphics_times;
     graphics_id = simparam->output_options.graphics_id;
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
+    const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
     int old_max_forward_buffer;

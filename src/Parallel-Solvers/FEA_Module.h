@@ -55,7 +55,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Simulation_Parameters/Simulation_Parameters.h"
+//#include "Simulation_Parameters/Simulation_Parameters.h"
 
 using namespace mtr;
 
@@ -67,6 +67,11 @@ namespace ROL{
   template<class datatype>
   class Problem;
 }
+
+class Simulation_Parameters;
+
+enum class FEA_MODULE_TYPE;
+enum class BOUNDARY_TYPE;
 
 class FEA_Module{
 

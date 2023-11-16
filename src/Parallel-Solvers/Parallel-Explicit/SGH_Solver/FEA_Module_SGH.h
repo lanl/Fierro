@@ -43,13 +43,21 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Solver.h"
 #include "FEA_Module.h"
-#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
-#include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 #include "material_models.h"
 
 class Explicit_Solver;
+
+class Solver;
+
+class Simulation_Parameters_Explicit;
+
+class SGH_Parameters;
+
+struct material_t;
+
+struct boundary_t;
+
 
 class FEA_Module_SGH: public FEA_Module{
 
@@ -524,7 +532,7 @@ public:
   real_t penalty_power;
   
   Simulation_Parameters_Explicit *simparam;
-  SGH_Parameters module_params;
+  SGH_Parameters *module_params;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
   elements::ref_element  *ref_elem;
@@ -678,6 +686,7 @@ public:
   size_t graphics_cyc_ival, cycle_stop, rk_num_stages, graphics_id;
   double fuzz, tiny, small;
   CArray <double> graphics_times;
+  int rk_num_bins;
 
   //optimization flags
   bool kinetic_energy_objective;
