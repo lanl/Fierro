@@ -53,14 +53,8 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
-#include <Tpetra_CrsMatrix.hpp>
 
-#include <Xpetra_MultiVector.hpp>
-#include "Tpetra_Details_makeColMap.hpp"
-#include "Tpetra_Details_DefaultTypes.hpp"
-#include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
-#include <set>
 
 #include "elements.h"
 #include "swage.h"
@@ -71,12 +65,6 @@
 #include "Simulation_Parameters/FEA_Module/FEA_Module_Headers.h"
 #include "Implicit_Solver.h"
 #include "FEA_Modules_Headers.h"
-
-//Repartition Package
-#include <Zoltan2_XpetraMultiVectorAdapter.hpp>
-#include <Zoltan2_PartitioningProblem.hpp>
-#include <Zoltan2_PartitioningSolution.hpp>
-#include <Zoltan2_InputTraits.hpp>
 
 //Optimization Package
 #include "ROL_Algorithm.hpp"
@@ -958,107 +946,6 @@ void Implicit_Solver::read_mesh_ansys_dat(const char *MESH){
  
 } // end read_mesh
 
-/* ----------------------------------------------------------------------
-   Initialize Ghost and Non-Overlapping Element Maps
-------------------------------------------------------------------------- */
-/*
-void Implicit_Solver::repartition_nodes(){
-  char ch;
-  int num_dim = simparam.num_dims;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
-  int local_node_index, current_column_index;
-  size_t strain_count;
-  std::stringstream line_parse;
-  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-  int nodes_per_element;
-  GO node_gid;
-  
-  //construct input adapted needed by Zoltan2 problem
-  typedef Xpetra::MultiVector<real_t,LO,GO,node_type> xvector_t;
-  typedef Zoltan2::XpetraMultiVectorAdapter<xvector_t> inputAdapter_t;
-  typedef Zoltan2::EvaluatePartition<inputAdapter_t> quality_t;
-  
-  Teuchos::RCP<xvector_t> xpetra_node_coords = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(node_coords_distributed));
-  Teuchos::RCP<inputAdapter_t> problem_adapter =  Teuchos::rcp(new inputAdapter_t(xpetra_node_coords));
-
-  // Create parameters for an RCB problem
-
-  double tolerance = 1.05;
-
-  Teuchos::ParameterList params("Node Partition Params");
-  params.set("debug_level", "basic_status");
-  params.set("debug_procs", "0");
-  params.set("error_check_level", "debug_mode_assertions");
-
-  //params.set("algorithm", "rcb");
-  params.set("algorithm", "multijagged");
-  params.set("imbalance_tolerance", tolerance );
-  params.set("num_global_parts", nranks);
-  params.set("partitioning_objective", "minimize_cut_edge_count");
-  
-  Teuchos::RCP<Zoltan2::PartitioningProblem<inputAdapter_t> > problem =
-           Teuchos::rcp(new Zoltan2::PartitioningProblem<inputAdapter_t>(&(*problem_adapter), &params));
-   
-  // Solve the problem
-
-  problem->solve();
-
-  // create metric object where communicator is Teuchos default
-
-  quality_t *metricObject1 = new quality_t(&(*problem_adapter), &params, //problem1->getComm(),
-					   &problem->getSolution());
-  // Check the solution.
-
-  if (myrank == 0) {
-    metricObject1->printMetrics(std::cout);
-  }
-
-  if (myrank == 0){
-    real_t imb = metricObject1->getObjectCountImbalance();
-    if (imb <= tolerance)
-      std::cout << "pass: " << imb << std::endl;
-    else
-      std::cout << "fail: " << imb << std::endl;
-    std::cout << std::endl;
-  }
-  delete metricObject1;
-
-  //migrate rows of the vector so they correspond to the partition recommended by Zoltan2
-  Teuchos::RCP<MV> partitioned_node_coords_distributed = Teuchos::rcp(new MV(map,num_dim));
-  Teuchos::RCP<xvector_t> xpartitioned_node_coords_distributed =
-                          Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(partitioned_node_coords_distributed));
-
-  problem_adapter->applyPartitioningSolution(*xpetra_node_coords, xpartitioned_node_coords_distributed, problem->getSolution());
-  *partitioned_node_coords_distributed = Xpetra::toTpetra<real_t,LO,GO,node_type>(*xpartitioned_node_coords_distributed);
-  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > partitioned_map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*(partitioned_node_coords_distributed->getMap())));
-  Teuchos::RCP<const Tpetra::Map<LO,GO,node_type> > partitioned_map_one_to_one;
-  partitioned_map_one_to_one = Tpetra::createOneToOne<LO,GO,node_type>(partitioned_map);
-  Teuchos::RCP<MV> partitioned_node_coords_one_to_one_distributed = Teuchos::rcp(new MV(partitioned_map_one_to_one,num_dim));
-
-  Tpetra::Import<LO, GO> importer_one_to_one(partitioned_map, partitioned_map_one_to_one);
-  partitioned_node_coords_one_to_one_distributed->doImport(*partitioned_node_coords_distributed, importer_one_to_one, Tpetra::INSERT);
-  node_coords_distributed = partitioned_node_coords_one_to_one_distributed;
-  partitioned_map = Teuchos::rcp(new Tpetra::Map<LO,GO,node_type>(*partitioned_map_one_to_one));
-
-  //migrate density vector if this is a restart file read
-  if(simparam.restart_file){
-    Teuchos::RCP<MV> partitioned_node_densities_distributed = Teuchos::rcp(new MV(partitioned_map, 1));
-
-    //create import object using local node indices map and all indices map
-    Tpetra::Import<LO, GO> importer(map, partitioned_map);
-
-    //comms to get ghosts
-    partitioned_node_densities_distributed->doImport(*design_node_densities_distributed, importer, Tpetra::INSERT);
-    design_node_densities_distributed = partitioned_node_densities_distributed;
-  }
-
-  //update nlocal_nodes and node map
-  map = partitioned_map;
-  nlocal_nodes = map->getLocalNumElements();
-  
-}
-*/
 /* ----------------------------------------------------------------------
    Construct list of objects for FEA modules 
 ------------------------------------------------------------------------- */

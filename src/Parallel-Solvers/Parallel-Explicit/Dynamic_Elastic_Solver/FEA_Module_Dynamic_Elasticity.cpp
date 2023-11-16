@@ -50,21 +50,12 @@
 #include <Teuchos_oblackholestream.hpp>
 #include <Teuchos_Tuple.hpp>
 #include <Teuchos_VerboseObject.hpp>
-#include <Teuchos_SerialDenseMatrix.hpp>
-#include <Teuchos_SerialDenseVector.hpp>
-#include <Teuchos_SerialDenseSolver.hpp>
 
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
-#include <Tpetra_CrsMatrix.hpp>
-#include "Tpetra_Details_makeColMap.hpp"
-#include "Tpetra_Details_DefaultTypes.hpp"
-#include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
 #include "Tpetra_Import_Util2.hpp"
-#include "MatrixMarket_Tpetra.hpp"
-#include <set>
 
 #include "elements.h"
 #include "swage.h"
@@ -77,19 +68,7 @@
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 
 //optimization
-#include "ROL_Algorithm.hpp"
 #include "ROL_Solver.hpp"
-#include "ROL_LineSearchStep.hpp"
-#include "ROL_TrustRegionStep.hpp"
-#include "ROL_StatusTest.hpp"
-#include "ROL_Types.hpp"
-#include "ROL_Elementwise_Reduce.hpp"
-#include "ROL_Stream.hpp"
-
-#include "ROL_StdVector.hpp"
-#include "ROL_StdBoundConstraint.hpp"
-#include "ROL_ParameterList.hpp"
-#include <ROL_TpetraMultiVector.hpp>
 #include "Kinetic_Energy_Minimize.h"
 
 #define MAX_ELEM_NODES 8

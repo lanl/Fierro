@@ -5,8 +5,6 @@
 #include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
-#include "Tpetra_Import.hpp"
-#include "Tpetra_Import_Util2.hpp"
 #include "Explicit_Solver.h"
 
 // -----------------------------------------------------------------------------

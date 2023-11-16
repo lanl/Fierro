@@ -63,7 +63,6 @@
 #include "Tpetra_Import.hpp"
 #include "Tpetra_Import_Util2.hpp"
 #include "MatrixMarket_Tpetra.hpp"
-#include <set>
 
 #include "elements.h"
 #include "swage.h"
