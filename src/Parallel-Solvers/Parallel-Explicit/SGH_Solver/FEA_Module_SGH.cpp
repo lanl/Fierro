@@ -177,6 +177,7 @@ FEA_Module_SGH::FEA_Module_SGH(
   small = dynamic_options.small;
   graphics_times = simparam->output_options.graphics_times;
   graphics_id = simparam->output_options.graphics_id;
+  rk_num_bins = simparam->dynamic_options.rk_num_bins;
 
   if(simparam->topology_optimization_on){
     max_time_steps = BUFFER_GROW;

@@ -43,13 +43,20 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Solver.h"
 #include "FEA_Module.h"
 #include "Simulation_Parameters/Simulation_Parameters.h"
-#include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
-#include "Simulation_Parameters/FEA_Module/Eulerian_Parameters.h"
 
-class Explicit_Solver_Eulerian;
+class Explicit_Solver;
+
+class Solver;
+
+class Simulation_Parameters_Explicit;
+
+class Dynamic_Elasticity_Parameters;
+
+struct material_t;
+
+struct boundary_t;
 
 class FEA_Module_Eulerian: public FEA_Module{
 
