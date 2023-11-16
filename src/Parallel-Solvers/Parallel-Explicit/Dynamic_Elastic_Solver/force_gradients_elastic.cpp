@@ -21,7 +21,6 @@
 #include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
-#include "Explicit_Solver.h"
 
 
 // -----------------------------------------------------------------------------

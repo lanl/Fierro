@@ -21,7 +21,6 @@
 #include "FEA_Module_SGH.h"
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
-#include "Explicit_Solver.h"
 
 
 // -----------------------------------------------------------------------------

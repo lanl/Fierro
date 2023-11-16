@@ -157,106 +157,106 @@ public:
 
   //multigrid solver data and functions
   //using equil_type = decltype (Tpetra::computeRowAndColumnOneNorms (*Global_Stiffness_Matrix, false));
-  using equil_type = Tpetra::Details::EquilibrationInfo<real_t, device_type>;
-  using mag_type = typename Kokkos::ArithTraits<real_t>::mag_type;
-  using scaling_view_type = Kokkos::View<mag_type*, device_type>;
-  equil_type equibResult;
-  void equilibrateMatrix(Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type> > &Axpetra, std::string equilibrate);
-  void preScaleRightHandSides (Tpetra::MultiVector<real_t,LO,GO,node_type>& B, std::string equilibrate);
-  void preScaleInitialGuesses (Tpetra::MultiVector<real_t,LO,GO,node_type>& X, std::string equilibrate);
-  void postScaleSolutionVectors (Tpetra::MultiVector<real_t,LO,GO,node_type>& X, std::string equilibrate);
-  void elementWiseMultiplyMultiVector (MV& X, scaling_view_type& scalingFactors,bool a);
-  void elementWiseDivideMultiVector (MV& X, scaling_view_type& scalingFactors,bool a);
-  void elementWiseMultiply (vec_array& X, scaling_view_type& scalingFactors, LO numRows, bool takeSquareRootsOfScalingFactors);
-  void elementWiseDivide (vec_array& X, scaling_view_type& scalingFactors, LO numRows, bool takeSquareRootsOfScalingFactors);
+  // using equil_type = Tpetra::Details::EquilibrationInfo<real_t, device_type>;
+  // using mag_type = typename Kokkos::ArithTraits<real_t>::mag_type;
+  // using scaling_view_type = Kokkos::View<mag_type*, device_type>;
+  // equil_type equibResult;
+  // void equilibrateMatrix(Teuchos::RCP<Xpetra::Matrix<real_t,LO,GO,node_type> > &Axpetra, std::string equilibrate);
+  // void preScaleRightHandSides (Tpetra::MultiVector<real_t,LO,GO,node_type>& B, std::string equilibrate);
+  // void preScaleInitialGuesses (Tpetra::MultiVector<real_t,LO,GO,node_type>& X, std::string equilibrate);
+  // void postScaleSolutionVectors (Tpetra::MultiVector<real_t,LO,GO,node_type>& X, std::string equilibrate);
+  // void elementWiseMultiplyMultiVector (MV& X, scaling_view_type& scalingFactors,bool a);
+  // void elementWiseDivideMultiVector (MV& X, scaling_view_type& scalingFactors,bool a);
+  // void elementWiseMultiply (vec_array& X, scaling_view_type& scalingFactors, LO numRows, bool takeSquareRootsOfScalingFactors);
+  // void elementWiseDivide (vec_array& X, scaling_view_type& scalingFactors, LO numRows, bool takeSquareRootsOfScalingFactors);
 
   //division functor
-  class ElementWiseDivide {
-    public:
-      static_assert (vec_array::rank == 2, "ViewType1 must be a rank-2 "
-                  "Kokkos::View in order to use this specialization.");
+  // class ElementWiseDivide {
+  //   public:
+  //     static_assert (vec_array::rank == 2, "ViewType1 must be a rank-2 "
+  //                 "Kokkos::View in order to use this specialization.");
 
-      ElementWiseDivide (const vec_array& X,
-                         const scaling_view_type& scalingFactors, bool takeSquareRootsOfScalingflag) :
-      X_ (X),
-      scalingFactors_ (scalingFactors)
-      { 
-        takeAbsoluteValueOfScalingFactors = true;
-        takeSquareRootsOfScalingFactors = takeSquareRootsOfScalingflag;
-      }
+  //     ElementWiseDivide (const vec_array& X,
+  //                        const scaling_view_type& scalingFactors, bool takeSquareRootsOfScalingflag) :
+  //     X_ (X),
+  //     scalingFactors_ (scalingFactors)
+  //     { 
+  //       takeAbsoluteValueOfScalingFactors = true;
+  //       takeSquareRootsOfScalingFactors = takeSquareRootsOfScalingflag;
+  //     }
 
-      KOKKOS_INLINE_FUNCTION void operator () (const LO i) const {
-        using val_type = typename scaling_view_type::non_const_value_type;
-        using KAT = Kokkos::ArithTraits<val_type>;
-        using mag_type = typename KAT::mag_type;
-        using KAM = Kokkos::ArithTraits<mag_type>;
+  //     KOKKOS_INLINE_FUNCTION void operator () (const LO i) const {
+  //       using val_type = typename scaling_view_type::non_const_value_type;
+  //       using KAT = Kokkos::ArithTraits<val_type>;
+  //       using mag_type = typename KAT::mag_type;
+  //       using KAM = Kokkos::ArithTraits<mag_type>;
 
-        for (LO j = 0; j < static_cast<LO> (X_.extent (1)); ++j) {
-          if (takeAbsoluteValueOfScalingFactors) {
-            const mag_type scalFactAbs = KAT::abs (scalingFactors_(i));
-            const mag_type scalFinalVal = takeSquareRootsOfScalingFactors ?
-              KAM::sqrt (scalFactAbs) : scalFactAbs;
-            X_(i,j) = X_(i,j) / scalFinalVal;
-          }
-          else {
-            const val_type scalFact = scalingFactors_(i);
-            const val_type scalFinalVal = takeSquareRootsOfScalingFactors ?
-              KAT::sqrt (scalFact) : scalFact;
-            X_(i,j) = X_(i,j) / scalFinalVal;
-          }
-        }
-      }
+  //       for (LO j = 0; j < static_cast<LO> (X_.extent (1)); ++j) {
+  //         if (takeAbsoluteValueOfScalingFactors) {
+  //           const mag_type scalFactAbs = KAT::abs (scalingFactors_(i));
+  //           const mag_type scalFinalVal = takeSquareRootsOfScalingFactors ?
+  //             KAM::sqrt (scalFactAbs) : scalFactAbs;
+  //           X_(i,j) = X_(i,j) / scalFinalVal;
+  //         }
+  //         else {
+  //           const val_type scalFact = scalingFactors_(i);
+  //           const val_type scalFinalVal = takeSquareRootsOfScalingFactors ?
+  //             KAT::sqrt (scalFact) : scalFact;
+  //           X_(i,j) = X_(i,j) / scalFinalVal;
+  //         }
+  //       }
+  //     }
 
-    private:
-      vec_array X_;
-      typename scaling_view_type::const_type scalingFactors_;
-      bool takeAbsoluteValueOfScalingFactors;
-      bool takeSquareRootsOfScalingFactors;
-  };
+  //   private:
+  //     vec_array X_;
+  //     typename scaling_view_type::const_type scalingFactors_;
+  //     bool takeAbsoluteValueOfScalingFactors;
+  //     bool takeSquareRootsOfScalingFactors;
+  // };
 
-  //multiplication functor
-  class ElementWiseMultiply {
-    public:
-      static_assert (vec_array::rank == 2, "ViewType1 must be a rank-2 "
-                 "Kokkos::View in order to use this specialization.");
+  // //multiplication functor
+  // class ElementWiseMultiply {
+  //   public:
+  //     static_assert (vec_array::rank == 2, "ViewType1 must be a rank-2 "
+  //                "Kokkos::View in order to use this specialization.");
 
-      ElementWiseMultiply (const vec_array& X,
-                       const scaling_view_type& scalingFactors, bool takeSquareRootsOfScalingflag) :
-      X_ (X),
-      scalingFactors_ (scalingFactors)
-      { 
-        takeAbsoluteValueOfScalingFactors = true;
-        takeSquareRootsOfScalingFactors = takeSquareRootsOfScalingflag;
-      }
+  //     ElementWiseMultiply (const vec_array& X,
+  //                      const scaling_view_type& scalingFactors, bool takeSquareRootsOfScalingflag) :
+  //     X_ (X),
+  //     scalingFactors_ (scalingFactors)
+  //     { 
+  //       takeAbsoluteValueOfScalingFactors = true;
+  //       takeSquareRootsOfScalingFactors = takeSquareRootsOfScalingflag;
+  //     }
 
-      KOKKOS_INLINE_FUNCTION void operator () (const LO i) const {
-      using val_type = typename scaling_view_type::non_const_value_type;
-      using KAT = Kokkos::ArithTraits<val_type>;
-      using mag_type = typename KAT::mag_type;
-      using KAM = Kokkos::ArithTraits<mag_type>;
+  //     KOKKOS_INLINE_FUNCTION void operator () (const LO i) const {
+  //     using val_type = typename scaling_view_type::non_const_value_type;
+  //     using KAT = Kokkos::ArithTraits<val_type>;
+  //     using mag_type = typename KAT::mag_type;
+  //     using KAM = Kokkos::ArithTraits<mag_type>;
 
-      for (LO j = 0; j < static_cast<LO> (X_.extent (1)); ++j) {
-        if (takeAbsoluteValueOfScalingFactors) {
-          const mag_type scalFactAbs = KAT::abs (scalingFactors_(i));
-          const mag_type scalFinalVal = takeSquareRootsOfScalingFactors ?
-            KAM::sqrt (scalFactAbs) : scalFactAbs;
-          X_(i,j) = X_(i,j) * scalFinalVal;
-        }
-        else {
-          const val_type scalFact = scalingFactors_(i);
-          const val_type scalFinalVal = takeSquareRootsOfScalingFactors ?
-            KAT::sqrt (scalFact) : scalFact;
-          X_(i,j) = X_(i,j) * scalFinalVal;
-        }
-      }
-    }
+  //     for (LO j = 0; j < static_cast<LO> (X_.extent (1)); ++j) {
+  //       if (takeAbsoluteValueOfScalingFactors) {
+  //         const mag_type scalFactAbs = KAT::abs (scalingFactors_(i));
+  //         const mag_type scalFinalVal = takeSquareRootsOfScalingFactors ?
+  //           KAM::sqrt (scalFactAbs) : scalFactAbs;
+  //         X_(i,j) = X_(i,j) * scalFinalVal;
+  //       }
+  //       else {
+  //         const val_type scalFact = scalingFactors_(i);
+  //         const val_type scalFinalVal = takeSquareRootsOfScalingFactors ?
+  //           KAT::sqrt (scalFact) : scalFact;
+  //         X_(i,j) = X_(i,j) * scalFinalVal;
+  //       }
+  //     }
+  //   }
 
-    private:
-      vec_array X_;
-      typename scaling_view_type::const_type scalingFactors_;
-      bool takeAbsoluteValueOfScalingFactors;
-      bool takeSquareRootsOfScalingFactors;
-  };
+  //   private:
+  //     vec_array X_;
+  //     typename scaling_view_type::const_type scalingFactors_;
+  //     bool takeAbsoluteValueOfScalingFactors;
+  //     bool takeSquareRootsOfScalingFactors;
+  // };
   
 };
 

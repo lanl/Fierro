@@ -2590,19 +2590,19 @@ void FEA_Module_Heat_Conduction::compute_adjoint_hessian_vec(const_host_vec_arra
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
-  if(module_params.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
-    Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
-  }
+  // if(module_params.equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
+  //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
+  // }
   real_t current_cpu_time2 = Implicit_Solver_Pointer_->CPU_Time();
   comm->barrier();
   SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
-  if(module_params.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
-  }
+  // if(module_params.equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
+  // }
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
   
@@ -3595,11 +3595,11 @@ int FEA_Module_Heat_Conduction::solve(){
     }
   }//row for
   */
-  if(module_params.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
-    Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
-    Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
-  }
+  // if(module_params.equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
+  //   Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
+  //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
+  // }
 
   //debug print
   //if(myrank==0)
@@ -3654,10 +3654,10 @@ int FEA_Module_Heat_Conduction::solve(){
   linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
 
-  if(module_params.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
-    Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
-  }
+  // if(module_params.equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
+  // }
 
   if(module_params.multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
