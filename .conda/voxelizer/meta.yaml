@@ -11,6 +11,10 @@ source:
   # - git_url: https://github.com/lanl/Fierro.git
   #   depth: 1
 
+build:
+  skip: true  # [ (not linux64) or (not osx) ]
+  skip: false # [ linux64 or osx ]
+
 requirements:
   build:
     - cmake >=3.17.0
@@ -22,7 +26,6 @@ requirements:
     - pybind11
     - setuptools
   run:
-    - elements
     - python
 
 test:
