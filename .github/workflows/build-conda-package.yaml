@@ -1,0 +1,48 @@
+name: Build-Conda-Package
+
+on: 
+  workflow_call:
+    inputs:
+      recipe_dir:
+        required: true
+        type: string
+      cross_compiling:
+        required: true
+      build_variant_file:
+        required: true
+        type: string
+      os:
+        required: true
+        type: string
+
+jobs:
+  build-package:
+    defaults:
+      run:
+        shell: bash -l {0}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo "CONDA=$HOME/" >> $GITHUB_ENV
+      - name: Cache conda
+        uses: actions/cache@v2
+        env:
+          # Increase this value to reset cache if environment has not changed
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key:
+            ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('etc/example-environment.yml') }}
+
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: build-env
+          environment-file: .etc/conda_build_environment.yaml
+          condarc-file: .etc/condarc.yaml
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - run: |
+          export CROSS_COMPILING=${{ inputs.cross_compiling }}
+          mamba mambabuild ${{ inputs.recipe_dir }} -e ${{ inputs.build_variant_file }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test

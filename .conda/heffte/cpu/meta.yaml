@@ -1,5 +1,6 @@
 {% set version = "1.0.0" %}
-{% set compiler_version = "10.4.0" %}
+{% set linux_compiler_version = "10.4.0" %}
+{% set macos_compiler_version = "12" %}
 
 package:
   name: fierro-heffte
@@ -18,8 +19,8 @@ build:
 requirements:
   build:
     - cmake >=3.17.0
-    - {{ compiler('c') }} ={{ compiler_version }}
-    - {{ compiler('cxx') }} ={{ compiler_version }}
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi
   host:
     - openmpi
