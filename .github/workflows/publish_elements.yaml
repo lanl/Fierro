@@ -21,15 +21,28 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: echo "CONDA=$HOME/" >> $GITHUB_ENV
+    - name: Cache conda
+      uses: actions/cache@v2
+      env:
+        # Increase this value to reset cache if environment has not changed
+        CACHE_NUMBER: 0
+      with:
+        path: ~/conda_pkgs_dir
+        key:
+          ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('etc/example-environment.yml') }}
+
     - uses: conda-incubator/setup-miniconda@v2
       with:
         miniforge-variant: Mambaforge
         miniforge-version: latest
         use-mamba: true
+        activate-environment: build-env
         environment-file: .etc/conda_build_environment.yaml
+        condarc-file: .etc/condarc.yaml
+        use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
 
     - run: |
         export BUILD_VARIANT_CONFIG=`cat ${{ matrix.variant_file }}`
         cd .conda/elements
         export CROSS_COMPILING=${{ matrix.cross_compile }}
-        mamba mambabuild . --variants "$BUILD_VARIANT_CONFIG" --token ${{ secrets.ANACONDA_TOKEN }}
+        mamba mambabuild . --variants "$BUILD_VARIANT_CONFIG" --token ${{ secrets.ANACONDA_TOKEN }} --no-test
