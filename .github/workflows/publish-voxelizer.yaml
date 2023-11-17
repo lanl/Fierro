@@ -18,8 +18,6 @@ jobs:
             variant_file: .conda/linux_build_variants.yaml
             cross_compile: 1
 
-    runs-on: ${{ matrix.os }}
-
     uses: ./.github/workflows/build-conda-package.yaml
     with:
       recipe_dir: .conda/voxelizer

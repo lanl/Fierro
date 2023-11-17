@@ -6,21 +6,23 @@ on:
       recipe_dir:
         required: true
         type: string
-      cross_compiling:
-        required: true
-      build_variant_file:
-        required: true
-        type: string
-      os:
-        required: true
-        type: string
 
 jobs:
   build-package:
     defaults:
       run:
         shell: bash -l {0}
-    runs-on: ${{ inputs.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            build_variant_file: .conda/macos_build_variants.yaml
+            cross_compile: 0
+          - os: ubuntu-latest
+            build_variant_file: .conda/linux_build_variants.yaml
+            cross_compile: 1
+
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
       - run: echo "CONDA=$HOME/" >> $GITHUB_ENV
@@ -44,5 +46,5 @@ jobs:
           condarc-file: .etc/condarc.yaml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - run: |
-          export CROSS_COMPILING=${{ inputs.cross_compiling }}
-          mamba mambabuild ${{ inputs.recipe_dir }} -e ${{ inputs.build_variant_file }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test
+          export CROSS_COMPILING=${{ matrix.cross_compile }}
+          mamba mambabuild ${{ inputs.recipe_dir }} -e ${{ matrix.build_variant_file }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test
