@@ -52,7 +52,6 @@ build_cores="1"
 valid_build_action=("full-app" "set-env" "install-kokkos" "fierro")
 valid_solver=("1DSGH" "SGH")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
-valid_heffte_build_types=("fftw" "cufft" "rocfft")
 valid_machines=("darwin" "chicoma" "linux" "mac")
 
 # Parse command line arguments

@@ -38,6 +38,7 @@ target_link_libraries (fierro-parallel-explicit PRIVATE
   parallel_dynamic_elastic_solver
   ${Trilinos_LIBRARIES}
   ${MPI_CXX_LIBRARIES}
+  Elements
 )
 
 install(

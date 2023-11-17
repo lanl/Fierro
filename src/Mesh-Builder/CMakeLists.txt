@@ -5,13 +5,14 @@ project(mesh-builder)
 SET(CMAKE_CXX_STANDARD 17)
 
 add_library(mesh_builder src/MeshBuilder.cpp src/EnsightIO.cpp src/VtkIO.cpp)
-target_link_libraries(mesh_builder PUBLIC yaml_serializable)
+target_link_libraries(mesh_builder PUBLIC yaml_serializable Elements)
 target_include_directories(mesh_builder PUBLIC include)
 
 add_executable(fierro-mesh-builder src/main.cpp)
 target_link_libraries(fierro-mesh-builder PUBLIC 
     yaml_serializable
     mesh_builder
+    Elements
 )
 
 install(
