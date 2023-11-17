@@ -1,0 +1,35 @@
+name: 'Publish Elements'
+
+on: [push]
+
+jobs:
+  build_conda_packages:
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            variant_file: .conda/macos_build_variants.yaml
+            cross_compile: 0
+          - os: ubuntu-latest
+            variant_file: .conda/linux_build_variants.yaml
+            cross_compile: 1
+
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+    - run: echo "CONDA=$HOME/" >> $GITHUB_ENV
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        miniforge-variant: Mambaforge
+        miniforge-version: latest
+        use-mamba: true
+        environment-file: .etc/conda_build_environment.yaml
+
+    - run: |
+        export BUILD_VARIANT_CONFIG=`cat ${{ matrix.variant_file }}`
+        cd .conda/elements
+        export CROSS_COMPILING=${{ matrix.cross_compile }}
+        mamba mambabuild . --variants "$BUILD_VARIANT_CONFIG" --token ${{ secrets.ANACONDA_TOKEN }}
