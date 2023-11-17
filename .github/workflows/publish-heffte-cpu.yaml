@@ -8,20 +8,7 @@ on:
 
 jobs:
   publish:
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-            variant_file: .conda/macos_build_variants.yaml
-            cross_compile: 0
-          - os: ubuntu-latest
-            variant_file: .conda/linux_build_variants.yaml
-            cross_compile: 1
-
     uses: ./.github/workflows/build-conda-package.yaml
     with:
       recipe_dir: .conda/heffte
-      cross_compiling: ${{ matrix.cross_compile }}
-      build_variant_file: ${{ matrix.variant_file }}
-      os: ${{ matrix.os }}
     secrets: inherit
