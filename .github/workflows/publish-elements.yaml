@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - .conda/elements/**
+      - .github/workflows/publish-elements.yaml
 
 jobs:
   publish:

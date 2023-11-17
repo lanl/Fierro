@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - .conda/heffte/**
+      - .github/workflows/publish-heffte-cpu.yaml
 
 jobs:
   publish:

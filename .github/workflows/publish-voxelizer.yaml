@@ -5,6 +5,7 @@ on:
     paths:
       - .conda/voxelizer/**
       - src/Voxelizer/**
+      - .github/workflows/publish-voxelizer.yaml
 
 jobs:
   publish:
