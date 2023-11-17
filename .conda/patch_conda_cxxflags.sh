@@ -1,4 +1,4 @@
-arch_flags=(-fno-visibility-inlines-hidden -fno-tree-vectorize)
+arch_flags=(-fno-tree-vectorize)
 if [ "$PLATFORM" == "linux-64" ]; then
     arch_flags+=(-march=x86-64 -mtune=generic)
     echo "Compiling with generic x86_64 instruction set."
