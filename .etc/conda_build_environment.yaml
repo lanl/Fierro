@@ -4,5 +4,5 @@ channels:
   - kwelsh-lanl
   - defaults
 dependencies:
-  - boa # For building
+  - conda-build # For building
   - anaconda-client # For uploading
