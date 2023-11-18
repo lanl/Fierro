@@ -3,4 +3,4 @@ source "$RECIPE_DIR/../cross-compile-setup.sh"
 export CMAKE_CXX_FLAGS=$PATCHED_CXXFLAGS
 
 cd python/Voxelizer
-$PYTHON setup.py install
+pip install .
