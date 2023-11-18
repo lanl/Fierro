@@ -38,13 +38,11 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
+          miniconda-version: latest
           activate-environment: build-env
           environment-file: .etc/conda_build_environment.yaml
           condarc-file: .etc/condarc.yaml
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - run: |
           export CROSS_COMPILING=${{ matrix.cross_compile }}
-          mamba mambabuild ${{ inputs.recipe_dir }} -e ${{ matrix.build_variant_file }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge
+          conda build ${{ inputs.recipe_dir }} -e ${{ matrix.build_variant_file }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge
