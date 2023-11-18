@@ -3,7 +3,7 @@
 {% set macos_compiler_version = "12" %}
 
 package: 
-  name: fierro-voxelizer-py
+  name: fierro-voxelizer
   version: 2
 
 source:
