@@ -8,11 +8,11 @@ heffte_build_type="${2}"
 [ -d "${libdir}/Elements/matar/src" ] && echo "matar submodule exists"
 
 
-#if { [ ! -d "${libdir}/Elements/elements" ] || [ ! -d "${libdir}/Elements/matar/include" ] ;}
-#then
-#  echo "Missing submodules, downloading them...."
-#  git submodule update --init --recursive
-#fi
+if { [ ! -d "${libdir}/Elements/elements" ] || [ ! -d "${libdir}/Elements/matar/include" ] ;}
+then
+    echo "Missing submodules, downloading them...."
+    git submodule update --init --recursive
+fi
 
 if [ ! -d "${TRILINOS_INSTALL_DIR}/lib" ]; then
     Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib64/cmake/Trilinos
