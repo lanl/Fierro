@@ -1,0 +1,15 @@
+name: 'Publish EVPFFT-CPU'
+
+on: 
+  push:
+    paths:
+      - .conda/evpfft/**
+      - src/EVPFFT/src/**
+      - .github/workflows/publish-evpfft.yaml
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/evpfft/cpu
+    secrets: inherit

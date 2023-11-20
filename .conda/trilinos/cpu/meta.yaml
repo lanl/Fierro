@@ -1,5 +1,6 @@
-{% set version = "14.4.0" %}
-{% set compiler_version = "10.4.0" %}
+{% set version = "1.0.0" %}
+{% set linux_compiler_version = "10.4.0" %}
+{% set macos_compiler_version = "12" %}
 
 package:
   name: fierro-trilinos-cpu
@@ -17,23 +18,23 @@ build:
 requirements:
   build:
     - cmake >=3.17.0
-    - {{ compiler('c') }} ={{ compiler_version }}
-    - {{ compiler('cxx') }} ={{ compiler_version }}
-    - {{ compiler('fortran') }} ={{ compiler_version }}
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('fortran') }} ={{ linux_compiler_version }}
     - openmpi
   host:
-    - _openmp_mutex
     - libblas
     - liblapack
     - openmpi
     - boost-cpp
     - libnetcdf
     - libmatio
+    - openmp
   run:
-    - _openmp_mutex
     - libblas
-    - {{ compiler('c') }} ={{ compiler_version }}
-    - {{ compiler('cxx') }} ={{ compiler_version }}
+    - openmp
 
 about:
   home: https://trilinos.org

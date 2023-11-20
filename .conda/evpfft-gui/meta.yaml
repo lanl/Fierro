@@ -9,7 +9,10 @@ source:
 
 build:
   number: 1
-  script: cd python/EVPFFT-GUI/; python setup.py install
+  script: cd python/EVPFFT-GUI/; pip install .
+  noarch: generic # This is a pure python package. So build for noarch on linux4
+  skip: true  # [not linux4]
+  skip: false # [linux64]
 
 requirements:
   host:
@@ -18,7 +21,7 @@ requirements:
   run:
     - paraview=5.11.2
     - fierro-evpfft
-    - fierro-voxelizer-py
+    - fierro-voxelizer
     - python
     - pyside6
 
