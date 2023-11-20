@@ -30,7 +30,12 @@ fi
 
 # Removing stale build directory
 if [ -d "${FIERRO_BUILD_DIR}" ]; then
-    make -C ${FIERRO_BUILD_DIR} distclean
+    if make -C ${FIERRO_BUILD_DIR} distclean; then
+        echo "";
+    else
+        echo "distclean failed. Removing build directory."
+        rm -r ${FIERRO_BUILD_DIR}
+    fi
 else
     mkdir -p ${FIERRO_BUILD_DIR}
 fi
