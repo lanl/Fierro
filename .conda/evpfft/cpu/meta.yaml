@@ -30,7 +30,7 @@ requirements:
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
     - elements
-    - openmp
+    - openmp # [osx]
   run:
     - openmpi
     - fierro-heffte
@@ -38,7 +38,7 @@ requirements:
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
     - elements
-    - openmp
+    - openmp # [osx]
 
 #TODO: Add tests
 

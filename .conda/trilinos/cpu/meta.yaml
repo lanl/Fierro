@@ -31,10 +31,10 @@ requirements:
     - boost-cpp
     - libnetcdf
     - libmatio
-    - openmp
+    - openmp # [osx]
   run:
     - libblas
-    - openmp
+    - openmp # [osx]
 
 about:
   home: https://trilinos.org
