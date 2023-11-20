@@ -2517,6 +2517,11 @@
                    <string>Compression</string>
                   </property>
                  </item>
+                 <item>
+                  <property name="text">
+                   <string>Shear</string>
+                  </property>
+                 </item>
                 </widget>
                </item>
                <item row="1" column="0">

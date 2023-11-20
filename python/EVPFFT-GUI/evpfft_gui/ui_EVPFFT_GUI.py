@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'EVPFFT_GUINIjlCa.ui'
+## Form generated from reading UI file 'EVPFFT_GUIoPyKFE.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -41,7 +41,6 @@ class LocalResource:
     
 
 VTK_OUTPUT = os.path.join(tempfile.gettempdir(), 'VTK_Geometry.vtk')
-print(VTK_OUTPUT)
 ELASTIC_PARAMETERS = LocalResource.get_resource_name('elastic_parameters.txt')
 PLASTIC_PARAMETERS = LocalResource.get_resource_name('plastic_parameters.txt')
 EVPFFT_INPUT = os.path.join(tempfile.gettempdir(), 'evpfft_lattice_input.txt')
@@ -1240,6 +1239,7 @@ class Ui_MainWindow(object):
         self.INBoundaryCondition = QComboBox(self.BoundaryConditionsInputs)
         self.INBoundaryCondition.addItem("")
         self.INBoundaryCondition.addItem("")
+        self.INBoundaryCondition.addItem("")
         self.INBoundaryCondition.setObjectName(u"INBoundaryCondition")
 
         self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.INBoundaryCondition)
@@ -1256,7 +1256,6 @@ class Ui_MainWindow(object):
         self.INBCDirection.setObjectName(u"INBCDirection")
 
         self.formLayout_3.setWidget(1, QFormLayout.FieldRole, self.INBCDirection)
-
 
         self.verticalLayout_17.addWidget(self.BoundaryConditionsInputs)
 
@@ -1869,6 +1868,17 @@ class Ui_MainWindow(object):
         self.BDeleteMaterial.clicked.connect(delete_material)
         
         # Boundary Conditions
+        def BC_direction():
+            if self.INBoundaryCondition.currentText() == "Tension" or self.INBoundaryCondition.currentText() == "Compression":
+                self.INBCDirection.setItemText(0, QCoreApplication.translate("MainWindow", u"x-direction", None))
+                self.INBCDirection.setItemText(1, QCoreApplication.translate("MainWindow", u"y-direction", None))
+                self.INBCDirection.setItemText(2, QCoreApplication.translate("MainWindow", u"z-direction", None))
+            elif self.INBoundaryCondition.currentText() == "Shear":
+                self.INBCDirection.setItemText(0, QCoreApplication.translate("MainWindow", u"xy-direction", None))
+                self.INBCDirection.setItemText(1, QCoreApplication.translate("MainWindow", u"xz-direction", None))
+                self.INBCDirection.setItemText(2, QCoreApplication.translate("MainWindow", u"yz-direction", None))
+        self.INBoundaryCondition.currentTextChanged.connect(BC_direction)
+        
         def add_bcs():
 #            if not self.INBCStrainRate.text():
 #                on_clicked("ERROR: Boundary condition incomplete")
@@ -2051,25 +2061,32 @@ class Ui_MainWindow(object):
             evpfft_lattice_input.write(phases)
             if str(self.INBCDirection.currentText()) == "x-direction":
                 if str(self.INBoundaryCondition.currentText()) == "Tension":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   1.0     0.        0.          udot    |    vel.grad\n' + '    0.      -0.35      0.                  |\n' + '    0.       0.         -0.35                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   1.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 elif str(self.INBoundaryCondition.currentText()) == "Compression":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -1.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.35      0.                  |\n' + '    0.       0.         0.35                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -1.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
             elif str(self.INBCDirection.currentText()) == "y-direction":
                 if str(self.INBoundaryCondition.currentText()) == "Tension":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -0.35     0.        0.          udot    |    vel.grad\n' + '    0.      1.0      0.                  |\n' + '    0.       0.         -0.35                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      1.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 elif str(self.INBoundaryCondition.currentText()) == "Compression":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.35     0.        0.          udot    |    vel.grad\n' + '    0.      -1.0      0.                  |\n' + '    0.       0.         0.35                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      -1.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
             elif str(self.INBCDirection.currentText()) == "z-direction":
                 if str(self.INBoundaryCondition.currentText()) == "Tension":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   -0.35     0.        0.          udot    |    vel.grad\n' + '    0.      -0.35      0.                  |\n' + '    0.       0.         1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 elif str(self.INBoundaryCondition.currentText()) == "Compression":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.35     0.        0.          udot    |    vel.grad\n' + '    0.      0.35      0.                  |\n' + '    0.       0.         -1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         -1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
+            elif str(self.INBoundaryCondition.currentText()) == "Shear":
+                if str(self.INBCDirection.currentText()) == "xy-direction":
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     1.0        0.          udot    |    vel.grad\n' + '    1.0      0.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                elif str(self.INBCDirection.currentText()) == "xz-direction":
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.0        1.0          udot    |    vel.grad\n' + '    0.0      0.0      0.                  |\n' + '    1.0       0.         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                elif str(self.INBCDirection.currentText()) == "yz-direction":
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.0        0.0          udot    |    vel.grad\n' + '    0.0      0.0      1.0                  |\n' + '    0.0       1.0         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
             else:
                 orint("INVALID BOUNDARY CONDITION")
             evpfft_lattice_input.write(test_conditions)
@@ -2349,6 +2366,7 @@ class Ui_MainWindow(object):
         self.LBoundaryCondition.setText(QCoreApplication.translate("MainWindow", u"Boundary Condition: ", None))
         self.INBoundaryCondition.setItemText(0, QCoreApplication.translate("MainWindow", u"Tension", None))
         self.INBoundaryCondition.setItemText(1, QCoreApplication.translate("MainWindow", u"Compression", None))
+        self.INBoundaryCondition.setItemText(2, QCoreApplication.translate("MainWindow", u"Shear", None))
 
         self.LBCDirection.setText(QCoreApplication.translate("MainWindow", u"Direction: ", None))
         self.INBCDirection.setItemText(0, QCoreApplication.translate("MainWindow", u"x-direction", None))
