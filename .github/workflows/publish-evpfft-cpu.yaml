@@ -1,11 +1,12 @@
 name: 'Publish EVPFFT-CPU'
 
 on: 
-  push:
-    paths:
-      - .conda/evpfft/**
-      - src/EVPFFT/src/**
-      - .github/workflows/publish-evpfft.yaml
+  - push:
+      paths:
+        - .conda/evpfft/**
+        - src/EVPFFT/src/**
+        - .github/workflows/publish-evpfft-cpu.yaml
+  - workflow_dispatch
 
 jobs:
   publish:
