@@ -42,7 +42,6 @@ jobs:
           activate-environment: build-env
           environment-file: .etc/conda_build_environment.yaml
           condarc-file: .etc/condarc.yaml
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - run: |
           export CROSS_COMPILING=${{ matrix.cross_compile }}
           conda build ${{ inputs.recipe_dir }} -e ${{ matrix.build_variant_file }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge -c nvidia
