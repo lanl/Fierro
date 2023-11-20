@@ -13,7 +13,7 @@ fi
 # Should be fine, since libdl is now just a placeholder for modern C compilers.
 
 # Compile shared libs to allow for hotswapping mpi implementations
-# To compile for shared libs, ensure that -fno-visibility-inlines-hidden is set.
+# To compile for shared libs, ensure that -fvisibility-inlines-hidden is not set.
 # The default "-fvisibility-inlines-hidden" will not-export class-inlined functions. 
 # This causes certain Kokkos symbols to not be loaded correctly.
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
