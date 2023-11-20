@@ -8,7 +8,7 @@ heffte_build_type="${2}"
 [ -d "${libdir}/Elements/matar/src" ] && echo "matar submodule exists"
 
 
-if { [ ! -d "${libdir}/Elements/elements" ] || [ ! -d "${libdir}/Elements/matar/include" ] ;}
+if { [ ! -d "${ELEMENTS_SOURCE_DIR}/elements" ] || [ ! -d "${ELEMENTS_SOURCE_DIR}/matar/include" ] ;}
 then
     echo "Missing submodules, downloading them...."
     git submodule update --init --recursive
