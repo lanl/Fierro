@@ -25,10 +25,10 @@ requirements:
     - python
     - pybind11
     - setuptools
-    - openmp
+    - llvm-openmp
   run:
     - python
-    - openmp
+    - llvm-openmp
 
 test:
   imports:
