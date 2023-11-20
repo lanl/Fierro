@@ -6,7 +6,7 @@ on:
         - .conda/evpfft/**
         - src/EVPFFT/src/**
         - .github/workflows/publish-evpfft-cpu.yaml
-  - workflow_dispatch
+  - workflow_dispatch:
 
 jobs:
   publish:
