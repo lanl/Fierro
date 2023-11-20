@@ -657,6 +657,9 @@ public:
 
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;
+ 
+  // for storing state variables used in user material model
+  DCArrayKokkos <double> state_vars;
 
   //elem_user_output_vars allow users to output variables of interest per element
   DCArrayKokkos <double> elem_user_output_vars;

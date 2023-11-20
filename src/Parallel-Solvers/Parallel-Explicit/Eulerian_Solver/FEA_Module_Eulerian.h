@@ -271,6 +271,9 @@ public:
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;
 
+  // for storing global variables used in user material model
+  DCArrayKokkos <double> state_vars;
+
   // Dual Views of the corner struct variables
   DViewCArrayKokkos <double> corner_force;
   DViewCArrayKokkos <double> corner_mass;
