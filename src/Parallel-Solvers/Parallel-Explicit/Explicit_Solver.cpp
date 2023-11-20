@@ -54,12 +54,6 @@
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
-#include <Tpetra_CrsMatrix.hpp>
-
-#include <Xpetra_MultiVector.hpp>
-#include "Tpetra_Details_makeColMap.hpp"
-#include "Tpetra_Details_DefaultTypes.hpp"
-#include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
 
 #include "elements.h"
@@ -75,12 +69,6 @@
 #include "Explicit_Solver.h"
 #include "mesh.h"
 #include "state.h"
-
-//Repartition Package
-#include <Zoltan2_XpetraMultiVectorAdapter.hpp>
-#include <Zoltan2_PartitioningProblem.hpp>
-#include <Zoltan2_PartitioningSolution.hpp>
-#include <Zoltan2_InputTraits.hpp>
 
 //Optimization Package
 #include "ROL_Algorithm.hpp"

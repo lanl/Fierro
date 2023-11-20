@@ -55,7 +55,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Simulation_Parameters/Simulation_Parameters.h"
+//#include "Simulation_Parameters/Simulation_Parameters.h"
 
 using namespace mtr;
 
@@ -67,6 +67,11 @@ namespace ROL{
   template<class datatype>
   class Problem;
 }
+
+class Simulation_Parameters;
+
+enum class FEA_MODULE_TYPE;
+enum class BOUNDARY_TYPE;
 
 class FEA_Module{
 
@@ -207,7 +212,7 @@ public:
   elements::Element2D *elem2D;
   
 
-  Simulation_Parameters simparam;
+  Simulation_Parameters *simparam;
   Solver *Solver_Pointer_;
   int num_dim;
   int num_gauss_points;
@@ -337,6 +342,7 @@ public:
   // node ids in bdy_patch set
   RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
   DCArrayKokkos <size_t> num_bdy_nodes_in_set;
+  bool node_specified_bcs; //currently happens with ansys import
 
   // patch ids in bdy set
   size_t num_bdy_sets;

@@ -5,15 +5,14 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_Eulerian.h"
-#include "Simulation_Parameters_Eulerian.h"
 
 void FEA_Module_Eulerian::example_function(double rk_alpha,
                          const size_t num_nodes,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = rk_num_bins - 1;
+    int num_dims = num_dim;
 
     // example device loop
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {

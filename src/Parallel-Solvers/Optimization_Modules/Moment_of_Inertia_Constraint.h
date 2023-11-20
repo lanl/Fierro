@@ -130,7 +130,7 @@ public:
     inequality_flag_ = inequality_flag;
     constraint_value_ = constraint_value;
     inertia_component_ = inertia_component;
-    int num_dim = FEM_->simparam.num_dims;
+    int num_dim = FEM_->simparam->num_dims;
     ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
 
     if(inertia_component_ == 0)
