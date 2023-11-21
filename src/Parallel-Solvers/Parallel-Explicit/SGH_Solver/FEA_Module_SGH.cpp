@@ -1021,7 +1021,7 @@ void FEA_Module_SGH::setup(){
     const DCArrayKokkos <material_t> material = simparam->material;
     global_vars = simparam->global_vars;
     state_vars = DCArrayKokkos <double> (rnum_elem, simparam->max_num_state_vars);
-    elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options->max_num_user_output_vars); 
+    elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam->output_options.max_num_user_output_vars); 
  
     //--- calculate bdy sets ---//
     mesh->num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
