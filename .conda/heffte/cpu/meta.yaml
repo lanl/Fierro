@@ -20,16 +20,14 @@ requirements:
   build:
     - cmake >=3.17.0
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }} # [osx]
     - openmpi
   host:
     - openmpi
     - fftw
-    - libcxx
   run:
     - openmpi
     - fftw
-    - libcxx
 
 about:
   home: https://github.com/lanl/Fierro
