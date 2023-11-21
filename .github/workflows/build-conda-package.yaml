@@ -18,9 +18,9 @@ jobs:
           - os: macos-latest
             build_variant_file: .conda/macos_build_variants.yaml
             cross_compile: 0
-          - os: ubuntu-latest
-            build_variant_file: .conda/linux_build_variants.yaml
-            cross_compile: 1
+          # - os: ubuntu-latest
+          #   build_variant_file: .conda/linux_build_variants.yaml
+          #   cross_compile: 1
 
     runs-on: ${{ matrix.os }}
     steps:
