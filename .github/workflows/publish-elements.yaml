@@ -5,6 +5,7 @@ on:
     paths:
       - .conda/elements/**
       - .github/workflows/publish-elements.yaml
+  workflow_dispatch:
 
 jobs:
   publish:
