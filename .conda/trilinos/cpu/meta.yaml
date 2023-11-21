@@ -22,7 +22,7 @@ requirements:
     - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
-    - {{ compiler('fortran') }} ={{ linux_compiler_version }}
+    - {{ compiler('fortran') }}
     - openmpi
   host:
     - libblas
