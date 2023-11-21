@@ -25,8 +25,6 @@ requirements:
   host:
     - openmpi
     - fftw
-    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
-    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
   run:
     - openmpi
     - fftw

@@ -19,7 +19,7 @@ fi
 # Some apple architectures. 
 # Only applies for clang.
 if [ "$PLATFORM" == "osx-arm64" ]; then
-    arch_flags+=(--target=arm64-apple-darwin)
+    arch_flags+=(-arch arm64 --target=arm64-apple-darwin)
     echo "Tuning for generic aarch64 CPUs"
     export VECTOR_ARCH_FLAGS=" -mtune=generic "
 fi
