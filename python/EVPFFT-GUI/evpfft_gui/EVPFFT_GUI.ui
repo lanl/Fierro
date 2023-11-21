@@ -850,7 +850,7 @@
            <enum>QFrame::NoFrame</enum>
           </property>
           <property name="currentIndex">
-           <number>3</number>
+           <number>2</number>
           </property>
           <widget class="QWidget" name="TitlePage">
            <property name="minimumSize">
@@ -1254,7 +1254,7 @@
             <item>
              <widget class="QStackedWidget" name="MaterialTypeTool">
               <property name="currentIndex">
-               <number>0</number>
+               <number>2</number>
               </property>
               <widget class="QWidget" name="Isotropic">
                <layout class="QFormLayout" name="formLayout_6">
@@ -1309,26 +1309,14 @@
                    <enum>QFrame::Raised</enum>
                   </property>
                   <layout class="QFormLayout" name="formLayout_2">
-                   <property name="leftMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>0</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>0</number>
-                   </property>
-                   <item row="0" column="0">
+                   <item row="2" column="0">
                     <widget class="QLabel" name="LIsotropicPlane">
                      <property name="text">
                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;Isotropic Plane: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                      </property>
                     </widget>
                    </item>
-                   <item row="0" column="1">
+                   <item row="2" column="1">
                     <widget class="QComboBox" name="INIsotropicPlane">
                      <item>
                       <property name="text">
@@ -1992,47 +1980,107 @@
               </column>
               <column>
                <property name="text">
-                <string>Ex</string>
+                <string>C11</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>Ey</string>
+                <string>C12</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>Ez</string>
+                <string>C13</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>NUxy</string>
+                <string>C14</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>NUxz</string>
+                <string>C15</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>NUyz</string>
+                <string>C16</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>Gxy</string>
+                <string>C22</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>Gxz</string>
+                <string>C23</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>Gyz</string>
+                <string>C24</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C25</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C26</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C33</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C34</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C35</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C36</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C44</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C45</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C46</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C55</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C56</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>C66</string>
                </property>
               </column>
              </widget>
@@ -2045,424 +2093,10 @@
              </widget>
             </item>
             <item>
-             <widget class="Line" name="line_6">
-              <property name="frameShadow">
-               <enum>QFrame::Sunken</enum>
-              </property>
-              <property name="lineWidth">
-               <number>1</number>
-              </property>
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="Line" name="line_7">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_2">
+             <widget class="QPushButton" name="BRegenElasticConstants">
               <property name="text">
-               <string>Stiffness Matrix [C]:</string>
+               <string>Regenerate Elastic Constants</string>
               </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QTableWidget" name="TStiffnessMatrix">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="rowCount">
-               <number>6</number>
-              </property>
-              <property name="columnCount">
-               <number>6</number>
-              </property>
-              <attribute name="horizontalHeaderMinimumSectionSize">
-               <number>21</number>
-              </attribute>
-              <attribute name="horizontalHeaderDefaultSectionSize">
-               <number>50</number>
-              </attribute>
-              <row/>
-              <row/>
-              <row/>
-              <row/>
-              <row/>
-              <row/>
-              <column/>
-              <column/>
-              <column/>
-              <column/>
-              <column/>
-              <column/>
-              <item row="0" column="0">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="0" column="1">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="0" column="2">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="0" column="3">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="0" column="4">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="0" column="5">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="1" column="0">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="1" column="1">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="1" column="2">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="1" column="3">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="1" column="4">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="1" column="5">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="2" column="0">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="2" column="1">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="2" column="2">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="2" column="3">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="2" column="4">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="2" column="5">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="3" column="0">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="3" column="1">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="3" column="2">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="3" column="3">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="3" column="4">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="3" column="5">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="4" column="0">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="4" column="1">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="4" column="2">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="4" column="3">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="4" column="4">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="4" column="5">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
-              <item row="5" column="0">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="5" column="1">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="5" column="2">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="5" column="3">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="5" column="4">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="background">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>235</red>
-                  <green>235</green>
-                  <blue>235</blue>
-                 </color>
-                </brush>
-               </property>
-               <property name="flags">
-                <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
-               </property>
-              </item>
-              <item row="5" column="5">
-               <property name="flags">
-                <set>ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
-               </property>
-              </item>
              </widget>
             </item>
             <item>

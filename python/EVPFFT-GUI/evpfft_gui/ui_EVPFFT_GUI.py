@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'EVPFFT_GUIoPyKFE.ui'
+## Form generated from reading UI file 'EVPFFT_GUIvbNgGr.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -685,11 +685,10 @@ class Ui_MainWindow(object):
         self.IsotropicPlane.setFrameShadow(QFrame.Raised)
         self.formLayout_2 = QFormLayout(self.IsotropicPlane)
         self.formLayout_2.setObjectName(u"formLayout_2")
-        self.formLayout_2.setContentsMargins(0, 0, 0, 0)
         self.LIsotropicPlane = QLabel(self.IsotropicPlane)
         self.LIsotropicPlane.setObjectName(u"LIsotropicPlane")
 
-        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.LIsotropicPlane)
+        self.formLayout_2.setWidget(2, QFormLayout.LabelRole, self.LIsotropicPlane)
 
         self.INIsotropicPlane = QComboBox(self.IsotropicPlane)
         self.INIsotropicPlane.addItem("")
@@ -697,7 +696,7 @@ class Ui_MainWindow(object):
         self.INIsotropicPlane.addItem("")
         self.INIsotropicPlane.setObjectName(u"INIsotropicPlane")
 
-        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.INIsotropicPlane)
+        self.formLayout_2.setWidget(2, QFormLayout.FieldRole, self.INIsotropicPlane)
 
 
         self.verticalLayout_23.addWidget(self.IsotropicPlane)
@@ -1018,8 +1017,8 @@ class Ui_MainWindow(object):
         self.verticalLayout_16.addWidget(self.BAddMaterial)
 
         self.TMaterials = QTableWidget(self.DefineMaterialTool)
-        if (self.TMaterials.columnCount() < 11):
-            self.TMaterials.setColumnCount(11)
+        if (self.TMaterials.columnCount() < 23):
+            self.TMaterials.setColumnCount(23)
         __qtablewidgetitem16 = QTableWidgetItem()
         self.TMaterials.setHorizontalHeaderItem(0, __qtablewidgetitem16)
         __qtablewidgetitem17 = QTableWidgetItem()
@@ -1042,6 +1041,30 @@ class Ui_MainWindow(object):
         self.TMaterials.setHorizontalHeaderItem(9, __qtablewidgetitem25)
         __qtablewidgetitem26 = QTableWidgetItem()
         self.TMaterials.setHorizontalHeaderItem(10, __qtablewidgetitem26)
+        __qtablewidgetitem27 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(11, __qtablewidgetitem27)
+        __qtablewidgetitem28 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(12, __qtablewidgetitem28)
+        __qtablewidgetitem29 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(13, __qtablewidgetitem29)
+        __qtablewidgetitem30 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(14, __qtablewidgetitem30)
+        __qtablewidgetitem31 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(15, __qtablewidgetitem31)
+        __qtablewidgetitem32 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(16, __qtablewidgetitem32)
+        __qtablewidgetitem33 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(17, __qtablewidgetitem33)
+        __qtablewidgetitem34 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(18, __qtablewidgetitem34)
+        __qtablewidgetitem35 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(19, __qtablewidgetitem35)
+        __qtablewidgetitem36 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(20, __qtablewidgetitem36)
+        __qtablewidgetitem37 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(21, __qtablewidgetitem37)
+        __qtablewidgetitem38 = QTableWidgetItem()
+        self.TMaterials.setHorizontalHeaderItem(22, __qtablewidgetitem38)
         self.TMaterials.setObjectName(u"TMaterials")
         self.TMaterials.setEnabled(True)
         self.TMaterials.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -1054,162 +1077,10 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_16.addWidget(self.BDeleteMaterial)
 
-        self.line_6 = QFrame(self.DefineMaterialTool)
-        self.line_6.setObjectName(u"line_6")
-        self.line_6.setFrameShadow(QFrame.Sunken)
-        self.line_6.setLineWidth(1)
-        self.line_6.setFrameShape(QFrame.HLine)
+        self.BRegenElasticConstants = QPushButton(self.DefineMaterialTool)
+        self.BRegenElasticConstants.setObjectName(u"BRegenElasticConstants")
 
-        self.verticalLayout_16.addWidget(self.line_6)
-
-        self.line_7 = QFrame(self.DefineMaterialTool)
-        self.line_7.setObjectName(u"line_7")
-        self.line_7.setFrameShape(QFrame.HLine)
-        self.line_7.setFrameShadow(QFrame.Sunken)
-
-        self.verticalLayout_16.addWidget(self.line_7)
-
-        self.label_2 = QLabel(self.DefineMaterialTool)
-        self.label_2.setObjectName(u"label_2")
-
-        self.verticalLayout_16.addWidget(self.label_2)
-
-        self.TStiffnessMatrix = QTableWidget(self.DefineMaterialTool)
-        if (self.TStiffnessMatrix.columnCount() < 6):
-            self.TStiffnessMatrix.setColumnCount(6)
-        if (self.TStiffnessMatrix.rowCount() < 6):
-            self.TStiffnessMatrix.setRowCount(6)
-        __qtablewidgetitem27 = QTableWidgetItem()
-        __qtablewidgetitem27.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(0, 0, __qtablewidgetitem27)
-        __qtablewidgetitem28 = QTableWidgetItem()
-        __qtablewidgetitem28.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(0, 1, __qtablewidgetitem28)
-        __qtablewidgetitem29 = QTableWidgetItem()
-        __qtablewidgetitem29.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(0, 2, __qtablewidgetitem29)
-        __qtablewidgetitem30 = QTableWidgetItem()
-        __qtablewidgetitem30.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(0, 3, __qtablewidgetitem30)
-        __qtablewidgetitem31 = QTableWidgetItem()
-        __qtablewidgetitem31.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(0, 4, __qtablewidgetitem31)
-        __qtablewidgetitem32 = QTableWidgetItem()
-        __qtablewidgetitem32.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(0, 5, __qtablewidgetitem32)
-        __qtablewidgetitem33 = QTableWidgetItem()
-        __qtablewidgetitem33.setBackground(brush);
-        __qtablewidgetitem33.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(1, 0, __qtablewidgetitem33)
-        __qtablewidgetitem34 = QTableWidgetItem()
-        __qtablewidgetitem34.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(1, 1, __qtablewidgetitem34)
-        __qtablewidgetitem35 = QTableWidgetItem()
-        __qtablewidgetitem35.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(1, 2, __qtablewidgetitem35)
-        __qtablewidgetitem36 = QTableWidgetItem()
-        __qtablewidgetitem36.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(1, 3, __qtablewidgetitem36)
-        __qtablewidgetitem37 = QTableWidgetItem()
-        __qtablewidgetitem37.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(1, 4, __qtablewidgetitem37)
-        __qtablewidgetitem38 = QTableWidgetItem()
-        __qtablewidgetitem38.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(1, 5, __qtablewidgetitem38)
-        __qtablewidgetitem39 = QTableWidgetItem()
-        __qtablewidgetitem39.setBackground(brush);
-        __qtablewidgetitem39.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(2, 0, __qtablewidgetitem39)
-        __qtablewidgetitem40 = QTableWidgetItem()
-        __qtablewidgetitem40.setBackground(brush);
-        __qtablewidgetitem40.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(2, 1, __qtablewidgetitem40)
-        __qtablewidgetitem41 = QTableWidgetItem()
-        __qtablewidgetitem41.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(2, 2, __qtablewidgetitem41)
-        __qtablewidgetitem42 = QTableWidgetItem()
-        __qtablewidgetitem42.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(2, 3, __qtablewidgetitem42)
-        __qtablewidgetitem43 = QTableWidgetItem()
-        __qtablewidgetitem43.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(2, 4, __qtablewidgetitem43)
-        __qtablewidgetitem44 = QTableWidgetItem()
-        __qtablewidgetitem44.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(2, 5, __qtablewidgetitem44)
-        __qtablewidgetitem45 = QTableWidgetItem()
-        __qtablewidgetitem45.setBackground(brush);
-        __qtablewidgetitem45.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(3, 0, __qtablewidgetitem45)
-        __qtablewidgetitem46 = QTableWidgetItem()
-        __qtablewidgetitem46.setBackground(brush);
-        __qtablewidgetitem46.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(3, 1, __qtablewidgetitem46)
-        __qtablewidgetitem47 = QTableWidgetItem()
-        __qtablewidgetitem47.setBackground(brush);
-        __qtablewidgetitem47.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(3, 2, __qtablewidgetitem47)
-        __qtablewidgetitem48 = QTableWidgetItem()
-        __qtablewidgetitem48.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(3, 3, __qtablewidgetitem48)
-        __qtablewidgetitem49 = QTableWidgetItem()
-        __qtablewidgetitem49.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(3, 4, __qtablewidgetitem49)
-        __qtablewidgetitem50 = QTableWidgetItem()
-        __qtablewidgetitem50.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(3, 5, __qtablewidgetitem50)
-        __qtablewidgetitem51 = QTableWidgetItem()
-        __qtablewidgetitem51.setBackground(brush);
-        __qtablewidgetitem51.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(4, 0, __qtablewidgetitem51)
-        __qtablewidgetitem52 = QTableWidgetItem()
-        __qtablewidgetitem52.setBackground(brush);
-        __qtablewidgetitem52.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(4, 1, __qtablewidgetitem52)
-        __qtablewidgetitem53 = QTableWidgetItem()
-        __qtablewidgetitem53.setBackground(brush);
-        __qtablewidgetitem53.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(4, 2, __qtablewidgetitem53)
-        __qtablewidgetitem54 = QTableWidgetItem()
-        __qtablewidgetitem54.setBackground(brush);
-        __qtablewidgetitem54.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(4, 3, __qtablewidgetitem54)
-        __qtablewidgetitem55 = QTableWidgetItem()
-        __qtablewidgetitem55.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(4, 4, __qtablewidgetitem55)
-        __qtablewidgetitem56 = QTableWidgetItem()
-        __qtablewidgetitem56.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(4, 5, __qtablewidgetitem56)
-        __qtablewidgetitem57 = QTableWidgetItem()
-        __qtablewidgetitem57.setBackground(brush);
-        __qtablewidgetitem57.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(5, 0, __qtablewidgetitem57)
-        __qtablewidgetitem58 = QTableWidgetItem()
-        __qtablewidgetitem58.setBackground(brush);
-        __qtablewidgetitem58.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(5, 1, __qtablewidgetitem58)
-        __qtablewidgetitem59 = QTableWidgetItem()
-        __qtablewidgetitem59.setBackground(brush);
-        __qtablewidgetitem59.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(5, 2, __qtablewidgetitem59)
-        __qtablewidgetitem60 = QTableWidgetItem()
-        __qtablewidgetitem60.setBackground(brush);
-        __qtablewidgetitem60.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(5, 3, __qtablewidgetitem60)
-        __qtablewidgetitem61 = QTableWidgetItem()
-        __qtablewidgetitem61.setBackground(brush);
-        __qtablewidgetitem61.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEditable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable);
-        self.TStiffnessMatrix.setItem(5, 4, __qtablewidgetitem61)
-        __qtablewidgetitem62 = QTableWidgetItem()
-        __qtablewidgetitem62.setFlags(Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
-        self.TStiffnessMatrix.setItem(5, 5, __qtablewidgetitem62)
-        self.TStiffnessMatrix.setObjectName(u"TStiffnessMatrix")
-        self.TStiffnessMatrix.setEnabled(True)
-        self.TStiffnessMatrix.setRowCount(6)
-        self.TStiffnessMatrix.setColumnCount(6)
-        self.TStiffnessMatrix.horizontalHeader().setMinimumSectionSize(21)
-        self.TStiffnessMatrix.horizontalHeader().setDefaultSectionSize(50)
-
-        self.verticalLayout_16.addWidget(self.TStiffnessMatrix)
+        self.verticalLayout_16.addWidget(self.BRegenElasticConstants)
 
         self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -1257,6 +1128,7 @@ class Ui_MainWindow(object):
 
         self.formLayout_3.setWidget(1, QFormLayout.FieldRole, self.INBCDirection)
 
+
         self.verticalLayout_17.addWidget(self.BoundaryConditionsInputs)
 
         self.BAddBC = QPushButton(self.BoundaryConditionsTool)
@@ -1267,10 +1139,10 @@ class Ui_MainWindow(object):
         self.TBCs = QTableWidget(self.BoundaryConditionsTool)
         if (self.TBCs.columnCount() < 2):
             self.TBCs.setColumnCount(2)
-        __qtablewidgetitem63 = QTableWidgetItem()
-        self.TBCs.setHorizontalHeaderItem(0, __qtablewidgetitem63)
-        __qtablewidgetitem64 = QTableWidgetItem()
-        self.TBCs.setHorizontalHeaderItem(1, __qtablewidgetitem64)
+        __qtablewidgetitem39 = QTableWidgetItem()
+        self.TBCs.setHorizontalHeaderItem(0, __qtablewidgetitem39)
+        __qtablewidgetitem40 = QTableWidgetItem()
+        self.TBCs.setHorizontalHeaderItem(1, __qtablewidgetitem40)
         self.TBCs.setObjectName(u"TBCs")
         self.TBCs.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
@@ -1615,9 +1487,180 @@ class Ui_MainWindow(object):
         self.INMaterialType.currentIndexChanged.connect(material_type)
         
         def add_material():
+            warning_flag = 0
             if str(self.INMaterialType.currentText()) == 'Isotropic':
                 if not self.INYoungsModulus.text() or not self.INPoissonsRatio.text() or not self.INMaterialName.text():
                     warning_message('ERROR: Material definition incomplete')
+                    warning_flag = 1
+                else:
+                    # Calculate Stiffness Matrix
+                    E = float(self.INYoungsModulus.text())
+                    NU = float(self.INPoissonsRatio.text())
+                    INCalcG = float(self.INYoungsModulus.text())/(2*(1+float(self.INPoissonsRatio.text())))
+                    S11 = 1/E
+                    S12 = -NU/E
+                    S13 = -NU/E
+                    S22 = 1/E
+                    S23 = -NU/E
+                    S33 = 1/E
+                    S44 = 1/INCalcG
+                    S55 = 1/INCalcG
+                    S66 = 1/INCalcG
+                    S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                    C11 = (1/S)*(S22*S33-S23*S23)
+                    C12 = (1/S)*(S13*S23-S12*S33)
+                    C13 = (1/S)*(S12*S23-S13*S22)
+                    C22 = (1/S)*(S33*S11-S13*S13)
+                    C23 = (1/S)*(S12*S13-S23*S11)
+                    C33 = (1/S)*(S11*S22-S12*S12)
+                    C44 = (1/S44)
+                    C55 = (1/S55)
+                    C66 = (1/S66)
+                
+                    self.INYoungsModulus.clear()
+                    self.INPoissonsRatio.clear()
+            if str(self.INMaterialType.currentText()) == 'Transversely Isotropic':
+                if not self.INEip.text() or not self.INNUip.text() or not self.INEop.text() or not self.INNUop.text() or not self.INGop.text() or not self.INMaterialName.text():
+                    warning_message('ERROR: Material definition incomplete')
+                    warning_flag = 1
+                else:
+                    if str(self.INIsotropicPlane.currentText()) == 'x-y plane':
+                        # Calculate Stiffness Matrix
+                        NUip = float(self.INNUip.text())
+                        NUop = float(self.INNUop.text())
+                        Eip = float(self.INEip.text())
+                        Eop = float(self.INEop.text())
+                        Gop = float(self.INGop.text())
+                        S11 = 1/Eip
+                        S12 = -NUip/Eip
+                        S13 = -NUop/Eop
+                        S22 = 1/Eip
+                        S23 = -NUop/Eop
+                        S33 = 1/Eop
+                        S44 = 1/Gop
+                        S55 = 1/Gop
+                        S66 = 1/(Eip/(2*(1+NUip)))
+                        S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                        C11 = (1/S)*(S22*S33-S23*S23)
+                        C12 = (1/S)*(S13*S23-S12*S33)
+                        C22 = (1/S)*(S33*S11-S13*S13)
+                        C13 = (1/S)*(S12*S23-S13*S22)
+                        C33 = (1/S)*(S11*S22-S12*S12)
+                        C23 = (1/S)*(S12*S13-S23*S11)
+                        C44 = (1/S44)
+                        C55 = (1/S55)
+                        C66 = (1/S66)
+                        
+                        self.INEip.clear()
+                        self.INNUip.clear()
+                        self.INEop.clear()
+                        self.INNUop.clear()
+                        self.INGop.clear()
+                    if str(self.INIsotropicPlane.currentText()) == 'x-z plane':
+                        # Calculate Stiffness Matrix
+                        NUip = float(self.INNUip.text())
+                        NUop = float(self.INNUop.text())
+                        Eip = float(self.INEip.text())
+                        Eop = float(self.INEop.text())
+                        Gop = float(self.INGop.text())
+                        S11 = 1/Eip
+                        S12 = -NUop/Eop
+                        S13 = -NUip/Eip
+                        S22 = 1/Eop
+                        S23 = -NUop/Eop
+                        S33 = 1/Eip
+                        S44 = 1/Gop
+                        S55 = 1/(Eip/(2*(1+NUip)))
+                        S66 = 1/Gop
+                        S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                        C11 = (1/S)*(S22*S33-S23*S23)
+                        C12 = (1/S)*(S13*S23-S12*S33)
+                        C22 = (1/S)*(S33*S11-S13*S13)
+                        C13 = (1/S)*(S12*S23-S13*S22)
+                        C33 = (1/S)*(S11*S22-S12*S12)
+                        C23 = (1/S)*(S12*S13-S23*S11)
+                        C44 = (1/S44)
+                        C55 = (1/S55)
+                        C66 = (1/S66)
+                        
+                        self.INEip.clear()
+                        self.INNUip.clear()
+                        self.INEop.clear()
+                        self.INNUop.clear()
+                        self.INGop.clear()
+                    if str(self.INIsotropicPlane.currentText()) == 'y-z plane':
+                        # Calculate Stiffness Matrix
+                        NUip = float(self.INNUip.text())
+                        NUop = float(self.INNUop.text())
+                        Eip = float(self.INEip.text())
+                        Eop = float(self.INEop.text())
+                        Gop = float(self.INGop.text())
+                        S11 = 1/Eop
+                        S12 = -NUop/Eop
+                        S13 = -NUop/Eop
+                        S22 = 1/Eip
+                        S23 = -NUip/Eip
+                        S33 = 1/Eip
+                        S44 = 1/(Eip/(2*(1+NUip)))
+                        S55 = 1/Gop
+                        S66 = 1/Gop
+                        S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                        C11 = (1/S)*(S22*S33-S23*S23)
+                        C12 = (1/S)*(S13*S23-S12*S33)
+                        C22 = (1/S)*(S33*S11-S13*S13)
+                        C13 = (1/S)*(S12*S23-S13*S22)
+                        C33 = (1/S)*(S11*S22-S12*S12)
+                        C23 = (1/S)*(S12*S13-S23*S11)
+                        C44 = (1/S44)
+                        C55 = (1/S55)
+                        C66 = (1/S66)
+                        
+                        self.INEip.clear()
+                        self.INNUip.clear()
+                        self.INEop.clear()
+                        self.INNUop.clear()
+                        self.INGop.clear()
+    
+            if str(self.INMaterialType.currentText()) == 'Orthotropic':
+                if not self.INEx.text() or not self.INEy.text() or not self.INEz.text() or not self.INNUxy.text() or not self.INNUxz.text() or not self.INNUyz.text() or not self.INGxy.text() or not self.INGxz.text() or not self.INGyz.text() or not self.INMaterialName.text():
+                    warning_message('ERROR: Material definition incomplete')
+                    warning_flag = 1
+                else:
+                    # Calculate Stiffness Matrix
+                    S11 = 1/float(self.INEx.text())
+                    S12 = -float(self.INNUxy.text())/float(self.INEx.text())
+                    S13 = -float(self.INNUxz.text())/float(self.INEx.text())
+                    S22 = 1/float(self.INEy.text())
+                    S23 = -float(self.INNUyz.text())/float(self.INEy.text())
+                    S33 = 1/float(self.INEz.text())
+                    S44 = 1/float(self.INGyz.text())
+                    S55 = 1/float(self.INGxz.text())
+                    S66 = 1/float(self.INGxy.text())
+                    S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                    C11 = (1/S)*(S22*S33-S23*S23)
+                    C12 = (1/S)*(S13*S23-S12*S33)
+                    C22 = (1/S)*(S33*S11-S13*S13)
+                    C13 = (1/S)*(S12*S23-S13*S22)
+                    C33 = (1/S)*(S11*S22-S12*S12)
+                    C23 = (1/S)*(S12*S13-S23*S11)
+                    C44 = (1/S44)
+                    C55 = (1/S55)
+                    C66 = (1/S66)
+                    
+                    self.INEx.clear()
+                    self.INEy.clear()
+                    self.INEz.clear()
+                    self.INNUxy.clear()
+                    self.INNUxz.clear()
+                    self.INNUyz.clear()
+                    self.INGxy.clear()
+                    self.INGxz.clear()
+                    self.INGyz.clear()
+                    
+            if str(self.INMaterialType.currentText()) == 'Anisotropic':
+                if not self.TAnisotropic.item(0,0).text() or not self.TAnisotropic.item(0,1).text() or not self.TAnisotropic.item(0,2).text() or not self.TAnisotropic.item(0,3).text() or not self.TAnisotropic.item(0,4).text() or not self.TAnisotropic.item(0,5).text() or not self.TAnisotropic.item(1,1).text() or not self.TAnisotropic.item(1,2).text() or not self.TAnisotropic.item(1,3).text() or not self.TAnisotropic.item(1,4).text() or not self.TAnisotropic.item(1,5).text() or not self.TAnisotropic.item(2,2).text() or not self.TAnisotropic.item(2,3).text() or not self.TAnisotropic.item(2,4).text() or not self.TAnisotropic.item(2,5).text() or not self.TAnisotropic.item(3,3).text() or not self.TAnisotropic.item(3,4).text() or not self.TAnisotropic.item(3,5).text() or not self.TAnisotropic.item(4,4).text() or not self.TAnisotropic.item(4,5).text() or not self.TAnisotropic.item(5,5).text() or not self.INMaterialName.text():
+                    warning_message('ERROR: Material definition incomplete')
+                    warning_flag = 1
                 else:
                     # Fill out material definition table
                     row = self.TMaterials.rowCount()
@@ -1628,226 +1671,58 @@ class Ui_MainWindow(object):
                     self.TMaterials.setItem(row, 1, QTableWidgetItem(
                         str(self.INMaterialType.currentText()))
                     )
-                    self.TMaterials.setItem(
-                        row, 2, QTableWidgetItem(self.INYoungsModulus.text())
-                    )
-                    self.TMaterials.setItem(
-                        row, 3, QTableWidgetItem(self.INYoungsModulus.text())
-                    )
-                    self.TMaterials.setItem(
-                        row, 4, QTableWidgetItem(self.INYoungsModulus.text())
-                    )
-                    self.TMaterials.setItem(
-                        row, 5, QTableWidgetItem(self.INPoissonsRatio.text())
-                    )
-                    self.TMaterials.setItem(
-                        row, 6, QTableWidgetItem(self.INPoissonsRatio.text())
-                    )
-                    self.TMaterials.setItem(
-                        row, 7, QTableWidgetItem(self.INPoissonsRatio.text())
-                    )
-                    self.INCalcG = float(self.INYoungsModulus.text())/(2*(1+float(self.INPoissonsRatio.text())))
-                    self.TMaterials.setItem(
-                        row, 8, QTableWidgetItem(str(self.INCalcG))
-                    )
-                    self.TMaterials.setItem(
-                        row, 9, QTableWidgetItem(str(self.INCalcG))
-                    )
-                    self.TMaterials.setItem(
-                        row, 10, QTableWidgetItem(str(self.INCalcG))
-                    )
-                    
-                    # Calculate Stiffness Matrix
-                    E = float(self.INYoungsModulus.text())
-                    NU = float(self.INPoissonsRatio.text())
-                    S11 = 1/E
-                    S12 = -NU/E
-                    S13 = -NU/E
-                    S22 = 1/E
-                    S23 = -NU/E
-                    S33 = 1/E
-                    S44 = 1/self.INCalcG
-                    S55 = 1/self.INCalcG
-                    S66 = 1/self.INCalcG
-                    S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                    self.C11 = (1/S)*(S22*S33-S23*S23)
-                    self.C12 = (1/S)*(S13*S23-S12*S33)
-                    self.C22 = (1/S)*(S33*S11-S13*S13)
-                    self.C13 = (1/S)*(S12*S23-S13*S22)
-                    self.C33 = (1/S)*(S11*S22-S12*S12)
-                    self.C23 = (1/S)*(S12*S13-S23*S11)
-                    self.C44 = (1/S44)
-                    self.C55 = (1/S55)
-                    self.C66 = (1/S66)
-                    
-                    # Fill out stiffness matrix table
-                    self.TStiffnessMatrix.setItem(0, 0, QTableWidgetItem(str(self.C11)))
-                    self.TStiffnessMatrix.setItem(0, 1, QTableWidgetItem(str(self.C12)))
-                    self.TStiffnessMatrix.setItem(0, 2, QTableWidgetItem(str(self.C13)))
-                    self.TStiffnessMatrix.setItem(0, 3, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(0, 4, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(0, 5, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(1, 1, QTableWidgetItem(str(self.C22)))
-                    self.TStiffnessMatrix.setItem(1, 2, QTableWidgetItem(str(self.C23)))
-                    self.TStiffnessMatrix.setItem(1, 3, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(1, 4, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(1, 5, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(2, 2, QTableWidgetItem(str(self.C33)))
-                    self.TStiffnessMatrix.setItem(2, 3, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(2, 4, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(2, 5, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(3, 3, QTableWidgetItem(str(self.C44)))
-                    self.TStiffnessMatrix.setItem(3, 4, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(3, 5, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(4, 4, QTableWidgetItem(str(self.C55)))
-                    self.TStiffnessMatrix.setItem(4, 5, QTableWidgetItem('0'))
-                    self.TStiffnessMatrix.setItem(5, 5, QTableWidgetItem(str(self.C66)))
-                    
+                    k = 2
+                    for i in [0,1,2,3,4,5,6]:
+                        for j in range(i,6):
+                            self.TMaterials.setItem(
+                                row, k, QTableWidgetItem(self.TAnisotropic.item(i,j).text())
+                            )
+                            self.TAnisotropic.item(i,j).setText('')
+                            k += 1
                     self.INMaterialName.clear()
-                    self.INYoungsModulus.clear()
-                    self.INPoissonsRatio.clear()
-            if str(self.INMaterialType.currentText()) == 'Transversely Isotropic':
-                if not self.INEip.text() or not self.INNUip.text() or not self.INEop.text() or not self.INNUop.text() or not self.INGop.text() or not self.INMaterialName.text():
-                    warning_message('ERROR: Material definition incomplete')
-                else:
-                    row = self.TMaterials.rowCount()
-                    self.TMaterials.insertRow(row)
-                    if str(self.INIsotropicPlane.currentText()) == 'x-y plane':
-                        self.TMaterials.setItem(row, 0, QTableWidgetItem(
-                            self.INMaterialName.text().strip())
-                        )
-                        self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                            str(self.INMaterialType.currentText()) + ': ' + self.INIsotropicPlane.currentText())
-                        )
-                        self.TMaterials.setItem(
-                            row, 2, QTableWidgetItem(self.INEip.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 3, QTableWidgetItem(self.INEip.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 4, QTableWidgetItem(self.INEop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 5, QTableWidgetItem(self.INNUip.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 6, QTableWidgetItem(self.INNUop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 7, QTableWidgetItem(self.INNUop.text())
-                        )
-                        self.INCalcG = float(self.INEip.text())/(2*(1+float(self.INNUip.text())))
-                        self.TMaterials.setItem(
-                            row, 8, QTableWidgetItem(str(self.INCalcG))
-                        )
-                        self.TMaterials.setItem(
-                            row, 9, QTableWidgetItem(self.INGop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 10, QTableWidgetItem(self.INGop.text())
-                        )
-                        self.INEip.clear()
-                        self.INNUip.clear()
-                        self.INEop.clear()
-                        self.INNUop.clear()
-                        self.INGop.clear()
-                        self.INMaterialName.clear()
-                    if str(self.INIsotropicPlane.currentText()) == 'x-z plane':
-                        self.TMaterials.setItem(row, 0, QTableWidgetItem(
-                            self.INMaterialName.text().strip())
-                        )
-                        self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                            str(self.INMaterialType.currentText()) + ': ' + self.INIsotropicPlane.currentText())
-                        )
-                        self.TMaterials.setItem(
-                            row, 2, QTableWidgetItem(self.INEip.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 3, QTableWidgetItem(self.INEop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 4, QTableWidgetItem(self.INEip.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 5, QTableWidgetItem(self.INNUop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 6, QTableWidgetItem(self.INNUip.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 7, QTableWidgetItem(self.INNUop.text())
-                        )
-                        self.INCalcG = float(self.INEip.text())/(2*(1+float(self.INNUip.text())))
-                        self.TMaterials.setItem(
-                            row, 8, QTableWidgetItem(self.INGop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 9, QTableWidgetItem(str(self.INCalcG))
-                        )
-                        self.TMaterials.setItem(
-                            row, 10, QTableWidgetItem(self.INGop.text())
-                        )
-                        self.INEip.clear()
-                        self.INNUip.clear()
-                        self.INEop.clear()
-                        self.INNUop.clear()
-                        self.INGop.clear()
-                        self.INMaterialName.clear()
-                    if str(self.INIsotropicPlane.currentText()) == 'y-z plane':
-                        self.TMaterials.setItem(row, 0, QTableWidgetItem(
-                            self.INMaterialName.text().strip())
-                        )
-                        self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                            str(self.INMaterialType.currentText()) + ': ' + self.INIsotropicPlane.currentText())
-                        )
-                        self.TMaterials.setItem(
-                            row, 2, QTableWidgetItem(self.INEop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 3, QTableWidgetItem(self.INEip.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 4, QTableWidgetItem(self.INEip.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 5, QTableWidgetItem(self.INNUop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 6, QTableWidgetItem(self.INNUop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 7, QTableWidgetItem(self.INNUip.text())
-                        )
-                        self.INCalcG = float(self.INEip.text())/(2*(1+float(self.INNUip.text())))
-                        self.TMaterials.setItem(
-                            row, 8, QTableWidgetItem(self.INGop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 9, QTableWidgetItem(self.INGop.text())
-                        )
-                        self.TMaterials.setItem(
-                            row, 10, QTableWidgetItem(str(self.INCalcG))
-                        )
-                        self.INEip.clear()
-                        self.INNUip.clear()
-                        self.INEop.clear()
-                        self.INNUop.clear()
-                        self.INGop.clear()
-                        self.INMaterialName.clear()
-            if str(self.INMaterialType.currentText()) == 'Orthotropic':
-                if not self.INEx.text() or not self.INEy.text() or not self.INEz.text() or not self.INNUxy.text() or not self.INNUxz.text() or not self.INNUyz.text() or not self.INGxy.text() or not self.INGxz.text() or not self.INGyz.text() or not self.INMaterialName.text():
-                    warning_message('ERROR: Material definition incomplete')
-                else:
-                    row = self.TMaterials.rowCount()
-                    self.TMaterials.insertRow(row)
-                    self.TMaterials.setItem(row, 0, QTableWidgetItem(
-                        self.INMaterialName.text().strip())
-                    )
-                    self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                        str(self.INMaterialType.currentText()))
-                    )
-                    self.INMaterialName.clear()
+                    warning_flag = 1
+            if warning_flag == 0:
+                # Fill out material definition table
+                row = self.TMaterials.rowCount()
+                self.TMaterials.insertRow(row)
+                self.TMaterials.setItem(row, 0, QTableWidgetItem(
+                    self.INMaterialName.text().strip())
+                )
+                self.TMaterials.setItem(row, 1, QTableWidgetItem(
+                    str(self.INMaterialType.currentText()))
+                )
+                self.TMaterials.setItem(
+                    row, 2, QTableWidgetItem(str(C11))
+                )
+                self.TMaterials.setItem(
+                    row, 3, QTableWidgetItem(str(C12))
+                )
+                self.TMaterials.setItem(
+                    row, 4, QTableWidgetItem(str(C13))
+                )
+                self.TMaterials.setItem(
+                    row, 8, QTableWidgetItem(str(C22))
+                )
+                self.TMaterials.setItem(
+                    row, 9, QTableWidgetItem(str(C23))
+                )
+                self.TMaterials.setItem(
+                    row, 13, QTableWidgetItem(str(C33))
+                )
+                self.TMaterials.setItem(
+                    row, 17, QTableWidgetItem(str(C44))
+                )
+                self.TMaterials.setItem(
+                    row, 20, QTableWidgetItem(str(C55))
+                )
+                self.TMaterials.setItem(
+                    row, 22, QTableWidgetItem(str(C66))
+                )
+                for i in [5,6,7,10,11,12,14,15,16,18,19,21]:
+                   self.TMaterials.setItem(row, i, QTableWidgetItem('0'))
+                self.INMaterialName.clear()
+            else:
+                warning_flag = 0
                 
         def delete_material():
             current_row = self.TMaterials.currentRow()
@@ -1863,6 +1738,14 @@ class Ui_MainWindow(object):
             )
             if button == QMessageBox.StandardButton.Yes:
                 self.TMaterials.removeRow(current_row)
+                
+        def regenerate_elastic_constants():
+            current_row = self.TMaterials.currentRow()
+            if current_row < 0:
+                return QMessageBox.warning(QMessageBox(),"Warning","Please select a material from the table")
+            if self.TMaterials.item(row,0) == 'Isotropic':
+                self.MaterialTypeTool.setCurrentIndex(0)
+                
         
         self.BAddMaterial.clicked.connect(add_material)
         self.BDeleteMaterial.clicked.connect(delete_material)
@@ -1923,129 +1806,27 @@ class Ui_MainWindow(object):
             current_file_loc = os.getcwd()
             
             # Elastic parameters file
-            if self.TMaterials.item(0,1).text() == 'Isotropic':
+#            if self.TMaterials.item(0,1).text() == 'Isotropic':
+#                elastic_parameters = open(ELASTIC_PARAMETERS,"w")
+#                iso = '1                         ISO\n'
+#                elastic_parameters.write(iso)
+#                Young_Nu = self.TMaterials.item(0,2).text() + '   ' + self.TMaterials.item(0,5).text() + '                  YOUNG(MPa),NU (V+R/2)\n'
+#                elastic_parameters.write(Young_Nu)
+#                elastic_parameters.close()
+            if self.TMaterials.item(0,1).text() == 'Isotropic' or 'Transversely Isotropic' in self.TMaterials.item(0,1).text() or self.TMaterials.item(0,1).text() == 'Orthotropic':
                 elastic_parameters = open(ELASTIC_PARAMETERS,"w")
-                iso = '1                         ISO\n'
+                iso = '0\n'
                 elastic_parameters.write(iso)
-                Young_Nu = self.TMaterials.item(0,2).text() + '   ' + self.TMaterials.item(0,5).text() + '                  YOUNG(MPa),NU (V+R/2)\n'
-                elastic_parameters.write(Young_Nu)
+                stiffness = '  ' + self.TMaterials.item(0,2).text() + '  ' + self.TMaterials.item(0,3).text() + '  ' + self.TMaterials.item(0,4).text() + '  0  0  0     Cu (MPa)\n' + '  ' + self.TMaterials.item(0,3).text() + '  ' + self.TMaterials.item(0,8).text() + '  ' + self.TMaterials.item(0,9).text() + '  0  0  0\n' + '  ' + self.TMaterials.item(0,4).text() + '  ' + self.TMaterials.item(0,9).text() + '  ' + self.TMaterials.item(0,13).text() + '  0  0  0\n' + '  0  0  0   ' + self.TMaterials.item(0,17).text() + '  0  0\n' + '  0  0  0  0  ' + self.TMaterials.item(0,20).text() + '  0\n' + '  0  0  0  0  0  ' + self.TMaterials.item(0,22).text()
+                elastic_parameters.write(stiffness)
                 elastic_parameters.close()
-            elif 'Transversely Isotropic' in self.TMaterials.item(0,1).text():
-                if str(self.INIsotropicPlane.currentText()) == 'x-y plane':
-                    NUip = float(self.TMaterials.item(0,5).text())
-                    NUop = float(self.TMaterials.item(0,6).text())
-                    Eip = float(self.TMaterials.item(0,2).text())
-                    Eop = float(self.TMaterials.item(0,4).text())
-                    Gop = float(self.TMaterials.item(0,10).text())
-                    S11 = 1/Eip
-                    S12 = -NUip/Eip
-                    S13 = -NUop/Eop
-                    S22 = 1/Eip
-                    S23 = -NUop/Eop
-                    S33 = 1/Eop
-                    S44 = 1/Gop
-                    S55 = 1/Gop
-                    S66 = 1/(Eip/(2*(1+NUip)))
-                    S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                    C11 = (1/S)*(S22*S33-S23*S23)
-                    C12 = (1/S)*(S13*S23-S12*S33)
-                    C22 = (1/S)*(S33*S11-S13*S13)
-                    C13 = (1/S)*(S12*S23-S13*S22)
-                    C33 = (1/S)*(S11*S22-S12*S12)
-                    C23 = (1/S)*(S12*S13-S23*S11)
-                    C44 = (1/S44)
-                    C55 = (1/S55)
-                    C66 = (1/S66)
-                    elastic_parameters = open(ELASTIC_PARAMETERS,"w")
-                    iso = '0\n'
-                    elastic_parameters.write(iso)
-                    stiffness = '  ' + str(C11) + '  ' + str(C12) + '  ' + str(C13) + '  0  0  0     Cu (MPa)\n' + '  ' + str(C12) + '  ' + str(C22) + '  ' + str(C23) + '  0  0  0\n' + '  ' + str(C13) + '  ' + str(C23) + '  ' + str(C33) + '  0  0  0\n' + '  0  0  0   ' + str(C44) + '  0  0\n' + '  0  0  0  0  ' + str(C55) + '  0\n' + '  0  0  0  0  0  ' + str(C66)
-                    elastic_parameters.write(stiffness)
-                elif str(self.INIsotropicPlane.currentText()) == 'x-z plane':
-                    NUip = float(self.TMaterials.item(0,6).text())
-                    NUop = float(self.TMaterials.item(0,5).text())
-                    Eip = float(self.TMaterials.item(0,2).text())
-                    Eop = float(self.TMaterials.item(0,3).text())
-                    Gop = float(self.TMaterials.item(0,8).text())
-                    S11 = 1/Eip
-                    S12 = -NUop/Eop
-                    S13 = -NUip/Eip
-                    S22 = 1/Eop
-                    S23 = -NUop/Eop
-                    S33 = 1/Eip
-                    S44 = 1/Gop
-                    S55 = 1/(Eip/(2*(1+NUip)))
-                    S66 = 1/Gop
-                    S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                    C11 = (1/S)*(S22*S33-S23*S23)
-                    C12 = (1/S)*(S13*S23-S12*S33)
-                    C22 = (1/S)*(S33*S11-S13*S13)
-                    C13 = (1/S)*(S12*S23-S13*S22)
-                    C33 = (1/S)*(S11*S22-S12*S12)
-                    C23 = (1/S)*(S12*S13-S23*S11)
-                    C44 = (1/S44)
-                    C55 = (1/S55)
-                    C66 = (1/S66)
-                    elastic_parameters = open(ELASTIC_PARAMETERS,"w")
-                    iso = '0\n'
-                    elastic_parameters.write(iso)
-                    stiffness = '  ' + str(C11) + '  ' + str(C12) + '  ' + str(C13) + '  0  0  0     Cu (MPa)\n' + '  ' + str(C12) + '  ' + str(C22) + '  ' + str(C23) + '  0  0  0\n' + '  ' + str(C13) + '  ' + str(C23) + '  ' + str(C33) + '  0  0  0\n' + '  0  0  0   ' + str(C44) + '  0  0\n' + '  0  0  0  0  ' + str(C55) + '  0\n' + '  0  0  0  0  0  ' + str(C66)
-                    elastic_parameters.write(stiffness)
-                else:
-                    NUip = float(self.TMaterials.item(0,7).text())
-                    NUop = float(self.TMaterials.item(0,6).text())
-                    Eip = float(self.TMaterials.item(0,3).text())
-                    Eop = float(self.TMaterials.item(0,2).text())
-                    Gop = float(self.TMaterials.item(0,8).text())
-                    S11 = 1/Eop
-                    S12 = -NUop/Eop
-                    S13 = -NUop/Eop
-                    S22 = 1/Eip
-                    S23 = -NUip/Eip
-                    S33 = 1/Eip
-                    S44 = 1/(Eip/(2*(1+NUip)))
-                    S55 = 1/Gop
-                    S66 = 1/Gop
-                    S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                    C11 = (1/S)*(S22*S33-S23*S23)
-                    C12 = (1/S)*(S13*S23-S12*S33)
-                    C22 = (1/S)*(S33*S11-S13*S13)
-                    C13 = (1/S)*(S12*S23-S13*S22)
-                    C33 = (1/S)*(S11*S22-S12*S12)
-                    C23 = (1/S)*(S12*S13-S23*S11)
-                    C44 = (1/S44)
-                    C55 = (1/S55)
-                    C66 = (1/S66)
-                    elastic_parameters = open(ELASTIC_PARAMETERS,"w")
-                    iso = '0\n'
-                    elastic_parameters.write(iso)
-                    stiffness = '  ' + str(C11) + '  ' + str(C12) + '  ' + str(C13) + '  0  0  0     Cu (MPa)\n' + '  ' + str(C12) + '  ' + str(C22) + '  ' + str(C23) + '  0  0  0\n' + '  ' + str(C13) + '  ' + str(C23) + '  ' + str(C33) + '  0  0  0\n' + '  0  0  0   ' + str(C44) + '  0  0\n' + '  0  0  0  0  ' + str(C55) + '  0\n' + '  0  0  0  0  0  ' + str(C66)
-                    elastic_parameters.write(stiffness)
-            elif self.TMaterials.item(0,1).text() == 'Orthotropic':
-                    S11 = 1/float(self.TMaterials.item(0,2).text())
-                    S12 = -float(self.TMaterials.item(0,5).text())/float(self.TMaterials.item(0,2).text())
-                    S13 = -float(self.TMaterials.item(0,6).text())/float(self.TMaterials.item(0,2).text())
-                    S22 = 1/float(self.TMaterials.item(0,3).text())
-                    S23 = -float(self.TMaterials.item(0,7).text())/float(self.TMaterials.item(0,3).text())
-                    S33 = 1/float(self.TMaterials.item(0,4).text())
-                    S44 = 1/float(self.TMaterials.item(0,10).text())
-                    S55 = 1/float(self.TMaterials.item(0,9).text())
-                    S66 = 1/float(self.TMaterials.item(0,8).text())
-                    S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                    C11 = (1/S)*(S22*S33-S23*S23)
-                    C12 = (1/S)*(S13*S23-S12*S33)
-                    C22 = (1/S)*(S33*S11-S13*S13)
-                    C13 = (1/S)*(S12*S23-S13*S22)
-                    C33 = (1/S)*(S11*S22-S12*S12)
-                    C23 = (1/S)*(S12*S13-S23*S11)
-                    C44 = (1/S44)
-                    C55 = (1/S55)
-                    C66 = (1/S66)
-                    elastic_parameters = open(ELASTIC_PARAMETERS,"w")
-                    iso = '0\n'
-                    elastic_parameters.write(iso)
-                    stiffness = '  ' + str(C11) + '  ' + str(C12) + '  ' + str(C13) + '  0  0  0     Cu (MPa)\n' + '  ' + str(C12) + '  ' + str(C22) + '  ' + str(C23) + '  0  0  0\n' + '  ' + str(C13) + '  ' + str(C23) + '  ' + str(C33) + '  0  0  0\n' + '  0  0  0   ' + str(C44) + '  0  0\n' + '  0  0  0  0  ' + str(C55) + '  0\n' + '  0  0  0  0  0  ' + str(C66)
-                    elastic_parameters.write(stiffness)
+            elif self.TMaterials.item(0,1).text() == 'Anisotropic':
+                elastic_parameters = open(ELASTIC_PARAMETERS,"w")
+                iso = '0\n'
+                elastic_parameters.write(iso)
+                stiffness = '  ' + self.TMaterials.item(0,2).text() + '  ' + self.TMaterials.item(0,3).text() + '  ' + self.TMaterials.item(0,4).text() + '  ' + self.TMaterials.item(0,5).text() + '  ' + self.TMaterials.item(0,6).text() + '  ' + self.TMaterials.item(0,7).text() + '     Cu (MPa)\n' + '  ' + self.TMaterials.item(0,3).text() + '  ' + self.TMaterials.item(0,8).text() + '  ' + self.TMaterials.item(0,9).text() + '  ' + self.TMaterials.item(0,10).text() + '  ' + self.TMaterials.item(0,11).text() + '  ' + self.TMaterials.item(0,12).text() + '\n' + '  ' + self.TMaterials.item(0,4).text() + '  ' + self.TMaterials.item(0,9).text() + '  ' + self.TMaterials.item(0,13).text() + '  ' + self.TMaterials.item(0,14).text() + '  ' + self.TMaterials.item(0,15).text() + '  ' + self.TMaterials.item(0,16).text() + '\n' + '  ' + self.TMaterials.item(0,5).text() + '  ' + self.TMaterials.item(0,10).text() + '  ' + self.TMaterials.item(0,14).text() + '  ' + self.TMaterials.item(0,17).text() + '  ' + self.TMaterials.item(0,18).text() + '  ' + self.TMaterials.item(0,19).text() + '\n' + '  ' + self.TMaterials.item(0,6).text() + '  ' + self.TMaterials.item(0,11).text() + '  ' + self.TMaterials.item(0,15).text() + '  ' + self.TMaterials.item(0,18).text() + '  ' + self.TMaterials.item(0,20).text() + '  ' + self.TMaterials.item(0,21).text() + '\n' + '  ' + self.TMaterials.item(0,7).text() + '  ' + self.TMaterials.item(0,12).text() + '  ' + self.TMaterials.item(0,16).text() + '  ' + self.TMaterials.item(0,19).text() + '  ' + self.TMaterials.item(0,21).text() + '  ' +  self.TMaterials.item(0,22).text()
+                elastic_parameters.write(stiffness)
+                elastic_parameters.close()
             
             # EVPFFT lattice input parameters file
             evpfft_lattice_input = open(EVPFFT_INPUT,"w")
@@ -2061,32 +1842,32 @@ class Ui_MainWindow(object):
             evpfft_lattice_input.write(phases)
             if str(self.INBCDirection.currentText()) == "x-direction":
                 if str(self.INBoundaryCondition.currentText()) == "Tension":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   1.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   1.0     0.        0.          udot     |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 elif str(self.INBoundaryCondition.currentText()) == "Compression":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -1.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -1.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
             elif str(self.INBCDirection.currentText()) == "y-direction":
                 if str(self.INBoundaryCondition.currentText()) == "Tension":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      1.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      1.0      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 elif str(self.INBoundaryCondition.currentText()) == "Compression":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      -1.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      -1.0      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
             elif str(self.INBCDirection.currentText()) == "z-direction":
                 if str(self.INBoundaryCondition.currentText()) == "Tension":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 elif str(self.INBoundaryCondition.currentText()) == "Compression":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         -1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
             elif str(self.INBoundaryCondition.currentText()) == "Shear":
                 if str(self.INBCDirection.currentText()) == "xy-direction":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     1.0        0.          udot    |    vel.grad\n' + '    1.0      0.0      0.                  |\n' + '    0.       0.         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     1.0        0.          udot    |    vel.grad\n' + '    1.0      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 elif str(self.INBCDirection.currentText()) == "xz-direction":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.0        1.0          udot    |    vel.grad\n' + '    0.0      0.0      0.                  |\n' + '    1.0       0.         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     0.        1.0          udot    |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    1.0       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 elif str(self.INBCDirection.currentText()) == "yz-direction":
-                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.0        0.0          udot    |    vel.grad\n' + '    0.0      0.0      1.0                  |\n' + '    0.0       1.0         0.0                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
+                    test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      0.      1.0                  |\n' + '    0.       1.0         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
             else:
                 orint("INVALID BOUNDARY CONDITION")
             evpfft_lattice_input.write(test_conditions)
@@ -2097,6 +1878,7 @@ class Ui_MainWindow(object):
             evpfft_lattice_input.close()
             
         # Run EVPFFT
+        self.run_cnt = 0
         def run_click():
             write_input_file()
             self.p = QProcess()
@@ -2106,6 +1888,7 @@ class Ui_MainWindow(object):
             self.p.finished.connect(process_finished)
             self.p.start("evpfft",["-f", EVPFFT_INPUT, "-m", "2"])
             self.progress_re = re.compile("       Current  Time  STEP = (\d+)")
+            self.run_cnt += 1
         def simple_percent_parser(output):
             m = self.progress_re.search(output)
             if m:
@@ -2225,6 +2008,10 @@ class Ui_MainWindow(object):
                 self.timer.timeout.connect(update_plot)
                 self.timer.start()
         def update_plot():
+            if self.run_cnt > 1:
+                with open("str_str.out", newline='') as f:
+                    reader = csv.reader(f)
+                    self.ss_data = list(reader)
             x = [0 for i in range(int(self.INNumberOfSteps.text()))]
             y = [0 for i in range(int(self.INNumberOfSteps.text()))]
             for i in range(int(self.INNumberOfSteps.text())):
@@ -2338,30 +2125,49 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem1 = self.TMaterials.horizontalHeaderItem(1)
         ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"Definition", None));
         ___qtablewidgetitem2 = self.TMaterials.horizontalHeaderItem(2)
-        ___qtablewidgetitem2.setText(QCoreApplication.translate("MainWindow", u"Ex", None));
+        ___qtablewidgetitem2.setText(QCoreApplication.translate("MainWindow", u"C11", None));
         ___qtablewidgetitem3 = self.TMaterials.horizontalHeaderItem(3)
-        ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"Ey", None));
+        ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"C12", None));
         ___qtablewidgetitem4 = self.TMaterials.horizontalHeaderItem(4)
-        ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"Ez", None));
+        ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"C13", None));
         ___qtablewidgetitem5 = self.TMaterials.horizontalHeaderItem(5)
-        ___qtablewidgetitem5.setText(QCoreApplication.translate("MainWindow", u"NUxy", None));
+        ___qtablewidgetitem5.setText(QCoreApplication.translate("MainWindow", u"C14", None));
         ___qtablewidgetitem6 = self.TMaterials.horizontalHeaderItem(6)
-        ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWindow", u"NUxz", None));
+        ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWindow", u"C15", None));
         ___qtablewidgetitem7 = self.TMaterials.horizontalHeaderItem(7)
-        ___qtablewidgetitem7.setText(QCoreApplication.translate("MainWindow", u"NUyz", None));
+        ___qtablewidgetitem7.setText(QCoreApplication.translate("MainWindow", u"C16", None));
         ___qtablewidgetitem8 = self.TMaterials.horizontalHeaderItem(8)
-        ___qtablewidgetitem8.setText(QCoreApplication.translate("MainWindow", u"Gxy", None));
+        ___qtablewidgetitem8.setText(QCoreApplication.translate("MainWindow", u"C22", None));
         ___qtablewidgetitem9 = self.TMaterials.horizontalHeaderItem(9)
-        ___qtablewidgetitem9.setText(QCoreApplication.translate("MainWindow", u"Gxz", None));
+        ___qtablewidgetitem9.setText(QCoreApplication.translate("MainWindow", u"C23", None));
         ___qtablewidgetitem10 = self.TMaterials.horizontalHeaderItem(10)
-        ___qtablewidgetitem10.setText(QCoreApplication.translate("MainWindow", u"Gyz", None));
+        ___qtablewidgetitem10.setText(QCoreApplication.translate("MainWindow", u"C24", None));
+        ___qtablewidgetitem11 = self.TMaterials.horizontalHeaderItem(11)
+        ___qtablewidgetitem11.setText(QCoreApplication.translate("MainWindow", u"C25", None));
+        ___qtablewidgetitem12 = self.TMaterials.horizontalHeaderItem(12)
+        ___qtablewidgetitem12.setText(QCoreApplication.translate("MainWindow", u"C26", None));
+        ___qtablewidgetitem13 = self.TMaterials.horizontalHeaderItem(13)
+        ___qtablewidgetitem13.setText(QCoreApplication.translate("MainWindow", u"C33", None));
+        ___qtablewidgetitem14 = self.TMaterials.horizontalHeaderItem(14)
+        ___qtablewidgetitem14.setText(QCoreApplication.translate("MainWindow", u"C34", None));
+        ___qtablewidgetitem15 = self.TMaterials.horizontalHeaderItem(15)
+        ___qtablewidgetitem15.setText(QCoreApplication.translate("MainWindow", u"C35", None));
+        ___qtablewidgetitem16 = self.TMaterials.horizontalHeaderItem(16)
+        ___qtablewidgetitem16.setText(QCoreApplication.translate("MainWindow", u"C36", None));
+        ___qtablewidgetitem17 = self.TMaterials.horizontalHeaderItem(17)
+        ___qtablewidgetitem17.setText(QCoreApplication.translate("MainWindow", u"C44", None));
+        ___qtablewidgetitem18 = self.TMaterials.horizontalHeaderItem(18)
+        ___qtablewidgetitem18.setText(QCoreApplication.translate("MainWindow", u"C45", None));
+        ___qtablewidgetitem19 = self.TMaterials.horizontalHeaderItem(19)
+        ___qtablewidgetitem19.setText(QCoreApplication.translate("MainWindow", u"C46", None));
+        ___qtablewidgetitem20 = self.TMaterials.horizontalHeaderItem(20)
+        ___qtablewidgetitem20.setText(QCoreApplication.translate("MainWindow", u"C55", None));
+        ___qtablewidgetitem21 = self.TMaterials.horizontalHeaderItem(21)
+        ___qtablewidgetitem21.setText(QCoreApplication.translate("MainWindow", u"C56", None));
+        ___qtablewidgetitem22 = self.TMaterials.horizontalHeaderItem(22)
+        ___qtablewidgetitem22.setText(QCoreApplication.translate("MainWindow", u"C66", None));
         self.BDeleteMaterial.setText(QCoreApplication.translate("MainWindow", u"Delete", None))
-        self.label_2.setText(QCoreApplication.translate("MainWindow", u"Stiffness Matrix [C]:", None))
-
-        __sortingEnabled1 = self.TStiffnessMatrix.isSortingEnabled()
-        self.TStiffnessMatrix.setSortingEnabled(False)
-        self.TStiffnessMatrix.setSortingEnabled(__sortingEnabled1)
-
+        self.BRegenElasticConstants.setText(QCoreApplication.translate("MainWindow", u"Regenerate Elastic Constants", None))
         self.LBoundaryConditions.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">BOUNDARY CONDITIONS</span></p></body></html>", None))
         self.LBoundaryCondition.setText(QCoreApplication.translate("MainWindow", u"Boundary Condition: ", None))
         self.INBoundaryCondition.setItemText(0, QCoreApplication.translate("MainWindow", u"Tension", None))
@@ -2374,10 +2180,10 @@ class Ui_MainWindow(object):
         self.INBCDirection.setItemText(2, QCoreApplication.translate("MainWindow", u"z-direction", None))
 
         self.BAddBC.setText(QCoreApplication.translate("MainWindow", u"Add", None))
-        ___qtablewidgetitem11 = self.TBCs.horizontalHeaderItem(0)
-        ___qtablewidgetitem11.setText(QCoreApplication.translate("MainWindow", u"Boundary Condition", None));
-        ___qtablewidgetitem12 = self.TBCs.horizontalHeaderItem(1)
-        ___qtablewidgetitem12.setText(QCoreApplication.translate("MainWindow", u"Direction", None));
+        ___qtablewidgetitem23 = self.TBCs.horizontalHeaderItem(0)
+        ___qtablewidgetitem23.setText(QCoreApplication.translate("MainWindow", u"Boundary Condition", None));
+        ___qtablewidgetitem24 = self.TBCs.horizontalHeaderItem(1)
+        ___qtablewidgetitem24.setText(QCoreApplication.translate("MainWindow", u"Direction", None));
         self.BDeleteBC.setText(QCoreApplication.translate("MainWindow", u"Delete", None))
         self.LSolverSettings_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">SOLVER SETTINGS</span></p></body></html>", None))
         self.LNumberOfSteps.setText(QCoreApplication.translate("MainWindow", u"Number of steps: ", None))
