@@ -8,7 +8,7 @@ package:
 
 source:
   url: https://github.com/trilinos/Trilinos/archive/trilinos-release-{{ version | replace('.', '-') }}.tar.gz
-  md5: 24d973894e2e334c6ac9436d8b16f7cc
+  md5: 0b627d9a1c84fc185d145940dead9910
 
 build:
   number: 2

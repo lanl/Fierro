@@ -3,7 +3,7 @@ c_compiler:
   - clang # [osx]
 cxx_compiler:
   - gxx     # [linux]
-#  - clangxx # [osx]
+  - clangxx # [osx]
 target_platform:
   - linux-64      # [linux]
   - linux-aarch64 # [linux] 

@@ -12,7 +12,7 @@ fi
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
-      -D BUILD_SHARED_LIBS=ON \
+      -D BUILD_SHARED_LIBS=OFF \ # I don't know why, but I couldn't compile for osx-arm64 from osx-64 with shared libs.
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
       -D CMAKE_CXX_STANDARD:STRING=17 \
       -D Heffte_ENABLE_FFTW=ON \
