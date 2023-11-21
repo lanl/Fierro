@@ -16,6 +16,19 @@ if [ "$PLATFORM" == "linux-aarch64" ]; then
     export VECTOR_ARCH_FLAGS=" -mtune=generic "
 fi
 
+# Some apple architectures. 
+# Only applies for clang.
+if [ "$PLATFORM" == "osx-arm64" ]; then
+    arch_flags+=(-target=arm64-apple-darwin)
+    echo "Tuning for generic aarch64 CPUs"
+    export VECTOR_ARCH_FLAGS=" -mtune=generic "
+fi
+if [ "$PLATFORM" == "osx-64" ]; then
+    arch_flags+=(-target=x86_64-apple-darwin)
+    echo "Tuning for generic aarch64 CPUs"
+    export VECTOR_ARCH_FLAGS=" -mtune=generic "
+fi
+
 PATCHED_CXXFLAGS=()
 for arg in $CXXFLAGS
 do
@@ -31,6 +44,7 @@ do
         ;;
     esac
 done
+
 PATCHED_CXXFLAGS+=(${arch_flags[@]})
 PATCHED_CXXFLAGS=${PATCHED_CXXFLAGS[@]}
 export PATCHED_CXXFLAGS
