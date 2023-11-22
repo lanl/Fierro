@@ -388,7 +388,7 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
             // calculate the Power=F dot V for this corner
             for (size_t dim=0; dim<num_dims; dim++){
                 for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
-                    column_id = Element_Gradient_Matrix_Assembly_Map(elem_gid,node_lid);
+                    column_id = Element_Gradient_Matrix_Assembly_Map(elem_gid,igradient);
                     gradient_node_id = nodes_in_elem(elem_gid,igradient);
                     if(!map->isNodeLocalElement(gradient_node_id)) continue;
                     if(node_lid==igradient){

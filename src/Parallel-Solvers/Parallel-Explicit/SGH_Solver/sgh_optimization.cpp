@@ -1415,6 +1415,24 @@ void FEA_Module_SGH::init_assembly(){
   }); // end parallel for
 
   Gradient_Matrix_Strides.update_host();
+
+  //build inverse map for element gradient assembly
+  for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++){
+      FOR_ALL_CLASS(node_lid, 0, num_nodes_in_elem, {
+          
+          // get the global_id of the node
+          size_t node_gid = nodes_in_elem(elem_gid, node_lid);
+          
+          // the column index is the num corners saved
+          size_t j = count_saved_corners_in_node(node_gid);
+          Element_Gradient_Matrix_Assembly_Map(elem_gid, node_lid) = j;
+
+          // increment the number of corners saved to this node_gid
+          count_saved_corners_in_node(node_gid)++;
+
+      });  // end FOR_ALL over nodes in element
+      Kokkos::fence();  
+  } // end for elem_gid
   
   DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits>(Gradient_Matrix_Strides);
   Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
@@ -1425,7 +1443,7 @@ void FEA_Module_SGH::init_assembly(){
   DOF_to_Elem_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes*num_dim);
   FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
     for(int idim = 0; idim < num_dim; idim++){
-      DOF_to_Elem_Matrix_Strides(inode*num_dim + idim) = node_to_elem_strides(inode);
+      DOF_to_Elem_Matrix_Strides(inode*num_dim + idim) = count_saved_corners_in_node(inode);
     }
   }); // end parallel for
   DOF_to_Elem_Matrix_Strides.update_host();
@@ -1443,25 +1461,6 @@ void FEA_Module_SGH::init_assembly(){
     }
   }); // end parallel for
 
-  
-  //build inverse map for element gradient assembly
-  for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++){
-      FOR_ALL_CLASS(node_lid, 0, num_nodes_in_elem, {
-          
-          // get the global_id of the node
-          size_t node_gid = nodes_in_elem(elem_gid, node_lid);
-          
-          // the column index is the num corners saved
-          size_t j = count_saved_corners_in_node(node_gid);
-          
-          Element_Gradient_Matrix_Assembly_Map(elem_gid, node_lid) = j;
-
-          // increment the number of corners saved to this node_gid
-          count_saved_corners_in_node(node_gid)++;
-
-      });  // end FOR_ALL over nodes in element
-  } // end for elem_gid
-  Kokkos::fence();  
 
   /*
   //construct distributed gradient matrix from local kokkos data
