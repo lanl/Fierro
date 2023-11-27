@@ -1688,9 +1688,14 @@ class Ui_MainWindow(object):
                 self.TMaterials.setItem(row, 0, QTableWidgetItem(
                     self.INMaterialName.text().strip())
                 )
-                self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                    str(self.INMaterialType.currentText() + ' ' + self.INIsotropicPlane.currentText()))
-                )
+                if str(self.INMaterialType.currentText()) == 'Transversely Isotropic':
+                    self.TMaterials.setItem(row, 1, QTableWidgetItem(
+                        str(self.INMaterialType.currentText() + ' ' + self.INIsotropicPlane.currentText()))
+                    )
+                else:
+                    self.TMaterials.setItem(row, 1, QTableWidgetItem(
+                        str(self.INMaterialType.currentText()))
+                    )
                 self.TMaterials.setItem(
                     row, 2, QTableWidgetItem(str(C11))
                 )
@@ -1723,7 +1728,7 @@ class Ui_MainWindow(object):
                 self.INMaterialName.clear()
             else:
                 warning_flag = 0
-    
+                
         def delete_material():
             current_row = self.TMaterials.currentRow()
             if current_row < 0:
@@ -1738,17 +1743,21 @@ class Ui_MainWindow(object):
             )
             if button == QMessageBox.StandardButton.Yes:
                 self.TMaterials.removeRow(current_row)
-
+                
         def regenerate_elastic_constants():
             current_row = self.TMaterials.currentRow()
             if current_row < 0:
                 return QMessageBox.warning(QMessageBox(),"Warning","Please select a material from the table")
                 
             # Define Stiffness Matrix
-            Mstiffness = [[float(self.TMaterials.item(0,2).text()), float(self.TMaterials.item(0,3).text()), float(self.TMaterials.item(0,4).text()),  float(self.TMaterials.item(0,5).text()), float(self.TMaterials.item(0,6).text()), float(self.TMaterials.item(0,7).text())], [float(self.TMaterials.item(0,3).text()), float(self.TMaterials.item(0,8).text()), float(self.TMaterials.item(0,9).text()),  float(self.TMaterials.item(0,10).text()), float(self.TMaterials.item(0,11).text()), float(self.TMaterials.item(0,12).text())], [float(self.TMaterials.item(0,4).text()), float(self.TMaterials.item(0,9).text()), float(self.TMaterials.item(0,13).text()), float(self.TMaterials.item(0,14).text()), float(self.TMaterials.item(0,15).text()), float(self.TMaterials.item(0,16).text())], [float(self.TMaterials.item(0,5).text()), float(self.TMaterials.item(0,10).text()), float(self.TMaterials.item(0,14).text()), float(self.TMaterials.item(0,17).text()), float(self.TMaterials.item(0,18).text()), float(self.TMaterials.item(0,19).text())], [float(self.TMaterials.item(0,6).text()), float(self.TMaterials.item(0,11).text()), float(self.TMaterials.item(0,15).text()), float(self.TMaterials.item(0,18).text()), float(self.TMaterials.item(0,20).text()), float(self.TMaterials.item(0,21).text())], [float(self.TMaterials.item(0,7).text()), float(self.TMaterials.item(0,12).text()), float(self.TMaterials.item(0,16).text()), float(self.TMaterials.item(0,19).text()), float(self.TMaterials.item(0,21).text()), float(self.TMaterials.item(0,22).text())]]
+            Mstiffness = [[float(self.TMaterials.item(current_row,2).text()), float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,4).text()),  float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,7).text())], [float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,8).text()), float(self.TMaterials.item(current_row,9).text()),  float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,12).text())], [float(self.TMaterials.item(current_row,4).text()), float(self.TMaterials.item(current_row,9).text()), float(self.TMaterials.item(current_row,13).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,16).text())], [float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,17).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,19).text())], [float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,20).text()), float(self.TMaterials.item(current_row,21).text())], [float(self.TMaterials.item(current_row,7).text()), float(self.TMaterials.item(current_row,12).text()), float(self.TMaterials.item(current_row,16).text()), float(self.TMaterials.item(current_row,19).text()), float(self.TMaterials.item(current_row,21).text()), float(self.TMaterials.item(current_row,22).text())]]
             Mcompliance = np.linalg.inv(Mstiffness)
             if self.TMaterials.item(current_row,1).text() == 'Isotropic':
                 self.MaterialTypeTool.setCurrentIndex(0)
+                self.INMaterialType.setCurrentIndex(0)
+                self.INMaterialName.clear()
+                self.INYoungsModulus.clear()
+                self.INPoissonsRatio.clear()
                 E = 1/Mcompliance[0][0]
                 nu = -Mcompliance[0][1]*E
                 self.INMaterialName.insert(self.TMaterials.item(current_row,0).text())
@@ -1756,9 +1765,97 @@ class Ui_MainWindow(object):
                 self.INPoissonsRatio.insert(str(nu))
             elif 'Transversely Isotropic' in self.TMaterials.item(current_row,1).text():
                 self.MaterialTypeTool.setCurrentIndex(1)
+                self.INMaterialType.setCurrentIndex(1)
+                self.INMaterialName.clear()
+                self.INEip.clear()
+                self.INNUip.clear()
+                self.INEop.clear()
+                self.INNUop.clear()
+                self.INGop.clear()
                 if 'x-y plane' in self.TMaterials.item(current_row,1).text():
-                    Eip =
-                
+                    Eip = 1/Mcompliance[0][0]
+                    nuip = -Mcompliance[0][1]*Eip
+                    Eop = 1/Mcompliance[2][2]
+                    nuop = -Mcompliance[0][2]*Eop
+                    Gop  = 1/Mcompliance[3][3]
+                    self.INMaterialName.insert(self.TMaterials.item(current_row,0).text())
+                    self.INEip.insert(str(Eip))
+                    self.INNUip.insert(str(nuip))
+                    self.INEop.insert(str(Eop))
+                    self.INNUop.insert(str(nuop))
+                    self.INGop.insert(str(Gop))
+                    self.INIsotropicPlane.setCurrentIndex(0)
+                elif 'x-z plane' in self.TMaterials.item(current_row,1).text():
+                    Eip = 1/Mcompliance[0][0]
+                    nuip = -Mcompliance[0][2]*Eip
+                    Eop = 1/Mcompliance[1][1]
+                    nuop = -Mcompliance[0][1]*Eop
+                    Gop  = 1/Mcompliance[3][3]
+                    self.INMaterialName.insert(self.TMaterials.item(current_row,0).text())
+                    self.INEip.insert(str(Eip))
+                    self.INNUip.insert(str(nuip))
+                    self.INEop.insert(str(Eop))
+                    self.INNUop.insert(str(nuop))
+                    self.INGop.insert(str(Gop))
+                    self.INIsotropicPlane.setCurrentIndex(1)
+                elif 'y-z plane' in self.TMaterials.item(current_row,1).text():
+                    Eip = 1/Mcompliance[1][1]
+                    nuip = -Mcompliance[1][2]*Eip
+                    Eop = 1/Mcompliance[0][0]
+                    nuop = -Mcompliance[0][1]*Eop
+                    Gop  = 1/Mcompliance[4][4]
+                    self.INMaterialName.insert(self.TMaterials.item(current_row,0).text())
+                    self.INEip.insert(str(Eip))
+                    self.INNUip.insert(str(nuip))
+                    self.INEop.insert(str(Eop))
+                    self.INNUop.insert(str(nuop))
+                    self.INGop.insert(str(Gop))
+                    self.INIsotropicPlane.setCurrentIndex(2)
+            elif self.TMaterials.item(current_row,1).text() == 'Orthotropic':
+                self.MaterialTypeTool.setCurrentIndex(3)
+                self.INMaterialType.setCurrentIndex(2)
+                self.INMaterialName.clear()
+                self.INEx.clear()
+                self.INEy.clear()
+                self.INEz.clear()
+                self.INNUxy.clear()
+                self.INNUxz.clear()
+                self.INNUyz.clear()
+                self.INGxy.clear()
+                self.INGxz.clear()
+                self.INGyz.clear()
+                Ex = 1/Mcompliance[0][0]
+                Ey = 1/Mcompliance[1][1]
+                Ez = 1/Mcompliance[2][2]
+                NUxy = -Mcompliance[0][1]*Ex
+                NUxz = -Mcompliance[0][2]*Ex
+                NUyz = -Mcompliance[1][2]*Ey
+                Gxy = 1/Mcompliance[5][5]
+                Gxz = 1/Mcompliance[4][4]
+                Gyz = 1/Mcompliance[3][3]
+                self.INMaterialName.insert(self.TMaterials.item(current_row,0).text())
+                self.INEx.insert(str(Ex))
+                self.INEy.insert(str(Ey))
+                self.INEz.insert(str(Ez))
+                self.INNUxy.insert(str(NUxy))
+                self.INNUxz.insert(str(NUxz))
+                self.INNUyz.insert(str(NUyz))
+                self.INGxy.insert(str(Gxy))
+                self.INGxz.insert(str(Gxz))
+                self.INGyz.insert(str(Gyz))
+            else:
+                self.MaterialTypeTool.setCurrentIndex(2)
+                self.INMaterialType.setCurrentIndex(3)
+                self.INMaterialName.clear()
+                self.INMaterialName.insert(self.TMaterials.item(current_row,0).text())
+                k = 2
+                for i in [0,1,2,3,4,5,6]:
+                    for j in range(i,6):
+                        self.TAnisotropic.item(i,j).setText('')
+                        self.TAnisotropic.setItem(
+                            i, j, QTableWidgetItem(self.TMaterials.item(current_row,k).text())
+                        )
+                        k += 1
                         
         self.BAddMaterial.clicked.connect(add_material)
         self.BDeleteMaterial.clicked.connect(delete_material)

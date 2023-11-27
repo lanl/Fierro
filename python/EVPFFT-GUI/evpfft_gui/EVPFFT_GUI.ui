@@ -1254,7 +1254,7 @@
             <item>
              <widget class="QStackedWidget" name="MaterialTypeTool">
               <property name="currentIndex">
-               <number>2</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="Isotropic">
                <layout class="QFormLayout" name="formLayout_6">
