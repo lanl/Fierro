@@ -38,14 +38,18 @@
 #include <math.h>  // fmin, fmax, abs note: fminl is long
 #include "FEA_Module.h"
 #include "Solver.h"
-#include "Simulation_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 
 #define BC_EPSILON 1.0e-8
 using namespace utils;
 
-FEA_Module::FEA_Module(Solver *Solver_Pointer){
+FEA_Module::FEA_Module(Solver *Solver_Pointer) {
 
   Solver_Pointer_ = Solver_Pointer;
+  simparam = &Solver_Pointer->simparam;
+
+  num_dim = simparam->num_dims;
+  num_gauss_points = simparam->num_gauss_points;
 
   //obtain global and local node and element counts
   num_nodes = Solver_Pointer->num_nodes;
@@ -112,6 +116,7 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
   //obtain boundary condition and loading data
   nboundary_patches = Solver_Pointer->nboundary_patches;
   Boundary_Patches = Solver_Pointer->Boundary_Patches;
+  node_specified_bcs = false;
   //initialize for default
   num_boundary_conditions = 0;
 
@@ -120,7 +125,6 @@ FEA_Module::FEA_Module(Solver *Solver_Pointer){
 
   //output data
   noutput = 0;
-  displaced_mesh_flag = false;
 }
 
 FEA_Module::~FEA_Module() {}
@@ -145,8 +149,8 @@ void FEA_Module::tag_boundaries(int bc_tag, real_t val, int bdy_set, real_t *pat
   //test patch limits for feasibility
   if(patch_limits != NULL){
     //test for upper bounds being greater than lower bounds
-    if(patch_limits[1] <= patch_limits[0]) std::cout << " Warning: patch limits for boundary condition are infeasible";
-    if(patch_limits[2] <= patch_limits[3]) std::cout << " Warning: patch limits for boundary condition are infeasible";
+    if(patch_limits[1] <= patch_limits[0]) std::cout << " Warning: patch limits for boundary condition are infeasible " << patch_limits[0] << " and " << patch_limits[1] << std::endl;
+    if(patch_limits[3] <= patch_limits[2]) std::cout << " Warning: patch limits for boundary condition are infeasible " << patch_limits[2] << " and " << patch_limits[3] << std::endl;
   }
     
   // save the boundary vertices to this set that are on the plane
@@ -238,7 +242,7 @@ int FEA_Module::check_boundary(Node_Combination &Patch_Nodes, int bc_tag, real_t
 
   //Nodes on the Patch
   auto node_list = Patch_Nodes.node_set;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   size_t nnodes = node_list.size();
   size_t node_rid;
   real_t node_coord[num_dim];

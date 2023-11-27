@@ -2,7 +2,6 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
-#include "Simulation_Parameters_SGH.h"
 
 void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
                        const mesh_t &mesh,
@@ -12,8 +11,8 @@ void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
                        const DViewCArrayKokkos <double> &elem_mass,
                        const DViewCArrayKokkos <double> &corner_force){
    
-    const size_t rk_level = simparam.rk_num_bins - 1; 
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = rk_num_bins - 1; 
+    int num_dims = num_dim;
 
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {

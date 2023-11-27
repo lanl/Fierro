@@ -34,6 +34,7 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D Trilinos_ENABLE_ROL=ON \
       -D Trilinos_ENABLE_Ifpack2=ON \
       -D Trilinos_ENABLE_Zoltan2=ON \
+      -D Trilinos_ENABLE_Anasazi=ON \
       -D MueLu_ENABLE_TESTS=OFF \
       -D Trilinos_ENABLE_ALL_PACKAGES=OFF \
       -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF \

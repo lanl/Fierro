@@ -15,23 +15,6 @@ IF (UNIX)
    *.a
    */*.a
    Makefile
-   crux/Makefile
-   ezcl/Makefile
-   genmalloc/Makefile
-   graphics/Makefile
-   hash/Makefile
-   l7/Makefile
-   MallocPlus/Makefile
-   memstats/Makefile
-   powerstats/Makefile
-   mesh/Makefile
-   mesh/hsfc/Makefile
-   mesh/kdtree/Makefile
-   mesh/zorder/Makefile
-   PowerParser/Makefile
-   s7/Makefile
-   timer/Makefile
-   tests/Makefile
    */tests/Makefile
    core core.*
    gmon.out

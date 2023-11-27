@@ -18,10 +18,9 @@
 #include "swage.h"
 #include "matar.h"
 #include "utilities.h"
-#include "Simulation_Parameters_Dynamic_Elasticity.h"
-#include "Simulation_Parameters_Dynamic_Optimization.h"
+#include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
-#include "Explicit_Solver.h"
 
 
 // -----------------------------------------------------------------------------
@@ -43,8 +42,8 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKok
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
-    const size_t num_dims = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    const size_t num_dims = simparam->num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
@@ -407,7 +406,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKok
     Kokkos::fence();
     */
     
-    const real_t damping_constant = simparam.damping_constant;
+    const real_t damping_constant = module_params->damping_constant;
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         
         Force_Gradient_Velocities(node_id*num_dims,0) = -damping_constant;
@@ -439,8 +438,8 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
-    const size_t num_dims = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    const size_t num_dims = simparam->num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
@@ -813,9 +812,9 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
 void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients){
 
   size_t num_bdy_nodes = mesh->num_bdy_nodes;
-  const DCArrayKokkos <boundary_t> boundary = simparam.boundary;
-  const DCArrayKokkos <material_t> material = simparam.material;
-  const int num_dim = simparam.num_dims;
+  const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
+  const DCArrayKokkos <material_t> material = simparam->material;
+  const int num_dim = simparam->num_dims;
   int num_corners = rnum_elem*num_nodes_in_elem;
   real_t global_dt;
   bool element_constant_density = true;
@@ -823,7 +822,7 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem,num_dim);
 
   //gradient contribution from gradient of Force vector with respect to design variable.
-  for (int cycle = 0; cycle < last_time_step+1; cycle++) {
+  for (unsigned long cycle = 0; cycle < last_time_step+1; cycle++) {
     //compute timestep from time data
     global_dt = time_data[cycle+1] - time_data[cycle];
     
@@ -937,8 +936,8 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(const DCArrayKok
                    const size_t cycle
                    ) {
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
-    const size_t num_dims = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    const size_t num_dims = simparam->num_dims;
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         

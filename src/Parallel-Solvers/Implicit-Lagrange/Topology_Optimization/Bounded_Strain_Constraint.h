@@ -125,7 +125,7 @@ public:
     ROL::Ptr<const MV> zp = getVector(z);
     //ROL::Ptr<MV> cp = getVector(c);
     ROL::Ptr<std::vector<real_t>> cp = dynamic_cast<ROL::StdVector<real_t>&>(c).getVector();
-    int num_dim = FEM_->simparam.num_dims;
+    int num_dim = FEM_->simparam->num_dims;
     int strain_count;
     if(num_dim==3) strain_count = 6;
     else strain_count = 3;

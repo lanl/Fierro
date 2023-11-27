@@ -39,18 +39,19 @@
 #define FEA_MODULE_ELASTICITY_H
 
 #include "FEA_Module.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
 
-//Eigensolver
-#include "AnasaziConfigDefs.hpp"
-#include "AnasaziTypes.hpp"
-#include "AnasaziTpetraAdapter.hpp"
+//Trilinos
+#include <Tpetra_MultiVector.hpp>
 
 //forward declare
 namespace MueLu{
   template<class floattype, class local_ind, class global_ind, class nodetype> 
   class Hierarchy;
+}
+
+namespace Anasazi{
+  template<class floattype, class vectortype> 
+  class Eigensolution;
 }
 
 namespace Xpetra{
@@ -66,15 +67,16 @@ namespace Xpetra{
 
 class Implicit_Solver;
 
+class Elasticity_Parameters;
+
 class FEA_Module_Elasticity: public FEA_Module{
 
 public:
 
   typedef Tpetra::Operator<real_t>                OP;
-  typedef Anasazi::MultiVecTraits<real_t,MV>     MVT;
-  typedef Anasazi::OperatorTraits<real_t,MV,OP>  OPT;
+  typedef Tpetra::Vector<real_t,LO,GO> TpetraVector;
 
-  FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index = 0);
+  FEA_Module_Elasticity(Elasticity_Parameters& in_params, Solver *Solver_Pointer, const int my_fea_module_index = 0);
   ~FEA_Module_Elasticity();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
@@ -147,8 +149,7 @@ public:
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
   
-  Simulation_Parameters_Elasticity simparam;
-  Simulation_Parameters_Topology_Optimization simparam_TO;
+  Elasticity_Parameters *module_params;
   Implicit_Solver *Implicit_Solver_Pointer_;
   
   //Local FEA data
@@ -217,6 +218,11 @@ public:
   Teuchos::RCP<Xpetra::Operator<real_t,LO,GO,node_type>> eigen_Prec;
   bool Hierarchy_Constructed;
   bool Eigen_Hierarchy_Constructed;
+
+  //Eigenvalue solution data
+  Teuchos::RCP<Anasazi::Eigensolution<real_t,MV>> sol;
+  Teuchos::RCP<MV> evecs;
+  int numev;
 
   //output dof data
   //Global arrays with collected data used to print

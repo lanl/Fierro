@@ -1,44 +1,64 @@
 # input file
-solver_type: Implicit
 num_dims: 3
-input_options:
-    mesh_file_format: ensight
-    mesh_file_name: TO_small_beam.geo
 
-output_options:
-  graphics_step_frequency: 100
+mesh_generation_options:
+    type: Box
+    origin: [0, 0, 0]
+    length: [10, 10, 100]
+    num_elems: [10, 10, 100]
 
-fea_modules:
+materials:
+  - id: 0
+    elastic_modulus: 200000000000
+    poisson_ratio: 0.3
+    density: 7850
+    thermal_conductivity: 10
+    specific_internal_energy_rate: 1.0
+    initial_temperature: 293
+
+fea_module_parameters:
+  - type: Inertial
+    material_id: 0
+    inertia_center_x: 0
+    inertia_center_y: 0
+    inertia_center_z: 0
+    
   - type: Elasticity
+    material_id: 0
     # Dirichlet conditions
     boundary_conditions:
-      - surface: z_plane
-        plane_position: 0.0
-        condition_type: fixed_displacement
-        displacement_value: 0.0
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: displacement
+        value: 0.0
             
     # Loading/Neumann Conditions
     loading_conditions:
-      - surface: z_plane
-        plane_position: 100.0
-        condition_type: surface_traction
+      - surface: 
+          type: z_plane
+          plane_position: 100.0
+        type: surface_traction
         component_x: 500
         component_y: 0
         component_z: 0
   
   - type: Heat_Conduction
+    material_id: 0
     # Dirichlet conditions
     boundary_conditions:
-      - surface: z_plane
-        plane_position: 0.0
-        condition_type: fixed_temperature
-        temperature_value: 293.0
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: temperature
+        value: 293.0
 
     # Loading/Neumann Conditions
     loading_conditions:
-      - surface: z_plane
-        plane_position: 100.0
-        condition_type: surface_heat_flux
+      - surface: 
+          type: z_plane
+          plane_position: 100.0
+        type: surface_heat_flux
         #can be normal (q dot n) or coordinated (vector q) for curved surfaces
         specification: normal
         flux_value: -0.1

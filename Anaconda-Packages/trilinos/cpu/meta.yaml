@@ -1,4 +1,4 @@
-{% set version = "14.0.0" %}
+{% set version = "14.4.0" %}
 {% set compiler_version = "10.4.0" %}
 
 package:
@@ -10,7 +10,7 @@ source:
   md5: 24d973894e2e334c6ac9436d8b16f7cc
 
 build:
-  number: 1
+  number: 2
   script_env:
     - PLATFORM={{ target_platform }}
 

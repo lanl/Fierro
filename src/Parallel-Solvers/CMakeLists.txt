@@ -16,7 +16,6 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${VECTOR_C_FLAGS}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${VECTOR_CXX_FLAGS}")
 
 find_package(MPI REQUIRED)
-find_package(Trilinos REQUIRED)
 
 # Assume if the CXX compiler exists, the rest do too.
 if (EXISTS ${Trilinos_CXX_COMPILER})
@@ -66,6 +65,7 @@ target_link_libraries (
 )
 
 # Material Models
+include_directories(.)
 include_directories(Material-Models)
 add_subdirectory(Material-Models)
 

@@ -55,7 +55,7 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Simulation_Parameters.h"
+//#include "Simulation_Parameters/Simulation_Parameters.h"
 
 using namespace mtr;
 
@@ -67,6 +67,11 @@ namespace ROL{
   template<class datatype>
   class Problem;
 }
+
+class Simulation_Parameters;
+
+enum class FEA_MODULE_TYPE;
+enum class BOUNDARY_TYPE;
 
 class FEA_Module{
 
@@ -196,7 +201,7 @@ public:
   virtual void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed) {}
 
   //interfacing information
-  std::string Module_Type;
+  FEA_MODULE_TYPE Module_Type;
   int last_compute_step;
 
   //output stream
@@ -207,8 +212,10 @@ public:
   elements::Element2D *elem2D;
   
 
-  Simulation_Parameters simparam;
+  Simulation_Parameters *simparam;
   Solver *Solver_Pointer_;
+  int num_dim;
+  int num_gauss_points;
   int my_fea_module_index_;
   
   //Local FEA data
@@ -322,7 +329,6 @@ public:
   //nodal DOF output data
   enum vector_styles {NODAL, DOF}; //multivector can store as ndof by 1 or nnode by vector_size
   int noutput;
-  bool displaced_mesh_flag;
   int displacement_index;
   std::vector<std::vector<std::string>> output_dof_names;
   std::vector<const_host_vec_array> module_outputs;
@@ -336,6 +342,7 @@ public:
   // node ids in bdy_patch set
   RaggedRightArrayKokkos <size_t> bdy_nodes_in_set;
   DCArrayKokkos <size_t> num_bdy_nodes_in_set;
+  bool node_specified_bcs; //currently happens with ansys import
 
   // patch ids in bdy set
   size_t num_bdy_sets;

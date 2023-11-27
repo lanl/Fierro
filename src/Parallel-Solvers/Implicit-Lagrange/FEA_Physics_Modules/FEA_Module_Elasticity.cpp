@@ -63,15 +63,14 @@
 #include "Tpetra_Import.hpp"
 #include "Tpetra_Import_Util2.hpp"
 #include "MatrixMarket_Tpetra.hpp"
-#include <set>
 
 #include "elements.h"
 #include "swage.h"
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
-#include "Simulation_Parameters_Elasticity.h"
-#include "Simulation_Parameters_Topology_Optimization.h"
+#include "Simulation_Parameters/FEA_Module/Elasticity_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Elasticity.h"
@@ -95,6 +94,9 @@
 #include <DriverCore.hpp>
 
 //Eigensolver
+#include "AnasaziConfigDefs.hpp"
+#include "AnasaziTypes.hpp"
+#include "AnasaziTpetraAdapter.hpp"
 #include "AnasaziBasicEigenproblem.hpp"
 #include "AnasaziBlockDavidsonSolMgr.hpp"
 #include "AnasaziBlockKrylovSchurSolMgr.hpp"
@@ -106,31 +108,28 @@
 using namespace utils;
 
 
-FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+FEA_Module_Elasticity::FEA_Module_Elasticity(
+    Elasticity_Parameters& in_params,
+    Solver *Solver_Pointer, 
+    const int my_fea_module_index
+  ) : FEA_Module(Solver_Pointer){
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
-  Module_Type = "Elasticity";
+  Module_Type = FEA_MODULE_TYPE::Elasticity;
 
   //recast solver pointer for non-base class access
   Implicit_Solver_Pointer_ = dynamic_cast<Implicit_Solver*>(Solver_Pointer);
 
-  //create parameter object
-  simparam = Simulation_Parameters_Elasticity();
-
-  //acquire base class data from existing simparam in solver (gets yaml options etc.)
-  *(Simulation_Parameters*)&simparam = Implicit_Solver_Pointer_->simparam;
-
-  //sets base class simparam pointer to avoid instancing the base simparam twice
-  FEA_Module::simparam = simparam;
+  module_params = &in_params;
+  simparam = &Implicit_Solver_Pointer_->simparam;
   
   //TO parameters
-  simparam_TO = Implicit_Solver_Pointer_->simparam_TO;
-  penalty_power = simparam_TO.optimization_options.simp_penalty_power;
-  nodal_density_flag = simparam_TO.nodal_density_flag;
+  penalty_power = simparam->optimization_options.simp_penalty_power;
+  nodal_density_flag = simparam->nodal_density_flag;
 
   //modal analysis flag hack
-  Implicit_Solver_Pointer_->fea_modules_modal_analysis[my_fea_module_index] = simparam.modal_analysis;
+  Implicit_Solver_Pointer_->fea_modules_modal_analysis[my_fea_module_index] = module_params->modal_analysis;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -152,7 +151,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(Solver *Solver_Pointer, const int m
   matrix_bc_reduced = body_term_flag = gravity_flag = thermal_flag = electric_flag = false;
 
   //construct globally distributed displacement, strain, and force vectors
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   size_t strain_count;
   node_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   all_node_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
@@ -186,11 +185,12 @@ FEA_Module_Elasticity::~FEA_Module_Elasticity(){ }
 void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header){
 
   char ch;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int buffer_lines = 1000;
   int max_word = 30;
-  int p_order = simparam.p_order;
-  real_t unit_scaling = simparam.unit_scaling;
+  Input_Options input_options = simparam->input_options.value();
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
   int local_node_index, current_column_index;
   size_t strain_count;
   std::string skip_line, read_line, substring, token;
@@ -259,6 +259,7 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
     MPI_Bcast(&zone_condition_type,1,MPI_INT,0,world);
     //perform readin strategy according to zone type
     if(zone_condition_type==DISPLACEMENT_CONDITION){
+      node_specified_bcs = true;
       bool per_node_flag = false;
       if(myrank==0){
         getline(*in, read_line);
@@ -603,10 +604,10 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::init_boundaries(){
-  max_boundary_sets = simparam.NB;
-  max_load_boundary_sets = simparam.NBSF;
-  max_disp_boundary_sets = simparam.NBD;
-  int num_dim = simparam.num_dims;
+  max_load_boundary_sets = module_params->loading_conditions.size();
+  max_disp_boundary_sets = module_params->boundary_conditions.size();
+  max_boundary_sets = max_load_boundary_sets + max_disp_boundary_sets;
+  int num_dim = simparam->num_dims;
   
   // set the number of boundary sets
   if(myrank == 0)
@@ -663,7 +664,7 @@ void FEA_Module_Elasticity::init_boundary_sets (int num_sets){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::grow_boundary_sets(int num_sets){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
 
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions being set to 0";
@@ -706,7 +707,7 @@ void FEA_Module_Elasticity::grow_boundary_sets(int num_sets){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::grow_displacement_condition_sets(int num_sets){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions being set to 0";
@@ -736,7 +737,7 @@ void FEA_Module_Elasticity::grow_displacement_condition_sets(int num_sets){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions being set to 0";
@@ -765,174 +766,57 @@ void FEA_Module_Elasticity::grow_loading_condition_sets(int num_sets){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::generate_bcs(){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int num_bcs;
   int bc_tag;
-  double temp_disp;
   real_t value;
-  real_t fix_limits[4];
-  
-  auto config = simparam.get_module_config(FEA_MODULE_TYPE::Elasticity);
-  if (!config.has_value()) 
-    throw std::runtime_error("Missing configuration for FEA Module " + to_string(FEA_MODULE_TYPE::Elasticity));
+  real_t surface_limits[4];
 
-  for (auto bc : config.value().boundary_conditions) {
-
-    switch (bc.surface) {
-      case BOUNDARY_TAG::x_plane:
+  for (auto bc : module_params->boundary_conditions) {
+    switch (bc.surface.type) {
+      case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
         break;
-      case BOUNDARY_TAG::y_plane:
+      case BOUNDARY_TYPE::y_plane:
         bc_tag = 1;
         break;
-      case BOUNDARY_TAG::z_plane:
+      case BOUNDARY_TYPE::z_plane:
         bc_tag = 2;
         break;
       default:
-        throw std::runtime_error("Invalid surface type: " + to_string(bc.surface));
+        throw std::runtime_error("Invalid surface type: " + to_string(bc.surface.type));
     }
-    // TODO: Need to consolidate value and plane_position some how for the user.
-    // This should also not be optional, or else we just take value 
-    // from the last loop...
-    if (bc.plane_position.has_value()) {
-      value = bc.plane_position.value() * simparam.unit_scaling;
-    }
+    value = bc.surface.plane_position * simparam->get_unit_scaling();
 
-    fix_limits[0] = fix_limits[2] = 4;
-    fix_limits[1] = fix_limits[3] = 6;
+    //determine if the surface has finite limits
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_disp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_disp_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
-    if(bc.condition_type == BOUNDARY_FEA_CONDITION::fixed_displacement){
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(bc.surface.use_limits){
+      surface_limits[0] = bc.surface.surface_limits_sl;
+      surface_limits[1] = bc.surface.surface_limits_su;
+      surface_limits[2] = bc.surface.surface_limits_tl;
+      surface_limits[3] = bc.surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    }
+    else{
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
+    }
+    if(bc.type == BOUNDARY_CONDITION_TYPE::displacement){
       Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
     }
-    // TODO: Make this required
-    if(bc.displacement_value.has_value()){
-      temp_disp = bc.displacement_value.value();
-      Boundary_Surface_Displacements(num_surface_disp_sets,0) = temp_disp;
-      Boundary_Surface_Displacements(num_surface_disp_sets,1) = temp_disp;
-      Boundary_Surface_Displacements(num_surface_disp_sets,2) = temp_disp;
-    }
+    Boundary_Surface_Displacements(num_surface_disp_sets,0) = bc.value;
+    Boundary_Surface_Displacements(num_surface_disp_sets,1) = bc.value;
+    Boundary_Surface_Displacements(num_surface_disp_sets,2) = bc.value;
     if(Boundary_Surface_Displacements(num_surface_disp_sets,0)||Boundary_Surface_Displacements(num_surface_disp_sets,1)||Boundary_Surface_Displacements(num_surface_disp_sets,2)) nonzero_bc_flag = true;
     *fos << "tagging " << bc_tag << " at " << value <<  std::endl;
     
     *fos << "tagged a set " << std::endl;
-    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    std::cout << "number of bdy patches in this bc set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
     *fos << std::endl;
     num_boundary_conditions++;
     num_surface_disp_sets++;
   }
- 
-  
-  /*
-  // tag the z=0 plane,  (Direction, value, bdy_set)
-  *fos << "tagging z = 0 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0.0 * simparam.unit_scaling;
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
-  if(num_surface_disp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_disp_sets+1);
-  //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(num_surface_disp_sets,0) = 0;
-  Boundary_Surface_Displacements(num_surface_disp_sets,1) = 0;
-  Boundary_Surface_Displacements(num_surface_disp_sets,2) = 0;
-  if(Boundary_Surface_Displacements(num_surface_disp_sets,0)||Boundary_Surface_Displacements(num_surface_disp_sets,1)||Boundary_Surface_Displacements(num_surface_disp_sets,2)) nonzero_bc_flag = true;
-    
-  *fos << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  *fos << std::endl;
-  num_boundary_conditions++;
-  num_surface_disp_sets++;
- 
-  // tag the y=10 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging y = 10 " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10.0 * simparam.unit_scaling;
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  num_boundary_conditions = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(num_surface_disp_sets,0) = 0;
-  Boundary_Surface_Displacements(num_surface_disp_sets,1) = 0;
-  Boundary_Surface_Displacements(num_surface_disp_sets,2) = 0;
-  num_surface_disp_sets++;
-    
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-
-  // tag the x=10 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging y = 10 " << std::endl;
-  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10.0 * simparam.unit_scaling;
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  num_boundary_conditions = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(num_surface_disp_sets,0) = 0;
-  Boundary_Surface_Displacements(num_surface_disp_sets,1) = 0;
-  Boundary_Surface_Displacements(num_surface_disp_sets,2) = 0;
-  num_surface_disp_sets++;
-    
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
- 
-  // tag the +z beam plane,  (Direction, value, bdy_set)
-  std::cout << "tagging z = 100 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 100.0 * simparam.unit_scaling;
-  //real_t fix_limits[4];
-  fix_limits[0] = fix_limits[2] = 4;
-  fix_limits[1] = fix_limits[3] = 6;
-  num_boundary_conditions = current_bdy_id++;
-  //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
-  Boundary_Surface_Displacements(num_surface_disp_sets,0) = 0;
-  Boundary_Surface_Displacements(num_surface_disp_sets,1) = 0;
-  Boundary_Surface_Displacements(num_surface_disp_sets,2) = 0;
-  num_surface_disp_sets++;
-    
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-  
-  //This part should be changed so it interfaces with simparam to handle multiple input cases
-  // tag the y=0 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging y = 0 " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0.0;
-  num_boundary_conditions = 1;
-  mesh->tag_bdys(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-    
-
-  // tag the z=0 plane,  (Direction, value, bdy_set)
-  std::cout << "tagging z = 0 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0.0;
-  num_boundary_conditions = 2;
-  mesh->tag_bdys(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-  
-  */
-
-  //Tag nodes for Boundary conditions such as displacements
   Displacement_Boundary_Conditions();
 } // end generate_bcs
 
@@ -941,246 +825,68 @@ void FEA_Module_Elasticity::generate_bcs(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::generate_applied_loads(){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int bc_tag;
   real_t value, temp_flux;
+  real_t surface_limits[4];
   
-  //Surface Forces Section
-
-  /*
-  std::cout << "tagging z = 2 Force " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2 * simparam.unit_scaling;
-  //value = 2;
-  num_boundary_conditions = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam.unit_scaling/simparam.unit_scaling;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-  
-  
-  std::cout << "tagging z = 1 Force " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 1 * simparam.unit_scaling;
-  //value = 2;
-  num_boundary_conditions = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 10/simparam.unit_scaling/simparam.unit_scaling;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-  
-  
-  std::cout << "tagging beam x = 0 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2 * simparam.unit_scaling;
-  //value = 2;
-  num_boundary_conditions = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 1/simparam.unit_scaling/simparam.unit_scaling;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-  */
-  /*
-  std::cout << "tagging beam -x " << std::endl;
-  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0 * simparam.unit_scaling;
-  //value = 2;
-  num_boundary_conditions = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = -1/simparam.unit_scaling/simparam.unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-
-  std::cout << "tagging beam +x " << std::endl;
-  bc_tag = 0;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10 * simparam.unit_scaling;
-  //value = 2;
-  num_boundary_conditions = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 1/simparam.unit_scaling/simparam.unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-  */
-
-  /*
-  std::cout << "tagging beam -y " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 0 * simparam.unit_scaling;
-  real_t load_limits_left[4];
-  load_limits_left[0] = load_limits_left[2] = 4;
-  load_limits_left[1] = load_limits_left[3] = 6;
-  //value = 2;
-  num_boundary_conditions = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, num_boundary_conditions ,load_limits_left);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = 10/simparam.unit_scaling/simparam.unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-
-  std::cout << "tagging beam +y " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 10 * simparam.unit_scaling;
-  real_t load_limits_right[4];
-  load_limits_right[0] = load_limits_right[2] = 4;
-  load_limits_right[1] = load_limits_right[3] = 6;
-  //value = 2;
-  num_boundary_conditions = current_bdy_id++;
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, num_boundary_conditions, load_limits_right);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(surf_force_set_id,0) = -10/simparam.unit_scaling/simparam.unit_scaling;
-  Boundary_Surface_Force_Densities(surf_force_set_id,1) = 0;
-  Boundary_Surface_Force_Densities(surf_force_set_id,2) = 0;
-  surf_force_set_id++;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-  */
-  
-  auto config = simparam.get_module_config(FEA_MODULE_TYPE::Elasticity);
-  if (!config.has_value())
-    throw std::runtime_error("Missing configuration for FEA Module " + to_string(FEA_MODULE_TYPE::Elasticity));
-
-  for (auto lc : config.value().loading_conditions) {
-    switch (lc.surface) {
-      case BOUNDARY_TAG::x_plane:
+  double unit_scaling = simparam->get_unit_scaling();
+  for (auto lc : module_params->loading_conditions) {
+    switch (lc->surface.type) {
+      case BOUNDARY_TYPE::x_plane:
         bc_tag = 0;
         break;
-      case BOUNDARY_TAG::y_plane:
+      case BOUNDARY_TYPE::y_plane:
         bc_tag = 1;
         break;
-      case BOUNDARY_TAG::z_plane:
+      case BOUNDARY_TYPE::z_plane:
         bc_tag = 2;
         break;
       default:
-        throw std::runtime_error("Invalid surface type: " + to_string(lc.surface));
+        throw std::runtime_error("Invalid surface type: " + to_string(lc->surface.type));
     }
     
-    // TODO: This should be required.
-    if(lc.plane_position.has_value()){
-      value = lc.plane_position.value() * simparam.unit_scaling;
-    }
+    value = lc->surface.plane_position * unit_scaling;
 
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
-    if(lc.condition_type == LOADING_CONDITION_TYPE::surface_traction){
-      Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-    }
-
-    if(lc.component_x.has_value()){
-      Boundary_Surface_Force_Densities(num_surface_force_sets,0) = lc.component_x.value()/simparam.unit_scaling/simparam.unit_scaling;
-    }
-    else{
-      Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 0;
-    }
-
-    if(lc.component_y.has_value()){
-      Boundary_Surface_Force_Densities(num_surface_force_sets,1) = lc.component_y.value()/simparam.unit_scaling/simparam.unit_scaling;
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(lc->surface.use_limits){
+      surface_limits[0] = lc->surface.surface_limits_sl;
+      surface_limits[1] = lc->surface.surface_limits_su;
+      surface_limits[2] = lc->surface.surface_limits_tl;
+      surface_limits[3] = lc->surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
     }
     else{
-      Boundary_Surface_Force_Densities(num_surface_force_sets,1) = 0;
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
     }
-
-    if(lc.component_z.has_value()){
-      Boundary_Surface_Force_Densities(num_surface_force_sets,2) = lc.component_z.value()/simparam.unit_scaling/simparam.unit_scaling;
-    }
-    else{
-      Boundary_Surface_Force_Densities(num_surface_force_sets,2) = 0;
-    }
+    lc->apply(
+      [&](const Surface_Traction_Condition& lc) { 
+        Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION; 
+        Boundary_Surface_Force_Densities(num_surface_force_sets,0) = lc.component_x/unit_scaling/unit_scaling;
+        Boundary_Surface_Force_Densities(num_surface_force_sets,1) = lc.component_y/unit_scaling/unit_scaling;
+        Boundary_Surface_Force_Densities(num_surface_force_sets,2) = lc.component_z/unit_scaling/unit_scaling;
+      },
+      [&](const Loading_Condition& lc) {
+        Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 0;
+        Boundary_Surface_Force_Densities(num_surface_force_sets,1) = 0;
+        Boundary_Surface_Force_Densities(num_surface_force_sets,2) = 0;
+      }
+    );
 
     *fos << "tagging " << bc_tag << " at " << value <<  std::endl;
     
     *fos << "tagged a set " << std::endl;
-    std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
+    std::cout << "number of bdy patches in this loading set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
     *fos << std::endl;
     num_boundary_conditions++;
     num_surface_force_sets++;
   }
-  /*
-  *fos << "tagging beam +z force " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  //value = 0;
-  value = 100;
-  //grow arrays as needed
-  if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
-  if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
-  //find boundary patches this BC corresponds to
-  tag_boundaries(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  Boundary_Surface_Force_Densities(num_surface_force_sets,0) = 500/simparam.unit_scaling/simparam.unit_scaling;
-  Boundary_Surface_Force_Densities(num_surface_force_sets,1) = 0;
-  Boundary_Surface_Force_Densities(num_surface_force_sets,2) = 0;
-  *fos << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << NBoundary_Condition_Patches(num_boundary_conditions) << std::endl;
-  *fos << std::endl;
   
-  num_boundary_conditions++;
-  num_surface_force_sets++;
-  
-  
-  std::cout << "tagging y = 2 " << std::endl;
-  bc_tag = 1;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2.0;
-  num_boundary_conditions = 4;
-  mesh->tag_bdys(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-
-  std::cout << "tagging z = 2 " << std::endl;
-  bc_tag = 2;  // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
-  value = 2.0;
-  num_boundary_conditions = 5;
-  mesh->tag_bdys(bc_tag, value, num_boundary_conditions);
-  Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION;
-  std::cout << "tagged a set " << std::endl;
-  std::cout << "number of bdy patches in this set = " << mesh->num_bdy_patches_in_set(num_boundary_conditions) << std::endl;
-  std::cout << std::endl;
-  */
-  
-  //Body Forces Section
-
   //apply gravity
-  gravity_flag = simparam.gravity_flag;
-  gravity_vector = simparam.gravity_vector.data();
+  gravity_flag = simparam->gravity_flag;
+  gravity_vector = simparam->gravity_vector.data();
 
   if(electric_flag||gravity_flag||thermal_flag) body_term_flag = true;
 
@@ -1190,7 +896,7 @@ void FEA_Module_Elasticity::generate_applied_loads(){
    Initialize global vectors and array maps needed for matrix assembly
 ------------------------------------------------------------------------- */
 void FEA_Module_Elasticity::init_assembly(){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   Stiffness_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Stiffness_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
@@ -1405,7 +1111,7 @@ void FEA_Module_Elasticity::init_assembly(){
 
   Stiffness_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Stiffness_Matrix_Strides);
   DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> (Stiffness_Matrix_Strides);
-  if(simparam.modal_analysis)
+  if(module_params->modal_analysis)
     Mass_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Stiffness_Matrix_Strides);
 
   //set stiffness Matrix Graph
@@ -1482,7 +1188,7 @@ void FEA_Module_Elasticity::init_assembly(){
   Global_Stiffness_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view()));
   Global_Stiffness_Matrix->fillComplete();
 
-  if(simparam.modal_analysis){
+  if(module_params->modal_analysis){
     Global_Mass_Matrix = Teuchos::rcp(new MAT(local_dof_map, colmap, row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Mass_Matrix.get_kokkos_view()));
     Global_Mass_Matrix->fillComplete();
   }
@@ -1545,7 +1251,7 @@ void FEA_Module_Elasticity::init_assembly(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::assemble_matrix(){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_element;
   int current_row_n_nodes_scanned;
@@ -1554,7 +1260,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
   
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Stiffness_Matrix(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> Local_Mass_Matrix;
-  if(simparam.modal_analysis){
+  if(module_params->modal_analysis){
     Local_Mass_Matrix = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_dim*max_nodes_per_element,num_dim*max_nodes_per_element);
   }
   //initialize stiffness Matrix entries to 0
@@ -1570,7 +1276,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
     //std::cout << std::endl;
   }
 
-  if(simparam.modal_analysis){
+  if(module_params->modal_analysis){
     for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
       for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
         Mass_Matrix(idof,istride) = 0;
@@ -1659,7 +1365,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
 
   
   //Mass matrix assembly for modal analysis
-  if(simparam.modal_analysis){
+  if(module_params->modal_analysis){
     if(num_dim==2)
     for (int ielem = 0; ielem < rnum_elem; ielem++){
       element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
@@ -1758,7 +1464,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
   //sort values and indices
   Tpetra::Import_Util::sortCrsEntries<row_pointers, indices_array, values_array>(row_offsets_pass, stiffness_local_indices.get_kokkos_view(), Stiffness_Matrix.get_kokkos_view());
 
-  if(simparam.modal_analysis){
+  if(module_params->modal_analysis){
     //local indices in the graph using the constructed column map
     CArrayKokkos<LO, array_layout, device_type, memory_traits> mass_local_indices(nnz, "mass_local_indices");
     entrycount = 0;
@@ -1791,7 +1497,7 @@ void FEA_Module_Elasticity::assemble_matrix(){
   /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
     for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam.Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*simparam.Elastic_Modulus*density_epsilon)
+      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*density_epsilon)
       Stiffness_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -1818,7 +1524,7 @@ void FEA_Module_Elasticity::assemble_vector(){
   host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1831,9 +1537,9 @@ void FEA_Module_Elasticity::assemble_vector(){
   LO node_id, dof_id;
   int num_boundary_sets = num_boundary_conditions;
   int surface_force_set_id = 0;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = max_nodes_per_element;
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign;
   int patch_node_count;
@@ -2280,8 +1986,8 @@ void FEA_Module_Elasticity::assemble_vector(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::Body_Term(size_t ielem, real_t density, real_t *force_density){
-  real_t unit_scaling = simparam.unit_scaling;
-  int num_dim = simparam.num_dims;
+  real_t unit_scaling = simparam->get_unit_scaling();
+  int num_dim = simparam->num_dims;
   
   //init 
   for(int idim = 0; idim < num_dim; idim++){
@@ -2310,8 +2016,8 @@ void FEA_Module_Elasticity::Body_Term(size_t ielem, real_t density, real_t *forc
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::Gradient_Body_Term(size_t ielem, real_t density, real_t *gradient_force_density){
-  real_t unit_scaling = simparam.unit_scaling;
-  int num_dim = simparam.num_dims;
+  real_t unit_scaling = simparam->get_unit_scaling();
+  int num_dim = simparam->num_dims;
   
   //init 
   for(int idim = 0; idim < num_dim; idim++){
@@ -2340,16 +2046,22 @@ void FEA_Module_Elasticity::Gradient_Body_Term(size_t ielem, real_t density, rea
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam->get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam_TO.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
   if(density < 0) density = 0;
-  for(int i = 0; i < penalty_power; i++)
+  if(module_params->material.SIMP_modulus){
+    for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
-  //relationship between density and stiffness
-  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  //Element_Modulus = density*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = simparam.Poisson_Ratio;
+    //relationship between density and stiffness
+    Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params->material.elastic_modulus/unit_scaling/unit_scaling;
+    //Element_Modulus = density*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+    Poisson_Ratio = module_params->material.poisson_ratio;
+  }
+  else if(module_params->material.linear_cell_modulus){
+    Element_Modulus = module_params->material.modulus_initial + module_params->material.modulus_density_slope*density;
+    Poisson_Ratio = module_params->material.poisson_ratio;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -2357,17 +2069,24 @@ void FEA_Module_Elasticity::Element_Material_Properties(size_t ielem, real_t &El
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam->get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam_TO.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
-  for(int i = 0; i < penalty_power - 1; i++)
-    penalty_product *= density;
-  //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = simparam.Poisson_Ratio;
+  
+  if(module_params->material.SIMP_modulus){
+    for(int i = 0; i < penalty_power - 1; i++)
+      penalty_product *= density;
+    //relationship between density and stiffness
+    Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params->material.elastic_modulus/unit_scaling/unit_scaling;
+    //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+    Poisson_Ratio = module_params->material.poisson_ratio;
+  }
+  else if(module_params->material.linear_cell_modulus){
+    Element_Modulus_Derivative = module_params->material.modulus_density_slope;
+    Poisson_Ratio = module_params->material.poisson_ratio;
+  }
 }
 
 /* --------------------------------------------------------------------------------
@@ -2375,19 +2094,27 @@ void FEA_Module_Elasticity::Gradient_Element_Material_Properties(size_t ielem, r
 ----------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.unit_scaling;
+  real_t unit_scaling = simparam->get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam_TO.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
-  if(penalty_power>=2){
-    for(int i = 0; i < penalty_power - 2; i++)
-      penalty_product *= density;
-    //relationship between density and stiffness
-    Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
+  
+  if(module_params->material.SIMP_modulus){
+    if(penalty_power>=2){
+      for(int i = 0; i < penalty_power - 2; i++)
+        penalty_product *= density;
+      //relationship between density and stiffness
+      Element_Modulus_Derivative = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params->material.elastic_modulus/unit_scaling/unit_scaling;
+    }
+    Poisson_Ratio = module_params->material.poisson_ratio;
   }
-  //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = simparam.Poisson_Ratio;
+  else if(module_params->material.linear_cell_modulus){
+    Element_Modulus_Derivative = 0;
+    Poisson_Ratio = module_params->material.poisson_ratio;
+  }
+  //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  
 }
 
 /* ----------------------------------------------------------------------
@@ -2400,15 +2127,15 @@ void FEA_Module_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, array_l
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = max_nodes_per_element;
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
 
@@ -2790,10 +2517,10 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag){
-    if(simparam_TO.helmholtz_filter)
+    if(simparam->optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter)
       all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     else
       all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -2801,13 +2528,13 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   else{
     Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   }
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
-  real_t unit_scaling = simparam.unit_scaling;
-  bool topology_optimization_on = simparam_TO.topology_optimization_on;
+  real_t unit_scaling = simparam->get_unit_scaling();
+  bool topology_optimization_on = simparam->topology_optimization_on;
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;
@@ -2931,8 +2658,8 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
       Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
     }
     else{
-      Element_Modulus = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-      Poisson_Ratio = simparam.Poisson_Ratio;
+      Element_Modulus = module_params->material.elastic_modulus/unit_scaling/unit_scaling;
+      Poisson_Ratio = module_params->material.poisson_ratio;
     }
     
     Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
@@ -3200,10 +2927,10 @@ void FEA_Module_Elasticity::local_mass_matrix(int ielem, CArrayKokkos<real_t, ar
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag){
-    if(simparam_TO.helmholtz_filter)
+    if(simparam->optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter)
       all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     else
       all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3211,10 +2938,10 @@ void FEA_Module_Elasticity::local_mass_matrix(int ielem, CArrayKokkos<real_t, ar
   else{
     Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   }
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
-  real_t material_density = simparam.material_density;
+  int num_gauss_points = simparam->num_gauss_points;
+  real_t material_density = module_params->material.density;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
 
@@ -3391,16 +3118,12 @@ void FEA_Module_Elasticity::Displacement_Boundary_Conditions(){
   int current_node_index, current_node_id;
   int num_boundary_sets = num_boundary_conditions;
   int surface_disp_set_id = 0;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int bc_option, bc_dim_set[3];
   int DOF_BC_type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> displacement(num_dim);
-  CArrayKokkos<int, array_layout, device_type, memory_traits> Displacement_Conditions(num_dim);
   CArrayKokkos<int, array_layout, device_type, memory_traits> first_condition_per_node(nall_nodes*num_dim);
   CArray<GO> Surface_Nodes;
-  Displacement_Conditions(0) = X_DISPLACEMENT_CONDITION;
-  Displacement_Conditions(1) = Y_DISPLACEMENT_CONDITION;
-  Displacement_Conditions(2) = Z_DISPLACEMENT_CONDITION;
 
   //host view of local nodal displacements
   host_vec_array node_displacements_host = node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
@@ -3531,15 +3254,15 @@ void FEA_Module_Elasticity::compute_adjoint_gradients(const_host_vec_array desig
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index;
@@ -3924,7 +3647,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3946,9 +3669,9 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   
   const_host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index, global_dof_id;
@@ -4375,19 +4098,19 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
-  if(simparam.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
-    Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
-  }
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
+  //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
+  // }
   real_t current_cpu_time2 = Implicit_Solver_Pointer_->CPU_Time();
   comm->barrier();
   SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
-  if(simparam.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
-  }
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
+  // }
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
   
@@ -4740,11 +4463,10 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
 
 void FEA_Module_Elasticity::init_output(){
   //check user parameters for output
-  bool output_displacement_flag = simparam.output_displacement_flag;
-  displaced_mesh_flag = simparam.displaced_mesh_flag;
-  bool output_strain_flag = simparam.output_strain_flag;
-  bool output_stress_flag = simparam.output_stress_flag;
-  int num_dim = simparam.num_dims;
+  bool output_displacement_flag = simparam->output(FIELD::displacement);
+  bool output_strain_flag = simparam->output(FIELD::strain);
+  bool output_stress_flag = simparam->output(FIELD::stress);
+  int num_dim = simparam->num_dims;
   int Brows;
   if(num_dim==3) Brows = 6;
   else Brows = 3;
@@ -4815,11 +4537,10 @@ void FEA_Module_Elasticity::init_output(){
 
 void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
   
-  bool output_displacement_flag = simparam.output_displacement_flag;
-  displaced_mesh_flag = simparam.displaced_mesh_flag;
-  bool output_strain_flag = simparam.output_strain_flag;
-  bool output_stress_flag = simparam.output_stress_flag;
-  int num_dim = simparam.num_dims;
+  bool output_displacement_flag = simparam->output(FIELD::displacement);
+  bool output_strain_flag = simparam->output(FIELD::strain);
+  bool output_stress_flag = simparam->output(FIELD::stress);
+  int num_dim = simparam->num_dims;
   int strain_count;
   int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
 
@@ -4890,11 +4611,10 @@ void FEA_Module_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type
 
 void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
   
-  bool output_displacement_flag = simparam.output_displacement_flag;
-  displaced_mesh_flag = simparam.displaced_mesh_flag;
-  bool output_strain_flag = simparam.output_strain_flag;
-  bool output_stress_flag = simparam.output_stress_flag;
-  int num_dim = simparam.num_dims;
+  bool output_displacement_flag = simparam->output(FIELD::displacement);
+  bool output_strain_flag = simparam->output(FIELD::strain);
+  bool output_stress_flag = simparam->output(FIELD::stress);
+  int num_dim = simparam->num_dims;
   int strain_count;
   GO nreduce_dof = 0;
   
@@ -4962,9 +4682,7 @@ void FEA_Module_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_t
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::compute_output(){
-  bool output_strain_flag = simparam.output_strain_flag;
-  bool output_stress_flag = simparam.output_stress_flag;
-  if(output_strain_flag)
+  if(simparam->output(FIELD::strain))
     compute_nodal_strains();
 }
 
@@ -4982,10 +4700,10 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
   host_vec_array all_node_strains = all_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   host_vec_array node_strains = node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
-  int strain_max_flag = simparam.strain_max_flag;
+  int num_gauss_points = simparam->num_gauss_points;
+  int strain_max_flag = module_params->strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
   int solve_flag, zero_strain_flag;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
@@ -5436,7 +5154,7 @@ void FEA_Module_Elasticity::compute_nodal_strains(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Elasticity::linear_solver_parameters(){
-  if(simparam.direct_solver_flag){
+  if(module_params->direct_solver_flag){
     Linear_Solve_Params = Teuchos::rcp(new Teuchos::ParameterList("Amesos2"));
     auto superlu_params = Teuchos::sublist(Teuchos::rcpFromRef(*Linear_Solve_Params), "SuperLU_DIST");
     superlu_params->set("Equil", true);
@@ -5458,7 +5176,7 @@ void FEA_Module_Elasticity::linear_solver_parameters(){
 
 int FEA_Module_Elasticity::solve(){
   //local variable for host view in the dual view
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
   int max_stride = 0;
@@ -5725,11 +5443,11 @@ int FEA_Module_Elasticity::solve(){
     }
   }//row for
   */
-  if(simparam.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
-    Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
-    Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
-  }
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
+  //   Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
+  //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
+  // }
 
   //debug print
   //if(myrank==0)
@@ -5784,12 +5502,12 @@ int FEA_Module_Elasticity::solve(){
   linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
 
-  if(simparam.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
-    Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
-  }
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
+  // }
 
-  if(simparam.multigrid_timers){
+  if(module_params->multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
     reportParams->set("How to merge timer sets",   "Union");
     reportParams->set("alwaysWriteLocal",          false);
@@ -5847,7 +5565,7 @@ int FEA_Module_Elasticity::solve(){
 
 void FEA_Module_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
   
-  if(simparam_TO.topology_optimization_on)
+  if(simparam->topology_optimization_on)
     comm_densities(zp);
   
   //add other variables you need commed here
@@ -5884,10 +5602,10 @@ void FEA_Module_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp, int c
 
 void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densities_lower_bound){
   
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   LO local_node_index;
-  //simparam_TO = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Implicit_Solver_Pointer_->simparam);
-  if(simparam_TO.thick_condition_boundary){
+  //simparam = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Implicit_Solver_Pointer_->simparam);
+  if(simparam->optimization_options.thick_condition_boundary){
     for(int i = 0; i < nlocal_nodes*num_dim; i++){
       if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
         for(int j = 0; j < Graph_Matrix_Strides(i/num_dim); j++){
@@ -5915,7 +5633,7 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
 int FEA_Module_Elasticity::eigensolve(){
   int nev = 9;
   int blocksize = 1.5*nev;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   GO global_index, global_dof_index;
   LO local_dof_index;
   size_t local_nrows = nlocal_nodes*num_dim;
@@ -6199,15 +5917,28 @@ int FEA_Module_Elasticity::eigensolve(){
   }
 
   // Get the eigenvalues and eigenvectors from the eigenproblem
-  Anasazi::Eigensolution<real_t,MV> sol = problem->getSolution();
-  Teuchos::RCP<MV> evecs = sol.Evecs;
-  int numev = sol.numVecs;
+  
+  sol = Teuchos::rcp (new Anasazi::Eigensolution<real_t,MV>());
+  *sol = problem->getSolution();
+  evecs = sol->Evecs;
+  numev = sol->numVecs;
 
    *fos << "Direct residual norms computed in Tpetra_BlockDavidson_lap_test.exe" << std::endl
        << std::setw(20) << "Eigenvalue" << std::setw(20) << "Residual  " << std::endl
        << "----------------------------------------" << std::endl;
+    
+    Teuchos::RCP<TpetraVector> current_evec, current_residual;
+    Teuchos::RCP<TpetraVector> current_evecMproduct = Teuchos::rcp (new TpetraVector (local_dof_map));
+    Teuchos::RCP<TpetraVector> current_evecKproduct = Teuchos::rcp (new TpetraVector (local_dof_map));
     for (int i=0; i<numev; i++) {
-      *fos << std::setw(20) << sol.Evals[i].realpart << std::setw(20) << std::endl;
+      current_evec = evecs->getVectorNonConst(i);
+      Global_Mass_Matrix->apply(*current_evec,*current_evecMproduct);
+      Global_Stiffness_Matrix->apply(*current_evec,*current_evecKproduct);
+      current_residual = current_evecKproduct;
+      //compute residual vector
+      current_residual->update(-sol->Evals[i].realpart,*current_evecMproduct,1);
+      real_t residual_norm = current_residual->norm2();
+      *fos << std::setw(20) << "Real Part: " << std::setw(20) << sol->Evals[i].realpart << std::setw(20) << "Imaginary Part: " << sol->Evals[i].imagpart << std::setw(20) << "Residual Norm: " << residual_norm << std::setw(20) << std::endl;
     }
 
   //reinsert global stiffness and mass values corresponding to BC indices to facilitate future calculation
