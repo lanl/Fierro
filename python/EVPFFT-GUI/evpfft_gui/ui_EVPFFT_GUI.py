@@ -1689,7 +1689,7 @@ class Ui_MainWindow(object):
                     self.INMaterialName.text().strip())
                 )
                 self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                    str(self.INMaterialType.currentText()))
+                    str(self.INMaterialType.currentText() + ' ' + self.INIsotropicPlane.currentText()))
                 )
                 self.TMaterials.setItem(
                     row, 2, QTableWidgetItem(str(C11))
@@ -1723,7 +1723,7 @@ class Ui_MainWindow(object):
                 self.INMaterialName.clear()
             else:
                 warning_flag = 0
-                
+    
         def delete_material():
             current_row = self.TMaterials.currentRow()
             if current_row < 0:
@@ -1738,17 +1738,31 @@ class Ui_MainWindow(object):
             )
             if button == QMessageBox.StandardButton.Yes:
                 self.TMaterials.removeRow(current_row)
-                
+
         def regenerate_elastic_constants():
             current_row = self.TMaterials.currentRow()
             if current_row < 0:
                 return QMessageBox.warning(QMessageBox(),"Warning","Please select a material from the table")
-            if self.TMaterials.item(row,0) == 'Isotropic':
-                self.MaterialTypeTool.setCurrentIndex(0)
                 
-        
+            # Define Stiffness Matrix
+            Mstiffness = [[float(self.TMaterials.item(0,2).text()), float(self.TMaterials.item(0,3).text()), float(self.TMaterials.item(0,4).text()),  float(self.TMaterials.item(0,5).text()), float(self.TMaterials.item(0,6).text()), float(self.TMaterials.item(0,7).text())], [float(self.TMaterials.item(0,3).text()), float(self.TMaterials.item(0,8).text()), float(self.TMaterials.item(0,9).text()),  float(self.TMaterials.item(0,10).text()), float(self.TMaterials.item(0,11).text()), float(self.TMaterials.item(0,12).text())], [float(self.TMaterials.item(0,4).text()), float(self.TMaterials.item(0,9).text()), float(self.TMaterials.item(0,13).text()), float(self.TMaterials.item(0,14).text()), float(self.TMaterials.item(0,15).text()), float(self.TMaterials.item(0,16).text())], [float(self.TMaterials.item(0,5).text()), float(self.TMaterials.item(0,10).text()), float(self.TMaterials.item(0,14).text()), float(self.TMaterials.item(0,17).text()), float(self.TMaterials.item(0,18).text()), float(self.TMaterials.item(0,19).text())], [float(self.TMaterials.item(0,6).text()), float(self.TMaterials.item(0,11).text()), float(self.TMaterials.item(0,15).text()), float(self.TMaterials.item(0,18).text()), float(self.TMaterials.item(0,20).text()), float(self.TMaterials.item(0,21).text())], [float(self.TMaterials.item(0,7).text()), float(self.TMaterials.item(0,12).text()), float(self.TMaterials.item(0,16).text()), float(self.TMaterials.item(0,19).text()), float(self.TMaterials.item(0,21).text()), float(self.TMaterials.item(0,22).text())]]
+            Mcompliance = np.linalg.inv(Mstiffness)
+            if self.TMaterials.item(current_row,1).text() == 'Isotropic':
+                self.MaterialTypeTool.setCurrentIndex(0)
+                E = 1/Mcompliance[0][0]
+                nu = -Mcompliance[0][1]*E
+                self.INMaterialName.insert(self.TMaterials.item(current_row,0).text())
+                self.INYoungsModulus.insert(str(E))
+                self.INPoissonsRatio.insert(str(nu))
+            elif 'Transversely Isotropic' in self.TMaterials.item(current_row,1).text():
+                self.MaterialTypeTool.setCurrentIndex(1)
+                if 'x-y plane' in self.TMaterials.item(current_row,1).text():
+                    Eip =
+                
+                        
         self.BAddMaterial.clicked.connect(add_material)
         self.BDeleteMaterial.clicked.connect(delete_material)
+        self.BRegenElasticConstants.clicked.connect(regenerate_elastic_constants)
         
         # Boundary Conditions
         def BC_direction():
