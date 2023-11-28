@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_library(voxelizer src/stl-to-voxelvtk.cpp)
 target_include_directories(voxelizer PUBLIC include)
+target_link_libraries(voxelizer Elements)
 
 add_executable(fierro-voxelizer src/main.cpp)
 target_link_libraries(fierro-voxelizer voxelizer)

@@ -116,29 +116,23 @@ source "$KOKKOS_CONFIG_SCRIPT" --kokkos_build_type=$kokkos_build_type --num_jobs
 HDF5_CONFIG_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_hdf5.sh"
 source "$HDF5_CONFIG_SCRIPT" --num_jobs=$num_jobs
 
-# Check if the 'MATAR' directory exists in the parent directory; if not, clone it
-MATAR_DIR="$PARENT_DIR/MATAR"
-if [ ! -d "$MATAR_DIR" ]; then
-  echo "Directory 'MATAR' does not exist in '$PARENT_DIR', downloading 'MATAR'...."
-  git clone https://github.com/lanl/MATAR.git "$MATAR_DIR"
-else
-  echo "Directory 'MATAR' exists in '$PARENT_DIR', skipping 'MATAR' download"
-fi
+# --------building matar
+MATAR_CONFIG_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_matar.sh"
+source "$MATAR_CONFIG_SCRIPT"  --kokkos_build_type=$kokkos_build_type --num_jobs=$num_jobs
 
 # --------building EVPFFT
 EVPFFT_SOURCE_DIR="$PARENT_DIR/src"
 EVPFFT_BUILD_DIR="$PARENT_DIR/evpfft_${heffte_build_type}_${kokkos_build_type}"
 HEFFTE_INSTALL_DIR="$PARENT_DIR/heffte/install_heffte_$heffte_build_type"
 KOKKOS_INSTALL_DIR="$PARENT_DIR/kokkos/install_kokkos_$kokkos_build_type"
+MATAR_INSTALL_DIR="$PARENT_DIR/MATAR/install_MATAR_$kokkos_build_type"
 HDF5_INSTALL_DIR="$PARENT_DIR/hdf5/install"
-MATAR_SOURCE_DIR="$PARENT_DIR/MATAR/src"
 
 
 # Configure EVPFFT using CMake
 cmake_options=(
     -D CMAKE_BUILD_TYPE=Release
-    -D CMAKE_PREFIX_PATH="$HEFFTE_INSTALL_DIR;$KOKKOS_INSTALL_DIR;$HDF5_INSTALL_DIR"
-    -D CMAKE_CXX_FLAGS="-I$MATAR_SOURCE_DIR"
+    -D CMAKE_PREFIX_PATH="$HEFFTE_INSTALL_DIR;$KOKKOS_INSTALL_DIR;$HDF5_INSTALL_DIR;$MATAR_INSTALL_DIR"
     -D ENABLE_PROFILING=ON
 )
 

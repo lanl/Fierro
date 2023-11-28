@@ -181,7 +181,7 @@ public:
     }
 
     //decide to output current optimization state
-    if(current_step%FEM_->simparam.optimization_options.optimization_output_freq==0)
+    if(current_step%FEM_->simparam->optimization_options.optimization_output_freq==0)
       FEM_->Implicit_Solver_Pointer_->output_design(current_step);
   }
 

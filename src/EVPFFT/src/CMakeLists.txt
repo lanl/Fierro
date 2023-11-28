@@ -11,7 +11,6 @@ if (BUILD_EVPFFT_FIERRO)
 else()
   set(This evpfft)
   project (${This})
-endif()
 enable_language(C)
 
 # CMAKE_BUILD_TYPE:
@@ -22,6 +21,7 @@ enable_language(C)
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif(NOT CMAKE_BUILD_TYPE)
+endif()
 
 # Set default values for EVPFFT options
 set(DEFAULT_TWO_SIGN_SLIP_SYSTEMS OFF)
@@ -117,12 +117,13 @@ if (BUILD_EVPFFT_FIERRO)
        Fierro-EVPFFT-Link/init_state_vars.cpp)
 
   add_library(${This} STATIC ${Sources})
-  target_link_libraries(${This} PRIVATE ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
+  target_link_libraries(${This} PRIVATE ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} Elements)
   target_include_directories(${This} PUBLIC Fierro-EVPFFT-Link)
   target_include_directories(${This} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 else ()
+  find_package(Matar REQUIRED)
   add_executable(${This} ${Sources})
-  target_link_libraries(${This} PRIVATE Kokkos::kokkos)
+  target_link_libraries(${This} PRIVATE matar Kokkos::kokkos)
 endif ()
 target_link_libraries(${This} PRIVATE Heffte::Heffte MPI::MPI_CXX ${HDF5_LIBRARIES})
 

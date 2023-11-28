@@ -2,7 +2,6 @@
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_Eulerian.h"
-#include "Simulation_Parameters_Eulerian.h"
 
 // -----------------------------------------------------------------------------
 // This function saves the variables at rk_stage = 0, which is t_n
@@ -14,8 +13,8 @@ void FEA_Module_Eulerian::rk_init(DViewCArrayKokkos <double> &node_coords,
              const size_t num_elems,
              const size_t num_nodes){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = rk_num_bins - 1;
+    int num_dims = num_dim;
     // save elem quantities
     FOR_ALL_CLASS(elem_gid, 0, num_elems, {
 
@@ -60,11 +59,11 @@ void FEA_Module_Eulerian::get_timestep(mesh_t &mesh,
                   DViewCArrayKokkos <double> &elem_vol){
 
     
-    const size_t rk_level = simparam.rk_num_bins - 1;
+->   const size_t rk_level = rk_num_bins - 1;
 
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
-    int num_dims = simparam.num_dims;
+    int num_dims = num_dim;
     double dt_lcl;
     double min_dt_calc;
     REDUCE_MIN_CLASS(elem_gid, 0, rnum_elem, dt_lcl, {
@@ -160,11 +159,11 @@ void FEA_Module_Eulerian::get_timestep2D(mesh_t &mesh,
                     DViewCArrayKokkos <double> &elem_sspd,
                     DViewCArrayKokkos <double> &elem_vol){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;
+->   const size_t rk_level = rk_num_bins - 1;
 
     // increase dt by 10%, that is the largest dt value
     dt = dt*1.1;
-    int num_dims = simparam.num_dims;
+    int num_dims = num_dim;
     double dt_lcl;
     double min_dt_calc;
 

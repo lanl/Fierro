@@ -167,7 +167,9 @@ echo "Building based on these argument options:"
 echo "Build action - ${build_action}"
 echo "Solver - ${solver}"
 echo "Kokkos backend - ${kokkos_build_type}"
-echo "HEFFTE - ${heffte_build_type}"
+if [ "${solver}" = "explicit-evpfft" ]; then
+    echo "HEFFTE - ${heffte_build_type}"
+fi
 echo "make -j ${build_cores}"
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"

@@ -14,7 +14,7 @@ void FEA_Module_Dynamic_Elasticity::update_velocity_elastic(double rk_alpha,
                          const DViewCArrayKokkos <double> &corner_force
                          ){
 
-    const size_t rk_level = simparam.rk_num_bins - 1;    
+    const size_t rk_level = simparam->rk_num_bins - 1;    
     const size_t num_dims = mesh.num_dims;
     
     // walk over the nodes to update the velocity
@@ -223,7 +223,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos <double> &e
                     const DViewCArrayKokkos <double> &elem_vol
                     ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+    const size_t rk_level = rk_num_bins - 1;
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -303,7 +303,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos <double> 
                       const DViewCArrayKokkos <double> &elem_vol
                       ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+    const size_t rk_level = rk_num_bins - 1;
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
