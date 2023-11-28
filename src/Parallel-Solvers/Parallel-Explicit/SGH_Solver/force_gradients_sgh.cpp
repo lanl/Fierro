@@ -464,7 +464,8 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
     Kokkos::fence();
 
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
+    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++){
+    //FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
         const size_t num_nodes_in_elem = 8;
         real_t gradient_result[num_dims];
@@ -842,8 +843,8 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         size_t mat_id = elem_mat_id(elem_gid);
         
         
-
-    }); // end parallel for loop over elements
+    }
+    //}); // end parallel for loop over elements
     
     /*
     //accumulate node values from corner storage
@@ -897,7 +898,8 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
     Kokkos::fence();
 
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
+    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++){
+    //FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
         const size_t num_nodes_in_elem = 8;
         real_t gradient_result[num_dims];
@@ -1299,9 +1301,9 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                         corner_gradient_storage(corner_gid,dim,igradient,jdim) = area_normal(node_lid, 0)*tau_gradient(0, dim, igradient, jdim)
                                 + area_normal(node_lid, 1)*tau_gradient(1, dim, igradient, jdim)
                                 + area_normal(node_lid, 2)*tau_gradient(2, dim, igradient, jdim)
-                                + area_normal_gradients(node_lid, 0)*tau(0, dim, igradient, jdim)
-                                + area_normal_gradients(node_lid, 1)*tau(1, dim, igradient, jdim)
-                                + area_normal_gradients(node_lid, 2)*tau(2, dim, igradient, jdim)
+                                + area_normal_gradients(node_lid, 0, igradient, jdim)*tau(0, dim)
+                                + area_normal_gradients(node_lid, 1, igradient, jdim)*tau(1, dim)
+                                + area_normal_gradients(node_lid, 2, igradient, jdim)*tau(2, dim)
                                 + phi*muc_gradient(node_lid, igradient, jdim)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
                     }
                 }
@@ -1317,8 +1319,8 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
         size_t mat_id = elem_mat_id(elem_gid);
         
         
-
-    }); // end parallel for loop over elements
+    }
+    //}); // end parallel for loop over elements
     
     /*
     //accumulate node values from corner storage
