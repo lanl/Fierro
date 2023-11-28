@@ -6,6 +6,7 @@ on:
       - .conda/voxelizer/**
       - src/Voxelizer/**
       - .github/workflows/publish-voxelizer.yaml
+  workflow_dispatch:
 
 jobs:
   publish:

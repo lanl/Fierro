@@ -6,6 +6,7 @@ on:
       - .conda/evpfft-gui/**
       - python/EVPFFT-GUI/**
       - .github/workflows/publish-evpfft-gui.yaml
+  workflow_dispatch:
 
 jobs:
   publish:
