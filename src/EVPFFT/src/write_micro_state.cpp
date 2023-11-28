@@ -149,7 +149,7 @@ void EVPFFT::calculate_eel(MatrixTypeRealDual &eel)
           }
         }
 
-        invert_matrix(cg66aux.pointer(), 6);
+        invert_matrix <6> (cg66aux.pointer());
           
         cb.chg_basis_3(cg66aux.pointer(), cinvg.pointer(), 3, 6, cb.B_basis_device_pointer());
 

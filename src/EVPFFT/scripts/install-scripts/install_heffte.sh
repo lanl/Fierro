@@ -70,7 +70,7 @@ PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
 HEFFTE_DIR="$PARENT_DIR/heffte"
 if [ ! -d "$HEFFTE_DIR" ]; then
   echo "Directory 'heffte' does not exist in '$PARENT_DIR', downloading 'heffte'...."
-  git clone https://github.com/icl-utk-edu/heffte.git "$HEFFTE_DIR"
+  git clone --depth 1 https://github.com/icl-utk-edu/heffte.git "$HEFFTE_DIR"
 else
   echo "Directory 'heffte' exists in '$PARENT_DIR', skipping 'heffte' download"
 fi
