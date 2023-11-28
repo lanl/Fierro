@@ -45,7 +45,7 @@ PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
 HDF5_DIR="$PARENT_DIR/hdf5"
 if [ ! -d "$HDF5_DIR" ]; then
   echo "Directory 'hdf5' does not exist in '$PARENT_DIR', downloading 'hdf5'...."
-  git clone https://github.com/HDFGroup/hdf5.git "$HDF5_DIR"
+  git clone --depth 1 https://github.com/HDFGroup/hdf5.git "$HDF5_DIR"
 else
   echo "Directory 'hdf5' exists in '$PARENT_DIR', skipping 'hdf5' download"
 fi

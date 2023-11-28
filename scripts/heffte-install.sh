@@ -9,7 +9,7 @@ echo "Heffte build type will be: $heffte_build_type"
 # Check if the 'heffte' directory exists and is not empty in the parent directory; if not, clone it
 if [ ! -d "${HEFFTE_SOURCE_DIR}" ]; then
   echo "Directory 'heffte' does not exist in '${libdir}', downloading 'heffte'...."
-  git clone https://github.com/icl-utk-edu/heffte.git ${HEFFTE_SOURCE_DIR}
+  git clone --depth 1 https://github.com/icl-utk-edu/heffte.git ${HEFFTE_SOURCE_DIR}
 else
   echo "Directory 'heffte' exists in '${HEFFTE_SOURCE_DIR}', skipping 'heffte' download"
 fi

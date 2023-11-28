@@ -144,7 +144,7 @@ void EVPFFT::data_grain(const std::string & filetext)
       s066(i,j) = c066.host(i,j);
     }
   }
-  invert_matrix(s066.pointer(),6);
+  invert_matrix <6> (s066.pointer());
 
   cb.chg_basis_3(c066.host_pointer(), c0.host_pointer(), 3, 6, cb.B_basis_host_pointer());
   cb.chg_basis_3(s066.pointer(), s0.host_pointer(), 3, 6, cb.B_basis_host_pointer());

@@ -70,7 +70,7 @@ PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
 KOKKOS_DIR="$PARENT_DIR/kokkos"
 if [ ! -d "$KOKKOS_DIR" ]; then
   echo "Directory 'kokkos' does not exist in '$PARENT_DIR', downloading 'kokkos'...."
-  git clone https://github.com/kokkos/kokkos.git "$KOKKOS_DIR"
+  git clone --depth 1 https://github.com/kokkos/kokkos.git "$KOKKOS_DIR"
 else
   echo "Directory 'kokkos' exists in '$PARENT_DIR', skipping 'kokkos' download"
 fi
