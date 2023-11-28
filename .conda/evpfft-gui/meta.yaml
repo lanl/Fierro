@@ -8,7 +8,7 @@ source:
   #   depth: 1
 
 build:
-  number: 1
+  number: 2
   script: cd python/EVPFFT-GUI/; pip install .
   noarch: generic # This is a pure python package. So build for noarch on linux4
   skip: true  # [not linux4]
