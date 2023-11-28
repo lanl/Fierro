@@ -6,6 +6,10 @@ on:
       recipe_dir:
         required: true
         type: string
+      additional_variant:
+        required: false
+        type: string
+        default: '.conda/empty.yaml'
 
 jobs:
   build-package:
@@ -52,4 +56,4 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         
       - run: |
-          mamba mambabuild ${{ inputs.recipe_dir }} -e .conda/build_variants.yaml --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge -c nvidia
+          mamba mambabuild ${{ inputs.recipe_dir }} -e .conda/build_variants.yaml -m ${{ inputs.additional_variant }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge -c nvidia
