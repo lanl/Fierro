@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'EVPFFT_GUIvbNgGr.ui'
+## Form generated from reading UI file 'EVPFFT_GUICghoaX.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -23,35 +23,13 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QForm
     QSizePolicy, QSpacerItem, QSplitter, QStackedWidget,
     QStatusBar, QTabWidget, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget)
-    
-# ================== New imports =====================
-    
-import fierro_voxelizer
-import tempfile
-import os
-    
-class LocalResource:
-    FILE_PATH = os.path.abspath(
-        os.path.join(*(os.path.split(os.path.expanduser(__file__))[:-1]))
-    )
-
-    @staticmethod
-    def get_resource_name(relpath: str) -> str:
-        return os.path.join(LocalResource.FILE_PATH, relpath)
-    
-
-VTK_OUTPUT = os.path.join(tempfile.gettempdir(), 'VTK_Geometry.vtk')
-ELASTIC_PARAMETERS = LocalResource.get_resource_name('elastic_parameters.txt')
-PLASTIC_PARAMETERS = LocalResource.get_resource_name('plastic_parameters.txt')
-EVPFFT_INPUT = os.path.join(tempfile.gettempdir(), 'evpfft_lattice_input.txt')
-
-# ======================================================
+import IconResourceFile_rc
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1022, 883)
+        MainWindow.resize(1022, 832)
         icon = QIcon()
         icon.addFile(u"Icons/EVPFFT_logo_A2.png", QSize(), QIcon.Normal, QIcon.Off)
         MainWindow.setWindowIcon(icon)
@@ -122,7 +100,7 @@ class Ui_MainWindow(object):
         self.BImportPart = QPushButton(self.ImportPart)
         self.BImportPart.setObjectName(u"BImportPart")
         icon1 = QIcon()
-        icon1.addFile(LocalResource.get_resource_name("Icons/Blue/Cube.svg"), QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/Blue Icons/Blue Icons/Cube.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.BImportPart.setIcon(icon1)
         self.BImportPart.setIconSize(QSize(50, 50))
         self.BImportPart.setFlat(False)
@@ -189,7 +167,7 @@ class Ui_MainWindow(object):
         self.BDefineMaterial = QPushButton(self.DefineMaterial)
         self.BDefineMaterial.setObjectName(u"BDefineMaterial")
         icon2 = QIcon()
-        icon2.addFile(LocalResource.get_resource_name("Icons/Blue/mine.svg"), QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/Blue Icons/Blue Icons/mine.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.BDefineMaterial.setIcon(icon2)
         self.BDefineMaterial.setIconSize(QSize(50, 50))
         self.BDefineMaterial.setFlat(True)
@@ -251,7 +229,7 @@ class Ui_MainWindow(object):
         self.BApplyBC = QPushButton(self.ApplyBC)
         self.BApplyBC.setObjectName(u"BApplyBC")
         icon3 = QIcon()
-        icon3.addFile(LocalResource.get_resource_name("Icons/Blue/brick.svg"), QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/Blue Icons/Blue Icons/brick.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.BApplyBC.setIcon(icon3)
         self.BApplyBC.setIconSize(QSize(50, 50))
         self.BApplyBC.setFlat(True)
@@ -320,7 +298,7 @@ class Ui_MainWindow(object):
         self.BSolverSettings = QPushButton(self.SolverSettings)
         self.BSolverSettings.setObjectName(u"BSolverSettings")
         icon4 = QIcon()
-        icon4.addFile(LocalResource.get_resource_name("Icons/Blue/gear.svg"), QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(u":/Blue Icons/Blue Icons/gear.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.BSolverSettings.setIcon(icon4)
         self.BSolverSettings.setIconSize(QSize(50, 50))
         self.BSolverSettings.setFlat(True)
@@ -349,7 +327,7 @@ class Ui_MainWindow(object):
         self.BRunEVPFFT = QPushButton(self.RunEVPFFT)
         self.BRunEVPFFT.setObjectName(u"BRunEVPFFT")
         icon5 = QIcon()
-        icon5.addFile(LocalResource.get_resource_name("Icons/Blue/Play.svg"), QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(u":/Blue Icons/Blue Icons/Play.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.BRunEVPFFT.setIcon(icon5)
         self.BRunEVPFFT.setIconSize(QSize(40, 40))
         self.BRunEVPFFT.setFlat(True)
@@ -378,7 +356,7 @@ class Ui_MainWindow(object):
         self.BViewResults = QPushButton(self.ViewResults)
         self.BViewResults.setObjectName(u"BViewResults")
         icon6 = QIcon()
-        icon6.addFile(LocalResource.get_resource_name("Icons/Blue/magnify.svg"), QSize(), QIcon.Normal, QIcon.Off)
+        icon6.addFile(u":/Blue Icons/Blue Icons/magnify.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.BViewResults.setIcon(icon6)
         self.BViewResults.setIconSize(QSize(40, 40))
         self.BViewResults.setFlat(True)
@@ -458,7 +436,7 @@ class Ui_MainWindow(object):
         self.LosAlamosLogo = QLabel(self.TitlePage)
         self.LosAlamosLogo.setObjectName(u"LosAlamosLogo")
         self.LosAlamosLogo.setMaximumSize(QSize(16777215, 60))
-        self.LosAlamosLogo.setPixmap(QPixmap(LocalResource.get_resource_name("Icons/LANL Logo Ultramarine.png")))
+        self.LosAlamosLogo.setPixmap(QPixmap(u":/Logos/Logos/LANL Logo Ultramarine.png"))
         self.LosAlamosLogo.setScaledContents(True)
 
         self.verticalLayout_2.addWidget(self.LosAlamosLogo)
@@ -469,9 +447,9 @@ class Ui_MainWindow(object):
 
         self.EVPFFTLogo = QLabel(self.TitlePage)
         self.EVPFFTLogo.setObjectName(u"EVPFFTLogo")
-        self.EVPFFTLogo.setMinimumSize(QSize(275, 175))
-        self.EVPFFTLogo.setMaximumSize(QSize(275, 175))
-        self.EVPFFTLogo.setPixmap(QPixmap(LocalResource.get_resource_name("Icons/EVPFFT_logo_horse_ppt.png")))
+        self.EVPFFTLogo.setMinimumSize(QSize(225, 175))
+        self.EVPFFTLogo.setMaximumSize(QSize(225, 175))
+        self.EVPFFTLogo.setPixmap(QPixmap(u":/Logos/Logos/FIERRO.png"))
         self.EVPFFTLogo.setScaledContents(True)
         self.EVPFFTLogo.setWordWrap(False)
         self.EVPFFTLogo.setIndent(-1)
@@ -509,7 +487,7 @@ class Ui_MainWindow(object):
         self.MatarLogo = QLabel(self.AdditionalSoftwareLogos)
         self.MatarLogo.setObjectName(u"MatarLogo")
         self.MatarLogo.setMaximumSize(QSize(120, 60))
-        self.MatarLogo.setPixmap(QPixmap(LocalResource.get_resource_name("Icons/MATAR_logo2.png")))
+        self.MatarLogo.setPixmap(QPixmap(u":/Logos/Logos/MATAR_logo2.png"))
         self.MatarLogo.setScaledContents(True)
 
         self.horizontalLayout_5.addWidget(self.MatarLogo)
@@ -517,7 +495,7 @@ class Ui_MainWindow(object):
         self.ParaviewLogo = QLabel(self.AdditionalSoftwareLogos)
         self.ParaviewLogo.setObjectName(u"ParaviewLogo")
         self.ParaviewLogo.setMaximumSize(QSize(130, 30))
-        self.ParaviewLogo.setPixmap(QPixmap(LocalResource.get_resource_name("Icons/ParaView_logo.png")))
+        self.ParaviewLogo.setPixmap(QPixmap(u":/Logos/Logos/ParaView_logo.png"))
         self.ParaviewLogo.setScaledContents(True)
 
         self.horizontalLayout_5.addWidget(self.ParaviewLogo)
@@ -1111,6 +1089,7 @@ class Ui_MainWindow(object):
         self.INBoundaryCondition.addItem("")
         self.INBoundaryCondition.addItem("")
         self.INBoundaryCondition.addItem("")
+        self.INBoundaryCondition.addItem("")
         self.INBoundaryCondition.setObjectName(u"INBoundaryCondition")
 
         self.formLayout_3.setWidget(0, QFormLayout.FieldRole, self.INBoundaryCondition)
@@ -1145,6 +1124,7 @@ class Ui_MainWindow(object):
         self.TBCs.setHorizontalHeaderItem(1, __qtablewidgetitem40)
         self.TBCs.setObjectName(u"TBCs")
         self.TBCs.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.TBCs.horizontalHeader().setDefaultSectionSize(175)
 
         self.verticalLayout_17.addWidget(self.TBCs)
 
@@ -1348,7 +1328,6 @@ class Ui_MainWindow(object):
 
 
         QMetaObject.connectSlotsByName(MainWindow)
-        
     # setupUi
 
     def retranslateUi(self, MainWindow):
@@ -1473,6 +1452,7 @@ class Ui_MainWindow(object):
         self.INBoundaryCondition.setItemText(0, QCoreApplication.translate("MainWindow", u"Tension", None))
         self.INBoundaryCondition.setItemText(1, QCoreApplication.translate("MainWindow", u"Compression", None))
         self.INBoundaryCondition.setItemText(2, QCoreApplication.translate("MainWindow", u"Shear", None))
+        self.INBoundaryCondition.setItemText(3, QCoreApplication.translate("MainWindow", u"Homogenization", None))
 
         self.LBCDirection.setText(QCoreApplication.translate("MainWindow", u"Direction: ", None))
         self.INBCDirection.setItemText(0, QCoreApplication.translate("MainWindow", u"x-direction", None))

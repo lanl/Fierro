@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1022</width>
-    <height>883</height>
+    <height>832</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -156,8 +156,8 @@
                  <string/>
                 </property>
                 <property name="icon">
-                 <iconset>
-                  <normaloff>Icons/Blue/Cube.svg</normaloff>Icons/Blue/Cube.svg</iconset>
+                 <iconset resource="Icons/IconResourceFile.qrc">
+                  <normaloff>:/Blue Icons/Blue Icons/Cube.svg</normaloff>:/Blue Icons/Blue Icons/Cube.svg</iconset>
                 </property>
                 <property name="iconSize">
                  <size>
@@ -297,8 +297,8 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset>
-                     <normaloff>Icons/Blue/mine.svg</normaloff>Icons/Blue/mine.svg</iconset>
+                    <iconset resource="Icons/IconResourceFile.qrc">
+                     <normaloff>:/Blue Icons/Blue Icons/mine.svg</normaloff>:/Blue Icons/Blue Icons/mine.svg</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -417,8 +417,8 @@
                  <string/>
                 </property>
                 <property name="icon">
-                 <iconset>
-                  <normaloff>Icons/Blue/brick.svg</normaloff>Icons/Blue/brick.svg</iconset>
+                 <iconset resource="Icons/IconResourceFile.qrc">
+                  <normaloff>:/Blue Icons/Blue Icons/brick.svg</normaloff>:/Blue Icons/Blue Icons/brick.svg</iconset>
                 </property>
                 <property name="iconSize">
                  <size>
@@ -570,8 +570,8 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset>
-                     <normaloff>Icons/Blue/gear.svg</normaloff>Icons/Blue/gear.svg</iconset>
+                    <iconset resource="Icons/IconResourceFile.qrc">
+                     <normaloff>:/Blue Icons/Blue Icons/gear.svg</normaloff>:/Blue Icons/Blue Icons/gear.svg</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -639,8 +639,8 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset>
-                     <normaloff>Icons/Blue/Play.svg</normaloff>Icons/Blue/Play.svg</iconset>
+                    <iconset resource="Icons/IconResourceFile.qrc">
+                     <normaloff>:/Blue Icons/Blue Icons/Play.svg</normaloff>:/Blue Icons/Blue Icons/Play.svg</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -708,8 +708,8 @@
                     <string/>
                    </property>
                    <property name="icon">
-                    <iconset>
-                     <normaloff>Icons/Blue/magnify.svg</normaloff>Icons/Blue/magnify.svg</iconset>
+                    <iconset resource="Icons/IconResourceFile.qrc">
+                     <normaloff>:/Blue Icons/Blue Icons/magnify.svg</normaloff>:/Blue Icons/Blue Icons/magnify.svg</iconset>
                    </property>
                    <property name="iconSize">
                     <size>
@@ -850,7 +850,7 @@
            <enum>QFrame::NoFrame</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>3</number>
           </property>
           <widget class="QWidget" name="TitlePage">
            <property name="minimumSize">
@@ -893,7 +893,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap>Icons/LANL Logo Ultramarine.png</pixmap>
+               <pixmap resource="Icons/IconResourceFile.qrc">:/Logos/Logos/LANL Logo Ultramarine.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>true</bool>
@@ -917,13 +917,13 @@
              <widget class="QLabel" name="EVPFFTLogo">
               <property name="minimumSize">
                <size>
-                <width>275</width>
+                <width>225</width>
                 <height>175</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>275</width>
+                <width>225</width>
                 <height>175</height>
                </size>
               </property>
@@ -931,7 +931,7 @@
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap>Icons/EVPFFT_logo_horse_ppt.png</pixmap>
+               <pixmap resource="Icons/IconResourceFile.qrc">:/Logos/Logos/FIERRO.png</pixmap>
               </property>
               <property name="scaledContents">
                <bool>true</bool>
@@ -1029,7 +1029,7 @@
                      <string/>
                     </property>
                     <property name="pixmap">
-                     <pixmap>Icons/MATAR_logo2.png</pixmap>
+                     <pixmap resource="Icons/IconResourceFile.qrc">:/Logos/Logos/MATAR_logo2.png</pixmap>
                     </property>
                     <property name="scaledContents">
                      <bool>true</bool>
@@ -1048,7 +1048,7 @@
                      <string/>
                     </property>
                     <property name="pixmap">
-                     <pixmap>Icons/ParaView_logo.png</pixmap>
+                     <pixmap resource="Icons/IconResourceFile.qrc">:/Logos/Logos/ParaView_logo.png</pixmap>
                     </property>
                     <property name="scaledContents">
                      <bool>true</bool>
@@ -1254,7 +1254,7 @@
             <item>
              <widget class="QStackedWidget" name="MaterialTypeTool">
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
               <widget class="QWidget" name="Isotropic">
                <layout class="QFormLayout" name="formLayout_6">
@@ -2156,6 +2156,11 @@
                    <string>Shear</string>
                   </property>
                  </item>
+                 <item>
+                  <property name="text">
+                   <string>Homogenization</string>
+                  </property>
+                 </item>
                 </widget>
                </item>
                <item row="1" column="0">
@@ -2199,6 +2204,9 @@
               <property name="editTriggers">
                <set>QAbstractItemView::NoEditTriggers</set>
               </property>
+              <attribute name="horizontalHeaderDefaultSectionSize">
+               <number>175</number>
+              </attribute>
               <column>
                <property name="text">
                 <string>Boundary Condition</string>
@@ -2579,6 +2587,8 @@
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="Icons/IconResourceFile.qrc"/>
+ </resources>
  <connections/>
 </ui>

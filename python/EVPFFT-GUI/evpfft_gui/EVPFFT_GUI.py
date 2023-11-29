@@ -1,3 +1,6 @@
+# To import images using resource file you must conver the .rc file to .py using (in command line):
+# pyside6-rcc IconResourceFile.qrc -o IconResourceFile.py
+
 from evpfft_gui.ui_EVPFFT_GUI import Ui_MainWindow
 
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
@@ -533,34 +536,55 @@ class EVPFFT_GUI(Ui_MainWindow):
         # Boundary Conditions
         def BC_direction():
             if self.INBoundaryCondition.currentText() == "Tension" or self.INBoundaryCondition.currentText() == "Compression":
-                self.INBCDirection.setItemText(0, QCoreApplication.translate("MainWindow", u"x-direction", None))
-                self.INBCDirection.setItemText(1, QCoreApplication.translate("MainWindow", u"y-direction", None))
-                self.INBCDirection.setItemText(2, QCoreApplication.translate("MainWindow", u"z-direction", None))
+                self.INBCDirection.clear()
+                self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"x-direction", None))
+                self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"y-direction", None))
+                self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"z-direction", None))
             elif self.INBoundaryCondition.currentText() == "Shear":
-                self.INBCDirection.setItemText(0, QCoreApplication.translate("MainWindow", u"xy-direction", None))
-                self.INBCDirection.setItemText(1, QCoreApplication.translate("MainWindow", u"xz-direction", None))
-                self.INBCDirection.setItemText(2, QCoreApplication.translate("MainWindow", u"yz-direction", None))
+                self.INBCDirection.clear()
+                self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xy-direction", None))
+                self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"xz-direction", None))
+                self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"yz-direction", None))
+            elif self.INBoundaryCondition.currentText() == "Homogenization":
+                self.INBCDirection.clear()
+                self.INBCDirection.addItem(QCoreApplication.translate("MainWindow", u"6 RVE BCs", None))
         self.INBoundaryCondition.currentTextChanged.connect(BC_direction)
         
         def add_bcs():
-#            if not self.INBCStrainRate.text():
-#                on_clicked("ERROR: Boundary condition incomplete")
-#            else:
             row = self.TBCs.rowCount()
-            self.TBCs.insertRow(row)
-            self.TBCs.setItem(row, 0, QTableWidgetItem(str(
-                self.INBoundaryCondition.currentText()))
-            )
-            self.TBCs.setItem(
-                row, 1, QTableWidgetItem(str(self.INBCDirection.currentText()))
-            )
-#            self.TBCs.setItem(
-#                row, 2, QTableWidgetItem(self.INBCStrainRate.text())
-#            )
-#            reset_bcs()
-#
-#        def reset_bcs():
-#            self.INBCStrainRate.clear()
+            if self.INBoundaryCondition.currentText() == 'Homogenization':
+                # Tension x-direction
+                self.TBCs.insertRow(row)
+                self.TBCs.setItem(row, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Tension")))
+                self.TBCs.setItem(row, 1, QTableWidgetItem(str("x-direction")))
+                # Tension y-direction
+                self.TBCs.insertRow(row+1)
+                self.TBCs.setItem(row+1, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Tension")))
+                self.TBCs.setItem(row+1, 1, QTableWidgetItem(str("y-direction")))
+                # Tension z-direction
+                self.TBCs.insertRow(row+2)
+                self.TBCs.setItem(row+2, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Tension")))
+                self.TBCs.setItem(row+2, 1, QTableWidgetItem(str("z-direction")))
+                # Shear xy-direction
+                self.TBCs.insertRow(row+3)
+                self.TBCs.setItem(row+3, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Shear")))
+                self.TBCs.setItem(row+3, 1, QTableWidgetItem(str("xy-direction")))
+                # Shear xz-direction
+                self.TBCs.insertRow(row+4)
+                self.TBCs.setItem(row+4, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Shear")))
+                self.TBCs.setItem(row+4, 1, QTableWidgetItem(str("xz-direction")))
+                # Shear yz-direction
+                self.TBCs.insertRow(row+5)
+                self.TBCs.setItem(row+5, 0, QTableWidgetItem(str(self.INBoundaryCondition.currentText() + " Shear")))
+                self.TBCs.setItem(row+5, 1, QTableWidgetItem(str("yz-direction")))
+            else:
+                self.TBCs.insertRow(row)
+                self.TBCs.setItem(row, 0, QTableWidgetItem(str(
+                    self.INBoundaryCondition.currentText()))
+                )
+                self.TBCs.setItem(
+                    row, 1, QTableWidgetItem(str(self.INBCDirection.currentText()))
+                )
 
         def delete_bcs():
             current_row = self.TBCs.currentRow()
@@ -575,13 +599,23 @@ class EVPFFT_GUI(Ui_MainWindow):
                 QMessageBox.StandardButton.No
             )
             if button == QMessageBox.StandardButton.Yes:
-                self.TBCs.removeRow(current_row)
+                if 'Homogenization' in self.TBCs.item(current_row,0).text():
+                    Hrmv = []
+                    for i in range(self.TBCs.rowCount()):
+                        if 'Homogenization' in self.TBCs.item(i,0).text():
+                            Hrmv.append(i)
+                    Hcnt = 0
+                    for i in Hrmv:
+                        self.TBCs.removeRow(i-Hcnt)
+                        Hcnt += 1
+                else:
+                    self.TBCs.removeRow(current_row)
                 
         self.BAddBC.clicked.connect(add_bcs)
         self.BDeleteBC.clicked.connect(delete_bcs)
         
         # Write input file
-        def write_input_file():
+        def write_input_file(BC_index):
             # Get current file location
             current_file_loc = os.getcwd()
             
@@ -620,33 +654,33 @@ class EVPFFT_GUI(Ui_MainWindow):
             evpfft_lattice_input.write(vtkfile)
             phases = '*INFORMATION ABOUT PHASE #1\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n' + '*INFORMATION ABOUT PHASE #2\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  f'{PLASTIC_PARAMETERS}\n' + f'{ELASTIC_PARAMETERS}\n'
             evpfft_lattice_input.write(phases)
-            if str(self.INBCDirection.currentText()) == "x-direction":
-                if str(self.INBoundaryCondition.currentText()) == "Tension":
+            if self.TBCs.item(BC_index,1).text() == "x-direction":
+                if self.TBCs.item(BC_index,0).text() == "Tension":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   1.0     0.        0.          udot     |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif str(self.INBoundaryCondition.currentText()) == "Compression":
+                elif self.TBCs.item(BC_index,0).text() == "Compression":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -1.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
-            elif str(self.INBCDirection.currentText()) == "y-direction":
-                if str(self.INBoundaryCondition.currentText()) == "Tension":
+            elif self.TBCs.item(BC_index,1).text() == "y-direction":
+                if self.TBCs.item(BC_index,0).text() == "Tension":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      1.0      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif str(self.INBoundaryCondition.currentText()) == "Compression":
+                elif self.TBCs.item(BC_index,0).text() == "Compression":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      -1.0      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
-            elif str(self.INBCDirection.currentText()) == "z-direction":
-                if str(self.INBoundaryCondition.currentText()) == "Tension":
+            elif self.TBCs.item(BC_index,1).text() == "z-direction":
+                if self.TBCs.item(BC_index,0).text() == "Tension":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif str(self.INBoundaryCondition.currentText()) == "Compression":
+                elif self.TBCs.item(BC_index,0).text() == "Compression":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         -1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
-            elif str(self.INBoundaryCondition.currentText()) == "Shear":
-                if str(self.INBCDirection.currentText()) == "xy-direction":
+            elif self.TBCs.item(BC_index,0).text() == "Shear":
+                if self.TBCs.item(BC_index,1).text() == "xy-direction":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     1.0        0.          udot    |    vel.grad\n' + '    1.0      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif str(self.INBCDirection.currentText()) == "xz-direction":
+                elif self.TBCs.item(BC_index,1).text() == "xz-direction":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     0.        1.0          udot    |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    1.0       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif str(self.INBCDirection.currentText()) == "yz-direction":
+                elif self.TBCs.item(BC_index,1).text() == "yz-direction":
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      0.      1.0                  |\n' + '    0.       1.0         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
             else:
                 print("INVALID BOUNDARY CONDITION")
@@ -658,10 +692,10 @@ class EVPFFT_GUI(Ui_MainWindow):
             evpfft_lattice_input.close()
             
             
-        # Run EVPFFT
+        # Single Run of EVPFFT
         self.run_cnt = 0
-        def run_click():
-            write_input_file()
+        def run_click(BC_index):
+            write_input_file(BC_index)
             self.p = QProcess()
             self.p.readyReadStandardOutput.connect(handle_stdout)
             self.p.readyReadStandardError.connect(handle_stderr)
@@ -697,9 +731,17 @@ class EVPFFT_GUI(Ui_MainWindow):
             }
             state_name = states[state]
             self.RunOutputWindow.appendPlainText(f"{state_name}")
-            
-        self.BRunEVPFFT.clicked.connect(run_click)
         
+        # Batch Run of EVPFFT
+        def batch_EVPFFT():
+            for BC_index in range(self.TBCs.rowCount()):
+                self.BRunEVPFFT.clicked.connect(run_click(BC_index))
+        
+        # Connect run button to indiviual or batch run
+        if self.TBCs.rowCount() < 1:
+            self.BRunEVPFFT.clicked.connect(run_click)
+        else:
+            self.BRunEVPFFT.clicked.connect(batch_EVPFFT)
         
         # Preview Results
         def preview_results_click():
