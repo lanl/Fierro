@@ -10,7 +10,9 @@ source:
 build:
   number: 2
   script: cd python/EVPFFT-GUI/; pip install .
-  noarch: generic # This is a pure python package. So build for noarch on linux64
+  noarch: python # This is a pure python package. So build for noarch on linux64
+  entry_points:
+    - evpfft-gui = evpfft_gui.gui:main
   skip: true  # [not (linux and x86_64)]
   skip: false # [linux and x86_64]
 
@@ -23,7 +25,7 @@ requirements:
     - fierro-evpfft
     - fierro-voxelizer
     - python
-    - pyside6
+    - pyside6=6.5
 
 test:
   imports:
