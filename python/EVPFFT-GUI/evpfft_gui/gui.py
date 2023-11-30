@@ -2,6 +2,7 @@ import sys
 import os
 
 def main():
+    sys.path.append(os.path.dirname(__file__))
     from evpfft_gui.EVPFFT_GUI import EVPFFT_GUI
     from PySide6.QtWidgets import QMainWindow, QApplication
     # MAIN WINDOW CLASS
