@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'EVPFFT_GUICghoaX.ui'
+## Form generated from reading UI file 'EVPFFT_GUIhyXpzV.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -1160,6 +1160,7 @@ class Ui_MainWindow(object):
 
         self.INNumberOfSteps = QLineEdit(self.SolverSettingsInputs)
         self.INNumberOfSteps.setObjectName(u"INNumberOfSteps")
+        self.INNumberOfSteps.setEnabled(False)
         self.INNumberOfSteps.setReadOnly(False)
 
         self.formLayout_4.setWidget(0, QFormLayout.FieldRole, self.INNumberOfSteps)
@@ -1223,6 +1224,49 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_18.addWidget(self.BOpenParaview)
 
+        self.THomogenization = QTableWidget(self.ResultsTool)
+        if (self.THomogenization.columnCount() < 1):
+            self.THomogenization.setColumnCount(1)
+        __qtablewidgetitem41 = QTableWidgetItem()
+        self.THomogenization.setHorizontalHeaderItem(0, __qtablewidgetitem41)
+        if (self.THomogenization.rowCount() < 12):
+            self.THomogenization.setRowCount(12)
+        __qtablewidgetitem42 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(0, __qtablewidgetitem42)
+        __qtablewidgetitem43 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(1, __qtablewidgetitem43)
+        __qtablewidgetitem44 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(2, __qtablewidgetitem44)
+        __qtablewidgetitem45 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(3, __qtablewidgetitem45)
+        __qtablewidgetitem46 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(4, __qtablewidgetitem46)
+        __qtablewidgetitem47 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(5, __qtablewidgetitem47)
+        __qtablewidgetitem48 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(6, __qtablewidgetitem48)
+        __qtablewidgetitem49 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(7, __qtablewidgetitem49)
+        __qtablewidgetitem50 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(8, __qtablewidgetitem50)
+        __qtablewidgetitem51 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(9, __qtablewidgetitem51)
+        __qtablewidgetitem52 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(10, __qtablewidgetitem52)
+        __qtablewidgetitem53 = QTableWidgetItem()
+        self.THomogenization.setVerticalHeaderItem(11, __qtablewidgetitem53)
+        self.THomogenization.setObjectName(u"THomogenization")
+        self.THomogenization.horizontalHeader().setDefaultSectionSize(250)
+        self.THomogenization.verticalHeader().setDefaultSectionSize(40)
+
+        self.verticalLayout_18.addWidget(self.THomogenization)
+
+        self.BHomogenization = QPushButton(self.ResultsTool)
+        self.BHomogenization.setObjectName(u"BHomogenization")
+        self.BHomogenization.setEnabled(False)
+
+        self.verticalLayout_18.addWidget(self.BHomogenization)
+
         self.verticalSpacer_5 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout_18.addItem(self.verticalSpacer_5)
@@ -1251,11 +1295,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_20 = QVBoxLayout(self.ParaviewWindow)
         self.verticalLayout_20.setObjectName(u"verticalLayout_20")
         self.verticalLayout_20.setContentsMargins(0, 0, 0, 0)
-        self.Paraview = QWidget(self.ParaviewWindow)
-        self.Paraview.setObjectName(u"Paraview")
-
-        self.verticalLayout_20.addWidget(self.Paraview)
-
         self.OutputWindows.addWidget(self.ParaviewWindow)
         self.PlotWindow = QWidget()
         self.PlotWindow.setObjectName(u"PlotWindow")
@@ -1481,6 +1520,33 @@ class Ui_MainWindow(object):
         self.INPlotSS.setItemText(2, QCoreApplication.translate("MainWindow", u"S33 vs E33", None))
 
         self.BOpenParaview.setText(QCoreApplication.translate("MainWindow", u"Open Paraview", None))
+        ___qtablewidgetitem25 = self.THomogenization.horizontalHeaderItem(0)
+        ___qtablewidgetitem25.setText(QCoreApplication.translate("MainWindow", u"Homogenized Elastic Constants", None));
+        ___qtablewidgetitem26 = self.THomogenization.verticalHeaderItem(0)
+        ___qtablewidgetitem26.setText(QCoreApplication.translate("MainWindow", u"E11", None));
+        ___qtablewidgetitem27 = self.THomogenization.verticalHeaderItem(1)
+        ___qtablewidgetitem27.setText(QCoreApplication.translate("MainWindow", u"E22", None));
+        ___qtablewidgetitem28 = self.THomogenization.verticalHeaderItem(2)
+        ___qtablewidgetitem28.setText(QCoreApplication.translate("MainWindow", u"E33", None));
+        ___qtablewidgetitem29 = self.THomogenization.verticalHeaderItem(3)
+        ___qtablewidgetitem29.setText(QCoreApplication.translate("MainWindow", u"NU12", None));
+        ___qtablewidgetitem30 = self.THomogenization.verticalHeaderItem(4)
+        ___qtablewidgetitem30.setText(QCoreApplication.translate("MainWindow", u"NU21", None));
+        ___qtablewidgetitem31 = self.THomogenization.verticalHeaderItem(5)
+        ___qtablewidgetitem31.setText(QCoreApplication.translate("MainWindow", u"NU13", None));
+        ___qtablewidgetitem32 = self.THomogenization.verticalHeaderItem(6)
+        ___qtablewidgetitem32.setText(QCoreApplication.translate("MainWindow", u"NU31", None));
+        ___qtablewidgetitem33 = self.THomogenization.verticalHeaderItem(7)
+        ___qtablewidgetitem33.setText(QCoreApplication.translate("MainWindow", u"NU23", None));
+        ___qtablewidgetitem34 = self.THomogenization.verticalHeaderItem(8)
+        ___qtablewidgetitem34.setText(QCoreApplication.translate("MainWindow", u"NU32", None));
+        ___qtablewidgetitem35 = self.THomogenization.verticalHeaderItem(9)
+        ___qtablewidgetitem35.setText(QCoreApplication.translate("MainWindow", u"G12", None));
+        ___qtablewidgetitem36 = self.THomogenization.verticalHeaderItem(10)
+        ___qtablewidgetitem36.setText(QCoreApplication.translate("MainWindow", u"G13", None));
+        ___qtablewidgetitem37 = self.THomogenization.verticalHeaderItem(11)
+        ___qtablewidgetitem37.setText(QCoreApplication.translate("MainWindow", u"G23", None));
+        self.BHomogenization.setText(QCoreApplication.translate("MainWindow", u"Generate Homogenized Elastic Constants", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
     # retranslateUi
 

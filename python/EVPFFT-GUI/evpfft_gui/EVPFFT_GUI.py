@@ -35,14 +35,32 @@ import paraview.simple as pvsimple
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
+import fierro_voxelizer
+import tempfile
+import time
+
+class LocalResource:
+    FILE_PATH = os.path.abspath(
+        os.path.join(*(os.path.split(os.path.expanduser(__file__))[:-1]))
+    )
+
+    @staticmethod
+    def get_resource_name(relpath: str) -> str:
+        return os.path.join(LocalResource.FILE_PATH, relpath)
+
+VTK_OUTPUT = os.path.join(tempfile.gettempdir(), 'VTK_Geometry.vtk')
+ELASTIC_PARAMETERS = LocalResource.get_resource_name('elastic_parameters.txt')
+PLASTIC_PARAMETERS = LocalResource.get_resource_name('plastic_parameters.txt')
+EVPFFT_INPUT = os.path.join(tempfile.gettempdir(), 'evpfft_lattice_input.txt')
 
 class EVPFFT_GUI(Ui_MainWindow):
     def setupUi(self, MainWindow):
         super().setupUi(MainWindow)
 
         # Paraview imports
-        render_view = pvsimple.CreateRenderView()
-        self.Paraview = QVTKRenderWindowInteractor(rw=render_view.GetRenderWindow(),iren=render_view.GetInteractor())
+        self.render_view = pvsimple.CreateRenderView()
+        self.Paraview = QVTKRenderWindowInteractor(rw=self.render_view.GetRenderWindow(),iren=self.render_view.GetInteractor())
+        self.verticalLayout_20.addWidget(self.Paraview)
         
         # Open Url in Help Menu
         def openUrl():
@@ -111,7 +129,7 @@ class EVPFFT_GUI(Ui_MainWindow):
                 self.BVoxelizeGeometry.setEnabled(False)
             else:
                 warning_message('ERROR: Incorrect file type')
-            pvsimple.Show(self.stl, render_view)
+            pvsimple.Show(self.stl, self.render_view)
             pvsimple.ResetCamera(view=None)
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
         
@@ -140,10 +158,10 @@ class EVPFFT_GUI(Ui_MainWindow):
                 self.voxel_reader = pvsimple.LegacyVTKReader(FileNames = VTK_OUTPUT)
                 pvsimple.SetDisplayProperties(Representation = "Surface")
                 self.threshold = pvsimple.Threshold(Input = self.voxel_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-                pvsimple.Show(self.threshold, render_view)
+                pvsimple.Show(self.threshold, self.render_view)
                 pvsimple.Hide(self.voxel_reader)
-                render_view.ResetCamera()
-                render_view.StillRender()
+                self.render_view.ResetCamera()
+                self.render_view.StillRender()
         self.BVoxelizeGeometry.clicked.connect(voxelize_geometry_click)
         
         # Apply Material
@@ -655,32 +673,32 @@ class EVPFFT_GUI(Ui_MainWindow):
             phases = '*INFORMATION ABOUT PHASE #1\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n' + '*INFORMATION ABOUT PHASE #2\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  f'{PLASTIC_PARAMETERS}\n' + f'{ELASTIC_PARAMETERS}\n'
             evpfft_lattice_input.write(phases)
             if self.TBCs.item(BC_index,1).text() == "x-direction":
-                if self.TBCs.item(BC_index,0).text() == "Tension":
+                if "Tension" in self.TBCs.item(BC_index,0).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   1.0     0.        0.          udot     |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif self.TBCs.item(BC_index,0).text() == "Compression":
+                elif "Compression" in self.TBCs.item(BC_index,0).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   -1.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
             elif self.TBCs.item(BC_index,1).text() == "y-direction":
-                if self.TBCs.item(BC_index,0).text() == "Tension":
+                if "Tension" in self.TBCs.item(BC_index,0).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      1.0      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif self.TBCs.item(BC_index,0).text() == "Compression":
+                elif "Compression" in self.TBCs.item(BC_index,0).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      -1.0      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
             elif self.TBCs.item(BC_index,1).text() == "z-direction":
-                if self.TBCs.item(BC_index,0).text() == "Tension":
+                if "Tension" in self.TBCs.item(BC_index,0).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif self.TBCs.item(BC_index,0).text() == "Compression":
+                elif "Compression" in self.TBCs.item(BC_index,0).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    0       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.0     0.        0.          udot    |    vel.grad\n' + '    0.      0.0      0.                  |\n' + '    0.       0.         -1.0                |\n' + '                                          |\n' + '    1       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
                 else:
                     print("INVALID BOUNDARY CONDITION")
-            elif self.TBCs.item(BC_index,0).text() == "Shear":
-                if self.TBCs.item(BC_index,1).text() == "xy-direction":
+            elif "Shear" in self.TBCs.item(BC_index,0).text():
+                if "xy-direction" in self.TBCs.item(BC_index,1).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     1.0        0.          udot    |    vel.grad\n' + '    1.0      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif self.TBCs.item(BC_index,1).text() == "xz-direction":
+                elif "xz-direction" in self.TBCs.item(BC_index,1).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     0.        1.0          udot    |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    1.0       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
-                elif self.TBCs.item(BC_index,1).text() == "yz-direction":
+                elif "yz-direction" in self.TBCs.item(BC_index,1).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       1       1                     |    (0:unknown-1:known)\n' + '    1       1       1                     |\n' + '                                          |\n' + '   0.     0.        0.          udot    |    vel.grad\n' + '    0.      0.      1.0                  |\n' + '    0.       1.0         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            0        0                    |\n' + '                     0                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
             else:
                 print("INVALID BOUNDARY CONDITION")
@@ -694,16 +712,17 @@ class EVPFFT_GUI(Ui_MainWindow):
             
         # Single Run of EVPFFT
         self.run_cnt = 0
-        def run_click(BC_index):
-            write_input_file(BC_index)
-            self.p = QProcess()
-            self.p.readyReadStandardOutput.connect(handle_stdout)
-            self.p.readyReadStandardError.connect(handle_stderr)
-            self.p.stateChanged.connect(handle_state)
-            self.p.finished.connect(process_finished)
-            self.p.start("evpfft",["-f", EVPFFT_INPUT, "-m", "2"])
-            self.progress_re = re.compile("       Current  Time  STEP = (\d+)")
-            self.run_cnt += 1
+        def single_EVPFFT(BC_index):
+            if self.p == None:
+                write_input_file(BC_index)
+                self.p = QProcess()
+                self.p.readyReadStandardOutput.connect(handle_stdout)
+                self.p.readyReadStandardError.connect(handle_stderr)
+                self.p.stateChanged.connect(handle_state)
+                self.p.finished.connect(process_finished)
+                self.p.start("evpfft",["-f", EVPFFT_INPUT, "-m", "2"])
+                self.progress_re = re.compile("       Current  Time  STEP = (\d+)")
+                self.run_cnt += 1
         def simple_percent_parser(output):
             m = self.progress_re.search(output)
             if m:
@@ -711,6 +730,7 @@ class EVPFFT_GUI(Ui_MainWindow):
                 return int(pc_complete)
         def process_finished():
             self.RunOutputProgress.setValue(100)
+            self.p.close()
             self.p = None
         def handle_stdout():
             data = self.p.readAllStandardOutput()
@@ -729,19 +749,75 @@ class EVPFFT_GUI(Ui_MainWindow):
                 QProcess.Starting: 'Starting EVPFFT',
                 QProcess.Running: 'Running EVPFFT',
             }
-            state_name = states[state]
-            self.RunOutputWindow.appendPlainText(f"{state_name}")
+            self.state_name = states[state]
+            self.RunOutputWindow.appendPlainText(f"{self.state_name}")
         
         # Batch Run of EVPFFT
         def batch_EVPFFT():
             for BC_index in range(self.TBCs.rowCount()):
-                self.BRunEVPFFT.clicked.connect(run_click(BC_index))
+                self.BRunEVPFFT.clicked.connect(single_EVPFFT(BC_index))
+                self.p.waitForStarted()
+                while self.p != None:
+                    QApplication.processEvents()
+                    
+                # Save Output Files
+                    
+                # Generate Homogenized Elastic Constants
+                if "Homogenization" in self.TBCs.item(BC_index,0).text():
+                    self.BHomogenization.setEnabled(True)
+                    with open("str_str.out", newline='') as f:
+                        reader = csv.reader(f)
+                        self.ss_data = list(reader)
+                    s11 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    s22 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    s33 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    s12 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    s13 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    s23 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    e11 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    e22 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    e33 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    e12 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    e13 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    e23 = [0 for i in range(int(self.INNumberOfSteps.text()))]
+                    for i in range(int(self.INNumberOfSteps.text())):
+                        s11[i] = float(self.ss_data[i+1][6])
+                        s22[i] = float(self.ss_data[i+1][7])
+                        s33[i] = float(self.ss_data[i+1][8])
+                        s12[i] = float(self.ss_data[i+1][11])
+                        s13[i] = float(self.ss_data[i+1][10])
+                        s23[i] = float(self.ss_data[i+1][9])
+                        e11[i] = float(self.ss_data[i+1][0])
+                        e22[i] = float(self.ss_data[i+1][1])
+                        e33[i] = float(self.ss_data[i+1][2])
+                        e12[i] = float(self.ss_data[i+1][5])
+                        e13[i] = float(self.ss_data[i+1][4])
+                        e23[i] = float(self.ss_data[i+1][3])
+                    if self.TBCs.item(BC_index,1).text() == "x-direction":
+                        self.HE11 = (s11[int(self.INNumberOfSteps.text())-1]-s11[0])/(e11[int(self.INNumberOfSteps.text())-1]-e11[0])
+                        self.HNU12 = -(e22[int(self.INNumberOfSteps.text())-1]-e22[0])/(e11[int(self.INNumberOfSteps.text())-1]-e11[0])
+                        self.HNU13 = -(e33[int(self.INNumberOfSteps.text())-1]-e33[0])/(e11[int(self.INNumberOfSteps.text())-1]-e11[0])
+                    if self.TBCs.item(BC_index,1).text() == "y-direction":
+                        self.HE22 = (s22[int(self.INNumberOfSteps.text())-1]-s22[0])/(e22[int(self.INNumberOfSteps.text())-1]-e22[0])
+                        self.HNU21 = -(e11[int(self.INNumberOfSteps.text())-1]-e11[0])/(e22[int(self.INNumberOfSteps.text())-1]-e22[0])
+                        self.HNU23 = -(e33[int(self.INNumberOfSteps.text())-1]-e33[0])/(e22[int(self.INNumberOfSteps.text())-1]-e22[0])
+                    if self.TBCs.item(BC_index,1).text() == "z-direction":
+                        self.HE33 = (s33[int(self.INNumberOfSteps.text())-1]-s33[0])/(e33[int(self.INNumberOfSteps.text())-1]-e33[0])
+                        self.HNU31 = -(e11[int(self.INNumberOfSteps.text())-1]-e11[0])/(e33[int(self.INNumberOfSteps.text())-1]-e33[0])
+                        self.HNU32 = -(e22[int(self.INNumberOfSteps.text())-1]-e22[0])/(e33[int(self.INNumberOfSteps.text())-1]-e33[0])
+                    if self.TBCs.item(BC_index,1).text() == "xy-direction":
+                        self.HG12 = (s12[int(self.INNumberOfSteps.text())-1]-s12[0])/(2*(e12[int(self.INNumberOfSteps.text())-1]-e12[0]))
+                    if self.TBCs.item(BC_index,1).text() == "xz-direction":
+                        self.HG13 = (s13[int(self.INNumberOfSteps.text())-1]-s13[0])/(2*(e13[int(self.INNumberOfSteps.text())-1]-e13[0]))
+                    if self.TBCs.item(BC_index,1).text() == "yz-direction":
+                        self.HG23 = (s23[int(self.INNumberOfSteps.text())-1]-s23[0])/(2*(e23[int(self.INNumberOfSteps.text())-1]-e23[0]))
+                
         
         # Connect run button to indiviual or batch run
-        if self.TBCs.rowCount() < 1:
-            self.BRunEVPFFT.clicked.connect(run_click)
-        else:
-            self.BRunEVPFFT.clicked.connect(batch_EVPFFT)
+        self.p = None
+        def run_click():
+            batch_EVPFFT()
+        self.BRunEVPFFT.clicked.connect(run_click)
         
         # Preview Results
         def preview_results_click():
@@ -768,23 +844,23 @@ class EVPFFT_GUI(Ui_MainWindow):
             self.results_reader = pvsimple.XDMFReader(FileNames = "micro_state_timestep_10.xdmf")
             pvsimple.SetDisplayProperties(Representation = "Surface")
             self.threshold2 = pvsimple.Threshold(registrationName='results_threshold', Input = self.results_reader, Scalars = "phase_id", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 2, LowerThreshold = 1, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
-            display = pvsimple.Show(self.threshold2, render_view)
+            display = pvsimple.Show(self.threshold2, self.render_view)
             # Select what variable you want to display
             pvsimple.GetAnimationScene().GoToLast()
             pvsimple.ColorBy(display,('CELLS',str(self.INPreviewResults.currentText())))
             vmstressLUT = pvsimple.GetColorTransferFunction(str(self.INPreviewResults.currentText()))
             r = self.results_reader.CellData.GetArray(str(self.INPreviewResults.currentText())).GetRange()
             vmstressLUT.RescaleTransferFunction(r[0], r[1]/2)
-            display.SetScalarBarVisibility(render_view, True)
-            pvsimple.HideUnusedScalarBars(render_view)
+            display.SetScalarBarVisibility(self.render_view, True)
+            pvsimple.HideUnusedScalarBars(self.render_view)
             # Add time filter
             threshold1 = pvsimple.FindSource('results_threshold')
             annotateTimeFilter1 = pvsimple.AnnotateTimeFilter(registrationName='AnnotateTimeFilter1', Input=threshold1)
-            annotateTimeFilter1Display = pvsimple.Show(annotateTimeFilter1, render_view, 'TextSourceRepresentation')
+            annotateTimeFilter1Display = pvsimple.Show(annotateTimeFilter1, self.render_view, 'TextSourceRepresentation')
             # Remove old view / reset cameras
             pvsimple.Hide(self.results_reader)
-            render_view.ResetCamera()
-            render_view.StillRender()
+            self.render_view.ResetCamera()
+            self.render_view.StillRender()
         self.BPreviewResults.clicked.connect(preview_results_click)
         self.BPreviewResults.clicked.connect(lambda: self.OutputWindows.setCurrentIndex(0))
         
@@ -858,6 +934,22 @@ class EVPFFT_GUI(Ui_MainWindow):
             self.timer.stop()
         self.BPlotSS.clicked.connect(plot_ss_click)
         self.BPlotSS.clicked.connect(lambda: self.OutputWindows.setCurrentIndex(1))
+        
+        # Generate Homogenized Elastic Constants
+        def homogenization_click():
+            self.THomogenization.setItem(0,0,QTableWidgetItem(str(self.HE11)))
+            self.THomogenization.setItem(1,0,QTableWidgetItem(str(self.HE22)))
+            self.THomogenization.setItem(2,0,QTableWidgetItem(str(self.HE33)))
+            self.THomogenization.setItem(3,0,QTableWidgetItem(str(self.HNU12)))
+            self.THomogenization.setItem(4,0,QTableWidgetItem(str(self.HNU21)))
+            self.THomogenization.setItem(5,0,QTableWidgetItem(str(self.HNU13)))
+            self.THomogenization.setItem(6,0,QTableWidgetItem(str(self.HNU31)))
+            self.THomogenization.setItem(7,0,QTableWidgetItem(str(self.HNU23)))
+            self.THomogenization.setItem(8,0,QTableWidgetItem(str(self.HNU32)))
+            self.THomogenization.setItem(9,0,QTableWidgetItem(str(self.HG12)))
+            self.THomogenization.setItem(10,0,QTableWidgetItem(str(self.HG13)))
+            self.THomogenization.setItem(11,0,QTableWidgetItem(str(self.HG23)))
+        self.BHomogenization.clicked.connect(homogenization_click)
         
         # Open Paraview
         def open_paraview_click():
