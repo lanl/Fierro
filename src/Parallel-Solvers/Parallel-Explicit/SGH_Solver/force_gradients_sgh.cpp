@@ -563,9 +563,10 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         
         
         // --- Calculate the Cauchy stress ---
-        for (size_t i = 0; i < 3; i++){
-            for (size_t j = 0; j < 3; j++){
+        for (size_t i = 0; i < num_dims; i++){
+            for (size_t j = 0; j < num_dims; j++){
                 tau(i, j) = stress(i,j);
+                tau_gradient(i,j) = 0;
                 // artificial viscosity can be added here to tau
             } // end for
         } //end for
@@ -1015,6 +1016,18 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
             for (size_t j = 0; j < 3; j++){
                 tau(i, j) = stress(i,j);
                 // artificial viscosity can be added here to tau
+            } // end for
+        } //end for
+        
+        //initialize gradient array
+        for (size_t i = 0; i < 3; i++){
+            for (size_t j = 0; j < 3; j++){
+                for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
+                    tau_gradient(i, j, igradient, 0) = 0;
+                    tau_gradient(i, j, igradient, 1) = 0;
+                    if(num_dims==3)
+                    tau_gradient(i, j, igradient, 2) = 0;
+                }
             } // end for
         } //end for
 
@@ -1539,7 +1552,8 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     const size_t num_dims = simparam->num_dims;
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
+    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++){
+    //FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
         
         const size_t num_nodes_in_elem = 8;
         real_t gradient_result[num_dims];
@@ -1640,7 +1654,7 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
         for (size_t i = 0; i < 3; i++){
             for (size_t j = 0; j < 3; j++){
                 tau(i, j) = stress(i,j);
-                // artificial viscosity can be added here to tau
+                tau_gradient(i,j) = 0;
             } // end for
         } //end for
 
@@ -1896,8 +1910,8 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
         size_t mat_id = elem_mat_id(elem_gid);
         
         
-
-    }); // end parallel for loop over elements
+    }
+    //}); // end parallel for loop over elements
     
     /*
     //accumulate node values from corner storage

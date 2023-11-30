@@ -237,6 +237,7 @@ void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
         double elem_power = 0.0;
+        elem_power_dgradients(elem_gid) = 0;
 
         // --- tally the contribution from each corner to the element ---
 
