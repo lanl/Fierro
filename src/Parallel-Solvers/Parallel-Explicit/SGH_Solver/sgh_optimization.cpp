@@ -721,14 +721,13 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       vec_array phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       vec_array psi_midpoint_adjoint_vector =  psi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       
-      //half step update for RK2 scheme
+      //half step update for RK2 scheme; EQUATION 1
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         real_t rate_of_change;
         real_t matrix_contribution;
         size_t dof_id;
         size_t elem_id;
         for (int idim = 0; idim < num_dim; idim++){
-
           //EQUATION 1
           matrix_contribution = 0;
           //compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
@@ -747,6 +746,23 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                             matrix_contribution/node_mass(node_gid)-
                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           midpoint_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt/2 + previous_adjoint_vector(node_gid,idim);
+
+        } 
+      }); // end parallel for
+      Kokkos::fence();
+
+      //apply BCs to adjoint vector, only matters for the momentum adjoint if using strictly velocity boundary conditions
+      boundary_adjoint(*mesh, boundary,midpoint_adjoint_vector, phi_midpoint_adjoint_vector, psi_midpoint_adjoint_vector);
+      
+      comm_adjoint_vector(cycle);
+      
+      //half step update for RK2 scheme; EQUATION 2
+      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+        real_t rate_of_change;
+        real_t matrix_contribution;
+        size_t dof_id;
+        size_t elem_id;
+        for (int idim = 0; idim < num_dim; idim++){
 
           //EQUATION 2
           matrix_contribution = 0;
@@ -770,9 +786,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       }); // end parallel for
       Kokkos::fence();
       
+      comm_phi_adjoint_vector(cycle);
+      
       //phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 
-      //half step update for RK2 scheme
+      //half step update for RK2 scheme; EQUATION 3
       FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
         real_t rate_of_change;
         real_t matrix_contribution;
@@ -791,8 +809,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       }); // end parallel for
       Kokkos::fence();
 
-      boundary_adjoint(*mesh, boundary,midpoint_adjoint_vector, phi_midpoint_adjoint_vector, psi_midpoint_adjoint_vector);
-      comm_adjoint_vectors(cycle);
       //swap names to get ghost nodes for the midpoint vectors
       vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
@@ -802,7 +818,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       psi_midpoint_adjoint_vector =  (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
       
-      //full step update with midpoint gradient for RK2 scheme
+      //full step update with midpoint gradient for RK2 scheme; EQUATION 1
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         real_t rate_of_change;
         real_t matrix_contribution;
@@ -828,6 +844,20 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                             matrix_contribution/node_mass(node_gid)-
                             phi_midpoint_adjoint_vector(node_gid,idim)/node_mass(node_gid);
           current_adjoint_vector(node_gid,idim) = -rate_of_change*global_dt + previous_adjoint_vector(node_gid,idim);
+        }
+      }); // end parallel for
+      Kokkos::fence();
+
+      boundary_adjoint(*mesh, boundary,current_adjoint_vector, phi_current_adjoint_vector, psi_midpoint_adjoint_vector);
+      comm_adjoint_vector(cycle);
+
+      //full step update with midpoint gradient for RK2 scheme; EQUATION 2
+      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
+        real_t rate_of_change;
+        real_t matrix_contribution;
+        size_t dof_id;
+        size_t elem_id;
+        for (int idim = 0; idim < num_dim; idim++){
 
           //EQUATION 2
           matrix_contribution = 0;
@@ -849,7 +879,10 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         }
       }); // end parallel for
       Kokkos::fence();
-      //half step update for RK2 scheme
+
+      comm_phi_adjoint_vector(cycle);
+
+      //full step update for RK2 scheme; EQUATION 3
       FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
         real_t rate_of_change;
         real_t matrix_contribution;
@@ -868,13 +901,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       }); // end parallel for
       Kokkos::fence();
 
-      
-      boundary_adjoint(*mesh, boundary,current_adjoint_vector, phi_current_adjoint_vector, psi_midpoint_adjoint_vector);
-
     } //end view scope
     
-
-    comm_adjoint_vectors(cycle);
     //phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
     
   }
@@ -1665,7 +1693,7 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
    Communicate updated nodal adjoint vectors to ghost nodes
 ------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::comm_adjoint_vectors(int cycle){
+void FEA_Module_SGH::comm_adjoint_vector(int cycle){
   
   //debug print of design vector
       //std::ostream &out = std::cout;
@@ -1682,6 +1710,37 @@ void FEA_Module_SGH::comm_adjoint_vectors(int cycle){
   
   //comms to get ghosts
   (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
+  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
+  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  //update_count++;
+  //if(update_count==1){
+      //MPI_Barrier(world);
+      //MPI_Abort(world,4);
+  //}
+}
+
+/* ----------------------------------------------------------------------
+   Communicate updated nodal adjoint vectors to ghost nodes
+------------------------------------------------------------------------- */
+
+void FEA_Module_SGH::comm_phi_adjoint_vector(int cycle){
+  
+  //debug print of design vector
+      //std::ostream &out = std::cout;
+      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+      //if(myrank==0)
+      //*fos << "Density data :" << std::endl;
+      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+      //*fos << std::endl;
+      //std::fflush(stdout);
+
+  //communicate design densities
+  //create import object using local node indices map and all indices map
+  //Tpetra::Import<LO, GO> importer(map, all_node_map);
+  
+  //comms to get ghosts
   (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
   //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
   //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);

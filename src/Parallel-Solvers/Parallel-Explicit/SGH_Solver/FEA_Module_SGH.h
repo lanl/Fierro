@@ -432,7 +432,9 @@ public:
 
   void comm_node_masses();
 
-  void comm_adjoint_vectors(int cycle);
+  void comm_adjoint_vector(int cycle);
+
+  void comm_phi_adjoint_vector(int cycle);
 
   void comm_variables(Teuchos::RCP<const MV> zp);
 
