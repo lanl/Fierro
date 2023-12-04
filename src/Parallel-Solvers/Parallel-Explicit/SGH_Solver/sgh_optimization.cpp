@@ -589,14 +589,12 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       // ---- Calculate velocity diveregence for the element ----
       if(num_dim==2){
           get_divergence2D(elem_div,
-                          *mesh,
                           node_coords,
                           node_vel,
                           elem_vol);
       }
       else {
           get_divergence(elem_div,
-                        *mesh,
                         node_coords,
                         node_vel,
                         elem_vol);
@@ -897,7 +895,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         }
         rate_of_change = -(matrix_contribution + psi_midpoint_adjoint_vector(elem_gid,0)*Power_Gradient_Energies(elem_gid))/elem_mass(elem_gid);
         //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
-        psi_current_adjoint_vector(elem_gid,0) = -rate_of_change*global_dt/2 + psi_midpoint_adjoint_vector(elem_gid,0);
+        psi_current_adjoint_vector(elem_gid,0) = -rate_of_change*global_dt + psi_previous_adjoint_vector(elem_gid,0);
       }); // end parallel for
       Kokkos::fence();
 
@@ -1694,31 +1692,8 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
 ------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::comm_adjoint_vector(int cycle){
-  
-  //debug print of design vector
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(myrank==0)
-      //*fos << "Density data :" << std::endl;
-      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
-
-  //communicate design densities
-  //create import object using local node indices map and all indices map
-  //Tpetra::Import<LO, GO> importer(map, all_node_map);
-  
   //comms to get ghosts
   (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
-  (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
-  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
-  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  
-  //update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
 }
 
 /* ----------------------------------------------------------------------
@@ -1726,28 +1701,6 @@ void FEA_Module_SGH::comm_adjoint_vector(int cycle){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_SGH::comm_phi_adjoint_vector(int cycle){
-  
-  //debug print of design vector
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(myrank==0)
-      //*fos << "Density data :" << std::endl;
-      //node_densities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
-
-  //communicate design densities
-  //create import object using local node indices map and all indices map
-  //Tpetra::Import<LO, GO> importer(map, all_node_map);
-  
   //comms to get ghosts
   (*phi_adjoint_vector_data)[cycle]->doImport(*phi_adjoint_vector_distributed, *importer, Tpetra::INSERT);
-  //all_node_map->describe(*fos,Teuchos::VERB_EXTREME);
-  //all_node_velocities_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-  
-  //update_count++;
-  //if(update_count==1){
-      //MPI_Barrier(world);
-      //MPI_Abort(world,4);
-  //}
 }
