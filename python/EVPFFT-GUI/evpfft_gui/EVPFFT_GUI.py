@@ -49,7 +49,8 @@ class LocalResource:
         return os.path.join(LocalResource.FILE_PATH, relpath)
 
 VTK_OUTPUT = os.path.join(tempfile.gettempdir(), 'VTK_Geometry.vtk')
-ELASTIC_PARAMETERS = LocalResource.get_resource_name('elastic_parameters.txt')
+ELASTIC_PARAMETERS_0 = LocalResource.get_resource_name('elastic_parameters_0.txt')
+ELASTIC_PARAMETERS_1 = LocalResource.get_resource_name('elastic_parameters_1.txt')
 PLASTIC_PARAMETERS = LocalResource.get_resource_name('plastic_parameters.txt')
 EVPFFT_INPUT = os.path.join(tempfile.gettempdir(), 'evpfft_lattice_input.txt')
 
@@ -166,6 +167,20 @@ class EVPFFT_GUI(Ui_MainWindow):
         
         # Apply Material
         def material_type():
+            if str(self.INSolidGas.currentText()) == 'Solid':
+                self.INMaterialType.clear()
+                self.INMaterialType.addItem(QCoreApplication.translate("MainWindow", u"Isotropic", None))
+                self.INMaterialType.addItem(QCoreApplication.translate("MainWindow", u"Transversely Isotropic", None))
+                self.INMaterialType.addItem(QCoreApplication.translate("MainWindow", u"Orthotropic", None))
+                self.INMaterialType.addItem(QCoreApplication.translate("MainWindow", u"Anisotropic", None))
+                self.MaterialTypeTool.setEnabled(True)
+            if str(self.INSolidGas.currentText()) == 'Gas':
+                self.INMaterialType.clear()
+                self.INMaterialType.addItem(QCoreApplication.translate("MainWindow", u"Ideal Gas", None))
+                self.MaterialTypeTool.setEnabled(False)
+        self.INSolidGas.currentIndexChanged.connect(material_type)
+        
+        def material_class():
             if str(self.INMaterialType.currentText()) == 'Isotropic':
                 self.MaterialTypeTool.setCurrentIndex(0)
             if str(self.INMaterialType.currentText()) == 'Transversely Isotropic':
@@ -174,181 +189,12 @@ class EVPFFT_GUI(Ui_MainWindow):
                 self.MaterialTypeTool.setCurrentIndex(3)
             if str(self.INMaterialType.currentText()) == 'Anisotropic':
                 self.MaterialTypeTool.setCurrentIndex(2)
-        self.INMaterialType.currentIndexChanged.connect(material_type)
+        self.INMaterialType.currentIndexChanged.connect(material_class)
         
         def add_material():
             warning_flag = 0
-            if str(self.INMaterialType.currentText()) == 'Isotropic':
-                if not self.INYoungsModulus.text() or not self.INPoissonsRatio.text() or not self.INMaterialName.text():
-                    warning_message('ERROR: Material definition incomplete')
-                    warning_flag = 1
-                else:
-                    # Calculate Stiffness Matrix
-                    E = float(self.INYoungsModulus.text())
-                    NU = float(self.INPoissonsRatio.text())
-                    INCalcG = float(self.INYoungsModulus.text())/(2*(1+float(self.INPoissonsRatio.text())))
-                    S11 = 1/E
-                    S12 = -NU/E
-                    S13 = -NU/E
-                    S22 = 1/E
-                    S23 = -NU/E
-                    S33 = 1/E
-                    S44 = 1/INCalcG
-                    S55 = 1/INCalcG
-                    S66 = 1/INCalcG
-                    S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                    C11 = (1/S)*(S22*S33-S23*S23)
-                    C12 = (1/S)*(S13*S23-S12*S33)
-                    C13 = (1/S)*(S12*S23-S13*S22)
-                    C22 = (1/S)*(S33*S11-S13*S13)
-                    C23 = (1/S)*(S12*S13-S23*S11)
-                    C33 = (1/S)*(S11*S22-S12*S12)
-                    C44 = (1/S44)
-                    C55 = (1/S55)
-                    C66 = (1/S66)
-                
-                    self.INYoungsModulus.clear()
-                    self.INPoissonsRatio.clear()
-            if str(self.INMaterialType.currentText()) == 'Transversely Isotropic':
-                if not self.INEip.text() or not self.INNUip.text() or not self.INEop.text() or not self.INNUop.text() or not self.INGop.text() or not self.INMaterialName.text():
-                    warning_message('ERROR: Material definition incomplete')
-                    warning_flag = 1
-                else:
-                    if str(self.INIsotropicPlane.currentText()) == 'x-y plane':
-                        # Calculate Stiffness Matrix
-                        NUip = float(self.INNUip.text())
-                        NUop = float(self.INNUop.text())
-                        Eip = float(self.INEip.text())
-                        Eop = float(self.INEop.text())
-                        Gop = float(self.INGop.text())
-                        S11 = 1/Eip
-                        S12 = -NUip/Eip
-                        S13 = -NUop/Eop
-                        S22 = 1/Eip
-                        S23 = -NUop/Eop
-                        S33 = 1/Eop
-                        S44 = 1/Gop
-                        S55 = 1/Gop
-                        S66 = 1/(Eip/(2*(1+NUip)))
-                        S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                        C11 = (1/S)*(S22*S33-S23*S23)
-                        C12 = (1/S)*(S13*S23-S12*S33)
-                        C22 = (1/S)*(S33*S11-S13*S13)
-                        C13 = (1/S)*(S12*S23-S13*S22)
-                        C33 = (1/S)*(S11*S22-S12*S12)
-                        C23 = (1/S)*(S12*S13-S23*S11)
-                        C44 = (1/S44)
-                        C55 = (1/S55)
-                        C66 = (1/S66)
-                        
-                        self.INEip.clear()
-                        self.INNUip.clear()
-                        self.INEop.clear()
-                        self.INNUop.clear()
-                        self.INGop.clear()
-                    if str(self.INIsotropicPlane.currentText()) == 'x-z plane':
-                        # Calculate Stiffness Matrix
-                        NUip = float(self.INNUip.text())
-                        NUop = float(self.INNUop.text())
-                        Eip = float(self.INEip.text())
-                        Eop = float(self.INEop.text())
-                        Gop = float(self.INGop.text())
-                        S11 = 1/Eip
-                        S12 = -NUop/Eop
-                        S13 = -NUip/Eip
-                        S22 = 1/Eop
-                        S23 = -NUop/Eop
-                        S33 = 1/Eip
-                        S44 = 1/Gop
-                        S55 = 1/(Eip/(2*(1+NUip)))
-                        S66 = 1/Gop
-                        S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                        C11 = (1/S)*(S22*S33-S23*S23)
-                        C12 = (1/S)*(S13*S23-S12*S33)
-                        C22 = (1/S)*(S33*S11-S13*S13)
-                        C13 = (1/S)*(S12*S23-S13*S22)
-                        C33 = (1/S)*(S11*S22-S12*S12)
-                        C23 = (1/S)*(S12*S13-S23*S11)
-                        C44 = (1/S44)
-                        C55 = (1/S55)
-                        C66 = (1/S66)
-                        
-                        self.INEip.clear()
-                        self.INNUip.clear()
-                        self.INEop.clear()
-                        self.INNUop.clear()
-                        self.INGop.clear()
-                    if str(self.INIsotropicPlane.currentText()) == 'y-z plane':
-                        # Calculate Stiffness Matrix
-                        NUip = float(self.INNUip.text())
-                        NUop = float(self.INNUop.text())
-                        Eip = float(self.INEip.text())
-                        Eop = float(self.INEop.text())
-                        Gop = float(self.INGop.text())
-                        S11 = 1/Eop
-                        S12 = -NUop/Eop
-                        S13 = -NUop/Eop
-                        S22 = 1/Eip
-                        S23 = -NUip/Eip
-                        S33 = 1/Eip
-                        S44 = 1/(Eip/(2*(1+NUip)))
-                        S55 = 1/Gop
-                        S66 = 1/Gop
-                        S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                        C11 = (1/S)*(S22*S33-S23*S23)
-                        C12 = (1/S)*(S13*S23-S12*S33)
-                        C22 = (1/S)*(S33*S11-S13*S13)
-                        C13 = (1/S)*(S12*S23-S13*S22)
-                        C33 = (1/S)*(S11*S22-S12*S12)
-                        C23 = (1/S)*(S12*S13-S23*S11)
-                        C44 = (1/S44)
-                        C55 = (1/S55)
-                        C66 = (1/S66)
-                        
-                        self.INEip.clear()
-                        self.INNUip.clear()
-                        self.INEop.clear()
-                        self.INNUop.clear()
-                        self.INGop.clear()
-    
-            if str(self.INMaterialType.currentText()) == 'Orthotropic':
-                if not self.INEx.text() or not self.INEy.text() or not self.INEz.text() or not self.INNUxy.text() or not self.INNUxz.text() or not self.INNUyz.text() or not self.INGxy.text() or not self.INGxz.text() or not self.INGyz.text() or not self.INMaterialName.text():
-                    warning_message('ERROR: Material definition incomplete')
-                    warning_flag = 1
-                else:
-                    # Calculate Stiffness Matrix
-                    S11 = 1/float(self.INEx.text())
-                    S12 = -float(self.INNUxy.text())/float(self.INEx.text())
-                    S13 = -float(self.INNUxz.text())/float(self.INEx.text())
-                    S22 = 1/float(self.INEy.text())
-                    S23 = -float(self.INNUyz.text())/float(self.INEy.text())
-                    S33 = 1/float(self.INEz.text())
-                    S44 = 1/float(self.INGyz.text())
-                    S55 = 1/float(self.INGxz.text())
-                    S66 = 1/float(self.INGxy.text())
-                    S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
-                    C11 = (1/S)*(S22*S33-S23*S23)
-                    C12 = (1/S)*(S13*S23-S12*S33)
-                    C22 = (1/S)*(S33*S11-S13*S13)
-                    C13 = (1/S)*(S12*S23-S13*S22)
-                    C33 = (1/S)*(S11*S22-S12*S12)
-                    C23 = (1/S)*(S12*S13-S23*S11)
-                    C44 = (1/S44)
-                    C55 = (1/S55)
-                    C66 = (1/S66)
-                    
-                    self.INEx.clear()
-                    self.INEy.clear()
-                    self.INEz.clear()
-                    self.INNUxy.clear()
-                    self.INNUxz.clear()
-                    self.INNUyz.clear()
-                    self.INGxy.clear()
-                    self.INGxz.clear()
-                    self.INGyz.clear()
-                    
-            if str(self.INMaterialType.currentText()) == 'Anisotropic':
-                if not self.TAnisotropic.item(0,0).text() or not self.TAnisotropic.item(0,1).text() or not self.TAnisotropic.item(0,2).text() or not self.TAnisotropic.item(0,3).text() or not self.TAnisotropic.item(0,4).text() or not self.TAnisotropic.item(0,5).text() or not self.TAnisotropic.item(1,1).text() or not self.TAnisotropic.item(1,2).text() or not self.TAnisotropic.item(1,3).text() or not self.TAnisotropic.item(1,4).text() or not self.TAnisotropic.item(1,5).text() or not self.TAnisotropic.item(2,2).text() or not self.TAnisotropic.item(2,3).text() or not self.TAnisotropic.item(2,4).text() or not self.TAnisotropic.item(2,5).text() or not self.TAnisotropic.item(3,3).text() or not self.TAnisotropic.item(3,4).text() or not self.TAnisotropic.item(3,5).text() or not self.TAnisotropic.item(4,4).text() or not self.TAnisotropic.item(4,5).text() or not self.TAnisotropic.item(5,5).text() or not self.INMaterialName.text():
+            if str(self.INSolidGas.currentText()) == 'Gas':
+                if not self.INMaterialName.text():
                     warning_message('ERROR: Material definition incomplete')
                     warning_flag = 1
                 else:
@@ -359,65 +205,256 @@ class EVPFFT_GUI(Ui_MainWindow):
                         self.INMaterialName.text().strip())
                     )
                     self.TMaterials.setItem(row, 1, QTableWidgetItem(
+                        str(self.INRegion.currentText()))
+                    )
+                    self.TMaterials.setItem(row, 2, QTableWidgetItem(
                         str(self.INMaterialType.currentText()))
                     )
-                    k = 2
-                    for i in [0,1,2,3,4,5,6]:
-                        for j in range(i,6):
-                            self.TMaterials.setItem(
-                                row, k, QTableWidgetItem(self.TAnisotropic.item(i,j).text())
-                            )
-                            self.TAnisotropic.item(i,j).setText('')
-                            k += 1
                     self.INMaterialName.clear()
-                    warning_flag = 1
-            if warning_flag == 0:
-                # Fill out material definition table
-                row = self.TMaterials.rowCount()
-                self.TMaterials.insertRow(row)
-                self.TMaterials.setItem(row, 0, QTableWidgetItem(
-                    self.INMaterialName.text().strip())
-                )
-                if str(self.INMaterialType.currentText()) == 'Transversely Isotropic':
-                    self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                        str(self.INMaterialType.currentText() + ' ' + self.INIsotropicPlane.currentText()))
-                    )
-                else:
-                    self.TMaterials.setItem(row, 1, QTableWidgetItem(
-                        str(self.INMaterialType.currentText()))
-                    )
-                self.TMaterials.setItem(
-                    row, 2, QTableWidgetItem(str(C11))
-                )
-                self.TMaterials.setItem(
-                    row, 3, QTableWidgetItem(str(C12))
-                )
-                self.TMaterials.setItem(
-                    row, 4, QTableWidgetItem(str(C13))
-                )
-                self.TMaterials.setItem(
-                    row, 8, QTableWidgetItem(str(C22))
-                )
-                self.TMaterials.setItem(
-                    row, 9, QTableWidgetItem(str(C23))
-                )
-                self.TMaterials.setItem(
-                    row, 13, QTableWidgetItem(str(C33))
-                )
-                self.TMaterials.setItem(
-                    row, 17, QTableWidgetItem(str(C44))
-                )
-                self.TMaterials.setItem(
-                    row, 20, QTableWidgetItem(str(C55))
-                )
-                self.TMaterials.setItem(
-                    row, 22, QTableWidgetItem(str(C66))
-                )
-                for i in [5,6,7,10,11,12,14,15,16,18,19,21]:
-                   self.TMaterials.setItem(row, i, QTableWidgetItem('0'))
-                self.INMaterialName.clear()
             else:
-                warning_flag = 0
+                if str(self.INMaterialType.currentText()) == 'Isotropic':
+                    if not self.INYoungsModulus.text() or not self.INPoissonsRatio.text() or not self.INMaterialName.text():
+                        warning_message('ERROR: Material definition incomplete')
+                        warning_flag = 1
+                    else:
+                        # Calculate Stiffness Matrix
+                        E = float(self.INYoungsModulus.text())
+                        NU = float(self.INPoissonsRatio.text())
+                        INCalcG = float(self.INYoungsModulus.text())/(2*(1+float(self.INPoissonsRatio.text())))
+                        S11 = 1/E
+                        S12 = -NU/E
+                        S13 = -NU/E
+                        S22 = 1/E
+                        S23 = -NU/E
+                        S33 = 1/E
+                        S44 = 1/INCalcG
+                        S55 = 1/INCalcG
+                        S66 = 1/INCalcG
+                        S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                        C11 = (1/S)*(S22*S33-S23*S23)
+                        C12 = (1/S)*(S13*S23-S12*S33)
+                        C13 = (1/S)*(S12*S23-S13*S22)
+                        C22 = (1/S)*(S33*S11-S13*S13)
+                        C23 = (1/S)*(S12*S13-S23*S11)
+                        C33 = (1/S)*(S11*S22-S12*S12)
+                        C44 = (1/S44)
+                        C55 = (1/S55)
+                        C66 = (1/S66)
+                    
+                        self.INYoungsModulus.clear()
+                        self.INPoissonsRatio.clear()
+                if str(self.INMaterialType.currentText()) == 'Transversely Isotropic':
+                    if not self.INEip.text() or not self.INNUip.text() or not self.INEop.text() or not self.INNUop.text() or not self.INGop.text() or not self.INMaterialName.text():
+                        warning_message('ERROR: Material definition incomplete')
+                        warning_flag = 1
+                    else:
+                        if str(self.INIsotropicPlane.currentText()) == 'x-y plane':
+                            # Calculate Stiffness Matrix
+                            NUip = float(self.INNUip.text())
+                            NUop = float(self.INNUop.text())
+                            Eip = float(self.INEip.text())
+                            Eop = float(self.INEop.text())
+                            Gop = float(self.INGop.text())
+                            S11 = 1/Eip
+                            S12 = -NUip/Eip
+                            S13 = -NUop/Eop
+                            S22 = 1/Eip
+                            S23 = -NUop/Eop
+                            S33 = 1/Eop
+                            S44 = 1/Gop
+                            S55 = 1/Gop
+                            S66 = 1/(Eip/(2*(1+NUip)))
+                            S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                            C11 = (1/S)*(S22*S33-S23*S23)
+                            C12 = (1/S)*(S13*S23-S12*S33)
+                            C22 = (1/S)*(S33*S11-S13*S13)
+                            C13 = (1/S)*(S12*S23-S13*S22)
+                            C33 = (1/S)*(S11*S22-S12*S12)
+                            C23 = (1/S)*(S12*S13-S23*S11)
+                            C44 = (1/S44)
+                            C55 = (1/S55)
+                            C66 = (1/S66)
+                            
+                            self.INEip.clear()
+                            self.INNUip.clear()
+                            self.INEop.clear()
+                            self.INNUop.clear()
+                            self.INGop.clear()
+                        if str(self.INIsotropicPlane.currentText()) == 'x-z plane':
+                            # Calculate Stiffness Matrix
+                            NUip = float(self.INNUip.text())
+                            NUop = float(self.INNUop.text())
+                            Eip = float(self.INEip.text())
+                            Eop = float(self.INEop.text())
+                            Gop = float(self.INGop.text())
+                            S11 = 1/Eip
+                            S12 = -NUop/Eop
+                            S13 = -NUip/Eip
+                            S22 = 1/Eop
+                            S23 = -NUop/Eop
+                            S33 = 1/Eip
+                            S44 = 1/Gop
+                            S55 = 1/(Eip/(2*(1+NUip)))
+                            S66 = 1/Gop
+                            S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                            C11 = (1/S)*(S22*S33-S23*S23)
+                            C12 = (1/S)*(S13*S23-S12*S33)
+                            C22 = (1/S)*(S33*S11-S13*S13)
+                            C13 = (1/S)*(S12*S23-S13*S22)
+                            C33 = (1/S)*(S11*S22-S12*S12)
+                            C23 = (1/S)*(S12*S13-S23*S11)
+                            C44 = (1/S44)
+                            C55 = (1/S55)
+                            C66 = (1/S66)
+                            
+                            self.INEip.clear()
+                            self.INNUip.clear()
+                            self.INEop.clear()
+                            self.INNUop.clear()
+                            self.INGop.clear()
+                        if str(self.INIsotropicPlane.currentText()) == 'y-z plane':
+                            # Calculate Stiffness Matrix
+                            NUip = float(self.INNUip.text())
+                            NUop = float(self.INNUop.text())
+                            Eip = float(self.INEip.text())
+                            Eop = float(self.INEop.text())
+                            Gop = float(self.INGop.text())
+                            S11 = 1/Eop
+                            S12 = -NUop/Eop
+                            S13 = -NUop/Eop
+                            S22 = 1/Eip
+                            S23 = -NUip/Eip
+                            S33 = 1/Eip
+                            S44 = 1/(Eip/(2*(1+NUip)))
+                            S55 = 1/Gop
+                            S66 = 1/Gop
+                            S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                            C11 = (1/S)*(S22*S33-S23*S23)
+                            C12 = (1/S)*(S13*S23-S12*S33)
+                            C22 = (1/S)*(S33*S11-S13*S13)
+                            C13 = (1/S)*(S12*S23-S13*S22)
+                            C33 = (1/S)*(S11*S22-S12*S12)
+                            C23 = (1/S)*(S12*S13-S23*S11)
+                            C44 = (1/S44)
+                            C55 = (1/S55)
+                            C66 = (1/S66)
+                            
+                            self.INEip.clear()
+                            self.INNUip.clear()
+                            self.INEop.clear()
+                            self.INNUop.clear()
+                            self.INGop.clear()
+        
+                if str(self.INMaterialType.currentText()) == 'Orthotropic':
+                    if not self.INEx.text() or not self.INEy.text() or not self.INEz.text() or not self.INNUxy.text() or not self.INNUxz.text() or not self.INNUyz.text() or not self.INGxy.text() or not self.INGxz.text() or not self.INGyz.text() or not self.INMaterialName.text():
+                        warning_message('ERROR: Material definition incomplete')
+                        warning_flag = 1
+                    else:
+                        # Calculate Stiffness Matrix
+                        S11 = 1/float(self.INEx.text())
+                        S12 = -float(self.INNUxy.text())/float(self.INEx.text())
+                        S13 = -float(self.INNUxz.text())/float(self.INEx.text())
+                        S22 = 1/float(self.INEy.text())
+                        S23 = -float(self.INNUyz.text())/float(self.INEy.text())
+                        S33 = 1/float(self.INEz.text())
+                        S44 = 1/float(self.INGyz.text())
+                        S55 = 1/float(self.INGxz.text())
+                        S66 = 1/float(self.INGxy.text())
+                        S = S11*S22*S33 - S11*S23*S23 - S22*S13*S13 - S33*S12*S12 + 2*S12*S23*S13
+                        C11 = (1/S)*(S22*S33-S23*S23)
+                        C12 = (1/S)*(S13*S23-S12*S33)
+                        C22 = (1/S)*(S33*S11-S13*S13)
+                        C13 = (1/S)*(S12*S23-S13*S22)
+                        C33 = (1/S)*(S11*S22-S12*S12)
+                        C23 = (1/S)*(S12*S13-S23*S11)
+                        C44 = (1/S44)
+                        C55 = (1/S55)
+                        C66 = (1/S66)
+                        
+                        self.INEx.clear()
+                        self.INEy.clear()
+                        self.INEz.clear()
+                        self.INNUxy.clear()
+                        self.INNUxz.clear()
+                        self.INNUyz.clear()
+                        self.INGxy.clear()
+                        self.INGxz.clear()
+                        self.INGyz.clear()
+                        
+                if str(self.INMaterialType.currentText()) == 'Anisotropic':
+                    if not self.TAnisotropic.item(0,0).text() or not self.TAnisotropic.item(0,1).text() or not self.TAnisotropic.item(0,2).text() or not self.TAnisotropic.item(0,3).text() or not self.TAnisotropic.item(0,4).text() or not self.TAnisotropic.item(0,5).text() or not self.TAnisotropic.item(1,1).text() or not self.TAnisotropic.item(1,2).text() or not self.TAnisotropic.item(1,3).text() or not self.TAnisotropic.item(1,4).text() or not self.TAnisotropic.item(1,5).text() or not self.TAnisotropic.item(2,2).text() or not self.TAnisotropic.item(2,3).text() or not self.TAnisotropic.item(2,4).text() or not self.TAnisotropic.item(2,5).text() or not self.TAnisotropic.item(3,3).text() or not self.TAnisotropic.item(3,4).text() or not self.TAnisotropic.item(3,5).text() or not self.TAnisotropic.item(4,4).text() or not self.TAnisotropic.item(4,5).text() or not self.TAnisotropic.item(5,5).text() or not self.INMaterialName.text():
+                        warning_message('ERROR: Material definition incomplete')
+                        warning_flag = 1
+                    else:
+                        # Fill out material definition table
+                        row = self.TMaterials.rowCount()
+                        self.TMaterials.insertRow(row)
+                        self.TMaterials.setItem(row, 0, QTableWidgetItem(
+                            self.INMaterialName.text().strip())
+                        )
+                        self.TMaterials.setItem(row, 1, QTableWidgetItem(
+                            str(self.INMaterialType.currentText()))
+                        )
+                        k = 2
+                        for i in [0,1,2,3,4,5,6]:
+                            for j in range(i,6):
+                                self.TMaterials.setItem(
+                                    row, k, QTableWidgetItem(self.TAnisotropic.item(i,j).text())
+                                )
+                                self.TAnisotropic.item(i,j).setText('')
+                                k += 1
+                        self.INMaterialName.clear()
+                        warning_flag = 1
+                if warning_flag == 0:
+                    # Fill out material definition table
+                    row = self.TMaterials.rowCount()
+                    self.TMaterials.insertRow(row)
+                    self.TMaterials.setItem(row, 0, QTableWidgetItem(
+                        self.INMaterialName.text().strip())
+                    )
+                    self.TMaterials.setItem(row, 1, QTableWidgetItem(
+                        str(self.INRegion.currentText()))
+                    )
+                    if str(self.INMaterialType.currentText()) == 'Transversely Isotropic':
+                        self.TMaterials.setItem(row, 2, QTableWidgetItem(
+                            str(self.INMaterialType.currentText() + ' ' + self.INIsotropicPlane.currentText()))
+                        )
+                    else:
+                        self.TMaterials.setItem(row, 2, QTableWidgetItem(
+                            str(self.INMaterialType.currentText()))
+                        )
+                    self.TMaterials.setItem(
+                        row, 3, QTableWidgetItem(str(C11))
+                    )
+                    self.TMaterials.setItem(
+                        row, 4, QTableWidgetItem(str(C12))
+                    )
+                    self.TMaterials.setItem(
+                        row, 5, QTableWidgetItem(str(C13))
+                    )
+                    self.TMaterials.setItem(
+                        row, 9, QTableWidgetItem(str(C22))
+                    )
+                    self.TMaterials.setItem(
+                        row, 10, QTableWidgetItem(str(C23))
+                    )
+                    self.TMaterials.setItem(
+                        row, 14, QTableWidgetItem(str(C33))
+                    )
+                    self.TMaterials.setItem(
+                        row, 18, QTableWidgetItem(str(C44))
+                    )
+                    self.TMaterials.setItem(
+                        row, 21, QTableWidgetItem(str(C55))
+                    )
+                    self.TMaterials.setItem(
+                        row, 23, QTableWidgetItem(str(C66))
+                    )
+                    for i in [6,7,8,11,12,13,15,16,17,19,20,22]:
+                       self.TMaterials.setItem(row, i, QTableWidgetItem('0'))
+                    self.INMaterialName.clear()
+                else:
+                    warning_flag = 0
                 
         def delete_material():
             current_row = self.TMaterials.currentRow()
@@ -634,33 +671,32 @@ class EVPFFT_GUI(Ui_MainWindow):
         
         # Write input file
         def write_input_file(BC_index):
-            # Get current file location
-            current_file_loc = os.getcwd()
+            # Elastic Input File
+            for i in range(self.TMaterials.rowCount()):
+                if self.TMaterials.item(i,2).text() == 'Isotropic' or 'Transversely Isotropic' in self.TMaterials.item(i,2).text() or self.TMaterials.item(i,2).text() == 'Orthotropic':
+                    if i == 0:
+                        print("generating EP0")
+                        elastic_parameters = open(ELASTIC_PARAMETERS_0,"w")
+                    else:
+                        print("generating EP1")
+                        elastic_parameters = open(ELASTIC_PARAMETERS_1,"w")
+                    iso = '0\n'
+                    elastic_parameters.write(iso)
+                    stiffness = '  ' + self.TMaterials.item(i,3).text() + '  ' + self.TMaterials.item(i,4).text() + '  ' + self.TMaterials.item(i,5).text() + '  0  0  0     Cu (MPa)\n' + '  ' + self.TMaterials.item(i,4).text() + '  ' + self.TMaterials.item(i,9).text() + '  ' + self.TMaterials.item(i,10).text() + '  0  0  0\n' + '  ' + self.TMaterials.item(i,5).text() + '  ' + self.TMaterials.item(i,10).text() + '  ' + self.TMaterials.item(i,14).text() + '  0  0  0\n' + '  0  0  0   ' + self.TMaterials.item(i,18).text() + '  0  0\n' + '  0  0  0  0  ' + self.TMaterials.item(i,21).text() + '  0\n' + '  0  0  0  0  0  ' + self.TMaterials.item(i,23).text()
+                    elastic_parameters.write(stiffness)
+                    elastic_parameters.close()
+                elif self.TMaterials.item(i,2).text() == 'Anisotropic':
+                    if i == 0:
+                        elastic_parameters = open(ELASTIC_PARAMETERS_0,"w")
+                    else:
+                        elastic_parameters = open(ELASTIC_PARAMETERS_1,"w")
+                    iso = '0\n'
+                    elastic_parameters.write(iso)
+                    stiffness = '  ' + self.TMaterials.item(i,3).text() + '  ' + self.TMaterials.item(i,4).text() + '  ' + self.TMaterials.item(i,5).text() + '  ' + self.TMaterials.item(i,6).text() + '  ' + self.TMaterials.item(i,7).text() + '  ' + self.TMaterials.item(i,8).text() + '     Cu (MPa)\n' + '  ' + self.TMaterials.item(i,4).text() + '  ' + self.TMaterials.item(i,9).text() + '  ' + self.TMaterials.item(i,10).text() + '  ' + self.TMaterials.item(i,11).text() + '  ' + self.TMaterials.item(i,12).text() + '  ' + self.TMaterials.item(i,13).text() + '\n' + '  ' + self.TMaterials.item(i,5).text() + '  ' + self.TMaterials.item(i,10).text() + '  ' + self.TMaterials.item(i,14).text() + '  ' + self.TMaterials.item(i,15).text() + '  ' + self.TMaterials.item(i,16).text() + '  ' + self.TMaterials.item(i,17).text() + '\n' + '  ' + self.TMaterials.item(i,6).text() + '  ' + self.TMaterials.item(i,11).text() + '  ' + self.TMaterials.item(i,15).text() + '  ' + self.TMaterials.item(i,18).text() + '  ' + self.TMaterials.item(i,19).text() + '  ' + self.TMaterials.item(i,20).text() + '\n' + '  ' + self.TMaterials.item(i,7).text() + '  ' + self.TMaterials.item(i,12).text() + '  ' + self.TMaterials.item(i,16).text() + '  ' + self.TMaterials.item(i,19).text() + '  ' + self.TMaterials.item(i,21).text() + '  ' + self.TMaterials.item(i,22).text() + '\n' + '  ' + self.TMaterials.item(i,8).text() + '  ' + self.TMaterials.item(i,13).text() + '  ' + self.TMaterials.item(i,17).text() + '  ' + self.TMaterials.item(i,20).text() + '  ' + self.TMaterials.item(i,22).text() + '  ' +  self.TMaterials.item(i,23).text()
+                    elastic_parameters.write(stiffness)
+                    elastic_parameters.close()
             
-            # Elastic parameters file
-#            if self.TMaterials.item(0,1).text() == 'Isotropic':
-#                elastic_parameters = open(ELASTIC_PARAMETERS,"w")
-#                iso = '1                         ISO\n'
-#                elastic_parameters.write(iso)
-#                Young_Nu = self.TMaterials.item(0,2).text() + '   ' + self.TMaterials.item(0,5).text() + '                  YOUNG(MPa),NU (V+R/2)\n'
-#                elastic_parameters.write(Young_Nu)
-#                elastic_parameters.close()
-            if self.TMaterials.item(0,1).text() == 'Isotropic' or 'Transversely Isotropic' in self.TMaterials.item(0,1).text() or self.TMaterials.item(0,1).text() == 'Orthotropic':
-                elastic_parameters = open(ELASTIC_PARAMETERS,"w")
-                iso = '0\n'
-                elastic_parameters.write(iso)
-                stiffness = '  ' + self.TMaterials.item(0,2).text() + '  ' + self.TMaterials.item(0,3).text() + '  ' + self.TMaterials.item(0,4).text() + '  0  0  0     Cu (MPa)\n' + '  ' + self.TMaterials.item(0,3).text() + '  ' + self.TMaterials.item(0,8).text() + '  ' + self.TMaterials.item(0,9).text() + '  0  0  0\n' + '  ' + self.TMaterials.item(0,4).text() + '  ' + self.TMaterials.item(0,9).text() + '  ' + self.TMaterials.item(0,13).text() + '  0  0  0\n' + '  0  0  0   ' + self.TMaterials.item(0,17).text() + '  0  0\n' + '  0  0  0  0  ' + self.TMaterials.item(0,20).text() + '  0\n' + '  0  0  0  0  0  ' + self.TMaterials.item(0,22).text()
-                elastic_parameters.write(stiffness)
-                elastic_parameters.close()
-            elif self.TMaterials.item(0,1).text() == 'Anisotropic':
-                elastic_parameters = open(ELASTIC_PARAMETERS,"w")
-                iso = '0\n'
-                elastic_parameters.write(iso)
-                stiffness = '  ' + self.TMaterials.item(0,2).text() + '  ' + self.TMaterials.item(0,3).text() + '  ' + self.TMaterials.item(0,4).text() + '  ' + self.TMaterials.item(0,5).text() + '  ' + self.TMaterials.item(0,6).text() + '  ' + self.TMaterials.item(0,7).text() + '     Cu (MPa)\n' + '  ' + self.TMaterials.item(0,3).text() + '  ' + self.TMaterials.item(0,8).text() + '  ' + self.TMaterials.item(0,9).text() + '  ' + self.TMaterials.item(0,10).text() + '  ' + self.TMaterials.item(0,11).text() + '  ' + self.TMaterials.item(0,12).text() + '\n' + '  ' + self.TMaterials.item(0,4).text() + '  ' + self.TMaterials.item(0,9).text() + '  ' + self.TMaterials.item(0,13).text() + '  ' + self.TMaterials.item(0,14).text() + '  ' + self.TMaterials.item(0,15).text() + '  ' + self.TMaterials.item(0,16).text() + '\n' + '  ' + self.TMaterials.item(0,5).text() + '  ' + self.TMaterials.item(0,10).text() + '  ' + self.TMaterials.item(0,14).text() + '  ' + self.TMaterials.item(0,17).text() + '  ' + self.TMaterials.item(0,18).text() + '  ' + self.TMaterials.item(0,19).text() + '\n' + '  ' + self.TMaterials.item(0,6).text() + '  ' + self.TMaterials.item(0,11).text() + '  ' + self.TMaterials.item(0,15).text() + '  ' + self.TMaterials.item(0,18).text() + '  ' + self.TMaterials.item(0,20).text() + '  ' + self.TMaterials.item(0,21).text() + '\n' + '  ' + self.TMaterials.item(0,7).text() + '  ' + self.TMaterials.item(0,12).text() + '  ' + self.TMaterials.item(0,16).text() + '  ' + self.TMaterials.item(0,19).text() + '  ' + self.TMaterials.item(0,21).text() + '  ' +  self.TMaterials.item(0,22).text()
-                elastic_parameters.write(stiffness)
-                elastic_parameters.close()
-            
-            # EVPFFT lattice input parameters file
+            # EVPFFT input parameters file
             evpfft_lattice_input = open(EVPFFT_INPUT,"w")
             modes = '2 0 0 0               NPHMX, NMODMX, NTWMMX, NSYSMX\n'
             evpfft_lattice_input.write(modes)
@@ -670,8 +706,24 @@ class EVPFFT_GUI(Ui_MainWindow):
             evpfft_lattice_input.write(nph_delt)
             vtkfile = f'{VTK_OUTPUT}\n'
             evpfft_lattice_input.write(vtkfile)
-            phases = '*INFORMATION ABOUT PHASE #1\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n' + '*INFORMATION ABOUT PHASE #2\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  f'{PLASTIC_PARAMETERS}\n' + f'{ELASTIC_PARAMETERS}\n'
-            evpfft_lattice_input.write(phases)
+            for i in range(self.TMaterials.rowCount()):
+                if self.TMaterials.item(i,2).text() == 'Ideal Gas':
+                    if self.TMaterials.item(i,1).text() == 'Void':
+                        phase1 = '*INFORMATION ABOUT PHASE #1\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n'
+                    else:
+                        phase2 = '*INFORMATION ABOUT PHASE #2\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n'
+                else:
+                    if i == 0:
+                        efile = f'{ELASTIC_PARAMETERS_0}'
+                    else:
+                        efile = f'{ELASTIC_PARAMETERS_1}'
+                        
+                    if self.TMaterials.item(i,1).text() == 'Void':
+                        phase1 = '*INFORMATION ABOUT PHASE #1\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  f'{PLASTIC_PARAMETERS}\n' + efile + '\n'
+                    else:
+                        phase2 = '*INFORMATION ABOUT PHASE #1\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  f'{PLASTIC_PARAMETERS}\n' + efile + '\n'
+            evpfft_lattice_input.write(phase1)
+            evpfft_lattice_input.write(phase2)
             if self.TBCs.item(BC_index,1).text() == "x-direction":
                 if "Tension" in self.TBCs.item(BC_index,0).text():
                     test_conditions = '*INFORMATION ABOUT TEST CONDITIONS\n' + '* boundary conditions\n' + '    1       1       1           iudot     |    flag for vel.grad.\n' + '    1       0       1                     |    (0:unknown-1:known)\n' + '    1       1       0                     |\n' + '                                          |\n' + '   1.0     0.        0.          udot     |    vel.grad\n' + '    0.      0.      0.                  |\n' + '    0.       0.         0.                |\n' + '                                          |\n' + '    0       0        0           iscau    |    flag for Cauchy\n' + '            1        0                    |\n' + '                     1                    |\n' + '                                          |\n' + '    0.      0.       0.          scauchy  |    Cauchy stress\n' + '            0.       0.                   |\n' + '                     0.                   @\n'
@@ -761,10 +813,12 @@ class EVPFFT_GUI(Ui_MainWindow):
                     QApplication.processEvents()
                     
                 # Save Output Files
+                
                     
                 # Generate Homogenized Elastic Constants
                 if "Homogenization" in self.TBCs.item(BC_index,0).text():
                     self.BHomogenization.setEnabled(True)
+                    self.THomogenization.setEnabled(True)
                     with open("str_str.out", newline='') as f:
                         reader = csv.reader(f)
                         self.ss_data = list(reader)
