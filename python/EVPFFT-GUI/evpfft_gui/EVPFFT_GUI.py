@@ -77,6 +77,7 @@ class EVPFFT_GUI(Ui_MainWindow):
         self.BApplyBC.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(3))
         self.BSolverSettings.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(4))
         self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(5))
+        self.VoxelResolution = (1., 1., 1.)
         
         # Help menu
         self.actionEVPFFT_Manual.triggered.connect(openUrl)
@@ -146,7 +147,7 @@ class EVPFFT_GUI(Ui_MainWindow):
                 else:
                     pvsimple.Delete(self.threshold)
                     
-                fierro_voxelizer.create_voxel_vtk(
+                self.VoxelResolution = fierro_voxelizer.create_voxel_vtk(
                     b3_filename[0],
                     VTK_OUTPUT,
                     int(self.INNumberOfVoxelsX.text()),
@@ -180,6 +181,21 @@ class EVPFFT_GUI(Ui_MainWindow):
                 self.MaterialTypeTool.setEnabled(False)
         self.INSolidGas.currentIndexChanged.connect(material_type)
         
+        def material_region():
+            if str(self.INRegion.currentText()) == 'Void':
+                pvsimple.Hide(self.threshold)
+                self.threshold = pvsimple.Threshold(Input = self.voxel_reader, Scalars = "density", ThresholdMethod = "Below Lower Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+                pvsimple.Show(self.threshold, self.render_view)
+                self.render_view.ResetCamera()
+                self.render_view.StillRender()
+            else:
+                pvsimple.Hide(self.threshold)
+                self.threshold = pvsimple.Threshold(Input = self.voxel_reader, Scalars = "density", ThresholdMethod = "Above Upper Threshold", UpperThreshold = 1, LowerThreshold = 0, AllScalars = 1, UseContinuousCellRange = 0, Invert = 0)
+                pvsimple.Show(self.threshold, self.render_view)
+                self.render_view.ResetCamera()
+                self.render_view.StillRender()
+        self.INRegion.currentIndexChanged.connect(material_region)
+        
         def material_class():
             if str(self.INMaterialType.currentText()) == 'Isotropic':
                 self.MaterialTypeTool.setCurrentIndex(0)
@@ -193,6 +209,11 @@ class EVPFFT_GUI(Ui_MainWindow):
         
         def add_material():
             warning_flag = 0
+            for i in range(self.TMaterials.rowCount()):
+                if str(self.INRegion.currentText()) == self.TMaterials.item(i,1).text():
+                    warning_message('ERROR: There is already a material assigned to this region')
+                    warning_flag = 1
+            
             if str(self.INSolidGas.currentText()) == 'Gas':
                 if not self.INMaterialName.text():
                     warning_message('ERROR: Material definition incomplete')
@@ -477,9 +498,9 @@ class EVPFFT_GUI(Ui_MainWindow):
                 return QMessageBox.warning(QMessageBox(),"Warning","Please select a material from the table")
                 
             # Define Stiffness Matrix
-            Mstiffness = [[float(self.TMaterials.item(current_row,2).text()), float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,4).text()),  float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,7).text())], [float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,8).text()), float(self.TMaterials.item(current_row,9).text()),  float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,12).text())], [float(self.TMaterials.item(current_row,4).text()), float(self.TMaterials.item(current_row,9).text()), float(self.TMaterials.item(current_row,13).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,16).text())], [float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,17).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,19).text())], [float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,20).text()), float(self.TMaterials.item(current_row,21).text())], [float(self.TMaterials.item(current_row,7).text()), float(self.TMaterials.item(current_row,12).text()), float(self.TMaterials.item(current_row,16).text()), float(self.TMaterials.item(current_row,19).text()), float(self.TMaterials.item(current_row,21).text()), float(self.TMaterials.item(current_row,22).text())]]
+            Mstiffness = [[float(self.TMaterials.item(current_row,3).text()), float(self.TMaterials.item(current_row,4).text()), float(self.TMaterials.item(current_row,5).text()),  float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,7).text()), float(self.TMaterials.item(current_row,8).text())], [float(self.TMaterials.item(current_row,4).text()), float(self.TMaterials.item(current_row,9).text()), float(self.TMaterials.item(current_row,10).text()),  float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,12).text()), float(self.TMaterials.item(current_row,13).text())], [float(self.TMaterials.item(current_row,5).text()), float(self.TMaterials.item(current_row,10).text()), float(self.TMaterials.item(current_row,14).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,16).text()), float(self.TMaterials.item(current_row,17).text())], [float(self.TMaterials.item(current_row,6).text()), float(self.TMaterials.item(current_row,11).text()), float(self.TMaterials.item(current_row,15).text()), float(self.TMaterials.item(current_row,18).text()), float(self.TMaterials.item(current_row,19).text()), float(self.TMaterials.item(current_row,20).text())], [float(self.TMaterials.item(current_row,7).text()), float(self.TMaterials.item(current_row,12).text()), float(self.TMaterials.item(current_row,16).text()), float(self.TMaterials.item(current_row,19).text()), float(self.TMaterials.item(current_row,21).text()), float(self.TMaterials.item(current_row,22).text())], [float(self.TMaterials.item(current_row,8).text()), float(self.TMaterials.item(current_row,13).text()), float(self.TMaterials.item(current_row,17).text()), float(self.TMaterials.item(current_row,20).text()), float(self.TMaterials.item(current_row,22).text()), float(self.TMaterials.item(current_row,23).text())]]
             Mcompliance = np.linalg.inv(Mstiffness)
-            if self.TMaterials.item(current_row,1).text() == 'Isotropic':
+            if self.TMaterials.item(current_row,2).text() == 'Isotropic':
                 self.MaterialTypeTool.setCurrentIndex(0)
                 self.INMaterialType.setCurrentIndex(0)
                 self.INMaterialName.clear()
@@ -490,7 +511,7 @@ class EVPFFT_GUI(Ui_MainWindow):
                 self.INMaterialName.insert(self.TMaterials.item(current_row,0).text())
                 self.INYoungsModulus.insert(str(E))
                 self.INPoissonsRatio.insert(str(nu))
-            elif 'Transversely Isotropic' in self.TMaterials.item(current_row,1).text():
+            elif 'Transversely Isotropic' in self.TMaterials.item(current_row,2).text():
                 self.MaterialTypeTool.setCurrentIndex(1)
                 self.INMaterialType.setCurrentIndex(1)
                 self.INMaterialName.clear()
@@ -499,7 +520,7 @@ class EVPFFT_GUI(Ui_MainWindow):
                 self.INEop.clear()
                 self.INNUop.clear()
                 self.INGop.clear()
-                if 'x-y plane' in self.TMaterials.item(current_row,1).text():
+                if 'x-y plane' in self.TMaterials.item(current_row,2).text():
                     Eip = 1/Mcompliance[0][0]
                     nuip = -Mcompliance[0][1]*Eip
                     Eop = 1/Mcompliance[2][2]
@@ -512,7 +533,7 @@ class EVPFFT_GUI(Ui_MainWindow):
                     self.INNUop.insert(str(nuop))
                     self.INGop.insert(str(Gop))
                     self.INIsotropicPlane.setCurrentIndex(0)
-                elif 'x-z plane' in self.TMaterials.item(current_row,1).text():
+                elif 'x-z plane' in self.TMaterials.item(current_row,2).text():
                     Eip = 1/Mcompliance[0][0]
                     nuip = -Mcompliance[0][2]*Eip
                     Eop = 1/Mcompliance[1][1]
@@ -525,7 +546,7 @@ class EVPFFT_GUI(Ui_MainWindow):
                     self.INNUop.insert(str(nuop))
                     self.INGop.insert(str(Gop))
                     self.INIsotropicPlane.setCurrentIndex(1)
-                elif 'y-z plane' in self.TMaterials.item(current_row,1).text():
+                elif 'y-z plane' in self.TMaterials.item(current_row,2).text():
                     Eip = 1/Mcompliance[1][1]
                     nuip = -Mcompliance[1][2]*Eip
                     Eop = 1/Mcompliance[0][0]
@@ -538,7 +559,7 @@ class EVPFFT_GUI(Ui_MainWindow):
                     self.INNUop.insert(str(nuop))
                     self.INGop.insert(str(Gop))
                     self.INIsotropicPlane.setCurrentIndex(2)
-            elif self.TMaterials.item(current_row,1).text() == 'Orthotropic':
+            elif self.TMaterials.item(current_row,2).text() == 'Orthotropic':
                 self.MaterialTypeTool.setCurrentIndex(3)
                 self.INMaterialType.setCurrentIndex(2)
                 self.INMaterialName.clear()
@@ -702,13 +723,14 @@ class EVPFFT_GUI(Ui_MainWindow):
             evpfft_lattice_input.write(modes)
             dimensions = str(int(self.INNumberOfVoxelsX.text())) + ' ' + str(int(self.INNumberOfVoxelsY.text())) + ' ' + str(int(self.INNumberOfVoxelsZ.text())) + '               x-dim, y-dim, z-dim\n'
             evpfft_lattice_input.write(dimensions)
-            nph_delt = '2                      number of phases (nph)\n' + '1.  1.  1.             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
+            dx, dy, dz = self.VoxelResolution
+            nph_delt = '2                      number of phases (nph)\n' + f'{dx:.4f} {dy:.4f} {dz:.4f}             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
             evpfft_lattice_input.write(nph_delt)
             vtkfile = f'{VTK_OUTPUT}\n'
             evpfft_lattice_input.write(vtkfile)
-            for i in range(self.TMaterials.rowCount()):
-                if self.TMaterials.item(i,2).text() == 'Ideal Gas':
-                    if self.TMaterials.item(i,1).text() == 'Void':
+            for i in range(2):
+                if not self.TMaterials.item(i,2) or self.TMaterials.item(i,2).text() == 'Ideal Gas':
+                    if not self.TMaterials.item(i,2) and i == 1 or self.TMaterials.item(i,1).text() == 'Void':
                         phase1 = '*INFORMATION ABOUT PHASE #1\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n'
                     else:
                         phase2 = '*INFORMATION ABOUT PHASE #2\n' + '1                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' + 'dummy\n' + 'dummy\n'
@@ -848,24 +870,23 @@ class EVPFFT_GUI(Ui_MainWindow):
                         e13[i] = float(self.ss_data[i+1][4])
                         e23[i] = float(self.ss_data[i+1][3])
                     if self.TBCs.item(BC_index,1).text() == "x-direction":
-                        self.HE11 = (s11[int(self.INNumberOfSteps.text())-1]-s11[0])/(e11[int(self.INNumberOfSteps.text())-1]-e11[0])
-                        self.HNU12 = -(e22[int(self.INNumberOfSteps.text())-1]-e22[0])/(e11[int(self.INNumberOfSteps.text())-1]-e11[0])
-                        self.HNU13 = -(e33[int(self.INNumberOfSteps.text())-1]-e33[0])/(e11[int(self.INNumberOfSteps.text())-1]-e11[0])
+                        self.HE11 = np.polyfit(e11,s11,1)
+                        self.HNU12 = np.polyfit(e11,e22,1)
+                        self.HNU13 = np.polyfit(e11,e33,1)
                     if self.TBCs.item(BC_index,1).text() == "y-direction":
-                        self.HE22 = (s22[int(self.INNumberOfSteps.text())-1]-s22[0])/(e22[int(self.INNumberOfSteps.text())-1]-e22[0])
-                        self.HNU21 = -(e11[int(self.INNumberOfSteps.text())-1]-e11[0])/(e22[int(self.INNumberOfSteps.text())-1]-e22[0])
-                        self.HNU23 = -(e33[int(self.INNumberOfSteps.text())-1]-e33[0])/(e22[int(self.INNumberOfSteps.text())-1]-e22[0])
+                        self.HE22 = np.polyfit(e22,s22,1)
+                        self.HNU21 = np.polyfit(e22,e11,1)
+                        self.HNU23 = np.polyfit(e22,e33,1)
                     if self.TBCs.item(BC_index,1).text() == "z-direction":
-                        self.HE33 = (s33[int(self.INNumberOfSteps.text())-1]-s33[0])/(e33[int(self.INNumberOfSteps.text())-1]-e33[0])
-                        self.HNU31 = -(e11[int(self.INNumberOfSteps.text())-1]-e11[0])/(e33[int(self.INNumberOfSteps.text())-1]-e33[0])
-                        self.HNU32 = -(e22[int(self.INNumberOfSteps.text())-1]-e22[0])/(e33[int(self.INNumberOfSteps.text())-1]-e33[0])
+                        self.HE33 = np.polyfit(e33,s33,1)
+                        self.HNU31 = np.polyfit(e33,e11,1)
+                        self.HNU32 = np.polyfit(e33,e22,1)
                     if self.TBCs.item(BC_index,1).text() == "xy-direction":
-                        self.HG12 = (s12[int(self.INNumberOfSteps.text())-1]-s12[0])/(2*(e12[int(self.INNumberOfSteps.text())-1]-e12[0]))
+                        self.HG12 = np.polyfit(np.multiply(e12,2.),s12,1)
                     if self.TBCs.item(BC_index,1).text() == "xz-direction":
-                        self.HG13 = (s13[int(self.INNumberOfSteps.text())-1]-s13[0])/(2*(e13[int(self.INNumberOfSteps.text())-1]-e13[0]))
+                        self.HG13 = np.polyfit(np.multiply(e13,2.),s13,1)
                     if self.TBCs.item(BC_index,1).text() == "yz-direction":
-                        self.HG23 = (s23[int(self.INNumberOfSteps.text())-1]-s23[0])/(2*(e23[int(self.INNumberOfSteps.text())-1]-e23[0]))
-                
+                        self.HG23 = np.polyfit(np.multiply(e23,2.),s23,1)
         
         # Connect run button to indiviual or batch run
         self.p = None
@@ -991,18 +1012,18 @@ class EVPFFT_GUI(Ui_MainWindow):
         
         # Generate Homogenized Elastic Constants
         def homogenization_click():
-            self.THomogenization.setItem(0,0,QTableWidgetItem(str(self.HE11)))
-            self.THomogenization.setItem(1,0,QTableWidgetItem(str(self.HE22)))
-            self.THomogenization.setItem(2,0,QTableWidgetItem(str(self.HE33)))
-            self.THomogenization.setItem(3,0,QTableWidgetItem(str(self.HNU12)))
-            self.THomogenization.setItem(4,0,QTableWidgetItem(str(self.HNU21)))
-            self.THomogenization.setItem(5,0,QTableWidgetItem(str(self.HNU13)))
-            self.THomogenization.setItem(6,0,QTableWidgetItem(str(self.HNU31)))
-            self.THomogenization.setItem(7,0,QTableWidgetItem(str(self.HNU23)))
-            self.THomogenization.setItem(8,0,QTableWidgetItem(str(self.HNU32)))
-            self.THomogenization.setItem(9,0,QTableWidgetItem(str(self.HG12)))
-            self.THomogenization.setItem(10,0,QTableWidgetItem(str(self.HG13)))
-            self.THomogenization.setItem(11,0,QTableWidgetItem(str(self.HG23)))
+            self.THomogenization.setItem(0,0,QTableWidgetItem(str(self.HE11[0])))
+            self.THomogenization.setItem(1,0,QTableWidgetItem(str(self.HE22[0])))
+            self.THomogenization.setItem(2,0,QTableWidgetItem(str(self.HE33[0])))
+            self.THomogenization.setItem(3,0,QTableWidgetItem(str(-self.HNU12[0])))
+            self.THomogenization.setItem(4,0,QTableWidgetItem(str(-self.HNU21[0])))
+            self.THomogenization.setItem(5,0,QTableWidgetItem(str(-self.HNU13[0])))
+            self.THomogenization.setItem(6,0,QTableWidgetItem(str(-self.HNU31[0])))
+            self.THomogenization.setItem(7,0,QTableWidgetItem(str(-self.HNU23[0])))
+            self.THomogenization.setItem(8,0,QTableWidgetItem(str(-self.HNU32[0])))
+            self.THomogenization.setItem(9,0,QTableWidgetItem(str(self.HG12[0])))
+            self.THomogenization.setItem(10,0,QTableWidgetItem(str(self.HG13[0])))
+            self.THomogenization.setItem(11,0,QTableWidgetItem(str(self.HG23[0])))
         self.BHomogenization.clicked.connect(homogenization_click)
         
         # Open Paraview

@@ -1348,7 +1348,7 @@
                 <widget class="QComboBox" name="INRegion">
                  <item>
                   <property name="text">
-                   <string>Structural</string>
+                   <string>Imported Part</string>
                   </property>
                  </item>
                  <item>

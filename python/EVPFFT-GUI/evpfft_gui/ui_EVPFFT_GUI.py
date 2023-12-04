@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'EVPFFT_GUIuamnOX.ui'
+## Form generated from reading UI file 'EVPFFT_GUIBhXCLq.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -1476,7 +1476,7 @@ class Ui_MainWindow(object):
         self.INMaterialType.setItemText(2, QCoreApplication.translate("MainWindow", u"Orthotropic", None))
         self.INMaterialType.setItemText(3, QCoreApplication.translate("MainWindow", u"Anisotropic", None))
 
-        self.INRegion.setItemText(0, QCoreApplication.translate("MainWindow", u"Structural", None))
+        self.INRegion.setItemText(0, QCoreApplication.translate("MainWindow", u"Imported Part", None))
         self.INRegion.setItemText(1, QCoreApplication.translate("MainWindow", u"Void", None))
 
         self.LYoungsModulus.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>E: </p></body></html>", None))
