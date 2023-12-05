@@ -634,6 +634,41 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
                         cycle);
       }
 
+      if(num_dim==2){
+            get_force_sgh2D(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            elem_den,
+                            elem_sie,
+                            elem_pres,
+                            elem_stress,
+                            elem_sspd,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            1.0,
+                            cycle);
+        }
+        else {
+            get_force_sgh(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_sie,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_vol,
+                        elem_div,
+                        elem_mat_id,
+                        corner_force,
+                        1.0,
+                        cycle);
+        }
+
       //compute gradient matrices
       get_force_egradient_sgh(material,
                               *mesh,
