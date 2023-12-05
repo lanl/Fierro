@@ -7,6 +7,7 @@ MPI_Comm evpfft_mpi_comm = MPI_COMM_NULL;
 KOKKOS_FUNCTION
 UserStrengthModel::UserStrengthModel(
   const DCArrayKokkos <material_t> &material,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t mat_id,
@@ -51,6 +52,7 @@ int UserStrengthModel::calc_stress(
   const DViewCArrayKokkos <double> &elem_stress,
   const size_t elem_gid,
   const size_t mat_id,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const DViewCArrayKokkos <double> &elem_sspd,

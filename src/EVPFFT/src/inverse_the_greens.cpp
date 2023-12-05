@@ -66,7 +66,7 @@ void EVPFFT::inverse_the_greens()
         }
       }
 
-      invert_matrix(a.pointer(), 3);
+      invert_matrix <3> (a.pointer());
 
       // TODO: optimize indexing of this loop 
       for (int p = 1; p <= 3; p++) {

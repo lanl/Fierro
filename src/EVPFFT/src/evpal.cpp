@@ -84,7 +84,7 @@ void EVPFFT::evpal(int imicro)
         }
       }
 
-      invert_matrix(sg66.pointer(), 6);
+      invert_matrix <6> (sg66.pointer());
 
       // TODO: optimize indexing of this loop
       for (int ii = 1; ii <= 3; ii++) {
@@ -243,7 +243,7 @@ void EVPFFT::evpal(int imicro)
           } // end for ii
 
 #if 0  
-          int error_flag = invert_matrix(xjacobinv.pointer(), 6);
+          int error_flag = invert_matrix <6> (xjacobinv.pointer());
 
           // TODO: optimize indexing of this loop
           for (int ii = 1; ii <= 6; ii++) {
@@ -350,7 +350,7 @@ void EVPFFT::evpal(int imicro)
     }
   }
 
-  invert_matrix(sg66_avg.pointer(), 6);
+  invert_matrix <6> (sg66_avg.pointer());
 
   // copy edotp_avg_view into edotp_avg
   for (int ii = 1; ii <= 3; ii++) {

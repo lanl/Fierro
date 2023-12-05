@@ -73,7 +73,7 @@ PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
 MATAR_DIR="$PARENT_DIR/MATAR"
 if [ ! -d "$MATAR_DIR" ]; then
   echo "Directory 'MATAR' does not exist in '$PARENT_DIR', downloading 'MATAR'...."
-  git clone https://github.com/lanl/MATAR.git "$MATAR_DIR"
+  git clone --depth 1 https://github.com/lanl/MATAR.git "$MATAR_DIR"
 else
   echo "Directory 'MATAR' exists in '$PARENT_DIR', skipping 'MATAR' download"
 fi
