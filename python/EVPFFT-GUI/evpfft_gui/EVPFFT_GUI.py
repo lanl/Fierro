@@ -49,8 +49,8 @@ class LocalResource:
         return os.path.join(LocalResource.FILE_PATH, relpath)
 
 VTK_OUTPUT = os.path.join(tempfile.gettempdir(), 'VTK_Geometry.vtk')
-ELASTIC_PARAMETERS_0 = LocalResource.get_resource_name('elastic_parameters_0.txt')
-ELASTIC_PARAMETERS_1 = LocalResource.get_resource_name('elastic_parameters_1.txt')
+ELASTIC_PARAMETERS_0 = 'elastic_parameters_0.txt'
+ELASTIC_PARAMETERS_1 = 'elastic_parameters_1.txt'
 PLASTIC_PARAMETERS = LocalResource.get_resource_name('plastic_parameters.txt')
 EVPFFT_INPUT = os.path.join(tempfile.gettempdir(), 'evpfft_lattice_input.txt')
 
