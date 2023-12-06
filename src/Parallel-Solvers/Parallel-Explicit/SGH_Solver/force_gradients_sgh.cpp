@@ -45,11 +45,25 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
 
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     const size_t num_dims = simparam->num_dims;
+    size_t num_corners = rnum_elem*num_nodes_in_elem;
 
     //initialize gradient matrix
     FOR_ALL_CLASS(dof_gid, 0, nlocal_nodes*num_dims, {
       for(int idof = 0; idof < Gradient_Matrix_Strides(dof_gid); idof++){
         Force_Gradient_Velocities(dof_gid,idof) = 0;
+      }
+    }); // end parallel for loop over nodes
+    Kokkos::fence();
+
+    //initialize buffer storage; not all components are explicitly set for this routine
+    FOR_ALL_CLASS(corner_gid, 0, num_corners, {
+      for (int dim = 0; dim < num_dims; dim++){
+            //assign gradient of corner contribution of force to relevant matrix entries with non-zero node velocity gradient
+            for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
+                for(int jdim = 0; jdim < num_dims; jdim++){
+                    corner_gradient_storage(corner_gid,dim,igradient,dim) = 0;
+                }
+            }
       }
     }); // end parallel for loop over nodes
     Kokkos::fence();
@@ -79,7 +93,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
         
         // Riemann velocity
         double vel_star_array[3];
-        double vel_star_gradient_array[3];
+        double vel_star_gradient_array[3*num_nodes_in_elem];
         
         // velocity gradient
         double vel_grad_array[9];
@@ -94,7 +108,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
         ViewCArrayKokkos <double> muc(muc_array, num_nodes_in_elem);
         ViewCArrayKokkos <double> muc_gradient(muc_gradient_array, num_nodes_in_elem);
         ViewCArrayKokkos <double> vel_star(vel_star_array, num_dims);
-        ViewCArrayKokkos <double> vel_star_gradient(vel_star_gradient_array, num_dims);
+        ViewCArrayKokkos <double> vel_star_gradient(vel_star_gradient_array, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
 
         EOSParent* eos_model = elem_eos(elem_gid).model;
@@ -177,7 +191,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
             
         // initialize to Riemann velocity to zero
         for (size_t dim = 0; dim < num_dims; dim++){
-            vel_star(dim) = vel_star_gradient(dim) = 0.0;
+            vel_star(dim) = 0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
@@ -295,15 +309,28 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
         if (sum(3) > fuzz) {
             for (size_t i = 0; i < num_dims; i++) {
                 vel_star(i) = sum(i)/sum(3);
-                vel_star_gradient(i) = 1/(double)num_nodes_in_elem;
             }
         }
         else {
             for (int i = 0; i < num_dims; i++){
                 vel_star(i) = 0.0;
-                vel_star_gradient(i) = 1/(double)num_nodes_in_elem;
             }
         } // end if
+
+        
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            // The Riemann velocity, called vel_star
+            if (sum(3) > fuzz) {
+                for (size_t i = 0; i < num_dims; i++) {
+                    vel_star_gradient(node_lid,i) = muc(node_lid)/sum(3);
+                }
+            }
+            else {
+                for (int i = 0; i < num_dims; i++){
+                    vel_star_gradient(node_lid,i) = 0;
+                }
+            } // end if
+        }
 
             
             
@@ -387,15 +414,19 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                 //assign gradient of corner contribution of force to relevant matrix entries with non-zero node velocity gradient
                 for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
                     size_t gradient_node_gid = nodes_in_elem(elem_gid, igradient);
-                    if(!map->isNodeLocalElement(gradient_node_gid)) continue;
+                    //if(!map->isNodeLocalElement(gradient_node_gid)) continue;
                     column_index = num_dims*Global_Gradient_Matrix_Assembly_Map(elem_gid, igradient, node_lid);
                     if(node_lid==igradient){
-                        Force_Gradient_Velocities(gradient_node_gid*num_dims+dim, column_index+dim) += phi*muc(node_lid)*(vel_star_gradient(dim) - 1);
-                        corner_gradient_storage(corner_gid,dim,igradient,dim) = phi*muc(node_lid)*(vel_star_gradient(dim) - 1);
+                        if(map->isNodeLocalElement(gradient_node_gid)){
+                            Force_Gradient_Velocities(gradient_node_gid*num_dims+dim, column_index+dim) += phi*muc(node_lid)*(vel_star_gradient(igradient,dim) - 1);
+                        }
+                        corner_gradient_storage(corner_gid,dim,igradient,dim) = phi*muc(node_lid)*(vel_star_gradient(igradient,dim) - 1);
                     }
                     else{
-                        Force_Gradient_Velocities(gradient_node_gid*num_dims+dim, column_index+dim) += phi*muc(node_lid)*(vel_star_gradient(dim));
-                        corner_gradient_storage(corner_gid,dim,igradient,dim) = phi*muc(node_lid)*(vel_star_gradient(dim));
+                        if(map->isNodeLocalElement(gradient_node_gid)){
+                            Force_Gradient_Velocities(gradient_node_gid*num_dims+dim, column_index+dim) += phi*muc(node_lid)*(vel_star_gradient(igradient,dim));
+                        }
+                        corner_gradient_storage(corner_gid,dim,igradient,dim) = phi*muc(node_lid)*(vel_star_gradient(igradient,dim));
                     }
                 }
             } // end loop over dimension
@@ -1302,15 +1333,17 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                 for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
                     for(int jdim = 0; jdim < num_dims; jdim++){
                         size_t gradient_node_gid = nodes_in_elem(elem_gid, igradient);
-                        if(!map->isNodeLocalElement(gradient_node_gid)) continue;
+                        //if(!map->isNodeLocalElement(gradient_node_gid)) continue;
                         column_index = num_dims*Global_Gradient_Matrix_Assembly_Map(elem_gid, igradient, node_lid);
-                        Force_Gradient_Positions(gradient_node_gid*num_dims+jdim, column_index+dim) += area_normal(node_lid, 0)*tau_gradient(0, dim, igradient, jdim)
-                                + area_normal(node_lid, 1)*tau_gradient(1, dim, igradient, jdim)
-                                + area_normal(node_lid, 2)*tau_gradient(2, dim, igradient, jdim)
-                                + area_normal_gradients(node_lid, 0, igradient, jdim)*tau(0, dim)
-                                + area_normal_gradients(node_lid, 1, igradient, jdim)*tau(1, dim)
-                                + area_normal_gradients(node_lid, 2, igradient, jdim)*tau(2, dim)
-                                + phi*muc_gradient(node_lid, igradient, jdim)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
+                        if(map->isNodeLocalElement(gradient_node_gid)){
+                            Force_Gradient_Positions(gradient_node_gid*num_dims+jdim, column_index+dim) += area_normal(node_lid, 0)*tau_gradient(0, dim, igradient, jdim)
+                                    + area_normal(node_lid, 1)*tau_gradient(1, dim, igradient, jdim)
+                                    + area_normal(node_lid, 2)*tau_gradient(2, dim, igradient, jdim)
+                                    + area_normal_gradients(node_lid, 0, igradient, jdim)*tau(0, dim)
+                                    + area_normal_gradients(node_lid, 1, igradient, jdim)*tau(1, dim)
+                                    + area_normal_gradients(node_lid, 2, igradient, jdim)*tau(2, dim)
+                                    + phi*muc_gradient(node_lid, igradient, jdim)*(vel_star(dim) - node_vel(rk_level, node_gid, dim));
+                        }
                         corner_gradient_storage(corner_gid,dim,igradient,jdim) = area_normal(node_lid, 0)*tau_gradient(0, dim, igradient, jdim)
                                 + area_normal(node_lid, 1)*tau_gradient(1, dim, igradient, jdim)
                                 + area_normal(node_lid, 2)*tau_gradient(2, dim, igradient, jdim)
@@ -1366,7 +1399,7 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
   const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
   const DCArrayKokkos <material_t> material = simparam->material;
   const int num_dim = simparam->num_dims;
-  int num_corners = rnum_elem*num_nodes_in_elem;
+  size_t num_corners = rnum_elem*num_nodes_in_elem;
   real_t global_dt;
   bool element_constant_density = true;
   size_t current_data_index, next_data_index;
