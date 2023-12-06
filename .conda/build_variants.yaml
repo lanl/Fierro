@@ -1,3 +1,7 @@
+# These "# [...]" comments are functional. 
+# They enable the line when the thing in [...] is a valid python expression that 
+# evaluates to True. linux and osx are variables provided to us and set to True if 
+# we are running conda-build on a Linux OS or MacOS, respectively.
 c_compiler:
   - gcc   # [linux]
   - clang # [osx]

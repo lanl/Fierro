@@ -1,6 +1,6 @@
 package: 
   name: evpfft_gui
-  version: 1
+  version: 2
 
 source:
   path: ../../
@@ -8,7 +8,7 @@ source:
   #   depth: 1
 
 build:
-  number: 2
+  number: 0
   script: cd python/EVPFFT-GUI/; pip install .
   noarch: python # This is a pure python package. So build for noarch on linux64
   entry_points:

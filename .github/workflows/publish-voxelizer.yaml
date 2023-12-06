@@ -5,6 +5,7 @@ on:
     paths:
       - .conda/voxelizer/**
       - src/Voxelizer/**
+      - python/Voxelizer/**
       - .github/workflows/publish-voxelizer.yaml
   workflow_dispatch:
 

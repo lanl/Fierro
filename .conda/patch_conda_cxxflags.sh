@@ -34,9 +34,13 @@ for arg in $CXXFLAGS
 do
     case $arg in 
         -march* | -mtune* | -mcpu*)
+            # We are going to add our own instruction optimization flags.
             echo "Removing architecture CXXFLAG: $arg"
         ;;
         -fvisibility-inlines-hidden | -ftree-vectorize)
+            # inlines-hidden is a problem when compiling the trilinos package and then
+            # using it later.
+            # also clang does not support -fnovisibility-inlines-hidden to disable it.
             echo "Removing CXXFLAG $arg"
         ;;
         *)
