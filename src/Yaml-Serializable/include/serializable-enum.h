@@ -52,20 +52,17 @@
 #define VECTOR_ITEM(NAME) #NAME,
 #define VECTOR_INITIALIZER(...) { MAP(VECTOR_ITEM, __VA_ARGS__) };
 
+
 /**
- * Macro for creating an enum with names that can be serialized to and from
- * strings. Attempting to deserialize a string to a enum value that doesn't exist
- * will result in ConfigurationException.
+ * Macro for implementing serialization templates for an ENUM.
+ * This can be called on an existing `enum class` that is defined somewhere else.
  * 
- * The first argument should be the enum name. Subsequent arguments should
- * be the enum values.
+ * The result is the implementation of the serialization functions for **all of the values listed**. 
+ * If you omit values here they will not be considered valid serialization tarets.
 */
-#define SERIALIZABLE_ENUM(CLASS_TYPE, ...)                                                    \
-    enum class CLASS_TYPE {                                                                   \
-        __VA_ARGS__                                                                           \
-    };                                                                                        \
+#define IMPL_YAML_SERIALIZABLE_FOR_ENUM(CLASS_TYPE, ...)                                      \
     inline void from_string(const std::string& s, CLASS_TYPE& v) {                            \
-        using class_name = CLASS_TYPE;                                                        \
+        using class_name = CLASS_TYPE; /* Used for MAP_INITIALIZED > MAP_ITEM */              \
         std::map<std::string, CLASS_TYPE> map MAP_INITIALIZER(__VA_ARGS__)                    \
         v = Yaml::validate_map(s, map);                                                       \
     }                                                                                         \
@@ -97,5 +94,19 @@
         from_string(s, v);                                                                    \
         return is;                                                                            \
     }                                                                                         \
+
+/**
+ * Macro for creating an enum with names that can be serialized to and from
+ * strings. Attempting to deserialize a string to a enum value that doesn't exist
+ * will result in ConfigurationException.
+ * 
+ * The first argument should be the enum name. Subsequent arguments should
+ * be the enum values.
+*/
+#define SERIALIZABLE_ENUM(CLASS_TYPE, ...)                                                    \
+    enum class CLASS_TYPE {                                                                   \
+        __VA_ARGS__                                                                           \
+    };                                                                                        \
+    IMPL_YAML_SERIALIZABLE_FOR_ENUM(CLASS_TYPE, __VA_ARGS__)                                  \
 
 #endif

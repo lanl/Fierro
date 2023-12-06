@@ -3,7 +3,7 @@
 #include "yaml-serializable.h"
 #include <string>
 #include <cmath>
-#include "Simulation_Parameters/Geometry.h"
+#include "Simulation_Parameters/SerializableGeometry.h"
 
 SERIALIZABLE_ENUM(VELOCITY_TYPE,
     // uniform
@@ -19,7 +19,7 @@ SERIALIZABLE_ENUM(VELOCITY_TYPE,
 
 struct mat_fill_t {
     size_t material_id;
-    Volume volume;
+    volume_t volume;
     VELOCITY_TYPE velocity = VELOCITY_TYPE::cartesian;
     double u,v,w;
     double speed;
@@ -28,6 +28,7 @@ struct mat_fill_t {
 };
 
 struct Region : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
+    std::shared_ptr<Volume> volume;
     size_t id;
     std::optional<double> sie;
     std::optional<double> ie;
@@ -51,13 +52,15 @@ struct Region : Yaml::DerivedFields, Yaml::ValidatedYaml, mat_fill_t {
       mat_fill_t::w = w.value_or(0);
 
       if (ie.has_value())
-        sie = ie.value()  / (den * volume.get_volume());
+        sie = ie.value()  / (den * volume->get_volume());
 
       mat_fill_t::sie = sie.value_or(0);
       // Remove ie now that we have set sie.
       // It doesn't really make sense to have both, 
       // and having both means we can't deserialize -> reserialize.
       ie = {};
+
+      mat_fill_t::volume = (volume_t)*volume;
     }
 };
 IMPL_YAML_SERIALIZABLE_FOR(Region, 

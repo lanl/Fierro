@@ -2,7 +2,7 @@
 
 #include "yaml-serializable.h"
 #include "Simulation_Parameters/FEA_Module/Boundary_Conditions.h"
-#include "Simulation_Parameters/Geometry.h"
+#include "Simulation_Parameters/SerializableGeometry.h"
 
 SERIALIZABLE_ENUM(LOADING_CONDITION_TYPE, surface_traction, surface_heat_flux, body_force, surface_force)
 SERIALIZABLE_ENUM(LOADING_SPECIFICATION, normal, coordinated)
@@ -10,7 +10,7 @@ SERIALIZABLE_ENUM(LOADING_SPECIFICATION, normal, coordinated)
 struct loading_t {
     LOADING_CONDITION_TYPE condition_type = LOADING_CONDITION_TYPE::body_force;
     Surface surface;
-    Volume volume;
+    volume_t volume;
     double x, y, z;
 
     KOKKOS_FUNCTION
@@ -39,7 +39,6 @@ struct Loading_Condition
   : virtual loading_t, 
     Yaml::TypeDiscriminated<Loading_Condition, LOADING_CONDITION_TYPE>, 
     Yaml::DerivedFields {
-  
   void derive() {
     loading_t::condition_type = type;
   }
@@ -48,10 +47,6 @@ struct Loading_Condition
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Loading_Condition, type)
 IMPL_YAML_SERIALIZABLE_FOR(Loading_Condition, type)
-
-
-
-
 
 struct Surface_Loading : virtual Loading_Condition { };
 YAML_ADD_REQUIRED_FIELDS_FOR(Surface_Loading, surface)
@@ -85,11 +80,12 @@ YAML_ADD_REQUIRED_FIELDS_FOR(Surface_Flux_Condition, flux_value, specification)
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Surface_Flux_Condition, Surface_Loading, flux_value, specification)
 
 
-
-
-
-
-struct Volume_Loading : virtual Loading_Condition { };
+struct Volume_Loading : virtual Loading_Condition {
+  std::shared_ptr<Volume> volume;
+  void derive() {
+    loading_t::volume = (volume_t)*volume;
+  }
+};
 YAML_ADD_REQUIRED_FIELDS_FOR(Volume_Loading, volume)
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Volume_Loading, Loading_Condition, volume)
 

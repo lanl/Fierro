@@ -14,6 +14,4 @@ add_subdirectory(Mesh-Builder)
 add_subdirectory(Voxelizer)
 add_subdirectory(CLI)
 
-if(BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
-  add_subdirectory(Parallel-Solvers)
-endif()
+add_subdirectory(Parallel-Solvers)

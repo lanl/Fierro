@@ -48,31 +48,63 @@ include_directories(${Trilinos_INCLUDE_DIRS} ${Trilinos_TPL_INCLUDE_DIRS})
 link_directories(${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 add_definitions(-DHAVE_KOKKOS=1 -DTRILINOS_INTERFACE=1)
 
-set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp FEA_Module_Inertial.cpp Solver.cpp)
-add_library(parallel_base_src OBJECT ${Parallel_Base_SRC})
+if (BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
+  set(Parallel_Base_SRC node_combination.cpp FEA_Module.cpp FEA_Module_Inertial.cpp Solver.cpp)
+  add_library(parallel_base_src OBJECT ${Parallel_Base_SRC})
 
-include_directories(Optimization_Modules)
-target_include_directories(
-    parallel_base_src PUBLIC 
-    ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}
-)
-target_compile_options (parallel_base_src PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
-target_link_libraries (
-    parallel_base_src PUBLIC
-    ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
-    yaml_serializable
-    mesh_builder
-)
+  include_directories(Optimization_Modules)
+  target_include_directories(
+      parallel_base_src PUBLIC 
+      ${MPI_CXX_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}
+  )
+  target_compile_options (parallel_base_src PRIVATE ${CMAKE_CXX_COMPILE_FLAGS})
+  target_link_libraries (
+      parallel_base_src PUBLIC
+      ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
+      yaml_serializable
+      mesh_builder
+  )
 
-# Material Models
-include_directories(.)
-include_directories(Material-Models)
-add_subdirectory(Material-Models)
+  include_directories(.)
+  include_directories(Material-Models)
+  add_subdirectory(Material-Models)
 
-if(BUILD_IMPLICIT_SOLVER)
-    add_subdirectory(Implicit-Lagrange)
+  if(BUILD_IMPLICIT_SOLVER)
+      add_subdirectory(Implicit-Lagrange)
+  endif()
+
+  if(BUILD_PARALLEL_EXPLICIT_SOLVER)
+      add_subdirectory(Parallel-Explicit)
+  endif()
 endif()
 
-if(BUILD_PARALLEL_EXPLICIT_SOLVER)
-    add_subdirectory(Parallel-Explicit)
+
+if (TEST) 
+  if (NOT googletest)
+    include(FetchContent)
+    FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+      DOWNLOAD_EXTRACT_TIMESTAMP False
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+    enable_testing()
+  endif()
+  add_executable(geometry-tests test/test-geometry.cpp)
+  add_executable(geometry-serialization-tests test/test-geometry-serialization.cpp)
+
+  find_package(Elements REQUIRED)
+  find_package(Kokkos REQUIRED)
+  target_include_directories(geometry-tests PUBLIC Simulation_Parameters)
+  target_link_libraries(geometry-tests GTest::gtest_main Elements Kokkos::all_libs gomp)
+  target_compile_options(geometry-tests PUBLIC "-fopenmp")
+  
+  target_include_directories(geometry-serialization-tests PUBLIC Simulation_Parameters)
+  target_link_libraries(geometry-serialization-tests GTest::gtest_main Elements Kokkos::all_libs yaml_serializable)
+  target_compile_options(geometry-serialization-tests PUBLIC "-fopenmp")
+  
+  include(GoogleTest)
+  gtest_discover_tests(geometry-tests)
+  gtest_discover_tests(geometry-serialization-tests)
 endif()
