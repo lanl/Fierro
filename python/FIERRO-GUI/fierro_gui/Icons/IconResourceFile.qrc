@@ -1,0 +1,19 @@
+<RCC>
+  <qresource prefix="Blue Icons">
+    <file>Blue Icons/mesh.svg</file>
+    <file>Blue Icons/brick.svg</file>
+    <file>Blue Icons/Cube.svg</file>
+    <file>Blue Icons/gear.svg</file>
+    <file>Blue Icons/lens.svg</file>
+    <file>Blue Icons/magnify.svg</file>
+    <file>Blue Icons/mine.svg</file>
+    <file>Blue Icons/Play.svg</file>
+  </qresource>
+  <qresource prefix="Logos">
+    <file>Logos/EVPFFT_logo_horse_ppt.png</file>
+    <file>Logos/FIERRO.png</file>
+    <file>Logos/LANL Logo Ultramarine.png</file>
+    <file>Logos/MATAR_logo2.png</file>
+    <file>Logos/ParaView_logo.png</file>
+  </qresource>
+</RCC>
