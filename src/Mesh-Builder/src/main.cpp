@@ -28,18 +28,6 @@ int main(int argc, char *argv[]) {
         return 0;
     }
     
-    MeshBuilderConfig config;
-    Yaml::from_file_strict(argv[1], config);
-
-    Mesh mesh = MeshBuilder::build_mesh(config.input);
-
-    switch (config.output.file_type) {
-        case FileType::Ensight:
-            MeshIO::write_ensight(config.output.name, mesh, true);
-            break;
-        case FileType::VTK:
-            MeshIO::write_vtk(config.output.name, mesh, true);
-            break;
-    }
+    MeshBuilder::build_mesh_from_file(argv[1]);
     return 0;
 }

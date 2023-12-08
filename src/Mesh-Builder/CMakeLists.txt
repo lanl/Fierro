@@ -4,6 +4,9 @@ project(mesh-builder)
 
 SET(CMAKE_CXX_STANDARD 17)
 
+find_package(Elements REQUIRED)
+add_subdirectory(../Yaml-Serializable ./Yaml-Serializable)
+
 add_library(mesh_builder src/MeshBuilder.cpp src/EnsightIO.cpp src/VtkIO.cpp)
 target_link_libraries(mesh_builder PUBLIC yaml_serializable Elements)
 target_include_directories(mesh_builder PUBLIC include)

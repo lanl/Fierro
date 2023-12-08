@@ -23,6 +23,8 @@ namespace {
         for (size_t i = 0; i < mesh.points.dims(0); i++){
             for (size_t j = 0; j < mesh.points.dims(1); j++)
                 out << mesh.points(i, j) << " ";
+            if (mesh.points.dims(1) == 2)
+                out << 0;
             out << std::endl;
         }
         
