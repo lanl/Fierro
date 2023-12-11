@@ -991,12 +991,21 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
         // create a view of the stress_matrix
         ViewCArrayKokkos <double> stress(&elem_stress(rk_level, elem_gid, 0,0), 3, 3);
         
-        
         // cut out the node_gids for this element
         ViewCArrayKokkos <size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
         
         //gradients of the element volume
         get_vol_hex_ugradient(volume_gradients, elem_gid, node_coords, elem_node_gids, rk_level);
+
+        
+        // //debug
+        // for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+        //     for (size_t dim = 0; dim < num_dims; dim++){
+        //         if(volume_gradients(node_lid, dim)>1 || volume_gradients(node_lid, dim) < -1)
+        //         std::cout << volume_gradients(node_lid, dim) << " ";
+        //     } // end for
+        // } // end for
+        // std::cout << std::endl;
         
         // get the B matrix which are the OUTWARD corner area normals
         get_bmatrix(area_normal,
@@ -1393,7 +1402,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                                     + area_normal_gradients(node_lid, 1, igradient, jdim)*tau(1, dim)
                                     + area_normal_gradients(node_lid, 2, igradient, jdim)*tau(2, dim)
                                     + phi*muc_gradient(node_lid, igradient, jdim)*(vel_star(dim) - node_vel(rk_level, node_gid, dim))
-                                    + phi*muc(node_lid)*(vel_star(dim, igradient, jdim));
+                                    + phi*muc(node_lid)*(vel_star_gradient(dim, igradient, jdim));
                         }
                         corner_gradient_storage(corner_gid,dim,igradient,jdim) = area_normal(node_lid, 0)*tau_gradient(0, dim, igradient, jdim)
                                 + area_normal(node_lid, 1)*tau_gradient(1, dim, igradient, jdim)
@@ -1402,7 +1411,17 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
                                 + area_normal_gradients(node_lid, 1, igradient, jdim)*tau(1, dim)
                                 + area_normal_gradients(node_lid, 2, igradient, jdim)*tau(2, dim)
                                 + phi*muc_gradient(node_lid, igradient, jdim)*(vel_star(dim) - node_vel(rk_level, node_gid, dim))
-                                + phi*muc(node_lid)*(vel_star(dim, igradient, jdim));
+                                + phi*muc(node_lid)*(vel_star_gradient(dim, igradient, jdim));
+                        // if(map->isNodeLocalElement(gradient_node_gid)){
+                        //     Force_Gradient_Positions(gradient_node_gid*num_dims+jdim, column_index+dim) +=
+                        //             + area_normal_gradients(node_lid, 0, igradient, jdim)*tau(0, dim)
+                        //             + area_normal_gradients(node_lid, 1, igradient, jdim)*tau(1, dim)
+                        //             + area_normal_gradients(node_lid, 2, igradient, jdim)*tau(2, dim);
+                        // }
+                        // corner_gradient_storage(corner_gid,dim,igradient,jdim) = 
+                        //         + area_normal_gradients(node_lid, 0, igradient, jdim)*tau(0, dim)
+                        //         + area_normal_gradients(node_lid, 1, igradient, jdim)*tau(1, dim)
+                        //         + area_normal_gradients(node_lid, 2, igradient, jdim)*tau(2, dim);
                     }
                 }
             } // end loop over dimension
