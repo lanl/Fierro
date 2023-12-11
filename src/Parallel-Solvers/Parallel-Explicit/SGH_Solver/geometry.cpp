@@ -666,7 +666,7 @@ void FEA_Module_SGH::get_vol_hex_ugradient(const ViewCArrayKokkos <double> &elem
                 case 4:
                     gradient_result =
                     (x(3)*(( z(0) - z(2))) +
-                    x(5)*((-z(0) + z(2) - z(4) + z(6)))
+                    x(5)*((-z(0) + z(2) - z(4) + z(6)))+
                     x(6)*(( z(2) - z(5))) +
                     x(0)*((-z(2) - z(3) + z(4) + z(5))) +
                     x(2)*((z(0) + z(3) - z(5) - z(6))) +
