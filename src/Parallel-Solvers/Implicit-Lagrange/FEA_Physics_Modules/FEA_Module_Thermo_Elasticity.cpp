@@ -63,7 +63,6 @@
 #include "Tpetra_Import.hpp"
 #include "Tpetra_Import_Util2.hpp"
 #include "MatrixMarket_Tpetra.hpp"
-#include <set>
 
 #include "elements.h"
 #include "swage.h"
@@ -71,6 +70,7 @@
 #include "utilities.h"
 #include "node_combination.h"
 #include "Simulation_Parameters/FEA_Module/Thermo_Elasticity_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters.h"
 #include "Amesos2_Version.hpp"
 #include "Amesos2.hpp"
 #include "FEA_Module_Thermo_Elasticity.h"
@@ -127,11 +127,11 @@ FEA_Module_Thermo_Elasticity::FEA_Module_Thermo_Elasticity(
 
 
   module_params = in_params;
-  simparam = Implicit_Solver_Pointer_->simparam;
+  simparam = &Implicit_Solver_Pointer_->simparam;
   
   //TO parameters
-  penalty_power = simparam.optimization_options.simp_penalty_power;
-  nodal_density_flag = simparam.nodal_density_flag;
+  penalty_power = simparam->optimization_options.simp_penalty_power;
+  nodal_density_flag = simparam->nodal_density_flag;
 
   //create ref element object
   //ref_elem = new elements::ref_element();
@@ -153,7 +153,7 @@ FEA_Module_Thermo_Elasticity::FEA_Module_Thermo_Elasticity(
   matrix_bc_reduced = body_term_flag = gravity_flag = thermal_flag = electric_flag = false;
 
   //construct globally distributed displacement, strain, and force vectors
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   size_t strain_count;
   node_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
   all_node_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
@@ -189,8 +189,8 @@ FEA_Module_Thermo_Elasticity::~FEA_Module_Thermo_Elasticity(){
 void FEA_Module_Thermo_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header){
 
   char ch;
-  Input_Options input_options = simparam.input_options.value();
-  int num_dim = simparam.num_dims;
+  Input_Options input_options = simparam->input_options.value();
+  int num_dim = simparam->num_dims;
   int buffer_lines = 1000;
   int max_word = 30;
   int p_order = input_options.p_order;
@@ -610,7 +610,7 @@ void FEA_Module_Thermo_Elasticity::init_boundaries(){
   max_load_boundary_sets = module_params.loading_conditions.size();
   max_disp_boundary_sets = module_params.boundary_conditions.size();
   max_boundary_sets = max_load_boundary_sets + max_disp_boundary_sets;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   
   // set the number of boundary sets
   if(myrank == 0)
@@ -667,7 +667,7 @@ void FEA_Module_Thermo_Elasticity::init_boundary_sets (int num_sets){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::grow_boundary_sets(int num_sets){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
 
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions being set to 0";
@@ -710,7 +710,7 @@ void FEA_Module_Thermo_Elasticity::grow_boundary_sets(int num_sets){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::grow_displacement_condition_sets(int num_sets){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions being set to 0";
@@ -740,7 +740,7 @@ void FEA_Module_Thermo_Elasticity::grow_displacement_condition_sets(int num_sets
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::grow_loading_condition_sets(int num_sets){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions being set to 0";
@@ -769,10 +769,10 @@ void FEA_Module_Thermo_Elasticity::grow_loading_condition_sets(int num_sets){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::generate_bcs(){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int bc_tag;
   real_t value;
-  real_t fix_limits[4];
+  real_t surface_limits[4];
 
   for (auto bc : module_params.boundary_conditions) {
     switch (bc.surface.type) {
@@ -788,14 +788,21 @@ void FEA_Module_Thermo_Elasticity::generate_bcs(){
       default:
         throw std::runtime_error("Invalid surface type: " + to_string(bc.surface.type));
     }
-    value = bc.surface.plane_position * simparam.get_unit_scaling();
+    value = bc.surface.plane_position * simparam->get_unit_scaling();
 
-    fix_limits[0] = fix_limits[2] = 4;
-    fix_limits[1] = fix_limits[3] = 6;
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_disp_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_disp_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(bc.surface.use_limits){
+      surface_limits[0] = bc.surface.surface_limits_sl;
+      surface_limits[1] = bc.surface.surface_limits_su;
+      surface_limits[2] = bc.surface.surface_limits_tl;
+      surface_limits[3] = bc.surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    }
+    else{
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
+    }
     if(bc.type == BOUNDARY_CONDITION_TYPE::displacement){
       Boundary_Condition_Type_List(num_boundary_conditions) = DISPLACEMENT_CONDITION;
     }
@@ -820,11 +827,12 @@ void FEA_Module_Thermo_Elasticity::generate_bcs(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::generate_applied_loads(){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int bc_tag;
   real_t value;
+  real_t surface_limits[4];
   
-  double unit_scaling = simparam.get_unit_scaling();
+  double unit_scaling = simparam->get_unit_scaling();
   for (auto lc : module_params.loading_conditions) {
     switch (lc->surface.type) {
       case BOUNDARY_TYPE::x_plane:
@@ -844,8 +852,17 @@ void FEA_Module_Thermo_Elasticity::generate_applied_loads(){
 
     if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
     if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
-    //tag_boundaries(bc_tag, value, num_boundary_conditions, fix_limits);
-    tag_boundaries(bc_tag, value, num_boundary_conditions);
+    //tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    if(lc->surface.use_limits){
+      surface_limits[0] = lc->surface.surface_limits_sl;
+      surface_limits[1] = lc->surface.surface_limits_su;
+      surface_limits[2] = lc->surface.surface_limits_tl;
+      surface_limits[3] = lc->surface.surface_limits_tu;
+      tag_boundaries(bc_tag, value, num_boundary_conditions, surface_limits);
+    }
+    else{
+      tag_boundaries(bc_tag, value, num_boundary_conditions);
+    }
     lc->apply(
       [&](const Surface_Traction_Condition& lc) { 
         Boundary_Condition_Type_List(num_boundary_conditions) = SURFACE_LOADING_CONDITION; 
@@ -870,8 +887,8 @@ void FEA_Module_Thermo_Elasticity::generate_applied_loads(){
   }
 
   //apply gravity
-  gravity_flag = simparam.gravity_flag;
-  gravity_vector = simparam.gravity_vector.data();
+  gravity_flag = simparam->gravity_flag;
+  gravity_vector = simparam->gravity_vector.data();
 
   if(electric_flag||gravity_flag||thermal_flag) body_term_flag = true;
 
@@ -881,7 +898,7 @@ void FEA_Module_Thermo_Elasticity::generate_applied_loads(){
    Initialize global vectors and array maps needed for matrix assembly
 ------------------------------------------------------------------------- */
 void FEA_Module_Thermo_Elasticity::init_assembly(){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   Stiffness_Matrix_Strides = CArrayKokkos<size_t, array_layout, device_type, memory_traits> (nlocal_nodes*num_dim, "Stiffness_Matrix_Strides");
   CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
@@ -1229,7 +1246,7 @@ void FEA_Module_Thermo_Elasticity::init_assembly(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::assemble_matrix(){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   int nodes_per_element;
   int current_row_n_nodes_scanned;
@@ -1406,7 +1423,7 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   host_vec_array Nodal_RHS = Global_Nodal_RHS->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -1419,9 +1436,9 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
   LO node_id, dof_id;
   int num_boundary_sets = num_boundary_conditions;
   int surface_force_set_id = 0;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = max_nodes_per_element;
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   int current_element_index, local_surface_id, surf_dim1, surf_dim2, surface_sign, normal_sign;
   int patch_node_count;
@@ -2148,8 +2165,8 @@ void FEA_Module_Thermo_Elasticity::assemble_vector(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::Body_Term(size_t ielem, real_t density, real_t *force_density){
-  real_t unit_scaling = simparam.get_unit_scaling();
-  int num_dim = simparam.num_dims;
+  real_t unit_scaling = simparam->get_unit_scaling();
+  int num_dim = simparam->num_dims;
   
   //init 
   for(int idim = 0; idim < num_dim; idim++){
@@ -2178,8 +2195,8 @@ void FEA_Module_Thermo_Elasticity::Body_Term(size_t ielem, real_t density, real_
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::Gradient_Body_Term(size_t ielem, real_t density, real_t *gradient_force_density){
-  real_t unit_scaling = simparam.get_unit_scaling();
-  int num_dim = simparam.num_dims;
+  real_t unit_scaling = simparam->get_unit_scaling();
+  int num_dim = simparam->num_dims;
   
   //init 
   for(int idim = 0; idim < num_dim; idim++){
@@ -2208,9 +2225,9 @@ void FEA_Module_Thermo_Elasticity::Gradient_Body_Term(size_t ielem, real_t densi
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.get_unit_scaling();
+  real_t unit_scaling = simparam->get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
@@ -2225,9 +2242,9 @@ void FEA_Module_Thermo_Elasticity::Element_Material_Properties(size_t ielem, rea
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.get_unit_scaling();
+  real_t unit_scaling = simparam->get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power - 1; i++)
@@ -2243,9 +2260,9 @@ void FEA_Module_Thermo_Elasticity::Gradient_Element_Material_Properties(size_t i
 ----------------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.get_unit_scaling();
+  real_t unit_scaling = simparam->get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
   if(penalty_power>=2){
@@ -2268,19 +2285,19 @@ void FEA_Module_Thermo_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, 
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = max_nodes_per_element;
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
-  real_t unit_scaling = simparam.get_unit_scaling();
-  bool topology_optimization_on = simparam.topology_optimization_on;
+  real_t unit_scaling = simparam->get_unit_scaling();
+  bool topology_optimization_on = simparam->topology_optimization_on;
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, invJacobian, weight_multiply;
@@ -2666,15 +2683,15 @@ void FEA_Module_Thermo_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos
   const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
 
@@ -3065,7 +3082,7 @@ void FEA_Module_Thermo_Elasticity::Displacement_Boundary_Conditions(){
   int current_node_index, current_node_id;
   int num_boundary_sets = num_boundary_conditions;
   int surface_disp_set_id = 0;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int bc_option, bc_dim_set[3];
   int DOF_BC_type;
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> displacement(num_dim);
@@ -3205,15 +3222,15 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_gradients(const_host_vec_arra
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index;
@@ -3598,7 +3615,7 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
   
   const_host_vec_array Element_Densities;
   //local variable for host view of densities from the dual view
-  //bool nodal_density_flag = simparam.nodal_density_flag;
+  //bool nodal_density_flag = simparam->nodal_density_flag;
   const_host_vec_array all_node_densities;
   if(nodal_density_flag)
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -3620,9 +3637,9 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
   
   const_host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
   GO current_global_index, global_dof_id;
@@ -4049,19 +4066,19 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
   // =========================================================================
   //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
   //xA->describe(*fos,Teuchos::VERB_EXTREME);
-  if(module_params.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
-    Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
-  }
+  // if(module_params.equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
+  //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
+  // }
   real_t current_cpu_time2 = Implicit_Solver_Pointer_->CPU_Time();
   comm->barrier();
   SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
 
-  if(module_params.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
-  }
+  // if(module_params.equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
+  // }
   //scale by reciprocal ofdirection vector sum
   lambda->scale(1/direction_vec_reduce);
   
@@ -4414,10 +4431,10 @@ void FEA_Module_Thermo_Elasticity::compute_adjoint_hessian_vec(const_host_vec_ar
 
 void FEA_Module_Thermo_Elasticity::init_output(){
   //check user parameters for output
-  bool output_displacement_flag = simparam.output(FIELD::displacement);
-  bool output_strain_flag = simparam.output(FIELD::strain);
-  bool output_stress_flag = simparam.output(FIELD::stress);
-  int num_dim = simparam.num_dims;
+  bool output_displacement_flag = simparam->output(FIELD::displacement);
+  bool output_strain_flag = simparam->output(FIELD::strain);
+  bool output_stress_flag = simparam->output(FIELD::stress);
+  int num_dim = simparam->num_dims;
   int Brows;
   if(num_dim==3) Brows = 6;
   else Brows = 3;
@@ -4488,10 +4505,10 @@ void FEA_Module_Thermo_Elasticity::init_output(){
 
 void FEA_Module_Thermo_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map){
   
-  bool output_displacement_flag = simparam.output(FIELD::displacement);
-  bool output_strain_flag = simparam.output(FIELD::strain);
-  bool output_stress_flag = simparam.output(FIELD::stress);
-  int num_dim = simparam.num_dims;
+  bool output_displacement_flag = simparam->output(FIELD::displacement);
+  bool output_strain_flag = simparam->output(FIELD::strain);
+  bool output_stress_flag = simparam->output(FIELD::stress);
+  int num_dim = simparam->num_dims;
   int strain_count;
   int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
 
@@ -4562,10 +4579,10 @@ void FEA_Module_Thermo_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO,GO,no
 
 void FEA_Module_Thermo_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map){
   
-  bool output_displacement_flag = simparam.output(FIELD::displacement);
-  bool output_strain_flag = simparam.output(FIELD::strain);
-  bool output_stress_flag = simparam.output(FIELD::stress);
-  int num_dim = simparam.num_dims;
+  bool output_displacement_flag = simparam->output(FIELD::displacement);
+  bool output_strain_flag = simparam->output(FIELD::strain);
+  bool output_stress_flag = simparam->output(FIELD::stress);
+  int num_dim = simparam->num_dims;
   int strain_count;
   GO nreduce_dof = 0;
   
@@ -4633,7 +4650,7 @@ void FEA_Module_Thermo_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO,GO
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Thermo_Elasticity::compute_output(){
-  if(simparam.output(FIELD::strain))
+  if(simparam->output(FIELD::strain))
     compute_nodal_strains();
 }
 
@@ -4651,9 +4668,9 @@ void FEA_Module_Thermo_Elasticity::compute_nodal_strains(){
   host_vec_array all_node_strains = all_node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   host_vec_array node_strains = node_strains_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   const_host_elem_conn_array node_nconn = node_nconn_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int strain_max_flag = module_params.strain_max_flag;
   int z_quad,y_quad,x_quad, direct_product_count;
   int solve_flag, zero_strain_flag;
@@ -5127,7 +5144,7 @@ void FEA_Module_Thermo_Elasticity::linear_solver_parameters(){
 
 int FEA_Module_Thermo_Elasticity::solve(){
   //local variable for host view in the dual view
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
   int max_stride = 0;
@@ -5394,11 +5411,11 @@ int FEA_Module_Thermo_Elasticity::solve(){
     }
   }//row for
   */
-  if(module_params.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
-    Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
-    Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
-  }
+  // if(module_params.equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->equilibrateMatrix(xA,"diag");
+  //   Implicit_Solver_Pointer_->preScaleRightHandSides(*Global_Nodal_RHS,"diag");
+  //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*X,"diag");
+  // }
 
   //debug print
   //if(myrank==0)
@@ -5453,10 +5470,10 @@ int FEA_Module_Thermo_Elasticity::solve(){
   linear_solve_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
   comm->barrier();
 
-  if(module_params.equilibrate_matrix_flag){
-    Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
-    Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
-  }
+  // if(module_params.equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*X,"diag");
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*Global_Nodal_RHS,"diag");
+  // }
 
   if(module_params.multigrid_timers){
     Teuchos::RCP<Teuchos::ParameterList> reportParams = rcp(new Teuchos::ParameterList);
@@ -5516,7 +5533,7 @@ int FEA_Module_Thermo_Elasticity::solve(){
 
 void FEA_Module_Thermo_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
   
-  if(simparam.topology_optimization_on)
+  if(simparam->topology_optimization_on)
     comm_densities(zp);
 }
 
@@ -5552,10 +5569,10 @@ void FEA_Module_Thermo_Elasticity::update_linear_solve(Teuchos::RCP<const MV> zp
 
 void FEA_Module_Thermo_Elasticity::node_density_constraints(host_vec_array node_densities_lower_bound){
   
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   LO local_node_index;
   //simparam = dynamic_cast<Simulation_Parameters_Topology_Optimization*>(Implicit_Solver_Pointer_->simparam);
-  if(simparam.optimization_options.thick_condition_boundary){
+  if(simparam->optimization_options.thick_condition_boundary){
     for(int i = 0; i < nlocal_nodes*num_dim; i++){
       if(Node_DOF_Boundary_Condition_Type(i) == DISPLACEMENT_CONDITION){
         for(int j = 0; j < Graph_Matrix_Strides(i/num_dim); j++){

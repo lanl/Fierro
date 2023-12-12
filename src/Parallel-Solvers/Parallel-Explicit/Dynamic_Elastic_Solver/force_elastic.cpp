@@ -2,9 +2,9 @@
 #include <math.h>  // fmin, fmax, abs note: fminl is long
 #include "mesh.h"
 #include "state.h"
+#include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
-#include "Tpetra_Import.hpp"
-#include "Tpetra_Import_Util2.hpp"
 #include "Explicit_Solver.h"
 
 // -----------------------------------------------------------------------------
@@ -24,9 +24,9 @@ void FEA_Module_Dynamic_Elasticity::get_force_elastic(const DCArrayKokkos <mater
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;    
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;    
     const size_t num_dim = mesh.num_dims;
-    const real_t damping_constant = module_params.damping_constant;
+    const real_t damping_constant = module_params->damping_constant;
     const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
 
     // walk over the nodes to update the velocity
@@ -92,13 +92,13 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos <material
                    const size_t cycle
                    ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;    
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;    
     const size_t num_dim = mesh.num_dims;
     const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-    const size_t num_lcs = module_params.loading.size();
+    const size_t num_lcs = module_params->loading.size();
     
-    const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
-    const DCArrayKokkos <loading_t> loading = module_params.loading;
+    const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
+    const DCArrayKokkos <loading_t> loading = module_params->loading;
 
     //debug check
     //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
@@ -155,7 +155,7 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos <material
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::assemble_matrix(){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem;
   int current_row_n_nodes_scanned;
   int local_dof_index, local_node_index, current_row, current_column;
@@ -263,7 +263,7 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix(){
   /*
   for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
     for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam.Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*simparam.Elastic_Modulus*density_epsilon)
+      if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*density_epsilon)
       Stiffness_Matrix(idof,istride) = 0;
       //debug print
       //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -281,16 +281,16 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix(){
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.get_unit_scaling();
+  real_t unit_scaling = simparam->get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
-  //Element_Modulus = density*simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.material.poisson_ratio;
+  Element_Modulus = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params->material.elastic_modulus/unit_scaling/unit_scaling;
+  //Element_Modulus = density*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  Poisson_Ratio = module_params->material.poisson_ratio;
 }
 
 /* ----------------------------------------------------------------------
@@ -298,17 +298,17 @@ void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, re
 ------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::Gradient_Element_Material_Properties(size_t ielem, real_t &Element_Modulus_Derivative, real_t &Poisson_Ratio, real_t density){
-  real_t unit_scaling = simparam.get_unit_scaling();
+  real_t unit_scaling = simparam->get_unit_scaling();
   real_t penalty_product = 1;
-  real_t density_epsilon = simparam.optimization_options.density_epsilon;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
   Element_Modulus_Derivative = 0;
   if(density < 0) density = 0;
   for(int i = 0; i < penalty_power - 1; i++)
     penalty_product *= density;
   //relationship between density and stiffness
-  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params.material.elastic_modulus/unit_scaling/unit_scaling;
-  //Element_Modulus_Derivative = simparam.Elastic_Modulus/unit_scaling/unit_scaling;
-  Poisson_Ratio = module_params.material.poisson_ratio;
+  Element_Modulus_Derivative = penalty_power*(1 - density_epsilon)*penalty_product*module_params->material.elastic_modulus/unit_scaling/unit_scaling;
+  //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  Poisson_Ratio = module_params->material.poisson_ratio;
 }
 
 /* ----------------------------------------------------------------------
@@ -323,7 +323,7 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
   
   const_host_vec_array all_node_densities;
   if(nodal_density_flag){
-    if(simparam.optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter)
+    if(simparam->optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter)
       all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     else
       all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -331,9 +331,9 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
   else{
     Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
   }
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
 
@@ -746,12 +746,12 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
   all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   else
   Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int nodes_per_elem = elem->num_basis();
-  int num_gauss_points = simparam.num_gauss_points;
+  int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
-  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;  
+  const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;  
   GO current_global_index;
   
   real_t global_dt;
@@ -834,7 +834,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
   }
   
   //loop through each element and assign the contribution to compliance gradient for each of its local nodes
-  if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+  if(simparam->dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if(myrank==0){
           std::cout << "gradient term derivative of force" << std::endl;
         }
@@ -845,7 +845,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     global_dt = time_data[cycle+1] - time_data[cycle];
 
     //print
-    if(simparam.dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
+    if(simparam->dynamic_options.output_time_sequence_level==TIME_OUTPUT_LEVEL::extreme){
       if (cycle==0){
         if(myrank==0)
           printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);

@@ -24,6 +24,7 @@ struct Simulation_Parameters
     std::optional<Input_Options> input_options;
     std::optional<std::shared_ptr<MeshBuilderInput>> mesh_generation_options;
     Output_Options output_options;
+    size_t max_num_state_vars = 0;
 
     std::vector<Region> regions;
     std::vector<Material> materials;
@@ -71,6 +72,12 @@ struct Simulation_Parameters
                 global_vars.host(i, j) = mat.global_vars[j];
         }
         global_vars.update_device();
+    }
+
+    void derive_max_num_state_vars() {
+        max_num_state_vars = 0;
+        for (const auto& mat : materials)
+          max_num_state_vars = std::max(mat.num_state_vars, max_num_state_vars);
     }
 
     void derive_objective_module() {
@@ -196,6 +203,8 @@ struct Simulation_Parameters
 
         if (output_options.include_default_output_fields)
             include_default_output_fields();
+
+        derive_max_num_state_vars();
     }
 
     void validate_one_of_modules_are_specified(std::vector<FEA_MODULE_TYPE> types) {

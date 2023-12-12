@@ -19,13 +19,20 @@ struct material_t {
     double initial_temperature  = 293;
     double thermal_conductivity = 10;
     double specific_internal_energy_rate = 1.0;
-    std::vector<double> expansion_coefficients = { 12e-6, 12e-6, 12e-6, 0, 0, 0 }; 
+    std::vector<double> expansion_coefficients = { 12e-6, 12e-6, 12e-6, 0, 0, 0 };
+    
+    bool SIMP_modulus        = true;
+    bool linear_cell_modulus = false;
+    double modulus_density_slope = 200000000000;
+    double modulus_initial = 0;
 
     double q1 = 1.0;
     double q2 = 0.0;
     double q1ex = 1.0;
     double q2ex = 0.0;
     bool maximum_limiter = false;
+
+    size_t num_state_vars = 0;
     
     // Non-serialized fields
     size_t num_global_vars = 0;
@@ -37,6 +44,7 @@ struct Material : Yaml::DerivedFields, material_t {
 
     void derive() {
         num_global_vars = global_vars.size();
+        if(linear_cell_modulus) SIMP_modulus = false;
     }
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Material, id)
@@ -44,8 +52,10 @@ IMPL_YAML_SERIALIZABLE_FOR(Material,
     id, eos_model, strength_model, strength_type,
     strength_run_location, eos_run_location,
     q1, q2, q1ex, q2ex, maximum_limiter,
+    num_state_vars,
     global_vars,
     elastic_modulus, poisson_ratio,
     density, initial_temperature, thermal_conductivity,
-    specific_internal_energy_rate, expansion_coefficients
+    specific_internal_energy_rate, expansion_coefficients,
+    SIMP_modulus, linear_cell_modulus, modulus_density_slope, modulus_initial
 )

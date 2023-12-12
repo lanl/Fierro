@@ -24,6 +24,11 @@ SERIALIZABLE_ENUM(BOUNDARY_CONDITION_TYPE,
 struct Surface {
     BOUNDARY_TYPE type;
     double plane_position;
+    bool use_limits = false;
+    double surface_limits_sl = std::numeric_limits<double>::lowest();
+    double surface_limits_su = std::numeric_limits<double>::max();
+    double surface_limits_tl = std::numeric_limits<double>::lowest();
+    double surface_limits_tu = std::numeric_limits<double>::max();
     
     KOKKOS_FUNCTION
     size_t planar_surface_index() {
@@ -42,7 +47,7 @@ struct Surface {
     }
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Surface, type)
-IMPL_YAML_SERIALIZABLE_FOR(Surface, type, plane_position)
+IMPL_YAML_SERIALIZABLE_FOR(Surface, type, plane_position, use_limits, surface_limits_sl, surface_limits_su, surface_limits_tl, surface_limits_tu)
 
 
 /**

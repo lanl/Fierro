@@ -50,21 +50,12 @@
 #include <Teuchos_oblackholestream.hpp>
 #include <Teuchos_Tuple.hpp>
 #include <Teuchos_VerboseObject.hpp>
-#include <Teuchos_SerialDenseMatrix.hpp>
-#include <Teuchos_SerialDenseVector.hpp>
-#include <Teuchos_SerialDenseSolver.hpp>
 
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
-#include <Tpetra_CrsMatrix.hpp>
-#include "Tpetra_Details_makeColMap.hpp"
-#include "Tpetra_Details_DefaultTypes.hpp"
-#include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
 #include "Tpetra_Import_Util2.hpp"
-#include "MatrixMarket_Tpetra.hpp"
-#include <set>
 
 #include "elements.h"
 #include "swage.h"
@@ -73,21 +64,11 @@
 #include "node_combination.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
+#include "Simulation_Parameters/FEA_Module/Dynamic_Elasticity_Parameters.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 
 //optimization
-#include "ROL_Algorithm.hpp"
 #include "ROL_Solver.hpp"
-#include "ROL_LineSearchStep.hpp"
-#include "ROL_TrustRegionStep.hpp"
-#include "ROL_StatusTest.hpp"
-#include "ROL_Types.hpp"
-#include "ROL_Elementwise_Reduce.hpp"
-#include "ROL_Stream.hpp"
-
-#include "ROL_StdVector.hpp"
-#include "ROL_StdBoundConstraint.hpp"
-#include "ROL_ParameterList.hpp"
-#include <ROL_TpetraMultiVector.hpp>
 #include "Kinetic_Energy_Minimize.h"
 
 #define MAX_ELEM_NODES 8
@@ -110,8 +91,8 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
   
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
-  module_params = params;
-  simparam = Explicit_Solver_Pointer_->simparam;
+  module_params = &params;
+  simparam = &(Explicit_Solver_Pointer_->simparam);
   
   mesh = mesh_in;
 
@@ -127,21 +108,21 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
   node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
 
-  if(simparam.topology_optimization_on||simparam.shape_optimization_on){
-    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-    force_gradient_velocity = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-    force_gradient_position = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+  if(simparam->topology_optimization_on||simparam->shape_optimization_on){
+    all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+    force_gradient_velocity = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+    force_gradient_position = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
     force_gradient_design = Teuchos::rcp(new MV(all_node_map, 1));
     corner_value_storage = Solver_Pointer->corner_value_storage;
     corner_vector_storage = Solver_Pointer->corner_vector_storage;
     relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
   }
 
-  if(simparam.topology_optimization_on||simparam.shape_optimization_on||simparam.num_dims==2){
+  if(simparam->topology_optimization_on||simparam->shape_optimization_on||simparam->num_dims==2){
     node_masses_distributed = Teuchos::rcp(new MV(map, 1));
     ghost_node_masses_distributed = Teuchos::rcp(new MV(ghost_node_map, 1));
-    adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
-    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam.num_dims));
+    adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam->num_dims));
+    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam->num_dims));
   }
   
   //setup output
@@ -153,25 +134,26 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
   
 
   //set parameters
-  Dynamic_Options dynamic_options = simparam.dynamic_options;
+  Dynamic_Options dynamic_options = simparam->dynamic_options;
   time_value = dynamic_options.time_value;
   time_final = dynamic_options.time_final;
   dt_max = dynamic_options.dt_max;
   dt_min = dynamic_options.dt_min;
   dt_cfl = dynamic_options.dt_cfl;
-  graphics_time = simparam.output_options.graphics_time;
-  graphics_dt_ival = simparam.output_options.graphics_dt_ival;
-  graphics_cyc_ival = simparam.output_options.graphics_cyc_ival;
+  graphics_time = simparam->output_options.graphics_time;
+  graphics_dt_ival = simparam->output_options.graphics_dt_ival;
+  graphics_cyc_ival = simparam->output_options.graphics_cyc_ival;
   cycle_stop = dynamic_options.cycle_stop;
   rk_num_stages = dynamic_options.rk_num_stages;
   dt = dynamic_options.dt;
   fuzz = dynamic_options.fuzz;
   tiny = dynamic_options.tiny;
   small = dynamic_options.small;
-  graphics_times = simparam.output_options.graphics_times;
-  graphics_id = simparam.output_options.graphics_id;
+  graphics_times = simparam->output_options.graphics_times;
+  graphics_id = simparam->output_options.graphics_id;
+  rk_num_bins = simparam->dynamic_options.rk_num_bins;
 
-  if(simparam.topology_optimization_on){
+  if(simparam->topology_optimization_on){
     max_time_steps = BUFFER_GROW;
     forward_solve_velocity_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     time_data.resize(max_time_steps+1);
@@ -180,10 +162,10 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
     phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps+1));
     //assign a multivector of corresponding size to each new timestep in the buffer
     for(int istep = 0; istep < max_time_steps+1; istep++){
-      (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-      (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-      (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-      (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+      (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+      (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+      (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+      (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
     }
     
   }
@@ -199,10 +181,10 @@ FEA_Module_Dynamic_Elasticity::~FEA_Module_Dynamic_Elasticity(){
 void FEA_Module_Dynamic_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header){
 
   char ch;
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
   int buffer_lines = 1000;
   int max_word = 30;
-  auto input_options = simparam.input_options.value();
+  auto input_options = simparam->input_options.value();
   int p_order = input_options.p_order;
   real_t unit_scaling = input_options.unit_scaling;
   int local_node_index, current_column_index;
@@ -227,8 +209,8 @@ void FEA_Module_Dynamic_Elasticity::elastic_interface_setup(node_t &node,
                        elem_t &elem,
                        corner_t &corner){
 
-    const size_t num_dim = simparam.num_dims;
-    const size_t rk_num_bins = simparam.dynamic_options.rk_num_bins;
+    const size_t num_dim = simparam->num_dims;
+    const size_t rk_num_bins = simparam->dynamic_options.rk_num_bins;
 
     num_nodes_in_elem = 1;
     for (int dim=0; dim<num_dim; dim++){
@@ -422,8 +404,8 @@ void FEA_Module_Dynamic_Elasticity::elastic_interface_setup(node_t &node,
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::init_boundaries() {
-  max_boundary_sets = module_params.boundary_conditions.size();
-  int num_dim = simparam.num_dims;
+  max_boundary_sets = module_params->boundary_conditions.size();
+  int num_dim = simparam->num_dims;
   
   // set the number of boundary sets
   if(myrank == 0)
@@ -474,7 +456,7 @@ void FEA_Module_Dynamic_Elasticity::init_boundary_sets (int num_sets){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::grow_boundary_sets(int num_sets){
-  int num_dim = simparam.num_dims;
+  int num_dim = simparam->num_dims;
 
   if(num_sets == 0){
     std::cout << " Warning: number of boundary conditions being set to 0";
@@ -536,10 +518,10 @@ void FEA_Module_Dynamic_Elasticity::Displacement_Boundary_Conditions(){
 
 void FEA_Module_Dynamic_Elasticity::init_output(){
   //check user parameters for output
-  bool output_velocity_flag = simparam.output(FIELD::velocity);
-  bool output_strain_flag = simparam.output(FIELD::strain);
-  bool output_stress_flag = simparam.output(FIELD::stress);
-  int num_dim = simparam.num_dims;
+  bool output_velocity_flag = simparam->output(FIELD::velocity);
+  bool output_strain_flag = simparam->output(FIELD::strain);
+  bool output_stress_flag = simparam->output(FIELD::stress);
+  int num_dim = simparam->num_dims;
   int Brows;
   if(num_dim==3) Brows = 6;
   else Brows = 3;
@@ -639,9 +621,9 @@ void FEA_Module_Dynamic_Elasticity::write_data(std::map <std::string, const doub
   std::map <std::string, std::pair<const double*, size_t> > &cell_data_fields_double){
 
   
-  const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
+  const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
 
-  for (const FIELD& field_name : simparam.output_options.output_fields) {
+  for (const FIELD& field_name : simparam->output_options.output_fields) {
     switch (field_name)
     {
 
@@ -781,7 +763,7 @@ void FEA_Module_Dynamic_Elasticity::comm_node_masses(){
 
 void FEA_Module_Dynamic_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
   
-  if(simparam.topology_optimization_on){
+  if(simparam->topology_optimization_on){
   //set density vector to the current value chosen by the optimizer
   test_node_densities_distributed = zp;
   
@@ -801,7 +783,7 @@ void FEA_Module_Dynamic_Elasticity::comm_variables(Teuchos::RCP<const MV> zp){
   //comms to get ghosts
   all_node_densities_distributed->doImport(*test_node_densities_distributed, *importer, Tpetra::INSERT);
   }
-  else if(simparam.shape_optimization_on){
+  else if(simparam->shape_optimization_on){
     //clause to communicate boundary node data if the boundary nodes are ghosts on this rank
   }
 }
@@ -815,10 +797,10 @@ void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array &nod
 
   const size_t num_dim = mesh->num_dims;
   const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type> (Tpetra::Access::ReadOnly);
-  const size_t num_lcs = module_params.loading_conditions.size();
+  const size_t num_lcs = module_params->loading_conditions.size();
     
-  const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
-  const DCArrayKokkos <loading_t> loading = module_params.loading;
+  const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
+  const DCArrayKokkos <loading_t> loading = module_params->loading;
 
   //debug check
   //std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
@@ -849,13 +831,13 @@ void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array &nod
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::setup(){
-    Dynamic_Options dynamic_options = simparam.dynamic_options;
+    Dynamic_Options dynamic_options = simparam->dynamic_options;
     const size_t rk_level = dynamic_options.rk_num_bins - 1;   
-    const size_t num_fills = simparam.regions.size();
+    const size_t num_fills = simparam->regions.size();
     const size_t rk_num_bins = dynamic_options.rk_num_bins;
-    const size_t num_bcs = module_params.boundary_conditions.size();
-    const size_t num_materials = simparam.materials.size();
-    const int num_dim = simparam.num_dims;
+    const size_t num_bcs = module_params->boundary_conditions.size();
+    const size_t num_materials = simparam->materials.size();
+    const int num_dim = simparam->num_dims;
 
     // ---------------------------------------------------------------------
     //    obtain mesh data
@@ -994,11 +976,12 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     //FEA_Module bc variable
     num_boundary_conditions = num_bcs;
 
-    const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
-    const DCArrayKokkos <mat_fill_t> mat_fill = simparam.mat_fill;
-    const DCArrayKokkos <material_t> material = simparam.material;
-    global_vars = simparam.global_vars;
-    elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam.output_options.max_num_user_output_vars); 
+    const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
+    const DCArrayKokkos <material_t> material = simparam->material;
+    global_vars = simparam->global_vars;
+    state_vars = DCArrayKokkos <double> (rnum_elem, simparam->max_num_state_vars);
+    elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam->output_options.max_num_user_output_vars);
  
     //--- calculate bdy sets ---//
     mesh->num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
@@ -1063,11 +1046,21 @@ void FEA_Module_Dynamic_Elasticity::setup(){
       });
     }
     elem_mat_id.update_host();
+
+    // function for initializing state_vars
+    init_state_vars(material,
+                    elem_mat_id,
+                    state_vars,
+                    global_vars,
+                    elem_user_output_vars,
+                    rnum_elem);
+    state_vars.update_device();
  
     // initialize strength model
     init_strength_model(elem_strength,
                         material,
                         elem_mat_id,
+                        state_vars,
                         global_vars,
                         elem_user_output_vars,
                         rnum_elem);
@@ -1076,6 +1069,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     init_eos_model(elem_eos,
                    material,
                    elem_mat_id,
+                   state_vars,
                    global_vars,
                    elem_user_output_vars,
                    rnum_elem);
@@ -1083,7 +1077,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     //--- apply the fill instructions over each of the Elements---//
     
     //initialize if topology optimization is used
-    if(simparam.topology_optimization_on){
+    if(simparam->topology_optimization_on){
       for(int elem_id = 0; elem_id < rnum_elem; elem_id++){
         relative_element_densities.host(elem_id) = 1;
       }//for
@@ -1150,6 +1144,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
                                          elem_stress,
                                          elem_gid,
                                          elem_mat_id(elem_gid),
+                                         state_vars,
                                          global_vars,
                                          elem_user_output_vars,
                                          elem_sspd,
@@ -1161,6 +1156,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
                                             elem_stress,
                                             elem_gid,
                                             elem_mat_id(elem_gid),
+                                            state_vars,
                                             global_vars,
                                             elem_user_output_vars,
                                             elem_sspd,
@@ -1356,7 +1352,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
 
     //current interface has differing mass arrays; this equates them until we unify memory
     //view scope
-    if(simparam.topology_optimization_on||simparam.shape_optimization_on||simparam.num_dims==2){
+    if(simparam->topology_optimization_on||simparam->shape_optimization_on||simparam->num_dims==2){
       {
         vec_array node_mass_interface = node_masses_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
 
@@ -1382,7 +1378,7 @@ void FEA_Module_Dynamic_Elasticity::setup(){
     } //endif
     
     //initialize if topology optimization is used
-    if(simparam.topology_optimization_on || simparam.shape_optimization_on){
+    if(simparam->topology_optimization_on || simparam->shape_optimization_on){
       init_assembly();
       assemble_matrix();
     }
@@ -1413,12 +1409,13 @@ void FEA_Module_Dynamic_Elasticity::module_cleanup(){
 
 void FEA_Module_Dynamic_Elasticity::cleanup_material_models() {
 
-    const DCArrayKokkos <material_t> material = simparam.material;
+    const DCArrayKokkos <material_t> material = simparam->material;
 
     // destroy strength model
     destroy_strength_model(elem_strength,
                            material,
                            elem_mat_id,
+                           state_vars,
                            global_vars,
                            elem_user_output_vars,
                            rnum_elem);
@@ -1427,6 +1424,7 @@ void FEA_Module_Dynamic_Elasticity::cleanup_material_models() {
     destroy_eos_model(elem_eos,
                       material,
                       elem_mat_id,
+                      state_vars,
                       global_vars,
                       elem_user_output_vars,
                       rnum_elem);
@@ -1444,8 +1442,8 @@ void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos <boundary_t> &b
               mesh_t &mesh,
               const DViewCArrayKokkos <double> &node_coords){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
-    size_t num_dim = simparam.num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    size_t num_dim = simparam->num_dims;
     int nboundary_patches = Explicit_Solver_Pointer_->nboundary_patches;
     int num_nodes_in_patch = mesh.num_nodes_in_patch;
     
@@ -1679,7 +1677,7 @@ int FEA_Module_Dynamic_Elasticity::solve(){
 ------------------------------------------------------------------------------- */
 
 void FEA_Module_Dynamic_Elasticity::elastic_solve(){
-    Dynamic_Options dynamic_options = simparam.dynamic_options;
+    Dynamic_Options dynamic_options = simparam->dynamic_options;
    
     const size_t rk_level = dynamic_options.rk_num_bins - 1; 
     time_value = dynamic_options.time_initial;
@@ -1687,25 +1685,25 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
     dt_max = dynamic_options.dt_max;
     dt_min = dynamic_options.dt_min;
     dt_cfl = dynamic_options.dt_cfl;
-    graphics_time = simparam.output_options.graphics_step;
-    graphics_dt_ival = simparam.output_options.graphics_step;
+    graphics_time = simparam->output_options.graphics_step;
+    graphics_dt_ival = simparam->output_options.graphics_step;
     cycle_stop = dynamic_options.cycle_stop;
     rk_num_stages = dynamic_options.rk_num_stages;
     dt = dynamic_options.dt;
     fuzz = dynamic_options.fuzz;
     tiny = dynamic_options.tiny;
     small = dynamic_options.small;
-    graphics_times = simparam.output_options.graphics_times;
-    graphics_id = simparam.output_options.graphics_id;
+    graphics_times = simparam->output_options.graphics_times;
+    graphics_id = simparam->output_options.graphics_id;
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
-    const DCArrayKokkos <material_t> material = simparam.material;
+    const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos <material_t> material = simparam->material;
     int nTO_modules;
     int old_max_forward_buffer;
     unsigned long cycle;
-    const int num_dim = simparam.num_dims;
+    const int num_dim = simparam->num_dims;
     real_t objective_accumulation, global_objective_accumulation;
-    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam.FEA_Module_My_TO_Modules;
+    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; //Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
@@ -1720,7 +1718,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
     }
     */
     //simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
-    if(simparam.topology_optimization_on){
+    if(simparam->topology_optimization_on){
       obj_pointer = problem->getObjective();
       KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
       kinetic_energy_minimize_function.objective_accumulation = 0;
@@ -1735,19 +1733,19 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
         phi_adjoint_vector_data->resize(max_time_steps+1);
         //assign a multivector of corresponding size to each new timestep in the buffer
         for(int istep = old_max_forward_buffer; istep < max_time_steps+1; istep++){
-          (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-          (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-          (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-          (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+          (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+          (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+          (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+          (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         }
       }
     }
 
-    if(simparam.topology_optimization_on)
-      nTO_modules = simparam.TO_Module_List.size();
+    if(simparam->topology_optimization_on)
+      nTO_modules = simparam->TO_Module_List.size();
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk&&simparam.output_options.write_initial)
+    if(simparam->output_options.output_file_format==OUTPUT_FORMAT::vtk&&simparam->output_options.write_initial)
     {
       if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
@@ -1842,7 +1840,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
     auto time_1 = std::chrono::high_resolution_clock::now();
 
   //save initial data
-  if(simparam.topology_optimization_on||simparam.shape_optimization_on){
+  if(simparam->topology_optimization_on||simparam->shape_optimization_on){
     time_data[0] = 0;
     //assign current velocity data to multivector
     //view scope
@@ -1933,7 +1931,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
 	    //if (stop_calc == 1) break;
         
   
-      if(simparam.dynamic_options.output_time_sequence_level>=TIME_OUTPUT_LEVEL::high){
+      if(simparam->dynamic_options.output_time_sequence_level>=TIME_OUTPUT_LEVEL::high){
         if (cycle==0){
             if(myrank==0)
               printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
@@ -2259,9 +2257,9 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
       } // end of RK loop
 
 	    // increment the time
-	    Explicit_Solver_Pointer_->time_value = simparam.dynamic_options.time_value = time_value+=dt;
+	    Explicit_Solver_Pointer_->time_value = simparam->dynamic_options.time_value = time_value+=dt;
 
-      if(simparam.topology_optimization_on||simparam.shape_optimization_on){
+      if(simparam->topology_optimization_on||simparam->shape_optimization_on){
         if(cycle >= max_time_steps)
           max_time_steps = cycle + 1;
 
@@ -2274,10 +2272,10 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
           phi_adjoint_vector_data->resize(max_time_steps + BUFFER_GROW +1);
           //assign a multivector of corresponding size to each new timestep in the buffer
           for(int istep = old_max_forward_buffer; istep < max_time_steps + BUFFER_GROW +1; istep++){
-            (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-            (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-            (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
-            (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam.num_dims));
+            (*forward_solve_velocity_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+            (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+            (*adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+            (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
           }
         }
 
@@ -2385,7 +2383,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
       else if (cycle == cycle_stop) {
         write = 1;
       }
-      else if (time_value >= time_final&&simparam.output_options.write_final){
+      else if (time_value >= time_final&&simparam->output_options.write_final){
         write = 1;
       }
       else if (time_value >= graphics_time){
@@ -2404,7 +2402,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
                 }
               }); // end parallel for
             } //end view scope
-            if(simparam.output_options.output_file_format==OUTPUT_FORMAT::vtk){
+            if(simparam->output_options.output_file_format==OUTPUT_FORMAT::vtk){
               if(myrank==0){
               printf("Writing outputs to file at %f \n", graphics_time);
               }
@@ -2429,7 +2427,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve(){
     last_time_step = cycle;
 
     //simple setup to just calculate KE minimize objective for now
-    if(simparam.topology_optimization_on){
+    if(simparam->topology_optimization_on){
       KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
 
       //collect local objective values

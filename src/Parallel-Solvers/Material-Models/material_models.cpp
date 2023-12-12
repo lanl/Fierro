@@ -61,6 +61,7 @@ void init_strength_model(
   DCArrayKokkos <strength_t> &elem_strength,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems)
@@ -95,10 +96,12 @@ void init_strength_model(
     if (run_loc == RUN_LOCATION::device) {
       switch (strength_model) {
         case STRENGTH_MODEL::ideal_gas:
-          new ((IdealGasStrengthModel*)elem_strength(elem_gid).model) IdealGasStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          new ((IdealGasStrengthModel*)elem_strength(elem_gid).model)
+            IdealGasStrengthModel(material, state_vars, global_vars, elem_user_output_vars, mat_id, elem_gid);
           break;
         case STRENGTH_MODEL::user_strength_model:
-          new ((UserStrengthModel*)elem_strength(elem_gid).model) UserStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          new ((UserStrengthModel*)elem_strength(elem_gid).model)
+            UserStrengthModel(material, state_vars, global_vars, elem_user_output_vars, mat_id, elem_gid);
           break;
         default:
           break;
@@ -116,10 +119,12 @@ void init_strength_model(
     if (run_loc == RUN_LOCATION::host) {
       switch (strength_model) {
         case STRENGTH_MODEL::ideal_gas:
-          new ((IdealGasStrengthModel*)elem_strength.host(elem_gid).model) IdealGasStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          new ((IdealGasStrengthModel*)elem_strength.host(elem_gid).model)
+            IdealGasStrengthModel(material, state_vars, global_vars, elem_user_output_vars, mat_id, elem_gid);
           break;
         case STRENGTH_MODEL::user_strength_model:
-          new ((UserStrengthModel*)elem_strength.host(elem_gid).model) UserStrengthModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          new ((UserStrengthModel*)elem_strength.host(elem_gid).model)
+            UserStrengthModel(material, state_vars, global_vars, elem_user_output_vars, mat_id, elem_gid);
           break;
         default:
           break;
@@ -134,6 +139,7 @@ void init_eos_model(
   DCArrayKokkos <eos_t> &elem_eos,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems)
@@ -168,10 +174,12 @@ void init_eos_model(
     if (run_loc == RUN_LOCATION::device) {
       switch (eos_model) {
         case EOS_MODEL::ideal_gas:
-          new ((IdealGasEOSModel*)elem_eos(elem_gid).model) IdealGasEOSModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          new ((IdealGasEOSModel*)elem_eos(elem_gid).model)
+            IdealGasEOSModel(material, state_vars, global_vars, elem_user_output_vars, mat_id, elem_gid);
           break;
         case EOS_MODEL::user_eos_model:
-          new ((UserEOSModel*)elem_eos(elem_gid).model) UserEOSModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          new ((UserEOSModel*)elem_eos(elem_gid).model)
+            UserEOSModel(material, state_vars, global_vars, elem_user_output_vars, mat_id, elem_gid);
           break;
         default:
           break;
@@ -189,10 +197,12 @@ void init_eos_model(
     if (run_loc == RUN_LOCATION::host) {
       switch (eos_model) {
         case EOS_MODEL::ideal_gas:
-          new ((IdealGasEOSModel*)elem_eos.host(elem_gid).model) IdealGasEOSModel(material, global_vars, elem_user_output_vars, mat_id, elem_gid);
+          new ((IdealGasEOSModel*)elem_eos.host(elem_gid).model)
+            IdealGasEOSModel(material, state_vars, global_vars, elem_user_output_vars, mat_id, elem_gid);
           break;
         case EOS_MODEL::user_eos_model:
-          new ((UserEOSModel*)elem_eos.host(elem_gid).model) UserEOSModel(material,  global_vars, elem_user_output_vars, mat_id, elem_gid);
+          new ((UserEOSModel*)elem_eos.host(elem_gid).model)
+            UserEOSModel(material, state_vars, global_vars, elem_user_output_vars, mat_id, elem_gid);
           break;
         default:
           break;
@@ -206,6 +216,7 @@ void destroy_strength_model(
   DCArrayKokkos <strength_t> &elem_strength,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> elem_user_output_vars,
   const size_t num_elems)
@@ -251,6 +262,7 @@ void destroy_eos_model(
   DCArrayKokkos <eos_t> &elem_eos,
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
+  const DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems)

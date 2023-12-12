@@ -3,7 +3,7 @@
 # Check if the 'hdf5' directory exists and is not empty in the parent directory; if not, clone it
 if [ ! -d "${HDF5_SOURCE_DIR}" ]; then
   echo "Directory 'hdf5' does not exist in '${libdir}', downloading 'hdf5'...."
-  git clone https://github.com/HDFGroup/hdf5.git ${HDF5_SOURCE_DIR}
+  git clone --depth 1 https://github.com/HDFGroup/hdf5.git ${HDF5_SOURCE_DIR}
 else
   echo "Directory 'hdf5' exists in '${libdir}', skipping 'hdf5' download"
 fi

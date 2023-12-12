@@ -22,8 +22,8 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos <material_t
                   const size_t cycle
                   ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = rk_num_bins - 1;
+    int num_dims = num_dim;
     
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -91,6 +91,7 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos <material_t
                                         elem_stress,
                                         elem_gid,
                                         mat_id,
+                                        state_vars,
                                         global_vars,
                                         elem_user_output_vars,
                                         elem_sspd,
@@ -115,6 +116,7 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos <material_t
                                  elem_stress,
                                  elem_gid,
                                  elem_mat_id(elem_gid),
+                                 state_vars,
                                  global_vars,
                                  elem_user_output_vars,
                                  elem_sspd,
@@ -126,6 +128,7 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos <material_t
                                     elem_stress,
                                     elem_gid,
                                     elem_mat_id(elem_gid),
+                                    state_vars,
                                     global_vars,
                                     elem_user_output_vars,
                                     elem_sspd,
@@ -157,8 +160,8 @@ void FEA_Module_Dynamic_Elasticity::update_state2D(const DCArrayKokkos <material
                     const size_t cycle
                     ){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;
-    int num_dims = simparam.num_dims;
+    const size_t rk_level = rk_num_bins - 1;
+    int num_dims = num_dim;
     
     // loop over all the elements in the mesh
     FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -219,6 +222,7 @@ void FEA_Module_Dynamic_Elasticity::update_state2D(const DCArrayKokkos <material
                                         elem_stress,
                                         elem_gid,
                                         mat_id,
+                                        state_vars,
                                         global_vars,
                                         elem_user_output_vars,
                                         elem_sspd,
@@ -243,6 +247,7 @@ void FEA_Module_Dynamic_Elasticity::update_state2D(const DCArrayKokkos <material
                                  elem_stress,
                                  elem_gid,
                                  elem_mat_id(elem_gid),
+                                 state_vars,
                                  global_vars,
                                  elem_user_output_vars,
                                  elem_sspd,
@@ -254,6 +259,7 @@ void FEA_Module_Dynamic_Elasticity::update_state2D(const DCArrayKokkos <material
                                     elem_stress,
                                     elem_gid,
                                     elem_mat_id(elem_gid),
+                                    state_vars,
                                     global_vars,
                                     elem_user_output_vars,
                                     elem_sspd,

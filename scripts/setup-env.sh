@@ -24,6 +24,10 @@ export FIERRO_EXPLICIT_SOURCE_DIR=${srcdir}/Parallel-Solvers/Parallel-Explicit
 export FIERRO_IMPLICIT_SOURCE_DIR=${srcdir}/Parallel-Solvers/Implicit-Lagrange
 export FIERRO_BUILD_DIR=${builddir}
 
+export ELEMENTS_SOURCE_DIR=${libdir}/Elements
+export ELEMENTS_BUILD_DIR=${builddir}/Elements
+export ELEMENTS_INSTALL_DIR=${installdir}/Elements
+
 export HEFFTE_SOURCE_DIR=${libdir}/heffte
 export HEFFTE_BUILD_DIR=${builddir}/heffte
 export HEFFTE_INSTALL_DIR=${installdir}/heffte
