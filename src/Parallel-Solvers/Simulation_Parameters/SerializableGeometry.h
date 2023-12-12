@@ -1,5 +1,6 @@
 #include "yaml-serializable.h"
 #include "Geometry.h"
+#include "stl-to-voxelvtk.h"
 
 IMPL_YAML_SERIALIZABLE_FOR_ENUM(VOLUME_TYPE,
     global,
@@ -39,6 +40,14 @@ struct VoxelGrid : voxel_grid, Volume::Register<VoxelGrid, VOLUME_TYPE::voxel_gr
     std::string voxel_file;
     void derive() {
         // TODO: Read from a VTK
+        const char* stl_file_path = "/Users/shankins/Documents/EVPFFT/2023_10_30/Fierro/python/EVPFFT-GUI/monkey.stl";
+        const char* vtk_file_path = "/Users/shankins/Documents/EVPFFT/2023_10_30/Fierro/build-fierro-pthreads/vtk/fierrovtk.vtk";
+        int gridX = 10;
+        int gridY = 10;
+        int gridZ = 10;
+        bool use_index_space = true;
+        std::tuple<double, double, double> VoxelGrid = Voxelizer.create_voxel_vtk(stl_file_path, vtk_file_path, gridX, gridY, gridZ, use_index_space);
+        voxel_file = vtk_file_path;
     }
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(VoxelGrid, voxel_file)

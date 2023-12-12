@@ -1,4 +1,4 @@
-#pragma once
+cd#pragma once
 
 #include "yaml-serializable.h"
 #include "matar.h"
@@ -46,6 +46,10 @@ struct Volume : Yaml::ValidatedYaml {
                        elem_coords[2]*elem_coords[2] );
         return ( radius >= radius1
               && radius <= radius2 );
+              
+      case VOLUME_TYPE::voxel_grid:
+        print("I entered this function. WOO")
+        return 0
 
       default:
         return false;
@@ -67,6 +71,10 @@ struct Volume : Yaml::ValidatedYaml {
 
       case VOLUME_TYPE::sphere:
         return (4.0 / 3.0) * M_PI * (std::pow(radius2, 3) - std::pow(radius1, 3));
+      
+      case VOLUME_TYPE::voxel_grid:
+        print("I entered this function. WOO")
+        return 0
       
       default:
         assert(0); // Unsupported volume type.
