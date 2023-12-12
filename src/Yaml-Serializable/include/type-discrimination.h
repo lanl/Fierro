@@ -48,32 +48,15 @@
 #include <functional>
 
 namespace {
-    template <typename T>
-    constexpr auto static_type_name() {
-        std::string_view name, prefix, suffix;
-    #ifdef __clang__
-        name = __PRETTY_FUNCTION__;
-        prefix = "auto static_type_name() [T = ";
-        suffix = "]";
-    #elif defined(__GNUC__)
-        name = __PRETTY_FUNCTION__;
-        prefix = "constexpr auto static_type_name() [with T = ";
-        suffix = "]";
-    #elif defined(_MSC_VER)
-        name = __FUNCSIG__;
-        prefix = "auto __cdecl static_type_name<";
-        suffix = ">(void)";
-    #endif
-        name.remove_prefix(prefix.size());
-        name.remove_suffix(suffix.size());
-        return name;
-    }
-
     template<typename F, typename Ret, typename A>
     A helper(Ret (F::*)(A));
 
     template<typename F, typename Ret, typename A>
     A helper(Ret (F::*)(A) const);
+
+    // Catch all for things that can't be determined
+    template<typename F = void, typename Ret = void, typename A = void>
+    void helper(...);
 
     template<typename F>
     struct first_argument {
@@ -94,6 +77,27 @@ namespace {
 }
 
 namespace Yaml {
+    template <typename T>
+    constexpr auto static_type_name() {
+        std::string_view name, prefix, suffix;
+    #ifdef __clang__
+        name = __PRETTY_FUNCTION__;
+        prefix = "auto Yaml::static_type_name() [T = ";
+        suffix = "]";
+    #elif defined(__GNUC__)
+        name = __PRETTY_FUNCTION__;
+        prefix = "constexpr auto Yaml::static_type_name() [with T = ";
+        suffix = "]";
+    #elif defined(_MSC_VER)
+        name = __FUNCSIG__;
+        prefix = "auto __cdecl Yaml::static_type_name<";
+        suffix = ">(void)";
+    #endif
+        name.remove_prefix(prefix.size());
+        name.remove_suffix(suffix.size());
+        return name;
+    }
+
     template<typename Base, typename DiscriminationType>
     struct TypeDiscriminated {
     private:
@@ -135,14 +139,19 @@ namespace Yaml {
 
         template <typename T> 
         bool dispatcher(TypeDiscriminated* base, T const& f) {
-            return dispatch_known_type(base, std::function<void(typename first_argument<T>::type)>(f));
+            if constexpr (std::is_same<typename first_argument<T>::type, void>::value) {
+                f();
+                return true;
+            } else {
+                return dispatch_known_type(base, std::function<void(typename first_argument<T>::type)>(f));
+            }
         }
 
         template <typename T, typename K, typename... Rest>
         bool dispatcher(TypeDiscriminated* base, T&& f, K&& f2, Rest&&... rest) {
             return dispatcher(base, f) || dispatcher(base, f2, rest...);
         }
-
+        
     public:
         DiscriminationType type;
         
@@ -171,6 +180,13 @@ namespace Yaml {
             serialization_map.at(b->type)->serialize(b, node);
         }
 
+        /**
+         * Attempt to apply a sequence of unary functions to this object.
+         * The first function where this object can be dynamically cast as its argument will be called.
+         * All other functions will be ignored.
+         * 
+         * Throws an std::runtime_error with the name of the unhandled type if the type goes unhandled at runtime.
+        */
         template<typename... Ts>
         void apply(Ts&&... handlers) {
             if (!dispatcher(this, handlers...)) {
@@ -178,9 +194,16 @@ namespace Yaml {
             }
         }
 
+        /**
+         * Attempt to apply a sequence of unary functions to this object.
+         * The first function where this object can be dynamically cast as its argument will be called.
+         * All other functions will be ignored.
+         * 
+         * Returns: false if no functions could be applied. true if one could be.
+        */
         template<typename... Ts>
-        void try_apply(Ts&&... handlers) {
-            dispatcher(this, handlers...);
+        bool try_apply(Ts&&... handlers) {
+            return dispatcher(this, handlers...);
         }
 
         template<typename T, DiscriminationType DiscriminationValue>
@@ -280,7 +303,6 @@ namespace Yaml {
             throw ConfigurationException(ss.str().c_str());
         }
     };
-
     // A static value needs to be set to invoke
     // a function at static-time.
     template <typename Base, typename DiscriminationType>
