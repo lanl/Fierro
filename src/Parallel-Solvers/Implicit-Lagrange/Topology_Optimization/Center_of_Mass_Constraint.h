@@ -131,11 +131,9 @@ public:
 
     const_host_vec_array design_densities = FEM_->design_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     
-    FEM_->compute_element_moments(design_densities,true, constraint_component_);
-    
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;
-    real_t initial_moment = ROL_Element_Moments->reduce(sumreduc);
+    real_t initial_moment;
     real_t initial_mass;
 
     if(FEM_->mass_init) { initial_mass = FEM_->mass; }
@@ -147,8 +145,16 @@ public:
       FEM_->mass_init = true;
     }
     
-    FEM_->com_init[constraint_component_] = true;
-    FEM_->center_of_mass[constraint_component_] = initial_center_of_mass = initial_moment/initial_mass;
+    if(FEM_->com_init[constraint_component_]) { initial_center_of_mass = FEM_->center_of_mass[constraint_component_]; }
+    else{
+      FEM_->compute_element_moments(design_densities,true, constraint_component_, false);
+
+      //sum per element results across all MPI ranks
+      ROL::Elementwise::ReductionSum<real_t> sumreduc;
+      initial_moment = ROL_Element_Moments->reduce(sumreduc);
+      FEM_->com_init[constraint_component_] = true;
+      FEM_->center_of_mass[constraint_component_] = initial_center_of_mass = initial_moment/initial_mass;
+    }
 
     //debug print
     if(FEM_->myrank==0){
