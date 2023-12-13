@@ -107,10 +107,8 @@ mkdir -p "$LIB_DIR"
 
 # --------setup env for machine
 if [ -n "$machine" ]; then
-    if [ "$machine" != "linux" ]; then
-        MACHINE_SCRIPT="$PARENT_DIR/scripts/machines/${machine}-env.sh"
-        source  "$MACHINE_SCRIPT" --env_type=$kokkos_build_type
-    fi
+    MACHINE_SCRIPT="$PARENT_DIR/scripts/machines/${machine}-env.sh"
+    source  "$MACHINE_SCRIPT" --env_type=$kokkos_build_type
 fi
 
 # --------building heffte
