@@ -3,13 +3,13 @@ name: 'Publish Heffte'
 on: 
   push:
     paths:
-      - .conda/heffte/cpu/**
-      - .github/workflows/publish-heffte-cpu.yaml
+      - .conda/heffte/cuda/**
+      - .github/workflows/publish-heffte-cuda.yaml
   workflow_dispatch:
 
 jobs:
   publish:
     uses: ./.github/workflows/build-conda-package.yaml
     with:
-      recipe_dir: .conda/heffte/cpu
+      recipe_dir: .conda/heffte/cuda
     secrets: inherit
