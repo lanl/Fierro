@@ -29,6 +29,7 @@ Required arguments:
   --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>
 
 Optional arguments:
+  --build_fftw: builds fftw from scratch
   --machine=<darwin|chicoma|linux|mac> (default: none)
   --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)
   --help: Display this help message
@@ -37,10 +38,14 @@ Optional arguments:
 To build EVPFFT you would need to provide both the `--heffte_build_type` and `--kokkos_build_type` options. The command below build EVPFFT using FFTW and Serial version of Kokkos:
 
 ```
-source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=serial
+source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=serial --build_fftw
 ```
 
-This will build EVPFFT in the folder `evpfft_{fftw}_{serial}`. The binary, `evpfft` is found in that folder
+This will build EVPFFT in the folder `evpfft_{fftw}_{serial}`. The binary, `evpfft` is found in that folder. Note that the `--build_fftw` will build FFTW from scratch. If you do not want to build FFTW from scratch because you already have a version on your system remove the `--build_fftw` option from the command. If your installed FFTW in a directory other than the default linux directories for libraries, then specify the following before running the build script.
+
+```
+export FFTW_ROOT=/path/to/where/FFTW/lib/and/include/folders/are/located
+```
 
 # Using EVPFFT as a standalone program
 
