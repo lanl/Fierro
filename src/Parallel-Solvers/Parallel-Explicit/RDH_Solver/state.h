@@ -27,7 +27,7 @@ struct node_t {
     {
         this->coords = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
         this->vel    = DCArrayKokkos <double> (num_rk, num_nodes, num_dims);
-	this->div    = DCArrayKokkos <double> (num_rk, num_nodes);
+	    this->div    = DCArrayKokkos <double> (num_rk, num_nodes);
         this->mass   = DCArrayKokkos <double> (num_nodes);
     }; // end method
 
@@ -109,8 +109,8 @@ struct elem_t {
         this->stress = CArray <double> (num_rk, num_elems, num_dims, num_dims);
         this->sspd = CArray <double> (num_elems);
         this->sie = CArray <double> (num_rk, num_elems);
-	this->vol    = CArray <double> (num_elems);
-	this->div    = CArray <double> (num_elems);
+	    this->vol    = CArray <double> (num_elems);
+	    this->div    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
 

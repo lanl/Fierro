@@ -45,26 +45,27 @@
 #include <sys/stat.h>
 #include <mpi.h>
 #include <chrono>
+
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_oblackholestream.hpp>
 #include <Teuchos_Tuple.hpp>
 #include <Teuchos_VerboseObject.hpp>
-#include <Teuchos_SerialDenseMatrix.hpp>
-#include <Teuchos_SerialDenseVector.hpp>
-#include <Teuchos_SerialDenseSolver.hpp>
+// #include <Teuchos_SerialDenseMatrix.hpp>
+// #include <Teuchos_SerialDenseVector.hpp>
+// #include <Teuchos_SerialDenseSolver.hpp>
 
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Map.hpp>
 #include <Tpetra_MultiVector.hpp>
-#include <Tpetra_CrsMatrix.hpp>
-#include "Tpetra_Details_makeColMap.hpp"
-#include "Tpetra_Details_DefaultTypes.hpp"
-#include "Tpetra_Details_FixedHashTable.hpp"
+// #include <Tpetra_CrsMatrix.hpp>
+// #include "Tpetra_Details_makeColMap.hpp"
+// #include "Tpetra_Details_DefaultTypes.hpp"
+// #include "Tpetra_Details_FixedHashTable.hpp"
 #include "Tpetra_Import.hpp"
 #include "Tpetra_Import_Util2.hpp"
-#include "MatrixMarket_Tpetra.hpp"
-#include <set>
+//#include "MatrixMarket_Tpetra.hpp"
+//#include <set>
 
 #include "elements.h"
 #include "swage.h"
@@ -73,6 +74,7 @@
 #include "matar.h"
 #include "utilities.h"
 #include "node_combination.h"
+#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/RDH_Parameters.h"
 #include "FEA_Module_RDH.h"
 #include "Explicit_Solver.h"
@@ -92,16 +94,20 @@
 
 using namespace utils;
 
-FEA_Module_RDH::FEA_Module_RDH( RDH_Parameters& params, Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index) :FEA_Module(Solver_Pointer){
+FEA_Module_RDH::FEA_Module_RDH( RDH_Parameters& params,
+                                Solver *Solver_Pointer,
+                                std::shared_ptr<mesh_t> mesh_in,
+                                const int my_fea_module_index) 
+                                :FEA_Module(Solver_Pointer){
 
   //assign interfacing index
   my_fea_module_index_ = my_fea_module_index;
-  
+  Module_Type = FEA_MODULE_TYPE::RDH;
+
   //recast solver pointer for non-base class access
   Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
-
   simparam = Explicit_Solver_Pointer_->simparam;
-  module_params = params;
+  module_params = &params;
 
   mesh = mesh_in;
 
@@ -117,26 +123,29 @@ FEA_Module_RDH::FEA_Module_RDH( RDH_Parameters& params, Solver *Solver_Pointer, 
   node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
 
+  //setup output
+  noutput = 0;
+  init_output();
+
   //set parameters
-  Dynamic_Options dynamic_options = simparam.dynamic_options;
+  Dynamic_Options dynamic_options = simparam->dynamic_options;
   time_value = dynamic_options.time_value;
   time_final = dynamic_options.time_final;
   dt_max = dynamic_options.dt_max;
   dt_min = dynamic_options.dt_min;
   dt_cfl = dynamic_options.dt_cfl;
-  graphics_time = simparam.output_options.graphics_time;
-  graphics_dt_ival = simparam.output_options.graphics_dt_ival;
-  graphics_cyc_ival = simparam.output_options.graphics_cyc_ival;
+  graphics_time = simparam->output_options.graphics_time;
+  graphics_dt_ival = simparam->output_options.graphics_dt_ival;
+  graphics_cyc_ival = simparam->output_options.graphics_cyc_ival;
   cycle_stop = dynamic_options.cycle_stop;
   rk_num_stages = dynamic_options.rk_num_stages;
   dt = dynamic_options.dt;
   fuzz = dynamic_options.fuzz;
   tiny = dynamic_options.tiny;
   small = dynamic_options.small;
-  graphics_times = simparam.output_options.graphics_times;
-  graphics_id = simparam.output_options.graphics_id;
-  //setup output
-  noutput = 0;
+  graphics_times = simparam->output_options.graphics_times;
+  graphics_id = simparam->output_options.graphics_id;
+  rk_num_bins = simparam->dynamic_options.rk_num_bins;
 
 }
 
@@ -148,10 +157,13 @@ FEA_Module_RDH::~FEA_Module_RDH(){
 // -----------------------------------------------------------------------------
 // Interfaces read in data with the RDH solver data; currently a hack to streamline
 //------------------------------------------------------------------------------
-void FEA_Module_RDH::rdh_interface_setup(node_t &node, elem_t &elem, mesh_t &mesh, corner_t &corner){
+void FEA_Module_RDH::rdh_interface_setup(node_t &node, 
+                                         elem_t &elem,
+                                         mesh_t &mesh,
+                                         corner_t &corner){
 
-    const size_t num_dim = simparam.num_dims;
-    const size_t rk_num_bins = simparam.dynamic_options.rk_num_bins;
+    const size_t num_dim = simparam->num_dims;
+    const size_t rk_num_bins = simparam->dynamic_options.rk_num_bins;
 
     num_nodes_in_elem = 1;
     for (int dim=0; dim<num_dim; dim++){
@@ -167,8 +179,13 @@ void FEA_Module_RDH::rdh_interface_setup(node_t &node, elem_t &elem, mesh_t &mes
 
     // intialize node variables
     mesh.initialize_nodes(nall_nodes);
+
+    // WARNING WARNING WARNING //
     // WARNING WARNING WARNING //
     //mesh.initialize_local_nodes(Explicit_Solver_Pointer_->nlocal_nodes);
+    // WARNING WARNING WARNING //
+    // WARNING WARNING WARNING //
+
     node.initialize(rk_num_bins, nall_nodes, num_dim);
 
     //view scope
@@ -273,13 +290,13 @@ void FEA_Module_RDH::cleanup_material_models() {
 
 void FEA_Module_RDH::setup(mesh_t &mesh){
 
-    const size_t rk_level = simparam.dynamic_options.rk_num_bins - 1;   
-    const size_t num_fills = simparam.regions.size();
-    const size_t rk_num_bins = simparam.dynamic_options.rk_num_bins;
-    const size_t num_bcs = module_params.boundary_conditions.size();
-    const size_t num_materials = simparam.materials.size();
-    const int num_dim = simparam.num_dims;
-    const size_t num_lcs = module_params.loading.size();
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;   
+    const size_t num_fills = simparam->regions.size();
+    const size_t rk_num_bins = simparam->dynamic_options.rk_num_bins;
+    const size_t num_bcs = module_params->boundary_conditions.size();
+    const size_t num_materials = simparam->materials.size();
+    const int num_dim = simparam->num_dims;
+    const size_t num_lcs = module_params->loading.size();
     if(num_lcs)
       have_loading_conditions = true;
 
@@ -719,14 +736,14 @@ void FEA_Module_RDH::rdh_solve(){
     fuzz = dynamic_options.fuzz;
     tiny = dynamic_options.tiny;
     small = dynamic_options.small;
-    graphics_times = simparam.output_options.graphics_times;
-    graphics_id = simparam.output_options.graphics_id;
+    graphics_times = simparam->output_options.graphics_times;
+    graphics_id = simparam->output_options.graphics_id;
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
     const DCArrayKokkos <boundary_t> boundary = module_params.boundary;
-    const DCArrayKokkos <material_t> material = simparam.material;
+    const DCArrayKokkos <material_t> material = simparam->material;
     int old_max_forward_buffer;
     size_t cycle;
-    const int num_dim = simparam.num_dims;
+    const int num_dim = simparam->num_dims;
 
     int myrank = Explicit_Solver_Pointer_->myrank;
     CArrayKokkos <double> node_extensive_mass(nall_nodes, "node_extensive_mass");

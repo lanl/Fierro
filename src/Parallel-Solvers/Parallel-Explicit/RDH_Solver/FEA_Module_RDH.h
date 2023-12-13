@@ -45,15 +45,20 @@
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
-#include "Solver.h"
 #include "FEA_Module.h"
-#include "Simulation_Parameters/FEA_Module/RDH_Parameters.h"
-#include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
-//#include "Simulation_Parameters_Elasticity.h"
-//#include "Simulation_Parameters_Dynamic_Optimization.h"
 #include "material_models.h"
 
 class Explicit_Solver;
+
+class Solver;
+
+class Simulation_Parameters_Explicit;
+
+class RDH_Parameters;
+
+struct material_t;
+
+struct boundary_t;
 
 class FEA_Module_RDH: public FEA_Module{
 
@@ -75,13 +80,14 @@ public:
 
   void rdh_solve();
 
-  Simulation_Parameters_Explicit simparam;
-  RDH_Parameters module_params;
+  // Put other routines here. //
+
+  Simulation_Parameters_Explicit *simparam;
+  RDH_Parameters *module_params;
   Explicit_Solver *Explicit_Solver_Pointer_;
 
-  //mesh_t mesh;
-  fe_ref_elem_t ref_elem;
-  //std::shared_ptr<fe_ref_elem_t> ref_elem;
+
+  std::shared_ptr<fe_ref_elem_t> ref_elem;
   std::shared_ptr<mesh_t> mesh;
 
   //shallow copies of mesh class views
@@ -118,9 +124,7 @@ public:
   
   // bdy nodes
   CArrayKokkos <size_t> bdy_nodes;
-  
-  //Topology optimization filter variable
-  DCArrayKokkos<double> relative_element_densities;
+
   
   //Local FEA data
   host_elem_conn_array interface_nodes_in_elem; //host view of element connectivity to nodes
@@ -134,39 +138,18 @@ public:
   Teuchos::RCP<MV> all_cached_node_velocities_distributed;
   Teuchos::RCP<MV> node_masses_distributed;
   Teuchos::RCP<MV> ghost_node_masses_distributed;
-  Teuchos::RCP<MV> adjoint_vector_distributed;
-  Teuchos::RCP<MV> phi_adjoint_vector_distributed;
-  Teuchos::RCP<MV> psi_adjoint_vector_distributed;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
   Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;
-  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> adjoint_vector_data;
-  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> phi_adjoint_vector_data;
-  Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> psi_adjoint_vector_data;
-  Teuchos::RCP<MV> force_gradient_design;
-  Teuchos::RCP<MV> force_gradient_position;
-  Teuchos::RCP<MV> force_gradient_velocity;
+  
 
   //Local FEA data
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Global_Gradient_Matrix_Assembly_Map;
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> Graph_Matrix; //stores global indices
   RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits> DOF_Graph_Matrix; //stores global indices
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Positions;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Velocities;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Force_Gradient_Energies;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Positions;
-  RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Velocities;
-  CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits> Power_Gradient_Energies;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Gradient_Matrix_Strides;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> DOF_to_Elem_Matrix_Strides;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Elem_to_Elem_Matrix_Strides;
   DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Matrix_Strides;
-  RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Gradient_Entries;
-  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Original_Gradient_Entry_Indices;
-  DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Gradient_Entries_Strides;
-
-  //distributed matrices
-  Teuchos::RCP<MAT> distributed_force_gradient_positions;
-  Teuchos::RCP<MAT> distributed_force_gradient_velocities;
 
   std::vector<real_t> time_data;
   int max_time_steps, last_time_step;
@@ -202,12 +185,16 @@ public:
   // for storing global variables used in user material model
   DCArrayKokkos <double> global_vars;
 
+  // for storing state variables used in user material model
+  DCArrayKokkos <double> state_vars;
+
   //elem_user_output_vars allow users to output variables of interest per element
   DCArrayKokkos <double> elem_user_output_vars;
 
   //material models
   DCArrayKokkos <eos_t> elem_eos;
   DCArrayKokkos <strength_t> elem_strength;
+
 
   // Dual Views of the corner struct variables
   DViewCArrayKokkos <double> corner_force;
@@ -230,11 +217,8 @@ public:
   size_t graphics_cyc_ival, cycle_stop, rk_num_stages, graphics_id;
   double fuzz, tiny, small;
   CArray <double> graphics_times;
+  int rk_num_bins;
 
-  //optimization flags
-  bool kinetic_energy_objective;
-  
-  bool have_loading_conditions;
 };
 
 #endif
