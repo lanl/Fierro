@@ -90,7 +90,7 @@ private:
   FEA_Module_Inertial *FEM_;
   ROL::Ptr<ROL_MV> ROL_Element_Masses;
   ROL::Ptr<ROL_MV> ROL_Element_Moments;
-  ROL::Ptr<ROL_MV> ROL_Gradients;
+  ROL::Ptr<ROL_MV> ROL_Gradients, ROL_Mass_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
   Teuchos::RCP<MV> mass_gradients_distributed;
   real_t initial_center_of_mass;
@@ -304,7 +304,7 @@ public:
   
   void applyJacobian(ROL::Vector<real_t> &jv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &x, real_t &tol) override {
     //std::cout << "Started constraint grad on task " <<FEM_->myrank  << std::endl;
-     //get Tpetra multivector pointer from the ROL vector
+    //get Tpetra multivector pointer from the ROL vector
     ROL::Ptr<const MV> zp = getVector(x);
     ROL::Ptr<std::vector<real_t>> jvp = dynamic_cast<ROL::StdVector<real_t>&>(jv).getVector();
     
@@ -365,91 +365,73 @@ public:
     //std::cout << "Ended constraint grad on task " <<FEM_->myrank  << std::endl;
   }
   
-  /*
-  void hessVec_12( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
+  void applyAdjointHessian(ROL::Vector<real_t> &ahuv, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol) {
     
+    //get Tpetra multivector pointer from the ROL vector
+    ROL::Ptr<const MV> zp = getVector(z);
+    ROL::Ptr<const std::vector<real_t>> up = dynamic_cast<const ROL::StdVector<real_t>&>(u).getVector();
+    ROL::Ptr<const MV> vp = getVector(v);
+    
+    //ROL::Ptr<ROL_MV> ROL_Element_Volumes;
+
+    //get local view of the data
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array v_view = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    host_vec_array moment_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array mass_gradients = mass_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+    //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
+    //communicate ghosts
+    if(last_comm_step!=current_step){
+      FEM_->comm_variables(zp);
+      last_comm_step = current_step;
+    }
+    
+    int rnum_elem = FEM_->rnum_elem;
+
+    //compute mass
+    real_t current_mass;
+    if(FEM_->mass_update == current_step&&0) { current_mass = FEM_->mass; }
+    else{
+      FEM_->compute_element_masses(design_densities,false);
+      //sum per element results across all MPI ranks
+      ROL::Elementwise::ReductionSum<real_t> sumreduc;
+      FEM_->mass = current_mass = ROL_Element_Masses->reduce(sumreduc);
+      FEM_->mass_update = current_step;
+    }
+
+    //compute center of mass
+    real_t current_com;
+    if(FEM_->com_update[constraint_component_] == current_step) current_com = FEM_->center_of_mass[constraint_component_];
+    else{
+    FEM_->compute_element_moments(design_densities,false,constraint_component_);
+    FEM_->com_update[constraint_component_] = current_step;
+    
+    //sum per element results across all MPI ranks
+    ROL::Elementwise::ReductionSum<real_t> sumreduc;
+    real_t current_moment = ROL_Element_Moments->reduce(sumreduc);
+    FEM_->center_of_mass[constraint_component_] = current_com = current_moment/current_mass;
+    }
+
     // Unwrap hv
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
-
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV KU(up->size(),0.0);
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      FEM_->apply_jacobian(KU,U,*zp,*vp);
-      for (size_t i=0; i<up->size(); i++) {
-        (*hvp)[i] = 2.0*KU[i];
-      }
+    ROL::Ptr<MV> ahuvp = getVector(ahuv);
+  
+    host_vec_array constraint_adjoint_hess = ahuvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    real_t matrix_product;
+    FEM_->compute_moment_gradients(design_densities, moment_gradients, constraint_component_);
+    FEM_->compute_nodal_gradients(design_densities, mass_gradients);
+    
+    ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
+    ROL_Mass_Gradients = ROL::makePtr<ROL_MV>(mass_gradients_distributed);
+    for(int i = 0; i < FEM_->nlocal_nodes; i++){
+        constraint_adjoint_hess(i,0) = -ROL_Gradients->dot(v)*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass-
+                      moment_gradients(i,0)*(*up)[0]*ROL_Mass_Gradients->dot(v)/current_mass/current_mass+
+                      2*current_com*ROL_Mass_Gradients->dot(v)*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass;
     }
+
+    ahuvp->putScalar(matrix_product);
     
   }
-
-  void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    // Unwrap g
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
- 
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      std::MV<real_t> U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      std::MV<real_t> V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,V);
-      for (size_t i=0; i<hvp->size(); i++) {
-        (*hvp)[i] *= 2.0;
-      }
-    }
-    
-  }
-
-  void hessVec_22( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
-    
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      MV V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,*vp,U);
-    }
-    
-  }
-  */
 };
 
 #endif // end header guard
