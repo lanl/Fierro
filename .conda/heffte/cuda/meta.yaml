@@ -35,9 +35,9 @@ requirements:
     - cuda-toolkit={{ cuda_version}}
     - cuda-cudart-static={{ cuda_version}}
     - libcusolver-dev={{ cuda_version}}
-    - libcufft-dev={{ cuda_version}}
-    - libcublas-dev={{ cuda_version}}
-    - libcusparse-dev={{ cuda_version}}
+    - libcufft-dev
+    - libcublas-dev
+    - libcusparse-dev
     - openmpi
   run:
     - cuda-cudart
