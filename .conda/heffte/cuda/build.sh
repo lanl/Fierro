@@ -12,6 +12,8 @@ fi
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
 
 export OMPI_CXX=nvcc
+# Specify -ccbin as $CXX to ensure that nvcc uses the cross compiler
+export NVCC_PREPEND_FLAGS="-ccbin $CXX"
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D BUILD_SHARED_LIBS=ON \
@@ -24,6 +26,7 @@ cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
       -D MPI_C_COMPILER="$BUILD_PREFIX/bin/mpicc" \
       -D MPI_CXX_COMPILER="$BUILD_PREFIX/bin/mpicxx" \
+      -D CMAKE_CUDA_HOST_LINK_LAUNCHER=$CXX \
 
 make -j 10 install
 
