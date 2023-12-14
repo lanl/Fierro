@@ -34,7 +34,7 @@ requirements:
   host:
     - cuda-toolkit={{ cuda_version}}
     - cuda-cudart-static={{ cuda_version}}
-    - libcusolver-dev={{ cuda_version}}
+    - libcusolver-dev
     - libcufft-dev
     - libcublas-dev
     - libcusparse-dev
