@@ -21,7 +21,7 @@ build:
 
 requirements:
   build:
-    - cmake=3.19
+    - cmake >=3.17
     - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
@@ -32,8 +32,7 @@ requirements:
   # These host CUDA dependencies are definitely overspecified.
   # Not sure which ones are totally necessary.
   host:
-    - cuda-toolkit={{ cuda_version}}
-    - cuda-cudart-static={{ cuda_version}}
+    - cuda-cudart-static
     - libcusolver-dev
     - libcufft-dev
     - libcublas-dev
