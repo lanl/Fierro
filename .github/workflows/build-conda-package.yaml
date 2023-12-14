@@ -36,25 +36,24 @@ jobs:
           use-mamba: true
           condarc-file: .etc/condarc.yaml
 
-      - name: Get Date
-        id: get-date
-        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-        shell: bash
+      # - name: Get Date
+      #   id: get-date
+      #   run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+      #   shell: bash
 
-      - name: Cache Conda env
-        uses: actions/cache@v2
-        with:
-          path: ${{ env.CONDA }}/envs
-          key:
-            conda-${{ runner.os }}--${{ runner.arch }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('.etc/conda_build_environment.yaml') }}-${{ env.CACHE_NUMBER }}
-        env:
-          CACHE_NUMBER: 1
-        id: cache
+      # - name: Cache Conda env
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: ${{ env.CONDA }}/envs
+      #     key:
+      #       conda-${{ runner.os }}--${{ runner.arch }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('.etc/conda_build_environment.yaml') }}-${{ env.CACHE_NUMBER }}
+      #   env:
+      #     CACHE_NUMBER: 1
+      #   id: cache
 
       - name: Update environment
         run:
           mamba env update -n build-env -f .etc/conda_build_environment.yaml
-        if: steps.cache.outputs.cache-hit != 'true'
-        
+        #if: steps.cache.outputs.cache-hit != 'true'
       - run: |
           mamba mambabuild ${{ inputs.recipe_dir }} -e .conda/build_variants.yaml -m ${{ inputs.additional_variant }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge -c nvidia
