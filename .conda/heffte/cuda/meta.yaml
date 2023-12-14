@@ -20,15 +20,23 @@ build:
 
 requirements:
   build:
-    - cmake >=3.17.0
+    - cmake=3.19
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
     - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('fortran') }}={{ linux_compiler_version }}
     - cuda-toolkit
     - openmpi
+  
+  # These host CUDA dependencies are definitely overspecified.
+  # Not sure which ones are totally necessary.
   host:
-    - cuda-cudart-dev
-    - libcublas-dev
+    - cuda-cudart-static
+    - libcusolver-dev
     - libcufft-dev
+    - libcublas-dev
+    - libcusparse-dev
     - openmpi
   run:
     - cuda-cudart
