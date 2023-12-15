@@ -14,9 +14,7 @@ source "$RECIPE_DIR/../../cross-compile-setup.sh"
 export OMPI_CXX=nvcc
 # Specify -ccbin as $CXX to ensure that nvcc uses the cross compiler
 export NVCC_PREPEND_FLAGS="-ccbin $CXX"
-
-# Stupid Debugging
-find $CONDA_PREFIX -name "*cuda*"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH $PREFIX/lib"
 
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D BUILD_SHARED_LIBS=ON \
