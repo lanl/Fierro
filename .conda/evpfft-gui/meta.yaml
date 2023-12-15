@@ -22,7 +22,7 @@ requirements:
     - setuptools
   run:
     - paraview=5.11.2
-    - fierro-evpfft
+    - evpfft
     - fierro-voxelizer
     - python
     - pyside6=6.5
