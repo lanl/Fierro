@@ -155,3 +155,14 @@ python:
   - 3.12
 ```
 This will tell conda-build to do all of the build configurations specified by our `build_variants.yaml` file for each of the python versions listed here. At the time of writing, this package is compiled 25 times, for MacOS (64 and arm64), Linux (64, arm64, powerpc) and for each python version listed here. All of these packages are then hosted on Anaconda.org, and the user gets whichever one makes sense for their environemnt automatically. Lastly, we ensure that these python versions get used in our `meta.yaml` recipy file by specifying `python={{ python }}` for build, host and runtime dependencies.
+
+
+### Metapackages
+Metapackages are packages that contain no installable content or build instructions, but only contain metadata. The can range from completely useless to useful shortcuts for pulling in a number of packages, or complicated/specific package dependencies. We use metapackages to make it easy to set up the development environments for Fierro and EVPFFT. Our dev packages (Fierro-dev, EVPFFT-dev) only contain runtime dependencies, and are created so you can run something like:
+```
+conda create -n fierro-dev fierro-dev -c kwelsh-lanl -c conda-forge
+conda activate fierro-dev
+```
+And then you have all of the dependencies necessary to successfully build Fierro from source.
+
+These packages are `noarch: generic` packages, because they don't contain any architecture/OS specific build artifacts themselves. Whether or not you can install them on your system depends solely on the dependencies being available.
