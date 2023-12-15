@@ -10,6 +10,10 @@ on:
         required: false
         type: string
         default: '.conda/empty.yaml'
+      debug:
+        required: False
+        type: bool
+        default: false
 
 jobs:
   build-package:
@@ -56,4 +60,12 @@ jobs:
           mamba env update -n build-env -f .etc/conda_build_environment.yaml
         #if: steps.cache.outputs.cache-hit != 'true'
       - run: |
-          mamba mambabuild ${{ inputs.recipe_dir }} -e .conda/build_variants.yaml -m ${{ inputs.additional_variant }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge -c nvidia
+          if [ ${{ inputs.debug }} = true ] ; then export DEBUG="--debug"; fi;
+          mamba mambabuild $DEBUG ${{ inputs.recipe_dir }} -e .conda/build_variants.yaml -m ${{ inputs.additional_variant }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge -c nvidia
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with: 
+          limit-access-to-actor: true
+        if: ${{ inputs.debug }} == 'true'
+

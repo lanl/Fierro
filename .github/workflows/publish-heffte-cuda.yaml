@@ -12,4 +12,5 @@ jobs:
     uses: ./.github/workflows/build-conda-package.yaml
     with:
       recipe_dir: .conda/heffte/cuda
+      debug: true
     secrets: inherit
