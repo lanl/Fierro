@@ -12,8 +12,6 @@ fi
 source "$RECIPE_DIR/../../cross-compile-setup.sh"
 
 export OMPI_CXX=nvcc
-# Specify -ccbin as $CXX to ensure that nvcc uses the cross compiler
-export NVCC_PREPEND_FLAGS="-ccbin $CXX"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH $PREFIX/lib"
 
 
