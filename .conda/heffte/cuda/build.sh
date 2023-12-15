@@ -16,6 +16,9 @@ export OMPI_CXX=nvcc
 export NVCC_PREPEND_FLAGS="-ccbin $CXX"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH $PREFIX/lib"
 
+
+find $PREFIX/lib -name "*cudart_static*"
+
 cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE \
       -D BUILD_SHARED_LIBS=ON \
       -D CMAKE_INSTALL_PREFIX:PATH=$PREFIX \
