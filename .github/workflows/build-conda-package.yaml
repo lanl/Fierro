@@ -12,7 +12,7 @@ on:
         default: '.conda/empty.yaml'
       debug:
         required: False
-        type: string
+        type: boolean
         default: false
 
 jobs:
@@ -62,11 +62,12 @@ jobs:
       - run: |
           if [ ${{ inputs.debug }} = true ] ; then export DEBUG="--debug"; fi;
           mamba mambabuild $DEBUG ${{ inputs.recipe_dir }} -e .conda/build_variants.yaml -m ${{ inputs.additional_variant }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge -c nvidia
-
+        continue-on-error: ${{ inputs.debug }}
+      
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
         with: 
           limit-access-to-actor: true
           timeout-minutes: 30
-        if: ${{ inputs.debug }} == 'true' && failure() # This is confusing, but this will run on failure
+        if: ${{ inputs.debug }} == 'true' && always() # This is confusing, but this will run on failure
 
