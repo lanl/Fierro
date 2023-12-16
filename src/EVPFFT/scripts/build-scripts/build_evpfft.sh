@@ -139,7 +139,7 @@ EVPFFT_BUILD_DIR="$PARENT_DIR/evpfft_${heffte_build_type}_${kokkos_build_type}"
 HEFFTE_INSTALL_DIR="$LIB_DIR/heffte/install_heffte_$heffte_build_type"
 KOKKOS_INSTALL_DIR="$LIB_DIR/kokkos/install_kokkos_$kokkos_build_type"
 MATAR_INSTALL_DIR="$LIB_DIR/MATAR/install_MATAR_$kokkos_build_type"
-HDF5_INSTALL_DIR="$LIB_DIR/hdf5/install"
+HDF5_INSTALL_DIR="$LIB_DIR/hdf5/install_hdf5"
 
 
 # Configure EVPFFT using CMake

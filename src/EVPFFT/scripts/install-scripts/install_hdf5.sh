@@ -47,8 +47,8 @@ mkdir -p "$LIB_DIR"
 
 # Define hdf5 directories
 HDF5_SOURCE_DIR="$LIB_DIR/hdf5"
-HDF5_INSTALL_DIR="$LIB_DIR/hdf5/install"
-HDF5_BUILD_DIR="$LIB_DIR/hdf5/build"
+HDF5_INSTALL_DIR="$LIB_DIR/hdf5/install_hdf5"
+HDF5_BUILD_DIR="$LIB_DIR/hdf5/build_hdf5"
 
 # Check if the 'hdf5' directory exists in the parent directory; if not, clone it
 if [ ! -d "$HDF5_SOURCE_DIR" ]; then

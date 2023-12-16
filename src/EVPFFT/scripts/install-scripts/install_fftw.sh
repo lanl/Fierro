@@ -47,8 +47,8 @@ mkdir -p "$LIB_DIR"
 
 # Define FFTW directories
 FFTW_SOURCE_DIR="$LIB_DIR/fftw-3.3.10"
-FFTW_INSTALL_DIR="$LIB_DIR/fftw-3.3.10/install"
-FFTW_BUILD_DIR="$LIB_DIR/fftw-3.3.10/build"
+FFTW_INSTALL_DIR="$LIB_DIR/fftw-3.3.10/install_fftw"
+FFTW_BUILD_DIR="$LIB_DIR/fftw-3.3.10/build_fftw"
 
 # Check if the 'fftw-3.3.10' directory exists in the lib directory; if not, clone it
 if [ ! -d "$FFTW_SOURCE_DIR" ]; then

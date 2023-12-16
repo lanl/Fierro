@@ -86,7 +86,7 @@ HEFFTE_BUILD_DIR="$LIB_DIR/heffte/build_heffte_$heffte_build_type"
 if [ "$heffte_build_type" = "fftw" ] && [ "$build_fftw" -eq 1 ]; then
   FFTW_INSTALL_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_fftw.sh"
   source "$FFTW_INSTALL_SCRIPT" --num_jobs=$num_jobs
-  FFTW_INSTALL_DIR="$LIB_DIR/fftw-3.3.10/install"
+  FFTW_INSTALL_DIR="$LIB_DIR/fftw-3.3.10/install_fftw"
 fi
 
 # Check if the 'heffte' directory exists in the parent directory; if not, clone it

@@ -12,6 +12,32 @@ EVPFFT depends on the following to build:
 4. [HeFFTe](https://github.com/icl-utk-edu/heffte) (FFTW,CUFFT,ROCFFT)
 5. [HDF5](https://www.hdfgroup.org/solutions/hdf5/)
 
+
+##Building EVPFFT with Anaconda
+It is advised to use Anaconda package manager to build EVPFFT as it simplifies systems environment setup and the installation of other dependecies. To build EVPFFT with anaconda:
+
+1. Create an environment and activate:
+```
+conda create --name evpfftEnv
+conda activate evpfftEnv
+```
+2. Install EVPFFT dependencies:
+```
+conda install cxx-compiler -c conda-forge
+conda install “fftw=*=mpi_openmpi*” -c conda-forge
+conda install “hdf5=*=mpi_openmpi*” -c conda-forge
+conda install elements -c kwelsh-lanl
+conda install “kokkos=4.1”
+conda install fierro-heffte -c kwelsh-lanl
+conda install cmake
+```
+3. Build EVPFFT
+```
+cmake /path/to/EVPFFT/src/ -DUSE_FFTW
+make
+```
+
+## Building EVPFFT without Anacaonda
 To make it easy to build EVPFFT, we have included `scripts/build-scripts/build_evpfft.sh` which when executed will download and install all required dependencies and EVPFFT. The script assumes that the user already has MPI installed.
 
 Run the build script as:
