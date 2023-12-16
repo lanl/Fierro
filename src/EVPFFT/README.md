@@ -25,10 +25,10 @@ conda activate evpfftEnv
 2. Install EVPFFT dependencies:
 ```
 conda install cxx-compiler -c conda-forge
-conda install “fftw=*=mpi_openmpi*” -c conda-forge
-conda install “hdf5=*=mpi_openmpi*” -c conda-forge
+conda install "fftw=*=mpi_openmpi*" -c conda-forge
+conda install "hdf5=*=mpi_openmpi*" -c conda-forge
 conda install elements -c kwelsh-lanl
-conda install “kokkos=4.1”
+conda install "kokkos=4.1"
 conda install fierro-heffte -c kwelsh-lanl
 conda install cmake
 ```
