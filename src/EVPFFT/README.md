@@ -13,7 +13,8 @@ EVPFFT depends on the following to build:
 5. [HDF5](https://www.hdfgroup.org/solutions/hdf5/)
 
 
-##Building EVPFFT with Anaconda
+## Building EVPFFT with Anaconda
+
 It is advised to use Anaconda package manager to build EVPFFT as it simplifies systems environment setup and the installation of other dependecies. To build EVPFFT with anaconda:
 
 1. Create an environment and activate:
@@ -38,6 +39,7 @@ make
 ```
 
 ## Building EVPFFT without Anacaonda
+
 To make it easy to build EVPFFT, we have included `scripts/build-scripts/build_evpfft.sh` which when executed will download and install all required dependencies and EVPFFT. The script assumes that the user already has MPI installed.
 
 Run the build script as:
