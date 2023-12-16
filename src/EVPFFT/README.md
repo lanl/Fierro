@@ -34,7 +34,11 @@ conda install cmake
 ```
 3. Build EVPFFT
 ```
-cmake /path/to/EVPFFT/src/ -DUSE_FFTW
+git clone https://github.com/lanl/Fierro.git
+cd Fierro/src/EVPFFT
+mkdir build
+cd build
+cmake ../src/ -DUSE_FFTW
 make
 ```
 
