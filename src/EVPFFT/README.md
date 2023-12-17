@@ -115,9 +115,6 @@ material_options:
     strength_type: hypo
     strength_run_location: host
     global_vars:
-      - 8 #N1 (EVPFFT RVE X dimension)
-      - 8 #N2 (EVPFFT RVE Y dimension)
-      - 8 #N3 (EVPFFT RVE Z dimension)
       - 0.0001 #udotAccTh (EVPFFT accumulated strain threshold before full solve)
       - 3000000 #[mm/s] (EVPFFT material sound speed)
 ```
