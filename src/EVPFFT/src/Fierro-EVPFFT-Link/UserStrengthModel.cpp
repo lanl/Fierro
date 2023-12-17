@@ -76,7 +76,7 @@ int UserStrengthModel::calc_stress(
       }
     }
 
-    double udotAccTh = global_vars.host(mat_id,3); // Linear Aprox. Threshold
+    double udotAccTh = global_vars.host(mat_id,0); // Linear Aprox. Threshold
     evpfft_ptr->solve(Fvel_grad.pointer(), Fstress.pointer(), dt_rk, cycle, elem_gid, udotAccTh);
 
     // Transpose stress. Not needed, stress is symmetric. But why not.
