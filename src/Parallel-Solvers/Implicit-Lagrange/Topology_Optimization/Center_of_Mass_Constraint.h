@@ -111,7 +111,7 @@ public:
   int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Inertial";
 
-  CenterOfMassConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int constraint_component, bool inequality_flag=true, real_t constraint_value=0) 
+  CenterOfMassConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, int constraint_component, real_t constraint_value=0, bool inequality_flag=true) 
   {
     FEM_ = dynamic_cast<FEA_Module_Inertial*>(FEM);
     nodal_density_flag_ = nodal_density_flag;
