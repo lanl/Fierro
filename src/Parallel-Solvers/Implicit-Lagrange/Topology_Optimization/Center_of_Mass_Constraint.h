@@ -95,7 +95,7 @@ private:
   Teuchos::RCP<MV> mass_gradients_distributed;
   real_t initial_center_of_mass;
   bool inequality_flag_;
-  real_t constraint_value_;
+  real_t constraint_value_, normalization_value;
   int constraint_component_;
 
   ROL::Ptr<const MV> getVector( const V& x ) {
@@ -120,6 +120,8 @@ public:
     inequality_flag_ = inequality_flag;
     constraint_value_ = constraint_value;
     constraint_component_ = constraint_component;
+    normalization_value = constraint_value_;
+    if(constraint_value_==0) normalization_value = 1;
     int num_dim = FEM_->simparam->num_dims;
     ROL_Element_Masses = ROL::makePtr<ROL_MV>(FEM_->Global_Element_Masses);
     if(constraint_component_ == 0)
@@ -222,10 +224,10 @@ public:
     }
     
     if(inequality_flag_){
-      (*cp)[0] = current_com;
+      (*cp)[0] = current_com/normalization_value;
     }
     else{
-      (*cp)[0] = current_com - constraint_value_;
+      (*cp)[0] = (current_com - constraint_value_)/normalization_value;
     }
 
     //std::cout << "Ended constraint value on task " <<FEM_->myrank <<std::endl;
@@ -293,7 +295,7 @@ public:
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
       constraint_gradients(i,constraint_component_) /= current_mass;
       constraint_gradients(i,constraint_component_) -= mass_gradients(i,0)*current_com/current_mass;
-      constraint_gradients(i,constraint_component_) *= (*vp)[0];
+      constraint_gradients(i,constraint_component_) *= (*vp)[0]/normalization_value;
     }
     
     
@@ -361,7 +363,7 @@ public:
     //debug print
     //std::cout << "Constraint Gradient value " << gradient_dot_v << std::endl;
 
-    (*jvp)[0] = gradient_dot_v;
+    (*jvp)[0] = gradient_dot_v/normalization_value;
     //std::cout << "Ended constraint grad on task " <<FEM_->myrank  << std::endl;
   }
   
@@ -429,7 +431,7 @@ public:
                       2*current_com*ROL_Mass_Gradients->dot(v)*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass;
     }
 
-    ahuvp->putScalar(matrix_product);
+    ahuvp->putScalar(matrix_product/normalization_value);
     
   }
 };
