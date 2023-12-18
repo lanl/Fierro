@@ -1,0 +1,73 @@
+name: Build-Conda-Package
+
+on: 
+  workflow_call:
+    inputs:
+      recipe_dir:
+        required: true
+        type: string
+      additional_variant:
+        required: false
+        type: string
+        default: '.conda/empty.yaml'
+      debug:
+        required: False
+        type: boolean
+        default: false
+
+jobs:
+  build-package:
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+          - os: ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo "CONDA=$HOME/" >> $GITHUB_ENV
+
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          activate-environment: build-env
+          use-mamba: true
+          condarc-file: .etc/condarc.yaml
+
+      # - name: Get Date
+      #   id: get-date
+      #   run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+      #   shell: bash
+
+      # - name: Cache Conda env
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: ${{ env.CONDA }}/envs
+      #     key:
+      #       conda-${{ runner.os }}--${{ runner.arch }}--${{ steps.get-date.outputs.today }}-${{ hashFiles('.etc/conda_build_environment.yaml') }}-${{ env.CACHE_NUMBER }}
+      #   env:
+      #     CACHE_NUMBER: 1
+      #   id: cache
+
+      - name: Update environment
+        run:
+          mamba env update -n build-env -f .etc/conda_build_environment.yaml
+        #if: steps.cache.outputs.cache-hit != 'true'
+      - run: |
+          if [ ${{ inputs.debug }} = true ] ; then export DEBUG="--debug"; fi;
+          mamba mambabuild $DEBUG ${{ inputs.recipe_dir }} -e .conda/build_variants.yaml -m ${{ inputs.additional_variant }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge -c nvidia
+        continue-on-error: ${{ inputs.debug }}
+      
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with: 
+          limit-access-to-actor: true
+          timeout-minutes: 30
+        if: inputs.debug && always() # This is confusing, but this will run on failure
+

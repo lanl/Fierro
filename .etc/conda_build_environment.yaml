@@ -1,0 +1,8 @@
+name: build-env
+channels:
+  - conda-forge
+  - kwelsh-lanl
+  - defaults
+dependencies:
+  - boa # For building
+  - anaconda-client # For uploading

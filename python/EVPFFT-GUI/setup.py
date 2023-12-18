@@ -16,10 +16,5 @@ setup(
     description='Package for running LANL\'s EVPFFT software with a graphical front end.',
     packages=find_packages(exclude=['ez_setup', 'tests', 'tests.*']),
     include_package_data=True,
-    install_requires=install_requires,
-    entry_points={
-        'console_scripts' : [
-            'evpfft-gui = evpfft_gui.gui:main'
-        ]
-    }
+    install_requires=install_requires
 )

@@ -1,0 +1,55 @@
+{% set version = "15.0.0" %}
+{% set linux_compiler_version = "10.4.0" %}
+{% set macos_compiler_version = "12" %}
+
+package:
+  name: fierro-trilinos-cpu
+  version: {{ version }}
+
+source:
+  url: https://github.com/trilinos/Trilinos/archive/trilinos-release-{{ version | replace('.', '-') }}.tar.gz
+  md5: 0b627d9a1c84fc185d145940dead9910
+
+build:
+  number: 2
+  script_env:
+    - PLATFORM={{ target_platform }}
+
+requirements:
+  build:
+    - cmake >=3.17.0
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('fortran') }}
+    - openmpi
+  host:
+    - libblas
+    - liblapack
+    - openmpi
+    - boost-cpp
+    - libnetcdf
+    - libmatio
+    - llvm-openmp # [osx]
+  run:
+    - libblas
+    - llvm-openmp # [osx]
+
+about:
+  home: https://trilinos.org
+  license: BSD-3-Clause
+  license_family: BSD
+  license_file: LICENSE
+  summary:
+    This is a specific build of Sandia's suite of HPC solvers and enabling technologies
+    that is maintained solely as a dependency for the associated fierro packages.
+  description:
+    Fast, compiled object-oriented algorithms and enabling
+    technologies that support the solution of large-scale,
+    complex multi-physics engineering and scientific problems.
+  dev_url: https://github.com/trilinos/Trilinos
+
+extra:
+  recipe-maintainers:
+    - kwelsh-lanl

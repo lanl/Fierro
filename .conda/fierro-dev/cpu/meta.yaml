@@ -1,0 +1,33 @@
+{% set version = "1.0.0" %}
+{% set compiler_version = "10.4.0" %}
+
+package:
+  name: fierro-dev
+  version: {{ version }}
+
+build:
+  number: 1
+  noarch: generic
+  skip: True # [not (linux and x86_64)]
+  script_env:
+    - PLATFORM={{ target_platform }}
+
+requirements:
+  run:
+    - cmake >=3.17
+    - {{ compiler('cxx') }}={{ compiler_version }}
+    - fierro-trilinos-cpu
+    - mpi
+    - elements
+  
+about:
+  home: https://github.com/lanl/Fierro
+  license: BSD-3-Clause
+  license_family: BSD
+  summary:
+    Metapackage for consolidating development dependencies for fierro.
+  dev_url: https://github.com/lanl/Fierro
+
+extra:
+  recipe-maintainers:
+    - kwelsh-lanl
