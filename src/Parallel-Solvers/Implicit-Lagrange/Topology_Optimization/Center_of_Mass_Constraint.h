@@ -293,9 +293,9 @@ public:
       //*fos << std::endl;
       //std::fflush(stdout);
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,constraint_component_) /= current_mass;
-      constraint_gradients(i,constraint_component_) -= mass_gradients(i,0)*current_com/current_mass;
-      constraint_gradients(i,constraint_component_) *= (*vp)[0]/normalization_value;
+      constraint_gradients(i,0) /= current_mass;
+      constraint_gradients(i,0) -= mass_gradients(i,0)*current_com/current_mass;
+      constraint_gradients(i,0) *= (*vp)[0]/normalization_value;
     }
     
     
@@ -354,8 +354,8 @@ public:
     FEM_->compute_nodal_gradients(design_densities, mass_gradients);
 
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
-      constraint_gradients(i,constraint_component_) /= current_mass;
-      constraint_gradients(i,constraint_component_) -= mass_gradients(i,0)*current_com/current_mass;
+      constraint_gradients(i,0) /= current_mass;
+      constraint_gradients(i,0) -= mass_gradients(i,0)*current_com/current_mass;
     }
 
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
