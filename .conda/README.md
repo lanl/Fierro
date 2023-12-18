@@ -166,3 +166,48 @@ conda activate fierro-dev
 And then you have all of the dependencies necessary to successfully build Fierro from source.
 
 These packages are `noarch: generic` packages, because they don't contain any architecture/OS specific build artifacts themselves. Whether or not you can install them on your system depends solely on the dependencies being available.
+
+
+## Debugging Tips
+Anaconda packages are great when they work, but debugging them can be a pain, since it takes so long (relatively) to initailize the build environment. If you find yourself having to debug a conda package, don't waste time and follow these tips:
+
+
+### Inspect the build/host environments.
+The intermediate build environments created can be found under `~/anaconda3/conda-bld/`. These are cleaned up if the build is successful, but are left for inspecting if it fails. Your intermediate environemnts might look something like `~/mambaforge/conda-bld/fierro-cpu_1702931506301`, and ones that are still around can be uncovered by running `conda env list`:
+```
+# conda environments:
+#
+                         ~/anaconda3
+base                  *  ~/mambaforge
+                         ~/mambaforge/conda-bld/cross-apple-test_1699913171912/_build_env
+                         ~/mambaforge/conda-bld/fierro-cpu_1702931083445/_build_env
+                         ~/mambaforge/conda-bld/fierro-cpu_1702931506301/_build_env
+                         ~/mambaforge/conda-bld/fierro-evpfft_1700005728459/_build_env
+                         ~/mambaforge/conda-bld/fierro-heffte-cuda_1702567877996/_build_env
+                         ~/mambaforge/conda-bld/fierro-heffte-cuda_1702568248715/_build_env
+                         ~/mambaforge/conda-bld/fierro-heffte-cuda_1702569485778/_build_env
+                         ~/mambaforge/conda-bld/fierro-heffte-cuda_1702571726755/_build_env
+                         ~/mambaforge/conda-bld/fierro-heffte-cuda_1702572653009/_build_env
+                         ~/mambaforge/conda-bld/fierro-heffte-cuda_1702573356532/_build_env
+                         ~/mambaforge/conda-bld/fierro-heffte-cuda_1702581207071/_build_env
+                         ~/mambaforge/conda-bld/fierro-heffte-cuda_1702582399999/_build_env
+                         ~/mambaforge/conda-bld/fierro-voxelizer-py_1700001705130/_build_env
+                         ~/mambaforge/conda-bld/fierro-voxelizer-py_1700003960166/_build_env
+                         ~/mambaforge/conda-bld/fierro-voxelizer-py_1700006765747/_build_env
+EVPFFT_MATAR             ~/mambaforge/envs/EVPFFT_MATAR
+...                      ...
+
+```
+
+Under that build folder you will find 3 relevant things:
+1. `_build_env` -- The environment where your "build" dependencies get installed (aka `$BUILD_PREFIX`)
+2. `_h_env_placehold_placehold_placehold_placehold_placehold...` -- The environment where your "host" dependencies get installed, and where you install your package (aka `$PREFIX`).
+3. `work` -- Where your source files are placed + where `conda_build.sh` (the exact script that is run) can be found.
+
+You can activate each of these environments or just inspect the installed packages with `conda list -p <path>`.
+
+### Modify and rebuild under `work`
+If you think you identified the issue, don't go back and try the package build again. First modify the intermediate build files and try the rebuild from there. If you think you are missing a host dependency, for example, run `conda install <package> -p <path-to-host-env>` and rerun `work/conda_build.sh` to see if that fixes it. If you think you need to modify the build script, just change `conda_build.sh` and rerun. Once the package builds successfully, make sure to make you changes to the original `meta.yaml` and/or `build.sh` files and then try the package build again.
+
+### Targetting Cross Compiling
+If you are having issues with the cross-compiling build targets, you can speicfically target just those by adding `--variants "{ target_platform: linux-aarch64 }"`. If you are using the `.conda/build_variants.yaml` file, you will need to comment out the variants you don't want to test.
