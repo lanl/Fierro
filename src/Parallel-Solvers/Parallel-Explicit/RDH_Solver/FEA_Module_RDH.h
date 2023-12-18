@@ -39,9 +39,9 @@
 #ifndef FEA_MODULE_RDH_H
 #define FEA_MODULE_RDH_H
 
-#include "mesh.h"
+#include "high_order_mesh.h"
 #include "ref_elem.h"
-#include "state.h"
+#include "rdh_state.h"
 #include "matar.h"
 #include "elements.h"
 #include "node_combination.h"
@@ -64,13 +64,13 @@ class FEA_Module_RDH: public FEA_Module{
 
 public:
   
-  FEA_Module_RDH( RDH_Parameters& params, Solver *Solver_Pointer, std::shared_ptr<mesh_t> mesh_in, const int my_fea_module_index = 0);
+  FEA_Module_RDH( RDH_Parameters& params, Solver *Solver_Pointer, std::shared_ptr<high_order_mesh_t> mesh_in, const int my_fea_module_index = 0);
   ~FEA_Module_RDH();
   
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads
-  void rdh_interface_setup(node_t &node, elem_t &elem, mesh_t &mesh, corner_t &corner);
+  void rdh_interface_setup(node_t &node, elem_t &elem, high_order_mesh_t &mesh, corner_t &corner);
 
-  void setup(mesh_t &mesh);
+  void setup(high_order_mesh_t &mesh);
 
   void cleanup_material_models();
 
@@ -88,7 +88,7 @@ public:
 
 
   std::shared_ptr<fe_ref_elem_t> ref_elem;
-  std::shared_ptr<mesh_t> mesh;
+  std::shared_ptr<high_order_mesh_t> mesh;
 
   //shallow copies of mesh class views
   size_t num_nodes_in_elem;
@@ -157,7 +157,7 @@ public:
   // ---------------------------------------------------------------------
   //    state data type declarations (must stay in scope for output after run)
   // ---------------------------------------------------------------------
-  mesh_t mesh_interface;
+  high_order_mesh_t mesh_interface;
   node_t  node_interface;
   elem_t  elem_interface;
   corner_t  corner_interface;

@@ -2,7 +2,7 @@
 // This code reads the mesh in different formats
 //------------------------------------------------------------------------------
 #include "mesh.h"
-#include "state.h"
+#include "rdh_state.h"
 
 #include <fstream>
 
@@ -173,6 +173,8 @@ void read_mesh_ensight(char* MESH,
 // This function reads a VTKPn file
 //--------------------------------------------------------
 //
+
+
 void readVTKPn(char* MESH,
                  mesh_t &mesh,
                  node_t &node,
@@ -230,6 +232,8 @@ void readVTKPn(char* MESH,
         i++;
     } // end while
     
+
+    // BEGIN TO FEA_MODULE
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
     node.initialize(rk_num_bins, num_nodes, num_dims);
@@ -252,7 +256,7 @@ void readVTKPn(char* MESH,
         
     } // end for points
     found=false;
-    
+    // END TO FEA_MODULES 
     
     // look for CELLS
     i = 0;
@@ -297,6 +301,8 @@ void readVTKPn(char* MESH,
         in.seekg(oldpos);
         
     }
+
+    // BEGIN TO FEA_MODULES
     size_t p = int(std::cbrt(num_nodes_in_elem)-1);
     num_zones_in_elem = int(std::pow(p, 3)); // one order lower than nodal index space
     num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
@@ -324,6 +330,8 @@ void readVTKPn(char* MESH,
     mesh.Pn = Pn_order;
     
     printf("Pn_order = %d \n", Pn_order);
+
+    
     
     CArray <size_t> get_ijk_from_vtk(num_nodes_in_elem, 3);
     mesh.convert_vtk_to_fierro = CArray <size_t> (num_nodes_in_elem);
@@ -332,7 +340,9 @@ void readVTKPn(char* MESH,
     // p_order   = 1, 2, 3, 4, 5
     // num_nodes = 2, 3, 4, 5, 6
     const int order[3] = {Pn_order, Pn_order, Pn_order};
-    
+    // END TO FEA_MODULE
+
+
     // re-order the nodes to be in i,j,k format of Fierro
     size_t this_node_lid = 0;
     for (size_t k=0; k<num_1D_points; k++){
@@ -382,7 +392,7 @@ void readVTKPn(char* MESH,
     } // end for
     
 
-    
+    // BEGIN TO FEA_MODULE 
     
     // update device side
     mesh.nodes_in_elem.update_device();

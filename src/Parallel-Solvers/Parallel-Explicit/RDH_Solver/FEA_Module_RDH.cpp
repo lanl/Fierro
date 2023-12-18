@@ -69,7 +69,7 @@
 
 #include "elements.h"
 #include "swage.h"
-#include "mesh.h"
+#include "high_order_mesh.h"
 #include "ref_elem.h"
 #include "matar.h"
 #include "utilities.h"
@@ -96,7 +96,7 @@ using namespace utils;
 
 FEA_Module_RDH::FEA_Module_RDH( RDH_Parameters& params,
                                 Solver *Solver_Pointer,
-                                std::shared_ptr<mesh_t> mesh_in,
+                                std::shared_ptr<high_order_mesh_t> mesh_in,
                                 const int my_fea_module_index) 
                                 :FEA_Module(Solver_Pointer){
 
@@ -159,7 +159,7 @@ FEA_Module_RDH::~FEA_Module_RDH(){
 //------------------------------------------------------------------------------
 void FEA_Module_RDH::rdh_interface_setup(node_t &node, 
                                          elem_t &elem,
-                                         mesh_t &mesh,
+                                         high_order_mesh_t &mesh,
                                          corner_t &corner){
 
     const size_t num_dim = simparam->num_dims;
@@ -180,11 +180,8 @@ void FEA_Module_RDH::rdh_interface_setup(node_t &node,
     // intialize node variables
     mesh.initialize_nodes(nall_nodes);
 
-    // WARNING WARNING WARNING //
-    // WARNING WARNING WARNING //
-    //mesh.initialize_local_nodes(Explicit_Solver_Pointer_->nlocal_nodes);
-    // WARNING WARNING WARNING //
-    // WARNING WARNING WARNING //
+    mesh.initialize_local_nodes(Explicit_Solver_Pointer_->nlocal_nodes);
+    
 
     node.initialize(rk_num_bins, nall_nodes, num_dim);
 
@@ -288,7 +285,7 @@ void FEA_Module_RDH::cleanup_material_models() {
    Setup RDH solver data
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_RDH::setup(mesh_t &mesh){
+void FEA_Module_RDH::setup(high_order_mesh_t &mesh){
 
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;   
     const size_t num_fills = simparam->regions.size();

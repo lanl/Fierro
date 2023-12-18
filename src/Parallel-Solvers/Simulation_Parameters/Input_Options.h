@@ -12,16 +12,17 @@ SERIALIZABLE_ENUM(MESH_FORMAT,
 
 SERIALIZABLE_ENUM(ELEMENT_TYPE, 
   quad4, quad8, quad12,
-  hex8, hex20, hex32
+  hex8, hex20, hex32,
+  hexN
 )
 
 struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
   std::string mesh_file_name;
   MESH_FORMAT mesh_file_format;
-  int p_order = 2;
+  int p_order = 1;
   double unit_scaling = 1.0;
 
-  ELEMENT_TYPE element_type = ELEMENT_TYPE::hex8;
+  ELEMENT_TYPE element_type = ELEMENT_TYPE::hexN;
   bool zero_index_base = false;
 
   // Non-serialized fields
@@ -51,6 +52,9 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
       switch (element_type) {
         case ELEMENT_TYPE::hex8:
           elem_words_per_line = 8;
+          break;
+        case ELEMENT_TYPE::hexN:
+          elem_words_per_line = int(std::pow(p_order+1, 3));
           break;
         case ELEMENT_TYPE::quad4:
           elem_words_per_line = 4;

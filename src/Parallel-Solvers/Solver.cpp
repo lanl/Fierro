@@ -841,15 +841,9 @@ void Solver::read_mesh_vtk(const char *MESH){
   CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
   int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
   size_t read_index_start, node_rid, elem_gid;
-  GO node_gid;
+  GO node_gid; // set node_gid as global ordinal
   real_t dof_value;
   bool zero_index_base = input_options.zero_index_base;
-  //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
-
-  //read the mesh
-  //PLACEHOLDER: ensight_format(MESH);
-  // abaqus_format(MESH);
-  // vtk_format(MESH)
 
   // --- Read the number of nodes in the mesh --- //
   num_nodes = 0;
@@ -891,7 +885,6 @@ void Solver::read_mesh_vtk(const char *MESH){
   
   //construct contiguous parallel row map now that we know the number of nodes
   map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_nodes,0,comm));
-  //map->describe(*fos,Teuchos::VERB_EXTREME);
 
   // set the vertices in the mesh read in
   nlocal_nodes = map->getLocalNumElements();
@@ -899,25 +892,14 @@ void Solver::read_mesh_vtk(const char *MESH){
   global_size_t min_gid = map->getMinGlobalIndex();
   global_size_t max_gid = map->getMaxGlobalIndex();
   global_size_t index_base = map->getIndexBase();
-  //debug print
-  //std::cout << "local node count on task: " << " " << nlocal_nodes << std::endl;
-
-  //allocate node storage with dual view
-  //dual_node_coords = dual_vec_array("dual_node_coords", nlocal_nodes,num_dim);
-
-  //local variable for host view in the dual view
+  
   
   node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
 
   //scope ensures view is destroyed for now to avoid calling a device view with an active host view later
   {
   host_vec_array node_coords = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-  //host_vec_array node_coords = dual_node_coords.view_host();
-  //notify that the host view is going to be modified in the file readin
-  //dual_node_coords.modify_host();
-
-  //old swage method
-  //mesh->init_nodes(local_nrows); // add 1 for index starting at 1
+  
     
   std::cout << "Num nodes assigned to task " << myrank << " = " << nlocal_nodes << std::endl;
 
@@ -981,12 +963,6 @@ void Solver::read_mesh_vtk(const char *MESH){
     //broadcast how many nodes were read into this buffer iteration
     MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
 
-    //debug_print
-    //std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
-    //for(int iprint=0; iprint < buffer_loop; iprint++)
-      //std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
-    //return;
-
     //determine which data to store in the swage mesh members (the local node data)
     //loop through read buffer
     for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
@@ -1015,29 +991,6 @@ void Solver::read_mesh_vtk(const char *MESH){
   //repartition node distribution
   repartition_nodes();
 
-  //synchronize device data
-  //dual_node_coords.sync_device();
-  //dual_node_coords.modify_device();
-
-  //debug print of nodal data
-  
-  //debug print nodal positions and indices
-  /*
-  std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
-  for (int inode = 0; inode < local_nrows; inode++){
-      std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
-    for (int istride = 0; istride < num_dim; istride++){
-        std::cout << node_coords(inode,istride) << " , ";
-    }
-    std::cout << " }"<< std::endl;
-  }
-  */
-
-  //check that local assignments match global total
-
-  
-  //read in element info (ensight file format is organized in element type sections)
-  //loop over this later for several element type sections
 
   num_elem = 0;
   rnum_elem = 0;
@@ -1198,13 +1151,14 @@ void Solver::read_mesh_vtk(const char *MESH){
   // Close mesh input file
   if(myrank==0)
   in->close();
-  
+
+#if 0  
   //std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
   
   Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
   
   elements::elem_types::elem_type mesh_element_type;
-
+  
   if(simparam.num_dims == 2){
     if(input_options.element_type == ELEMENT_TYPE::quad4){
       mesh_element_type = elements::elem_types::Quad4;
@@ -1359,6 +1313,97 @@ void Solver::read_mesh_vtk(const char *MESH){
     std::cout << std::endl;
   }
   */  
+#else
+  //1 type per mesh for now
+  // for(int ielem = 0; ielem < rnum_elem; ielem++)
+  //   Element_Types(ielem) = mesh_element_type;
+  
+
+  // Define max_nodes_per_element
+
+  //copy temporary element storage to multivector storage
+  dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
+  host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
+  dual_nodes_in_elem.modify_host();
+
+  for(int ielem = 0; ielem < rnum_elem; ielem++)
+    for(int inode = 0; inode < elem_words_per_line; inode++)
+      nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
+
+  //view storage for all local elements connected to local nodes on this rank
+  //DCArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
+  Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
+  //copy temporary global indices storage to view storage
+  for(int ielem = 0; ielem < rnum_elem; ielem++)
+    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
+
+  //delete temporary element connectivity and index storage
+  std::vector<size_t>().swap(element_temp);
+  std::vector<size_t>().swap(global_indices_temp);
+  
+  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
+  All_Element_Global_Indices.modify_host();
+  All_Element_Global_Indices.sync_device();
+
+  all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
+
+  //element type selection (subject to change)
+  // ---- Set Element Type ---- //
+  // allocate element type memory
+  //elements::elem_type_t* elem_choice;
+
+  int NE = 1; // number of element types in problem
+    
+
+  // Convert ensight index system to the ijk finite element numbering convention
+  // for vertices in cell
+  //if(active_node_ordering_convention == IJK){
+  // CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
+  // CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
+  // convert_ensight_to_ijk(0) = 0;
+  // convert_ensight_to_ijk(1) = 1;
+  // convert_ensight_to_ijk(2) = 3;
+  // convert_ensight_to_ijk(3) = 2;
+  // convert_ensight_to_ijk(4) = 4;
+  // convert_ensight_to_ijk(5) = 5;
+  // convert_ensight_to_ijk(6) = 7;
+  // convert_ensight_to_ijk(7) = 6;
+    
+  int nodes_per_element;
+  
+  if(num_dim==2)
+  for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
+    //set nodes per element
+    nodes_per_element = 0.0;
+
+    // Replace this with function from mesh builder.
+    // for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
+    //   tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
+    // }   
+        
+    // for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
+    //   nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
+    // }
+  }
+
+  if(num_dim==3)
+  for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++) {
+
+    //set nodes per element
+    nodes_per_element = 0;
+    
+    //replace with function from mesh builder.
+    // for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
+    //   tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
+    // }   
+        
+    // for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
+    //   nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
+    // }
+  }
+  
+
+#endif
 } // end read_mesh
 
 /* ----------------------------------------------------------------------

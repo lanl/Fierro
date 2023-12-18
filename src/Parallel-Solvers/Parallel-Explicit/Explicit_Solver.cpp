@@ -150,11 +150,11 @@ void Explicit_Solver::run() {
     
   //MPI info
   world = MPI_COMM_WORLD; //used for convenience to represent all the ranks in the job
-  MPI_Comm_rank(world,&myrank);
-  MPI_Comm_size(world,&nranks);
+  MPI_Comm_rank(world, &myrank);
+  MPI_Comm_size(world, &nranks);
   
   if(myrank == 0){
-    std::cout << "Starting Lagrangian SGH code" << std::endl;
+    std::cout << "Starting Explicit Solve" << std::endl;
   }
 
   //initialize Trilinos communicator class
@@ -1045,6 +1045,10 @@ void Explicit_Solver::FEA_module_setup(){
       [&](SGH_Parameters& param) {
         sgh_module = new FEA_Module_SGH(param, this, mesh);
         fea_modules.push_back(sgh_module);
+      },
+      [&](RDH_Parameters& param){
+        rdh_module = new FEA_Module_RDH(param, this, mesh);
+        fea_modules.push_back(rdh_module);
       },
       [&](Dynamic_Elasticity_Parameters& param) {
         fea_modules.push_back(new FEA_Module_Dynamic_Elasticity(param, this, mesh));

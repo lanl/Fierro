@@ -3,7 +3,7 @@
 
 
 #include "matar.h"
-#include "state.h"
+#include "rdh_state.h"
 #include "ref_elem.h"
 
 #define PI 3.141592653589793
@@ -170,7 +170,7 @@ struct nodes_in_zone_t {
 };
 
 // mesh sizes and connectivity data structures
-struct mesh_t {
+struct high_order_mesh_t {
     
     mesh_init::elem_name_tag elem_kind;
 
@@ -293,6 +293,15 @@ struct mesh_t {
         return;
         
     }; // end method
+
+    // initialization methods
+    void initialize_local_nodes(const size_t num_nodes_inp)
+    {
+        num_nodes = num_nodes_inp;
+        
+        return;
+        
+    }; // end method
     
     
     // initialization methods
@@ -319,17 +328,17 @@ struct mesh_t {
 			     const size_t num_dims_inp)
     {
         
-	num_dims = num_dims_inp;
+        num_dims = num_dims_inp;
         num_elems = num_elems_inp;
-        
-	num_nodes_in_elem = num_nodes_in_elem_inp;
+            
+        num_nodes_in_elem = num_nodes_in_elem_inp;
         num_zones_in_elem = num_zones_in_elem_inp;
         num_surfs_in_elem = num_surfs_in_elem_inp;
 
         nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         zones_in_elem = zones_in_elem_t(num_zones_in_elem);
-	surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
+        surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
 
         return;
         
