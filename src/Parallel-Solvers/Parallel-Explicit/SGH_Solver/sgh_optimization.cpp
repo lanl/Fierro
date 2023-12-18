@@ -488,6 +488,14 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
     if(simparam->topology_optimization_on||simparam->shape_optimization_on){
       //assemble_matrix();
     }
+
+    // update host copies of arrays modified in this function
+    elem_den.update_host();
+    elem_mass.update_host();
+    elem_sie.update_host();
+    elem_stress.update_host();
+    elem_pres.update_host();
+    elem_sspd.update_host(); 
     
     //execute solve
     sgh_solve();
