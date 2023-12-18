@@ -27,8 +27,8 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi={{ mpi_version }}
   host:
-    - openmp      # [linux]
-    - llvm-openmp # [osx]
+    - _openmp_mutex # [linux]
+    - llvm-openmp   # [osx]
     - openmpi={{ mpi_version }}
     - fierro-trilinos-cpu
     - elements
