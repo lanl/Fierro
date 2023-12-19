@@ -61,7 +61,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
             //assign gradient of corner contribution of force to relevant matrix entries with non-zero node velocity gradient
             for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){
                 for(int jdim = 0; jdim < num_dims; jdim++){
-                    corner_gradient_storage(corner_gid,dim,igradient,dim) = 0;
+                    corner_gradient_storage(corner_gid,dim,igradient,jdim) = 0;
                 }
             }
       }
