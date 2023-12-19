@@ -24,11 +24,6 @@ UserStrengthModel::UserStrengthModel(
     // Input files for for multiple materials should be names as evpfft1.in, evpfft2.in, etc.
     std::string filename = "evpfft" + std::to_string(mat_id+1) + ".in";
 
-    // get dimensions
-    int N1 = global_vars.host(mat_id,0);
-    int N2 = global_vars.host(mat_id,1);
-    int N3 = global_vars.host(mat_id,2);
-
     real_t stress_scale = 1.0; // 1.0e-5; // used to convert MPa to MegaBar
     real_t time_scale = 1.0; // 1.0e+6; // used to convert second to microsecond
 
@@ -81,7 +76,7 @@ int UserStrengthModel::calc_stress(
       }
     }
 
-    double udotAccTh = global_vars.host(mat_id,3); // Linear Aprox. Threshold
+    double udotAccTh = global_vars.host(mat_id,0); // Linear Aprox. Threshold
     evpfft_ptr->solve(Fvel_grad.pointer(), Fstress.pointer(), dt_rk, cycle, elem_gid, udotAccTh);
 
     // Transpose stress. Not needed, stress is symmetric. But why not.
