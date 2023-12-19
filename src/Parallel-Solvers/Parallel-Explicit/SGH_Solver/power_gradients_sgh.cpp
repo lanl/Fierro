@@ -259,7 +259,7 @@ void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
             for (size_t dim=0; dim<num_dims; dim++){
                 
                 double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
-                elem_power_dgradients(elem_gid) += corner_vector_storage(corner_gid, dim)*node_radius*half_vel;
+                elem_power_dgradients(elem_gid) += corner_vector_storage(corner_gid, dim)*node_radius*node_vel(rk_level, node_gid, dim);
                 
             } // end for dim
             
@@ -457,7 +457,7 @@ void FEA_Module_SGH::get_power_egradient_sgh(double rk_alpha,
             for (size_t dim=0; dim<num_dims; dim++){
                 
                 double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
-                Power_Gradient_Energies(elem_gid) += Force_Gradient_Energies(elem_gid, node_lid*num_dims+dim)*node_radius*half_vel;
+                Power_Gradient_Energies(elem_gid) += Force_Gradient_Energies(elem_gid, node_lid*num_dims+dim)*node_radius*node_vel(rk_level, node_gid, dim);
                 
             } // end for dim
             
