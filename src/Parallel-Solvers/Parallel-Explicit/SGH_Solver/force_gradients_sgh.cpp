@@ -1307,7 +1307,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
             for (size_t i = 0; i < num_dims; i++) {
                 for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){     
                     for( int jdim = 0; jdim < num_dims; jdim++){    
-                        vel_star_gradient(i) = sum_gradient(i,igradient,jdim)/sum(3)-sum(i)/(sum(3)*sum(3))*sum_gradient(3,igradient,jdim);
+                        vel_star_gradient(i,igradient,jdim) = sum_gradient(i,igradient,jdim)/sum(3)-sum(i)/(sum(3)*sum(3))*sum_gradient(3,igradient,jdim);
                     }
                 }
             }
@@ -1316,7 +1316,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
             for (int i = 0; i < num_dims; i++){
                 for(int igradient = 0; igradient < num_nodes_in_elem; igradient++){     
                     for( int jdim = 0; jdim < num_dims; jdim++){    
-                        vel_star_gradient(i) = 0;
+                        vel_star_gradient(i,igradient,jdim) = 0;
                     }
                 }
             }
