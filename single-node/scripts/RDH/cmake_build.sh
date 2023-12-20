@@ -83,7 +83,7 @@ ${ADDITIONS[@]}
 -D Kokkos_DIR=${KOKKOS_INSTALL_DIR}/${INSTALL_LIB}/cmake/Kokkos
 )
 set -x
-cmake "${OPTIONS[@]}" "${SGH_BASE_DIR:-../}"
+cmake "${OPTIONS[@]}" "${RDH_BASE_DIR:-../}"
 set +x
 make -j${NUM_TASKS}
 

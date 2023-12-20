@@ -52,6 +52,10 @@ export matardir=${libdir}/Elements/matar
 export builddir=${basedir}/${my_build}
 export installdir=${basedir}/install-kokkos/install-kokkos-${my_device}
 
+export ELEMENTS_SOURCE_DIR=${libdir}/Elements
+export ELEMENTS_BUILD_DIR=${builddir}/Elements
+export ELEMENTS_INSTALL_DIR=${installdir}/Elements
+
 export RDH_BASE_DIR=${basedir}
 export RDH_SOURCE_DIR=${srcdir}/Explicit-Lagrange-Kokkos/RDH_solver
 export RDH_BUILD_DIR=${builddir}

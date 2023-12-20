@@ -77,7 +77,7 @@ void init(int p_order, int num_dim_inp){
     if(p_order == 0){       
         
         num_gauss_lob_1d = 2; // num gauss lobatto points in 1d
-	num_gauss_leg_1d = 1;
+	    num_gauss_leg_1d = 1;
         num_dofs_1d = 2;
         num_elem_dofs_1d = 1;
         num_zones_1d = 1;
@@ -87,7 +87,7 @@ void init(int p_order, int num_dim_inp){
     else{
         
         num_gauss_lob_1d = 2 * p_order + 1; // num gauss lobatto points in 1d
-	num_gauss_leg_1d = 2*p_order;
+	    num_gauss_leg_1d = 2*p_order;
 
         num_dofs_1d = p_order+1;
         num_elem_dofs_1d = p_order;

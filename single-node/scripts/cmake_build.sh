@@ -3,8 +3,8 @@
 solver="${1}"
 
 echo "Removing old Kokkos build and installation directory"
-rm -rf ${SGH_BUILD_DIR}
-mkdir -p ${SGH_BUILD_DIR}
+rm -rf ${RDH_BUILD_DIR}
+mkdir -p ${RDH_BUILD_DIR}
 
 cmake_options=(
 -D BUILD_EXPLICIT_SOLVER=OFF
@@ -17,19 +17,23 @@ if [ "$solver" = "1DSGH" ]; then
     cmake_options+=(
         -D BUILD_1D_KOKKOS_SGH=ON
     )
+elif [ "$solver" = "SGH" ]; then
+    cmake_options+=(
+        -D BUILD_1D_KOKKOS_SGH=ON
+    )
 else
     cmake_options+=(
-        -D BUILD_KOKKOS_SGH=ON
+    	-D BUILD_KOKKOS_RDH=ON
     )
 fi
 
 # Print CMake options for reference
 echo "CMake Options: ${cmake_options[@]}"
 
-# Configure SGH
-cmake "${cmake_options[@]}" -B "${SGH_BUILD_DIR}" -S "${SGH_BASE_DIR}"
+# Configure RDH
+cmake "${cmake_options[@]}" -B "${RDH_BUILD_DIR}" -S "${RDH_BASE_DIR}"
 
-# Build SGH
-make -C "${SGH_BUILD_DIR}" -j${SGH_BUILD_CORES}
+# Build RDH
+make -C "${RDH_BUILD_DIR}" -j${RDH_BUILD_CORES}
 
 cd $basedir

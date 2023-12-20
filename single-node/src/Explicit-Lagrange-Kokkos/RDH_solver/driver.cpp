@@ -93,7 +93,7 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         node_t  node;
         elem_t  elem;
-	corner_t corner;
+	      corner_t corner;
         fe_ref_elem_t ref_elem;
         CArrayKokkos <material_t> material;
         CArrayKokkos <double> state_vars; // array to hold init model variables
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]){
         printf("writing VTK file \n");
         VTKHexN(mesh, node);
         
-	printf("building corners \n");
+	      printf("building corners \n");
         mesh.build_corner_connectivity();
         printf("building elem_elem \n");
         mesh.build_elem_elem_connectivity();
@@ -248,31 +248,31 @@ int main(int argc, char *argv[]){
                                                num_elems,
                                                num_state_vars );
         
-	DViewCArrayKokkos <double> lobatto_jacobian(&elem.gauss_lobatto_jacobian(0,0,0),
+	      DViewCArrayKokkos <double> lobatto_jacobian(&elem.gauss_lobatto_jacobian(0,0,0),
                                                     num_lob_pts,
                                                     num_dims,
                                                     num_dims);
 	
-	DViewCArrayKokkos <double> legendre_jacobian(&elem.gauss_legendre_jacobian(0,0,0),
+	      DViewCArrayKokkos <double> legendre_jacobian(&elem.gauss_legendre_jacobian(0,0,0),
                                                     num_leg_pts,
                                                     num_dims,
                                                     num_dims);
 
-	DViewCArrayKokkos <double> lobatto_jacobian_inverse(&elem.gauss_lobatto_jacobian_inverse(0,0,0),
-                                                            num_lob_pts,
-                                                            num_dims,
-                                                            num_dims);
-	
-	DViewCArrayKokkos <double> legendre_jacobian_inverse(&elem.gauss_legendre_jacobian_inverse(0,0,0),
-                                                            num_leg_pts,
-                                                            num_dims,
-                                                            num_dims);
-	
-	DViewCArrayKokkos <double> lobatto_det(&elem.gauss_lobatto_det_j(0),
-                                               num_lob_pts);
+        DViewCArrayKokkos <double> lobatto_jacobian_inverse(&elem.gauss_lobatto_jacobian_inverse(0,0,0),
+                                                                  num_lob_pts,
+                                                                  num_dims,
+                                                                  num_dims);
+        
+        DViewCArrayKokkos <double> legendre_jacobian_inverse(&elem.gauss_legendre_jacobian_inverse(0,0,0),
+                                                                  num_leg_pts,
+                                                                  num_dims,
+                                                                  num_dims);
+        
+        DViewCArrayKokkos <double> lobatto_det(&elem.gauss_lobatto_det_j(0),
+                                                    num_lob_pts);
 
-	DViewCArrayKokkos <double> legendre_det(&elem.gauss_legendre_det_j(0),
-                                               num_leg_pts);
+        DViewCArrayKokkos <double> legendre_det(&elem.gauss_legendre_det_j(0),
+                                                    num_leg_pts);
 
         // create Dual Views of the corner struct variables
         DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
@@ -425,7 +425,7 @@ int main(int argc, char *argv[]){
                   elem_sspd,
                   elem_sie,
                   elem_vol,
-		  elem_div,
+		              elem_div,
                   elem_mass,
                   elem_mat_id,
                   elem_statev,
