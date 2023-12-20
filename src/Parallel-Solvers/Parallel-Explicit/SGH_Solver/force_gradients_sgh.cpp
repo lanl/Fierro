@@ -1814,7 +1814,7 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
         
         // initialize sum term in MARS to zero
         for (int i = 0; i < 4; i++){
-            sum(i) = 0.0;
+            sum(i) = sum_gradient(i) = 0.0;
         }
 
         double mag;       // magnitude of the area normal
