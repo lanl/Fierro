@@ -1,3 +1,4 @@
+#pragma once
 #include "matar.h"
 #include <cmath>
 #include <assert.h>
@@ -10,9 +11,11 @@ enum class VOLUME_TYPE {
     voxel_grid
 };
 
+namespace {
+    const double _4_PI_3 = M_PI * 4. / 3.;
+}
 struct volume_t {
     VOLUME_TYPE volume_type = VOLUME_TYPE::global;
-    const double _4_PI_3 = M_PI * 4. / 3.;
 
     double inner_radius = 0.;
     double outer_radius = 0.;

@@ -22,7 +22,7 @@
 using namespace mtr; // matar namespace
 
 // Functions used within MAIN
-std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(const char* stl_file_path); // BINARY STL READER FUNCTION
+std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(std::string stl_file_path); // BINARY STL READER FUNCTION
 void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ, CArray<float> &normalX, CArray<float> &normalY, CArray<float> &normalZ, CArray<float> &v1X, CArray<float> &v1Y, CArray<float> &v1Z, CArray<float> &v2X, CArray<float> &v2Y, CArray<float> &v2Z, CArray<float> &v3X, CArray<float> &v3Y, CArray<float> &v3Z, unsigned int &n_facets, CArray<float> &nodex, CArray<float> &nodey, CArray<float> &nodez); // VOXELIZATION FUNCTION
 
 double sign (double x1, double y1, double v1x, double v1y, double v2x, double v2y) {
@@ -45,7 +45,7 @@ void compute_normal(float* normal, float* a, float* b, float* c) {
 }
 
 std::tuple<double, double, double> Voxelizer::create_voxel_vtk(
-        const char* stl_file_path, const char* vtk_file_path, 
+        std::string stl_file_path, std::string vtk_file_path,
         int gridX, int gridY, int gridZ,
         bool use_index_space) {
     
@@ -103,39 +103,68 @@ std::tuple<double, double, double> Voxelizer::create_voxel_vtk(
 
     // VTK WRITER
     int i,j,k;
-    auto out=fopen(vtk_file_path,"w"); // open the file
+    std::ofstream out(vtk_file_path);
+//    auto out=fopen(vtk_file_path,"w"); // open the file
 
-    fprintf(out,"# vtk DataFile Version 3.0\n"); // write the header
-    fprintf(out,"Header\n");
-    fprintf(out,"ASCII\n");
-    fprintf(out,"DATASET RECTILINEAR_GRID\n");
-    fprintf(out,"DIMENSIONS %d %d %d\n",gridX+1,gridY+1,gridZ+1);
+    out << "# vtk DataFile Version 3.0\n"; // write the header
+    out << "Header\n";
+    out << "ASCII\n";
+    out << "DATASET RECTILINEAR_GRID\n";
+    out << "DIMENSIONS " << gridX + 1 << " " << gridY + 1 << " " << gridZ + 1 << "\n";
+//    fprintf(out,"# vtk DataFile Version 3.0\n"); // write the header
+//    fprintf(out,"Header\n");
+//    fprintf(out,"ASCII\n");
+//    fprintf(out,"DATASET RECTILINEAR_GRID\n");
+//    fprintf(out,"DIMENSIONS %d %d %d\n",gridX+1,gridY+1,gridZ+1);
     
-    fprintf(out,"X_COORDINATES %d float\n", gridX+1); // nodal x coordinates
+    out << "X_COORDINATES " << gridX + 1 << " float\n"; // nodal x coordinates
     for (i=0; i<(gridX+1); i++) {
-        fprintf(out,"%f ", use_index_space ? i : nodex(i));
+        out << nodex(i) << " ";
     }
-    fprintf(out,"\nY_COORDINATES %d float\n", gridY+1); // nodal y coordinates
-    for (i=0; i<(gridY+1); i++) {
-        fprintf(out,"%f ", use_index_space ? i : nodey(i));
+    out << "\nY_COORDINATES " << gridY + 1 << " float\n"; // nodal y coordinates
+    for (i=0; i<(gridX+1); i++) {
+        out << nodey(i) << " ";
     }
-    fprintf(out,"\nZ_COORDINATES %d float\n", gridZ+1); // nodal z coordinates
+    out << "\nZ_COORDINATES " << gridZ + 1 << " float\n"; // nodal z coordinates
     for (i=0; i<(gridZ+1); i++) {
-        fprintf(out,"%f ", use_index_space ? i : nodez(i));
+        out << nodez(i) << " ";
     }
+//    fprintf(out,"X_COORDINATES %d float\n", gridX+1); // nodal x coordinates
+//    for (i=0; i<(gridX+1); i++) {
+//        fprintf(out,"%f ", use_index_space ? i : nodex(i));
+//    }
+//    fprintf(out,"\nY_COORDINATES %d float\n", gridY+1); // nodal y coordinates
+//    for (i=0; i<(gridY+1); i++) {
+//        fprintf(out,"%f ", use_index_space ? i : nodey(i));
+//    }
+//    fprintf(out,"\nZ_COORDINATES %d float\n", gridZ+1); // nodal z coordinates
+//    for (i=0; i<(gridZ+1); i++) {
+//        fprintf(out,"%f ", use_index_space ? i : nodez(i));
+//    }
     
-    fprintf(out,"\n\nCELL_DATA %d\n",gridX*gridY*gridZ); // material (1) or void (0) region definition
-    fprintf(out,"SCALARS density float 1\n");
-    fprintf(out,"LOOKUP_TABLE default\n");
+    out << "\n\nCELL_DATA " << gridX*gridY*gridZ << "\n";
+    out << "SCALARS density float 1\n";
+    out << "LOOKUP_TABLE default\n";
     for (i=0;i<gridZ;i++){
         for (j=0;j<gridY;j++){
             for (k=0;k<gridX;k++){
-                fprintf(out,"%d ",OUTPUTgrid(i,j,k));
+                out << OUTPUTgrid(i,j,k) << " ";
             }
         }
     }
+//    fprintf(out,"\n\nCELL_DATA %d\n",gridX*gridY*gridZ); // material (1) or void (0) region definition
+//    fprintf(out,"SCALARS density float 1\n");
+//    fprintf(out,"LOOKUP_TABLE default\n");
+//    for (i=0;i<gridZ;i++){
+//        for (j=0;j<gridY;j++){
+//            for (k=0;k<gridX;k++){
+//                fprintf(out,"%d ",OUTPUTgrid(i,j,k));
+//            }
+//        }
+//    }
 
-    fclose(out);
+    out.close();
+//    fclose(out);
     
     // END CLOCK
     auto stop = std::chrono::high_resolution_clock::now();
@@ -151,9 +180,9 @@ std::tuple<double, double, double> Voxelizer::create_voxel_vtk(
 // ==============================================================
 
 // BINARY STL READER - (Note: it can ONLY read binary stl files)
-std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(const char* stl_file_path){
+std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(std::string stl_file_path){
     // Open the binary file
-    const char* filename = stl_file_path;
+    std::string filename = stl_file_path;
     auto input = std::ifstream{filename, std::ifstream::in | std::ifstream::binary};
     
     // Check that the file is actually open

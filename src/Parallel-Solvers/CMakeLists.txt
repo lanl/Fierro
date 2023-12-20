@@ -63,6 +63,7 @@ if (BUILD_IMPLICIT_SOLVER OR BUILD_PARALLEL_EXPLICIT_SOLVER)
       ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${MPI_Fortran_LIBRARIES} ${MPI_Fortran_LINK_FLAGS}
       yaml_serializable
       mesh_builder
+      voxelizer
   )
 
   include_directories(.)
