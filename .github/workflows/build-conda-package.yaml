@@ -61,7 +61,7 @@ jobs:
         #if: steps.cache.outputs.cache-hit != 'true'
       - run: |
           if [ ${{ inputs.debug }} = true ] ; then export DEBUG="--debug"; fi;
-          mamba mambabuild $DEBUG ${{ inputs.recipe_dir }} -e .conda/build_variants.yaml -m ${{ inputs.additional_variant }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c kwelsh-lanl -c conda-forge -c nvidia
+          mamba mambabuild $DEBUG ${{ inputs.recipe_dir }} -e .conda/build_variants.yaml -m ${{ inputs.additional_variant }} --token ${{ secrets.ANACONDA_TOKEN }} --no-test -c fierromechanics -c conda-forge -c nvidia
         continue-on-error: ${{ inputs.debug }}
       
       - name: Setup tmate session
