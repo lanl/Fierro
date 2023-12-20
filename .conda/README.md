@@ -160,7 +160,7 @@ This will tell conda-build to do all of the build configurations specified by ou
 ### Metapackages
 Metapackages are packages that contain no installable content or build instructions, but only contain metadata. The can range from completely useless to useful shortcuts for pulling in a number of packages, or complicated/specific package dependencies. We use metapackages to make it easy to set up the development environments for Fierro and EVPFFT. Our dev packages (Fierro-dev, EVPFFT-dev) only contain runtime dependencies, and are created so you can run something like:
 ```
-conda create -n fierro-dev fierro-dev -c kwelsh-lanl -c conda-forge
+conda create -n fierro-dev fierro-dev -c fierromechanics -c conda-forge
 conda activate fierro-dev
 ```
 And then you have all of the dependencies necessary to successfully build Fierro from source.
