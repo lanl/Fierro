@@ -4,7 +4,6 @@ project(stl-voxelizer)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 
-
 add_library(voxelizer src/stl-to-voxelvtk.cpp)
 target_include_directories(voxelizer PUBLIC include)
 target_link_libraries(voxelizer Elements)

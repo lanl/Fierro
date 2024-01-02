@@ -2,6 +2,7 @@
 #include "matar.h"
 #include <cmath>
 #include <assert.h>
+#include "stl-to-voxelvtk.h"
 
 enum class VOLUME_TYPE {
     global,
@@ -143,7 +144,11 @@ struct voxel_grid : virtual volume_t {
      *  _grid: a 3D boolean grid of voxels.
     */
     voxel_grid(double cell_sizes[3], double o[3], mtr::DCArrayKokkos<bool> _grid) : voxel_grid() {
-        grid = _grid;
+//        input_file = _input_file;
+//        gridX = _gridX;
+//        gridY = _gridY;
+//        gridZ = _gridZ;
+        
         for (size_t i = 0; i < 3; i++)  {
             origin[i] = o[i];
             cell_size[i] = cell_sizes[i];

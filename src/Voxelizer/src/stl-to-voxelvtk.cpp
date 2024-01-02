@@ -44,10 +44,13 @@ void compute_normal(float* normal, float* a, float* b, float* c) {
         normal[i] /= l;
 }
 
-std::tuple<double, double, double> Voxelizer::create_voxel_vtk(
+vox_out Voxelizer::create_voxel_vtk(
         std::string stl_file_path, std::string vtk_file_path,
         int gridX, int gridY, int gridZ,
         bool use_index_space) {
+    
+    // Define output holding variable
+    vox_out voxelizer_output;
     
     // Start Clock
     auto start = std::chrono::high_resolution_clock::now();
@@ -119,15 +122,15 @@ std::tuple<double, double, double> Voxelizer::create_voxel_vtk(
     
     out << "X_COORDINATES " << gridX + 1 << " float\n"; // nodal x coordinates
     for (i=0; i<(gridX+1); i++) {
-        out << nodex(i) << " ";
+        out << (use_index_space ? i : nodex(i)) << " ";
     }
     out << "\nY_COORDINATES " << gridY + 1 << " float\n"; // nodal y coordinates
     for (i=0; i<(gridX+1); i++) {
-        out << nodey(i) << " ";
+        out << (use_index_space ? i : nodey(i)) << " ";
     }
     out << "\nZ_COORDINATES " << gridZ + 1 << " float\n"; // nodal z coordinates
     for (i=0; i<(gridZ+1); i++) {
-        out << nodez(i) << " ";
+        out << (use_index_space ? i : nodez(i)) << " ";
     }
 //    fprintf(out,"X_COORDINATES %d float\n", gridX+1); // nodal x coordinates
 //    for (i=0; i<(gridX+1); i++) {
@@ -172,7 +175,15 @@ std::tuple<double, double, double> Voxelizer::create_voxel_vtk(
     std::cout << "Total Time: " << duration.count() << " milliseconds" << std::endl;
 
     printf("\nfinished\n\n");
-    return {nodex(1) - nodex(0), nodey(1) - nodey(0), nodez(1) - nodez(0)};
+    
+    // define outputs
+    voxelizer_output.OUTPUTgrid = OUTPUTgrid;
+    double hold[3] = {nodex(1) - nodex(0), nodey(1) - nodey(0), nodez(1) - nodez(0)};
+    for (int i = 0; i < 3; ++i) {
+        voxelizer_output.cell_sizes[i] = hold[i];
+        }
+//    return {nodex(1) - nodex(0), nodey(1) - nodey(0), nodez(1) - nodez(0)};
+    return voxelizer_output;
 }
 
 // ==============================================================

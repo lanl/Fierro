@@ -9,7 +9,7 @@ dynamic_options:
 mesh_generation_options:
   type: Box
   origin: [0, 0, 0]
-  length: [1.2, 1.2, 1.2]
+  length: [10, 10, 10]
   num_elems: [32, 32, 32]
 
 output_options:
@@ -84,12 +84,22 @@ regions:
     v: 0.0
     w: 0.0
     # energy source initial conditions
-  - volume: 
-      type: sphere
-      radius1: 0.0
-      radius2: 0.0375
+#  - volume: 
+#      type: spherical_shell
+#      inner_radius: 0.0
+#      outer_radius: 0.0375
+#    material_id: 0
+#    den: 1.0
+#    ie: 0.25833839995946534
+  - volume:
+      type: voxel_grid
+      input_file: /Users/shankins/Documents/FY24 Documents/Github/XcodeFierro/Fierro/stl_files/Bunny.stl
+      gridX: 10
+      gridY: 10
+      gridZ: 10
+      use_index_space: true
     material_id: 0
-    den: 1.0
+    den: 0.5
     ie: 0.25833839995946534
         
     velocity: cartesian

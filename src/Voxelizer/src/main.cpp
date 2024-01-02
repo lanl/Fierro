@@ -12,11 +12,11 @@ int main(int argc, char *argv[]) {
     int gridZ = std::stoi(argv[5]); // voxel resolution z-direction
     bool use_index_space = (argc < 7) || std::stoi(argv[6]); // whether to output global or local coordinates
     
-    auto resolution = Voxelizer::create_voxel_vtk(stl_file_path, vtk_file_path, gridX, gridY, gridZ, use_index_space);
-
-    std::cout << "Voxel mesh created with resolution: (" 
-        << std::get<0>(resolution) << "," << std::get<1>(resolution) << "," << std::get<2>(resolution) << ")." 
-        << std::endl;
+//    auto resolution = Voxelizer::create_voxel_vtk(stl_file_path, vtk_file_path, gridX, gridY, gridZ, use_index_space);
+//
+//    std::cout << "Voxel mesh created with resolution: (" 
+//        << std::get<0>(resolution) << "," << std::get<1>(resolution) << "," << std::get<2>(resolution) << ")." 
+//        << std::endl;
     return 0;
 }
 

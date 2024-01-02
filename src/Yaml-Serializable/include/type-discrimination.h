@@ -156,7 +156,6 @@ namespace Yaml {
             // derivation/validation so that we don't double
             // derive when we deserialize it as the derived class later.
             deserialize(b, node, true);
-
             const auto& deserialization_map = TypeDiscriminated::data();
             if (deserialization_map.count(b.type) == 0)
                 throw_invalid_discriminator_exception(b.type);
