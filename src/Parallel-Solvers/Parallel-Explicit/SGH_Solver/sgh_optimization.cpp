@@ -550,8 +550,8 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         if(myrank==0)
           printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       }
-          // print time step every 10 cycles
-      else if (cycle%1==0){
+          // print time step every 20 cycles
+      else if (cycle%20==0){
         if(myrank==0)
           printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
       } // end if
@@ -849,6 +849,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         psi_midpoint_adjoint_vector(elem_gid,0) = -rate_of_change*global_dt/2 + psi_previous_adjoint_vector(elem_gid,0);
       }); // end parallel for
       Kokkos::fence();
+      
+      //save for second half of RK
+      (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
 
       //swap names to get ghost nodes for the midpoint vectors
       vec_array current_adjoint_vector = adjoint_vector_distributed->getLocalView<device_type> (Tpetra::Access::ReadWrite);
@@ -937,10 +940,14 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
           matrix_contribution += midpoint_adjoint_vector(dof_id/num_dim,dof_id%num_dim)*Force_Gradient_Energies(elem_gid,idof);
         }
         rate_of_change = -(matrix_contribution + psi_midpoint_adjoint_vector(elem_gid,0)*Power_Gradient_Energies(elem_gid))/elem_mass(elem_gid);
-        //rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
+        //debug
+        //std::cout << "PSI RATE OF CHANGE " << rate_of_change << std::endl;
         psi_current_adjoint_vector(elem_gid,0) = -rate_of_change*global_dt + psi_previous_adjoint_vector(elem_gid,0);
       }); // end parallel for
       Kokkos::fence();
+
+      //save data from time-step completion
+      (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
 
     } //end view scope
     
@@ -1274,6 +1281,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
       const_vec_array current_element_internal_energy = (*forward_solve_internal_energy_data)[0]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       const_vec_array current_psi_adjoint_vector = (*psi_adjoint_vector_data)[0]->getLocalView<device_type> (Tpetra::Access::ReadOnly);
       
+      //(*psi_adjoint_vector_data)[100]->describe(*fos,Teuchos::VERB_EXTREME);
       FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
         real_t lambda_dot;
         size_t node_id;
