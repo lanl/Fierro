@@ -70,7 +70,12 @@ struct fe_ref_elem_t{
     CArrayKokkos <double> gauss_leg_weights;
     
 
+
+
+
 void init(int p_order, int num_dim_inp){ 
+
+    //CArrayKokkos <double> lob_nodes_1D;
     
     num_dim = num_dim_inp;
 
@@ -149,268 +154,289 @@ void init(int p_order, int num_dim_inp){
     if(num_dim == 3){
         
         // --- build gauss nodal positions and weights ---
-        lob_nodes_1D = CArrayKokkos <double> (num_gauss_lob_1d);
-        lobatto_nodes_1D(lob_nodes_1D, num_gauss_lob_1d);
+        
+        lob_nodes_1D = CArrayKokkos <double> (num_gauss_lob_1d,"lob_nodes_1d");
+        CArrayKokkos <double> test;
+        test = CArrayKokkos <double> (num_gauss_lob_1d);
+        // lob_nodes_1D(0) = -1.0;
+        // lob_nodes_1D(1) =  1.0;
+        
+        RUN({
+            //printf("%d\n", lob_nodes_1D.size());
+            lobatto_nodes_1D(lob_nodes_1D, num_gauss_lob_1d);
+            // lob_nodes_1D(0) = -1.0;
+            // lob_nodes_1D(1) =  1.0;
+            // lob_nodes_1D(2) = -1.0;
+            // lob_nodes_1D(3) =  1.0;
+            // lob_nodes_1D(4) = -1.0;
+            
+        });
     
         lob_weights_1D = CArrayKokkos <double> (num_gauss_lob_1d);
-        lobatto_weights_1D(lob_weights_1D, num_gauss_lob_1d);
+        RUN({
+            lobatto_weights_1D(lob_weights_1D, num_gauss_lob_1d);
+        });
     
         leg_nodes_1D = CArrayKokkos <double> (num_gauss_leg_1d);
-        legendre_nodes_1D(leg_nodes_1D, num_gauss_leg_1d);
+        RUN({
+            legendre_nodes_1D(leg_nodes_1D, num_gauss_leg_1d);
+        });
     
         leg_weights_1D = CArrayKokkos <double> (num_gauss_leg_1d);
-        legendre_weights_1D(leg_weights_1D, num_gauss_leg_1d);
+        RUN({
+            legendre_weights_1D(leg_weights_1D, num_gauss_leg_1d);
+        });
+        
 
 
-        FOR_ALL( k, 0, num_gauss_lob_1d, 
-                 j, 0, num_gauss_lob_1d,
-                 i, 0, num_gauss_lob_1d, { 
+    //     FOR_ALL( k, 0, num_gauss_lob_1d, 
+    //              j, 0, num_gauss_lob_1d,
+    //              i, 0, num_gauss_lob_1d, { 
                     
-                    int lob_rid = lobatto_rid(i,j,k);
+    //                 int lob_rid = lobatto_rid(i,j,k);
                     
-                    gauss_lob_positions(lob_rid,0) = lob_nodes_1D(i);
-                    gauss_lob_positions(lob_rid,1) = lob_nodes_1D(j);
-                    gauss_lob_positions(lob_rid,2) = lob_nodes_1D(k);
+    //                 gauss_lob_positions(lob_rid,0) = lob_nodes_1D(i);
+    //                 gauss_lob_positions(lob_rid,1) = lob_nodes_1D(j);
+    //                 gauss_lob_positions(lob_rid,2) = lob_nodes_1D(k);
                   
-                    gauss_lob_weights(lob_rid) = lob_weights_1D(i)*lob_weights_1D(j)*lob_weights_1D(k);
-        });
+    //                 gauss_lob_weights(lob_rid) = lob_weights_1D(i)*lob_weights_1D(j)*lob_weights_1D(k);
+    //     });
     
-        FOR_ALL( k, 0, num_gauss_leg_1d, 
-                 j, 0, num_gauss_leg_1d,
-                 i, 0, num_gauss_leg_1d, { 
+    //     FOR_ALL( k, 0, num_gauss_leg_1d, 
+    //              j, 0, num_gauss_leg_1d,
+    //              i, 0, num_gauss_leg_1d, { 
         
-                    int leg_rid = legendre_rid(i,j,k);
+    //                 int leg_rid = legendre_rid(i,j,k);
                     
-                    gauss_leg_positions(leg_rid,0) = leg_nodes_1D(i);
-                    gauss_leg_positions(leg_rid,1) = leg_nodes_1D(j);
-                    gauss_leg_positions(leg_rid,2) = leg_nodes_1D(k);
-                    //printf(" leg_weight: %f \n", leg_weights_1D(i)); 
-                    gauss_leg_weights(leg_rid) = leg_weights_1D(i)*leg_weights_1D(j)*leg_weights_1D(k);
-        });
+    //                 gauss_leg_positions(leg_rid,0) = leg_nodes_1D(i);
+    //                 gauss_leg_positions(leg_rid,1) = leg_nodes_1D(j);
+    //                 gauss_leg_positions(leg_rid,2) = leg_nodes_1D(k);
+    //                 //printf(" leg_weight: %f \n", leg_weights_1D(i)); 
+    //                 gauss_leg_weights(leg_rid) = leg_weights_1D(i)*leg_weights_1D(j)*leg_weights_1D(k);
+    //     });
 
-        // Saving vertex positions in 1D
-        if( p_order == 0){
-            // dofs same as lobatto quadrature points 
-            FOR_ALL(i,  0, num_gauss_lob_1d,{
-                dof_positions_1d(i) = lob_nodes_1D(i);
-            });
-        }
+    //     // Saving vertex positions in 1D
+    //     if( p_order == 0){
+    //         // dofs same as lobatto quadrature points 
+    //         FOR_ALL(i,  0, num_gauss_lob_1d,{
+    //             dof_positions_1d(i) = lob_nodes_1D(i);
+    //         });
+    //     }
 
-        else{
-            RUN({
-                int dof_id = 0;
-                for(int i = 0; i < num_gauss_lob_1d; i=i+2){
+    //     else{
+    //         RUN({
+    //             int dof_id = 0;
+    //             for(int i = 0; i < num_gauss_lob_1d; i=i+2){
 
-                    dof_positions_1d(dof_id) = lob_nodes_1D(i);
+    //                 dof_positions_1d(dof_id) = lob_nodes_1D(i);
 
-                    dof_id++;
-                }
-            });  
-        }
+    //                 dof_id++;
+    //             }
+    //         });  
+    //     }
 
-        FOR_ALL( num_k, 0, num_dofs_1d, 
-                 num_j, 0, num_dofs_1d,
-                 num_i, 0, num_dofs_1d, { 
+    //     FOR_ALL( num_k, 0, num_dofs_1d, 
+    //              num_j, 0, num_dofs_1d,
+    //              num_i, 0, num_dofs_1d, { 
         
-                    int dof_rlid = dof_rid(num_i, num_j, num_k);
+    //                 int dof_rlid = dof_rid(num_i, num_j, num_k);
 
-                    dof_positions(dof_rlid, 0) = dof_positions_1d(num_i);
-                    dof_positions(dof_rlid, 1) = dof_positions_1d(num_j);
-                    dof_positions(dof_rlid, 2) = dof_positions_1d(num_k);
-        });
+    //                 dof_positions(dof_rlid, 0) = dof_positions_1d(num_i);
+    //                 dof_positions(dof_rlid, 1) = dof_positions_1d(num_j);
+    //                 dof_positions(dof_rlid, 2) = dof_positions_1d(num_k);
+    //     });
 
-        // basis and grad basis evaluations done at points //
+    //     // basis and grad basis evaluations done at points //
         
-        // temp variables hold evaluations at a single point for each dof //
-        CArrayKokkos <double> temp_nodal_basis(num_dofs_in_elem);
-        CArrayKokkos <double> temp_elem_basis(num_elem_dofs_in_elem);
+    //     // temp variables hold evaluations at a single point for each dof //
+    //     CArrayKokkos <double> temp_nodal_basis(num_dofs_in_elem);
+    //     CArrayKokkos <double> temp_elem_basis(num_elem_dofs_in_elem);
         
-        CArrayKokkos <double> val_1d(num_dofs_1d);
-        CArrayKokkos <double> val_3d(num_dofs_1d, 3);
+    //     CArrayKokkos <double> val_1d(num_dofs_1d);
+    //     CArrayKokkos <double> val_3d(num_dofs_1d, 3);
 
-        CArrayKokkos <double> elem_val_1d(num_elem_dofs_1d);
-        CArrayKokkos <double> elem_val_3d(num_elem_dofs_1d, 3);
+    //     CArrayKokkos <double> elem_val_1d(num_elem_dofs_1d);
+    //     CArrayKokkos <double> elem_val_3d(num_elem_dofs_1d, 3);
         
-        CArrayKokkos <double> point(3);
+    //     CArrayKokkos <double> point(3);
 	
-        // --- evaluate the basis at the lobatto positions
-        FOR_ALL(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
+    //     // --- evaluate the basis at the lobatto positions
+    //     FOR_ALL(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
 
-            // Get the nodal coordinates
-            for(int dim = 0; dim < 3; dim++){
-              point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-            }
+    //         // Get the nodal coordinates
+    //         for(int dim = 0; dim < 3; dim++){
+    //           point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
+    //         }
 
-            get_basis(temp_nodal_basis, val_1d, val_3d, point);
+    //         get_basis(temp_nodal_basis, val_1d, val_3d, point);
             
-            //double check_basis = 0.0;
+    //         //double check_basis = 0.0;
 
-            for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+    //         for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
 
-                gauss_lob_basis(gauss_lob_rid, basis_id) = temp_nodal_basis(basis_id);
-                //check_basis += temp_nodal_basis(basis_id);
-            	temp_nodal_basis(basis_id) = 0.0;
-            }
-            //printf(" basis tally = %f \n", check_basis );
+    //             gauss_lob_basis(gauss_lob_rid, basis_id) = temp_nodal_basis(basis_id);
+    //             //check_basis += temp_nodal_basis(basis_id);
+    //         	temp_nodal_basis(basis_id) = 0.0;
+    //         }
+    //         //printf(" basis tally = %f \n", check_basis );
 
-        });
+    //     });
 
-	// --- evaluate the basis at the legendre points
-        FOR_ALL(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
+	// // --- evaluate the basis at the legendre points
+    //     FOR_ALL(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
 
-            // Get the nodal coordinates
-            for(int dim = 0; dim < 3; dim++){
-                point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
-            }
+    //         // Get the nodal coordinates
+    //         for(int dim = 0; dim < 3; dim++){
+    //             point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
+    //         }
 
-            get_basis(temp_nodal_basis, val_1d, val_3d, point);
+    //         get_basis(temp_nodal_basis, val_1d, val_3d, point);
             
-            //double check_basis = 0.0;
+    //         //double check_basis = 0.0;
 
-            for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+    //         for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
 
-                gauss_leg_basis(gauss_leg_rid, basis_id) = temp_nodal_basis(basis_id);
-              //  check_basis += temp_nodal_basis(basis_id);
-                temp_nodal_basis(basis_id) = 0.0;
-	    }
+    //             gauss_leg_basis(gauss_leg_rid, basis_id) = temp_nodal_basis(basis_id);
+    //           //  check_basis += temp_nodal_basis(basis_id);
+    //             temp_nodal_basis(basis_id) = 0.0;
+	//     }
 
-            //printf(" basis tally = %f \n", check_basis );
-        });
+    //         //printf(" basis tally = %f \n", check_basis );
+    //     });
 
-        // --- evaluate the thermodynamic basis at the lobatto positions
-        FOR_ALL(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
+    //     // --- evaluate the thermodynamic basis at the lobatto positions
+    //     FOR_ALL(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
 
-            // Get the nodal coordinates
-            for(int dim = 0; dim < 3; dim++){
-              point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-            }
+    //         // Get the nodal coordinates
+    //         for(int dim = 0; dim < 3; dim++){
+    //           point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
+    //         }
 
-            get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+    //         get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
             
-            //double check_basis = 0.0;
+    //         //double check_basis = 0.0;
 
-            for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
+    //         for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
 
-                gauss_lob_elem_basis(gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
-                //check_basis += temp_elem_basis(basis_id);
-            	temp_elem_basis(basis_id) = 0.0;
-            }
-            //printf(" basis tally = %f \n", check_basis );
+    //             gauss_lob_elem_basis(gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
+    //             //check_basis += temp_elem_basis(basis_id);
+    //         	temp_elem_basis(basis_id) = 0.0;
+    //         }
+    //         //printf(" basis tally = %f \n", check_basis );
 
-        });
+    //     });
 
-	// --- evaluate the thermodynamic basis at the legendre points
-        FOR_ALL(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
+	// // --- evaluate the thermodynamic basis at the legendre points
+    //     FOR_ALL(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
 
-            // Get the nodal coordinates
-            for(int dim = 0; dim < 3; dim++){
-                point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
-            }
+    //         // Get the nodal coordinates
+    //         for(int dim = 0; dim < 3; dim++){
+    //             point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
+    //         }
 
-            get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+    //         get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
             
-            //double check_basis = 0.0;
+    //         //double check_basis = 0.0;
 
-            for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
+    //         for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
 
-                gauss_leg_elem_basis(gauss_leg_rid, basis_id) = temp_elem_basis(basis_id);
-                //check_basis += temp_elem_basis(basis_id);
-                temp_elem_basis(basis_id) = 0.0;
-	    }
+    //             gauss_leg_elem_basis(gauss_leg_rid, basis_id) = temp_elem_basis(basis_id);
+    //             //check_basis += temp_elem_basis(basis_id);
+    //             temp_elem_basis(basis_id) = 0.0;
+	//     }
 
-            //printf(" basis tally = %f \n", check_basis );
-        });
+    //         //printf(" basis tally = %f \n", check_basis );
+    //     });
         
 
 
-        // --- evaluate grad_basis functions at the lobatto points ---
+    //     // --- evaluate grad_basis functions at the lobatto points ---
 
-        CArrayKokkos <double> temp_partial_xi(num_dofs_in_elem);
-        CArrayKokkos <double> temp_partial_eta(num_dofs_in_elem);
-        CArrayKokkos <double> temp_partial_mu(num_dofs_in_elem);
+    //     CArrayKokkos <double> temp_partial_xi(num_dofs_in_elem);
+    //     CArrayKokkos <double> temp_partial_eta(num_dofs_in_elem);
+    //     CArrayKokkos <double> temp_partial_mu(num_dofs_in_elem);
         
-        CArrayKokkos <double> Dval_1d(num_dofs_1d);
-        CArrayKokkos <double> Dval_3d(num_dofs_1d,3);
+    //     CArrayKokkos <double> Dval_1d(num_dofs_1d);
+    //     CArrayKokkos <double> Dval_3d(num_dofs_1d,3);
         
-        FOR_ALL(gauss_lob_rid, 0, num_gauss_lob_in_elem,{
+    //     FOR_ALL(gauss_lob_rid, 0, num_gauss_lob_in_elem,{
 
-            // Get the lobatto coordinates
-            for(int dim = 0; dim < 3; dim++){
-                point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-            }
+    //         // Get the lobatto coordinates
+    //         for(int dim = 0; dim < 3; dim++){
+    //             point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
+    //         }
 
-            //double check[3];
-            //for (int i = 0; i < 3; i++) check[i] = 0.0;
+    //         //double check[3];
+    //         //for (int i = 0; i < 3; i++) check[i] = 0.0;
 
-            partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
-            partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
-            partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
+    //         partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
+    //         partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
+    //         partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
 
-            for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+    //         for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
 
 
-                gauss_lob_grad_basis(gauss_lob_rid, basis_id, 0) = temp_partial_xi(basis_id);
-                gauss_lob_grad_basis(gauss_lob_rid, basis_id, 1) = temp_partial_eta(basis_id);
-                gauss_lob_grad_basis(gauss_lob_rid, basis_id, 2) = temp_partial_mu(basis_id);
+    //             gauss_lob_grad_basis(gauss_lob_rid, basis_id, 0) = temp_partial_xi(basis_id);
+    //             gauss_lob_grad_basis(gauss_lob_rid, basis_id, 1) = temp_partial_eta(basis_id);
+    //             gauss_lob_grad_basis(gauss_lob_rid, basis_id, 2) = temp_partial_mu(basis_id);
                 
-              //  check[0] += temp_partial_xi(basis_id);
-              //  check[1] += temp_partial_eta(basis_id);
-              //  check[2] += temp_partial_mu(basis_id);
+    //           //  check[0] += temp_partial_xi(basis_id);
+    //           //  check[1] += temp_partial_eta(basis_id);
+    //           //  check[2] += temp_partial_mu(basis_id);
 
-                temp_partial_xi(basis_id)  = 0.0;
-                temp_partial_eta(basis_id) = 0.0;
-                temp_partial_mu(basis_id)  = 0.0;
-            }
+    //             temp_partial_xi(basis_id)  = 0.0;
+    //             temp_partial_eta(basis_id) = 0.0;
+    //             temp_partial_mu(basis_id)  = 0.0;
+    //         }
             
-            //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
-        });
+    //         //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
+    //     });
 
 
-        FOR_ALL(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
+    //     FOR_ALL(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
 
-            // Get the nodal coordinates
-            for(int dim = 0; dim < 3; dim++){
-                point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
-            }
+    //         // Get the nodal coordinates
+    //         for(int dim = 0; dim < 3; dim++){
+    //             point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
+    //         }
 
-            partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
-            partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
-            partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
+    //         partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
+    //         partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
+    //         partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
             
-            //double check[3];
-            //for (int i = 0; i < 3; i++) check[i] = 0.0;
+    //         //double check[3];
+    //         //for (int i = 0; i < 3; i++) check[i] = 0.0;
 
-            for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+    //         for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
 
 
-                gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) = temp_partial_xi(basis_id);
-                //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) );
-                gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) = temp_partial_eta(basis_id);
-                //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) );
-                gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) = temp_partial_mu(basis_id);
-                //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) );
+    //             gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) = temp_partial_xi(basis_id);
+    //             //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) );
+    //             gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) = temp_partial_eta(basis_id);
+    //             //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) );
+    //             gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) = temp_partial_mu(basis_id);
+    //             //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) );
               
-              //  check[0] += temp_partial_xi(basis_id);
-              //  check[1] += temp_partial_eta(basis_id);
-              //  check[2] += temp_partial_mu(basis_id);
+    //           //  check[0] += temp_partial_xi(basis_id);
+    //           //  check[1] += temp_partial_eta(basis_id);
+    //           //  check[2] += temp_partial_mu(basis_id);
                 
-                temp_partial_xi(basis_id)  = 0.0;
-                temp_partial_eta(basis_id) = 0.0;
-                temp_partial_mu(basis_id)  = 0.0;
-            }
+    //             temp_partial_xi(basis_id)  = 0.0;
+    //             temp_partial_eta(basis_id) = 0.0;
+    //             temp_partial_mu(basis_id)  = 0.0;
+    //         }
             
-            //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
-        });
+    //         //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
+    //     });
         
         
     }// end 3d scope    
 
-}; // end of member function
+} // end of member function
 
-    
-KOKKOS_FUNCTION
+//KOKKOS_FUNCTION    
 void lobatto_nodes_1D(
-                      CArrayKokkos <double> &lob_nodes_1D,
+                      const CArrayKokkos <double> &lob_nodes_1D,
                       const int &num){
     if (num == 1){
         lob_nodes_1D(0) = 0.0;
@@ -683,9 +709,8 @@ void lobatto_nodes_1D(
 *  defined in 1D.
 *****************************************************************************************/
 
-KOKKOS_FUNCTION
 void lobatto_weights_1D(
-                        CArrayKokkos <double> &lob_weights_1D,  // Lobbatto weights
+                        const CArrayKokkos <double> &lob_weights_1D,  // Lobbatto weights
                         const int &num){                     // Interpolation order
     if (num == 1){
         lob_weights_1D(0) = 2.0;
@@ -951,9 +976,8 @@ void lobatto_weights_1D(
     } // end if
 } // end of lobatto_weights_1D function
 
-KOKKOS_FUNCTION
 void legendre_nodes_1D(
-                       CArrayKokkos <double> &leg_nodes_1D,
+                       const CArrayKokkos <double> &leg_nodes_1D,
                        const int &num){
 
     if (num == 1){
@@ -1196,12 +1220,11 @@ void legendre_nodes_1D(
     } // end if
     
     
-}; // end of legendre_nodes_1D function
+} // end of legendre_nodes_1D function
 
 
-KOKKOS_FUNCTION
 void legendre_weights_1D(
-                         CArrayKokkos <double> &leg_weights_1D,  // Legendre weights
+                         const CArrayKokkos <double> &leg_weights_1D,  // Legendre weights
                          const int &num){                  // Interpolation order
     if (num == 1){
         leg_weights_1D(0) = 2.0;
@@ -1452,27 +1475,28 @@ KOKKOS_INLINE_FUNCTION
 int dof_rid(int i, int j, int k) const 
 {
     return i + j*num_dofs_1d + k*num_dofs_1d*num_dofs_1d;
-};
+}
 
 
 KOKKOS_INLINE_FUNCTION
 int elem_dof_rid(int i, int j, int k) const 
 {
     return i + j*num_elem_dofs_1d + k*num_elem_dofs_1d*num_elem_dofs_1d;
-};
+}
 
 KOKKOS_INLINE_FUNCTION
 int lobatto_rid(int i, int j, int k) const 
 {
     return i + j*num_gauss_lob_1d + k*num_gauss_lob_1d*num_gauss_lob_1d;
-};
+}
+
 KOKKOS_INLINE_FUNCTION
 int legendre_rid(int i, int j, int k) const 
 {
     return i + j*num_gauss_leg_1d + k*num_gauss_leg_1d*num_gauss_leg_1d;
-};
+}
 
-KOKKOS_INLINE_FUNCTION
+//KOKKOS_INLINE_FUNCTION
 void get_basis(const CArrayKokkos <double> &basis,
                const CArrayKokkos <double> &val_1d,
                const CArrayKokkos <double> &val_3d,
@@ -1529,9 +1553,9 @@ void get_basis(const CArrayKokkos <double> &basis,
           val_3d(i,1) = 0.0;
           val_3d(i,2) = 0.0;
         }
-};
+}
 
-KOKKOS_INLINE_FUNCTION
+//KOKKOS_INLINE_FUNCTION
 void partial_xi_basis(const CArrayKokkos <double> &partial_xi,
                       const CArrayKokkos <double> &val_1d,
                       const CArrayKokkos <double> &val_3d,
@@ -1607,9 +1631,9 @@ void partial_xi_basis(const CArrayKokkos <double> &partial_xi,
           Dval_3d(i,1) = 0.0;
           Dval_3d(i,2) = 0.0;
         }
-    };
+}
 
-KOKKOS_INLINE_FUNCTION
+//KOKKOS_INLINE_FUNCTION
 void partial_eta_basis(const CArrayKokkos <double> &partial_eta,
                        const CArrayKokkos <double> &val_1d,
                        const CArrayKokkos <double> &val_3d,
@@ -1679,10 +1703,10 @@ void partial_eta_basis(const CArrayKokkos <double> &partial_eta,
           Dval_3d(i,1) = 0.0;
           Dval_3d(i,2) = 0.0;
         }
-    };
+}
 
 
-KOKKOS_INLINE_FUNCTION
+//KOKKOS_INLINE_FUNCTION
 void partial_mu_basis(const CArrayKokkos <double> &partial_mu, 
                       const CArrayKokkos <double> &val_1d,
                       const CArrayKokkos <double> &val_3d,
@@ -1753,9 +1777,9 @@ void partial_mu_basis(const CArrayKokkos <double> &partial_mu,
           Dval_3d(i,1) = 0.0;
           Dval_3d(i,2) = 0.0;
         }
-};
+}
 
-KOKKOS_INLINE_FUNCTION
+//KOKKOS_INLINE_FUNCTION
 void get_bernstein_basis(const CArrayKokkos <double> &elem_basis,
                const CArrayKokkos <double> &elem_val_1d,
                const CArrayKokkos <double> &elem_val_3d,
@@ -1813,7 +1837,7 @@ void get_bernstein_basis(const CArrayKokkos <double> &elem_basis,
         }
 }
 
-KOKKOS_INLINE_FUNCTION
+//KOKKOS_INLINE_FUNCTION
 void lagrange_basis_1D(
         const CArrayKokkos <double> &interp,    // interpolant from each basis
         const double x_point){     // point of interest in element
@@ -1849,7 +1873,7 @@ void lagrange_basis_1D(
 } // end of Lagrange_1D function
 
 
-KOKKOS_INLINE_FUNCTION
+//KOKKOS_INLINE_FUNCTION
 void lagrange_derivative_1D(
                             const CArrayKokkos <double> &derivative,    // derivative
                             const double x_point){         // point of interest in element
@@ -1894,7 +1918,7 @@ void lagrange_derivative_1D(
         } // end loop over all nodes
 } // end of Lagrange_1D function
 
-KOKKOS_INLINE_FUNCTION
+//KOKKOS_INLINE_FUNCTION
 void bernstein_basis_1D(
         const CArrayKokkos <double> &interp,
         const double X){
@@ -1904,7 +1928,8 @@ void bernstein_basis_1D(
       }
 }
 
-KOKKOS_INLINE_FUNCTION
+// WARNING WARNING WARNING: Change to for loop? //
+//KOKKOS_INLINE_FUNCTION
 double eval_bernstein(
         const size_t n,// polynomial order
         const size_t v,// index

@@ -289,15 +289,15 @@ int main(int argc, char *argv[]){
         node_coords.update_device();
         Kokkos::fence();
 
-        get_gauss_leg_pt_jacobian(mesh,
-                                  elem,
-                                  ref_elem,
-                                  node_coords,
-                                  legendre_jacobian,
-                                  legendre_det,
-                                  legendre_jacobian_inverse);
+        // get_gauss_leg_pt_jacobian(mesh,
+        //                           elem,
+        //                           ref_elem,
+        //                           node_coords,
+        //                           legendre_jacobian,
+        //                           legendre_det,
+        //                           legendre_jacobian_inverse);
         
-        get_vol(elem_vol, node_coords, mesh, elem, ref_elem);
+        // get_vol(elem_vol, node_coords, mesh, elem, ref_elem);
         
         /*
         for (int elem_gid  = 0; elem_gid < mesh.num_elems; elem_gid++){

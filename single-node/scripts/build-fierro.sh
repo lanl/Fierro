@@ -47,7 +47,8 @@ build_action="full-app"
 solver="RDH"
 machine="darwin"
 kokkos_build_type="cuda"
-build_cores="32"
+build_corer="32"
+
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-kokkos" "fierro")

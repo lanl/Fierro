@@ -63,7 +63,7 @@
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/FEA_Module_Headers.h"
 #include "FEA_Module_SGH.h"
-#include "FEA_Module_RDH.h"
+//#include "FEA_Module_RDH.h"
 //#include "FEA_Module_Eulerian.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "FEA_Module_Inertial.h"
@@ -1046,10 +1046,10 @@ void Explicit_Solver::FEA_module_setup(){
         sgh_module = new FEA_Module_SGH(param, this, mesh);
         fea_modules.push_back(sgh_module);
       },
-      [&](RDH_Parameters& param){
+     /* [&](RDH_Parameters& param){
         rdh_module = new FEA_Module_RDH(param, this, mesh);
         fea_modules.push_back(rdh_module);
-      },
+      },*/
       [&](Dynamic_Elasticity_Parameters& param) {
         fea_modules.push_back(new FEA_Module_Dynamic_Elasticity(param, this, mesh));
       },

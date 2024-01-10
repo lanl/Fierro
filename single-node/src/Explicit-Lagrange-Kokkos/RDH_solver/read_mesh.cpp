@@ -302,6 +302,7 @@ void readVTKPn(char* MESH,
     num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
     
     // initialize reference element //
+    
     ref_elem.init(p, num_dims);
     
     // intialize elem mesh

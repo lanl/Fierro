@@ -134,7 +134,7 @@ public:
 
   //FEA simulations
   class FEA_Module_SGH *sgh_module;
-  class FEA_Module_RDH *rdh_module;
+  //class FEA_Module_RDH *rdh_module;
 
   //Global FEA data
   Teuchos::RCP<MV> node_velocities_distributed;

@@ -5,7 +5,7 @@ set(CMAKE_C_FLAGS  "${Trilinos_C_COMPILER_FLAGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_Fortran_FLAGS  "${Trilinos_Fortran_COMPILER_FLAGS} ${CMAKE_Fortran_FLAGS}")
 
 include_directories(SGH_Solver)
-include_directories(RDH_Solver)
+#include_directories(RDH_Solver)
 include_directories(Dynamic_Elastic_Solver)
 #include_directories(Eulerian_Solver)
 include_directories(Topology_Optimization)
@@ -22,7 +22,7 @@ elseif (THREADS)
   add_definitions(-DHAVE_THREADS=1)
 endif()
 
-add_subdirectory(RDH_Solver)
+#add_subdirectory(RDH_Solver)
 add_subdirectory(SGH_Solver)
 add_subdirectory(Dynamic_Elastic_Solver)
 #add_subdirectory(Eulerian_Solver)
@@ -37,11 +37,11 @@ target_link_libraries (fierro-parallel-explicit PRIVATE
   parallel_base_src 
   material_models
   parallel_sgh_solver
-  parallel_rdh_solver
   parallel_dynamic_elastic_solver
   ${Trilinos_LIBRARIES}
   ${MPI_CXX_LIBRARIES}
   Elements
+  #parallel_rdh_solver
 )
 
 install(
