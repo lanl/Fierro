@@ -68,376 +68,380 @@ struct fe_ref_elem_t{
     CArrayKokkos <double> leg_weights_1D;
     CArrayKokkos <double> gauss_lob_weights;
     CArrayKokkos <double> gauss_leg_weights;
+
+    // temp variables hold evaluations at a single point for each dof //
+    // CArrayKokkos <double> temp_nodal_basis;
+    // CArrayKokkos <double> temp_elem_basis;
     
+    // CArrayKokkos <double> val_1d;
+    // CArrayKokkos <double> val_3d;
+
+    // CArrayKokkos <double> elem_val_1d;
+    // CArrayKokkos <double> elem_val_3d;    
 
 
 
 
-void init(int p_order, int num_dim_inp){ 
-
-    //CArrayKokkos <double> lob_nodes_1D;
-    
-    num_dim = num_dim_inp;
-
-    if(p_order == 0){       
+    void init(int p_order, int num_dim_inp){ 
         
-        num_gauss_lob_1d = 2; // num gauss lobatto points in 1d
-	    num_gauss_leg_1d = 1;
-        num_dofs_1d = 2;
-        num_elem_dofs_1d = 1;
-        num_zones_1d = 1;
-        num_zones_in_elem = num_zones_1d*num_zones_1d*num_zones_1d;
-
-    }
-    else{
         
-        num_gauss_lob_1d = 2 * p_order + 1; // num gauss lobatto points in 1d
-	    num_gauss_leg_1d = 2*p_order;
+        //CArrayKokkos <double> lob_nodes_1D;
+        
+        num_dim = num_dim_inp;
 
-        num_dofs_1d = p_order+1;
-        num_elem_dofs_1d = p_order;
+        if(p_order == 0){       
+            
+            num_gauss_lob_1d = 2; // num gauss lobatto points in 1d
+            num_gauss_leg_1d = 1;
+            num_dofs_1d = 2;
+            num_elem_dofs_1d = 1;
+            num_zones_1d = 1;
+            num_zones_in_elem = num_zones_1d*num_zones_1d*num_zones_1d;
 
-        num_zones_1d = (num_dofs_1d - 1) / 2;
-        num_zones_in_elem = num_zones_1d*num_zones_1d*num_zones_1d;
+        }
+        else{
+            
+            num_gauss_lob_1d = 2 * p_order + 1; // num gauss lobatto points in 1d
+            num_gauss_leg_1d = 2*p_order;
 
-    }
+            num_dofs_1d = p_order+1;
+            num_elem_dofs_1d = p_order;
 
-    num_gauss_lob_in_elem = 1;
-   
-    num_gauss_leg_in_elem = 1;
+            num_zones_1d = (num_dofs_1d - 1) / 2;
+            num_zones_in_elem = num_zones_1d*num_zones_1d*num_zones_1d;
 
-    num_dofs_in_elem = 1;
-    
-    num_elem_dofs_in_elem = 1;
-    
-    for (int dim = 0; dim < num_dim; dim++){
-    
-      num_gauss_lob_in_elem *= num_gauss_lob_1d;    
-      num_gauss_leg_in_elem *= num_gauss_leg_1d;
+        }
 
-      num_dofs_in_elem *= num_dofs_1d; 
-      num_elem_dofs_in_elem *= num_elem_dofs_1d; 
-    }
+        num_gauss_lob_in_elem = 1;
     
+        num_gauss_leg_in_elem = 1;
 
-    // keeping both for now. being able to call ref_elem.num_basis is convenient for computations. //
-    num_basis = num_dofs_in_elem;
-    num_elem_basis = num_elem_dofs_in_elem;
+        num_dofs_in_elem = 1;
+        
+        num_elem_dofs_in_elem = 1;
+        
+        for (int dim = 0; dim < num_dim; dim++){
+        
+        num_gauss_lob_in_elem *= num_gauss_lob_1d;    
+        num_gauss_leg_in_elem *= num_gauss_leg_1d;
 
-    // allocate memory
-    dof_positions = CArrayKokkos <double> (num_dofs_in_elem, num_dim);
-    dof_positions_1d = CArrayKokkos <double> (num_dofs_1d);    
-    
-    elem_dof_positions = CArrayKokkos <double> (num_elem_dofs_in_elem, num_dim);
-    elem_dof_positions_1d = CArrayKokkos <double> (num_elem_dofs_1d);    
-    
-    gauss_lob_weights = CArrayKokkos <double> (num_gauss_lob_in_elem);
-    gauss_leg_weights = CArrayKokkos <double> (num_gauss_leg_in_elem);
+        num_dofs_in_elem *= num_dofs_1d; 
+        num_elem_dofs_in_elem *= num_elem_dofs_1d; 
+        }
+        
 
-    // Memory for gradients
-    gauss_lob_grad_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_basis, num_dim);
-    gauss_leg_grad_basis = CArrayKokkos  <double> (num_gauss_leg_in_elem, num_basis, num_dim);
+        // keeping both for now. being able to call ref_elem.num_basis is convenient for computations. //
+        num_basis = num_dofs_in_elem;
+        num_elem_basis = num_elem_dofs_in_elem;
 
-    // Basis evaluation at the nodes
-    gauss_lob_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_basis);
-    gauss_leg_basis = CArrayKokkos <double> (num_gauss_leg_in_elem, num_basis);
-    
-    gauss_lob_elem_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_elem_basis);
-    gauss_leg_elem_basis = CArrayKokkos <double> (num_gauss_leg_in_elem, num_elem_basis);
-    
-    gauss_lob_positions = CArrayKokkos <double> (num_gauss_lob_in_elem, num_dim); 
-    gauss_leg_positions = CArrayKokkos <double> (num_gauss_leg_in_elem, num_dim);
-    
-    //WARNING WARNING WARNING may need to add gauss_lob_elem_positions etc for BV matrix to get control coefficients //
-    
-    // --- build reference index spaces for 3D ---
-    if(num_dim == 3){
+        // allocate memory
+        dof_positions = CArrayKokkos <double> (num_dofs_in_elem, num_dim, "dof_positions");
+        dof_positions_1d = CArrayKokkos <double> (num_dofs_1d, "dof_positions_1d");    
+        
+        elem_dof_positions = CArrayKokkos <double> (num_elem_dofs_in_elem, num_dim, "elem_dof_positions");
+        elem_dof_positions_1d = CArrayKokkos <double> (num_elem_dofs_1d, "elem_dof_positions_1d");    
+        
+        gauss_lob_weights = CArrayKokkos <double> (num_gauss_lob_in_elem, "gauss_lob_weights");
+        gauss_leg_weights = CArrayKokkos <double> (num_gauss_leg_in_elem, "gauss_leg_weights");
+
+        // Memory for gradients
+        gauss_lob_grad_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_basis, num_dim, "gauss_lob_grad_basis");
+        gauss_leg_grad_basis = CArrayKokkos  <double> (num_gauss_leg_in_elem, num_basis, num_dim, "gauss_leg_grad_basis");
+
+        // Basis evaluation at the nodes
+        gauss_lob_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_basis, "gauss_lob_basis");
+        gauss_leg_basis = CArrayKokkos <double> (num_gauss_leg_in_elem, num_basis, "gauss_leg_basis");
+        
+        gauss_lob_elem_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_elem_basis, "gauss_lob_elem_basis");
+        gauss_leg_elem_basis = CArrayKokkos <double> (num_gauss_leg_in_elem, num_elem_basis, "gauss_leg_elem_basis");
+        
+        gauss_lob_positions = CArrayKokkos <double> (num_gauss_lob_in_elem, num_dim,"gauss_lob_positions"); 
+        gauss_leg_positions = CArrayKokkos <double> (num_gauss_leg_in_elem, num_dim,"gauss_leg_positions");
         
         // --- build gauss nodal positions and weights ---
-        
-        lob_nodes_1D = CArrayKokkos <double> (num_gauss_lob_1d,"lob_nodes_1d");
-        CArrayKokkos <double> test;
-        test = CArrayKokkos <double> (num_gauss_lob_1d);
-        // lob_nodes_1D(0) = -1.0;
-        // lob_nodes_1D(1) =  1.0;
-        
-        RUN({
-            //printf("%d\n", lob_nodes_1D.size());
-            lobatto_nodes_1D(lob_nodes_1D, num_gauss_lob_1d);
-            // lob_nodes_1D(0) = -1.0;
-            // lob_nodes_1D(1) =  1.0;
-            // lob_nodes_1D(2) = -1.0;
-            // lob_nodes_1D(3) =  1.0;
-            // lob_nodes_1D(4) = -1.0;
             
+        lob_nodes_1D = CArrayKokkos <double> (num_gauss_lob_1d,"lob_nodes_1d");
+        
+        RUN_CLASS({
+            lobatto_nodes_1D( lob_nodes_1D, num_gauss_lob_1d);
         });
-    
-        lob_weights_1D = CArrayKokkos <double> (num_gauss_lob_1d);
-        RUN({
+
+        lob_weights_1D = CArrayKokkos <double> (num_gauss_lob_1d,"lob_weightss_1d");
+        RUN_CLASS({
             lobatto_weights_1D(lob_weights_1D, num_gauss_lob_1d);
         });
-    
-        leg_nodes_1D = CArrayKokkos <double> (num_gauss_leg_1d);
-        RUN({
+
+        leg_nodes_1D = CArrayKokkos <double> (num_gauss_leg_1d,"leg_nodes_1d");
+        RUN_CLASS({
             legendre_nodes_1D(leg_nodes_1D, num_gauss_leg_1d);
         });
-    
-        leg_weights_1D = CArrayKokkos <double> (num_gauss_leg_1d);
-        RUN({
+
+        leg_weights_1D = CArrayKokkos <double> (num_gauss_leg_1d,"leg_weights_1d");
+        RUN_CLASS({
             legendre_weights_1D(leg_weights_1D, num_gauss_leg_1d);
         });
+
+        // //WARNING WARNING WARNING may need to add gauss_lob_elem_positions etc for BV matrix to get control coefficients //
         
-
-
-    //     FOR_ALL( k, 0, num_gauss_lob_1d, 
-    //              j, 0, num_gauss_lob_1d,
-    //              i, 0, num_gauss_lob_1d, { 
+        // // --- build reference index spaces for 3D ---
+        if(num_dim == 3){
+            
+            FOR_ALL_CLASS( k, 0, num_gauss_lob_1d, 
+                     j, 0, num_gauss_lob_1d,
+                     i, 0, num_gauss_lob_1d, { 
+                        
+                        int lob_rid = lobatto_rid(i,j,k);
+                                            
+                        gauss_lob_positions(lob_rid,0) = lob_nodes_1D(i);
+                        gauss_lob_positions(lob_rid,1) = lob_nodes_1D(j);
+                        gauss_lob_positions(lob_rid,2) = lob_nodes_1D(k);
                     
-    //                 int lob_rid = lobatto_rid(i,j,k);
+                        gauss_lob_weights(lob_rid) = lob_weights_1D(i)*lob_weights_1D(j)*lob_weights_1D(k);
+            });
+        
+            FOR_ALL_CLASS( k, 0, num_gauss_leg_1d, 
+                     j, 0, num_gauss_leg_1d,
+                     i, 0, num_gauss_leg_1d, { 
+            
+                        int leg_rid = legendre_rid(i,j,k);
+                        
+                        gauss_leg_positions(leg_rid,0) = leg_nodes_1D(i);
+                        gauss_leg_positions(leg_rid,1) = leg_nodes_1D(j);
+                        gauss_leg_positions(leg_rid,2) = leg_nodes_1D(k);
+                        //printf(" leg_weight: %f \n", leg_weights_1D(i)); 
+                        gauss_leg_weights(leg_rid) = leg_weights_1D(i)*leg_weights_1D(j)*leg_weights_1D(k);
+            });
+
+            // Saving vertex positions in 1D
+            if( p_order == 0){
+                // dofs same as lobatto quadrature points 
+                FOR_ALL_CLASS(i,  0, num_gauss_lob_1d,{
+                    dof_positions_1d(i) = lob_nodes_1D(i);
+                });
+            }
+
+            else{   
+
+                RUN_CLASS({
+                    int dof_id = 0;
                     
-    //                 gauss_lob_positions(lob_rid,0) = lob_nodes_1D(i);
-    //                 gauss_lob_positions(lob_rid,1) = lob_nodes_1D(j);
-    //                 gauss_lob_positions(lob_rid,2) = lob_nodes_1D(k);
-                  
-    //                 gauss_lob_weights(lob_rid) = lob_weights_1D(i)*lob_weights_1D(j)*lob_weights_1D(k);
-    //     });
-    
-    //     FOR_ALL( k, 0, num_gauss_leg_1d, 
-    //              j, 0, num_gauss_leg_1d,
-    //              i, 0, num_gauss_leg_1d, { 
-        
-    //                 int leg_rid = legendre_rid(i,j,k);
-                    
-    //                 gauss_leg_positions(leg_rid,0) = leg_nodes_1D(i);
-    //                 gauss_leg_positions(leg_rid,1) = leg_nodes_1D(j);
-    //                 gauss_leg_positions(leg_rid,2) = leg_nodes_1D(k);
-    //                 //printf(" leg_weight: %f \n", leg_weights_1D(i)); 
-    //                 gauss_leg_weights(leg_rid) = leg_weights_1D(i)*leg_weights_1D(j)*leg_weights_1D(k);
-    //     });
+                    for(int i = 0; i < num_gauss_lob_1d; i=i+2){
 
-    //     // Saving vertex positions in 1D
-    //     if( p_order == 0){
-    //         // dofs same as lobatto quadrature points 
-    //         FOR_ALL(i,  0, num_gauss_lob_1d,{
-    //             dof_positions_1d(i) = lob_nodes_1D(i);
-    //         });
-    //     }
+                        dof_positions_1d(dof_id) = lob_nodes_1D(i);
 
-    //     else{
-    //         RUN({
-    //             int dof_id = 0;
-    //             for(int i = 0; i < num_gauss_lob_1d; i=i+2){
+                        dof_id++;
+                    }
+                });  
+            }
 
-    //                 dof_positions_1d(dof_id) = lob_nodes_1D(i);
-
-    //                 dof_id++;
-    //             }
-    //         });  
-    //     }
-
-    //     FOR_ALL( num_k, 0, num_dofs_1d, 
-    //              num_j, 0, num_dofs_1d,
-    //              num_i, 0, num_dofs_1d, { 
-        
-    //                 int dof_rlid = dof_rid(num_i, num_j, num_k);
-
-    //                 dof_positions(dof_rlid, 0) = dof_positions_1d(num_i);
-    //                 dof_positions(dof_rlid, 1) = dof_positions_1d(num_j);
-    //                 dof_positions(dof_rlid, 2) = dof_positions_1d(num_k);
-    //     });
-
-    //     // basis and grad basis evaluations done at points //
-        
-    //     // temp variables hold evaluations at a single point for each dof //
-    //     CArrayKokkos <double> temp_nodal_basis(num_dofs_in_elem);
-    //     CArrayKokkos <double> temp_elem_basis(num_elem_dofs_in_elem);
-        
-    //     CArrayKokkos <double> val_1d(num_dofs_1d);
-    //     CArrayKokkos <double> val_3d(num_dofs_1d, 3);
-
-    //     CArrayKokkos <double> elem_val_1d(num_elem_dofs_1d);
-    //     CArrayKokkos <double> elem_val_3d(num_elem_dofs_1d, 3);
-        
-    //     CArrayKokkos <double> point(3);
-	
-    //     // --- evaluate the basis at the lobatto positions
-    //     FOR_ALL(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
-
-    //         // Get the nodal coordinates
-    //         for(int dim = 0; dim < 3; dim++){
-    //           point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-    //         }
-
-    //         get_basis(temp_nodal_basis, val_1d, val_3d, point);
+            FOR_ALL_CLASS( num_k, 0, num_dofs_1d, 
+                     num_j, 0, num_dofs_1d,
+                     num_i, 0, num_dofs_1d, { 
             
-    //         //double check_basis = 0.0;
+                    int dof_rlid = dof_rid(num_i, num_j, num_k);
 
-    //         for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+                    dof_positions(dof_rlid, 0) = dof_positions_1d(num_i);
+                    dof_positions(dof_rlid, 1) = dof_positions_1d(num_j);
+                    dof_positions(dof_rlid, 2) = dof_positions_1d(num_k);
+            });
 
-    //             gauss_lob_basis(gauss_lob_rid, basis_id) = temp_nodal_basis(basis_id);
-    //             //check_basis += temp_nodal_basis(basis_id);
-    //         	temp_nodal_basis(basis_id) = 0.0;
-    //         }
-    //         //printf(" basis tally = %f \n", check_basis );
-
-    //     });
-
-	// // --- evaluate the basis at the legendre points
-    //     FOR_ALL(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
-
-    //         // Get the nodal coordinates
-    //         for(int dim = 0; dim < 3; dim++){
-    //             point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
-    //         }
-
-    //         get_basis(temp_nodal_basis, val_1d, val_3d, point);
+            // basis and grad basis evaluations done at points //
             
-    //         //double check_basis = 0.0;
-
-    //         for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
-
-    //             gauss_leg_basis(gauss_leg_rid, basis_id) = temp_nodal_basis(basis_id);
-    //           //  check_basis += temp_nodal_basis(basis_id);
-    //             temp_nodal_basis(basis_id) = 0.0;
-	//     }
-
-    //         //printf(" basis tally = %f \n", check_basis );
-    //     });
-
-    //     // --- evaluate the thermodynamic basis at the lobatto positions
-    //     FOR_ALL(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
-
-    //         // Get the nodal coordinates
-    //         for(int dim = 0; dim < 3; dim++){
-    //           point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-    //         }
-
-    //         get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+            // temp variables hold evaluations at a single point for each dof //
+            CArrayKokkos <double> temp_nodal_basis(num_dofs_in_elem);
+            CArrayKokkos <double> temp_elem_basis(num_elem_dofs_in_elem);
             
-    //         //double check_basis = 0.0;
+            CArrayKokkos <double> val_1d(num_dofs_1d);
+            CArrayKokkos <double> val_3d(num_dofs_1d, 3);
 
-    //         for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
+            CArrayKokkos <double> elem_val_1d(num_elem_dofs_1d);
+            CArrayKokkos <double> elem_val_3d(num_elem_dofs_1d, 3);
 
-    //             gauss_lob_elem_basis(gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
-    //             //check_basis += temp_elem_basis(basis_id);
-    //         	temp_elem_basis(basis_id) = 0.0;
-    //         }
-    //         //printf(" basis tally = %f \n", check_basis );
+            CArrayKokkos <double> point(3);
 
-    //     });
+            // //--- evaluate the basis at the lobatto positions
+            FOR_ALL_CLASS(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
 
-	// // --- evaluate the thermodynamic basis at the legendre points
-    //     FOR_ALL(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
+                // Get the nodal coordinates
+                for(int dim = 0; dim < 3; dim++){
+                  point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
+                }
 
-    //         // Get the nodal coordinates
-    //         for(int dim = 0; dim < 3; dim++){
-    //             point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
-    //         }
-
-    //         get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
-            
-    //         //double check_basis = 0.0;
-
-    //         for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
-
-    //             gauss_leg_elem_basis(gauss_leg_rid, basis_id) = temp_elem_basis(basis_id);
-    //             //check_basis += temp_elem_basis(basis_id);
-    //             temp_elem_basis(basis_id) = 0.0;
-	//     }
-
-    //         //printf(" basis tally = %f \n", check_basis );
-    //     });
-        
-
-
-    //     // --- evaluate grad_basis functions at the lobatto points ---
-
-    //     CArrayKokkos <double> temp_partial_xi(num_dofs_in_elem);
-    //     CArrayKokkos <double> temp_partial_eta(num_dofs_in_elem);
-    //     CArrayKokkos <double> temp_partial_mu(num_dofs_in_elem);
-        
-    //     CArrayKokkos <double> Dval_1d(num_dofs_1d);
-    //     CArrayKokkos <double> Dval_3d(num_dofs_1d,3);
-        
-    //     FOR_ALL(gauss_lob_rid, 0, num_gauss_lob_in_elem,{
-
-    //         // Get the lobatto coordinates
-    //         for(int dim = 0; dim < 3; dim++){
-    //             point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
-    //         }
-
-    //         //double check[3];
-    //         //for (int i = 0; i < 3; i++) check[i] = 0.0;
-
-    //         partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
-    //         partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
-    //         partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
-
-    //         for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
-
-
-    //             gauss_lob_grad_basis(gauss_lob_rid, basis_id, 0) = temp_partial_xi(basis_id);
-    //             gauss_lob_grad_basis(gauss_lob_rid, basis_id, 1) = temp_partial_eta(basis_id);
-    //             gauss_lob_grad_basis(gauss_lob_rid, basis_id, 2) = temp_partial_mu(basis_id);
+                get_basis(temp_nodal_basis, val_1d, val_3d, point);
                 
-    //           //  check[0] += temp_partial_xi(basis_id);
-    //           //  check[1] += temp_partial_eta(basis_id);
-    //           //  check[2] += temp_partial_mu(basis_id);
+                double check_basis = 0.0;
 
-    //             temp_partial_xi(basis_id)  = 0.0;
-    //             temp_partial_eta(basis_id) = 0.0;
-    //             temp_partial_mu(basis_id)  = 0.0;
-    //         }
-            
-    //         //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
-    //     });
+                for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+                    gauss_lob_basis(gauss_lob_rid, basis_id) = temp_nodal_basis(basis_id);
+                    check_basis += temp_nodal_basis(basis_id);
+                	temp_nodal_basis(basis_id) = 0.0;
+                }
+                printf(" basis tally = %f \n", check_basis );
 
+            });
+            Kokkos::fence();
 
-    //     FOR_ALL(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
-
-    //         // Get the nodal coordinates
-    //         for(int dim = 0; dim < 3; dim++){
-    //             point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
-    //         }
-
-    //         partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
-    //         partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
-    //         partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
-            
-    //         //double check[3];
-    //         //for (int i = 0; i < 3; i++) check[i] = 0.0;
-
-    //         for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
-
-
-    //             gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) = temp_partial_xi(basis_id);
-    //             //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) );
-    //             gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) = temp_partial_eta(basis_id);
-    //             //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) );
-    //             gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) = temp_partial_mu(basis_id);
-    //             //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) );
-              
-    //           //  check[0] += temp_partial_xi(basis_id);
-    //           //  check[1] += temp_partial_eta(basis_id);
-    //           //  check[2] += temp_partial_mu(basis_id);
+        // --- evaluate the basis at the legendre points
+            FOR_ALL_CLASS(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
                 
-    //             temp_partial_xi(basis_id)  = 0.0;
-    //             temp_partial_eta(basis_id) = 0.0;
-    //             temp_partial_mu(basis_id)  = 0.0;
-    //         }
+                CArrayKokkos <double> point(3);
+                // Get the nodal coordinates
+                for(int dim = 0; dim < 3; dim++){
+                    point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
+                }
+
+                get_basis(temp_nodal_basis, val_1d, val_3d, point);
+                
+                //double check_basis = 0.0;
+
+                for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+
+                    gauss_leg_basis(gauss_leg_rid, basis_id) = temp_nodal_basis(basis_id);
+                    //check_basis += temp_nodal_basis(basis_id);
+                    temp_nodal_basis(basis_id) = 0.0;
+            }
+
+                //printf(" basis tally = %f \n", check_basis );
+            });
+            Kokkos::fence();
+
+            // --- evaluate the thermodynamic basis at the lobatto positions
+            FOR_ALL_CLASS(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
+
+                // Get the nodal coordinates
+                for(int dim = 0; dim < 3; dim++){
+                  point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
+                }
+
+                get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                
+                //double check_basis = 0.0;
+
+                for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
+
+                    gauss_lob_elem_basis(gauss_lob_rid, basis_id) = temp_elem_basis(basis_id);
+                    //check_basis += temp_elem_basis(basis_id);
+                	temp_elem_basis(basis_id) = 0.0;
+                }
+                //printf(" basis tally = %f \n", check_basis );
+
+            });
+            Kokkos::fence();
+
+        // --- evaluate the thermodynamic basis at the legendre points
+            FOR_ALL_CLASS(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
+
+                // Get the nodal coordinates
+                for(int dim = 0; dim < 3; dim++){
+                    point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
+                }
+
+                get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_3d, point);
+                
+                //double check_basis = 0.0;
+
+                for(int basis_id = 0; basis_id < num_elem_dofs_in_elem; basis_id++){
+
+                    gauss_leg_elem_basis(gauss_leg_rid, basis_id) = temp_elem_basis(basis_id);
+                    //check_basis += temp_elem_basis(basis_id);
+                    temp_elem_basis(basis_id) = 0.0;
+            }
+
+                //printf(" basis tally = %f \n", check_basis );
+            });
+            Kokkos::fence();
             
-    //         //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
-    //     });
-        
-        
-    }// end 3d scope    
 
-} // end of member function
 
-//KOKKOS_FUNCTION    
-void lobatto_nodes_1D(
+            // --- evaluate grad_basis functions at the lobatto points ---
+
+            CArrayKokkos <double> temp_partial_xi(num_dofs_in_elem);
+            CArrayKokkos <double> temp_partial_eta(num_dofs_in_elem);
+            CArrayKokkos <double> temp_partial_mu(num_dofs_in_elem);
+            
+            CArrayKokkos <double> Dval_1d(num_dofs_1d);
+            CArrayKokkos <double> Dval_3d(num_dofs_1d,3);
+            
+            FOR_ALL_CLASS(gauss_lob_rid, 0, num_gauss_lob_in_elem,{
+
+                // Get the lobatto coordinates
+                for(int dim = 0; dim < 3; dim++){
+                    point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
+                }
+
+                //double check[3];
+                //for (int i = 0; i < 3; i++) check[i] = 0.0;
+
+                partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
+
+                for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+
+
+                    gauss_lob_grad_basis(gauss_lob_rid, basis_id, 0) = temp_partial_xi(basis_id);
+                    gauss_lob_grad_basis(gauss_lob_rid, basis_id, 1) = temp_partial_eta(basis_id);
+                    gauss_lob_grad_basis(gauss_lob_rid, basis_id, 2) = temp_partial_mu(basis_id);
+                    
+                  //  check[0] += temp_partial_xi(basis_id);
+                  //  check[1] += temp_partial_eta(basis_id);
+                  //  check[2] += temp_partial_mu(basis_id);
+
+                    temp_partial_xi(basis_id)  = 0.0;
+                    temp_partial_eta(basis_id) = 0.0;
+                    temp_partial_mu(basis_id)  = 0.0;
+                }
+                
+                //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
+            });
+            Kokkos::fence();
+
+
+            FOR_ALL_CLASS(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
+
+                // Get the nodal coordinates
+                for(int dim = 0; dim < 3; dim++){
+                    point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
+                }
+
+                partial_xi_basis(temp_partial_xi, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
+                
+                //double check[3];
+                //for (int i = 0; i < 3; i++) check[i] = 0.0;
+
+                for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+
+
+                    gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) = temp_partial_xi(basis_id);
+                    //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 0) );
+                    gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) = temp_partial_eta(basis_id);
+                    //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 1) );
+                    gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) = temp_partial_mu(basis_id);
+                    //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) );
+                
+                  //  check[0] += temp_partial_xi(basis_id);
+                  //  check[1] += temp_partial_eta(basis_id);
+                  //  check[2] += temp_partial_mu(basis_id);
+                    
+                    temp_partial_xi(basis_id)  = 0.0;
+                    temp_partial_eta(basis_id) = 0.0;
+                    temp_partial_mu(basis_id)  = 0.0;
+                }
+                
+                //printf(" grad_basis tally = %f, %f, %f \n", check[0], check[1], check[2]);
+            });
+            Kokkos::fence();
+            
+        }// end 3d scope    
+
+    } // end of member function
+
+KOKKOS_FUNCTION
+void lobatto_nodes_1D (
                       const CArrayKokkos <double> &lob_nodes_1D,
-                      const int &num){
+                      const int &num) const{
     if (num == 1){
         lob_nodes_1D(0) = 0.0;
     }
@@ -709,9 +713,10 @@ void lobatto_nodes_1D(
 *  defined in 1D.
 *****************************************************************************************/
 
+//KOKKOS_FUNCTION
 void lobatto_weights_1D(
                         const CArrayKokkos <double> &lob_weights_1D,  // Lobbatto weights
-                        const int &num){                     // Interpolation order
+                        const int &num) const {                     // Interpolation order
     if (num == 1){
         lob_weights_1D(0) = 2.0;
     }
@@ -976,9 +981,11 @@ void lobatto_weights_1D(
     } // end if
 } // end of lobatto_weights_1D function
 
+
+//KOKKOS_FUNCTION
 void legendre_nodes_1D(
                        const CArrayKokkos <double> &leg_nodes_1D,
-                       const int &num){
+                       const int &num) const {
 
     if (num == 1){
         leg_nodes_1D(0) = 0.0;
@@ -1222,10 +1229,10 @@ void legendre_nodes_1D(
     
 } // end of legendre_nodes_1D function
 
-
+//KOKKOS_FUNCTION
 void legendre_weights_1D(
                          const CArrayKokkos <double> &leg_weights_1D,  // Legendre weights
-                         const int &num){                  // Interpolation order
+                         const int &num) const{                  // Interpolation order
     if (num == 1){
         leg_weights_1D(0) = 2.0;
     }
@@ -1496,11 +1503,11 @@ int legendre_rid(int i, int j, int k) const
     return i + j*num_gauss_leg_1d + k*num_gauss_leg_1d*num_gauss_leg_1d;
 }
 
-//KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void get_basis(const CArrayKokkos <double> &basis,
                const CArrayKokkos <double> &val_1d,
                const CArrayKokkos <double> &val_3d,
-               const CArrayKokkos <double> &point){
+               const CArrayKokkos <double> &point) const{
 
         
         // initialize to zero //
@@ -1555,16 +1562,13 @@ void get_basis(const CArrayKokkos <double> &basis,
         }
 }
 
-//KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void partial_xi_basis(const CArrayKokkos <double> &partial_xi,
                       const CArrayKokkos <double> &val_1d,
                       const CArrayKokkos <double> &val_3d,
                       const CArrayKokkos <double> &Dval_1d,
                       const CArrayKokkos <double> &Dval_3d,
-                      const CArrayKokkos <double> &point)
-{
-
-
+                      const CArrayKokkos <double> &point) const {
         
         //initialize//
         for (int i = 0; i < num_dofs_1d; i++){
@@ -1633,13 +1637,13 @@ void partial_xi_basis(const CArrayKokkos <double> &partial_xi,
         }
 }
 
-//KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void partial_eta_basis(const CArrayKokkos <double> &partial_eta,
                        const CArrayKokkos <double> &val_1d,
                        const CArrayKokkos <double> &val_3d,
                        const CArrayKokkos <double> &Dval_1d,
                        const CArrayKokkos <double> &Dval_3d,
-                       const CArrayKokkos <double> &point){   
+                       const CArrayKokkos <double> &point) const {   
 
         //initialize//
         for (int i = 0; i < num_dofs_1d; i++){
@@ -1706,13 +1710,13 @@ void partial_eta_basis(const CArrayKokkos <double> &partial_eta,
 }
 
 
-//KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void partial_mu_basis(const CArrayKokkos <double> &partial_mu, 
                       const CArrayKokkos <double> &val_1d,
                       const CArrayKokkos <double> &val_3d,
                       const CArrayKokkos <double> &Dval_1d,
                       const CArrayKokkos <double> &Dval_3d,
-                      const CArrayKokkos <double> &point){
+                      const CArrayKokkos <double> &point) const {
 
         //initialize//
         for (int i = 0; i < num_dofs_1d; i++){
@@ -1779,11 +1783,11 @@ void partial_mu_basis(const CArrayKokkos <double> &partial_mu,
         }
 }
 
-//KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void get_bernstein_basis(const CArrayKokkos <double> &elem_basis,
                const CArrayKokkos <double> &elem_val_1d,
                const CArrayKokkos <double> &elem_val_3d,
-               const CArrayKokkos <double> &point){
+               const CArrayKokkos <double> &point) const {
 
         // initialize to zero //
         for (int i =0; i< num_elem_dofs_1d; i++){
@@ -1837,10 +1841,10 @@ void get_bernstein_basis(const CArrayKokkos <double> &elem_basis,
         }
 }
 
-//KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void lagrange_basis_1D(
         const CArrayKokkos <double> &interp,    // interpolant from each basis
-        const double x_point){     // point of interest in element
+        const double x_point) const{     // point of interest in element
                          
         
         // calculate the basis value associated with each node_i
@@ -1873,10 +1877,10 @@ void lagrange_basis_1D(
 } // end of Lagrange_1D function
 
 
-//KOKKOS_INLINE_FUNCTION
+KOKKOS_INLINE_FUNCTION
 void lagrange_derivative_1D(
                             const CArrayKokkos <double> &derivative,    // derivative
-                            const double x_point){         // point of interest in element
+                            const double x_point) const {         // point of interest in element
 
         for(int vert_i = 0; vert_i < num_dofs_1d; vert_i++){ // looping over the nodes
         
@@ -1918,10 +1922,10 @@ void lagrange_derivative_1D(
         } // end loop over all nodes
 } // end of Lagrange_1D function
 
-//KOKKOS_INLINE_FUNCTION
+KOKKOS_INLINE_FUNCTION
 void bernstein_basis_1D(
         const CArrayKokkos <double> &interp,
-        const double X){
+        const double X) const {
       
       for( int dof_i = 0; dof_i < num_elem_dofs_1d; dof_i++){
         interp(dof_i) = eval_bernstein(num_elem_dofs_1d-1, dof_i, X);
@@ -1929,11 +1933,11 @@ void bernstein_basis_1D(
 }
 
 // WARNING WARNING WARNING: Change to for loop? //
-//KOKKOS_INLINE_FUNCTION
-double eval_bernstein(
+KOKKOS_INLINE_FUNCTION
+double eval_bernstein (
         const size_t n,// polynomial order
         const size_t v,// index
-        const double X){ // point at which to evaluate polynomial 
+        const double X) const { // point at which to evaluate polynomial 
       
       if ( n == 0 && v != 0 ) return 0.0;
       if ( n == 0 && v == 0 ) return 1.0;
