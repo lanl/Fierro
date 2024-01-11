@@ -66,6 +66,7 @@ class DisplacementConstraint_TopOpt : public ROL::Constraint<real_t> {
   typedef Tpetra::Map<>::node_type Node;
   typedef Tpetra::Map<LO, GO, Node> Map;
   typedef Tpetra::MultiVector<real_t, LO, GO, Node> MV;
+  typedef Tpetra::MultiVector<bool, LO, GO, Node> BoolV;
   typedef ROL::Vector<real_t> V;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,Node> ROL_MV;
   typedef ROL::TpetraMultiVector<bool,LO,GO,Node> ROL_BoolV;
@@ -85,6 +86,7 @@ class DisplacementConstraint_TopOpt : public ROL::Constraint<real_t> {
   typedef MV::dual_view_type::t_dev vec_array;
   typedef MV::dual_view_type::t_host host_vec_array;
   typedef Kokkos::View<const real_t**, array_layout, HostSpace, memory_traits> const_host_vec_array;
+  typedef Kokkos::View<const bool**, array_layout, HostSpace, memory_traits> const_host_bool_array;
   typedef MV::dual_view_type dual_vec_array;
 
 private:
@@ -188,9 +190,31 @@ public:
   void value(ROL::Vector<real_t> &c, const ROL::Vector<real_t> &z, real_t &tol ) {
     ROL::Ptr<const MV> zp = getVector(z);
     ROL::Ptr<std::vector<real_t>> cp = dynamic_cast<ROL::StdVector<real_t>&>(c).getVector();
-    real_t current_quadsum_value;
+    ROL::Ptr<const BoolV> active_nodesp = (*ROL_Active_Nodes).getVector();
+    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
+    
+    const_host_bool_array active_nodes_view = active_nodesp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+    int nlocal_nodes = FEM_->nlocal_nodes;
+    int num_dim = FEM_->num_dim;
+    real_t current_quadsum_value, current_local_quadsum_value;
+
+    current_local_quadsum_value = current_quadsum_value = 0;
+    for(int inode = 0; inode < nlocal_nodes; inode++){
+      if(active_nodes_view(inode,0)){
+        for(int idim = 0; idim < num_dim; idim++){
+          current_local_quadsum_value += (displacements_view(inode,idim)-target_displacements_view(inode,idim))*
+                                        (displacements_view(inode,idim)-target_displacements_view(inode,idim))/(target_displacements_view(inode,idim)*target_displacements_view(inode,idim));
+        }
+      }
+    }
+
+    MPI_Allreduce(&current_local_quadsum_value,&current_quadsum_value,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+
     if(FEM_->myrank==0)
-      std::cout << "CURRENT STRAIN ENERGY RATIO " << current_quadsum_value/initial_strain_energy_/constraint_value_ << std::endl;
+      std::cout << "CURRENT STRAIN ENERGY RATIO " << current_quadsum_value << std::endl;
     if(inequality_flag_)
       (*cp)[0] = current_quadsum_value;
     else
