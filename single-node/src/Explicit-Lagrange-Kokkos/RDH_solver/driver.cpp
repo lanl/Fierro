@@ -246,7 +246,7 @@ int main(int argc, char *argv[]){
 
         DViewCArrayKokkos <double> elem_statev(&elem.statev(0,0),
                                                num_elems,
-                                               num_state_vars );
+                                               num_state_vars);
         
 	      DViewCArrayKokkos <double> lobatto_jacobian(&elem.gauss_lobatto_jacobian(0,0,0),
                                                     num_lob_pts,
@@ -289,15 +289,15 @@ int main(int argc, char *argv[]){
         node_coords.update_device();
         Kokkos::fence();
 
-        // get_gauss_leg_pt_jacobian(mesh,
-        //                           elem,
-        //                           ref_elem,
-        //                           node_coords,
-        //                           legendre_jacobian,
-        //                           legendre_det,
-        //                           legendre_jacobian_inverse);
+        get_gauss_leg_pt_jacobian(mesh,
+                                  elem,
+                                  ref_elem,
+                                  node_coords,
+                                  legendre_jacobian,
+                                  legendre_det,
+                                  legendre_jacobian_inverse);
         
-        // get_vol(elem_vol, node_coords, mesh, elem, ref_elem);
+        get_vol(elem_vol, node_coords, mesh, elem, ref_elem);
         
         /*
         for (int elem_gid  = 0; elem_gid < mesh.num_elems; elem_gid++){
@@ -307,13 +307,13 @@ int main(int argc, char *argv[]){
         }
         */
 
-        /* 
-        double vol_check = 0.0;
-        for (int i = 0; i < mesh.num_elems; i++){
-           vol_check += elem_vol(i);
-        }
-        printf("calculated volume is: %f \n", vol_check); 
-        */
+        printf("calculated volume is: %f \n", elem_vol.host(0));
+        // double vol_check = 0.0;
+        // for (int i = 0; i < mesh.num_elems; i++){
+        //    vol_check += elem_vol(i);
+        // }
+        // printf("calculated volume is: %f \n", vol_check); 
+        
        /* 
         // check jacobian inverse works //
         double temp_left = 0.0;

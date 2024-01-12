@@ -205,6 +205,7 @@ struct fe_ref_elem_t{
             
                         int leg_rid = legendre_rid(i,j,k);
                         
+                        //printf(" leg_node_1D value = %f \n", leg_nodes_1D(i) );
                         gauss_leg_positions(leg_rid,0) = leg_nodes_1D(i);
                         gauss_leg_positions(leg_rid,1) = leg_nodes_1D(j);
                         gauss_leg_positions(leg_rid,2) = leg_nodes_1D(k);
@@ -259,24 +260,28 @@ struct fe_ref_elem_t{
 
             CArrayKokkos <double> point(3);
 
+            //printf(" num_dofs = %d \n", num_dofs_in_elem );
+
             // //--- evaluate the basis at the lobatto positions
             FOR_ALL_CLASS(gauss_lob_rid, 0, num_gauss_lob_in_elem, {
 
                 // Get the nodal coordinates
                 for(int dim = 0; dim < 3; dim++){
                   point(dim) = gauss_lob_positions(gauss_lob_rid, dim);
+                  //printf(" point value = %f \n", point(dim) );
+
                 }
 
                 get_basis(temp_nodal_basis, val_1d, val_3d, point);
-                
                 double check_basis = 0.0;
 
                 for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
+                    //printf(" computed basis value = %f \n", temp_nodal_basis(basis_id) );
                     gauss_lob_basis(gauss_lob_rid, basis_id) = temp_nodal_basis(basis_id);
-                    check_basis += temp_nodal_basis(basis_id);
+                    //check_basis += temp_nodal_basis(basis_id);
                 	temp_nodal_basis(basis_id) = 0.0;
                 }
-                printf(" basis tally = %f \n", check_basis );
+                //printf(" basis tally = %f \n", check_basis );
 
             });
             Kokkos::fence();
@@ -284,24 +289,24 @@ struct fe_ref_elem_t{
         // --- evaluate the basis at the legendre points
             FOR_ALL_CLASS(gauss_leg_rid,  0, num_gauss_leg_in_elem, {
                 
-                CArrayKokkos <double> point(3);
                 // Get the nodal coordinates
                 for(int dim = 0; dim < 3; dim++){
                     point(dim) = gauss_leg_positions(gauss_leg_rid, dim);
+                    //printf(" point value = %f \n", point(dim) );
                 }
 
                 get_basis(temp_nodal_basis, val_1d, val_3d, point);
                 
-                //double check_basis = 0.0;
+                double check_basis = 0.0;
 
                 for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
-
+                    //printf(" computed basis value = %f \n", temp_nodal_basis(basis_id) );
                     gauss_leg_basis(gauss_leg_rid, basis_id) = temp_nodal_basis(basis_id);
-                    //check_basis += temp_nodal_basis(basis_id);
+                    check_basis += temp_nodal_basis(basis_id);
                     temp_nodal_basis(basis_id) = 0.0;
-            }
+                }
 
-                //printf(" basis tally = %f \n", check_basis );
+                printf(" basis tally = %f \n", check_basis );
             });
             Kokkos::fence();
 
@@ -408,8 +413,8 @@ struct fe_ref_elem_t{
                 partial_eta_basis(temp_partial_eta, val_1d, val_3d, Dval_1d, Dval_3d, point);
                 partial_mu_basis(temp_partial_mu, val_1d, val_3d, Dval_1d, Dval_3d, point);
                 
-                //double check[3];
-                //for (int i = 0; i < 3; i++) check[i] = 0.0;
+                double check[3];
+                for (int i = 0; i < 3; i++) check[i] = 0.0;
 
                 for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
 
@@ -421,9 +426,9 @@ struct fe_ref_elem_t{
                     gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) = temp_partial_mu(basis_id);
                     //printf(" grad basis value : %f \n ", gauss_leg_grad_basis(gauss_leg_rid, basis_id, 2) );
                 
-                  //  check[0] += temp_partial_xi(basis_id);
-                  //  check[1] += temp_partial_eta(basis_id);
-                  //  check[2] += temp_partial_mu(basis_id);
+                   check[0] += temp_partial_xi(basis_id);
+                   check[1] += temp_partial_eta(basis_id);
+                   check[2] += temp_partial_mu(basis_id);
                     
                     temp_partial_xi(basis_id)  = 0.0;
                     temp_partial_eta(basis_id) = 0.0;
@@ -982,7 +987,7 @@ void lobatto_weights_1D(
 } // end of lobatto_weights_1D function
 
 
-//KOKKOS_FUNCTION
+KOKKOS_FUNCTION
 void legendre_nodes_1D(
                        const CArrayKokkos <double> &leg_nodes_1D,
                        const int &num) const {
@@ -1229,7 +1234,7 @@ void legendre_nodes_1D(
     
 } // end of legendre_nodes_1D function
 
-//KOKKOS_FUNCTION
+KOKKOS_FUNCTION
 void legendre_weights_1D(
                          const CArrayKokkos <double> &leg_weights_1D,  // Legendre weights
                          const int &num) const{                  // Interpolation order

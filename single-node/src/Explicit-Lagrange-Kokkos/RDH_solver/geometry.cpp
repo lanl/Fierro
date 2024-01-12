@@ -235,14 +235,13 @@ void get_bmatrix(const ViewCArrayKokkos <double> &B_matrix,
 
 
 // node coords are hard coded for 2nd order explicit time integration. 
-KOKKOS_FUNCTION
 void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                                const elem_t &elem,
                                const fe_ref_elem_t &ref_elem,
                                const DViewCArrayKokkos <double> &node_coords, 
-                               const DViewCArrayKokkos <double> &gauss_legendre_jacobian,
-                               const DViewCArrayKokkos <double> &gauss_legendre_det_j,
-                               const DViewCArrayKokkos <double> &gauss_legendre_jacobian_inverse){
+                               DViewCArrayKokkos <double> &gauss_legendre_jacobian,
+                               DViewCArrayKokkos <double> &gauss_legendre_det_j,
+                               DViewCArrayKokkos <double> &gauss_legendre_jacobian_inverse){
 
     // loop over the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems,{
@@ -260,7 +259,7 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                     for(int node_lid = 0; node_lid < ref_elem.num_basis; node_lid++){
                         
                         size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-                        //printf(" node_coord : %f \n", node_coords(0, node_gid, dim_i));
+                        //printf(" legendre grad basis =  : %f \n", ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j));
                         gauss_legendre_jacobian(gauss_gid, dim_i, dim_j) += 
                             ref_elem.gauss_leg_grad_basis(gauss_lid, node_lid, dim_j) * node_coords(1, node_gid , dim_i);
 
@@ -292,12 +291,11 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
     }); // end FOR_ALL over elements
 } // end subroutine
 
-KOKKOS_FUNCTION
-void get_vol(const DViewCArrayKokkos <double> &elem_vol,
+void get_vol(DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
              const mesh_t &mesh,
              const elem_t &elem,
-             const fe_ref_elem_t &ref_elem){
+             const fe_ref_elem_t &ref_elem) {
     
     const size_t num_dims = mesh.num_dims;
     

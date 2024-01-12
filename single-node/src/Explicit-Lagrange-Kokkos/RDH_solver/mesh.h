@@ -1634,11 +1634,12 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
                                const elem_t &elem,
                                const fe_ref_elem_t &ref_elem,
                                const DViewCArrayKokkos <double> &node_coords,
-                               const DViewCArrayKokkos <double> &gauss_legendre_jacobian,
-                               const DViewCArrayKokkos <double> &gauss_legendre_det_j,
-                               const DViewCArrayKokkos <double> &gauss_legendre_jacobian_inverse);
+                               DViewCArrayKokkos <double> &gauss_legendre_jacobian,
+                               DViewCArrayKokkos <double> &gauss_legendre_det_j,
+                               DViewCArrayKokkos <double> &gauss_legendre_jacobian_inverse);
 
-void get_vol(const DViewCArrayKokkos <double> &elem_vol,
+KOKKOS_FUNCTION
+void get_vol(DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
              const mesh_t &mesh,
              const elem_t &elem,

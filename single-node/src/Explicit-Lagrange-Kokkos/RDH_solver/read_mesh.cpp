@@ -302,6 +302,9 @@ void readVTKPn(char* MESH,
     num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
     
     // initialize reference element //
+    //printf("polynomial order = %d \n", p);
+    printf("num_zones_in_elem = %d \n", num_zones_in_elem);
+    printf("num_surfs_in_elem = %d \n", num_surfs_in_elem);
     
     ref_elem.init(p, num_dims);
     
