@@ -311,10 +311,10 @@ void get_vol(DViewCArrayKokkos <double> &elem_vol,
     }
     else {
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
-            
-            // cut out the node_gids for this element
-            //ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
-            //printf("number of legendre points : %d \n", elem.num_leg_pts); 
+        
+            // // cut out the node_gids for this element
+            // // ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
+            // // printf("number of legendre points : %d \n", elem.num_leg_pts); 
             for (int gauss_lid = 0; gauss_lid < elem.num_leg_pts; gauss_lid++){
               int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
               
