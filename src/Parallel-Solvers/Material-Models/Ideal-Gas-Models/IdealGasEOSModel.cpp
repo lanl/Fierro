@@ -56,7 +56,10 @@ double IdealGasEOSModel::calc_sound_speed_gradient_internal_energy(
   const double den,
   const double sie){
   // sound speed gradient
-  return 0.5*gamma_*(gamma_ - 1.0)/sqrt(gamma_*(gamma_ - 1.0)*sie);
+  if(elem_sspd(elem_gid) < csmin_)
+    return 0;
+  else
+    return 0.5*gamma_*(gamma_ - 1.0)/sqrt(gamma_*(gamma_ - 1.0)*sie);
 }
 
 KOKKOS_FUNCTION
