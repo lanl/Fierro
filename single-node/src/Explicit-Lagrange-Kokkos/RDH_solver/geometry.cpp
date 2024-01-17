@@ -293,6 +293,8 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
 
 void get_vol(DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
+             const DViewCArrayKokkos <double> &legendre_weights,
+             const DViewCArrayKokkos <double> &legendre_jacobian_det,
              const mesh_t &mesh,
              const elem_t &elem,
              const fe_ref_elem_t &ref_elem) {
@@ -315,16 +317,17 @@ void get_vol(DViewCArrayKokkos <double> &elem_vol,
             // // cut out the node_gids for this element
             // // ViewCArrayKokkos <size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
             // // printf("number of legendre points : %d \n", elem.num_leg_pts); 
+            elem_vol(elem_gid) = 0.0;
             for (int gauss_lid = 0; gauss_lid < elem.num_leg_pts; gauss_lid++){
               int gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_lid);
               
-              //printf("legendre weight : %f\n", ref_elem.gauss_leg_weights(gauss_lid));
-              //printf("legendre J det : %f\n", elem.gauss_legendre_det_j(gauss_gid));
-              //printf("legendre gid : %d\n", gauss_gid);
+            //   printf("legendre weight : %f\n", legendre_weights(gauss_lid) );//ref_elem.gauss_leg_weights(gauss_lid));
+            //   printf("legendre J det : %f\n", legendre_jacobian_det(gauss_gid) );//elem.gauss_legendre_det_j(gauss_gid));
+            //   printf("legendre gid : %d\n", gauss_gid);
 
-              elem_vol(elem_gid) += ref_elem.gauss_leg_weights(gauss_lid)*elem.gauss_legendre_det_j(gauss_gid);
+              elem_vol(elem_gid) += legendre_weights(gauss_lid)*legendre_jacobian_det(gauss_gid);
             }
-
+            printf("elem_vol inside loop %f \n", elem_vol(0));
             //get_vol_jacobi(elem_vol, elem_gid, node_coords, elem_node_gids);//  
         
         });

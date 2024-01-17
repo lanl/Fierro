@@ -66,18 +66,9 @@ struct fe_ref_elem_t{
     // Quadrature Weights
     CArrayKokkos <double> lob_weights_1D;
     CArrayKokkos <double> leg_weights_1D;
-    CArrayKokkos <double> gauss_lob_weights;
-    CArrayKokkos <double> gauss_leg_weights;
-
-    // temp variables hold evaluations at a single point for each dof //
-    // CArrayKokkos <double> temp_nodal_basis;
-    // CArrayKokkos <double> temp_elem_basis;
-    
-    // CArrayKokkos <double> val_1d;
-    // CArrayKokkos <double> val_3d;
-
-    // CArrayKokkos <double> elem_val_1d;
-    // CArrayKokkos <double> elem_val_3d;    
+    DCArrayKokkos <double> gauss_lob_weights;
+    DCArrayKokkos <double> gauss_leg_weights;
+   
 
 
 
@@ -122,11 +113,12 @@ struct fe_ref_elem_t{
         
         for (int dim = 0; dim < num_dim; dim++){
         
-        num_gauss_lob_in_elem *= num_gauss_lob_1d;    
-        num_gauss_leg_in_elem *= num_gauss_leg_1d;
+            num_gauss_lob_in_elem *= num_gauss_lob_1d;    
+            num_gauss_leg_in_elem *= num_gauss_leg_1d;
 
-        num_dofs_in_elem *= num_dofs_1d; 
-        num_elem_dofs_in_elem *= num_elem_dofs_1d; 
+            num_dofs_in_elem *= num_dofs_1d; 
+            num_elem_dofs_in_elem *= num_elem_dofs_1d; 
+
         }
         
 
@@ -141,8 +133,8 @@ struct fe_ref_elem_t{
         elem_dof_positions = CArrayKokkos <double> (num_elem_dofs_in_elem, num_dim, "elem_dof_positions");
         elem_dof_positions_1d = CArrayKokkos <double> (num_elem_dofs_1d, "elem_dof_positions_1d");    
         
-        gauss_lob_weights = CArrayKokkos <double> (num_gauss_lob_in_elem, "gauss_lob_weights");
-        gauss_leg_weights = CArrayKokkos <double> (num_gauss_leg_in_elem, "gauss_leg_weights");
+        gauss_lob_weights = DCArrayKokkos <double> (num_gauss_lob_in_elem, "gauss_lob_weights");
+        gauss_leg_weights = DCArrayKokkos <double> (num_gauss_leg_in_elem, "gauss_leg_weights");
 
         // Memory for gradients
         gauss_lob_grad_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_basis, num_dim, "gauss_lob_grad_basis");
@@ -166,7 +158,7 @@ struct fe_ref_elem_t{
             lobatto_nodes_1D( lob_nodes_1D, num_gauss_lob_1d);
         });
 
-        lob_weights_1D = CArrayKokkos <double> (num_gauss_lob_1d,"lob_weightss_1d");
+        lob_weights_1D = CArrayKokkos <double> (num_gauss_lob_1d,"lob_weights_1d");
         RUN_CLASS({
             lobatto_weights_1D(lob_weights_1D, num_gauss_lob_1d);
         });
@@ -198,6 +190,7 @@ struct fe_ref_elem_t{
                     
                         gauss_lob_weights(lob_rid) = lob_weights_1D(i)*lob_weights_1D(j)*lob_weights_1D(k);
             });
+            Kokkos::fence();
         
             FOR_ALL_CLASS( k, 0, num_gauss_leg_1d, 
                      j, 0, num_gauss_leg_1d,
@@ -212,6 +205,7 @@ struct fe_ref_elem_t{
                         //printf(" leg_weight: %f \n", leg_weights_1D(i)); 
                         gauss_leg_weights(leg_rid) = leg_weights_1D(i)*leg_weights_1D(j)*leg_weights_1D(k);
             });
+            Kokkos::fence();
 
             // Saving vertex positions in 1D
             if( p_order == 0){
@@ -234,6 +228,7 @@ struct fe_ref_elem_t{
                     }
                 });  
             }
+            Kokkos::fence();
 
             FOR_ALL_CLASS( num_k, 0, num_dofs_1d, 
                      num_j, 0, num_dofs_1d,
@@ -245,6 +240,7 @@ struct fe_ref_elem_t{
                     dof_positions(dof_rlid, 1) = dof_positions_1d(num_j);
                     dof_positions(dof_rlid, 2) = dof_positions_1d(num_k);
             });
+            Kokkos::fence();
 
             // basis and grad basis evaluations done at points //
             
@@ -285,6 +281,10 @@ struct fe_ref_elem_t{
 
             // });
             // Kokkos::fence();
+
+            // WARNING WARNING WARNING:: works well for modest Pn orders, especially since this and the 
+            // following loops to build the basis structures are only called once.  Should consider making
+            // these computations parallel if we need to run with very large Pn orders.
             RUN_CLASS({
                 for (int gauss_lob_rid = 0; gauss_lob_rid < num_gauss_lob_in_elem; gauss_lob_rid++){
                     // Get the nodal coordinates

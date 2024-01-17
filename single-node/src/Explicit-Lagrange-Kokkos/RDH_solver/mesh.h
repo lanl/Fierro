@@ -1641,6 +1641,8 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
 KOKKOS_FUNCTION
 void get_vol(DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
+             const DViewCArrayKokkos <double> &legendre_weights,
+             const DViewCArrayKokkos <double> &legendre_jacobian_det,
              const mesh_t &mesh,
              const elem_t &elem,
              const fe_ref_elem_t &ref_elem);

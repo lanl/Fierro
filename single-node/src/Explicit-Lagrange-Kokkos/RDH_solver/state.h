@@ -27,7 +27,7 @@ struct node_t {
     {
         this->coords = CArray <double> (num_rk, num_nodes, num_dims);
         this->vel    = CArray <double> (num_rk, num_nodes, num_dims);
-	this->div    = CArray <double> (num_rk, num_nodes);
+	    this->div    = CArray <double> (num_rk, num_nodes);
         this->mass   = CArray <double> (num_nodes);
     }; // end method
 
@@ -109,8 +109,8 @@ struct elem_t {
         this->stress = CArray <double> (num_rk, num_elems, num_dims, num_dims);
         this->sspd = CArray <double> (num_elems);
         this->sie = CArray <double> (num_rk, num_elems);
-	this->vol    = CArray <double> (num_elems);
-	this->div    = CArray <double> (num_elems);
+        this->vol    = CArray <double> (num_elems);
+        this->div    = CArray <double> (num_elems);
         this->mass   = CArray <double> (num_elems);
         this->mat_id = CArray <size_t> (num_elems);
 
@@ -125,11 +125,11 @@ struct elem_t {
 		       size_t num_dims, 
 		       size_t p_order)
     {
-	num_leg_pts = std::pow( num_elems*(2*p_order), 3 );// discontinuous index across mesh
-	num_lob_pts = std::pow( num_elems*(2*p_order+1), 3 );// discontinuous index across mesh
-        
-	// thermodynamic variables are internal to the element and located at the zone centers
-	num_zones = num_elems*num_zones_in_elem; // to keep things global.
+        num_leg_pts = num_elems*std::pow( (2*p_order), 3 );// discontinuous index across mesh
+        num_lob_pts = num_elems*std::pow( (2*p_order+1), 3 );// discontinuous index across mesh
+            
+        // thermodynamic variables are internal to the element and located at the zone centers
+        num_zones = num_elems*num_zones_in_elem; // to keep things global.
 
         this->sie = CArray <double> (num_rk, num_zones);
 
@@ -143,14 +143,14 @@ struct elem_t {
         this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);
         this->sspd = CArray <double> (num_leg_pts);
 	
-	this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);
-	this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
-	
-	this->gauss_lobatto_jacobian_inverse = CArray <double> (num_lob_pts, num_dims, num_dims);
-	this->gauss_legendre_jacobian_inverse = CArray <double> (num_leg_pts, num_dims, num_dims);
-	
-	this->gauss_lobatto_det_j = CArray <double> (num_lob_pts);
-	this->gauss_legendre_det_j = CArray <double> (num_leg_pts);
+        this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);
+        this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
+        
+        this->gauss_lobatto_jacobian_inverse = CArray <double> (num_lob_pts, num_dims, num_dims);
+        this->gauss_legendre_jacobian_inverse = CArray <double> (num_leg_pts, num_dims, num_dims);
+        
+        this->gauss_lobatto_det_j = CArray <double> (num_lob_pts);
+        this->gauss_legendre_det_j = CArray <double> (num_leg_pts);
 
     }; // end method
 
