@@ -168,9 +168,6 @@ int main(int argc, char *argv[]){
         // ---------------------------------------------------------------------
         //    allocate memory
         // ---------------------------------------------------------------------
-        ref_elem.gauss_lob_weights.update_host();
-        ref_elem.gauss_leg_weights.update_host();
-        Kokkos::fence();
 
         // shorthand names
         const size_t num_nodes = mesh.num_nodes;
@@ -279,19 +276,6 @@ int main(int argc, char *argv[]){
         DViewCArrayKokkos <double> legendre_det(&elem.gauss_legendre_det_j(0),
                                                       num_leg_pts);
 
-        // printf(" Allocating DVeiw of quad weights\n");
-
-        // printf(" Test lob weight access %f\n", ref_elem.gauss_lob_weights.host(0));
-
-        DViewCArrayKokkos <double> lobatto_weights(&ref_elem.gauss_lob_weights.host(0),
-                                                      num_lob_pts_per_elem);
-  
-        DViewCArrayKokkos <double> legendre_weights(&ref_elem.gauss_leg_weights.host(0),
-                                                      num_leg_pts_per_elem);
-                                            
-
-        // printf(" DONE allocating DVeiw of quad weights\n");
-
         // create Dual Views of the corner struct variables
         DViewCArrayKokkos <double> corner_force(&corner.force(0,0),
                                                 num_corners, 
@@ -315,7 +299,7 @@ int main(int argc, char *argv[]){
                                   legendre_det,
                                   legendre_jacobian_inverse);
         
-        get_vol(elem_vol, node_coords, legendre_weights, legendre_det, mesh, elem, ref_elem);
+        get_vol(elem_vol, node_coords, ref_elem.gauss_leg_weights, legendre_det, mesh, elem, ref_elem);
         
         /*
         for (int elem_gid  = 0; elem_gid < mesh.num_elems; elem_gid++){

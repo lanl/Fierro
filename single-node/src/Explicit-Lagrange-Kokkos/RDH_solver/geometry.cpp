@@ -293,7 +293,7 @@ void get_gauss_leg_pt_jacobian(const mesh_t &mesh,
 
 void get_vol(DViewCArrayKokkos <double> &elem_vol,
              const DViewCArrayKokkos <double> &node_coords,
-             const DViewCArrayKokkos <double> &legendre_weights,
+             const CArrayKokkos <double> &legendre_weights,
              const DViewCArrayKokkos <double> &legendre_jacobian_det,
              const mesh_t &mesh,
              const elem_t &elem,

@@ -66,8 +66,8 @@ struct fe_ref_elem_t{
     // Quadrature Weights
     CArrayKokkos <double> lob_weights_1D;
     CArrayKokkos <double> leg_weights_1D;
-    DCArrayKokkos <double> gauss_lob_weights;
-    DCArrayKokkos <double> gauss_leg_weights;
+    CArrayKokkos <double> gauss_lob_weights;
+    CArrayKokkos <double> gauss_leg_weights;
    
 
 
@@ -133,8 +133,8 @@ struct fe_ref_elem_t{
         elem_dof_positions = CArrayKokkos <double> (num_elem_dofs_in_elem, num_dim, "elem_dof_positions");
         elem_dof_positions_1d = CArrayKokkos <double> (num_elem_dofs_1d, "elem_dof_positions_1d");    
         
-        gauss_lob_weights = DCArrayKokkos <double> (num_gauss_lob_in_elem, "gauss_lob_weights");
-        gauss_leg_weights = DCArrayKokkos <double> (num_gauss_leg_in_elem, "gauss_leg_weights");
+        gauss_lob_weights = CArrayKokkos <double> (num_gauss_lob_in_elem, "gauss_lob_weights");
+        gauss_leg_weights = CArrayKokkos <double> (num_gauss_leg_in_elem, "gauss_leg_weights");
 
         // Memory for gradients
         gauss_lob_grad_basis = CArrayKokkos <double> (num_gauss_lob_in_elem, num_basis, num_dim, "gauss_lob_grad_basis");
