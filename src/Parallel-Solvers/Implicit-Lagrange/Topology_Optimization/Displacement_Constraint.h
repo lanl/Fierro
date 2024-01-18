@@ -101,6 +101,7 @@ private:
   real_t initial_strain_energy_;
   bool inequality_flag_;
   real_t constraint_value_;
+  real_t scaling;
 
   ROL::Ptr<const MV> getVector( const V& x ) {
     return dynamic_cast<const ROL_MV&>(x).getVector();
@@ -129,6 +130,7 @@ public:
       all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
 
       ROL_Displacements = ROL::makePtr<ROL_MV>(FEM_->node_displacements_distributed);
+      scaling = 1;
 
       std::cout.precision(10);
       if(FEM_->myrank==0)
@@ -216,9 +218,9 @@ public:
     if(FEM_->myrank==0)
       std::cout << "CURRENT STRAIN ENERGY RATIO " << current_quadsum_value << std::endl;
     if(inequality_flag_)
-      (*cp)[0] = current_quadsum_value;
+      (*cp)[0] = current_quadsum_value/scaling;
     else
-      (*cp)[0] = current_quadsum_value - constraint_value_;
+      (*cp)[0] = current_quadsum_value/scaling - constraint_value_;
   }
 
   
@@ -228,6 +230,8 @@ public:
     ROL::Ptr<const MV> zp = getVector(x);
     ROL::Ptr<const std::vector<real_t>> vp = dynamic_cast<const ROL::StdVector<real_t>&>(v).getVector();
     ROL::Ptr<MV> ajvp = getVector(ajv);
+    ROL::Ptr<const BoolV> active_nodesp = (*ROL_Active_Nodes).getVector();
+    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
     
     //ROL::Ptr<ROL_MV> ROL_Element_Volumes;
 
@@ -236,6 +240,9 @@ public:
     //host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_vec_array constraint_gradients = ajvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     //host_vec_array dual_constraint_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_bool_array active_nodes_view = active_nodesp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     //communicate ghosts
     /*
@@ -246,33 +253,17 @@ public:
     */
     int rnum_elem = FEM_->rnum_elem;
     int nlocal_nodes = FEM_->nlocal_nodes;
+    
+    FEM_->compute_adjoint_gradients(design_densities, constraint_gradients);
 
     if(nodal_density_flag_){
-      FEM_->compute_adjoint_gradients(design_densities, constraint_gradients);
-      //debug print of gradient
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(FEM_->myrank==0)
-      //*fos << "Gradient data :" << std::endl;
-      //ajvp->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
       for(int i = 0; i < nlocal_nodes; i++){
-        constraint_gradients(i,0) *= (*vp)[0]/initial_strain_energy_/constraint_value_;
+        constraint_gradients(i,0) *= (*vp)[0]/scaling;
       }
     }
     else{
-      FEM_->compute_adjoint_gradients(design_densities, constraint_gradients);
-      //debug print of gradient
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(FEM_->myrank==0)
-      //*fos << "Gradient data :" << std::endl;
-      //ajvp->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
       for(int i = 0; i < rnum_elem; i++){
-        constraint_gradients(i,0) *= (*vp)[0]/initial_strain_energy_/constraint_value_;
+        constraint_gradients(i,0) *= (*vp)[0]/scaling;
       }
     }
     //std::cout << "Ended constraint adjoint grad on task " <<FEM_->myrank  << std::endl;
@@ -284,10 +275,15 @@ public:
     //get Tpetra multivector pointer from the ROL vector
     ROL::Ptr<const MV> zp = getVector(x);
     ROL::Ptr<std::vector<real_t>> jvp = dynamic_cast<ROL::StdVector<real_t>&>(jv).getVector();
+    ROL::Ptr<const BoolV> active_nodesp = (*ROL_Active_Nodes).getVector();
+    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
 
     //get local view of the data
     host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_bool_array active_nodes_view = active_nodesp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
     int rnum_elem = FEM_->rnum_elem;
     int nlocal_nodes = FEM_->nlocal_nodes;
@@ -295,12 +291,12 @@ public:
     FEM_->compute_adjoint_gradients(design_densities, constraint_gradients);
     if(nodal_density_flag_){
       for(int i = 0; i < nlocal_nodes; i++){
-        constraint_gradients(i,0) /= initial_strain_energy_*constraint_value_;
+        constraint_gradients(i,0) /= scaling;
       }
     }
     else{
       for(int i = 0; i < rnum_elem; i++){
-        constraint_gradients(i,0) /= initial_strain_energy_*constraint_value_;
+        constraint_gradients(i,0) /= scaling;
       }
     }
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
@@ -319,24 +315,29 @@ public:
     ROL::Ptr<const MV> vp = getVector(v);
     ROL::Ptr<const std::vector<real_t>> up = dynamic_cast<const ROL::StdVector<real_t>&>(u).getVector();
     ROL::Ptr<const MV> zp = getVector(z);
+    ROL::Ptr<const BoolV> active_nodesp = (*ROL_Active_Nodes).getVector();
+    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
     
-    host_vec_array constraint_hessvec = ahuvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array constraint_adjoint_hessvec = ahuvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_bool_array active_nodes_view = active_nodesp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     
     int rnum_elem = FEM_->rnum_elem;
     int nlocal_nodes = FEM_->nlocal_nodes;
 
-    FEM_->compute_adjoint_hessian_vec(design_densities, constraint_hessvec, vp);
+    FEM_->compute_adjoint_hessian_vec(design_densities, constraint_adjoint_hessvec, vp);
     for(int i = 0; i < nlocal_nodes; i++){
-      constraint_hessvec(i,0) *= (*up)[0]/initial_strain_energy_/constraint_value_;
+      constraint_adjoint_hessvec(i,0) *= (*up)[0]/scaling;
     }
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);
     //hvp->describe(*fos,Teuchos::VERB_EXTREME);
     if(FEM_->myrank==0)
-    std::cout << "Called Strain Energy Constraint Hessianvec" << std::endl;
+    std::cout << "Called Displacement Constraint Hessianvec" << std::endl;
     FEM_->hessvec_count++;
   }
 };

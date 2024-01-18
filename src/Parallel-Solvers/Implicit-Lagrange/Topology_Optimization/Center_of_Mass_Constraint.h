@@ -429,9 +429,8 @@ public:
         constraint_adjoint_hess(i,0) = -ROL_Gradients->dot(v)*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass-
                       moment_gradients(i,0)*(*up)[0]*ROL_Mass_Gradients->dot(v)/current_mass/current_mass+
                       2*current_com*ROL_Mass_Gradients->dot(v)*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass;
+        constraint_adjoint_hess(i,0) /= normalization_value;
     }
-
-    ahuvp->putScalar(matrix_product/normalization_value);
     
   }
 };
