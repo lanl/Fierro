@@ -1,6 +1,7 @@
 #include "stl-to-voxelvtk.h"
 #include <string>
 #include <iostream>
+#include <Kokkos_Core.hpp>
 #include <tuple>
 
 int main(int argc, char *argv[]) {
@@ -10,6 +11,7 @@ int main(int argc, char *argv[]) {
     int gridX = std::stoi(argv[3]); // voxel resolution x-direction
     int gridY = std::stoi(argv[4]); // voxel resolution y-direction
     int gridZ = std::stoi(argv[5]); // voxel resolution z-direction
+    /*
     bool use_index_space = (argc < 7) || std::stoi(argv[6]); // whether to output global or local coordinates
     
     auto resolution = Voxelizer::create_voxel_vtk(stl_file_path, vtk_file_path, gridX, gridY, gridZ, use_index_space);
@@ -17,6 +19,13 @@ int main(int argc, char *argv[]) {
     std::cout << "Voxel mesh created with resolution: (" 
         << std::get<0>(resolution) << "," << std::get<1>(resolution) << "," << std::get<2>(resolution) << ")." 
         << std::endl;
+    */
+    Kokkos::initialize(argc, argv);
+    {
+        auto outint = Voxelizer::create_voxel_vtk(stl_file_path, vtk_file_path, gridX, gridY, gridZ);
+    }
+    Kokkos::finalize();
     return 0;
+     
 }
 
