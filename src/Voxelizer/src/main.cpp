@@ -1,7 +1,7 @@
 #include "stl-to-voxelvtk.h"
 #include <string>
 #include <iostream>
-#include <Kokkos_Core.hpp>
+//#include <Kokkos_Core.hpp>
 #include <tuple>
 
 int main(int argc, char *argv[]) {
@@ -20,11 +20,11 @@ int main(int argc, char *argv[]) {
         << std::get<0>(resolution) << "," << std::get<1>(resolution) << "," << std::get<2>(resolution) << ")." 
         << std::endl;
     */
-    Kokkos::initialize(argc, argv);
-    {
-        auto outint = Voxelizer::create_voxel_vtk(stl_file_path, vtk_file_path, gridX, gridY, gridZ);
-    }
-    Kokkos::finalize();
+//    Kokkos::initialize(argc, argv);
+//    {
+    auto outint = Voxelizer::create_voxel_vtk(stl_file_path, vtk_file_path, gridX, gridY, gridZ);
+//    }
+//    Kokkos::finalize();
     return 0;
      
 }
