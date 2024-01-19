@@ -434,7 +434,7 @@ void main_function(DCArrayKokkos<bool> &gridOUTPUT, int &gridX, int &gridY, int 
     DCArrayKokkos<int> correctionLISTcounter(1);
     
     // Find which facets could be crossed by the ray in the y-direction
-    DCArrayKokkos<int> possibleCROSSLISTy(ely*elx,ely);
+    DCArrayKokkos<int> possibleCROSSLISTy(ely*n_facets,ely);
     DCArrayKokkos<int> counter(1);
     DCArrayKokkos<int> count1(ely);
     counter(0) = 0;
@@ -461,23 +461,9 @@ void main_function(DCArrayKokkos<bool> &gridOUTPUT, int &gridX, int &gridY, int 
     DCArrayKokkos<bool> voxelsINSIDE(elz);
     
     // Loop through each pixel in the x-y plane by passing rays in the z-direction and finding where they cross the voxelized mesh
-//    std::cout << correctionLIST.dims(0) << std::endl;
-//    std::cout << ely*elx << std::endl;
-//    int a = 0;
-//    int af = 0;
-//    int i = 0;
-//    REDUCE_SUM(i,0,100,a,{
-//        a += 1;
-//    }, af);
-//    std::cout << af << std::endl;
-    
     correctionLISTcounter(0) = 0;
     FOR_LOOP (loopY,0,ely,
             loopX,0,elx,{
-//        std::cout << "" << std::endl;
-//        std::cout << "loopX: " << loopX << std::endl;
-//        std::cout << "loopY: " << loopY << std::endl;
-        
         facetCROSSLISTcounter(0) = 0;
 
         // Find which facets could be crossed by the ray in the x-direction
@@ -526,7 +512,6 @@ void main_function(DCArrayKokkos<bool> &gridOUTPUT, int &gridX, int &gridY, int 
                     Kokkos::atomic_add(&correctionLISTcounter(0),1);;
                 }
             }
-//            std::cout << "Made it past first correctionLIST" << std::endl;
             
             // Check if the ray crossed facets
             int loopCHECKFACET;
@@ -615,27 +600,17 @@ void main_function(DCArrayKokkos<bool> &gridOUTPUT, int &gridX, int &gridY, int 
                             }
                          }
                     } else if (ucnt != 0) {
-//                        std::cout << correctionLISTcounter(0) << std::endl;
-//                        if (correctionLISTcounter(0) == 968) {
-//                            std::cout << "Reached bad number" << std::endl;
-//                            std::cout << correctionLIST.dims(0) << std::endl;
-//                            std::cout << correctionLIST(968,0) << std::endl;
-//                        }
-//                        std::cout << correctionLIST(correctionLISTcounter(0),0) << std::endl;
-//                        std::cout << correctionLIST(correctionLISTcounter(0),1) << std::endl;
                         if (count3 == 0) {
                             correctionLIST(correctionLISTcounter(0),0) = loopX;
                             correctionLIST(correctionLISTcounter(0),1) = loopY;
                             Kokkos::atomic_add(&correctionLISTcounter(0),1);
                         }
-//                        std::cout << "end of atomic add update: " << correctionLISTcounter(0) << std::endl;
                     }
                 }
-//                std::cout << "Made it past second correctionLIST" << std::endl;
             }
         }
     });
-//    std::cout << "Made it to the bottom of the big loop!" << std::endl;
+    Kokkos::fence();
 
     // Use interpolation to fill in the rays that could not be voxelised
     if (correctionLISTcounter(0) > 0) {
@@ -707,9 +682,7 @@ void main_function(DCArrayKokkos<bool> &gridOUTPUT, int &gridX, int &gridY, int 
                 gridOUTPUT(correctionLIST(loopC,0),correctionLIST(loopC,1),k) = 1;
             }
         });
-        Kokkos::fence();
     }
-//    std::cout << "Made it out of correction loop" << std::endl;
 }
 
 
