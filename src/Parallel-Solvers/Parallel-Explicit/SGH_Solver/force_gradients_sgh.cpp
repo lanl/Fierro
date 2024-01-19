@@ -536,7 +536,7 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         ViewCArrayKokkos <double> muc(muc_array, num_nodes_in_elem);
         ViewCArrayKokkos <double> muc_gradient(muc_gradient_array, num_nodes_in_elem);
         ViewCArrayKokkos <double> vel_star(vel_star_array, num_dims);
-        ViewCArrayKokkos <double> vel_star_gradient(vel_star_array, num_dims);
+        ViewCArrayKokkos <double> vel_star_gradient(vel_star_gradient_array, num_dims);
         ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
 
         EOSParent* eos_model = elem_eos(elem_gid).model;
