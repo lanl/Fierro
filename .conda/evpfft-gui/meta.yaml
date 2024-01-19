@@ -30,3 +30,7 @@ requirements:
 test:
   imports:
     - evpfft_gui
+    
+extra:
+  recipe-maintainers:
+    - fierromechanics
