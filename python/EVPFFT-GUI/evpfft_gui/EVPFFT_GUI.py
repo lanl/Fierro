@@ -153,7 +153,6 @@ class EVPFFT_GUI(Ui_MainWindow):
                     int(self.INNumberOfVoxelsX.text()),
                     int(self.INNumberOfVoxelsY.text()),
                     int(self.INNumberOfVoxelsZ.text()),
-                    True
                 )
                 # Paraview window
                 pvsimple.Delete(self.stl)
