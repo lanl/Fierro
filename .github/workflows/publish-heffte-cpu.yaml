@@ -1,0 +1,15 @@
+name: 'Publish Heffte'
+
+on: 
+  push:
+    paths:
+      - .conda/heffte/cpu/**
+      - .github/workflows/publish-heffte-cpu.yaml
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/heffte/cpu
+    secrets: inherit

@@ -1,0 +1,16 @@
+name: 'Publish EVPFFT GUI'
+
+on: 
+  push:
+    paths:
+      - .conda/evpfft-gui/**
+      - python/EVPFFT-GUI/**
+      - .github/workflows/publish-evpfft-gui.yaml
+  workflow_dispatch:
+
+jobs:
+  publish:
+    uses: ./.github/workflows/build-conda-package.yaml
+    with:
+      recipe_dir: .conda/evpfft-gui
+    secrets: inherit

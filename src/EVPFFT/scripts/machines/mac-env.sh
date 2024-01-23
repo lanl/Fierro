@@ -9,3 +9,5 @@ export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
 export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
 export OMPI_CC=${CC}
 export OMPI_CXX=${CXX}
+#export HDF5_ROOT=/path/to/where/HDF5/lib/and/include/folders/are/located
+#export FFTW_ROOT=/path/to/where/FFTW/lib/and/include/folders/are/located

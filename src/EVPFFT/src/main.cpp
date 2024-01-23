@@ -118,7 +118,7 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
         M66(ii,jj) = sg66_avg(ii,jj) + dedotp66_avg(ii,jj) * dt;
       }
     }
-    invert_matrix(M66.pointer(), 6);
+    invert_matrix <6> (M66.pointer());
 
     MatrixTypeRealHost M3333(3,3,3,3);
     cb.chg_basis_3(M66.pointer(), M3333.pointer(), 3, 6, cb.B_basis_host_pointer());

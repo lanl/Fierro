@@ -39,7 +39,7 @@ SERIALIZABLE_ENUM(TEST_ENUM,
     VALUE_3
 )
 
-TEST(YamlSerialization, IntSerialization) {
+TEST(YamlSerializable, IntSerialization) {
     EXPECT_EQ(Yaml::from_string<int>("1"),          1);
     EXPECT_EQ(Yaml::from_string<int>("-1"),        -1);
     EXPECT_EQ(Yaml::from_string<int>("0"),          0);
@@ -58,7 +58,7 @@ TEST(YamlSerialization, IntSerialization) {
     EXPECT_EQ("192837123\n",  Yaml::to_string(std::make_unique<int>(192837123)));
 }
 
-TEST(YamlSerialization, DoubleSerialization) {
+TEST(YamlSerializable, DoubleSerialization) {
     EXPECT_EQ(Yaml::to_string(0.1), "0.1\n");
     EXPECT_EQ(Yaml::from_string<double>("-1"), -1);
     EXPECT_EQ(Yaml::from_string<double>("0"), 0);
@@ -68,7 +68,7 @@ TEST(YamlSerialization, DoubleSerialization) {
     EXPECT_EQ(*Yaml::from_string<std::unique_ptr<double>>("192837123"),  192837123);
 }
 
-TEST(YamlSerialization, EnumSerialization) {
+TEST(YamlSerializable, EnumSerialization) {
     EXPECT_EQ(Yaml::from_string<TEST_ENUM>("VALUE_1"),  TEST_ENUM::VALUE_1);
     EXPECT_EQ(Yaml::from_string<TEST_ENUM>("VALUE_2"),  TEST_ENUM::VALUE_2);
     EXPECT_EQ(Yaml::from_string<TEST_ENUM>("VALUE_3"),  TEST_ENUM::VALUE_3);
@@ -91,7 +91,7 @@ TEST(YamlSerialization, EnumSerialization) {
     EXPECT_EQ(v, TEST_ENUM::VALUE_3);
 }
 
-TEST(YamlSerialization, VectorSerialization) {
+TEST(YamlSerializable, VectorSerialization) {
     std::string s_empty = "\
     ";
     std::vector<int> v_empty;
@@ -156,7 +156,7 @@ struct Serializable : Yaml::DerivedFields {
 };
 IMPL_YAML_SERIALIZABLE_FOR(Serializable, a, b, c, d, e)
 
-TEST(YamlSerialization, StructSerialization) {
+TEST(YamlSerializable, StructSerialization) {
     auto obj = Serializable();
     obj.a = 5;
     // I chose some numbers here that are exact float/double representable.
@@ -177,7 +177,7 @@ TEST(YamlSerialization, StructSerialization) {
     EXPECT_TRUE(deserialized.derived);
 }
 
-TEST(YamlSerialization, StructSerializationSharedPtr) {
+TEST(YamlSerializable, StructSerializationSharedPtr) {
     auto obj = Serializable();
     obj.a = 5;
     // I chose some numbers here that are exact float/double representable.
@@ -197,7 +197,7 @@ TEST(YamlSerialization, StructSerializationSharedPtr) {
     EXPECT_TRUE(compare_vec(obj.e, deserialized->e));
 }
 
-TEST(YamlSerialization, StructSerializationSharedPtrStrict) {
+TEST(YamlSerializable, StructSerializationSharedPtrStrict) {
     auto obj = Serializable();
     obj.a = 5;
     // I chose some numbers here that are exact float/double representable.
@@ -228,7 +228,7 @@ struct Derived : Serializable {
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Derived, Serializable, f)
 
-TEST(YamlSerialization, DerivedClassSerialization) {
+TEST(YamlSerializable, DerivedClassSerialization) {
     
     auto obj = Derived();
     obj.a = 5;
@@ -264,7 +264,7 @@ struct SimpleSerializable {
 };
 IMPL_YAML_SERIALIZABLE_FOR(SimpleSerializable, a, b, c, d, e)
 
-TEST(YamlSerailizable, StrictDeserialization) {
+TEST(YamlSerializable, StrictDeserialization) {
     std::string input = R"(
     a: 1        
     b: 1.0      
@@ -479,7 +479,7 @@ struct ContainerOfDiscriminated {
 };
 IMPL_YAML_SERIALIZABLE_FOR(ContainerOfDiscriminated, modules)
 
-TEST(YamlSerailizable, NestedTypeDiscrimination) {
+TEST(YamlSerializable, NestedTypeDiscrimination) {
     std::string input = R"(
     modules:
       - type: A
@@ -509,7 +509,7 @@ TEST(YamlSerailizable, NestedTypeDiscrimination) {
 }
 
 
-TEST(YamlSerailizable, NestedTypeDiscriminationStrict) {
+TEST(YamlSerializable, NestedTypeDiscriminationStrict) {
     std::string input = R"(
     modules:
       - type: A
@@ -570,6 +570,31 @@ TEST(YamlSerializable, TypeDiscriminatedApply) {
 }
 
 
+TEST(YamlSerializable, TypeDiscriminatedApplyDefault) {
+    std::string input = R"(
+    type: B
+    )";
+
+    std::shared_ptr<TypedBase> base_ptr;
+    Yaml::from_string(input, base_ptr);
+
+    Module m = Module::A;
+    base_ptr->apply(
+        [&](...) { m = Module::B; }
+    );
+
+    EXPECT_EQ(m, Module::B);
+
+    m = Module::B;
+    base_ptr->apply(
+        [&](void) { m = Module::A; }
+    );
+
+    EXPECT_EQ(m, Module::A);
+}
+
+
+
 TEST(YamlSerializable, TypeDiscriminatedApplyThrow) {
     std::string input = R"(
     type: A
@@ -605,5 +630,6 @@ TEST(YamlSerializable, TypeDiscriminatedTryApplyNoThrow) {
 }
 
 
-
-
+TEST(YamlSerializable, StaticTypeName) {
+    EXPECT_STREQ(std::string(Yaml::static_type_name<DerivedA>()).c_str(), "DerivedA");
+}

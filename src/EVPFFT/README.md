@@ -12,10 +12,26 @@ EVPFFT depends on the following to build:
 4. [HeFFTe](https://github.com/icl-utk-edu/heffte) (FFTW,CUFFT,ROCFFT)
 5. [HDF5](https://www.hdfgroup.org/solutions/hdf5/)
 
-To make it easy to build EVPFFT, we have included `scripts/build-scripts/build_evpfft.sh` which when executed will download and install all required dependencies and EVPFFT. The script assumes that the user already has MPI installed.
+To make it easy to build EVPFFT, we have included `scripts/build-scripts/build_evpfft.sh` which when executed will download and install all required dependencies and EVPFFT. It is important to note that EVPFFT depends on three main libraries which can be time consuming to download from scratch namely, MPI, FFTW (MPI version), and HDF5 (MPI version). Therefore the user is advised to download these packages themselves either using `sudo apt install` of Anaconda package manager.
 
-Run the build script as:
+## Building EVPFFT with Anaconda
+It is advised to use Anaconda package manager to build EVPFFT as follows:
 
+1. Create an environment and activate:
+```
+conda create --name evpfftEnv
+conda activate evpfftEnv
+```
+
+2. Install needed packages:
+```
+conda install cxx-compiler -c conda-forge
+conda install cmake
+conda install "fftw=*=mpi_openmpi*" -c conda-forge
+conda install "hdf5=*=mpi_openmpi*" -c conda-forge
+```
+
+3. Run the build script as:
 ```
 source build_evpfft.sh --help
 ```
@@ -29,6 +45,8 @@ Required arguments:
   --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>
 
 Optional arguments:
+  --build_fftw: builds fftw from scratch
+  --build_hdf5: builds hdf5 from scratch
   --machine=<darwin|chicoma|linux|mac> (default: none)
   --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)
   --help: Display this help message
@@ -40,7 +58,19 @@ To build EVPFFT you would need to provide both the `--heffte_build_type` and `--
 source build_evpfft.sh --heffte_build_type=fftw --kokkos_build_type=serial
 ```
 
-This will build EVPFFT in the folder `evpfft_{fftw}_{serial}`. The binary, `evpfft` is found in that folder
+This will build EVPFFT in the folder `evpfft_{fftw}_{serial}`. The binary, `evpfft` is found in that folder.
+
+## Building EVPFFT without Anaconda
+Install HDF5 (MPI version) and FFTW (MPI version) with `sudo apt install` which will install the libraries in the default location. Then run the build script as above.
+
+If you would like to build HDF5 and FFTW from scratch then use `--build_hdf5` and `--build_fftw` options of the build script.
+
+If you do not want to build HDF5 and FFTW from scratch because you already have a version on your system remove the `--build_hdf5` and `--build_fftw` option from the command. If your installed HDF5 and FFTW are located in a directory other than the default linux directories for libraries, then specify the following before running the build script.
+
+```
+export HDF5_ROOT=/path/to/where/HDF5/lib/and/include/folders/are/located
+export FFTW_ROOT=/path/to/where/FFTW/lib/and/include/folders/are/located
+```
 
 # Using EVPFFT as a standalone program
 
@@ -85,9 +115,6 @@ material_options:
     strength_type: hypo
     strength_run_location: host
     global_vars:
-      - 8 #N1 (EVPFFT RVE X dimension)
-      - 8 #N2 (EVPFFT RVE Y dimension)
-      - 8 #N3 (EVPFFT RVE Z dimension)
       - 0.0001 #udotAccTh (EVPFFT accumulated strain threshold before full solve)
       - 3000000 #[mm/s] (EVPFFT material sound speed)
 ```

@@ -1,0 +1,8 @@
+name: build-env
+channels:
+  - conda-forge
+  - fierromechanics
+  - defaults
+dependencies:
+  - boa # For building
+  - anaconda-client # For uploading

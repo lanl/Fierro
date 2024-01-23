@@ -66,19 +66,22 @@ echo "Script location: $SCRIPT_DIR"
 # Determine the parent directory of the script's directory
 PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
 
-# Check if the 'kokkos' directory exists in the parent directory; if not, clone it
-KOKKOS_DIR="$PARENT_DIR/kokkos"
-if [ ! -d "$KOKKOS_DIR" ]; then
-  echo "Directory 'kokkos' does not exist in '$PARENT_DIR', downloading 'kokkos'...."
-  git clone https://github.com/kokkos/kokkos.git "$KOKKOS_DIR"
-else
-  echo "Directory 'kokkos' exists in '$PARENT_DIR', skipping 'kokkos' download"
-fi
+# make lib directory to store all dependencies
+LIB_DIR="$PARENT_DIR/lib"
+mkdir -p "$LIB_DIR"
 
 # Define kokkos directories
-KOKKOS_SOURCE_DIR="$PARENT_DIR/kokkos"
-KOKKOS_INSTALL_DIR="$PARENT_DIR/kokkos/install_kokkos_$kokkos_build_type"
-KOKKOS_BUILD_DIR="$PARENT_DIR/kokkos/build_kokkos_$kokkos_build_type"
+KOKKOS_SOURCE_DIR="$LIB_DIR/kokkos"
+KOKKOS_INSTALL_DIR="$LIB_DIR/kokkos/install_kokkos_$kokkos_build_type"
+KOKKOS_BUILD_DIR="$LIB_DIR/kokkos/build_kokkos_$kokkos_build_type"
+
+# Check if the 'kokkos' directory exists in the parent directory; if not, clone it
+if [ ! -d "$KOKKOS_SOURCE_DIR" ]; then
+  echo "Directory 'kokkos' does not exist in '$LIB_DIR', downloading 'kokkos'...."
+  git clone --depth 1 https://github.com/kokkos/kokkos.git "$KOKKOS_SOURCE_DIR"
+else
+  echo "Directory 'kokkos' exists in '$LIB_DIR', skipping 'kokkos' download"
+fi
 
 # Configure kokkos using CMake
 cmake_options=(

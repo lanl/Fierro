@@ -7,6 +7,8 @@ show_help() {
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>"
     echo " "
     echo "Optional arguments:"
+    echo "  --build_fftw: builds fftw from scratch"
+    echo "  --build_hdf5: builds hdf5 from scratch"
     echo "  --machine=<darwin|chicoma|linux|mac> (default: none)"
     echo "  --num_jobs=<number>: Number of jobs for 'make' (default: 1, on Mac use 1)"
     echo "  --help: Display this help message"
@@ -19,6 +21,8 @@ heffte_build_type=""
 kokkos_build_type=""
 machine=""
 num_jobs=1
+build_fftw=0
+build_hdf5=0
 
 # Define arrays of valid options
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
@@ -47,6 +51,12 @@ for arg in "$@"; do
                 show_help
                 return 1
             fi
+            ;;
+        --build_fftw)
+            build_fftw=1
+            ;;
+        --build_hdf5)
+            build_hdf5=1
             ;;
         --machine=*)
             option="${arg#*=}"
@@ -96,38 +106,49 @@ echo "Script directory: ${SCRIPT_DIR}"
 # Determine the parent directory of the script's directory
 PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
 
+# make lib directory to store all dependencies
+LIB_DIR="$PARENT_DIR/lib"
+mkdir -p "$LIB_DIR"
+
 # --------setup env for machine
 if [ -n "$machine" ]; then
-    if [ "$machine" != "linux" ]; then
-        MACHINE_SCRIPT="$PARENT_DIR/scripts/machines/${machine}-env.sh"
-        source  "$MACHINE_SCRIPT" --env_type=$kokkos_build_type
-    fi
+    MACHINE_SCRIPT="$PARENT_DIR/scripts/machines/${machine}-env.sh"
+    source  "$MACHINE_SCRIPT" --env_type=$kokkos_build_type
 fi
 
 # --------building heffte
-HEFFTE_CONFIG_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_heffte.sh"
-source "$HEFFTE_CONFIG_SCRIPT" --heffte_build_type=$heffte_build_type --num_jobs=$num_jobs
+build_fftw_option=""
+if [ "$build_fftw" -eq 1 ]; then
+  build_fftw_option="--build_fftw"
+fi
+HEFFTE_INSTALL_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_heffte.sh"
+source "$HEFFTE_INSTALL_SCRIPT" --heffte_build_type=$heffte_build_type --num_jobs=$num_jobs $build_fftw_option
 
 # --------building kokkos
-KOKKOS_CONFIG_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_kokkos.sh"
-source "$KOKKOS_CONFIG_SCRIPT" --kokkos_build_type=$kokkos_build_type --num_jobs=$num_jobs
+KOKKOS_INSTALL_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_kokkos.sh"
+source "$KOKKOS_INSTALL_SCRIPT" --kokkos_build_type=$kokkos_build_type --num_jobs=$num_jobs
 
 # --------building hdf5
-HDF5_CONFIG_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_hdf5.sh"
-source "$HDF5_CONFIG_SCRIPT" --num_jobs=$num_jobs
+if [ "$build_hdf5" -eq 1 ]; then
+  HDF5_INSTALL_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_hdf5.sh"
+  source "$HDF5_INSTALL_SCRIPT" --num_jobs=$num_jobs
+fi
 
 # --------building matar
-MATAR_CONFIG_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_matar.sh"
-source "$MATAR_CONFIG_SCRIPT"  --kokkos_build_type=$kokkos_build_type --num_jobs=$num_jobs
+MATAR_INSTALL_SCRIPT="$PARENT_DIR/scripts/install-scripts/install_matar.sh"
+source "$MATAR_INSTALL_SCRIPT"  --kokkos_build_type=$kokkos_build_type --num_jobs=$num_jobs
 
 # --------building EVPFFT
 EVPFFT_SOURCE_DIR="$PARENT_DIR/src"
 EVPFFT_BUILD_DIR="$PARENT_DIR/evpfft_${heffte_build_type}_${kokkos_build_type}"
-HEFFTE_INSTALL_DIR="$PARENT_DIR/heffte/install_heffte_$heffte_build_type"
-KOKKOS_INSTALL_DIR="$PARENT_DIR/kokkos/install_kokkos_$kokkos_build_type"
-MATAR_INSTALL_DIR="$PARENT_DIR/MATAR/install_MATAR_$kokkos_build_type"
-HDF5_INSTALL_DIR="$PARENT_DIR/hdf5/install"
 
+# set dependencies directories
+HEFFTE_INSTALL_DIR="$LIB_DIR/heffte/install_heffte_$heffte_build_type"
+KOKKOS_INSTALL_DIR="$LIB_DIR/kokkos/install_kokkos_$kokkos_build_type"
+MATAR_INSTALL_DIR="$LIB_DIR/MATAR/install_MATAR_$kokkos_build_type"
+if [ "$build_hdf5" -eq 1 ]; then
+  HDF5_INSTALL_DIR="$LIB_DIR/hdf5/install_hdf5"
+fi
 
 # Configure EVPFFT using CMake
 cmake_options=(
