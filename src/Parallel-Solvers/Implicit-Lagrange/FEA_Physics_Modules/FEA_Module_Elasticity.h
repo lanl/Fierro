@@ -148,6 +148,11 @@ public:
   void collect_output(Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > global_reduce_map);
 
   void node_density_constraints(host_vec_array node_densities_lower_bound);
+
+  //for the displacement constraint adjoint solves
+  void compute_displacement_constraint_gradients(const_host_vec_array design_densities, host_vec_array gradients);
+
+  void compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
   
   Elasticity_Parameters *module_params;
   Implicit_Solver *Implicit_Solver_Pointer_;
