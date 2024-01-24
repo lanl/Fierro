@@ -24,10 +24,12 @@ struct volume_t {
     double origin[3];
     double x1 = 0., x2 = 0., y1 = 0., y2 = 0., z1 = 0., z2 = 0.;
 
-    mtr::DCArrayKokkos <bool> grid;
+    vox_out grid_plus_cellsize;
+    mtr::CArray<bool> grid;
     size_t voxel_dimensions[3];
     double cell_size[3];
     double volume = 0.;
+    
 
     KOKKOS_FUNCTION
     volume_t() { }
@@ -47,6 +49,7 @@ struct volume_t {
             y = elem_coords[1] - origin[1];
             z = elem_coords[2] - origin[2];
             r = std::sqrt(x*x + y*y + z*z);
+            std::cout << r << std::endl;
             return (r >= inner_radius) && (r <= outer_radius);
         case VOLUME_TYPE::cylindrical_shell:
             x = elem_coords[0] - origin[0];
@@ -62,6 +65,9 @@ struct volume_t {
             i = static_cast<int>((elem_coords[0] - origin[0]) / cell_size[0]);
             j = static_cast<int>((elem_coords[1] - origin[1]) / cell_size[1]);
             k = static_cast<int>((elem_coords[2] - origin[2]) / cell_size[2]);
+//            std::cout << "elem_coords [0]: " << elem_coords[0] << std::endl;
+//            std::cout << "origin [0]: " << origin[0] << std::endl;
+            std::cout << "cell_size [0]: " << cell_size[0] << std::endl;
 
             return (i >= 0) && (i < voxel_dimensions[0])
                 && (j >= 0) && (j < voxel_dimensions[1])
@@ -105,6 +111,7 @@ struct spherical_shell : virtual volume_t {
         inner_radius = inner;
         outer_radius = outer;
         for (size_t i = 0; i < 3; i++) origin[i] = o[i];
+        std::cout << "SHPHERICAL SHELL" << std::endl;
     }
 };
 
@@ -143,21 +150,20 @@ struct voxel_grid : virtual volume_t {
      *  o: The origin point of the grid. (minimum x, y, z potentially contained in the grid)
      *  _grid: a 3D boolean grid of voxels.
     */
-    voxel_grid(double cell_sizes[3], double o[3], mtr::DCArrayKokkos<bool> _grid) : voxel_grid() {
-//        input_file = _input_file;
-//        gridX = _gridX;
-//        gridY = _gridY;
-//        gridZ = _gridZ;
-        
-        for (size_t i = 0; i < 3; i++)  {
-            origin[i] = o[i];
-            cell_size[i] = cell_sizes[i];
-            voxel_dimensions[i] = _grid.dims(i);
-        }
+    voxel_grid(vox_out _grid_plus_cellsize) : voxel_grid() {
+        mtr::CArray<bool> grid;
+        double cell_size[3];
+        grid_plus_cellsize = _grid_plus_cellsize;
+        grid = grid_plus_cellsize.OUTPUTgrid;
+//        cell_size[0] = grid_plus_cellsize.cell_sizes[0];
+        for (int i=0; i<3; i++) {
+            cell_size[i] = grid_plus_cellsize.cell_sizes[i];
+            std::cout << "CELL SIZES: " << grid_plus_cellsize.cell_sizes[i] << std::endl;
+        };
     }
     void cache_volume() {
         size_t var, result;
-        grid.update_device();
+//        grid.update_device();
         REDUCE_SUM(i, 0, grid.dims(0), j, 0, grid.dims(1), k, 0, grid.dims(2), var, { var += grid(i, j, k) ? 1 : 0; }, result);
         double voxel_size = cell_size[0] * cell_size[1] * cell_size[2];
         volume = voxel_size * result;

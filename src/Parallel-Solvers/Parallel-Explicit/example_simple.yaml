@@ -93,11 +93,10 @@ regions:
 #    ie: 0.25833839995946534
   - volume:
       type: voxel_grid
-      input_file: /Users/shankins/Documents/FY24 Documents/Github/XcodeFierro/Fierro/stl_files/Bunny.stl
+      input_file: /Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/stl_files/Bunny.stl
       gridX: 10
       gridY: 10
       gridZ: 10
-      use_index_space: true
     material_id: 0
     den: 0.5
     ie: 0.25833839995946534

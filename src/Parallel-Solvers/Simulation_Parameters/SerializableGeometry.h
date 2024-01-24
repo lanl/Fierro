@@ -41,32 +41,48 @@ YAML_ADD_REQUIRED_FIELDS_FOR(Box, x1, x2, y1, y2, z1, z2)
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Box, Volume, x1, x2, y1, y2, z1, z2)
 
 struct VoxelGrid : virtual voxel_grid, Volume::Register<VoxelGrid, VOLUME_TYPE::voxel_grid>, Yaml::ValidatedYaml {
-//    
-//    std::string input_file;
-//    std::optional<int> gridX;
-//    std::optional<int> gridY;
-//    std::optional<int> gridZ;
-//    
-//    // Non-serialized fields
-//    bool isSTL;
-//    
-//    void derive() {
-//        // Check if input file actually exists
-//        if (!std::filesystem::exists(input_file)) {
-//                throw Yaml::ConfigurationException("Input file does not exist");
-//            }
-//        
-//        // Check what type of file was used for the input
-//        isSTL = (input_file.find(".stl") != std::string::npos);
-//        bool has_grid = gridX.has_value() || gridY.has_value() || gridZ.has_value();
-//        if (isSTL && !has_grid)
-//            throw Yaml::ConfigurationException("grid[X, Y, Z] is required for stl files");
-//        if (!isSTL && has_grid)
-//            throw Yaml::ConfigurationException("Don't specify grid[X, Y, Z] for VTK files");
-//    }
+    std::string input_file;
+    std::optional<int> gridX;
+    std::optional<int> gridY;
+    std::optional<int> gridZ;
+    bool use_index_space = true;
+    vox_out grid_plus_cellsize;
+    
+    // Non-serialized fields
+    bool isSTL;
+    
+    void derive() {
+        // Check what type of file was used for the input
+        isSTL = input_file.find(".stl");
+        bool has_grid = gridX.has_value() || gridY.has_value() || gridZ.has_value();
+        if (isSTL && !has_grid)
+            throw Yaml::ConfigurationException("grid[X, Y, Z] is required for stl files");
+        if (!isSTL && has_grid)
+            throw Yaml::ConfigurationException("Don't specify grid[X, Y, Z] for VTK files");
+        
+        // If it is an stl file do the following
+        if (isSTL){
+            int gridXf = gridX.value();
+            int gridYf = gridY.value();
+            int gridZf = gridZ.value();
+            std::string stl_file_path = input_file;
+            std::filesystem::path vtk_file_path = std::filesystem::current_path();
+            vtk_file_path /= "vtk_output.vtk";
+            grid_plus_cellsize = Voxelizer::create_voxel_vtk(stl_file_path, vtk_file_path.string(), gridXf, gridYf, gridZf, use_index_space);
+            std::cout << "CELL SIZES: " << grid_plus_cellsize.cell_sizes[0] << std::endl;
+            voxel_grid(grid_plus_cellsize);
+        } else {
+            std::cout << "NEED TO ADD THIS CAPABILITY" << std::endl;
+        }
+        
+        cache_volume();
+    }
+    
+    
+    
 };
-YAML_ADD_REQUIRED_FIELDS_FOR(VoxelGrid)
-IMPL_YAML_SERIALIZABLE_WITH_BASE(VoxelGrid, Volume)
+YAML_ADD_REQUIRED_FIELDS_FOR(VoxelGrid, input_file)
+IMPL_YAML_SERIALIZABLE_WITH_BASE(VoxelGrid, Volume, input_file, gridX, gridY, gridZ, use_index_space)
 // Note the above macro is defined in "serializable-struct.h"
 
 #endif

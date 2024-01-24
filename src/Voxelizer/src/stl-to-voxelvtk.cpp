@@ -178,7 +178,8 @@ vox_out Voxelizer::create_voxel_vtk(
     
     // define outputs
     voxelizer_output.OUTPUTgrid = OUTPUTgrid;
-    double hold[3] = {nodex(1) - nodex(0), nodey(1) - nodey(0), nodez(1) - nodez(0)};
+    double hold[3] = {1, 1, 1};
+//    double hold[3] = {nodex(1) - nodex(0), nodey(1) - nodey(0), nodez(1) - nodez(0)};
     for (int i = 0; i < 3; ++i) {
         voxelizer_output.cell_sizes[i] = hold[i];
         }
