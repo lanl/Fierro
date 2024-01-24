@@ -5,6 +5,7 @@
 #include "matar.h"
 #include "state.h"
 #include "ref_elem.h"
+#include <cmath>
 
 #define PI 3.141592653589793
 
@@ -158,14 +159,14 @@ struct nodes_in_zone_t {
   		this->num_nodes_in_zone_ = num_nodes_in_zone_inp;
 	};
 
-       	// return global zone index for given local zone index in an element    
-       	size_t  host(const size_t zone_gid, const size_t node_lid) const{
-       		return zone_gid*num_nodes_in_zone_ + node_lid;
-       	};
+    // return global zone index for given local zone index in an element    
+    size_t  host(const size_t zone_gid, const size_t node_lid) const{
+        return zone_gid*num_nodes_in_zone_ + node_lid;
+    };
 
-       	KOKKOS_INLINE_FUNCTION	
+    KOKKOS_INLINE_FUNCTION	
 	size_t operator()(const size_t zone_gid, const size_t node_lid) const{
-    		return zone_gid*num_nodes_in_zone_ + node_lid;
+    	return zone_gid*num_nodes_in_zone_ + node_lid;
 	};
 };
 
@@ -205,6 +206,10 @@ struct mesh_t {
     size_t num_bdy_nodes;
     size_t num_bdy_sets;
     size_t num_nodes_in_patch;
+
+    // Surface quadrature 
+    //size_t num_lobatto_in_patch;
+    //size_t num_legendre_in_patch;
 
     // mesh index converting
     CArray <size_t> convert_vtk_to_fierro;
@@ -267,6 +272,10 @@ struct mesh_t {
     
     CArrayKokkos <size_t> surf_in_patch;       // high-order mesh class
     
+
+    // Surface quadrature
+    //CArrayKokkos <size_t> legendre_in_patch;
+    //CArrayKokkos <size_t> lobatto_in_patch;
     
     // ---- bdy ----
     
@@ -319,17 +328,17 @@ struct mesh_t {
 			     const size_t num_dims_inp)
     {
         
-	num_dims = num_dims_inp;
+	    num_dims = num_dims_inp;
         num_elems = num_elems_inp;
         
-	num_nodes_in_elem = num_nodes_in_elem_inp;
+	    num_nodes_in_elem = num_nodes_in_elem_inp;
         num_zones_in_elem = num_zones_in_elem_inp;
         num_surfs_in_elem = num_surfs_in_elem_inp;
 
         nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         zones_in_elem = zones_in_elem_t(num_zones_in_elem);
-	surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
+	    surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
 
         return;
         
@@ -516,42 +525,66 @@ struct mesh_t {
         
         // WARNING WARNING
         // the mesh element kind should be in the input file and set when reading mesh
-        //mesh_elem_kind = mesh_init::linear_tensor_element; // MUST BE SET
+        // mesh_elem_kind = mesh_init::linear_tensor_element; // MUST BE SET
     
         // building patches
         
         num_nodes_in_patch = 2*(num_dims-1);  // 2 (2D) or 4 (3D)
         num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
+
+        //num_lobatto_in_patch = int(pow(3, num_dims-1));
         
-        size_t num_patches_in_surf;  // =Pn_order or =Pn_order*Pn_order
+        //num_legendre_in_patch = 2*(num_dims-1);
+        
+        size_t num_patches_in_surf;  // = Pn_order or = Pn_order*Pn_order
         
         size_t num_1D = Pn + 1; // number of nodes in 1D
+
+        // num quad points 1D //
+        //size_t num_lob_1D = 2*Pn + 1;
+        //size_t num_leg_1D = 2*Pn;
+
+        DCArrayKokkos <size_t> node_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_nodes_in_patch);
         
-        DCArrayKokkos <size_t> node_ordering_in_elem; // dimensions will be (num_patches_in_elem,num_nodes_in_patch);
-        
+        //DCArrayKokkos <size_t> lobatto_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_lobatto_in_patch);
+
+        //DCArrayKokkos <size_t> legendre_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_legendre_in_patch);
+
+
         printf("num_dims = %zu \n", num_dims);
         
         if(num_dims == 3) {
             
             // num_patches_in_surf = [1^2, 2^2, 3^2, 4^2, ... , Pn^2]
+
             num_patches_in_surf = Pn*Pn;
             
             num_patches_in_elem = num_patches_in_surf*num_surfs_in_elem;
             
             // nodes in a patch in the element
             node_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_nodes_in_patch);
+
+            //lobatto_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_lobatto_in_patch);
+
+            //legendre_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_legendre_in_patch);
             
             printf("num_patches_in_elem = %zu \n", num_patches_in_elem);
             printf("num_nodes_in_patch = %zu \n", num_nodes_in_patch);
+            //printf("num_lobatto_in_patch = %zu \n", num_lobatto_in_patch);
+            //printf("num_legendre_in_patch = %zu \n", num_legendre_in_patch);
             printf("num_surfaces = %zu \n", num_surfs_in_elem);
             
-        } else {
+        } 
+        else {
+
             num_patches_in_surf = Pn;
             
             num_patches_in_elem = num_patches_in_surf*num_surfs_in_elem;
             
             // nodes in a patch in the element
-            node_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem,num_nodes_in_patch);
+            node_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_nodes_in_patch);
+            //lobatto_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_lobatto_in_patch);
+            //legendre_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_legendre_in_patch);
              
         } // end if dim
         
@@ -569,15 +602,28 @@ struct mesh_t {
                 
                 int count = 0;
                 int elem_patch_lid = 0;
-                for (size_t surf_lid=0; surf_lid<num_surfs_in_elem; surf_lid++){
-                    for (size_t patch_lid=0; patch_lid<num_patches_in_surf; patch_lid++){
-                        for (size_t node_lid=0; node_lid <num_nodes_in_patch; node_lid++){
-                            node_ordering_in_elem.host(elem_patch_lid,node_lid) = temp_node_lids[count];
+                for ( size_t surf_lid=0; surf_lid < num_surfs_in_elem; surf_lid++ ){
+                    for ( size_t patch_lid=0; patch_lid < num_patches_in_surf; patch_lid++ ){
+                        for ( size_t node_lid=0; node_lid < num_nodes_in_patch; node_lid++ ){
+                            node_ordering_in_elem.host( elem_patch_lid, node_lid ) = temp_node_lids[count];
+                            //legendre_ordering_in_elem.host( elem_patch_lid, node_lid ) = temp_node_lids[count];
                             count++;
                         } // end for node_lid
                         elem_patch_lid ++;
                     } // end for patch_lid in a surface
                 } // end for i
+
+                // count = 0;
+                // elem_patch_lid = 0;
+                // for ( size_t surf_lid=0; surf_lid < num_surfs_in_elem; surf_lid++ ){
+                //     for ( size_t patch_lid=0; patch_lid < num_patches_in_surf; patch_lid++ ){
+                //         for ( size_t lobatto_lid=0; lobatto_lid < num_lobatto_in_patch; lobatto_lid++ ){
+                //             lobatto_ordering_in_elem.host( elem_patch_lid, lobatto_lid ) = temp_node_lids[count];
+                //             count++;
+                //         } // end for node_lid
+                //         elem_patch_lid ++;
+                //     } // end for patch_lid in a surface
+                // } // end for i
                 
             }
             else {
@@ -600,6 +646,7 @@ struct mesh_t {
                     for (size_t patch_lid=0; patch_lid<num_patches_in_surf; patch_lid++){
                         for (size_t node_lid=0; node_lid <num_nodes_in_patch; node_lid++){
                             node_ordering_in_elem.host(elem_patch_lid,node_lid) = temp_node_lids[count];
+                            //legendre_ordering_in_elem.host( elem_patch_lid, node_lid ) = temp_node_lids[count];
                             count++;
                         } // end for node_lid
                         elem_patch_lid ++;
@@ -608,7 +655,7 @@ struct mesh_t {
                 
             } // end if on dims
             
-        } // end if linear element iwth classic numbering
+        } // end of linear element iwth classic numbering
         // -----
         // arbitrary-order element
         // -----
@@ -952,7 +999,7 @@ struct mesh_t {
         printf("done building node ordering \n");
         
         
-        // for saviong the hash keys of the patches and then the nighboring elem_gid
+        // for saving the hash keys of the patches and then the nighboring elem_gid
         CArrayKokkos <int> hash_keys_in_elem (num_elems, num_patches_in_elem, num_nodes_in_patch); // always 4 ids in 3D
         
         
@@ -966,7 +1013,7 @@ struct mesh_t {
         patches_in_elem = CArrayKokkos <size_t> (num_elems, num_patches_in_elem);
         
         
-        // a temporary storaage for the patch_gids that are on the mesh boundary
+        // a temporary storage for the patch_gids that are on the mesh boundary
         CArrayKokkos <size_t> temp_bdy_patches(num_elems*num_patches_in_elem);
         
         // step 1) calculate the hash values for each patch in the element
@@ -1857,21 +1904,64 @@ void user_strength_model_vpsc(const DViewCArrayKokkos <double> &elem_pres,
                               const double dt,
                               const double rk_alpha);
 
-
 void user_model_init(const DCArrayKokkos <double> &file_state_vars,
                      const size_t num_state_vars,
                      const size_t mat_id,
                      const size_t num_elems);
 
-/*
-KOKKOS_FUNCTION
-double max_Eigen3D(const ViewCArrayKokkos<double> tensor);
+void build_force_tensor(DViewCArrayKokkos <double> &force_tensor,
+                        const size_t stage,
+                        const mesh_t &mesh,
+                        const DViewCArrayKokkos <double> &stress_tensor,
+                        const CArrayKokkos <double> &legendre_grad_basis,
+                        const CArrayKokkos <double> &bernstein_basis,
+                        const CArrayKokkos <double> &legendre_weights,
+                        const DViewCArrayKokkos <double> &legendre_jacobian_det,
+                        const DViewCArrayKokkos <double> &legendre_jacobian_inverse );
 
+void get_stress_tensor(DViewCArrayKokkos <double> &elem_stress,
+                       const size_t stage,
+                       const mesh_t &mesh,
+                       const DViewCArrayKokkos <double> &elem_pressure);
 
-KOKKOS_FUNCTION
-double max_Eigen2D(const ViewCArrayKokkos<double> tensor);
+void assemble_kinematic_mass_matrix( CArrayKokkos <double> &M_V,
+                                    CArrayKokkos <double> &lumped_mass,
+                                    const mesh_t &mesh,
+                                    const CArrayKokkos <double> &basis,
+                                    const CArrayKokkos <double> &legendre_weights,
+                                    const DViewCArrayKokkos <double> &legendre_jacobian_det,
+                                    const DViewCArrayKokkos <double> &density );
 
-*/
+void assemble_thermodynamic_mass_matrix( CArrayKokkos <double> &M,
+                                    const mesh_t &mesh,
+                                    const CArrayKokkos <double> &basis,
+                                    const CArrayKokkos <double> &legendre_weights,
+                                    const DViewCArrayKokkos <double> &legendre_jacobian_det,
+                                    const DViewCArrayKokkos <double> &density );
+
+void assemble_A1(   CArrayKokkos <double> &A1,
+                    CArrayKokkos <double> &residual_in_elem,
+                    const size_t stage,
+                    const double factor,
+                    const double dt,
+                    const mesh_t &mesh,
+                    CArrayKokkos <double> &M_dot_u,
+                    CArrayKokkos <double> &F_dot_ones,
+                    const CArrayKokkos <double> &force_tensor,
+                    const CArrayKokkos <double> &mass_matrix,
+                    const DViewCArrayKokkos <double> &node_vel );
+
+void update_momentum(DViewCArrayKokkos <double> &node_vel,
+                     const size_t stage,
+                     const CArrayKokkos <double> &residual,
+                     const CArrayKokkos <double> &mass_matrix);
+
+void update_position_rdh(const size_t stage,
+                         double factor,
+                         double dt,
+                         const mesh_t &mesh,
+                         DViewCArrayKokkos <double> &node_coords,
+                         const DViewCArrayKokkos <double> &node_vel);
 
 void rdh_solve(CArrayKokkos <material_t> &material,
                CArrayKokkos <boundary_t> &boundary,
@@ -1933,161 +2023,8 @@ void get_timestep(mesh_t &mesh,
                   const double fuzz);
 
 
-void get_timestep2D(mesh_t &mesh,
-                    DViewCArrayKokkos <double> &node_coords,
-                    DViewCArrayKokkos <double> &node_vel,
-                    DViewCArrayKokkos <double> &elem_sspd,
-                    DViewCArrayKokkos <double> &elem_vol,
-                    double time_value,
-                    const double graphics_time,
-                    const double time_final,
-                    const double dt_max,
-                    const double dt_min,
-                    const double dt_cfl,
-                    double &dt,
-                    const double fuzz);
 
 
-void get_divergence(DViewCArrayKokkos <double> &elem_div,
-                    const mesh_t mesh,
-                    const DViewCArrayKokkos <double> &node_coords,
-                    const DViewCArrayKokkos <double> &node_vel,
-                    const DViewCArrayKokkos <double> &elem_vol);
-
-
-void get_divergence2D(DViewCArrayKokkos <double> &elem_div,
-                      const mesh_t mesh,
-                      const DViewCArrayKokkos <double> &node_coords,
-                      const DViewCArrayKokkos <double> &node_vel,
-                      const DViewCArrayKokkos <double> &elem_vol);
-
-
-KOKKOS_FUNCTION
-void get_velgrad(ViewCArrayKokkos <double> &vel_grad,
-                 const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                 const DViewCArrayKokkos <double> &node_vel,
-                 const ViewCArrayKokkos <double> &b_matrix,
-                 const double elem_vol,
-                 const size_t elem_gid);
-
-
-KOKKOS_FUNCTION
-void get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
-                   const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                   const DViewCArrayKokkos <double> &node_vel,
-                   const ViewCArrayKokkos <double> &b_matrix,
-                   const double elem_vol,
-                   const double elem_area,
-                   const size_t elem_gid);
-
-KOKKOS_FUNCTION
-void decompose_vel_grad(ViewCArrayKokkos <double> &D_tensor,
-                        ViewCArrayKokkos <double> &W_tensor,
-                        const ViewCArrayKokkos <double> &vel_grad,
-                        const ViewCArrayKokkos <size_t>  &elem_node_gids,
-                        const size_t elem_gid,
-                        const DViewCArrayKokkos <double> &node_coords,
-                        const DViewCArrayKokkos <double> &node_vel,
-                        const double vol);
-
-
-void get_force_tensor(const CArrayKokkos <material_t> &material,
-                   const mesh_t &mesh,
-                   const DViewCArrayKokkos <double> &node_coords,
-                   const DViewCArrayKokkos <double> &node_vel,
-                   const DViewCArrayKokkos <double> &elem_den,
-                   const DViewCArrayKokkos <double> &elem_sie,
-                   const DViewCArrayKokkos <double> &elem_pres,
-                   const DViewCArrayKokkos <double> &elem_stress,
-                   const DViewCArrayKokkos <double> &elem_sspd,
-                   const DViewCArrayKokkos <double> &elem_vol,
-                   const DViewCArrayKokkos <double> &elem_div,
-                   const DViewCArrayKokkos <size_t> &elem_mat_id,
-                   DViewCArrayKokkos <double> &corner_force,
-                   const double fuzz,
-                   const double small,
-                   const DViewCArrayKokkos <double> &elem_statev,
-                   const double dt,
-                   const double rk_alpha);
-
-
-void get_force_tensor2D(const CArrayKokkos <material_t> &material,
-                     const mesh_t &mesh,
-                     const DViewCArrayKokkos <double> &node_coords,
-                     const DViewCArrayKokkos <double> &node_vel,
-                     const DViewCArrayKokkos <double> &elem_den,
-                     const DViewCArrayKokkos <double> &elem_sie,
-                     const DViewCArrayKokkos <double> &elem_pres,
-                     const DViewCArrayKokkos <double> &elem_stress,
-                     const DViewCArrayKokkos <double> &elem_sspd,
-                     const DViewCArrayKokkos <double> &elem_vol,
-                     const DViewCArrayKokkos <double> &elem_div,
-                     const DViewCArrayKokkos <size_t> &elem_mat_id,
-                     DViewCArrayKokkos <double> &corner_force,
-                     const double fuzz,
-                     const double small,
-                     const DViewCArrayKokkos <double> &elem_statev,
-                     const double dt,
-                     const double rk_alpha);
-
-
-
-void update_energy_rdh(double rk_alpha,
-                       double dt,
-                       const mesh_t &mesh,
-                       const DViewCArrayKokkos <double> &node_vel,
-                       const DViewCArrayKokkos <double> &node_coords,
-                       DViewCArrayKokkos <double> &elem_sie,
-                       const DViewCArrayKokkos <double> &elem_mass,
-                       const DViewCArrayKokkos <double> &corner_force);
-
-
-void update_position_rdh(double rk_alpha,
-                         double dt,
-                         const size_t num_dims,
-                         const size_t num_nodes,
-                         DViewCArrayKokkos <double> &node_coords,
-                         const DViewCArrayKokkos <double> &node_vel);
-
-
-void update_state_rdh(const CArrayKokkos <material_t> &material,
-                  const mesh_t &mesh,
-                  const DViewCArrayKokkos <double> &node_coords,
-                  const DViewCArrayKokkos <double> &node_vel,
-                  DViewCArrayKokkos <double> &elem_den,
-                  DViewCArrayKokkos <double> &elem_pres,
-                  DViewCArrayKokkos <double> &elem_stress,
-                  DViewCArrayKokkos <double> &elem_sspd,
-                  const DViewCArrayKokkos <double> &elem_sie,
-                  const DViewCArrayKokkos <double> &elem_vol,
-                  const DViewCArrayKokkos <double> &elem_mass,
-                  const DViewCArrayKokkos <size_t> &elem_mat_id,
-                  const DViewCArrayKokkos <double> &elem_statev,
-                  const double dt,
-                  const double rk_alpha);
-
-void update_state_rdh2D(const CArrayKokkos <material_t> &material,
-                    const mesh_t &mesh,
-                    const DViewCArrayKokkos <double> &node_coords,
-                    const DViewCArrayKokkos <double> &node_vel,
-                    DViewCArrayKokkos <double> &elem_den,
-                    DViewCArrayKokkos <double> &elem_pres,
-                    DViewCArrayKokkos <double> &elem_stress,
-                    DViewCArrayKokkos <double> &elem_sspd,
-                    const DViewCArrayKokkos <double> &elem_sie,
-                    const DViewCArrayKokkos <double> &elem_vol,
-                    const DViewCArrayKokkos <double> &elem_mass,
-                    const DViewCArrayKokkos <size_t> &elem_mat_id,
-                    const DViewCArrayKokkos <double> &elem_statev,
-                    const double dt,
-                    const double rk_alpha);
-
-
-KOKKOS_FUNCTION
-void get_area_weights2D(const ViewCArrayKokkos <double> &corner_areas,
-                        const size_t elem_gid,
-                        const DViewCArrayKokkos <double> &node_coords,
-                        const ViewCArrayKokkos <size_t>  &elem_node_gids);
 
 */
 KOKKOS_FUNCTION

@@ -295,7 +295,7 @@ struct fe_ref_elem_t{
                     }
 
                     get_basis(temp_nodal_basis, val_1d, val_3d, point);
-                    double check_basis = 0.0;
+                    //double check_basis = 0.0;
 
                     for(int basis_id = 0; basis_id < num_dofs_in_elem; basis_id++){
                         //printf(" computed basis value = %f \n", temp_nodal_basis(basis_id) );

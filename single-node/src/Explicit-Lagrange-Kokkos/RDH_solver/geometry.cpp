@@ -6,19 +6,19 @@
 #include "state.h"
 #include "ref_elem.h"
 
-void update_position_sgh(double rk_alpha,
+void update_position_rdh(const size_t stage,
+                         double factor,
                          double dt,
-                         const size_t num_dims,
-                         const size_t num_nodes,
+                         const mesh_t &mesh,
                          DViewCArrayKokkos <double> &node_coords,
                          const DViewCArrayKokkos <double> &node_vel){
     
     // loop over all the nodes in the mesh
-    FOR_ALL(node_gid, 0, num_nodes, {
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
 
-        for (int dim = 0; dim < num_dims; dim++){
-            double half_vel = (node_vel(1, node_gid, dim) + node_vel(0, node_gid, dim))*0.5;
-            node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha*dt*half_vel;
+        for (int dim = 0; dim < mesh.num_dims; dim++){
+            double half_vel = factor*(node_vel(stage, node_gid, dim) + node_vel(0, node_gid, dim));
+            node_coords(1, node_gid, dim) = node_coords(0, node_gid, dim) + dt*half_vel;
         }
         
     }); // end parallel for over nodes

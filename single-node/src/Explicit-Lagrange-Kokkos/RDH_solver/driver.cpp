@@ -178,7 +178,7 @@ int main(int argc, char *argv[]){
         const size_t num_leg_pts = elem.num_leg_pts;//*num_elems;
         const size_t num_lob_pts_per_elem = ref_elem.num_gauss_lob_in_elem;
         const size_t num_leg_pts_per_elem = ref_elem.num_gauss_leg_in_elem;
-        printf(" num_leg_pts_per_elem = %d\n", num_leg_pts_per_elem);
+        //printf(" num_leg_pts_per_elem = %d\n", num_leg_pts_per_elem);
         // allocate elem_statev
         elem.statev = CArray <double> (num_elems, num_state_vars);
 
@@ -215,19 +215,19 @@ int main(int argc, char *argv[]){
         
         // create Dual Views of the individual elem struct variables
         DViewCArrayKokkos <double> elem_den(&elem.den(0),
-                                            num_zones);
+                                            num_leg_pts);
 
-        DViewCArrayKokkos <double> elem_pres(&elem.pres(0),
-                                             num_zones);
+        DViewCArrayKokkos <double> elem_pressure(&elem.pres(0),
+                                             num_leg_pts);
 
         DViewCArrayKokkos <double> elem_stress(&elem.stress(0,0,0,0),
                                                rk_num_bins,
-                                               num_zones,
+                                               num_leg_pts,
                                                3,
                                                3); // always 3D even in 2D-RZ
 
         DViewCArrayKokkos <double> elem_sspd(&elem.sspd(0),
-                                             num_zones);
+                                             num_leg_pts);
 
         DViewCArrayKokkos <double> elem_sie(&elem.sie(0,0),
                                             rk_num_bins,
@@ -366,7 +366,7 @@ int main(int argc, char *argv[]){
               node_vel,
               node_mass,
               elem_den,
-              elem_pres,
+              elem_pressure,
               elem_stress,
               elem_sspd,
               elem_sie,
@@ -398,7 +398,7 @@ int main(int argc, char *argv[]){
                 node_vel,
                 node_mass,
                 elem_den,
-                elem_pres,
+                elem_pressure,
                 elem_stress,
                 elem_sspd,
                 elem_sie,
@@ -421,7 +421,7 @@ int main(int argc, char *argv[]){
                   node_vel,
                   node_mass,
                   elem_den,
-                  elem_pres,
+                  elem_pressure,
                   elem_stress,
                   elem_sspd,
                   elem_sie,
@@ -458,7 +458,7 @@ int main(int argc, char *argv[]){
                 node_vel,
                 node_mass,
                 elem_den,
-                elem_pres,
+                elem_pressure,
                 elem_stress,
                 elem_sspd,
                 elem_sie,
@@ -485,7 +485,7 @@ int main(int argc, char *argv[]){
 //DViewCArrayKokkos <double> node_vel,
 //DViewCArrayKokkos <double> node_mass,
 //DViewCArrayKokkos <double> elem_den,
-//DViewCArrayKokkos <double> elem_pres,
+//DViewCArrayKokkos <double> elem_pressure,
 //DViewCArrayKokkos <double> elem_stress,
 //DViewCArrayKokkos <double> elem_sspd, 
 //DViewCArrayKokkos <double> elem_sie,
