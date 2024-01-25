@@ -114,6 +114,7 @@ public:
   typedef MCONN::dual_view_type::t_dev elem_conn_array;
   typedef Kokkos::View<const GO**, array_layout, HostSpace, memory_traits> const_host_elem_conn_array;
   typedef Kokkos::View<const GO**, array_layout, device_type, memory_traits> const_elem_conn_array;
+  typedef Kokkos::View<const bool**, array_layout, HostSpace, memory_traits> const_host_bool_array;
   
   //initializes memory for arrays used in the global stiffness matrix assembly
   //initialize data for boundaries of the model and storage for boundary conditions and applied loads

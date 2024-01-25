@@ -104,7 +104,7 @@ using namespace utils;
    Compute the gradient of the displacement constraint with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host_vec_array design_variables, host_vec_array design_gradients){
+void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host_vec_array design_variables, const_host_vec_array target_displacements, const_host_bool_array active_nodes, host_vec_array design_gradients){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -496,7 +496,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
    Compute the hessian*vector product of the displacement with respect to nodal densities
 ---------------------------------------------------------------------------------------*/
 
-void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
+void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_bool_array active_nodes, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
   //local variable for host view in the dual view
   real_t current_cpu_time = Implicit_Solver_Pointer_->CPU_Time();
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);

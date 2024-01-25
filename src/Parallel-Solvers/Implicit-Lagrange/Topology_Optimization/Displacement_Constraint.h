@@ -288,7 +288,7 @@ public:
     int rnum_elem = FEM_->rnum_elem;
     int nlocal_nodes = FEM_->nlocal_nodes;
 
-    FEM_->compute_adjoint_gradients(design_densities, constraint_gradients);
+    FEM_->compute_displacement_constraint_gradients(design_densities, target_displacements_view, active_nodes_view, constraint_gradients);
     if(nodal_density_flag_){
       for(int i = 0; i < nlocal_nodes; i++){
         constraint_gradients(i,0) /= scaling;
@@ -328,7 +328,7 @@ public:
     int rnum_elem = FEM_->rnum_elem;
     int nlocal_nodes = FEM_->nlocal_nodes;
 
-    FEM_->compute_adjoint_hessian_vec(design_densities, constraint_adjoint_hessvec, vp);
+    FEM_->compute_displacement_constraint_hessian_vec(design_densities, target_displacements_view, active_nodes_view, constraint_adjoint_hessvec, vp);
     for(int i = 0; i < nlocal_nodes; i++){
       constraint_adjoint_hessvec(i,0) *= (*up)[0]/scaling;
     }
