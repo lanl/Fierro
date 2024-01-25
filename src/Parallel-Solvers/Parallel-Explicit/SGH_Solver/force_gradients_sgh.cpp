@@ -986,7 +986,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
         ViewCArrayKokkos <double> area_normal_gradients(area_normal_gradients_array, num_nodes_in_elem, num_dims, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> shock_dir(shock_dir_array, num_dims);
         ViewCArrayKokkos <double> sum(sum_array, 4);
-        ViewCArrayKokkos <double> sum_gradient(sum_gradient_array, 4*max_nodes_per_element*num_dims);
+        ViewCArrayKokkos <double> sum_gradient(sum_gradient_array, 4, max_nodes_per_element, num_dims);
         ViewCArrayKokkos <double> muc(muc_array, num_nodes_in_elem);
         ViewCArrayKokkos <double> muc_gradient(muc_gradient_array, num_nodes_in_elem, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> vel_star(vel_star_array, num_dims);
