@@ -41,19 +41,23 @@ echo "Script location: $SCRIPT_DIR"
 # Determine the parent directory of the script's directory
 PARENT_DIR=$(dirname $(dirname "${SCRIPT_DIR}"))
 
-# Check if the 'hdf5' directory exists in the parent directory; if not, clone it
-HDF5_DIR="$PARENT_DIR/hdf5"
-if [ ! -d "$HDF5_DIR" ]; then
-  echo "Directory 'hdf5' does not exist in '$PARENT_DIR', downloading 'hdf5'...."
-  git clone https://github.com/HDFGroup/hdf5.git "$HDF5_DIR"
-else
-  echo "Directory 'hdf5' exists in '$PARENT_DIR', skipping 'hdf5' download"
-fi
+# make lib directory to store all dependencies
+LIB_DIR="$PARENT_DIR/lib"
+mkdir -p "$LIB_DIR"
 
 # Define hdf5 directories
-HDF5_SOURCE_DIR="$PARENT_DIR/hdf5"
-HDF5_INSTALL_DIR="$PARENT_DIR/hdf5/install"
-HDF5_BUILD_DIR="$PARENT_DIR/hdf5/build"
+HDF5_SOURCE_DIR="$LIB_DIR/hdf5"
+HDF5_INSTALL_DIR="$LIB_DIR/hdf5/install_hdf5"
+HDF5_BUILD_DIR="$LIB_DIR/hdf5/build_hdf5"
+
+# Check if the 'hdf5' directory exists in the parent directory; if not, clone it
+if [ ! -d "$HDF5_SOURCE_DIR" ]; then
+  echo "Directory 'hdf5' does not exist in '$LIB_DIR', downloading 'hdf5'...."
+  git clone --depth 1 https://github.com/HDFGroup/hdf5.git "$HDF5_SOURCE_DIR"
+else
+  echo "Directory 'hdf5' exists in '$LIB_DIR', skipping 'hdf5' download"
+fi
+
 
 # Check to avoid reinstalling HDF5 which might take time
 if [ -d "$HDF5_INSTALL_DIR" ]; then

@@ -1,7 +1,6 @@
 #include <pybind11/pybind11.h>
 #include "stl-to-voxelvtk.h"
 
-
 PYBIND11_MODULE(fierro_voxelizer, m) {
     m.doc() = "backend voxelizer for fierro GUI front-ends.";
 

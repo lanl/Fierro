@@ -1,0 +1,37 @@
+{% set version = "1.0.0" %}
+{% set linux_compiler_version = "10.4.0" %}
+{% set macos_compiler_version = "12" %}
+
+package:
+  name: evpfft-dev
+  version: {{ version }}
+
+build:
+  number: 1
+  noarch: generic
+  skip: True # [not (linux and x86_64)]
+  script_env:
+    - PLATFORM={{ target_platform }}
+
+requirements:
+  run:
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - openmpi
+    - fierro-heffte
+    - fftw=*=mpi_openmpi_*
+    - kokkos=4.1
+    - hdf5=*=mpi_openmpi_*
+    - elements
+
+about:
+  home: https://github.com/lanl/Fierro
+  summary: This is a metapackage for EVPFFT developers. Installing this package gives you all the dependencies necessary to build EVPFFT from source.
+  description:
+  dev_url: https://github.com/lanl/Fierro
+
+extra:
+  recipe-maintainers:
+    - fierromechanics
