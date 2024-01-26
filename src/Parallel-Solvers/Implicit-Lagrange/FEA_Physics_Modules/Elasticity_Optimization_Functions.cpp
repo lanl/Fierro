@@ -104,7 +104,7 @@ using namespace utils;
    Compute the gradient of the displacement constraint with respect to nodal densities
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host_vec_array design_variables, const_host_vec_array target_displacements, const_host_bool_array active_nodes, host_vec_array design_gradients){
+void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host_vec_array design_variables, const_host_vec_array target_displacements, const_host_bool_array active_dofs, host_vec_array design_gradients){
   //local variable for host view in the dual view
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_vec_array all_node_displacements = all_node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -122,8 +122,9 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  size_t local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
-  GO current_global_index;
+  LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz, access_index;
+  GO current_global_index, global_dof_id;
+  size_t local_nrows = nlocal_nodes*num_dim;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Element_Modulus_Gradient, Poisson_Ratio, gradient_force_density[3];
@@ -156,6 +157,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
   ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3,elem->num_basis());
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_adjoint(elem->num_basis()*num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
   size_t Brows;
@@ -177,6 +179,123 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
   //initialize gradient value to zero
   for(size_t inode = 0; inode < nlocal_nodes; inode++)
     design_gradients(inode,0) = 0;
+
+  //solve for the adjoint vector first
+  if(!adjoints_allocated){
+    adjoint_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
+    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
+    all_adjoint_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    adjoints_allocated = true;
+  }
+  Teuchos::RCP<MV> lambda = adjoint_displacements_distributed;
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(lambda));
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xB = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(adjoint_equation_RHS_distributed));
+  
+  host_vec_array adjoint_equation_RHS_view = adjoint_equation_RHS_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+  
+  const_host_vec_array lambda_view = lambda->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
+
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
+    if(active_dofs(i,0))
+      adjoint_equation_RHS_view(i,0) = -2*(all_node_displacements(i/num_dim,i%num_dim)-target_displacements(i,0))/
+                                          (target_displacements(i,0)*target_displacements(i,0));
+    else
+      adjoint_equation_RHS_view(i,0) = 0;
+  }
+
+  //set adjoint equation RHS terms to 0 if they correspond to a boundary constraint DOF index
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
+    if(Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)
+      adjoint_equation_RHS_view(i,0) = 0;
+  }
+  //*fos << "Elastic Modulus Gradient" << Element_Modulus_Gradient <<std::endl;
+  //*fos << "DISPLACEMENT" << std::endl;
+  //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+
+  //*fos << "RHS vector" << std::endl;
+  //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
+
+  //assign old stiffness matrix entries
+  if(!matrix_bc_reduced){
+  LO stride_index;
+  for(LO i=0; i < local_nrows; i++){
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_id = DOF_Graph_Matrix(i,j);
+        local_dof_id = all_dof_map->getLocalElement(global_dof_id);
+        Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
+        Original_Stiffness_Entry_Indices(i,j) = j;
+        if(local_dof_id == i){
+          Stiffness_Matrix(i,j) = 1;
+        }
+        else{     
+          Stiffness_Matrix(i,j) = 0;
+        }
+      }//stride for
+    }
+    else{
+      stride_index = 0;
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_id = DOF_Graph_Matrix(i,j);
+        local_dof_id = all_dof_map->getLocalElement(global_dof_id);
+        if((Node_DOF_Boundary_Condition_Type(local_dof_id)==DISPLACEMENT_CONDITION)){
+          Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
+          Original_Stiffness_Entry_Indices(i,stride_index) = j;   
+          Stiffness_Matrix(i,j) = 0;
+          stride_index++;
+        }
+      }
+    }
+  }//row for
+  
+  matrix_bc_reduced = true;
+  }
+  
+  //solve for adjoint vector
+  int num_iter = 2000;
+  double solve_tol = 1e-05;
+  int cacheSize = 0;
+  std::string solveType         = "belos";
+  std::string belosType         = "cg";
+  // =========================================================================
+  // Preconditioner construction
+  // =========================================================================
+  //bool useML   = Linear_Solve_Params->isParameter("use external multigrid package") && (Linear_Solve_Params->get<std::string>("use external multigrid package") == "ml");
+  //out<<"*********** MueLu ParameterList ***********"<<std::endl;
+  //out<<*Linear_Solve_Params;
+  //out<<"*******************************************"<<std::endl;
+  
+  //H->Write(-1, -1);
+  //H->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  // =========================================================================
+  // System solution (Ax = b)
+  // =========================================================================
+  //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
+  //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
+  // }
+  real_t current_cpu_time2 = Implicit_Solver_Pointer_->CPU_Time();
+  comm->barrier();
+  SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  comm->barrier();
+  hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
+
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
+  // }
+  
+  //import for displacement of ghosts
+  //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+
+  //comms to get displacements on all node map
+  all_adjoint_displacements_distributed->doImport(*adjoint_displacements_distributed, *dof_importer, Tpetra::INSERT);
+  host_vec_array all_adjoint = all_adjoint_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+
+  //END LINEAR SOLVE
 
   //loop through each element and assign the contribution to compliance gradient for each of its local nodes
   for(size_t ielem = 0; ielem < rnum_elem; ielem++){
@@ -205,6 +324,9 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
       current_nodal_displacements(node_loop*num_dim) = all_node_displacements(local_dof_idx,0);
       current_nodal_displacements(node_loop*num_dim+1) = all_node_displacements(local_dof_idy,0);
       current_nodal_displacements(node_loop*num_dim+2) = all_node_displacements(local_dof_idz,0);
+      current_nodal_adjoint(node_loop*num_dim) = all_adjoint(local_dof_idx,0);
+      current_nodal_adjoint(node_loop*num_dim+1) = all_adjoint(local_dof_idy,0);
+      current_nodal_adjoint(node_loop*num_dim+2) = all_adjoint(local_dof_idz,0);
       
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
       //debug print
@@ -448,9 +570,11 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
     for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
       for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
         if(ifill==jfill)
-          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
-        else
-          inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_adjoint(ifill)*current_nodal_displacements(jfill);
+        else{
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*(current_nodal_adjoint(ifill)*current_nodal_displacements(jfill)+
+                            current_nodal_displacements(ifill)*current_nodal_adjoint(jfill));
+        }
         //debug
         //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
         //inner_product += Local_Matrix_Contribution(ifill, jfill);
@@ -464,7 +588,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) -= inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*0.5*invJacobian;
+      design_gradients(local_node_id,0) += inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*0.5*invJacobian;
     }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
@@ -478,17 +602,27 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
       //compute inner product for this quadrature point contribution
       inner_product = 0;
       for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
-        inner_product += gradient_force_density[ifill%num_dim]*current_nodal_displacements(ifill)*basis_values(ifill/num_dim);
+        inner_product += gradient_force_density[ifill%num_dim]*current_nodal_adjoint(ifill)*basis_values(ifill/num_dim);
       }
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) += inner_product*basis_values(igradient)*weight_multiply*Jacobian;
+      design_gradients(local_node_id,0) -= inner_product*basis_values(igradient)*weight_multiply*Jacobian;
       }
     }
     }
   }
-  //debug print
+  
+  //restore values of K for any scalar or matrix vector products
+  if(matrix_bc_reduced){
+    for(LO i = 0; i < local_nrows; i++){
+      for(LO j = 0; j < Original_Stiffness_Entries_Strides(i); j++){
+        access_index = Original_Stiffness_Entry_Indices(i,j);
+        Stiffness_Matrix(i,access_index) = Original_Stiffness_Entries(i,j);
+      }
+    }//row for
+    matrix_bc_reduced = false;
+  }
 
 }
 
@@ -496,7 +630,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
    Compute the hessian*vector product of the displacement with respect to nodal densities
 ---------------------------------------------------------------------------------------*/
 
-void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_bool_array active_nodes, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
+void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_bool_array active_dofs, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed){
   //local variable for host view in the dual view
   real_t current_cpu_time = Implicit_Solver_Pointer_->CPU_Time();
   const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
@@ -531,7 +665,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
+  LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz, access_index;
   GO current_global_index, global_dof_id;
   size_t local_nrows = nlocal_nodes*num_dim;
 
@@ -1312,5 +1446,17 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
       }
     }
   }//end element loop for hessian vector product
+
+  //restore values of K for any scalar or matrix vector products
+  if(matrix_bc_reduced){
+    for(LO i = 0; i < local_nrows; i++){
+      for(LO j = 0; j < Original_Stiffness_Entries_Strides(i); j++){
+        access_index = Original_Stiffness_Entry_Indices(i,j);
+        Stiffness_Matrix(i,access_index) = Original_Stiffness_Entries(i,j);
+      }
+    }//row for
+    matrix_bc_reduced = false;
+  }
+
   hessvec_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
 }
