@@ -54,7 +54,7 @@ void assemble_A1(   CArrayKokkos <double> &A1,
     // Assemble A1 operator, A1 = sum_{E \ni i} \Phi^E_i(u^k)
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
 
-        int num_elems_attached_to_node = 1;//mesh.num_elems_in_node(node_gid);
+        int num_elems_attached_to_node = mesh.num_corners_in_node(node_gid);
 
         for (int elem_in_node = 0; elem_in_node < num_elems_attached_to_node; elem_in_node++){
             int elem_in_node_gid = mesh.elems_in_node(node_gid, elem_in_node);

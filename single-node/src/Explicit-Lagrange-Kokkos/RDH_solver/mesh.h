@@ -206,6 +206,7 @@ struct mesh_t {
     size_t num_bdy_nodes;
     size_t num_bdy_sets;
     size_t num_nodes_in_patch;
+    size_t num_nodes_in_surf;
 
     // Surface quadrature 
     //size_t num_lobatto_in_patch;
@@ -271,6 +272,8 @@ struct mesh_t {
     CArrayKokkos <size_t> patches_in_surf;  // high-order mesh class
     
     CArrayKokkos <size_t> surf_in_patch;       // high-order mesh class
+
+    CArrayKokkos <size_t> nodes_in_surf;
     
 
     // Surface quadrature
@@ -1264,13 +1267,77 @@ struct mesh_t {
                     size_t patch_gid = patches_in_elem(elem_gid, patch_lid);
                     
                     // save the surface gid
+                    // Grab the first patch on surf and return surface_gid from surf_in_patch //
                     surfs_in_elem(elem_gid,surf_lid) = surf_in_patch(patch_gid);
 
                 } // end surf_lid
                 
             });
-            
-        
+
+
+            DViewCArrayKokkos <size_t> surf_node_ordering_in_elem;
+
+            if ( num_dims == 3){
+                
+                // num_1D = Pn+1
+                int num_surface_nodes = num_surfs_in_elem*pow(num_1D, num_dims-1);
+                int temp_surf_node_lids[num_surface_nodes];
+                // 2D arbitrary order elements
+                int count = 0;
+                
+                for (int i_surf = 0; i_surf < 2; i_surf++){
+                    for (int k=0; k<num_1D; k++){
+                        for (int j=0; j<num_1D; j++){
+                            
+                            // node_lid 0 in patch
+                            //index = i + j*num_1D + k*num_1D*num_1D;
+                            temp_surf_node_lids[count] = i_surf + j*num_1D + k*num_1D*num_1D;
+                            count++;
+                            
+                            
+                        } // end for k
+                    } // end for j
+                }
+                
+                for (int j_surf = 0; j_surf < 2; j_surf++){
+                    for (int k=0; k<num_1D; k++){
+                        for (int i=0; i<num_1D; i++){
+                        
+                        // node_lid 0 in patch
+                        temp_surf_node_lids[count] = i + j_surf*num_1D + k*num_1D*num_1D;
+                        count++;
+                        }
+                    }
+                }
+                
+                for (int k_surf = 0; k_surf < 2; k_surf++){
+                    for (int j=0; j<num_1D; j++){
+                        for (int i=0; i<num_1D; i++){
+                        
+                            // node_lid 0 in patch
+                            temp_surf_node_lids[count] = i + j*num_1D + k_surf*num_1D*num_1D;
+                            count++; 
+                        }
+                    }   
+                }
+
+                nodes_in_surf = CArrayKokkos <size_t> (num_surfs, num_1D*num_1D);
+
+                surf_node_ordering_in_elem = DViewCArrayKokkos <int> (&temp_surf_node_lids[0], 6, num_1D*num_1D);
+                surf_node_ordering_in_elem.update_device();
+                for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+                    FOR_ALL_CLASS(surf_lid, 0 , num_surfs_in_elem, {
+                        surf_gid = surfs_in_elem(elem_gid, surf_lid);
+                        for (int surf_node_lid = 0; surf_node_lid < num_nodes_in_surf; surf_node_lid++){
+                            node_lid = surf_node_ordering_in_elem(surf_lid, surf_node_lid);
+                            int node_gid = nodes_in_elem(elem_gid, node_lid);
+                            nodes_in_surf(surf_gid, surf_node_lid) = node_gid;
+                        }// end loop over surf_node_lid
+                    });// end loop over FOR_ALL_CLASS
+                }// end loop over elem_gid
+
+            }// end 3D scope
+
         } // end of high-order mesh objects
                           
         // ----------------
