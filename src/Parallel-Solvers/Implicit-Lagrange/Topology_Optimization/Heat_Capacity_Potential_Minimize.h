@@ -129,9 +129,9 @@ public:
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
-    //debug
-    std::ostream &out = std::cout;
-    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    // //debug
+    // std::ostream &out = std::cout;
+    // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
 
     current_step++;
     ROL::Ptr<const MV> zp = getVector(z);
@@ -167,13 +167,13 @@ public:
       //update deformation variables
       FEM_->update_linear_solve(zp, current_step);
       if(FEM_->myrank==0)
-      *fos << "called Trial" << std::endl;
+      std::cout << "called Trial" << std::endl;
     }
     else { // ROL::UpdateType::Temp
       // This is a new value of x used for,
       // e.g., finite-difference checks
       if(FEM_->myrank==0)
-      *fos << "called Temp" << std::endl;
+      std::cout << "called Temp" << std::endl;
       FEM_->all_node_temperatures_distributed = all_node_temperatures_distributed_temp;
       FEM_->comm_variables(zp);
       FEM_->update_linear_solve(zp, current_step);
@@ -301,9 +301,9 @@ public:
   
   
   void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //debug
-    std::ostream &out = std::cout;
-    Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+    // //debug
+    // std::ostream &out = std::cout;
+    // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
     // Unwrap hv
     ROL::Ptr<MV> hvp = getVector(hv);
 
@@ -322,7 +322,7 @@ public:
     //vp->describe(*fos,Teuchos::VERB_EXTREME);
     //hvp->describe(*fos,Teuchos::VERB_EXTREME);
     if(FEM_->myrank==0)
-    *fos << "Called Heat Capacity Potential Hessianvec" << std::endl;
+    std::cout << "Called Heat Capacity Potential Hessianvec" << std::endl;
     FEM_->hessvec_count++;
   }
 /*

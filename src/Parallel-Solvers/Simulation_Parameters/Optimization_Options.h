@@ -18,6 +18,7 @@ SERIALIZABLE_ENUM(TO_MODULE_TYPE,
   Strain_Energy_Minimize,
   Mass_Constraint,
   Moment_of_Inertia_Constraint,
+  Center_of_Mass_Constraint,
   Heat_Capacity_Potential_Constraint,
   MULTI_OBJECTIVE_TERM,
   Thermo_Elastic_Strain_Energy_Minimize,
@@ -27,13 +28,19 @@ SERIALIZABLE_ENUM(TO_MODULE_TYPE,
 
 SERIALIZABLE_ENUM(OPTIMIZATION_PROCESS, none, topology_optimization, shape_optimization)
 SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, none, minimize_kinetic_energy, multi_objective, minimize_compliance, minimize_thermal_resistance)
-SERIALIZABLE_ENUM(CONSTRAINT_TYPE, mass, moment_of_inertia)
+SERIALIZABLE_ENUM(CONSTRAINT_TYPE, mass, moment_of_inertia, center_of_mass)
 SERIALIZABLE_ENUM(RELATION, equality)
 SERIALIZABLE_ENUM(DENSITY_FILTER, none, helmholtz_filter)
 SERIALIZABLE_ENUM(MULTI_OBJECTIVE_STRUCTURE, linear)
-SERIALIZABLE_ENUM(CONSTRAINT_COMPONENT, xx, yy, zz, xy, xz, yz)
+SERIALIZABLE_ENUM(CONSTRAINT_COMPONENT, x, y, z, xx, yy, zz, xy, xz, yz)
 inline int component_to_int(CONSTRAINT_COMPONENT c) {
   switch(c) {
+    case CONSTRAINT_COMPONENT::x:
+      return 0;
+    case CONSTRAINT_COMPONENT::y:
+      return 1;
+    case CONSTRAINT_COMPONENT::z:
+      return 2;
     case CONSTRAINT_COMPONENT::xx:
       return 0;
     case CONSTRAINT_COMPONENT::yy:
@@ -62,6 +69,10 @@ struct Optimization_Constraint {
 
   void validate() {
     if (type == CONSTRAINT_TYPE::moment_of_inertia) {
+      if (!component.has_value())
+        throw Yaml::ConfigurationException("`component` field required for constraint type " + to_string(type));
+    }
+    if (type == CONSTRAINT_TYPE::center_of_mass) {
       if (!component.has_value())
         throw Yaml::ConfigurationException("`component` field required for constraint type " + to_string(type));
     }

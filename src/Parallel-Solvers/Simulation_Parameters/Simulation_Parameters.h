@@ -146,6 +146,13 @@ struct Simulation_Parameters
                     {constraint.value, (double)component_to_int(constraint.component.value())}
                 );
                 break;
+            case CONSTRAINT_TYPE::center_of_mass:
+                add_TO_module(
+                    TO_MODULE_TYPE::Center_of_Mass_Constraint, 
+                    f_type, 
+                    {constraint.value, (double)component_to_int(constraint.component.value())}
+                );
+                break;
             default:
                 throw Yaml::ConfigurationException("Unsupported constraint type " + to_string(constraint.type));
             }

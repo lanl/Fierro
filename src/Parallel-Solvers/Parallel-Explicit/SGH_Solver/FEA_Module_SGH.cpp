@@ -2018,14 +2018,12 @@ void FEA_Module_SGH::sgh_solve(){
             // ---- Calculate velocity diveregence for the element ----
             if(num_dim==2){
                 get_divergence2D(elem_div,
-                                 *mesh,
                                  node_coords,
                                  node_vel,
                                  elem_vol);
             }
             else {
                 get_divergence(elem_div,
-                               *mesh,
                                node_coords,
                                node_vel,
                                elem_vol);
@@ -2104,7 +2102,6 @@ void FEA_Module_SGH::sgh_solve(){
 
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
-                              *mesh,
                               node_vel,
                               node_mass,
                               corner_force);

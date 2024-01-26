@@ -1321,6 +1321,10 @@ void Implicit_Solver::setup_optimization_problem(){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false);
       }
+      else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Center_of_Mass_Constraint){
+        *fos << " CENTER OF MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        eq_constraint = ROL::makePtr<CenterOfMassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0], false);
+      }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Strain_Energy_Constraint){    
         *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<StrainEnergyConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][0], false);
@@ -1352,6 +1356,10 @@ void Implicit_Solver::setup_optimization_problem(){
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<MomentOfInertiaConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0]);
+      }
+      else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Center_of_Mass_Constraint){
+        *fos << " CENTER OF MASS CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
+        ineq_constraint = ROL::makePtr<CenterOfMassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, Function_Arguments[imodule][1], Function_Arguments[imodule][0]);
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Strain_Energy_Constraint){
         *fos << " STRAIN ENERGY CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;

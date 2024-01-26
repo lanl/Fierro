@@ -35,12 +35,11 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
  
-#ifndef STRAIN_ENERGY_MINIMIZE_TOPOPT_H
-#define STRAIN_ENERGY_MINIMIZE_TOPOPT_H
+#ifndef DISPLACEMENT_CONSTRAINT_TOPOPT_H
+#define DISPLACEMENT_CONSTRAINT_TOPOPT_H
 
 #include "matar.h"
 #include "elements.h"
-#include <string>
 #include <Teuchos_ScalarTraits.hpp>
 #include <Teuchos_RCP.hpp>
 #include <Teuchos_oblackholestream.hpp>
@@ -55,19 +54,22 @@
 
 #include "ROL_Types.hpp"
 #include <ROL_TpetraMultiVector.hpp>
-#include "ROL_Objective.hpp"
+#include "ROL_Constraint.hpp"
 #include "ROL_Elementwise_Reduce.hpp"
 #include "FEA_Module_Elasticity.h"
 
-class StrainEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
+//designed for many displacement constraints; uses a quadratic error penalty sum to allow solving one adjoint system rather than one per displacement constraint
+class DisplacementConstraint_TopOpt : public ROL::Constraint<real_t> {
   
   typedef Tpetra::Map<>::local_ordinal_type LO;
   typedef Tpetra::Map<>::global_ordinal_type GO;
   typedef Tpetra::Map<>::node_type Node;
   typedef Tpetra::Map<LO, GO, Node> Map;
   typedef Tpetra::MultiVector<real_t, LO, GO, Node> MV;
+  typedef Tpetra::MultiVector<bool, LO, GO, Node> BoolV;
   typedef ROL::Vector<real_t> V;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,Node> ROL_MV;
+  typedef ROL::TpetraMultiVector<bool,LO,GO,Node> ROL_BoolV;
   
   using traits = Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>;
   using array_layout    = typename traits::array_layout;
@@ -84,17 +86,22 @@ class StrainEnergyMinimize_TopOpt : public ROL::Objective<real_t> {
   typedef MV::dual_view_type::t_dev vec_array;
   typedef MV::dual_view_type::t_host host_vec_array;
   typedef Kokkos::View<const real_t**, array_layout, HostSpace, memory_traits> const_host_vec_array;
+  typedef Kokkos::View<const bool**, array_layout, HostSpace, memory_traits> const_host_bool_array;
   typedef MV::dual_view_type dual_vec_array;
 
 private:
 
   FEA_Module_Elasticity *FEM_;
-  ROL::Ptr<ROL_MV> ROL_Force;
   ROL::Ptr<ROL_MV> ROL_Displacements;
+  ROL::Ptr<ROL_MV> ROL_Target_Displacements;
+  ROL::Ptr<ROL_BoolV> ROL_Active_Nodes;
   ROL::Ptr<ROL_MV> ROL_Gradients;
+  Teuchos::RCP<MV> constraint_gradients_distributed;
   Teuchos::RCP<MV> all_node_displacements_distributed_temp;
-
-  bool useLC_; // Use linear form of compliance.  Otherwise use quadratic form.
+  real_t initial_strain_energy_;
+  bool inequality_flag_;
+  real_t constraint_value_;
+  real_t scaling;
 
   ROL::Ptr<const MV> getVector( const V& x ) {
     return dynamic_cast<const ROL_MV&>(x).getVector();
@@ -106,27 +113,28 @@ private:
 
 public:
   bool nodal_density_flag_;
-  int last_comm_step, last_solve_step, current_step;
+  int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Elasticity";
 
-  StrainEnergyMinimize_TopOpt(FEA_Module *FEM, bool nodal_density_flag) 
-    : useLC_(true) {
+  DisplacementConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, ROL::Ptr<ROL_MV> Target_Displacements, ROL::Ptr<ROL_MV> Active_Nodes, real_t constraint_value=0, bool inequality_flag=true){
       FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
       current_step = 0;
-      
+      inequality_flag_ = inequality_flag;
+      constraint_value_ = constraint_value;
+      constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
+
       //deep copy solve data into the cache variable
       FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
       all_node_displacements_distributed_temp = FEM_->all_node_displacements_distributed;
 
-      ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
       ROL_Displacements = ROL::makePtr<ROL_MV>(FEM_->node_displacements_distributed);
+      scaling = 1;
 
-      real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
       std::cout.precision(10);
       if(FEM_->myrank==0)
-      std::cout << "INITIAL STRAIN ENERGY " << current_strain_energy << std::endl;
+        std::cout << "INITIAL STRAIN ENERGY " << initial_strain_energy_ << std::endl;
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -174,202 +182,164 @@ public:
       // This is a new value of x used for,
       // e.g., finite-difference checks
       if(FEM_->myrank==0)
-      std::cout << "called Temp" << std::endl;
+        std::cout << "called Temp" << std::endl;
       FEM_->all_node_displacements_distributed = all_node_displacements_distributed_temp;
       FEM_->comm_variables(zp);
       FEM_->update_linear_solve(zp, current_step);
     }
-
-    //decide to output current optimization state
-    if(current_step%FEM_->simparam->optimization_options.optimization_output_freq==0)
-      FEM_->Implicit_Solver_Pointer_->output_design(current_step);
   }
 
-  real_t value(const ROL::Vector<real_t> &z, real_t &tol) {
-    //std::cout << "Started obj value on task " <<FEM_->myrank  << std::endl;
+  void value(ROL::Vector<real_t> &c, const ROL::Vector<real_t> &z, real_t &tol ) {
     ROL::Ptr<const MV> zp = getVector(z);
-    real_t c = 0.0;
-
-    //debug print
-    //std::ostream &out = std::cout;
-    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(FEM_->myrank==0)
-    //*fos << "Value function z:" << std::endl;
-    //zp->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
-    //std::fflush(stdout);
-
-    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
-    /*
-    if(last_comm_step!=current_step){
-      FEM_->comm_variables(zp);
-      last_comm_step = current_step;
-    }
+    ROL::Ptr<std::vector<real_t>> cp = dynamic_cast<ROL::StdVector<real_t>&>(c).getVector();
+    ROL::Ptr<const BoolV> active_nodesp = (*ROL_Active_Nodes).getVector();
+    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
     
-    if(last_solve_step!=current_step){
-      //std::cout << "UPDATED DISPLACEMENTS" << std::endl;
-      FEM_->update_linear_solve(zp);
-      last_solve_step = current_step;
-    }
-    */
-    //debug print of displacements
-    //std::ostream &out = std::cout;
-    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(FEM_->myrank==0)
-    //*fos << "Displacement data :" << std::endl;
-    //FEM_->node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-    //*fos << std::endl;
-    //std::fflush(stdout);
-    
-    ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
-    ROL_Displacements = ROL::makePtr<ROL_MV>(FEM_->node_displacements_distributed);
+    const_host_bool_array active_nodes_view = active_nodesp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
-    real_t current_strain_energy = ROL_Displacements->dot(*ROL_Force)/2;
-    std::cout.precision(10);
+    int nlocal_nodes = FEM_->nlocal_nodes;
+    int num_dim = FEM_->num_dim;
+    real_t current_quadsum_value, current_local_quadsum_value;
+
+    current_local_quadsum_value = current_quadsum_value = 0;
+    for(int inode = 0; inode < nlocal_nodes; inode++){
+      if(active_nodes_view(inode,0)){
+        for(int idim = 0; idim < num_dim; idim++){
+          current_local_quadsum_value += (displacements_view(inode,idim)-target_displacements_view(inode,idim))*
+                                        (displacements_view(inode,idim)-target_displacements_view(inode,idim))/(target_displacements_view(inode,idim)*target_displacements_view(inode,idim));
+        }
+      }
+    }
+
+    MPI_Allreduce(&current_local_quadsum_value,&current_quadsum_value,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+
     if(FEM_->myrank==0)
-    std::cout << "CURRENT STRAIN ENERGY " << current_strain_energy << std::endl;
-
-    //std::cout << "Ended obj value on task " <<FEM_->myrank  << std::endl;
-    return current_strain_energy;
+      std::cout << "CURRENT STRAIN ENERGY RATIO " << current_quadsum_value << std::endl;
+    if(inequality_flag_)
+      (*cp)[0] = current_quadsum_value/scaling;
+    else
+      (*cp)[0] = current_quadsum_value/scaling - constraint_value_;
   }
 
-  //void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //g.zero();
-  //}
   
-  void gradient( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &z, real_t &tol ) {
-    //std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
-    //get Tpetra multivector pointer from the ROL vector
-    ROL::Ptr<const MV> zp = getVector(z);
-    ROL::Ptr<MV> gp = getVector(g);
+  void applyAdjointJacobian(ROL::Vector<real_t> &ajv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &x, real_t &tol) override {
+    //std::cout << "Started constraint adjoint grad on task " <<FEM_->myrank << std::endl;
+     //get Tpetra multivector pointer from the ROL vector
+    ROL::Ptr<const MV> zp = getVector(x);
+    ROL::Ptr<const std::vector<real_t>> vp = dynamic_cast<const ROL::StdVector<real_t>&>(v).getVector();
+    ROL::Ptr<MV> ajvp = getVector(ajv);
+    ROL::Ptr<const BoolV> active_nodesp = (*ROL_Active_Nodes).getVector();
+    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
+    
+    //ROL::Ptr<ROL_MV> ROL_Element_Volumes;
 
-    //communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
-    //FEM_->gradient_print_sync=1;
+    //get local view of the data
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    //host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array constraint_gradients = ajvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    //host_vec_array dual_constraint_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_bool_array active_nodes_view = active_nodesp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+    //communicate ghosts
     /*
     if(last_comm_step!=current_step){
       FEM_->comm_variables(zp);
       last_comm_step = current_step;
     }
-    
-    if(last_solve_step!=current_step){
-      FEM_->update_linear_solve(zp);
-      last_solve_step = current_step;
-    }
     */
-    //FEM_->gradient_print_sync=0;
-    //get local view of the data
-    host_vec_array objective_gradients = gp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    int rnum_elem = FEM_->rnum_elem;
+    int nlocal_nodes = FEM_->nlocal_nodes;
+    
+    FEM_->compute_adjoint_gradients(design_densities, constraint_gradients);
 
-    FEM_->compute_adjoint_gradients(design_densities, objective_gradients);
-      //debug print of gradient
-      //std::ostream &out = std::cout;
-      //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-      //if(FEM_->myrank==0)
-      //*fos << "Gradient data :" << std::endl;
-      //gp->describe(*fos,Teuchos::VERB_EXTREME);
-      //*fos << std::endl;
-      //std::fflush(stdout);
-      //for(int i = 0; i < FEM_->nlocal_nodes; i++){
-        //objective_gradients(i,0) *= -1;
-      //}
-    
-    //std::cout << "Objective Gradient called"<< std::endl;
-    //debug print of design variables
-    //std::ostream &out = std::cout;
-    //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    //if(FEM_->myrank==0)
-    //*fos << "Gradient data :" << std::endl;
-    //gp->describe(*fos,Teuchos::VERB_EXTREME);
-    
-    //*fos << std::endl;
-    //std::fflush(stdout);
-    //std::cout << "ended obj gradient on task " <<FEM_->myrank  << std::endl;
+    if(nodal_density_flag_){
+      for(int i = 0; i < nlocal_nodes; i++){
+        constraint_gradients(i,0) *= (*vp)[0]/scaling;
+      }
+    }
+    else{
+      for(int i = 0; i < rnum_elem; i++){
+        constraint_gradients(i,0) *= (*vp)[0]/scaling;
+      }
+    }
+    //std::cout << "Ended constraint adjoint grad on task " <<FEM_->myrank  << std::endl;
+    //debug print
+    //std::cout << "Constraint Gradient value " << std::endl;
   }
   
-  
-  void hessVec( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, real_t &tol ) {
-    // //debug
-    // std::ostream &out = std::cout;
-    // Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
+  void applyJacobian(ROL::Vector<real_t> &jv, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &x, real_t &tol) {
+    //get Tpetra multivector pointer from the ROL vector
+    ROL::Ptr<const MV> zp = getVector(x);
+    ROL::Ptr<std::vector<real_t>> jvp = dynamic_cast<ROL::StdVector<real_t>&>(jv).getVector();
+    ROL::Ptr<const BoolV> active_nodesp = (*ROL_Active_Nodes).getVector();
+    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
+
+    //get local view of the data
+    host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_bool_array active_nodes_view = active_nodesp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+
+    int rnum_elem = FEM_->rnum_elem;
+    int nlocal_nodes = FEM_->nlocal_nodes;
+
+    FEM_->compute_displacement_constraint_gradients(design_densities, target_displacements_view, active_nodes_view, constraint_gradients);
+    if(nodal_density_flag_){
+      for(int i = 0; i < nlocal_nodes; i++){
+        constraint_gradients(i,0) /= scaling;
+      }
+    }
+    else{
+      for(int i = 0; i < rnum_elem; i++){
+        constraint_gradients(i,0) /= scaling;
+      }
+    }
+    ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
+    real_t gradient_dot_v = ROL_Gradients->dot(v);
+    //debug print
+    //std::cout << "Constraint Gradient value " << gradient_dot_v << std::endl;
+
+    (*jvp)[0] = gradient_dot_v;
+  }
+
+  void applyAdjointHessian(ROL::Vector<real_t> &ahuv, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &v, const ROL::Vector<real_t> &z, Real &tol) {
     // Unwrap hv
-    ROL::Ptr<MV> hvp = getVector(hv);
+    ROL::Ptr<MV> ahuvp = getVector(ahuv);
 
     // Unwrap v
     ROL::Ptr<const MV> vp = getVector(v);
+    ROL::Ptr<const std::vector<real_t>> up = dynamic_cast<const ROL::StdVector<real_t>&>(u).getVector();
     ROL::Ptr<const MV> zp = getVector(z);
+    ROL::Ptr<const BoolV> active_nodesp = (*ROL_Active_Nodes).getVector();
+    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
     
-    host_vec_array objective_hessvec = hvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array constraint_adjoint_hessvec = ahuvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_bool_array active_nodes_view = active_nodesp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    
+    int rnum_elem = FEM_->rnum_elem;
+    int nlocal_nodes = FEM_->nlocal_nodes;
 
-    FEM_->compute_adjoint_hessian_vec(design_densities, objective_hessvec, vp);
+    FEM_->compute_displacement_constraint_hessian_vec(design_densities, target_displacements_view, active_nodes_view, constraint_adjoint_hessvec, vp);
+    for(int i = 0; i < nlocal_nodes; i++){
+      constraint_adjoint_hessvec(i,0) *= (*up)[0]/scaling;
+    }
     //if(FEM_->myrank==0)
     //std::cout << "hessvec" << std::endl;
     //vp->describe(*fos,Teuchos::VERB_EXTREME);
     //hvp->describe(*fos,Teuchos::VERB_EXTREME);
     if(FEM_->myrank==0)
-    std::cout << "Called Strain Energy Hessianvec" << std::endl;
+    std::cout << "Called Displacement Constraint Hessianvec" << std::endl;
     FEM_->hessvec_count++;
   }
-/*
-  void hessVec_21( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    // Unwrap g
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
- 
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      std::MV<real_t> U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      std::MV<real_t> V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,V);
-      for (size_t i=0; i<hvp->size(); i++) {
-        (*hvp)[i] *= 2.0;
-      }
-    }
-    
-  }
-
-  void hessVec_22( ROL::Vector<real_t> &hv, const ROL::Vector<real_t> &v, 
-                   const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-                     
-    ROL::Ptr<MV> hvp = getVector(hv);
-
-    // Unwrap v
-    ROL::Ptr<const MV> vp = getVector(v);
-
-    // Unwrap x
-    ROL::Ptr<const MV> up = getVector(u);
-    ROL::Ptr<const MV> zp = getVector(z);
-    
-    // Apply Jacobian
-    hv.zero();
-    if ( !useLC_ ) {
-      MV U;
-      U.assign(up->begin(),up->end());
-      FEM_->set_boundary_conditions(U);
-      MV V;
-      V.assign(vp->begin(),vp->end());
-      FEM_->set_boundary_conditions(V);
-      FEM_->apply_adjoint_jacobian(*hvp,U,*zp,*vp,U);
-    }
-    
-  }
-  */
 };
 
 #endif // end header guard

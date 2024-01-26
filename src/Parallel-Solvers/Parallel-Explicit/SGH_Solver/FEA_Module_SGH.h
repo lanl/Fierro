@@ -256,14 +256,12 @@ public:
   double average_element_density(const int nodes_per_elem, const CArray<double> current_element_densities) const;
 
   void get_divergence(DViewCArrayKokkos <double> &elem_div,
-                      const mesh_t mesh,
                       const DViewCArrayKokkos <double> &node_coords,
                       const DViewCArrayKokkos <double> &node_vel,
                       const DViewCArrayKokkos <double> &elem_vol);
 
 
   void get_divergence2D(DViewCArrayKokkos <double> &elem_div,
-                        const mesh_t mesh,
                         const DViewCArrayKokkos <double> &node_coords,
                         const DViewCArrayKokkos <double> &node_vel,
                         const DViewCArrayKokkos <double> &elem_vol);
@@ -301,7 +299,6 @@ public:
 
 
   void update_velocity_sgh(double rk_alpha,
-                           const mesh_t &mesh,
                            DViewCArrayKokkos <double> &node_vel,
                            const DViewCArrayKokkos <double> &node_mass,
                            const DViewCArrayKokkos <double> &corner_force);
@@ -432,7 +429,9 @@ public:
 
   void comm_node_masses();
 
-  void comm_adjoint_vectors(int cycle);
+  void comm_adjoint_vector(int cycle);
+
+  void comm_phi_adjoint_vector(int cycle);
 
   void comm_variables(Teuchos::RCP<const MV> zp);
 

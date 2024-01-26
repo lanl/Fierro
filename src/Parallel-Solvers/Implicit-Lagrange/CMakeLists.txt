@@ -1,5 +1,5 @@
 set(Implicit_Solver_SRC Implicit_Solver.cpp)
-set(FEA_Module_SRC FEA_Physics_Modules/FEA_Module_Elasticity.cpp FEA_Physics_Modules/FEA_Module_Heat_Conduction.cpp FEA_Physics_Modules/FEA_Module_Thermo_Elasticity.cpp )
+set(FEA_Module_SRC FEA_Physics_Modules/FEA_Module_Elasticity.cpp FEA_Physics_Modules/Elasticity_Optimization_Functions.cpp FEA_Physics_Modules/FEA_Module_Heat_Conduction.cpp FEA_Physics_Modules/FEA_Module_Thermo_Elasticity.cpp )
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
