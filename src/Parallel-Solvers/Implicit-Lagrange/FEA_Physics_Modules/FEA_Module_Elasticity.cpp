@@ -162,7 +162,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(
   all_node_strains_distributed = Teuchos::rcp(new MV(all_node_map, strain_count));
   Global_Nodal_Forces = Teuchos::rcp(new MV(local_dof_map, 1));
   Global_Nodal_RHS = Teuchos::rcp(new MV(local_dof_map, 1));
-  adjoints_allocated = false;
+  adjoints_allocated = constraint_adjoints_allocated = false;
 
   //initialize displacements to 0
   //local variable for host view in the dual view

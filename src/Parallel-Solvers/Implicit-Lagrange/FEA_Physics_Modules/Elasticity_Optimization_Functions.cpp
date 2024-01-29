@@ -653,8 +653,19 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
     all_adjoint_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
     adjoints_allocated = true;
   }
+
+  if(!constraint_adjoints_allocated){
+    psi_adjoint_vector_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
+    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
+    all_psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    all_phi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    constraint_adjoints_allocated = true;
+  }
+
   Teuchos::RCP<MV> lambda = adjoint_displacements_distributed;
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xlambda = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(lambda));
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xpsi_lambda = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(psi_adjoint_vector_distributed));
+  Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xphi_lambda = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(phi_adjoint_vector_distributed));
   Teuchos::RCP<Xpetra::MultiVector<real_t,LO,GO,node_type>> xB = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t,LO,GO,node_type>(adjoint_equation_RHS_distributed));
   
   host_vec_array adjoint_equation_RHS_view = adjoint_equation_RHS_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
@@ -721,6 +732,107 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   real_t current_density = 1;
   
   //direction_vec_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+
+  //compute adjoint from the gradient problem (redundant with gradient function for now to make sure it works; optimize later)
+
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
+    if(active_dofs(i,0))
+      adjoint_equation_RHS_view(i,0) = -2*(all_node_displacements(i/num_dim,i%num_dim)-target_displacements(i,0))/
+                                          (target_displacements(i,0)*target_displacements(i,0));
+    else
+      adjoint_equation_RHS_view(i,0) = 0;
+  }
+
+  //set adjoint equation RHS terms to 0 if they correspond to a boundary constraint DOF index
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
+    if(Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)
+      adjoint_equation_RHS_view(i,0) = 0;
+  }
+  //*fos << "Elastic Modulus Gradient" << Element_Modulus_Gradient <<std::endl;
+  //*fos << "DISPLACEMENT" << std::endl;
+  //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+
+  //*fos << "RHS vector" << std::endl;
+  //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
+
+  //assign old stiffness matrix entries
+  if(!matrix_bc_reduced){
+  LO stride_index;
+  for(LO i=0; i < local_nrows; i++){
+    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_id = DOF_Graph_Matrix(i,j);
+        local_dof_id = all_dof_map->getLocalElement(global_dof_id);
+        Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
+        Original_Stiffness_Entry_Indices(i,j) = j;
+        if(local_dof_id == i){
+          Stiffness_Matrix(i,j) = 1;
+        }
+        else{     
+          Stiffness_Matrix(i,j) = 0;
+        }
+      }//stride for
+    }
+    else{
+      stride_index = 0;
+      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
+        global_dof_id = DOF_Graph_Matrix(i,j);
+        local_dof_id = all_dof_map->getLocalElement(global_dof_id);
+        if((Node_DOF_Boundary_Condition_Type(local_dof_id)==DISPLACEMENT_CONDITION)){
+          Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
+          Original_Stiffness_Entry_Indices(i,stride_index) = j;   
+          Stiffness_Matrix(i,j) = 0;
+          stride_index++;
+        }
+      }
+    }
+  }//row for
+  
+  matrix_bc_reduced = true;
+  }
+  
+  //solve for adjoint vector
+  int num_iter = 2000;
+  double solve_tol = 1e-05;
+  int cacheSize = 0;
+  std::string solveType         = "belos";
+  std::string belosType         = "cg";
+  // =========================================================================
+  // Preconditioner construction
+  // =========================================================================
+  //bool useML   = Linear_Solve_Params->isParameter("use external multigrid package") && (Linear_Solve_Params->get<std::string>("use external multigrid package") == "ml");
+  //out<<"*********** MueLu ParameterList ***********"<<std::endl;
+  //out<<*Linear_Solve_Params;
+  //out<<"*******************************************"<<std::endl;
+  
+  //H->Write(-1, -1);
+  //H->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  // =========================================================================
+  // System solution (Ax = b)
+  // =========================================================================
+  //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
+  //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
+  // }
+  real_t current_cpu_time2 = Implicit_Solver_Pointer_->CPU_Time();
+  comm->barrier();
+  SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  comm->barrier();
+  hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
+
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
+  // }
+  
+  //import for displacement of ghosts
+  //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+
+  //comms to get displacements on all node map
+  all_adjoint_displacements_distributed->doImport(*adjoint_displacements_distributed, *dof_importer, Tpetra::INSERT);
+  host_vec_array all_adjoint = all_adjoint_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
   //initialize gradient value to zero
   for(size_t inode = 0; inode < nlocal_nodes; inode++)
@@ -1031,49 +1143,8 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
 
   //*fos << "RHS vector" << std::endl;
   //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
-
-  //assign old stiffness matrix entries
-  if(!matrix_bc_reduced){
-  LO stride_index;
-  for(LO i=0; i < local_nrows; i++){
-    if((Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)){
-      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
-        global_dof_id = DOF_Graph_Matrix(i,j);
-        local_dof_id = all_dof_map->getLocalElement(global_dof_id);
-        Original_Stiffness_Entries(i,j) = Stiffness_Matrix(i,j);
-        Original_Stiffness_Entry_Indices(i,j) = j;
-        if(local_dof_id == i){
-          Stiffness_Matrix(i,j) = 1;
-        }
-        else{     
-          Stiffness_Matrix(i,j) = 0;
-        }
-      }//stride for
-    }
-    else{
-      stride_index = 0;
-      for(LO j = 0; j < Stiffness_Matrix_Strides(i); j++){
-        global_dof_id = DOF_Graph_Matrix(i,j);
-        local_dof_id = all_dof_map->getLocalElement(global_dof_id);
-        if((Node_DOF_Boundary_Condition_Type(local_dof_id)==DISPLACEMENT_CONDITION)){
-          Original_Stiffness_Entries(i,stride_index) = Stiffness_Matrix(i,j);
-          Original_Stiffness_Entry_Indices(i,stride_index) = j;   
-          Stiffness_Matrix(i,j) = 0;
-          stride_index++;
-        }
-      }
-    }
-  }//row for
-  
-  matrix_bc_reduced = true;
-  }
   
   //solve for adjoint vector
-  int num_iter = 2000;
-  double solve_tol = 1e-05;
-  int cacheSize = 0;
-  std::string solveType         = "belos";
-  std::string belosType         = "cg";
   // =========================================================================
   // Preconditioner construction
   // =========================================================================
@@ -1094,11 +1165,11 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   //   Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
   //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
   // }
-  real_t current_cpu_time2 = Implicit_Solver_Pointer_->CPU_Time();
+  real_t current_cpu_time3 = Implicit_Solver_Pointer_->CPU_Time();
   comm->barrier();
   SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
-  hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time2;
+  hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time3;
 
   // if(module_params->equilibrate_matrix_flag){
   //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
@@ -1110,8 +1181,8 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
 
   //comms to get displacements on all node map
-  all_adjoint_displacements_distributed->doImport(*adjoint_displacements_distributed, *dof_importer, Tpetra::INSERT);
-  host_vec_array all_adjoint = all_adjoint_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  all_psi_adjoint_vector_distributed->doImport(*psi_adjoint_vector_distributed, *dof_importer, Tpetra::INSERT);
+  host_vec_array all_psi_adjoint = all_psi_adjoint_vector_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //*fos << "ALL ADJOINT" << std::endl;
   //all_adjoint_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 //now that adjoint is computed, calculate the hessian vector product

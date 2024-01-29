@@ -179,10 +179,14 @@ public:
   Teuchos::RCP<MV> all_node_displacements_distributed;
   Teuchos::RCP<MV> all_cached_node_displacements_distributed;
   Teuchos::RCP<MV> all_node_strains_distributed;
-  bool adjoints_allocated;
+  bool adjoints_allocated, constraint_adjoints_allocated;
   Teuchos::RCP<MV> adjoint_displacements_distributed;
+  Teuchos::RCP<MV> psi_adjoint_vector_distributed;
+  Teuchos::RCP<MV> phi_adjoint_vector_distributed;
   Teuchos::RCP<MV> adjoint_equation_RHS_distributed;
   Teuchos::RCP<MV> all_adjoint_displacements_distributed;
+  Teuchos::RCP<MV> all_psi_adjoint_vector_distributed;
+  Teuchos::RCP<MV> all_phi_adjoint_vector_distributed;
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
   Teuchos::RCP<MAT> Global_Mass_Matrix;
   Teuchos::RCP<MV> Global_Nodal_RHS;
