@@ -182,9 +182,9 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
 
   //solve for the adjoint vector first
   if(!adjoints_allocated){
-    adjoint_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
-    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     all_adjoint_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    adjoint_displacements_distributed = Teuchos::rcp(new MV(*all_adjoint_displacements_distributed, local_dof_map));
+    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     adjoints_allocated = true;
   }
   Teuchos::RCP<MV> lambda = adjoint_displacements_distributed;
@@ -648,17 +648,17 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   const_host_vec_array direction_vec = direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
   if(!adjoints_allocated){
-    adjoint_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
-    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     all_adjoint_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    adjoint_displacements_distributed = Teuchos::rcp(new MV(*all_adjoint_displacements_distributed, local_dof_map));
+    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     adjoints_allocated = true;
   }
 
   if(!constraint_adjoints_allocated){
-    psi_adjoint_vector_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
-    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     all_psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
     all_phi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    psi_adjoint_vector_distributed = Teuchos::rcp(new MV(*all_psi_adjoint_vector_distributed, local_dof_map));
+    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(*all_psi_adjoint_vector_distributed, local_dof_map));
     constraint_adjoints_allocated = true;
   }
 

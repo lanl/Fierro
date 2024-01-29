@@ -3656,9 +3656,9 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   const_host_vec_array direction_vec = direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
   if(!adjoints_allocated){
-    adjoint_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
-    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     all_adjoint_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    adjoint_displacements_distributed = Teuchos::rcp(new MV(*all_adjoint_displacements_distributed, local_dof_map));
+    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     adjoints_allocated = true;
   }
   Teuchos::RCP<MV> lambda = adjoint_displacements_distributed;
