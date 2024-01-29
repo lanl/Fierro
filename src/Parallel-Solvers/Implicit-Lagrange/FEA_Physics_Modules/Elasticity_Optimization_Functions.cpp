@@ -197,7 +197,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
 
   for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
     if(active_dofs(i,0))
-      adjoint_equation_RHS_view(i,0) = -2*(all_node_displacements(i/num_dim,i%num_dim)-target_displacements(i,0))/
+      adjoint_equation_RHS_view(i,0) = -2*(all_node_displacements(i,0)-target_displacements(i,0))/
                                           (target_displacements(i,0)*target_displacements(i,0));
     else
       adjoint_equation_RHS_view(i,0) = 0;
@@ -713,6 +713,8 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(),num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_nodal_displacements(elem->num_basis()*num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_adjoint_displacements(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_psi_adjoint(elem->num_basis()*num_dim);
+  CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_phi_adjoint(elem->num_basis()*num_dim);
   CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
   size_t Brows;
@@ -740,7 +742,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   //compute adjoint from the gradient problem (redundant with gradient function for now to make sure it works; optimize later)
   for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
     if(active_dofs(i,0))
-      adjoint_equation_RHS_view(i,0) = -2*(all_node_displacements(i/num_dim,i%num_dim)-target_displacements(i,0))/
+      adjoint_equation_RHS_view(i,0) = -2*(all_node_displacements(i,0)-target_displacements(i,0))/
                                           (target_displacements(i,0)*target_displacements(i,0));
     else
       adjoint_equation_RHS_view(i,0) = 0;
@@ -1473,6 +1475,13 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
     }//quadrature loop
   }//element index loop
 
+  //set adjoint equation RHS contribution from constraint definition
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
+    if(active_dofs(i,0))
+      adjoint_equation_RHS_view(i,0) -= 2*(all_psi_adjoint(i,0))*direction_vec_reduce/
+                                          (target_displacements(i,0)*target_displacements(i,0));
+  }
+
   //set adjoint equation RHS terms to 0 if they correspond to a boundary constraint DOF index
   for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
     if(Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)
@@ -1559,6 +1568,12 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
       current_adjoint_displacements(node_loop*num_dim) = all_adjoint(local_dof_idx,0);
       current_adjoint_displacements(node_loop*num_dim+1) = all_adjoint(local_dof_idy,0);
       current_adjoint_displacements(node_loop*num_dim+2) = all_adjoint(local_dof_idz,0);
+      current_psi_adjoint(node_loop*num_dim) = all_psi_adjoint(local_dof_idx,0);
+      current_psi_adjoint(node_loop*num_dim+1) = all_psi_adjoint(local_dof_idy,0);
+      current_psi_adjoint(node_loop*num_dim+2) = all_psi_adjoint(local_dof_idz,0);
+      current_phi_adjoint(node_loop*num_dim) = all_phi_adjoint(local_dof_idx,0);
+      current_phi_adjoint(node_loop*num_dim+1) = all_phi_adjoint(local_dof_idy,0);
+      current_phi_adjoint(node_loop*num_dim+2) = all_phi_adjoint(local_dof_idz,0);
       
       if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
     }
@@ -1789,9 +1804,10 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
     for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
       for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
         if(ifill==jfill)
-          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*current_adjoint_displacements(ifill)*current_nodal_displacements(jfill);
         else
-          inner_product += 2*Local_Matrix_Contribution(ifill, jfill)*current_nodal_displacements(ifill)*current_nodal_displacements(jfill);
+          inner_product += Local_Matrix_Contribution(ifill, jfill)*(current_adjoint_displacements(ifill)*current_nodal_displacements(jfill) +
+                          current_adjoint_displacements(jfill)*current_nodal_displacements(ifill));
       }
     }
 
@@ -1820,7 +1836,9 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
     inner_product = 0;
     for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
       for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
-        inner_product += Local_Matrix_Contribution(ifill, jfill)*current_adjoint_displacements(ifill)*current_nodal_displacements(jfill);
+        inner_product += Local_Matrix_Contribution(ifill, jfill)*current_phi_adjoint(ifill)*current_nodal_displacements(jfill);
+        
+        inner_product += Local_Matrix_Contribution(ifill, jfill)*current_adjoint_displacements(ifill)*current_psi_adjoint(jfill);
         //debug
         //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
         //inner_product += Local_Matrix_Contribution(ifill, jfill);
@@ -1835,7 +1853,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
       hessvec(local_node_id,0) += inner_product*direction_vec_reduce*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*invJacobian;
-      }
+    }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
       if(body_term_flag){
