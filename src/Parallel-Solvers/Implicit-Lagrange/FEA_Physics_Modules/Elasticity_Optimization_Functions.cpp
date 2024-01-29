@@ -733,8 +733,11 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   
   //direction_vec_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 
-  //compute adjoint from the gradient problem (redundant with gradient function for now to make sure it works; optimize later)
+  //initialize hessian vector product value to zero
+  for(size_t inode = 0; inode < nlocal_nodes; inode++)
+    hessvec(inode,0) = 0;
 
+  //compute adjoint from the gradient problem (redundant with gradient function for now to make sure it works; optimize later)
   for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
     if(active_dofs(i,0))
       adjoint_equation_RHS_view(i,0) = -2*(all_node_displacements(i/num_dim,i%num_dim)-target_displacements(i,0))/
@@ -833,12 +836,9 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   //comms to get displacements on all node map
   all_adjoint_displacements_distributed->doImport(*adjoint_displacements_distributed, *dof_importer, Tpetra::INSERT);
   host_vec_array all_adjoint = all_adjoint_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-
-  //initialize gradient value to zero
-  for(size_t inode = 0; inode < nlocal_nodes; inode++)
-    hessvec(inode,0) = 0;
   
-  //initialize RHS vector
+  //Solve for the psi adjoint vector
+  //initialize RHS vector for next solve
   for(int i=0; i < local_dof_map->getLocalNumElements(); i++)
     adjoint_equation_RHS_view(i,0) = 0;
   
@@ -1125,7 +1125,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
             //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
             //inner_product += Local_Matrix_Contribution(ifill, jfill);
           }
-          adjoint_equation_RHS_view(local_dof_id,0) += inner_product*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
+          adjoint_equation_RHS_view(local_dof_id,0) -= inner_product*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
         }
       }
       } //density gradient loop
@@ -1167,7 +1167,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   // }
   real_t current_cpu_time3 = Implicit_Solver_Pointer_->CPU_Time();
   comm->barrier();
-  SystemSolve(xA,xlambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  SystemSolve(xA,xpsi_lambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
   comm->barrier();
   hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time3;
 
@@ -1175,7 +1175,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
   // }
   //scale by reciprocal ofdirection vector sum
-  lambda->scale(1/direction_vec_reduce);
+  psi_adjoint_vector_distributed->scale(1/direction_vec_reduce);
   
   //import for displacement of ghosts
   //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
@@ -1185,8 +1185,350 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   host_vec_array all_psi_adjoint = all_psi_adjoint_vector_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //*fos << "ALL ADJOINT" << std::endl;
   //all_adjoint_distributed->describe(*fos,Teuchos::VERB_EXTREME);
-//now that adjoint is computed, calculate the hessian vector product
-//loop through each element and assign the contribution to Hessian vector product for each of its local nodes
+
+  //compute phi adjoint vector
+
+  //initialize RHS vector for next solve
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++)
+    adjoint_equation_RHS_view(i,0) = 0;
+  
+  //sum components of direction vector
+  direction_vec_reduce = local_direction_vec_reduce = 0;
+  for(int i = 0; i < nlocal_nodes; i++)
+    local_direction_vec_reduce += direction_vec(i,0);
+  
+  MPI_Allreduce(&local_direction_vec_reduce,&direction_vec_reduce,1,MPI_DOUBLE,MPI_SUM,world);
+
+  //loop through each element to contribute to the RHS of the hessvec adjoint equation
+  for(size_t ielem = 0; ielem < rnum_elem; ielem++){
+    nodes_per_elem = elem->num_basis();
+
+    //initialize C matrix
+    for(int irow = 0; irow < Brows; irow++)
+      for(int icol = 0; icol < Brows; icol++)
+        C_matrix(irow,icol) = 0;
+
+    //B matrix initialization
+    for(int irow=0; irow < Brows; irow++)
+      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+        CB_matrix(irow,icol) = 0;
+      }
+
+    //acquire set of nodes and nodal displacements for this local element
+    for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, node_loop));
+      local_dof_idx = all_dof_map->getLocalElement(nodes_in_elem(ielem, node_loop)*num_dim);
+      local_dof_idy = local_dof_idx + 1;
+      local_dof_idz = local_dof_idx + 2;
+      nodal_positions(node_loop,0) = all_node_coords(local_node_id,0);
+      nodal_positions(node_loop,1) = all_node_coords(local_node_id,1);
+      nodal_positions(node_loop,2) = all_node_coords(local_node_id,2);
+      current_adjoint_displacements(node_loop*num_dim) = all_adjoint(local_dof_idx,0);
+      current_adjoint_displacements(node_loop*num_dim+1) = all_adjoint(local_dof_idy,0);
+      current_adjoint_displacements(node_loop*num_dim+2) = all_adjoint(local_dof_idz,0);
+      
+      if(nodal_density_flag) nodal_density(node_loop) = all_node_densities(local_node_id,0);
+    }
+
+    //loop over quadrature points
+    for(int iquad=0; iquad < direct_product_count; iquad++){
+
+      //set current quadrature point
+      if(num_dim==3) z_quad = iquad/(num_gauss_points*num_gauss_points);
+      y_quad = (iquad % (num_gauss_points*num_gauss_points))/num_gauss_points;
+      x_quad = iquad % num_gauss_points;
+      quad_coordinate(0) = legendre_nodes_1D(x_quad);
+      quad_coordinate(1) = legendre_nodes_1D(y_quad);
+      if(num_dim==3)
+      quad_coordinate(2) = legendre_nodes_1D(z_quad);
+
+      //set current quadrature weight
+      quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
+      quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
+      if(num_dim==3)
+      quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
+      else
+      quad_coordinate_weight(2) = 1;
+      weight_multiply = quad_coordinate_weight(0)*quad_coordinate_weight(1)*quad_coordinate_weight(2);
+
+      //compute shape functions at this point for the element type
+      elem->basis(basis_values,quad_coordinate);
+
+      //compute all the necessary coordinates and derivatives at this point
+      //compute shape function derivatives
+      elem->partial_xi_basis(basis_derivative_s1,quad_coordinate);
+      elem->partial_eta_basis(basis_derivative_s2,quad_coordinate);
+      elem->partial_mu_basis(basis_derivative_s3,quad_coordinate);
+
+      //compute derivatives of x,y,z w.r.t the s,t,w isoparametric space needed by JT (Transpose of the Jacobian)
+      //derivative of x,y,z w.r.t s
+      JT_row1(0) = 0;
+      JT_row1(1) = 0;
+      JT_row1(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row1(0) += nodal_positions(node_loop,0)*basis_derivative_s1(node_loop);
+        JT_row1(1) += nodal_positions(node_loop,1)*basis_derivative_s1(node_loop);
+        JT_row1(2) += nodal_positions(node_loop,2)*basis_derivative_s1(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t t
+      JT_row2(0) = 0;
+      JT_row2(1) = 0;
+      JT_row2(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row2(0) += nodal_positions(node_loop,0)*basis_derivative_s2(node_loop);
+        JT_row2(1) += nodal_positions(node_loop,1)*basis_derivative_s2(node_loop);
+        JT_row2(2) += nodal_positions(node_loop,2)*basis_derivative_s2(node_loop);
+      }
+
+      //derivative of x,y,z w.r.t w
+      JT_row3(0) = 0;
+      JT_row3(1) = 0;
+      JT_row3(2) = 0;
+      for(int node_loop=0; node_loop < nodes_per_elem; node_loop++){
+        JT_row3(0) += nodal_positions(node_loop,0)*basis_derivative_s3(node_loop);
+        JT_row3(1) += nodal_positions(node_loop,1)*basis_derivative_s3(node_loop);
+        JT_row3(2) += nodal_positions(node_loop,2)*basis_derivative_s3(node_loop);
+      }
+    
+      //compute the determinant of the Jacobian
+      Jacobian = JT_row1(0)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+                 JT_row1(1)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+                 JT_row1(2)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1));
+      if(Jacobian<0) Jacobian = -Jacobian;
+      invJacobian = 1/Jacobian;
+
+      //compute density
+      current_density = 0;
+      if(nodal_density_flag)
+      for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
+        current_density += nodal_density(node_loop)*basis_values(node_loop);
+      }
+      //default constant element density
+      else{
+        current_density = Element_Densities(ielem,0);
+      }
+
+      //debug print
+      //std::cout << "Current Density " << current_density << std::endl;
+
+      //compute the contributions of this quadrature point to the B matrix
+      if(num_dim==2)
+      for(int ishape=0; ishape < nodes_per_elem; ishape++){
+        B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(1,ishape*num_dim) = 0;
+        B_matrix_contribution(2,ishape*num_dim) = 0;
+        B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(5,ishape*num_dim) = 0;
+        B_matrix_contribution(0,ishape*num_dim+1) = 0;
+        B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        B_matrix_contribution(2,ishape*num_dim+1) = 0;
+        B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(4,ishape*num_dim+1) = 0;
+        B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(0,ishape*num_dim+2) = 0;
+        B_matrix_contribution(1,ishape*num_dim+2) = 0;
+        B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(3,ishape*num_dim+2) = 0;
+        B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+    }
+    if(num_dim==3)
+    for(int ishape=0; ishape < nodes_per_elem; ishape++){
+        B_matrix_contribution(0,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(1,ishape*num_dim) = 0;
+        B_matrix_contribution(2,ishape*num_dim) = 0;
+        B_matrix_contribution(3,ishape*num_dim) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        B_matrix_contribution(4,ishape*num_dim) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(5,ishape*num_dim) = 0;
+        B_matrix_contribution(0,ishape*num_dim+1) = 0;
+        B_matrix_contribution(1,ishape*num_dim+1) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+        B_matrix_contribution(2,ishape*num_dim+1) = 0;
+        B_matrix_contribution(3,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(4,ishape*num_dim+1) = 0;
+        B_matrix_contribution(5,ishape*num_dim+1) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(0,ishape*num_dim+2) = 0;
+        B_matrix_contribution(1,ishape*num_dim+2) = 0;
+        B_matrix_contribution(2,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(1)-JT_row3(0)*JT_row2(1))-
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(1)-JT_row3(0)*JT_row1(1))+
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(1)-JT_row2(0)*JT_row1(1)));
+        B_matrix_contribution(3,ishape*num_dim+2) = 0;
+        B_matrix_contribution(4,ishape*num_dim+2) = (basis_derivative_s1(ishape)*(JT_row2(1)*JT_row3(2)-JT_row3(1)*JT_row2(2))-
+          basis_derivative_s2(ishape)*(JT_row1(1)*JT_row3(2)-JT_row3(1)*JT_row1(2))+
+          basis_derivative_s3(ishape)*(JT_row1(1)*JT_row2(2)-JT_row2(1)*JT_row1(2)));
+        B_matrix_contribution(5,ishape*num_dim+2) = (-basis_derivative_s1(ishape)*(JT_row2(0)*JT_row3(2)-JT_row3(0)*JT_row2(2))+
+          basis_derivative_s2(ishape)*(JT_row1(0)*JT_row3(2)-JT_row3(0)*JT_row1(2))-
+          basis_derivative_s3(ishape)*(JT_row1(0)*JT_row2(2)-JT_row2(0)*JT_row1(2)));
+    }
+    
+    //look up element material properties at this point as a function of density
+    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+    
+    Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+    Shear_Term = 0.5 - Poisson_Ratio;
+    Pressure_Term = 1 - Poisson_Ratio;
+
+    //debug print
+    //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
+
+    //compute Elastic (C) matrix
+    if(num_dim==2){
+      C_matrix(0,0) = Pressure_Term;
+      C_matrix(1,1) = Pressure_Term;
+      C_matrix(0,1) = Poisson_Ratio;
+      C_matrix(1,0) = Poisson_Ratio;
+      C_matrix(2,2) = Shear_Term;
+    }
+    if(num_dim==3){
+      C_matrix(0,0) = Pressure_Term;
+      C_matrix(1,1) = Pressure_Term;
+      C_matrix(2,2) = Pressure_Term;
+      C_matrix(0,1) = Poisson_Ratio;
+      C_matrix(0,2) = Poisson_Ratio;
+      C_matrix(1,0) = Poisson_Ratio;
+      C_matrix(1,2) = Poisson_Ratio;
+      C_matrix(2,0) = Poisson_Ratio;
+      C_matrix(2,1) = Poisson_Ratio;
+      C_matrix(3,3) = Shear_Term;
+      C_matrix(4,4) = Shear_Term;
+      C_matrix(5,5) = Shear_Term;
+    }
+
+    //compute the previous multiplied by the Elastic (C) Matrix
+    for(int irow=0; irow < Brows; irow++){
+      for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+        CB_matrix_contribution(irow,icol) = 0;
+        for(int span=0; span < Brows; span++){
+          CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+        }
+      }
+    }
+    
+    //compute the contributions of this quadrature point to all the local stiffness matrix elements
+    for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+      for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+        matrix_term = 0;
+        for(int span = 0; span < Brows; span++){
+          matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
+        }
+        Local_Matrix_Contribution(ifill,jfill) = matrix_term;
+        if(ifill!=jfill)
+          Local_Matrix_Contribution(jfill,ifill) = Local_Matrix_Contribution(ifill,jfill);
+      }
+    }
+
+    //evaluate local stiffness matrix gradient with respect to igradient
+    for(int igradient=0; igradient < nodes_per_elem; igradient++){
+      //if(!map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))) continue;
+      local_node_id = all_node_map->getLocalElement(nodes_in_elem(ielem, igradient));
+      
+      //compute rhs product for this quadrature point contribution  
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        local_dof_id = all_dof_map->getLocalElement(nodes_in_elem(ielem, ifill/num_dim)*num_dim);
+        local_dof_id += ifill%num_dim;
+        global_dof_id = all_dof_map->getGlobalElement(local_dof_id);
+        if(Node_DOF_Boundary_Condition_Type(local_dof_id)!=DISPLACEMENT_CONDITION&&local_dof_map->isNodeGlobalElement(global_dof_id)){
+          inner_product = 0;
+          for(int jfill=0; jfill < num_dim*nodes_per_elem; jfill++){
+            inner_product += Local_Matrix_Contribution(ifill, jfill)*current_adjoint_displacements(jfill);
+            //debug
+            //if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
+            //inner_product += Local_Matrix_Contribution(ifill, jfill);
+          }
+          adjoint_equation_RHS_view(local_dof_id,0) -= inner_product*Gradient_Elastic_Constant*basis_values(igradient)*weight_multiply*all_direction_vec(local_node_id,0)*invJacobian;
+        }
+      }
+      } //density gradient loop
+    }//quadrature loop
+  }//element index loop
+
+  //set adjoint equation RHS terms to 0 if they correspond to a boundary constraint DOF index
+  for(int i=0; i < local_dof_map->getLocalNumElements(); i++){
+    if(Node_DOF_Boundary_Condition_Type(i)==DISPLACEMENT_CONDITION)
+      adjoint_equation_RHS_view(i,0) = 0;
+  }
+  //*fos << "Elastic Modulus Gradient" << Element_Modulus_Gradient <<std::endl;
+  //*fos << "DISPLACEMENT" << std::endl;
+  //all_node_displacements_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+
+  //*fos << "RHS vector" << std::endl;
+  //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  //solve for adjoint vector
+  // =========================================================================
+  // Preconditioner construction
+  // =========================================================================
+  //bool useML   = Linear_Solve_Params->isParameter("use external multigrid package") && (Linear_Solve_Params->get<std::string>("use external multigrid package") == "ml");
+  //out<<"*********** MueLu ParameterList ***********"<<std::endl;
+  //out<<*Linear_Solve_Params;
+  //out<<"*******************************************"<<std::endl;
+  
+  //H->Write(-1, -1);
+  //H->describe(*fos,Teuchos::VERB_EXTREME);
+  
+  // =========================================================================
+  // System solution (Ax = b)
+  // =========================================================================
+  //since matrix graph and A are the same from the last update solve, the Hierarchy H need not be rebuilt
+  //xA->describe(*fos,Teuchos::VERB_EXTREME);
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->preScaleRightHandSides(*adjoint_equation_RHS_distributed,"diag");
+  //   Implicit_Solver_Pointer_->preScaleInitialGuesses(*lambda,"diag");
+  // }
+  real_t current_cpu_time4 = Implicit_Solver_Pointer_->CPU_Time();
+  comm->barrier();
+  SystemSolve(xA,xphi_lambda,xB,H,Prec,*fos,solveType,belosType,false,false,false,cacheSize,0,true,true,num_iter,solve_tol);
+  comm->barrier();
+  hessvec_linear_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time4;
+
+  // if(module_params->equilibrate_matrix_flag){
+  //   Implicit_Solver_Pointer_->postScaleSolutionVectors(*lambda,"diag");
+  // }
+  //scale by reciprocal ofdirection vector sum
+  phi_adjoint_vector_distributed->scale(1/direction_vec_reduce);
+  
+  //import for displacement of ghosts
+  //Tpetra::Import<LO, GO> ghost_displacement_importer(local_dof_map, all_dof_map);
+
+  //comms to get displacements on all node map
+  all_phi_adjoint_vector_distributed->doImport(*phi_adjoint_vector_distributed, *dof_importer, Tpetra::INSERT);
+  host_vec_array all_phi_adjoint = all_phi_adjoint_vector_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //*fos << "ALL ADJOINT" << std::endl;
+  //all_adjoint_distributed->describe(*fos,Teuchos::VERB_EXTREME);
+
+  //now that adjoint is computed, calculate the hessian vector product
+  //loop through each element and assign the contribution to Hessian vector product for each of its local nodes
 
   for(size_t ielem = 0; ielem < rnum_elem; ielem++){
     nodes_per_elem = elem->num_basis();
