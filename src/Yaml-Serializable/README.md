@@ -264,22 +264,21 @@ IMPL_YAML_SERIALIZABLE_FOR(MyStruct, a, b, c, d)
 
 
 ### Derived Data
-YAML has much less expressive semantics than you might want for your C++ struct. It is often useful to have a post-read hook to put the data into a more useful view for consumers of the struct. For this reason, there is a `Yaml::DerivedFields` class to inherit from and a `void derive()` hook that you can implement. This function will get run after the data is loaded, but before the custom `void validate()` hook is run. The following example uses the `void derive()` hook to initialize difficult to unserializable members of a base class[^2].
+YAML has much less expressive semantics than you might want for your C++ struct. It is often useful to have a post-read hook to put the data into a more useful view for consumers of the struct. For this reason, there is a `Yaml::DerivedFields` class to inherit from and a `void derive()` hook that you can implement. This function will get run after the data is loaded, but before the custom `void validate()` hook is run. The following example uses the `void derive()` hook to initialize difficult to unserializable members of a base class.
 
 ```c++
 
 struct my_struct {
-    double array[5];
+    double* array;
 };
 
 struct MyStruct : my_struct, Yaml::DerivedFields {
     std::vector<double> array;
 
     void derive() {
-        if (array.size() != 5)
-            throw Yaml::ConfigurationException("Expected list of 5 elements", "array");
+        my_struct::array = new double[array.size()];
 
-        for (size_t i = 0; i < 5; i++)
+        for (size_t i = 0; i < array.size(); i++)
             my_struct::array[i] = array[i];
     }
 };
@@ -386,4 +385,3 @@ The difference between `apply` and `try_apply` is that `apply` will throw a runt
 
 
 [^1]: There is a slight addition to the YAML 1.0 spec to include simple lists with bracket syntax: "[1, 2, 3, ... ]".
-[^2]: Fixed size arrays (`std::array<T, N>` or `T[N]`) and raw pointers (`T*`) are not currently supported as serialization targets.
