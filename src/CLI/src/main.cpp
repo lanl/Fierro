@@ -11,10 +11,10 @@
 #include <string>
 
 std::vector<std::shared_ptr<FierroBackend>> BACKENDS {
-    std::shared_ptr<ParallelExplicit>(),
-    std::shared_ptr<ParallelImplicit>(),
-    std::shared_ptr<MeshBuilderBackend>(),
-    std::shared_ptr<VoxelizerBackend>(),
+    std::make_shared<ParallelExplicit>(),
+    std::make_shared<ParallelImplicit>(),
+    std::make_shared<MeshBuilderBackend>(),
+    std::make_shared<VoxelizerBackend>(),
 };
 
 std::vector<std::shared_ptr<FierroBackend>> find_fierro_backends() {
