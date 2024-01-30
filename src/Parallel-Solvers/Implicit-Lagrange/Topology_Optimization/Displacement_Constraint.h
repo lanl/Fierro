@@ -116,7 +116,7 @@ public:
   int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Elasticity";
 
-  DisplacementConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, ROL::Ptr<ROL_MV> Target_Displacements, ROL::Ptr<ROL_MV> Active_Nodes, real_t constraint_value=0, bool inequality_flag=true){
+  DisplacementConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, ROL::Ptr<ROL_MV> Target_Displacements, ROL::Ptr<ROL_BoolV> Active_Nodes, real_t constraint_value=0, bool inequality_flag=true){
       FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
