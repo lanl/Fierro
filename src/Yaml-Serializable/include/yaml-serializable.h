@@ -101,6 +101,25 @@ namespace Yaml {
         Containers::Impl<T>::deserialize(v, node, raw);
     }
 
+    template<typename T, size_t N>
+    void serialize(const T(&v)[N], Yaml::Node& node) {
+        Containers::FixedLengthImpl<T, N>::serialize(v, node);
+    }
+
+    template<typename T, size_t N>
+    void deserialize(T(&v)[N], Yaml::Node& node, bool raw) {
+        Containers::FixedLengthImpl<T, N>::deserialize(v, node, raw);
+    }
+
+    template<typename T, size_t N>
+    void serialize(const std::array<T, N>& v, Yaml::Node& node) {
+        Containers::FixedLengthImpl<T, N>::serialize(v, node);
+    }
+
+    template<typename T, size_t N>
+    void deserialize(std::array<T, N>& v, Yaml::Node& node, bool raw) {
+        Containers::FixedLengthImpl<T, N>::deserialize(v, node, raw);
+    }
 
     /**
      * Implements direct string serialization for Yaml Serializable objects.

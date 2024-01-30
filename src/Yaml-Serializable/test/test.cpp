@@ -5,6 +5,7 @@
 #include <cmath>
 #include <memory>
 #include <optional>
+#include <array>
 
 template<typename T>
 bool compare_vec(std::vector<T> a, std::vector<T> b) {
@@ -632,4 +633,101 @@ TEST(YamlSerializable, TypeDiscriminatedTryApplyNoThrow) {
 
 TEST(YamlSerializable, StaticTypeName) {
     EXPECT_STREQ(std::string(Yaml::static_type_name<DerivedA>()).c_str(), "DerivedA");
+}
+
+TEST(YamlSerializable, ArrayReading) {
+    std::string input = R"(
+        - 1
+        - 2
+        - 3
+    )";
+
+    int v[3];
+    Yaml::from_string(input, v);
+
+    for (size_t i = 0; i < 3; i++)
+        EXPECT_EQ(i+1, v[i]);
+}
+
+TEST(YamlSerializable, ArrayReadWrite) {
+    int a[3];
+    std::string str = Yaml::to_string(a);
+
+    int b[3];
+    Yaml::from_string(str, b);
+
+    for (size_t i = 0; i < 3; i++)
+        EXPECT_EQ(a[i], b[i]);
+}
+
+TEST(YamlSerializable, StdArrayReading) {
+    std::string input = R"(
+        - 1
+        - 2
+        - 3
+    )";
+
+    std::array<int, 3> v;
+    Yaml::from_string(input, v);
+
+    for (size_t i = 0; i < 3; i++)
+        EXPECT_EQ(i+1, v[i]);
+}
+
+TEST(YamlSerializable, StdArrayReadWrite) {
+    std::array<int, 3> a;
+    std::string str = Yaml::to_string(a);
+
+    std::array<int, 3> b;
+    Yaml::from_string(str, b);
+
+    for (size_t i = 0; i < 3; i++)
+        EXPECT_EQ(a[i], b[i]);
+}
+
+
+TEST(YamlSerializable, ArrayReadingInvalidLength) {
+    std::string input = R"(
+        - 1
+        - 2
+    )";
+
+    int v[3];
+
+    EXPECT_THROW({
+        Yaml::from_string(input, v);
+    }, Yaml::ConfigurationException);
+}
+
+TEST(YamlSerializable, StdArrayReadingInvalidLength) {
+    std::string input = R"(
+        - 1
+        - 2
+    )";
+
+    std::array<int, 3> v;
+
+    EXPECT_THROW({
+        Yaml::from_string(input, v);
+    }, Yaml::ConfigurationException);
+}
+
+
+TEST(YamlSerializable, InvalidScalarList) {
+    std::string input = "1 2 3";
+
+    int v[3];
+    EXPECT_THROW({
+        Yaml::from_string(input, v);
+    }, Yaml::ConfigurationException);
+}
+
+TEST(YamlSerializable, ValidScalarList) {
+    std::string input = "[1, 2, 3]";
+
+    int v[3];
+    Yaml::from_string(input, v);
+
+    for (size_t i = 0; i < 3; i++)
+        EXPECT_EQ(i+1, v[i]);
 }

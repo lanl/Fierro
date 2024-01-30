@@ -47,6 +47,7 @@
 #include <vector>
 #include <sstream>
 #include <optional>
+#include <regex>
 
 namespace Yaml {
     namespace {
@@ -89,20 +90,47 @@ namespace Yaml {
             return result;
         }
 
-        template<typename T, typename F>
-        void deserialize_to_iterable(Node& node, bool raw, F inserter) {
+        /**
+         * Checks if this string looks like a Yaml list or not.
+        */
+        bool looks_like_a_list(std::string s) {
+            return std::regex_match(s, std::regex("\\[[^\\[\\]\n]*\\]"));
+        }
+        
+        /**
+         * This implementation of Yaml serialization doesn't have support for the bracket notation: [1, 2, 3, ...].
+         * So we have a little wrapper here for simple bracketing. 
+         * 
+         * If we are trying to parse the node into a sequence, we will use this function 
+         * to try to conver [...] style strings to Yaml::Sequence nodes.
+        */
+        Node to_sequence_node(Node& node) {
             Yaml::Node sequence_node;
             if (node.IsScalar()) {
+                auto s = node.As<std::string>();
+                if (!looks_like_a_list(s))
+                    throw Yaml::ConfigurationException("Failed to parse string: `" + s + "`. Expected a list.");
                 for (auto token : tokenizer(node.As<std::string>(), ','))
                     sequence_node.PushBack() = token;
             }
             if (node.IsSequence()) {
                 sequence_node = node;
             }
+            
+            return sequence_node;
+        }
 
-            for(size_t i = 0; i < sequence_node.Size(); i++) {
+        /**
+         * Deserializes the node into an iterable object with variable inserter F.
+         * `inserter` is called once for each element.
+         * 
+         * Treats deserialization errors in the i'th item as being under a node named "<i>".
+        */
+        template<typename T, typename F>
+        void deserialize_to_iterable(Node& node, bool raw, F inserter) {
+            for(size_t i = 0; i < node.Size(); i++) {
                 T item;
-                deserialize_from_indexed_item(item, sequence_node, raw, i);
+                deserialize_from_indexed_item(item, node, raw, i);
                 inserter(item);
             }
         }
@@ -133,7 +161,8 @@ namespace Yaml {
             static void deserialize(std::vector<T>& v, Yaml::Node& node, bool raw) {
                 if (node.IsNone()) return;
                 v.clear();
-                deserialize_to_iterable<T>(node, raw, [&](const T& item) {v.push_back(item);});
+                auto sequence_node = to_sequence_node(node);
+                deserialize_to_iterable<T>(sequence_node, raw, [&](const T& item) {v.push_back(item);});
             }
             static void serialize(const std::vector<T>& v, Yaml::Node& node) {
                 set_node_to_empty_sequence(node);
@@ -176,7 +205,8 @@ namespace Yaml {
             static void deserialize(std::set<T>& v, Yaml::Node& node, bool raw) {
                 if (node.IsNone()) return;
                 v.clear();
-                deserialize_to_iterable<T>(node, raw, [&](const T& item) {v.insert(item);});
+                auto sequence_node = to_sequence_node(node);
+                deserialize_to_iterable<T>(sequence_node, raw, [&](const T& item) {v.insert(item);});
             }
             static void serialize(const std::set<T>& v, Yaml::Node& node) {
                 set_node_to_empty_sequence(node);
@@ -235,6 +265,37 @@ namespace Yaml {
                 } else {
                     Yaml::serialize(*v, node);
                 }
+            }
+        };
+
+
+        /**
+         * Separate special handling for T[N] and std::array<T, N>. 
+         * Exactly what is accepted here is implemented with different templates in yaml-serializable-base.h and 
+         * implemented in yaml-serailizable.h
+        */
+        template<typename T, size_t N>
+        struct FixedLengthImpl {
+            static void validate_length(Node& node) {
+                if (node.Size() != N)
+                    throw Yaml::ConfigurationException("Expected a list of length: " + std::to_string(N) 
+                                                     + ". Found list of length: " + std::to_string(node.Size()));
+            }
+
+            template<typename K>
+            static void deserialize(K& v, Yaml::Node& node, bool raw) {
+                if (node.IsNone()) return;
+                auto sequence_node = to_sequence_node(node);
+                validate_length(sequence_node);
+                size_t i = 0;
+                deserialize_to_iterable<T>(sequence_node, raw, [&](const T& item) { v[i++] = item; });
+            }
+
+            template<typename K>
+            static void serialize(const K& v, Yaml::Node& node) {
+                set_node_to_empty_sequence(node);
+                for (size_t i = 0; i < N; i++)
+                    Yaml::serialize(v[i], node.PushBack());
             }
         };
     }
