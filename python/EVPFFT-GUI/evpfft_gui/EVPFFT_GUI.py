@@ -722,7 +722,10 @@ class EVPFFT_GUI(Ui_MainWindow):
             evpfft_lattice_input.write(modes)
             dimensions = str(int(self.INNumberOfVoxelsX.text())) + ' ' + str(int(self.INNumberOfVoxelsY.text())) + ' ' + str(int(self.INNumberOfVoxelsZ.text())) + '               x-dim, y-dim, z-dim\n'
             evpfft_lattice_input.write(dimensions)
-            dx, dy, dz = self.VoxelResolution
+#            dx, dy, dz = self.VoxelResolution
+            dx = 1
+            dy = 1
+            dz = 1
             nph_delt = '2                      number of phases (nph)\n' + f'{dx:.4f} {dy:.4f} {dz:.4f}             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
             evpfft_lattice_input.write(nph_delt)
             vtkfile = f'{VTK_OUTPUT}\n'
