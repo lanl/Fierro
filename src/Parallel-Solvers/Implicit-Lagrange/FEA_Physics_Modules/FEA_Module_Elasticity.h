@@ -150,9 +150,9 @@ public:
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
   //for the displacement constraint adjoint solves
-  void compute_displacement_constraint_gradients(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_bool_array active_dofs, host_vec_array gradients);
+  void compute_displacement_constraint_gradients(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_int_array active_dofs, host_vec_array gradients);
 
-  void compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_bool_array active_dofs, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
+  void compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_int_array active_dofs, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
   
   Elasticity_Parameters *module_params;
   Implicit_Solver *Implicit_Solver_Pointer_;

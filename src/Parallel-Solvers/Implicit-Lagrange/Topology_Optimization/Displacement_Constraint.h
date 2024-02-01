@@ -66,10 +66,10 @@ class DisplacementConstraint_TopOpt : public ROL::Constraint<real_t> {
   typedef Tpetra::Map<>::node_type Node;
   typedef Tpetra::Map<LO, GO, Node> Map;
   typedef Tpetra::MultiVector<real_t, LO, GO, Node> MV;
-  typedef Tpetra::MultiVector<bool, LO, GO, Node> BoolV;
+  typedef Tpetra::MultiVector<int, LO, GO, Node> IMV;
   typedef ROL::Vector<real_t> V;
   typedef ROL::TpetraMultiVector<real_t,LO,GO,Node> ROL_MV;
-  typedef ROL::TpetraMultiVector<bool,LO,GO,Node> ROL_BoolV;
+  typedef ROL::TpetraMultiVector<int,LO,GO,Node> ROL_IMV;
   
   using traits = Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>;
   using array_layout    = typename traits::array_layout;
@@ -86,15 +86,15 @@ class DisplacementConstraint_TopOpt : public ROL::Constraint<real_t> {
   typedef MV::dual_view_type::t_dev vec_array;
   typedef MV::dual_view_type::t_host host_vec_array;
   typedef Kokkos::View<const real_t**, array_layout, HostSpace, memory_traits> const_host_vec_array;
-  typedef Kokkos::View<const bool**, array_layout, HostSpace, memory_traits> const_host_bool_array;
+  typedef Kokkos::View<const int**, array_layout, HostSpace, memory_traits> const_host_int_array;
   typedef MV::dual_view_type dual_vec_array;
 
 private:
 
   FEA_Module_Elasticity *FEM_;
   ROL::Ptr<ROL_MV> ROL_Displacements;
-  ROL::Ptr<ROL_MV> ROL_Target_Displacements;
-  ROL::Ptr<ROL_BoolV> ROL_Active_DOFs;
+  ROL::Ptr<MV> Target_Displacements_;
+  ROL::Ptr<IMV> Active_DOFs_;
   ROL::Ptr<ROL_MV> ROL_Gradients;
   Teuchos::RCP<MV> constraint_gradients_distributed;
   Teuchos::RCP<MV> all_node_displacements_distributed_temp;
@@ -116,7 +116,7 @@ public:
   int last_comm_step, current_step, last_solve_step;
   std::string my_fea_module = "Elasticity";
 
-  DisplacementConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, ROL::Ptr<ROL_MV> Target_Displacements, ROL::Ptr<ROL_BoolV> Active_Nodes, real_t constraint_value=0, bool inequality_flag=true){
+  DisplacementConstraint_TopOpt(FEA_Module *FEM, bool nodal_density_flag, ROL::Ptr<MV> Target_Displacements, ROL::Ptr<IMV> Active_DOFs, real_t constraint_value=0, bool inequality_flag=true){
       FEM_ = dynamic_cast<FEA_Module_Elasticity*>(FEM);
       nodal_density_flag_ = nodal_density_flag;
       last_comm_step = last_solve_step = -1;
@@ -124,6 +124,8 @@ public:
       inequality_flag_ = inequality_flag;
       constraint_value_ = constraint_value;
       constraint_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
+      Target_Displacements_ = Target_Displacements;
+      Active_DOFs_ = Active_DOFs;
 
       //deep copy solve data into the cache variable
       FEM_->all_cached_node_displacements_distributed = Teuchos::rcp(new MV(*(FEM_->all_node_displacements_distributed), Teuchos::Copy));
@@ -192,10 +194,10 @@ public:
   void value(ROL::Vector<real_t> &c, const ROL::Vector<real_t> &z, real_t &tol ) {
     ROL::Ptr<const MV> zp = getVector(z);
     ROL::Ptr<std::vector<real_t>> cp = dynamic_cast<ROL::StdVector<real_t>&>(c).getVector();
-    ROL::Ptr<const BoolV> active_dofsp = (*ROL_Active_DOFs).getVector();
-    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
+    ROL::Ptr<const IMV> active_dofsp = Active_DOFs_;
+    ROL::Ptr<const MV> target_displacementsp = Target_Displacements_;
     
-    const_host_bool_array active_dofs_view = active_dofsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_int_array active_dofs_view = active_dofsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
@@ -228,8 +230,8 @@ public:
     ROL::Ptr<const MV> zp = getVector(x);
     ROL::Ptr<const std::vector<real_t>> vp = dynamic_cast<const ROL::StdVector<real_t>&>(v).getVector();
     ROL::Ptr<MV> ajvp = getVector(ajv);
-    ROL::Ptr<const BoolV> active_dofsp = (*ROL_Active_DOFs).getVector();
-    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
+    ROL::Ptr<const IMV> active_dofsp = Active_DOFs_;
+    ROL::Ptr<const MV> target_displacementsp = Target_Displacements_;
     
     //ROL::Ptr<ROL_MV> ROL_Element_Volumes;
 
@@ -238,7 +240,7 @@ public:
     //host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     host_vec_array constraint_gradients = ajvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     //host_vec_array dual_constraint_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    const_host_bool_array active_dofs_view = active_dofsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_int_array active_dofs_view = active_dofsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
@@ -273,13 +275,13 @@ public:
     //get Tpetra multivector pointer from the ROL vector
     ROL::Ptr<const MV> zp = getVector(x);
     ROL::Ptr<std::vector<real_t>> jvp = dynamic_cast<ROL::StdVector<real_t>&>(jv).getVector();
-    ROL::Ptr<const BoolV> active_dofsp = (*ROL_Active_DOFs).getVector();
-    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
+    ROL::Ptr<const IMV> active_dofsp = Active_DOFs_;
+    ROL::Ptr<const MV> target_displacementsp = Target_Displacements_;
 
     //get local view of the data
     host_vec_array constraint_gradients = constraint_gradients_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    const_host_bool_array active_dofs_view = active_dofsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_int_array active_dofs_view = active_dofsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
 
@@ -313,13 +315,13 @@ public:
     ROL::Ptr<const MV> vp = getVector(v);
     ROL::Ptr<const std::vector<real_t>> up = dynamic_cast<const ROL::StdVector<real_t>&>(u).getVector();
     ROL::Ptr<const MV> zp = getVector(z);
-    ROL::Ptr<const BoolV> active_dofsp = (*ROL_Active_DOFs).getVector();
-    ROL::Ptr<const MV> target_displacementsp = (*ROL_Target_Displacements).getVector();
+    ROL::Ptr<const IMV> active_dofsp = Active_DOFs_;
+    ROL::Ptr<const MV> target_displacementsp = Target_Displacements_;
     
     host_vec_array constraint_adjoint_hessvec = ahuvp->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
     const_host_vec_array design_densities = zp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array direction_vector = vp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-    const_host_bool_array active_dofs_view = active_dofsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const_host_int_array active_dofs_view = active_dofsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array target_displacements_view = target_displacementsp->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const_host_vec_array displacements_view = FEM_->node_displacements_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     

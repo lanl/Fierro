@@ -1320,12 +1320,9 @@ void Implicit_Solver::setup_optimization_problem(){
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Displacement_Constraint){
         //simple test of assignment to the vector for constraint dofs
         Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 0));
-        Teuchos::RCP<Tpetra::MultiVector<GO,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<GO,LO,GO>(local_dof_map, 0));
-        ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO>> ROL_target_displacements = ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO>>(target_displacements);
-        //ROL::Ptr<ROL::TpetraMultiVector<bool,LO,GO>> ROL_active_dofs = ROL::makePtr<ROL::TpetraMultiVector<bool,LO,GO>>(active_dofs);
-        ROL::Ptr<ROL::TpetraMultiVector<bool,LO,GO>> ROL_active_dofs;
+        Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 0));
         *fos << " DISPLACEMENT CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, ROL_target_displacements, ROL_active_dofs, false);
+        eq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, target_displacements, active_dofs, false);
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
@@ -1364,8 +1361,9 @@ void Implicit_Solver::setup_optimization_problem(){
         ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag);
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Displacement_Constraint){
-        ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO>> target_displacements;
-        ROL::Ptr<ROL::TpetraMultiVector<bool,LO,GO>> active_dofs;
+        //simple test of assignment to the vector for constraint dofs
+        Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 0));
+        Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 0));
         *fos << " DISPLACEMENT CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, target_displacements, active_dofs);
       }
