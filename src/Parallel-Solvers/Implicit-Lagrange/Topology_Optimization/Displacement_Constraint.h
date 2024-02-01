@@ -204,12 +204,10 @@ public:
     real_t current_quadsum_value, current_local_quadsum_value;
 
     current_local_quadsum_value = current_quadsum_value = 0;
-    for(int inode = 0; inode < nlocal_nodes; inode++){
-      if(active_dofs_view(inode,0)){
-        for(int idim = 0; idim < num_dim; idim++){
-          current_local_quadsum_value += (displacements_view(inode,idim)-target_displacements_view(inode,idim))*
-                                        (displacements_view(inode,idim)-target_displacements_view(inode,idim))/(target_displacements_view(inode,idim)*target_displacements_view(inode,idim));
-        }
+    for(int idof = 0; idof < nlocal_nodes*num_dim; idof++){
+      if(active_dofs_view(idof,0)){
+          current_local_quadsum_value += (displacements_view(idof,0)-target_displacements_view(idof,0))*
+                                        (displacements_view(idof,0)-target_displacements_view(idof,0))/(target_displacements_view(idof,0)*target_displacements_view(idof,0));
       }
     }
 
