@@ -18,13 +18,12 @@ output_options:
   timer_output_level: thorough
   output_file_format: vtk
   graphics_step: 1.0e-1  #[s]
-
-#output_fields:
-  #- velocity
-  #- processor_id
-  #- element_id
-  #- stress
-  #- user_vars
+  #output_fields:
+    #- velocity
+    #- processor_id
+    #- element_id
+    #- stress
+    #- user_vars
 
 
 fea_module_parameters:
