@@ -72,6 +72,7 @@ elif [ "$solver" = "explicit-evpfft" ] || [ "$solver" = "explicit-ls-evpfft" ]; 
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
         -D BUILD_IMPLICIT_SOLVER=OFF
         -D CMAKE_PREFIX_PATH="$HEFFTE_INSTALL_DIR;$HDF5_INSTALL_DIR;$ELEMENTS_INSTALL_DIR"
+        -D ABSOLUTE_NO_OUTPUT=ON
     )
     if [ "$heffte_build_type" = "cufft" ]; then
         cmake_options+=(
