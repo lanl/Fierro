@@ -108,6 +108,8 @@ public:
   typedef MV::dual_view_type::t_host host_vec_array;
   typedef Kokkos::View<const real_t**, array_layout, HostSpace, memory_traits> const_host_vec_array;
   typedef Kokkos::View<const real_t**, array_layout, device_type, memory_traits> const_vec_array;
+  typedef Kokkos::View<const int**, array_layout, HostSpace, memory_traits> const_host_ivec_array;
+  typedef Kokkos::View<int**, array_layout, HostSpace, memory_traits> host_ivec_array;
   typedef MV::dual_view_type dual_vec_array;
   typedef MCONN::dual_view_type dual_elem_conn_array;
   typedef MCONN::dual_view_type::t_host host_elem_conn_array;

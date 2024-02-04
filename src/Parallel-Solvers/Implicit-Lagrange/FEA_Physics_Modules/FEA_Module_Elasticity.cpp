@@ -974,7 +974,7 @@ void FEA_Module_Elasticity::init_assembly(){
 
   //allocate sparse graph with node repeats
   RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Repeat_Graph_Matrix(Graph_Matrix_Strides_initial);
-  RaggedRightArrayofVectorsKokkos<size_t, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial,num_dim);
+  RaggedRightArrayofVectorsKokkos<size_t, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial,3);
   
   //Fill the initial Graph with repeats
   if(num_dim == 2)

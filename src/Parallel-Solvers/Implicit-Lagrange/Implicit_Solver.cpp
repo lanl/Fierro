@@ -1321,6 +1321,19 @@ void Implicit_Solver::setup_optimization_problem(){
         //simple test of assignment to the vector for constraint dofs
         Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 0));
         Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 0));
+        active_dofs->putScalar(0);
+        host_vec_array target_displacements_view = target_displacements->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+        host_ivec_array active_dofs_view = active_dofs->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+        if(map->isNodeGlobalElement(12100)){
+          LO local_node_id = map->getLocalElement(12100);
+          active_dofs_view(local_node_id*num_dim,0) = 1;
+          target_displacements_view(local_node_id*num_dim,0) = 3.5e-04;
+        }
+        if(map->isNodeGlobalElement(12110)){
+          LO local_node_id = map->getLocalElement(12110);
+          active_dofs_view(local_node_id*num_dim,0) = 1;
+          target_displacements_view(local_node_id*num_dim,0) = 3.5e-04;
+        }
         *fos << " DISPLACEMENT CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, target_displacements, active_dofs, false);
       }
@@ -1364,6 +1377,9 @@ void Implicit_Solver::setup_optimization_problem(){
         //simple test of assignment to the vector for constraint dofs
         Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 0));
         Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 0));
+        active_dofs->putScalar(0);
+        host_vec_array target_displacements_view = target_displacements->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+        host_ivec_array active_dofs_view = active_dofs->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
         *fos << " DISPLACEMENT CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         ineq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, target_displacements, active_dofs);
       }
