@@ -19,6 +19,7 @@ output_options:
   output_file_format: vtk
   graphics_step: 2.4e-6 #1.2e-6 #6.0e-07  #[s]
   max_num_user_output_vars: 5
+  include_default_output_fields: false
   output_fields:
     - velocity
     #- processor_id
@@ -59,6 +60,7 @@ materials:
     q2: 0.5 # 0.5  q2/4
     q1ex: 0.01 # 0.01 to 0.1
     q2ex: 0.0
+    maximum_limiter: true
     global_vars:
       - 0.0001 #udotAccTh
       - 3000000 #[mm/s] ref sound speed
