@@ -18,7 +18,7 @@ struct fe_ref_elem_t{
     // Kinematic Dofs
     size_t num_dofs_1d;
     size_t num_dofs_in_elem;
-    size_t num_dofs_in_surf;
+    //size_t num_dofs_in_surf;
     
     // Thermodynamic Dofs
     size_t num_elem_dofs_1d;
@@ -57,7 +57,7 @@ struct fe_ref_elem_t{
     
     CArrayKokkos <double> gauss_lob_positions;
     CArrayKokkos <double> gauss_leg_positions;
-    CArrayKokkos <double> gauss_leg_surf_positions;
+    //CArrayKokkos <double> gauss_leg_surf_positions;
     
     CArrayKokkos <double> dof_positions;
     CArrayKokkos <double> dof_positions_1d;
@@ -71,7 +71,7 @@ struct fe_ref_elem_t{
 
     CArrayKokkos <double> gauss_lob_weights;
     CArrayKokkos <double> gauss_leg_weights;
-    CArrayKokkos <double> gauss_leg_surf_weights;
+    //CArrayKokkos <double> gauss_leg_surf_weights;
 
    
 
@@ -114,7 +114,7 @@ struct fe_ref_elem_t{
 
         num_dofs_in_elem = 1;
         
-        num_dofs_in_surf = 1;
+        //num_dofs_in_surf = 1;
 
         num_elem_dofs_in_elem = 1;
         
@@ -156,8 +156,8 @@ struct fe_ref_elem_t{
         gauss_lob_positions = CArrayKokkos <double> (num_gauss_lob_in_elem, num_dim,"gauss_lob_positions"); 
         gauss_leg_positions = CArrayKokkos <double> (num_gauss_leg_in_elem, num_dim,"gauss_leg_positions");
 
-        gauss_leg_surf_positions = CArrayKokkos <double> (num_surfs, num_gauss_leg_in_surfs, num_dim-1, "gauss_leg_surf_positions");
-        gauss_leg_surf_weights = CArrayKokkos <double> (num_surfs, num_gauss_leg_in_surfs, "gauss_leg_surf_weights");
+        // gauss_leg_surf_positions = CArrayKokkos <double> (num_surfs, num_gauss_leg_in_surfs, num_dim-1, "gauss_leg_surf_positions");
+        // gauss_leg_surf_weights = CArrayKokkos <double> (num_surfs, num_gauss_leg_in_surfs, "gauss_leg_surf_weights");
 
         // --- build gauss nodal positions and weights ---
             
@@ -218,58 +218,58 @@ struct fe_ref_elem_t{
             Kokkos::fence();
 
             // surface quadrature i faces
-            FOR_ALL_CLASS( k, 0, num_gauss_leg_1d, 
-                     j, 0, num_gauss_leg_1d, { 
+            // FOR_ALL_CLASS( k, 0, num_gauss_leg_1d, 
+            //          j, 0, num_gauss_leg_1d, { 
             
-                        int leg_rid = legendre_rid_2D(j,k);
+            //             int leg_rid = legendre_rid_2D(j,k);
                         
-                        // i min
-                        gauss_leg_surf_positions(0, leg_rid,0) = leg_nodes_1D(j);
-                        gauss_leg_surf_positions(0, leg_rid,1) = leg_nodes_1D(k);
-                        gauss_leg_weights(0,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
+            //             // i min
+            //             gauss_leg_surf_positions(0, leg_rid,0) = leg_nodes_1D(j);
+            //             gauss_leg_surf_positions(0, leg_rid,1) = leg_nodes_1D(k);
+            //             gauss_leg_weights(0,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
 
-                        // i max
-                        gauss_leg_surf_positions(1, leg_rid,0) = leg_nodes_1D(j);
-                        gauss_leg_surf_positions(1, leg_rid,1) = leg_nodes_1D(k);
-                        gauss_leg_weights(1,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
-            });
-            Kokkos::fence();
+            //             // i max
+            //             gauss_leg_surf_positions(1, leg_rid,0) = leg_nodes_1D(j);
+            //             gauss_leg_surf_positions(1, leg_rid,1) = leg_nodes_1D(k);
+            //             gauss_leg_weights(1,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
+            // });
+            // Kokkos::fence();
 
-            // surface quadrature j faces
-            FOR_ALL_CLASS( i, 0, num_gauss_leg_1d, 
-                     k, 0, num_gauss_leg_1d, { 
+            // // surface quadrature j faces
+            // FOR_ALL_CLASS( i, 0, num_gauss_leg_1d, 
+            //          k, 0, num_gauss_leg_1d, { 
             
-                        int leg_rid = legendre_rid_2D(j,k);
+            //             int leg_rid = legendre_rid_2D(j,k);
                         
-                        // j min
-                        gauss_leg_surf_positions(2, leg_rid,0) = leg_nodes_1D(i);
-                        gauss_leg_surf_positions(2, leg_rid,1) = leg_nodes_1D(k);
-                        gauss_leg_weights(2,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
+            //             // j min
+            //             gauss_leg_surf_positions(2, leg_rid,0) = leg_nodes_1D(i);
+            //             gauss_leg_surf_positions(2, leg_rid,1) = leg_nodes_1D(k);
+            //             gauss_leg_weights(2,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
 
-                        // j max
-                        gauss_leg_surf_positions(3, leg_rid,0) = leg_nodes_1D(i);
-                        gauss_leg_surf_positions(3, leg_rid,1) = leg_nodes_1D(k);
-                        gauss_leg_weights(3,leg_rid) = leg_weights_1D(i)*leg_weights_1D(k);
-            });
-            Kokkos::fence();
+            //             // j max
+            //             gauss_leg_surf_positions(3, leg_rid,0) = leg_nodes_1D(i);
+            //             gauss_leg_surf_positions(3, leg_rid,1) = leg_nodes_1D(k);
+            //             gauss_leg_weights(3,leg_rid) = leg_weights_1D(i)*leg_weights_1D(k);
+            // });
+            // Kokkos::fence();
 
-            // surface quadrature k faces
-            FOR_ALL_CLASS(i , 0, num_gauss_leg_1d, 
-                     j, 0, num_gauss_leg_1d, { 
+            // // surface quadrature k faces
+            // FOR_ALL_CLASS(i , 0, num_gauss_leg_1d, 
+            //          j, 0, num_gauss_leg_1d, { 
             
-                        int leg_rid = legendre_rid_2D(i,j);
+            //             int leg_rid = legendre_rid_2D(i,j);
                         
-                        // k min
-                        gauss_leg_surf_positions(4, leg_rid,0) = leg_nodes_1D(i);
-                        gauss_leg_surf_positions(4, leg_rid,1) = leg_nodes_1D(j);
-                        gauss_leg_weights(4,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
+            //             // k min
+            //             gauss_leg_surf_positions(4, leg_rid,0) = leg_nodes_1D(i);
+            //             gauss_leg_surf_positions(4, leg_rid,1) = leg_nodes_1D(j);
+            //             gauss_leg_weights(4,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
 
-                        // k max
-                        gauss_leg_surf_positions(5, leg_rid,0) = leg_nodes_1D(i);
-                        gauss_leg_surf_positions(5, leg_rid,1) = leg_nodes_1D(j);
-                        gauss_leg_weights(5,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
-            });
-            Kokkos::fence();
+            //             // k max
+            //             gauss_leg_surf_positions(5, leg_rid,0) = leg_nodes_1D(i);
+            //             gauss_leg_surf_positions(5, leg_rid,1) = leg_nodes_1D(j);
+            //             gauss_leg_weights(5,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
+            // });
+            // Kokkos::fence();
 
             // Saving vertex positions in 1D
             if( p_order == 0){

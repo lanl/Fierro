@@ -116,7 +116,7 @@ void setup(const CArrayKokkos <material_t> &material,
     Kokkos::fence();
     
     // make memory to store state_vars from an external file
-       DCArrayKokkos <size_t> mat_num_state_vars(num_materials); // actual number of state_vars
+    DCArrayKokkos <size_t> mat_num_state_vars(num_materials); // actual number of state_vars
     FOR_ALL(mat_id, 0, num_materials, {
         
         mat_num_state_vars(mat_id) = material(mat_id).num_state_vars;
@@ -192,6 +192,7 @@ void setup(const CArrayKokkos <material_t> &material,
 
             const size_t rk_level = 1;
            
+            
             // calculate the coordinates and radius of the element
             double elem_coords[3]; // note:initialization with a list won't work
             elem_coords[0] = 0.0;
@@ -292,7 +293,7 @@ void setup(const CArrayKokkos <material_t> &material,
                 //printf( "volume in elem %d is %f \n", elem_gid, elem_vol(elem_gid) ); 
                 
                 // mass
-		elem_mass(elem_gid) = elem_den(elem_gid)/elem_vol(elem_gid);
+		        elem_mass(elem_gid) = elem_den(elem_gid)/elem_vol(elem_gid);
                 printf( "mass in elem %d is %f \n", elem_gid, elem_mass(elem_gid) ); 
 
                 

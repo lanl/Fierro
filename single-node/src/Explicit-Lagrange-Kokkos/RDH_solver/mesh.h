@@ -1281,7 +1281,7 @@ struct mesh_t {
                 
                 // num_1D = Pn+1
                 int num_surface_nodes = num_surfs_in_elem*pow(num_1D, num_dims-1);
-                int temp_surf_node_lids[num_surface_nodes];
+                size_t temp_surf_node_lids[num_surface_nodes];
                 // 2D arbitrary order elements
                 int count = 0;
                 
@@ -1322,14 +1322,15 @@ struct mesh_t {
                 }
 
                 nodes_in_surf = CArrayKokkos <size_t> (num_surfs, num_1D*num_1D);
-
-                surf_node_ordering_in_elem = DViewCArrayKokkos <int> (&temp_surf_node_lids[0], 6, num_1D*num_1D);
+                size_t num_faces = 6;
+                size_t num_nodes_in_face = num_1D*num_1D;
+                surf_node_ordering_in_elem = DViewCArrayKokkos <size_t> (&temp_surf_node_lids[0], num_faces, num_nodes_in_face);
                 surf_node_ordering_in_elem.update_device();
                 for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
                     FOR_ALL_CLASS(surf_lid, 0 , num_surfs_in_elem, {
-                        surf_gid = surfs_in_elem(elem_gid, surf_lid);
+                        int surf_gid = surfs_in_elem(elem_gid, surf_lid);
                         for (int surf_node_lid = 0; surf_node_lid < num_nodes_in_surf; surf_node_lid++){
-                            node_lid = surf_node_ordering_in_elem(surf_lid, surf_node_lid);
+                            int node_lid = surf_node_ordering_in_elem(surf_lid, surf_node_lid);
                             int node_gid = nodes_in_elem(elem_gid, node_lid);
                             nodes_in_surf(surf_gid, surf_node_lid) = node_gid;
                         }// end loop over surf_node_lid
