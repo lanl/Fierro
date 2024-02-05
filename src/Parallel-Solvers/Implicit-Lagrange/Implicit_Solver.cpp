@@ -1319,8 +1319,8 @@ void Implicit_Solver::setup_optimization_problem(){
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Displacement_Constraint){
         //simple test of assignment to the vector for constraint dofs
-        Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 0));
-        Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 0));
+        Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 1));
+        Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 1));
         active_dofs->putScalar(0);
         host_vec_array target_displacements_view = target_displacements->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
         host_ivec_array active_dofs_view = active_dofs->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
@@ -1335,7 +1335,7 @@ void Implicit_Solver::setup_optimization_problem(){
           target_displacements_view(local_node_id*num_dim,0) = 3.5e-04;
         }
         *fos << " DISPLACEMENT CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
-        eq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, target_displacements, active_dofs, false);
+        eq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, target_displacements, active_dofs, 0, false);
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
@@ -1375,8 +1375,8 @@ void Implicit_Solver::setup_optimization_problem(){
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Displacement_Constraint){
         //simple test of assignment to the vector for constraint dofs
-        Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 0));
-        Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 0));
+        Teuchos::RCP<MV> target_displacements = Teuchos::rcp(new MV(local_dof_map, 1));
+        Teuchos::RCP<Tpetra::MultiVector<int,LO,GO>> active_dofs = Teuchos::rcp(new Tpetra::MultiVector<int,LO,GO>(local_dof_map, 1));
         active_dofs->putScalar(0);
         host_vec_array target_displacements_view = target_displacements->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
         host_ivec_array active_dofs_view = active_dofs->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);

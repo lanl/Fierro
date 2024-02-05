@@ -135,8 +135,6 @@ public:
       scaling = 1;
 
       std::cout.precision(10);
-      if(FEM_->myrank==0)
-        std::cout << "INITIAL STRAIN ENERGY " << initial_strain_energy_ << std::endl;
   }
 
   void update(const ROL::Vector<real_t> &z, ROL::UpdateType type, int iter = -1 ) {
@@ -210,13 +208,17 @@ public:
       if(active_dofs_view(idof,0)){
           current_local_quadsum_value += (displacements_view(idof,0)-target_displacements_view(idof,0))*
                                         (displacements_view(idof,0)-target_displacements_view(idof,0))/(target_displacements_view(idof,0)*target_displacements_view(idof,0));
+          // if(std::isnan((displacements_view(idof,0)-target_displacements_view(idof,0))*
+          //                               (displacements_view(idof,0)-target_displacements_view(idof,0))/(target_displacements_view(idof,0)*target_displacements_view(idof,0)))){
+          //                               std::cout << "NAN QUADSUM VALUES " << target_displacements_view(idof,0) << " " << active_dofs_view(idof,0) << std::endl;
+          //                               }
       }
     }
 
     MPI_Allreduce(&current_local_quadsum_value,&current_quadsum_value,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
 
     if(FEM_->myrank==0)
-      std::cout << "CURRENT STRAIN ENERGY RATIO " << current_quadsum_value << std::endl;
+      std::cout << "CURRENT DISPLACEMENT CONSTRAINT VALUE " << current_quadsum_value << std::endl;
     if(inequality_flag_)
       (*cp)[0] = current_quadsum_value/scaling;
     else
