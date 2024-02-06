@@ -1341,8 +1341,8 @@ void Implicit_Solver::setup_optimization_problem(){
         ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
         //construct direction vector for check
         Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-        directions_distributed->putScalar(1);
-        //directions_distributed->randomize(-1,1);
+        //directions_distributed->putScalar(1);
+        directions_distributed->randomize(-0.8,1);
         //real_t normd = directions_distributed->norm2();
         //directions_distributed->scale(normd);
         //set all but first component to 0 for debug
@@ -1352,10 +1352,11 @@ void Implicit_Solver::setup_optimization_problem(){
         ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
         ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
         
-        ROL::Ptr<std::vector<real_t> > c_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+        ROL::Ptr<std::vector<real_t> > c_ptr = ROL::makePtr<std::vector<real_t>>(1,1.0);
         ROL::Ptr<ROL::Vector<real_t> > constraint_buf = ROL::makePtr<ROL::StdVector<real_t>>(c_ptr);
         //std::cout << " VALUE TEST " << obj_value << std::endl;
-        eq_constraint->checkApplyJacobian(*rol_x, *rol_d, *constraint_buf);
+        //eq_constraint->checkApplyJacobian(*rol_x, *rol_d, *constraint_buf);
+        eq_constraint->checkApplyAdjointHessian(*rol_x, *constraint_buf, *rol_d, *rol_x);
         //obj->checkHessVec(*rol_x, *rol_d);
         //directions_distributed->putScalar(-0.000001);
         //obj->checkGradient(*rol_x, *rol_d);
