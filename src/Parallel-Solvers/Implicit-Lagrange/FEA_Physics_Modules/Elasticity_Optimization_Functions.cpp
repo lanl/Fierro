@@ -215,7 +215,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
   //*fos << "RHS vector" << std::endl;
   //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
 
-  //assign old stiffness matrix entries
+  //assign reduced stiffness matrix entries for linear solver
   if(!matrix_bc_reduced){
   LO stride_index;
   for(LO i=0; i < local_nrows; i++){
@@ -658,7 +658,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
     all_psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
     all_phi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
     psi_adjoint_vector_distributed = Teuchos::rcp(new MV(*all_psi_adjoint_vector_distributed, local_dof_map));
-    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(*all_psi_adjoint_vector_distributed, local_dof_map));
+    phi_adjoint_vector_distributed = Teuchos::rcp(new MV(*all_phi_adjoint_vector_distributed, local_dof_map));
     constraint_adjoints_allocated = true;
   }
 
@@ -760,7 +760,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   //*fos << "RHS vector" << std::endl;
   //Global_Nodal_RHS->describe(*fos,Teuchos::VERB_EXTREME);
 
-  //assign old stiffness matrix entries
+  //assign reduced stiffness matrix entries for linear solver
   if(!matrix_bc_reduced){
   LO stride_index;
   for(LO i=0; i < local_nrows; i++){
