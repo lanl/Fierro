@@ -1336,6 +1336,31 @@ void Implicit_Solver::setup_optimization_problem(){
         }
         *fos << " DISPLACEMENT CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, target_displacements, active_dofs, 0, false);
+
+        ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_x =
+        ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
+        //construct direction vector for check
+        Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
+        directions_distributed->putScalar(1);
+        //directions_distributed->randomize(-1,1);
+        //real_t normd = directions_distributed->norm2();
+        //directions_distributed->scale(normd);
+        //set all but first component to 0 for debug
+        host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+        //for(int init = 1; init < nlocal_nodes; init++)
+        //directions(4,0) = -0.3;
+        ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
+        ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
+        
+        ROL::Ptr<std::vector<real_t> > c_ptr = ROL::makePtr<std::vector<real_t>>(1,0.0);
+        ROL::Ptr<ROL::Vector<real_t> > constraint_buf = ROL::makePtr<ROL::StdVector<real_t>>(c_ptr);
+        //std::cout << " VALUE TEST " << obj_value << std::endl;
+        eq_constraint->checkApplyJacobian(*rol_x, *rol_d, *constraint_buf);
+        //obj->checkHessVec(*rol_x, *rol_d);
+        //directions_distributed->putScalar(-0.000001);
+        //obj->checkGradient(*rol_x, *rol_d);
+        //directions_distributed->putScalar(-0.0000001);
+        //obj->checkGradient(*rol_x, *rol_d);
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;

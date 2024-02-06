@@ -588,7 +588,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
       
       //debug print
       //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
-      design_gradients(local_node_id,0) += inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*0.5*invJacobian;
+      design_gradients(local_node_id,0) += inner_product*Elastic_Constant*basis_values(igradient)*weight_multiply*invJacobian;
     }
 
       //evaluate gradient of body force (such as gravity which depends on density) with respect to igradient
