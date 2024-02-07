@@ -2,7 +2,7 @@
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
-    echo "  --solver=<all|explicit|explicit-evpfft|explicit-evp|implicit>. Default is 'explicit'"
+    echo "  --solver=<all|explicit|explicit-evpfft|explicit-ls-evpfft|explicit-evp|implicit>. Default is 'explicit'"
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>. Default is 'serial'"
     echo "  --build_action=<full-app|set-env|install-trilinos|install-hdf5|install-heffte|fierro>. Default is 'full-app'"
     echo "  --machine=<darwin|chicoma|linux|mac>. Default is 'linux'"
@@ -26,6 +26,7 @@ show_help() {
     echo "          all                         builds both the explicit (non EVPFFT) and implicit solvers. Generally for debugging purposes"
     echo "          explicit                    builds the explicit solver"
     echo "          explicit-evpfft             builds the explicit solver with the EVPFFT material model"
+    echo "          explicit-ls-evpfft          builds the explicit solver with the LS-EVPFFT material model"
     echo "          explicit-evp                builds the explicit solver with the EVP material model"    
     echo "          implicit                    builds the explicit solver"
     echo " "
@@ -63,7 +64,7 @@ build_cores="1"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-trilinos" "install-hdf5" "install-heffte" "fierro")
-valid_solver=("all" "explicit" "explicit-evpfft" "explicit-evp" "implicit")
+valid_solver=("all" "explicit" "explicit-evpfft" "explicit-ls-evpfft" "explicit-evp" "implicit")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
 valid_machines=("darwin" "chicoma" "linux" "mac")
@@ -167,7 +168,7 @@ echo "Building based on these argument options:"
 echo "Build action - ${build_action}"
 echo "Solver - ${solver}"
 echo "Kokkos backend - ${kokkos_build_type}"
-if [ "${solver}" = "explicit-evpfft" ]; then
+if [ "${solver}" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
     echo "HEFFTE - ${heffte_build_type}"
 fi
 echo "make -j ${build_cores}"
@@ -180,7 +181,7 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
     source trilinos-install.sh ${kokkos_build_type}
-    if [ "$solver" = "explicit-evpfft" ]; then
+    if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
         source hdf5-install.sh
         source heffte-install.sh ${heffte_build_type} ${machine}
     fi
