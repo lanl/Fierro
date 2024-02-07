@@ -32,7 +32,7 @@ std::vector<std::string> split (std::string s, std::string delimiter);
 void init_state_vars(
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &state_vars,
+  DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems)
@@ -412,7 +412,7 @@ void init_state_vars(
   //});
 	}
   Kokkos::fence();
-  //state_vars.update_host();
+  state_vars.update_host();
 
     printf("user_mat_init completed\n");
     
