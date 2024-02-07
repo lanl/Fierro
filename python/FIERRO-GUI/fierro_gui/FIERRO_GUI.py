@@ -156,7 +156,6 @@ class FIERRO_GUI(Ui_MainWindow):
                     int(self.INNumberOfVoxelsX.text()),
                     int(self.INNumberOfVoxelsY.text()),
                     int(self.INNumberOfVoxelsZ.text()),
-                    True
                 )
                 # Paraview window
                 pvsimple.Delete(self.stl)
@@ -840,8 +839,15 @@ class FIERRO_GUI(Ui_MainWindow):
             global_mesh_input.close()
             
             # Run Mesh Builder Tool
+#            import subprocess
+#            executable_path = "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/build-fierro-serial/bin/fierro-mesh-builder"
+#            arguments = ["/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/python/FIERRO-GUI/global_mesh.yaml"]
+#            command = [executable_path] + arguments
+#            process = subprocess.Popen(command)
+#            process.wait()
 #            self.mesh_builder = QProcess()
-#            self.mesh_builder.start("fierro-mesh-builder",'global_mesh.yaml')
+#            self.mesh_builder.start("fierro-mesh-builder","/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/python/FIERRO-GUI/global_mesh.yaml")
+#            self.p.start("evpfft",["-f", EVPFFT_INPUT, "-m", "2"])
             fierro_mesh_builder.build_mesh_from_file('global_mesh.yaml')
             
             # View Global Mesh in Paraview Window
