@@ -1193,13 +1193,6 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   //initialize RHS vector for next solve
   for(int i=0; i < local_dof_map->getLocalNumElements(); i++)
     adjoint_equation_RHS_view(i,0) = 0;
-  
-  //sum components of direction vector
-  direction_vec_reduce = local_direction_vec_reduce = 0;
-  for(int i = 0; i < nlocal_nodes; i++)
-    local_direction_vec_reduce += direction_vec(i,0);
-  
-  MPI_Allreduce(&local_direction_vec_reduce,&direction_vec_reduce,1,MPI_DOUBLE,MPI_SUM,world);
 
   //loop through each element to contribute to the RHS of the hessvec adjoint equation
   for(size_t ielem = 0; ielem < rnum_elem; ielem++){
@@ -1820,12 +1813,12 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
         //std::cout << "contribution for " << igradient + 1 << " is " << inner_product << std::endl;
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, igradient))){
         temp_id = map->getLocalElement(nodes_in_elem(ielem, igradient));
-          hessvec(temp_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(jlocal_node_id,0)*
-                                  basis_values(jgradient)*weight_multiply*0.5*invJacobian;
+          hessvec(temp_id,0) += inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(jlocal_node_id,0)*
+                                  basis_values(jgradient)*weight_multiply*invJacobian;
         }
         if(igradient!=jgradient&&map->isNodeGlobalElement(nodes_in_elem(ielem, jgradient))){
           //temp_id = map->getLocalElement(nodes_in_elem(ielem, jgradient));
-          hessvec(jlocal_node_id,0) -= inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(local_node_id,0)*
+          hessvec(jlocal_node_id,0) += inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(local_node_id,0)*
                                       basis_values(jgradient)*weight_multiply*invJacobian;
 
         }
