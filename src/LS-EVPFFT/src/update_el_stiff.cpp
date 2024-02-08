@@ -5,6 +5,7 @@
 #include "Profiler.h"
 #include "math_functions.h"
 #include "determinant33.h"
+#include "defgrad_dcmp.h"
 
 void EVPFFT::update_el_stiff()
 {
@@ -23,6 +24,9 @@ void EVPFFT::update_el_stiff()
     real_t defgradetmp_[3*3];
     real_t caux3333_[3*3*3*3];
     real_t caux66_[6*6];
+    real_t F_[3*3];
+    real_t V_[3*3];
+    real_t R_[3*3];
 
     // create views of thread private arrays
     ViewMatrixTypeReal aa(aa_,3,3);
@@ -30,6 +34,9 @@ void EVPFFT::update_el_stiff()
     ViewMatrixTypeReal defgradetmp(defgradetmp_,3,3);
     ViewMatrixTypeReal caux3333(caux3333_,3,3,3,3);
     ViewMatrixTypeReal caux66(caux66_,6,6);
+    ViewMatrixTypeReal F(F_,3,3);
+    ViewMatrixTypeReal V(V_,3,3);
+    ViewMatrixTypeReal R(R_,3,3);
 
     int iph;
 
@@ -39,9 +46,17 @@ void EVPFFT::update_el_stiff()
 
       for (int jj = 1; jj <= 3; jj++) {
         for (int ii = 1; ii <= 3; ii++) {
+          F(ii,jj) = defgrade(ii,jj,i,j,k);
+        }
+      }
+      defgrad_dcmp(F.pointer(), V.pointer(), R.pointer());
+      
+      for (int jj = 1; jj <= 3; jj++) {
+        for (int ii = 1; ii <= 3; ii++) {
           aa(ii,jj) = 0.0;
           for (int kk = 1; kk <= 3; kk++) {
-            aa(ii,jj) += defgrade(ii,kk,i,j,k)*ag(kk,jj,i,j,k);
+            // aa(ii,jj) += defgrade(ii,kk,i,j,k)*ag(kk,jj,i,j,k);
+            aa(ii,jj) += R(ii,kk)*ag(kk,jj,i,j,k);
           }
         }
       }
@@ -53,7 +68,7 @@ void EVPFFT::update_el_stiff()
         }
       }
 
-      determinant33(defgradetmp.pointer(), detFe);
+      // determinant33(defgradetmp.pointer(), detFe);
 
       for (int i1 = 1; i1 <= 3; i1++) {
         for (int j1 = 1; j1 <= 3; j1++) {
@@ -78,7 +93,8 @@ void EVPFFT::update_el_stiff()
                 }
               }
                             
-              caux3333(i1,j1,k1,l1) = dum/detFe;
+              // caux3333(i1,j1,k1,l1) = dum/detFe;
+              caux3333(i1,j1,k1,l1) = dum;
              
             }
           }
