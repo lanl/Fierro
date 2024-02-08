@@ -14,9 +14,12 @@ struct Output_Options : Yaml::DerivedFields, Yaml::ValidatedYaml {
   size_t max_num_user_output_vars=0;
   bool write_initial = true;
   bool write_final   = true;
+  bool convert_to_vtk = false;
+  bool convert_to_tecplot = false;
 };
 
 IMPL_YAML_SERIALIZABLE_FOR(Output_Options, 
   timer_output_level, output_fields, include_default_output_fields,
-  output_file_format, write_initial, write_final, max_num_user_output_vars
+  output_file_format, write_initial, write_final, max_num_user_output_vars,
+  convert_to_vtk, convert_to_tecplot
 )

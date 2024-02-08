@@ -190,6 +190,10 @@ void Implicit_Solver::run(){
     real_t linear_solve_time = 0;
     real_t hessvec_time = 0;
     real_t hessvec_linear_time = 0;
+
+    if(simparam.output_options.convert_to_tecplot){
+      output_design(0,simparam.output_options.convert_to_tecplot);
+    }
     
     // ---- Find Boundaries on mesh ---- //
     init_boundaries();
@@ -1750,7 +1754,7 @@ void Implicit_Solver::collect_information(){
    Sort Information for parallel file output
 ------------------------------------------------------------------------- */
 
-void Implicit_Solver::sort_information(){
+void Implicit_Solver::sort_information(bool mesh_conversion_flag){
   GO nreduce_nodes = 0;
   GO nreduce_elem = 0;
   int num_dim = simparam.num_dims;
@@ -1766,19 +1770,20 @@ void Implicit_Solver::sort_information(){
   //comms to collect
   sorted_node_coords_distributed->doImport(*node_coords_distributed, node_sorting_importer, Tpetra::INSERT);
 
-  //comms to collect FEA module related vector data
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    fea_modules[imodule]->sort_output(sorted_map);
-    //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+  if(!mesh_conversion_flag){
+    //comms to collect FEA module related vector data
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      fea_modules[imodule]->sort_output(sorted_map);
+      //collected_node_displacements_distributed->doImport(*(fea_elasticity->node_displacements_distributed), dof_collection_importer, Tpetra::INSERT);
+    }
+    
+
+    //collected nodal density information
+    sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
+
+    //comms to collect
+    sorted_node_densities_distributed->doImport(*design_node_densities_distributed, node_sorting_importer, Tpetra::INSERT);
   }
-  
-
-  //collected nodal density information
-  sorted_node_densities_distributed = Teuchos::rcp(new MV(sorted_map, 1));
-
-  //comms to collect
-  sorted_node_densities_distributed->doImport(*design_node_densities_distributed, node_sorting_importer, Tpetra::INSERT);
-
   //sort element connectivity
   sorted_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(num_elem,0,comm));
   Tpetra::Import<LO, GO> element_sorting_importer(all_element_map, sorted_element_map);
@@ -1794,10 +1799,10 @@ void Implicit_Solver::sort_information(){
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
-void Implicit_Solver::output_design(int current_step){
+void Implicit_Solver::output_design(int current_step, bool mesh_conversion_flag){
   if(current_step!=last_print_step){
     last_print_step = current_step;
-    parallel_tecplot_writer();
+    parallel_tecplot_writer(mesh_conversion_flag);
   }
 
 }
@@ -1806,7 +1811,7 @@ void Implicit_Solver::output_design(int current_step){
    Output Model Information in tecplot format
 ------------------------------------------------------------------------- */
 
-void Implicit_Solver::parallel_tecplot_writer(){
+void Implicit_Solver::parallel_tecplot_writer(bool mesh_conversion_flag){
   
   int num_dim = simparam.num_dims;
 	std::string current_file_name;
@@ -1830,9 +1835,11 @@ void Implicit_Solver::parallel_tecplot_writer(){
     fea_modules[imodule]->compute_output();
   }
   
-  sort_information();
+  sort_information(mesh_conversion_flag);
   const_host_vec_array sorted_node_coords = sorted_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
-  const_host_vec_array sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  const_host_vec_array sorted_node_densities;
+  if(!mesh_conversion_flag)
+    sorted_node_densities = sorted_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   const_host_elem_conn_array sorted_nodes_in_elem = sorted_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
   // Convert ijk index system to the finite element numbering convention
   // for vertices in cell
@@ -1860,6 +1867,8 @@ void Implicit_Solver::parallel_tecplot_writer(){
     current_file_name = base_file_name_undeformed + file_count + file_extension;
   else
     current_file_name = base_file_name + file_count + file_extension;
+  
+  if(mesh_conversion_flag) current_file_name = "Converted_Tecplot_Mesh.dat";
 
   MPI_File_open(MPI_COMM_WORLD, current_file_name.c_str(), 
                 MPI_MODE_CREATE|MPI_MODE_WRONLY, 
@@ -1885,18 +1894,28 @@ void Implicit_Solver::parallel_tecplot_writer(){
   //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
   //else
   current_line_stream.str("");
-  if(num_dim == 2)
-	  current_line_stream << "VARIABLES = \"x\", \"y\", \"density\"";
-  else if(num_dim == 3)
-	  current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
-      nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
-      for(int ivector = 0; ivector < nvector; ivector++){
-        current_line_stream << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+  if(mesh_conversion_flag){
+    if(num_dim == 2)
+      current_line_stream << "VARIABLES = \"x\", \"y\"";
+    else if(num_dim == 3)
+      current_line_stream << "VARIABLES = \"x\", \"y\", \"z\"";
+  }
+  else{
+    if(num_dim == 2)
+      current_line_stream << "VARIABLES = \"x\", \"y\", \"density\"";
+    else if(num_dim == 3)
+      current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"density\"";
+
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+        for(int ivector = 0; ivector < nvector; ivector++){
+          current_line_stream << ", \"" << fea_modules[imodule]->output_dof_names[ioutput][ivector] << "\"";
+        }
       }
     }
   }
+  
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -1935,13 +1954,15 @@ void Implicit_Solver::parallel_tecplot_writer(){
   //output nodal data
   //compute buffer output size and file stream offset for this MPI rank
   int default_dof_count = num_dim;
-  default_dof_count++;
+  if(!mesh_conversion_flag) default_dof_count++;
   int buffer_size_per_node_line = 26*default_dof_count + 1; //25 width + 1 space per number plus line terminator
-  for (int imodule = 0; imodule < nfea_modules; imodule++){
-    noutput = fea_modules[imodule]->noutput;
-    for(int ioutput = 0; ioutput < noutput; ioutput++){
-      nvector = fea_modules[imodule]->output_vector_sizes[ioutput];  
-      buffer_size_per_node_line += 26*nvector;
+  if(!mesh_conversion_flag){
+    for (int imodule = 0; imodule < nfea_modules; imodule++){
+      noutput = fea_modules[imodule]->noutput;
+      for(int ioutput = 0; ioutput < noutput; ioutput++){
+        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];  
+        buffer_size_per_node_line += 26*nvector;
+      }
     }
   }
   int nlocal_sorted_nodes = sorted_map->getLocalNumElements();
@@ -1960,21 +1981,23 @@ void Implicit_Solver::parallel_tecplot_writer(){
 		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
 
     //velocity print
-    current_line_stream << std::setw(25) << sorted_node_densities(nodeline,0) << " ";
-    
-    for (int imodule = 0; imodule < nfea_modules; imodule++){
-      noutput = fea_modules[imodule]->noutput;
-      for(int ioutput = 0; ioutput < noutput; ioutput++){
-        current_sorted_output = fea_modules[imodule]->module_outputs[ioutput];
-        nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
-        if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
-          for(int ivector = 0; ivector < nvector; ivector++){
-           current_line_stream << std::setw(25) << current_sorted_output(nodeline*nvector + ivector,0) << " ";
+    if(!mesh_conversion_flag){
+      current_line_stream << std::setw(25) << sorted_node_densities(nodeline,0) << " ";
+
+      for (int imodule = 0; imodule < nfea_modules; imodule++){
+        noutput = fea_modules[imodule]->noutput;
+        for(int ioutput = 0; ioutput < noutput; ioutput++){
+          current_sorted_output = fea_modules[imodule]->module_outputs[ioutput];
+          nvector = fea_modules[imodule]->output_vector_sizes[ioutput];
+          if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::DOF){
+            for(int ivector = 0; ivector < nvector; ivector++){
+            current_line_stream << std::setw(25) << current_sorted_output(nodeline*nvector + ivector,0) << " ";
+            }
           }
-        }
-        if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
-          for(int ivector = 0; ivector < nvector; ivector++){
-            current_line_stream << std::setw(25) << current_sorted_output(nodeline,ivector) << " ";
+          if(fea_modules[imodule]->vector_style[ioutput] == FEA_Module::NODAL){
+            for(int ivector = 0; ivector < nvector; ivector++){
+              current_line_stream << std::setw(25) << current_sorted_output(nodeline,ivector) << " ";
+            }
           }
         }
       }
@@ -2040,7 +2063,7 @@ void Implicit_Solver::parallel_tecplot_writer(){
   MPI_Barrier(world);
 
   //Displaced Geometry File option
-  if(displacement_module>=0&&displace_geometry){
+  if(displacement_module>=0&&(displace_geometry&&!mesh_conversion_flag)){
     current_line_stream.str("");
     header_stream_offset = 0;
     //deformed geometry
