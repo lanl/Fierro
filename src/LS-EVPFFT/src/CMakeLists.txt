@@ -88,6 +88,7 @@ set( Sources
      matrix_exp.cpp
      determinant33.cpp
      euler.cpp
+     defgrad_dcmp.cpp
      vpsc_input.cpp
      data_crystal.cpp
      data_crystal_elast.cpp
