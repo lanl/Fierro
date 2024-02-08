@@ -2,15 +2,14 @@
 #include "mesh.h"
 #include "state.h"
 
-void
-update_energy_sgh(double                           rk_alpha,
-                  double                           dt,
-                  const mesh_t&                    mesh,
-                  const DViewCArrayKokkos<double>& node_vel,
-                  const DViewCArrayKokkos<double>& node_coords,
-                  DViewCArrayKokkos<double>&       elem_sie,
-                  const DViewCArrayKokkos<double>& elem_mass,
-                  const DViewCArrayKokkos<double>& corner_force)
+void update_energy_sgh(double                           rk_alpha,
+                       double                           dt,
+                       const mesh_t&                    mesh,
+                       const DViewCArrayKokkos<double>& node_vel,
+                       const DViewCArrayKokkos<double>& node_coords,
+                       DViewCArrayKokkos<double>&       elem_sie,
+                       const DViewCArrayKokkos<double>& elem_mass,
+                       const DViewCArrayKokkos<double>& corner_force)
 {
     // loop over all the elements in the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems, {

@@ -5,23 +5,22 @@
 #include "state.h"
 #include "mesh.h"
 
-void
-update_state(const CArrayKokkos<material_t>&  material,
-             const mesh_t&                    mesh,
-             const DViewCArrayKokkos<double>& node_coords,
-             const DViewCArrayKokkos<double>& node_vel,
-             DViewCArrayKokkos<double>&       elem_den,
-             DViewCArrayKokkos<double>&       elem_pres,
-             DViewCArrayKokkos<double>&       elem_stress,
-             DViewCArrayKokkos<double>&       elem_sspd,
-             const DViewCArrayKokkos<double>& elem_sie,
-             const DViewCArrayKokkos<double>& elem_vol,
-             const DViewCArrayKokkos<double>& elem_mass,
-             const DViewCArrayKokkos<size_t>& elem_mat_id,
-             const DViewCArrayKokkos<double>& elem_statev,
-             const double                     dt,
-             const double                     rk_alpha
-             )
+void update_state(const CArrayKokkos<material_t>&  material,
+                  const mesh_t&                    mesh,
+                  const DViewCArrayKokkos<double>& node_coords,
+                  const DViewCArrayKokkos<double>& node_vel,
+                  DViewCArrayKokkos<double>&       elem_den,
+                  DViewCArrayKokkos<double>&       elem_pres,
+                  DViewCArrayKokkos<double>&       elem_stress,
+                  DViewCArrayKokkos<double>&       elem_sspd,
+                  const DViewCArrayKokkos<double>& elem_sie,
+                  const DViewCArrayKokkos<double>& elem_vol,
+                  const DViewCArrayKokkos<double>& elem_mass,
+                  const DViewCArrayKokkos<size_t>& elem_mat_id,
+                  const DViewCArrayKokkos<double>& elem_statev,
+                  const double                     dt,
+                  const double                     rk_alpha
+                  )
 {
     // loop over all the elements in the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -101,23 +100,22 @@ update_state(const CArrayKokkos<material_t>&  material,
     return;
 } // end method to update state
 
-void
-update_state2D(const CArrayKokkos<material_t>&  material,
-               const mesh_t&                    mesh,
-               const DViewCArrayKokkos<double>& node_coords,
-               const DViewCArrayKokkos<double>& node_vel,
-               DViewCArrayKokkos<double>&       elem_den,
-               DViewCArrayKokkos<double>&       elem_pres,
-               DViewCArrayKokkos<double>&       elem_stress,
-               DViewCArrayKokkos<double>&       elem_sspd,
-               const DViewCArrayKokkos<double>& elem_sie,
-               const DViewCArrayKokkos<double>& elem_vol,
-               const DViewCArrayKokkos<double>& elem_mass,
-               const DViewCArrayKokkos<size_t>& elem_mat_id,
-               const DViewCArrayKokkos<double>& elem_statev,
-               const double                     dt,
-               const double                     rk_alpha
-               )
+void update_state2D(const CArrayKokkos<material_t>&  material,
+                    const mesh_t&                    mesh,
+                    const DViewCArrayKokkos<double>& node_coords,
+                    const DViewCArrayKokkos<double>& node_vel,
+                    DViewCArrayKokkos<double>&       elem_den,
+                    DViewCArrayKokkos<double>&       elem_pres,
+                    DViewCArrayKokkos<double>&       elem_stress,
+                    DViewCArrayKokkos<double>&       elem_sspd,
+                    const DViewCArrayKokkos<double>& elem_sie,
+                    const DViewCArrayKokkos<double>& elem_vol,
+                    const DViewCArrayKokkos<double>& elem_mass,
+                    const DViewCArrayKokkos<size_t>& elem_mat_id,
+                    const DViewCArrayKokkos<double>& elem_statev,
+                    const double                     dt,
+                    const double                     rk_alpha
+                    )
 {
     // loop over all the elements in the mesh
     FOR_ALL(elem_gid, 0, mesh.num_elems, {

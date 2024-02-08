@@ -5,26 +5,25 @@
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 // ------------------------------------------------------------------------------
-void
-get_force_sgh(const CArrayKokkos<material_t>&  material,
-              const mesh_t&                    mesh,
-              const DViewCArrayKokkos<double>& node_coords,
-              const DViewCArrayKokkos<double>& node_vel,
-              const DViewCArrayKokkos<double>& elem_den,
-              const DViewCArrayKokkos<double>& elem_sie,
-              const DViewCArrayKokkos<double>& elem_pres,
-              const DViewCArrayKokkos<double>& elem_stress,
-              const DViewCArrayKokkos<double>& elem_sspd,
-              const DViewCArrayKokkos<double>& elem_vol,
-              const DViewCArrayKokkos<double>& elem_div,
-              const DViewCArrayKokkos<size_t>& elem_mat_id,
-              DViewCArrayKokkos<double>&       corner_force,
-              const double                     fuzz,
-              const double                     small,
-              const DViewCArrayKokkos<double>& elem_statev,
-              const double                     dt,
-              const double                     rk_alpha
-              )
+void get_force_sgh(const CArrayKokkos<material_t>&  material,
+                   const mesh_t&                    mesh,
+                   const DViewCArrayKokkos<double>& node_coords,
+                   const DViewCArrayKokkos<double>& node_vel,
+                   const DViewCArrayKokkos<double>& elem_den,
+                   const DViewCArrayKokkos<double>& elem_sie,
+                   const DViewCArrayKokkos<double>& elem_pres,
+                   const DViewCArrayKokkos<double>& elem_stress,
+                   const DViewCArrayKokkos<double>& elem_sspd,
+                   const DViewCArrayKokkos<double>& elem_vol,
+                   const DViewCArrayKokkos<double>& elem_div,
+                   const DViewCArrayKokkos<size_t>& elem_mat_id,
+                   DViewCArrayKokkos<double>&       corner_force,
+                   const double                     fuzz,
+                   const double                     small,
+                   const DViewCArrayKokkos<double>& elem_statev,
+                   const double                     dt,
+                   const double                     rk_alpha
+                   )
 {
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -374,26 +373,25 @@ get_force_sgh(const CArrayKokkos<material_t>&  material,
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 // ------------------------------------------------------------------------------
-void
-get_force_sgh2D(const CArrayKokkos<material_t>&  material,
-                const mesh_t&                    mesh,
-                const DViewCArrayKokkos<double>& node_coords,
-                const DViewCArrayKokkos<double>& node_vel,
-                const DViewCArrayKokkos<double>& elem_den,
-                const DViewCArrayKokkos<double>& elem_sie,
-                const DViewCArrayKokkos<double>& elem_pres,
-                const DViewCArrayKokkos<double>& elem_stress,
-                const DViewCArrayKokkos<double>& elem_sspd,
-                const DViewCArrayKokkos<double>& elem_vol,
-                const DViewCArrayKokkos<double>& elem_div,
-                const DViewCArrayKokkos<size_t>& elem_mat_id,
-                DViewCArrayKokkos<double>&       corner_force,
-                const double                     fuzz,
-                const double                     small,
-                const DViewCArrayKokkos<double>& elem_statev,
-                const double                     dt,
-                const double                     rk_alpha
-                )
+void get_force_sgh2D(const CArrayKokkos<material_t>&  material,
+                     const mesh_t&                    mesh,
+                     const DViewCArrayKokkos<double>& node_coords,
+                     const DViewCArrayKokkos<double>& node_vel,
+                     const DViewCArrayKokkos<double>& elem_den,
+                     const DViewCArrayKokkos<double>& elem_sie,
+                     const DViewCArrayKokkos<double>& elem_pres,
+                     const DViewCArrayKokkos<double>& elem_stress,
+                     const DViewCArrayKokkos<double>& elem_sspd,
+                     const DViewCArrayKokkos<double>& elem_vol,
+                     const DViewCArrayKokkos<double>& elem_div,
+                     const DViewCArrayKokkos<size_t>& elem_mat_id,
+                     DViewCArrayKokkos<double>&       corner_force,
+                     const double                     fuzz,
+                     const double                     small,
+                     const DViewCArrayKokkos<double>& elem_statev,
+                     const double                     dt,
+                     const double                     rk_alpha
+                     )
 {
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(elem_gid, 0, mesh.num_elems, {

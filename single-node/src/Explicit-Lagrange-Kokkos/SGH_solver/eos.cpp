@@ -7,15 +7,14 @@
 // This is the gamma-law gas eos
 // ------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void
-ideal_gas(const DViewCArrayKokkos<double>& elem_pres,
-          const DViewCArrayKokkos<double>& elem_stress,
-          const size_t                     elem_gid,
-          const size_t                     mat_id,
-          const DViewCArrayKokkos<double>& elem_state_vars,
-          const DViewCArrayKokkos<double>& elem_sspd,
-          const double                     den,
-          const double                     sie)
+void ideal_gas(const DViewCArrayKokkos<double>& elem_pres,
+               const DViewCArrayKokkos<double>& elem_stress,
+               const size_t                     elem_gid,
+               const size_t                     mat_id,
+               const DViewCArrayKokkos<double>& elem_state_vars,
+               const DViewCArrayKokkos<double>& elem_sspd,
+               const double                     den,
+               const double                     sie)
 {
     // statev(0) = gamma
     // statev(1) = minimum sound speed

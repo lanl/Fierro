@@ -18,8 +18,7 @@ struct node_t
     CArray<double> mass;
 
     // initialization method (num_rk_storage_bins, num_nodes, num_dims)
-    void
-    initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
+    void initialize(size_t num_rk, size_t num_nodes, size_t num_dims)
     {
         this->coords = CArray<double>(num_rk, num_nodes, num_dims);
         this->vel    = CArray<double>(num_rk, num_nodes, num_dims);
@@ -61,8 +60,7 @@ struct elem_t
     CArray<double> statev;
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
-    void
-    initialize(size_t num_rk, size_t num_elems, size_t num_dims)
+    void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
     {
         this->den    = CArray<double>(num_elems);
         this->pres   = CArray<double>(num_elems);
@@ -86,8 +84,7 @@ struct corner_t
     CArray<double> mass;
 
     // initialization method (num_corners, num_dims)
-    void
-    initialize(size_t num_corners, size_t num_dims)
+    void initialize(size_t num_corners, size_t num_dims)
     {
         this->force = CArray<double>(num_corners, num_dims);
         this->mass  = CArray<double>(num_corners);

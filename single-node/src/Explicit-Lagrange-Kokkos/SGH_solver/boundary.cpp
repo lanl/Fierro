@@ -6,11 +6,10 @@
 #include "mesh.h"
 #include "state.h"
 
-void
-boundary_velocity(const mesh_t&                   mesh,
-                  const CArrayKokkos<boundary_t>& boundary,
-                  DViewCArrayKokkos<double>&      node_vel,
-                  const double                    time_value)
+void boundary_velocity(const mesh_t&                   mesh,
+                       const CArrayKokkos<boundary_t>& boundary,
+                       DViewCArrayKokkos<double>&      node_vel,
+                       const double                    time_value)
 {
     // Loop over boundary sets
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++)

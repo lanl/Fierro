@@ -5,14 +5,13 @@
 // -----------------------------------------------------------------------------
 // This function saves the variables at rk_stage = 0, which is t_n
 // ------------------------------------------------------------------------------
-void
-rk_init(DViewCArrayKokkos<double>& node_coords,
-        DViewCArrayKokkos<double>& node_vel,
-        DViewCArrayKokkos<double>& elem_sie,
-        DViewCArrayKokkos<double>& elem_stress,
-        const size_t               num_dims,
-        const size_t               num_elems,
-        const size_t               num_nodes)
+void rk_init(DViewCArrayKokkos<double>& node_coords,
+             DViewCArrayKokkos<double>& node_vel,
+             DViewCArrayKokkos<double>& elem_sie,
+             DViewCArrayKokkos<double>& elem_stress,
+             const size_t               num_dims,
+             const size_t               num_elems,
+             const size_t               num_nodes)
 {
     // save elem quantities
     FOR_ALL(elem_gid, 0, num_elems, {
@@ -46,20 +45,19 @@ rk_init(DViewCArrayKokkos<double>& node_coords,
 // between any two nodes in the mesh
 // ------------------------------------------------------------------------------
 // WARNING WARNING :  Only works for 3D, 8 node elements
-void
-get_timestep(mesh_t&                    mesh,
-             DViewCArrayKokkos<double>& node_coords,
-             DViewCArrayKokkos<double>& node_vel,
-             DViewCArrayKokkos<double>& elem_sspd,
-             DViewCArrayKokkos<double>& elem_vol,
-             double                     time_value,
-             const double               graphics_time,
-             const double               time_final,
-             const double               dt_max,
-             const double               dt_min,
-             const double               dt_cfl,
-             double&                    dt,
-             const double               fuzz)
+void get_timestep(mesh_t&                    mesh,
+                  DViewCArrayKokkos<double>& node_coords,
+                  DViewCArrayKokkos<double>& node_vel,
+                  DViewCArrayKokkos<double>& elem_sspd,
+                  DViewCArrayKokkos<double>& elem_vol,
+                  double                     time_value,
+                  const double               graphics_time,
+                  const double               time_final,
+                  const double               dt_max,
+                  const double               dt_min,
+                  const double               dt_cfl,
+                  double&                    dt,
+                  const double               fuzz)
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
@@ -154,20 +152,19 @@ get_timestep(mesh_t&                    mesh,
 // between any two nodes in the mesh
 // ------------------------------------------------------------------------------
 // WARNING WARNING :  Only works for 3D, 8 node elements
-void
-get_timestep2D(mesh_t&                    mesh,
-               DViewCArrayKokkos<double>& node_coords,
-               DViewCArrayKokkos<double>& node_vel,
-               DViewCArrayKokkos<double>& elem_sspd,
-               DViewCArrayKokkos<double>& elem_vol,
-               double                     time_value,
-               const double               graphics_time,
-               const double               time_final,
-               const double               dt_max,
-               const double               dt_min,
-               const double               dt_cfl,
-               double&                    dt,
-               const double               fuzz)
+void get_timestep2D(mesh_t&                    mesh,
+                    DViewCArrayKokkos<double>& node_coords,
+                    DViewCArrayKokkos<double>& node_vel,
+                    DViewCArrayKokkos<double>& elem_sspd,
+                    DViewCArrayKokkos<double>& elem_vol,
+                    double                     time_value,
+                    const double               graphics_time,
+                    const double               time_final,
+                    const double               dt_max,
+                    const double               dt_min,
+                    const double               dt_cfl,
+                    double&                    dt,
+                    const double               fuzz)
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;

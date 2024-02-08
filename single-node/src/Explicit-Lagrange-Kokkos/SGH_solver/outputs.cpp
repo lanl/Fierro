@@ -4,22 +4,21 @@
 #include <cstring>
 #include <sys/stat.h>
 
-void
-write_outputs(const mesh_t&              mesh,
-              DViewCArrayKokkos<double>& node_coords,
-              DViewCArrayKokkos<double>& node_vel,
-              DViewCArrayKokkos<double>& node_mass,
-              DViewCArrayKokkos<double>& elem_den,
-              DViewCArrayKokkos<double>& elem_pres,
-              DViewCArrayKokkos<double>& elem_stress,
-              DViewCArrayKokkos<double>& elem_sspd,
-              DViewCArrayKokkos<double>& elem_sie,
-              DViewCArrayKokkos<double>& elem_vol,
-              DViewCArrayKokkos<double>& elem_mass,
-              DViewCArrayKokkos<size_t>& elem_mat_id,
-              CArray<double>&            graphics_times,
-              size_t&                    graphics_id,
-              const double               time_value)
+void write_outputs(const mesh_t&              mesh,
+                   DViewCArrayKokkos<double>& node_coords,
+                   DViewCArrayKokkos<double>& node_vel,
+                   DViewCArrayKokkos<double>& node_mass,
+                   DViewCArrayKokkos<double>& elem_den,
+                   DViewCArrayKokkos<double>& elem_pres,
+                   DViewCArrayKokkos<double>& elem_stress,
+                   DViewCArrayKokkos<double>& elem_sspd,
+                   DViewCArrayKokkos<double>& elem_sie,
+                   DViewCArrayKokkos<double>& elem_vol,
+                   DViewCArrayKokkos<double>& elem_mass,
+                   DViewCArrayKokkos<size_t>& elem_mat_id,
+                   CArray<double>&            graphics_times,
+                   size_t&                    graphics_id,
+                   const double               time_value)
 {
     // ---------------------------------------------------------------------
     //   t=tval ensight and state output
@@ -77,22 +76,21 @@ write_outputs(const mesh_t&              mesh,
 // This function write outs the data to an ensight case file
 // ------------------------------------------------------------------------------
 
-void
-ensight(const mesh_t&                    mesh,
-        const DViewCArrayKokkos<double>& node_coords,
-        const DViewCArrayKokkos<double>& node_vel,
-        const DViewCArrayKokkos<double>& node_mass,
-        const DViewCArrayKokkos<double>& elem_den,
-        const DViewCArrayKokkos<double>& elem_pres,
-        const DViewCArrayKokkos<double>& elem_stress,
-        const DViewCArrayKokkos<double>& elem_sspd,
-        const DViewCArrayKokkos<double>& elem_sie,
-        const DViewCArrayKokkos<double>& elem_vol,
-        const DViewCArrayKokkos<double>& elem_mass,
-        const DViewCArrayKokkos<size_t>& elem_mat_id,
-        CArray<double>&                  graphics_times,
-        size_t&                          graphics_id,
-        const double                     time_value)
+void ensight(const mesh_t&                    mesh,
+             const DViewCArrayKokkos<double>& node_coords,
+             const DViewCArrayKokkos<double>& node_vel,
+             const DViewCArrayKokkos<double>& node_mass,
+             const DViewCArrayKokkos<double>& elem_den,
+             const DViewCArrayKokkos<double>& elem_pres,
+             const DViewCArrayKokkos<double>& elem_stress,
+             const DViewCArrayKokkos<double>& elem_sspd,
+             const DViewCArrayKokkos<double>& elem_sie,
+             const DViewCArrayKokkos<double>& elem_vol,
+             const DViewCArrayKokkos<double>& elem_mass,
+             const DViewCArrayKokkos<size_t>& elem_mat_id,
+             CArray<double>&                  graphics_times,
+             size_t&                          graphics_id,
+             const double                     time_value)
 {
     const int num_scalar_vars = 9;
     const int num_vec_vars    = 2;
@@ -412,20 +410,19 @@ ensight(const mesh_t&                    mesh,
     return;
 } // end of Ensight function
 
-void
-state_file(const mesh_t&                    mesh,
-           const DViewCArrayKokkos<double>& node_coords,
-           const DViewCArrayKokkos<double>& node_vel,
-           const DViewCArrayKokkos<double>& node_mass,
-           const DViewCArrayKokkos<double>& elem_den,
-           const DViewCArrayKokkos<double>& elem_pres,
-           const DViewCArrayKokkos<double>& elem_stress,
-           const DViewCArrayKokkos<double>& elem_sspd,
-           const DViewCArrayKokkos<double>& elem_sie,
-           const DViewCArrayKokkos<double>& elem_vol,
-           const DViewCArrayKokkos<double>& elem_mass,
-           const DViewCArrayKokkos<size_t>& elem_mat_id,
-           const double                     time_value)
+void state_file(const mesh_t&                    mesh,
+                const DViewCArrayKokkos<double>& node_coords,
+                const DViewCArrayKokkos<double>& node_vel,
+                const DViewCArrayKokkos<double>& node_mass,
+                const DViewCArrayKokkos<double>& elem_den,
+                const DViewCArrayKokkos<double>& elem_pres,
+                const DViewCArrayKokkos<double>& elem_stress,
+                const DViewCArrayKokkos<double>& elem_sspd,
+                const DViewCArrayKokkos<double>& elem_sie,
+                const DViewCArrayKokkos<double>& elem_vol,
+                const DViewCArrayKokkos<double>& elem_mass,
+                const DViewCArrayKokkos<size_t>& elem_mat_id,
+                const double                     time_value)
 {
     struct stat st;
 

@@ -7,14 +7,13 @@
 // -----------------------------------------------------------------------------
 // Reads an ensight .geo mesh file
 // ------------------------------------------------------------------------------
-void
-read_mesh_ensight(char*        MESH,
-                  mesh_t&      mesh,
-                  node_t&      node,
-                  elem_t&      elem,
-                  corner_t&    corner,
-                  const size_t num_dims,
-                  const size_t rk_num_bins)
+void read_mesh_ensight(char*        MESH,
+                       mesh_t&      mesh,
+                       node_t&      node,
+                       elem_t&      elem,
+                       corner_t&    corner,
+                       const size_t num_dims,
+                       const size_t rk_num_bins)
 {
     const size_t rk_level = 0;
 

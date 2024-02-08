@@ -55,8 +55,7 @@ double small = 1.0e-8;   // single precision
 // ==============================================================================
 //    main
 // ==============================================================================
-int
-main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     // check to see of a mesh was supplied when running the code
     if (argc == 1)

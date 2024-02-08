@@ -52,8 +52,7 @@ patch 6: [4,5,6,7]  zeta-plus  dir
 
 // sort in ascending order using bubble sort
 KOKKOS_INLINE_FUNCTION
-void
-bubble_sort(size_t arr[], const size_t num)
+void bubble_sort(size_t arr[], const size_t num)
 {
     for (size_t i = 0; i < (num - 1); i++)
     {
@@ -158,8 +157,7 @@ struct mesh_t
     DCArrayKokkos<size_t> num_bdy_nodes_in_set;
 
     // initialization methods
-    void
-    initialize_nodes(const size_t num_nodes_inp)
+    void initialize_nodes(const size_t num_nodes_inp)
     {
         num_nodes = num_nodes_inp;
 
@@ -167,8 +165,7 @@ struct mesh_t
     }; // end method
 
     // initialization methods
-    void
-    initialize_elems(const size_t num_elems_inp, const size_t num_dims_inp)
+    void initialize_elems(const size_t num_elems_inp, const size_t num_dims_inp)
     {
         num_dims = num_dims_inp;
         num_nodes_in_elem = 1;
@@ -184,8 +181,7 @@ struct mesh_t
     }; // end method
 
     // initialization methods
-    void
-    initialize_corners(const size_t num_corners_inp)
+    void initialize_corners(const size_t num_corners_inp)
     {
         num_corners = num_corners_inp;
 
@@ -193,8 +189,7 @@ struct mesh_t
     }; // end method
 
     // build the corner mesh connectivity arrays
-    void
-    build_corner_connectivity()
+    void build_corner_connectivity()
     {
         num_corners_in_node = CArrayKokkos<size_t>(num_nodes); // stride sizes
 
@@ -256,8 +251,7 @@ struct mesh_t
     } // end of build_corner_connectivity
 
     // build elem connectivity arrays
-    void
-    build_elem_elem_connectivity()
+    void build_elem_elem_connectivity()
     {
         // find the max number of elems around a node
         size_t max_num_elems_in_node;
@@ -345,8 +339,7 @@ struct mesh_t
     } // end of build_elem_elem_connectivity
 
     // build the patches
-    void
-    build_patch_connectivity()
+    void build_patch_connectivity()
     {
         size_t high_order = 0;
 
@@ -696,8 +689,7 @@ struct mesh_t
     } // end patch connectivity method
 
     // build the patches
-    void
-    build_node_node_connectivity()
+    void build_node_node_connectivity()
     {
         // find the max number of elems around a node
         size_t max_num_elems_in_node;
@@ -836,8 +828,7 @@ struct mesh_t
         }); // end parallel for over nodes
     } // end of node node connectivity
 
-    void
-    init_bdy_sets(size_t num_bcs)
+    void init_bdy_sets(size_t num_bcs)
     {
         if (num_bcs == 0)
         {

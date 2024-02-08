@@ -46,25 +46,24 @@ test::setup test_problem;
 // -----------------------------------------------------------------------------
 // The user must input their parameters inside this function
 // ------------------------------------------------------------------------------
-void
-input(CArrayKokkos<material_t>& material,
-      CArrayKokkos<mat_fill_t>& mat_fill,
-      CArrayKokkos<boundary_t>& boundary,
-      CArrayKokkos<double>&     state_vars,
-      size_t&                   num_materials,
-      size_t&                   num_fills,
-      size_t&                   num_bcs,
-      size_t&                   num_dims,
-      size_t&                   max_num_state_vars,
-      double&                   dt_start,
-      double&                   time_final,
-      double&                   dt_max,
-      double&                   dt_min,
-      double&                   dt_cfl,
-      double&                   graphics_dt_ival,
-      size_t&                   graphics_cyc_ival,
-      size_t&                   cycle_stop,
-      size_t&                   rk_num_stages)
+void input(CArrayKokkos<material_t>& material,
+           CArrayKokkos<mat_fill_t>& mat_fill,
+           CArrayKokkos<boundary_t>& boundary,
+           CArrayKokkos<double>&     state_vars,
+           size_t&                   num_materials,
+           size_t&                   num_fills,
+           size_t&                   num_bcs,
+           size_t&                   num_dims,
+           size_t&                   max_num_state_vars,
+           double&                   dt_start,
+           double&                   time_final,
+           double&                   dt_max,
+           double&                   dt_min,
+           double&                   dt_cfl,
+           double&                   graphics_dt_ival,
+           size_t&                   graphics_cyc_ival,
+           size_t&                   cycle_stop,
+           size_t&                   rk_num_stages)
 {
     // Dimensions
     num_dims = 3;

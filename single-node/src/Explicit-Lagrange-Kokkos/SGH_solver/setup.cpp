@@ -50,31 +50,30 @@ std::string trim(const std::string& s);
 KOKKOS_FUNCTION
 int get_id(int i, int j, int k, int num_i, int num_j);
 
-void
-setup(const CArrayKokkos<material_t>&  material,
-      const CArrayKokkos<mat_fill_t>&  mat_fill,
-      const CArrayKokkos<boundary_t>&  boundary,
-      mesh_t&                          mesh,
-      const DViewCArrayKokkos<double>& node_coords,
-      DViewCArrayKokkos<double>&       node_vel,
-      DViewCArrayKokkos<double>&       node_mass,
-      const DViewCArrayKokkos<double>& elem_den,
-      const DViewCArrayKokkos<double>& elem_pres,
-      const DViewCArrayKokkos<double>& elem_stress,
-      const DViewCArrayKokkos<double>& elem_sspd,
-      const DViewCArrayKokkos<double>& elem_sie,
-      const DViewCArrayKokkos<double>& elem_vol,
-      const DViewCArrayKokkos<double>& elem_mass,
-      const DViewCArrayKokkos<size_t>& elem_mat_id,
-      const DViewCArrayKokkos<double>& elem_statev,
-      const CArrayKokkos<double>&      state_vars,
-      const DViewCArrayKokkos<double>& corner_mass,
-      const size_t                     num_fills,
-      const size_t                     rk_num_bins,
-      const size_t                     num_bcs,
-      const size_t                     num_materials,
-      const size_t                     num_state_vars
-      )
+void setup(const CArrayKokkos<material_t>&  material,
+           const CArrayKokkos<mat_fill_t>&  mat_fill,
+           const CArrayKokkos<boundary_t>&  boundary,
+           mesh_t&                          mesh,
+           const DViewCArrayKokkos<double>& node_coords,
+           DViewCArrayKokkos<double>&       node_vel,
+           DViewCArrayKokkos<double>&       node_mass,
+           const DViewCArrayKokkos<double>& elem_den,
+           const DViewCArrayKokkos<double>& elem_pres,
+           const DViewCArrayKokkos<double>& elem_stress,
+           const DViewCArrayKokkos<double>& elem_sspd,
+           const DViewCArrayKokkos<double>& elem_sie,
+           const DViewCArrayKokkos<double>& elem_vol,
+           const DViewCArrayKokkos<double>& elem_mass,
+           const DViewCArrayKokkos<size_t>& elem_mat_id,
+           const DViewCArrayKokkos<double>& elem_statev,
+           const CArrayKokkos<double>&      state_vars,
+           const DViewCArrayKokkos<double>& corner_mass,
+           const size_t                     num_fills,
+           const size_t                     rk_num_bins,
+           const size_t                     num_bcs,
+           const size_t                     num_materials,
+           const size_t                     num_state_vars
+           )
 {
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
@@ -520,10 +519,9 @@ setup(const CArrayKokkos<material_t>&  material,
 // set planes for tagging sub sets of boundary patches
 // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
 // val = plane value, cyl radius, sphere radius
-void
-tag_bdys(const CArrayKokkos<boundary_t>&  boundary,
-         mesh_t&                          mesh,
-         const DViewCArrayKokkos<double>& node_coords)
+void tag_bdys(const CArrayKokkos<boundary_t>&  boundary,
+              mesh_t&                          mesh,
+              const DViewCArrayKokkos<double>& node_coords)
 {
     size_t num_dims = mesh.num_dims;
 
@@ -570,12 +568,11 @@ tag_bdys(const CArrayKokkos<boundary_t>&  boundary,
 // bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell
 // val = plane value, radius, radius
 KOKKOS_FUNCTION
-size_t
-check_bdy(const size_t                     patch_gid,
-          const int                        this_bc_tag,
-          const double                     val,
-          const mesh_t&                    mesh,
-          const DViewCArrayKokkos<double>& node_coords)
+size_t check_bdy(const size_t                     patch_gid,
+                 const int                        this_bc_tag,
+                 const double                     val,
+                 const mesh_t&                    mesh,
+                 const DViewCArrayKokkos<double>& node_coords)
 {
     size_t num_dims = mesh.num_dims;
 
@@ -658,9 +655,8 @@ check_bdy(const size_t                     patch_gid,
     return is_on_bdy;
 } // end method to check bdy
 
-void
-build_boundry_node_sets(const CArrayKokkos<boundary_t>& boundary,
-                        mesh_t&                         mesh)
+void build_boundry_node_sets(const CArrayKokkos<boundary_t>& boundary,
+                             mesh_t&                         mesh)
 {
     // build boundary nodes in each boundary set
 
@@ -739,17 +735,16 @@ build_boundry_node_sets(const CArrayKokkos<boundary_t>& boundary,
 // -----------------------------------------------------------------------------
 // The function to read a voxel vtk file from Dream3d and intialize the mesh
 // ------------------------------------------------------------------------------
-void
-user_voxel_init(DCArrayKokkos<size_t>& elem_values,
-                double&                dx,
-                double&                dy,
-                double&                dz,
-                double&                orig_x,
-                double&                orig_y,
-                double&                orig_z,
-                size_t&                num_elems_i,
-                size_t&                num_elems_j,
-                size_t&                num_elems_k)
+void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
+                     double&                dx,
+                     double&                dy,
+                     double&                dz,
+                     double&                orig_x,
+                     double&                orig_y,
+                     double&                orig_z,
+                     size_t&                num_elems_i,
+                     size_t&                num_elems_j,
+                     size_t&                num_elems_k)
 {
     std::string MESH = "voxel.vtk"; // user specified
 
@@ -1049,8 +1044,7 @@ user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 } // end routine
 
 // Code from stackover flow for string delimiter parsing
-std::vector<std::string>
-split(std::string s, std::string delimiter)
+std::vector<std::string> split(std::string s, std::string delimiter)
 {
     size_t                   pos_start = 0, pos_end, delim_len = delimiter.length();
     std::string              token;
@@ -1067,8 +1061,7 @@ split(std::string s, std::string delimiter)
 } // end of split
 
 // retrieves multiple values between [ ]
-std::vector<double>
-extract_list(std::string str)
+std::vector<double> extract_list(std::string str)
 {
     // replace '[' with a space and ']' with a space
     std::replace(str.begin(), str.end(), '[', ' ');
@@ -1089,22 +1082,19 @@ extract_list(std::string str)
     return values;
 }  // end of extract_list
 
-std::string
-ltrim(const std::string& s)
+std::string ltrim(const std::string& s)
 {
     size_t start = s.find_first_not_of(WHITESPACE);
     return (start == std::string::npos) ? "" : s.substr(start);
 }
 
-std::string
-rtrim(const std::string& s)
+std::string rtrim(const std::string& s)
 {
     size_t end = s.find_last_not_of(WHITESPACE);
     return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
-std::string
-trim(const std::string& s)
+std::string trim(const std::string& s)
 {
     return rtrim(ltrim(s));
 }
@@ -1117,8 +1107,7 @@ trim(const std::string& s)
 //
 // Returns a global id for a given i,j,k
 KOKKOS_FUNCTION
-int
-get_id(int i, int j, int k, int num_i, int num_j)
+int get_id(int i, int j, int k, int num_i, int num_j)
 {
     return i + j * num_i + k * num_i * num_j;
 }
