@@ -143,7 +143,7 @@ struct strength_t {
 void init_state_vars(
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
-  const DCArrayKokkos <double> &state_vars,
+  DCArrayKokkos <double> &state_vars,
   const DCArrayKokkos <double> &global_vars,
   const DCArrayKokkos <double> &elem_user_output_vars,
   const size_t num_elems);
