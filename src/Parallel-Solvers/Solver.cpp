@@ -953,7 +953,7 @@ void Solver::read_mesh_vtk(const char *MESH){
         //read portions of the line into the substring variable
         line_parse >> substring;
         //debug print
-        std::cout<<" "<< substring <<std::endl;
+        //std::cout<<" "<< substring <<std::endl;
         //assign the substring variable as a word of the read buffer
         strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
         }
