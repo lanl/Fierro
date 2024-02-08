@@ -35,10 +35,11 @@ import paraview.simple as pvsimple
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
-import fierro_voxelizer
+#import fierro_voxelizer
 import fierro_mesh_builder
 import tempfile
 import time
+import subprocess
 
 class LocalResource:
     FILE_PATH = os.path.abspath(
@@ -80,7 +81,11 @@ class FIERRO_GUI(Ui_MainWindow):
         self.BSolverSettings.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(5))
         self.BViewResults.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(6))
         self.BGlobalMesh.clicked.connect(lambda: self.ToolSettings.setCurrentIndex(1))
-        self.VoxelResolution = (1., 1., 1.)
+
+#        self.VoxelResolution = (1., 1., 1.)
+        self.VoxelResolutionX = 1.
+        self.VoxelResolutionY = 1.
+        self.VoxelResolutionZ = 1.
         
         # Help menu
         self.actionEVPFFT_Manual.triggered.connect(openUrl)
@@ -117,6 +122,9 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.LNumberOfVoxelsZ.setEnabled(True)
                 self.INNumberOfVoxelsZ.setEnabled(True)
                 self.BVoxelizeGeometry.setEnabled(True)
+                self.BStlDimensions.setEnabled(True)
+                self.BCustomDimensions.setEnabled(True)
+                
             elif self.file_type == '.vt':
                 self.stl = pvsimple.LegacyVTKReader(FileNames = b3_filename)
                 pvsimple.SetDisplayProperties(Representation = "Surface")
@@ -134,29 +142,58 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.BVoxelizeGeometry.setEnabled(False)
             else:
                 warning_message('ERROR: Incorrect file type')
+                
             pvsimple.Show(self.stl, self.render_view)
             pvsimple.ResetCamera(view=None)
         self.BUploadGeometryFile.clicked.connect(geometry_upload_click)
         
+        # Allow for custom dimensions of stl files
+        def custom_dimensions_checked():
+            if self.BCustomDimensions.isChecked():
+                self.LLengthX.setEnabled(True)
+                self.LLengthY.setEnabled(True)
+                self.LLengthZ.setEnabled(True)
+                self.INLengthX.setEnabled(True)
+                self.INLengthY.setEnabled(True)
+                self.INLengthZ.setEnabled(True)
+            else:
+                self.LLengthX.setEnabled(False)
+                self.LLengthY.setEnabled(False)
+                self.LLengthZ.setEnabled(False)
+                self.INLengthX.setEnabled(False)
+                self.INLengthY.setEnabled(False)
+                self.INLengthZ.setEnabled(False)
+                self.INLengthX.setText("0")
+                self.INLengthY.setText("0")
+                self.INLengthZ.setText("0")
+        self.BCustomDimensions.clicked.connect(custom_dimensions_checked)
+        self.BStlDimensions.clicked.connect(custom_dimensions_checked)
+        
         # Voxelize Geometry
         def voxelize_geometry_click():
-            if not self.INNumberOfVoxelsX.text() or not self.INNumberOfVoxelsY.text() or not self.INNumberOfVoxelsZ.text():
+            if not self.INNumberOfVoxelsX.text() or not self.INNumberOfVoxelsY.text() or not self.INNumberOfVoxelsZ.text() or not self.INLengthX.text() or not self.INLengthY.text() or not self.INLengthZ.text():
                 warning_message('ERROR: Number of voxels NOT defined')
             else:
                 try:
                     self.voxel_reader
                 except:
-                    print('')
+                    # Run voxelization executable
+                    executable_path = "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/build-fierro-serial/bin/fierro-voxelizer"
+                    arguments = [b3_filename[0], VTK_OUTPUT, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
+                    command = [executable_path] + arguments
+                    process = subprocess.Popen(command)
+                    process.wait()
                 else:
+                    # Delete any previously loaded geometries
                     pvsimple.Delete(self.threshold)
                     
-                self.VoxelResolution = fierro_voxelizer.create_voxel_vtk(
-                    b3_filename[0],
-                    VTK_OUTPUT,
-                    int(self.INNumberOfVoxelsX.text()),
-                    int(self.INNumberOfVoxelsY.text()),
-                    int(self.INNumberOfVoxelsZ.text()),
-                )
+                    # Run voxelization executable
+                    executable_path = "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/build-fierro-serial/bin/fierro-voxelizer"
+                    arguments = [b3_filename[0], VTK_OUTPUT, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
+                    command = [executable_path] + arguments
+                    process = subprocess.Popen(command)
+                    process.wait()
+                    
                 # Paraview window
                 pvsimple.Delete(self.stl)
                 self.voxel_reader = pvsimple.LegacyVTKReader(FileNames = VTK_OUTPUT)
@@ -725,7 +762,9 @@ class FIERRO_GUI(Ui_MainWindow):
             evpfft_lattice_input.write(modes)
             dimensions = str(int(self.INNumberOfVoxelsX.text())) + ' ' + str(int(self.INNumberOfVoxelsY.text())) + ' ' + str(int(self.INNumberOfVoxelsZ.text())) + '               x-dim, y-dim, z-dim\n'
             evpfft_lattice_input.write(dimensions)
-            dx, dy, dz = self.VoxelResolution
+            dx = self.VoxelResolutionX
+            dy = self.VoxelResolutionY
+            dz = self.VoxelResolutionZ
             nph_delt = '2                      number of phases (nph)\n' + f'{dx:.4f} {dy:.4f} {dz:.4f}             RVE dimensions (delt)\n' + '* name and path of microstructure file (filetext)\n'
             evpfft_lattice_input.write(nph_delt)
             vtkfile = f'{VTK_OUTPUT}\n'
@@ -1110,3 +1149,4 @@ class FIERRO_GUI(Ui_MainWindow):
             message = QMessageBox()
             message.setText(msg)
             message.exec()
+

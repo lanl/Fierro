@@ -64,7 +64,7 @@ setup(
     python_requires='>=3.8',
     author='Kevin Welsh',
     author_email='kwelsh@lanl.gov',
-    version='0.1',
+    version='0.2',
     description='',
     include_package_data=True,
     install_requires=install_requires,

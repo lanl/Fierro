@@ -9,8 +9,8 @@ dynamic_options:
 mesh_generation_options:
   type: Box
   origin: [0, 0, 0]
-  length: [1.2, 1.2, 1.2]
-  num_elems: [32, 32, 32]
+  length: [30, 30, 30]
+  num_elems: [30, 30, 30]
 
 output_options:
   timer_output_level: thorough
@@ -22,39 +22,39 @@ fea_module_parameters:
     material_id: 0
     boundary_conditions:
       # Tag X plane
-      - surface: 
+      - surface:
           type: x_plane
           plane_position: 0.0
         type: reflected
                 
         # Tag Y plane
-      - surface: 
+      - surface:
           type: y_plane
           plane_position: 0.0
         type: reflected
                 
         # Tag Z plane
-      - surface: 
+      - surface:
           type: z_plane
           plane_position: 0.0
         type: reflected
                 
         # Tag X plane
-      - surface: 
+      - surface:
           type: x_plane
-          plane_position: 1.2
+          plane_position: 30
         type: reflected
                 
         # Tag Y plane
-      - surface: 
+      - surface:
           type: y_plane
-          plane_position: 1.2
+          plane_position: 30
         type: reflected
                 
         # Tag Z plane
-      - surface: 
+      - surface:
           type: z_plane
-          plane_position: 1.2
+          plane_position: 30
         type: reflected
 
 materials:
@@ -64,7 +64,7 @@ materials:
     elastic_modulus: 10
     poisson_ratio: 0.3
     q1: 1.0
-    q2: 0
+    q2: 1.3333
     q1ex: 1.0
     q2ex: 0.0
     global_vars:
@@ -73,24 +73,46 @@ materials:
       - 1.0
 
 regions:
-  - volume: 
+  - volume:
       type: global
     material_id: 0
     den: 1.0
-    sie: 1.e-10
+    sie: 1.0e-10
         
     velocity: cartesian
     u: 0.0
     v: 0.0
     w: 0.0
+    
     # energy source initial conditions
-  - volume: 
-      type: sphere
-      radius1: 0.0
-      radius2: 0.0375
+#  - volume:
+#      type: sphere
+#      radius1: 0.0
+#      radius2: 0.0375
+#    material_id: 0
+#    den: 1.0
+#    ie: 0.25833839995946534
+
+  - volume:
+      type: stl_to_voxel
+      stl_file_path: "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/stl_files/Bunny.stl"
+      num_voxel_x: 30
+      num_voxel_y: 30
+      num_voxel_z: 30
+      orig_x: 0
+      orig_y: 0
+      orig_z: 0
+      length_x: 30
+      length_y: 30
+      length_z: 30
     material_id: 0
     den: 1.0
-    ie: 0.25833839995946534
+    sie: 935.61
+    
+    
+#    x1, x2, y1, y2, z1, z2, filename, num_voxel_x, num_voxel_y, num_voxel_z
+
+
         
     velocity: cartesian
     u: 0.0

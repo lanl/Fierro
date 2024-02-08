@@ -7,7 +7,6 @@
 // This function evolves the velocity at the nodes of the mesh
 //------------------------------------------------------------------------------
 void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
-                         const mesh_t &mesh,
                          DViewCArrayKokkos <double> &node_vel,
                          const DViewCArrayKokkos <double> &node_mass,
                          const DViewCArrayKokkos <double> &corner_force
@@ -216,7 +215,6 @@ void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos <double> &vel_grad,
 // This subroutine to calculate the velocity divergence in all elements
 //------------------------------------------------------------------------------
 void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
-                    const mesh_t mesh,
                     const DViewCArrayKokkos <double> &node_coords,
                     const DViewCArrayKokkos <double> &node_vel,
                     const DViewCArrayKokkos <double> &elem_vol
@@ -296,7 +294,6 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos <double> &elem_div,
 // This subroutine to calculate the velocity divergence in all elements
 //------------------------------------------------------------------------------
 void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos <double> &elem_div,
-                      const mesh_t mesh,
                       const DViewCArrayKokkos <double> &node_coords,
                       const DViewCArrayKokkos <double> &node_vel,
                       const DViewCArrayKokkos <double> &elem_vol

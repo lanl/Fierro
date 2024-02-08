@@ -1126,6 +1126,11 @@ void FEA_Module_SGH::setup(){
     
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++){
+        
+        // if volume is defined by an stl file, voxelize it
+        if (mat_fill(f_id).volume.type == VOLUME_TYPE::stl_to_voxel) {
+            mat_fill(f_id).volume.stl_to_voxel();
+        }
             
         // parallel loop over elements in mesh
         //for (size_t elem_gid = 0; elem_gid <= rnum_elem; elem_gid++) {
@@ -2018,14 +2023,12 @@ void FEA_Module_SGH::sgh_solve(){
             // ---- Calculate velocity diveregence for the element ----
             if(num_dim==2){
                 get_divergence2D(elem_div,
-                                 *mesh,
                                  node_coords,
                                  node_vel,
                                  elem_vol);
             }
             else {
                 get_divergence(elem_div,
-                               *mesh,
                                node_coords,
                                node_vel,
                                elem_vol);
@@ -2104,7 +2107,6 @@ void FEA_Module_SGH::sgh_solve(){
 
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
-                              *mesh,
                               node_vel,
                               node_mass,
                               corner_force);

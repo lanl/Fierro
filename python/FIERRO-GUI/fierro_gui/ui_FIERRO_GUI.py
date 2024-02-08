@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUItLLwnt.ui'
+## Form generated from reading UI file 'FIERRO_GUIOOgkEj.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -20,9 +20,9 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QForm
     QFrame, QGridLayout, QHBoxLayout, QHeaderView,
     QLabel, QLineEdit, QMainWindow, QMenu,
     QMenuBar, QPlainTextEdit, QProgressBar, QPushButton,
-    QSizePolicy, QSpacerItem, QSplitter, QStackedWidget,
-    QStatusBar, QTabWidget, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget)
+    QRadioButton, QSizePolicy, QSpacerItem, QSplitter,
+    QStackedWidget, QStatusBar, QTabWidget, QTableWidget,
+    QTableWidgetItem, QVBoxLayout, QWidget)
 import IconResourceFile_rc
 
 class Ui_MainWindow(object):
@@ -1282,6 +1282,75 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_15.addWidget(self.GeometryInputs)
 
+        self.Dimensions = QFrame(self.GeometryInformationTool)
+        self.Dimensions.setObjectName(u"Dimensions")
+        self.Dimensions.setFrameShape(QFrame.NoFrame)
+        self.Dimensions.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_15 = QHBoxLayout(self.Dimensions)
+        self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
+        self.horizontalLayout_15.setContentsMargins(-1, 0, -1, 0)
+        self.BStlDimensions = QRadioButton(self.Dimensions)
+        self.BStlDimensions.setObjectName(u"BStlDimensions")
+        self.BStlDimensions.setEnabled(False)
+        self.BStlDimensions.setChecked(True)
+
+        self.horizontalLayout_15.addWidget(self.BStlDimensions)
+
+        self.BCustomDimensions = QRadioButton(self.Dimensions)
+        self.BCustomDimensions.setObjectName(u"BCustomDimensions")
+        self.BCustomDimensions.setEnabled(False)
+
+        self.horizontalLayout_15.addWidget(self.BCustomDimensions)
+
+
+        self.verticalLayout_15.addWidget(self.Dimensions, 0, Qt.AlignHCenter)
+
+        self.Lengths = QFrame(self.GeometryInformationTool)
+        self.Lengths.setObjectName(u"Lengths")
+        self.Lengths.setFrameShape(QFrame.NoFrame)
+        self.Lengths.setFrameShadow(QFrame.Raised)
+        self.formLayout_10 = QFormLayout(self.Lengths)
+        self.formLayout_10.setObjectName(u"formLayout_10")
+        self.formLayout_10.setContentsMargins(-1, 0, -1, 0)
+        self.LLengthX = QLabel(self.Lengths)
+        self.LLengthX.setObjectName(u"LLengthX")
+        self.LLengthX.setEnabled(False)
+
+        self.formLayout_10.setWidget(0, QFormLayout.LabelRole, self.LLengthX)
+
+        self.INLengthX = QLineEdit(self.Lengths)
+        self.INLengthX.setObjectName(u"INLengthX")
+        self.INLengthX.setEnabled(False)
+
+        self.formLayout_10.setWidget(0, QFormLayout.FieldRole, self.INLengthX)
+
+        self.LLengthY = QLabel(self.Lengths)
+        self.LLengthY.setObjectName(u"LLengthY")
+        self.LLengthY.setEnabled(False)
+
+        self.formLayout_10.setWidget(1, QFormLayout.LabelRole, self.LLengthY)
+
+        self.INLengthY = QLineEdit(self.Lengths)
+        self.INLengthY.setObjectName(u"INLengthY")
+        self.INLengthY.setEnabled(False)
+
+        self.formLayout_10.setWidget(1, QFormLayout.FieldRole, self.INLengthY)
+
+        self.LLengthZ = QLabel(self.Lengths)
+        self.LLengthZ.setObjectName(u"LLengthZ")
+        self.LLengthZ.setEnabled(False)
+
+        self.formLayout_10.setWidget(2, QFormLayout.LabelRole, self.LLengthZ)
+
+        self.INLengthZ = QLineEdit(self.Lengths)
+        self.INLengthZ.setObjectName(u"INLengthZ")
+        self.INLengthZ.setEnabled(False)
+
+        self.formLayout_10.setWidget(2, QFormLayout.FieldRole, self.INLengthZ)
+
+
+        self.verticalLayout_15.addWidget(self.Lengths)
+
         self.BVoxelizeGeometry = QPushButton(self.GeometryInformationTool)
         self.BVoxelizeGeometry.setObjectName(u"BVoxelizeGeometry")
         self.BVoxelizeGeometry.setEnabled(False)
@@ -2285,6 +2354,14 @@ class Ui_MainWindow(object):
         self.LNumberOfVoxelsX.setText(QCoreApplication.translate("MainWindow", u"Number of voxels x: ", None))
         self.LNumberOfVoxelsY.setText(QCoreApplication.translate("MainWindow", u"Number of voxels y: ", None))
         self.LNumberOfVoxelsZ.setText(QCoreApplication.translate("MainWindow", u"Number of voxels z: ", None))
+        self.BStlDimensions.setText(QCoreApplication.translate("MainWindow", u"stl dimensions", None))
+        self.BCustomDimensions.setText(QCoreApplication.translate("MainWindow", u"custom dimensions", None))
+        self.LLengthX.setText(QCoreApplication.translate("MainWindow", u"Length x:", None))
+        self.INLengthX.setText(QCoreApplication.translate("MainWindow", u"0", None))
+        self.LLengthY.setText(QCoreApplication.translate("MainWindow", u"Length y:", None))
+        self.INLengthY.setText(QCoreApplication.translate("MainWindow", u"0", None))
+        self.LLengthZ.setText(QCoreApplication.translate("MainWindow", u"Length z:", None))
+        self.INLengthZ.setText(QCoreApplication.translate("MainWindow", u"0", None))
         self.BVoxelizeGeometry.setText(QCoreApplication.translate("MainWindow", u"Voxelize Geometry", None))
         self.LDefineMaterials.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; text-decoration: underline;\">DEFINE MATERIALS</span></p></body></html>", None))
         self.LMaterialName.setText(QCoreApplication.translate("MainWindow", u"Name:", None))

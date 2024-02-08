@@ -17,14 +17,13 @@
 using namespace mtr; // matar namespace
 
 // Functions used within MAIN
-std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(const char* stl_file_path); // BINARY STL READER FUNCTION
-void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ, CArray<float> &normal, CArray<float> &v1X, CArray<float> &v1Y, CArray<float> &v1Z, CArray<float> &v2X, CArray<float> &v2Y, CArray<float> &v2Z, CArray<float> &v3X, CArray<float> &v3Y, CArray<float> &v3Z, unsigned int &n_facets, CArray<float> &nodex, CArray<float> &nodey, CArray<float> &nodez); // VOXELIZATION FUNCTION
+std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(std::string stl_file_path); // BINARY STL READER FUNCTION
+void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ, CArray<float> &normal, CArray<float> &v1X, CArray<float> &v1Y, CArray<float> &v1Z, CArray<float> &v2X, CArray<float> &v2Y, CArray<float> &v2Z, CArray<float> &v3X, CArray<float> &v3Y, CArray<float> &v3Z, unsigned int &n_facets, double &voxel_dx, double &voxel_dy, double &voxel_dz); // VOXELIZATION FUNCTION
 
 // ==============================================================
 // ---------------------------- MAIN ----------------------------
 // ==============================================================
-int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_path,
-                                int gridX, int gridY, int gridZ) {
+std::tuple<CArray<bool>, double, double, double> Voxelizer::create_voxel_vtk(std::string stl_file_path, std::string vtk_file_path, int gridX, int gridY, int gridZ, double length_x, double length_y, double length_z) {
     
 //    Kokkos::initialize(argc, argv);
 //    {
@@ -32,8 +31,8 @@ int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_
         auto start = std::chrono::high_resolution_clock::now();
             
         // ***** USER-DEFINED INPUTS *****
-        //const char* stl_file_path = argv[1]; // location of BINARY "stl" file
-        //const char* vtk_file_path = argv[2];
+        //std::string stl_file_path = argv[1]; // location of BINARY "stl" file
+        //std::string vtk_file_path = argv[2];
         //int gridX = atoi(argv[3]); // voxel resolution x-direction
         //int gridY = atoi(argv[4]); // voxel resolution y-direction
         //int gridZ = atoi(argv[5]); // voxel resolution z-direction
@@ -53,9 +52,10 @@ int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_
 //        Kokkos::fence();
         
         // Voxelize the part in the x,y,z directions
-        CArray<float> nodex;
-        CArray<float> nodey;
-        CArray<float> nodez;
+        double voxel_dx;
+        double voxel_dy;
+        double voxel_dz;
+    
         // X-direction voxelization
         CArray<bool> gridOUTPUTX(gridY+2,gridZ+2,gridX+2);
         FOR_LOOP (i, 0, gridY+2,
@@ -64,7 +64,7 @@ int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_
             gridOUTPUTX(i,j,k) = 0;
         });
 //        Kokkos::fence();
-        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, nodex, nodey, nodez);
+        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz);
         // Y-direction voxelization
         CArray<bool> gridOUTPUTY(gridZ+2,gridX+2,gridY+2);
         FOR_LOOP (i, 0, gridZ+2,
@@ -73,7 +73,7 @@ int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_
             gridOUTPUTY(i,j,k) = 0;
         });
 //        Kokkos::fence();
-        main_function(gridOUTPUTY, gridZ, gridX, gridY, normal, v1Z, v1X, v1Y, v2Z, v2X, v2Y, v3Z, v3X, v3Y, n_facets, nodex, nodey, nodez);
+        main_function(gridOUTPUTY, gridZ, gridX, gridY, normal, v1Z, v1X, v1Y, v2Z, v2X, v2Y, v3Z, v3X, v3Y, n_facets, voxel_dx, voxel_dy, voxel_dz);
         
         // Z-direction voxelization
         CArray<bool> gridOUTPUTZ(gridX+2,gridY+2,gridZ+2);
@@ -83,7 +83,7 @@ int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_
             gridOUTPUTZ(i,j,k) = 0;
         });
 //        Kokkos::fence();
-        main_function(gridOUTPUTZ, gridX, gridY, gridZ, normal, v1X, v1Y, v1Z, v2X, v2Y, v2Z, v3X, v3Y, v3Z, n_facets, nodex, nodey, nodez);
+        main_function(gridOUTPUTZ, gridX, gridY, gridZ, normal, v1X, v1Y, v1Z, v2X, v2Y, v2Z, v3X, v3Y, v3Z, n_facets, voxel_dx, voxel_dy, voxel_dz);
 
         // Sum the voxelization in the XYZ-directions
         CArray<int> TOTgrid(gridX+2,gridY+2,gridZ+2);
@@ -102,8 +102,15 @@ int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_
 //        Kokkos::fence();
 
         // VTK WRITER
+        if (length_x*length_y*length_z > 0) {
+            voxel_dx = length_x/gridX;
+            voxel_dy = length_y/gridY;
+            voxel_dz = length_z/gridZ;
+        }
+    
         int i,j,k;
-        auto out=fopen(vtk_file_path,"w"); // open the file
+        const char* cvtk_file_path = vtk_file_path.c_str(); // convert std::string to C-style string
+        auto out=std::fopen(cvtk_file_path,"w"); // open the file
 
         fprintf(out,"# vtk DataFile Version 3.0\n"); // write the header
         fprintf(out,"Header\n");
@@ -113,15 +120,15 @@ int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_
         
         fprintf(out,"X_COORDINATES %d float\n", gridX+1); // nodal x coordinates
         for (i=0; i<(gridX+1); i++) {
-            fprintf(out,"%f ",double(i));
+            fprintf(out,"%lf ",double(i)*double(voxel_dx));
         }
         fprintf(out,"\nY_COORDINATES %d float\n", gridY+1); // nodal y coordinates
         for (i=0; i<(gridY+1); i++) {
-            fprintf(out,"%f ",double(i));
+            fprintf(out,"%lf ",double(i)*double(voxel_dy));
         }
         fprintf(out,"\nZ_COORDINATES %d float\n", gridZ+1); // nodal z coordinates
         for (i=0; i<(gridZ+1); i++) {
-            fprintf(out,"%f ",double(i));
+            fprintf(out,"%lf ",double(i)*double(voxel_dz));
         }
         
         fprintf(out,"\n\nCELL_DATA %d\n",gridX*gridY*gridZ); // material (1) or void (0) region definition
@@ -149,7 +156,143 @@ int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_
     printf("\nfinished\n\n");
     
     
-    return 0;
+    return {OUTPUTgrid, voxel_dx, voxel_dy, voxel_dz};
+}
+
+std::tuple<double, double, double> Voxelizer::create_voxel_vtk_GUI(std::string stl_file_path, std::string vtk_file_path, int gridX, int gridY, int gridZ, double length_x, double length_y, double length_z) {
+    
+//    Kokkos::initialize(argc, argv);
+//    {
+        // Start Clock
+        auto start = std::chrono::high_resolution_clock::now();
+            
+        // ***** USER-DEFINED INPUTS *****
+        //std::string stl_file_path = argv[1]; // location of BINARY "stl" file
+        //std::string vtk_file_path = argv[2];
+        //int gridX = atoi(argv[3]); // voxel resolution x-direction
+        //int gridY = atoi(argv[4]); // voxel resolution y-direction
+        //int gridZ = atoi(argv[5]); // voxel resolution z-direction
+        
+        // Read the stl file
+        auto [normal, v1X, v1Y, v1Z, v2X, v2Y, v2Z, v3X, v3Y, v3Z, n_facets] = binary_stl_reader(stl_file_path);
+        
+//        v1X.update_device();
+//        v1Y.update_device();
+//        v1Z.update_device();
+//        v2X.update_device();
+//        v2Y.update_device();
+//        v2Z.update_device();
+//        v3X.update_device();
+//        v3Y.update_device();
+//        v3Z.update_device();
+//        Kokkos::fence();
+        
+        // Voxelize the part in the x,y,z directions
+        double voxel_dx;
+        double voxel_dy;
+        double voxel_dz;
+    
+        // X-direction voxelization
+        CArray<bool> gridOUTPUTX(gridY+2,gridZ+2,gridX+2);
+        FOR_LOOP (i, 0, gridY+2,
+                 j, 0, gridZ+2,
+                 k, 0, gridX+2,{
+            gridOUTPUTX(i,j,k) = 0;
+        });
+//        Kokkos::fence();
+        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz);
+        // Y-direction voxelization
+        CArray<bool> gridOUTPUTY(gridZ+2,gridX+2,gridY+2);
+        FOR_LOOP (i, 0, gridZ+2,
+                 j, 0, gridX+2,
+                 k, 0, gridY+2,{
+            gridOUTPUTY(i,j,k) = 0;
+        });
+//        Kokkos::fence();
+        main_function(gridOUTPUTY, gridZ, gridX, gridY, normal, v1Z, v1X, v1Y, v2Z, v2X, v2Y, v3Z, v3X, v3Y, n_facets, voxel_dx, voxel_dy, voxel_dz);
+        
+        // Z-direction voxelization
+        CArray<bool> gridOUTPUTZ(gridX+2,gridY+2,gridZ+2);
+        FOR_LOOP (i, 0, gridX+2,
+                 j, 0, gridY+2,
+                 k, 0, gridZ+2,{
+            gridOUTPUTZ(i,j,k) = 0;
+        });
+//        Kokkos::fence();
+        main_function(gridOUTPUTZ, gridX, gridY, gridZ, normal, v1X, v1Y, v1Z, v2X, v2Y, v2Z, v3X, v3Y, v3Z, n_facets, voxel_dx, voxel_dy, voxel_dz);
+
+        // Sum the voxelization in the XYZ-directions
+        CArray<int> TOTgrid(gridX+2,gridY+2,gridZ+2);
+        FOR_LOOP(i,0,gridX+2,
+                j,0,gridY+2,
+                k,0,gridZ+2,{
+            TOTgrid(i,j,k) = gridOUTPUTX(j,k,i) + gridOUTPUTY(k,i,j) + gridOUTPUTZ(i,j,k);
+        });
+//        Kokkos::fence();
+        CArray<bool> OUTPUTgrid(gridZ,gridY,gridX);
+        FOR_LOOP(i,1,gridX+1,
+                j,1,gridY+1,
+                k,1,gridZ+1,{
+            OUTPUTgrid(k-1,j-1,i-1) = TOTgrid(i,j,k)>=2;
+        });
+//        Kokkos::fence();
+
+        // VTK WRITER
+        if (length_x*length_y*length_z > 0) {
+            voxel_dx = length_x/gridX;
+            voxel_dy = length_y/gridY;
+            voxel_dz = length_z/gridZ;
+        }
+    
+        int i,j,k;
+        const char* cvtk_file_path = vtk_file_path.c_str(); // convert std::string to C-style string
+        auto out=std::fopen(cvtk_file_path,"w"); // open the file
+
+        fprintf(out,"# vtk DataFile Version 3.0\n"); // write the header
+        fprintf(out,"Header\n");
+        fprintf(out,"ASCII\n");
+        fprintf(out,"DATASET RECTILINEAR_GRID\n");
+        fprintf(out,"DIMENSIONS %d %d %d\n",gridX+1,gridY+1,gridZ+1);
+        
+        fprintf(out,"X_COORDINATES %d float\n", gridX+1); // nodal x coordinates
+        for (i=0; i<(gridX+1); i++) {
+            fprintf(out,"%lf ",double(i)*double(voxel_dx));
+        }
+        fprintf(out,"\nY_COORDINATES %d float\n", gridY+1); // nodal y coordinates
+        for (i=0; i<(gridY+1); i++) {
+            fprintf(out,"%lf ",double(i)*double(voxel_dy));
+        }
+        fprintf(out,"\nZ_COORDINATES %d float\n", gridZ+1); // nodal z coordinates
+        for (i=0; i<(gridZ+1); i++) {
+            fprintf(out,"%lf ",double(i)*double(voxel_dz));
+        }
+        
+        fprintf(out,"\n\nCELL_DATA %d\n",gridX*gridY*gridZ); // material (1) or void (0) region definition
+        fprintf(out,"SCALARS density float 1\n");
+        fprintf(out,"LOOKUP_TABLE default\n");
+        for (i=0;i<gridZ;i++){
+            for (j=0;j<gridY;j++){
+                for (k=0;k<gridX;k++){
+                    fprintf(out,"%d ",OUTPUTgrid(i,j,k));
+                }
+            }
+        }
+
+        fclose(out);
+        
+        // END CLOCK
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop-start);
+        std::cout << "Total Time: " << duration.count() << " milliseconds" << std::endl;
+
+//    } // end of kokkos scope
+
+//    Kokkos::finalize();
+
+    printf("\nfinished\n\n");
+    
+    
+    return {voxel_dx, voxel_dy, voxel_dz};
 }
 
 
@@ -161,9 +304,9 @@ int Voxelizer::create_voxel_vtk(const char* stl_file_path, const char* vtk_file_
 // ==============================================================
 
 // BINARY STL READER - (Note: it can ONLY read binary stl files)
-std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(const char* stl_file_path){
+std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(std::string stl_file_path){
     // Open the binary file
-    const char* filename = stl_file_path;
+    std::string filename = stl_file_path;
     auto input = std::ifstream{filename, std::ifstream::in | std::ifstream::binary};
     
     // Check that the file is actually open
@@ -244,7 +387,7 @@ std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<fl
 }
 
 // VOXELIZATION FUNCTION
-void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ, CArray<float> &normal, CArray<float> &v1X, CArray<float> &v1Y, CArray<float> &v1Z, CArray<float> &v2X, CArray<float> &v2Y, CArray<float> &v2Z, CArray<float> &v3X, CArray<float> &v3Y, CArray<float> &v3Z, unsigned int &n_facets, CArray<float> &nodex, CArray<float> &nodey, CArray<float> &nodez){
+void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ, CArray<float> &normal, CArray<float> &v1X, CArray<float> &v1Y, CArray<float> &v1Z, CArray<float> &v2X, CArray<float> &v2Y, CArray<float> &v2Z, CArray<float> &v3X, CArray<float> &v3Y, CArray<float> &v3Z, unsigned int &n_facets, double &voxel_dx, double &voxel_dy, double &voxel_dz){
     // Find the global maximum and minimum values of the mesh
     float meshXmax;
     float meshXmin;
@@ -333,42 +476,39 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
 //    Kokkos::fence();
 
     // Define the grid that the voxel mesh will be generated on
-    float voxwidth;
+//    float voxwidth;
     
     // Voxel grid x-direction
-    voxwidth = (meshXmax-meshXmin)/(gridX+0.5);
+    voxel_dx = (meshXmax-meshXmin)/(gridX);
     int elx = gridX+2;
     CArray<float> gridCOx(elx+1);
     gridCOx(0) = meshXmin;
     gridCOx(elx) = meshXmax;
     FOR_LOOP (i, 0, elx-1, {
-        gridCOx(i+1) = (meshXmin+(voxwidth/2)) + voxwidth*i;
+        gridCOx(i+1) = (meshXmin+(voxel_dx/2)) + voxel_dx*i;
     });
-    nodex = gridCOx;
 //    Kokkos::fence();
 
     // Voxel grid y-direction
-    voxwidth = (meshYmax-meshYmin)/(gridY+0.5);
+    voxel_dy = (meshYmax-meshYmin)/(gridY);
     int ely = gridY+2;
     CArray<float> gridCOy(ely+1);
     gridCOy(0) = meshYmin;
     gridCOy(ely) = meshYmax;
     FOR_LOOP(i, 0, ely-1, {
-        gridCOy(i+1) = (meshYmin+(voxwidth/2)) + voxwidth*i;
+        gridCOy(i+1) = (meshYmin+(voxel_dy/2)) + voxel_dy*i;
     });
-    nodey = gridCOy;
 //    Kokkos::fence();
 
     // Voxel grid z-direction
-    voxwidth = (meshZmax-meshZmin)/(gridZ+0.5);
+    voxel_dz = (meshZmax-meshZmin)/(gridZ);
     int elz = gridZ+2;
     CArray<float> gridCOz(elz+1);
     gridCOz(0) = meshZmin;
     gridCOz(elz) = meshZmax;
     FOR_LOOP(i, 0, elz-1, {
-        gridCOz(i+1) = (meshZmin+(voxwidth/2)) + voxwidth*i;
+        gridCOz(i+1) = (meshZmin+(voxel_dz/2)) + voxel_dz*i;
     });
-    nodez = gridCOz;
 //    Kokkos::fence();
 
     // Z-DIRECTIONAL RAY EXECUTION

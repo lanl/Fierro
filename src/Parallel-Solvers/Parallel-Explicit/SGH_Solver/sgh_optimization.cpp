@@ -588,14 +588,12 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       // ---- Calculate velocity diveregence for the element ----
       if(num_dim==2){
           get_divergence2D(elem_div,
-                          *mesh,
                           node_coords,
                           node_vel,
                           elem_vol);
       }
       else {
           get_divergence(elem_div,
-                        *mesh,
                         node_coords,
                         node_vel,
                         elem_vol);
