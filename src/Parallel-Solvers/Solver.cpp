@@ -249,6 +249,9 @@ void Solver::read_mesh_ensight(const char *MESH){
   size_t read_index_start, node_rid, elem_gid;
   GO node_gid;
   real_t dof_value;
+  bool zero_index_base = input_options.zero_index_base;
+  int negative_index_found = 0;
+  int global_negative_index_found = 0;
   //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
   //read the mesh
@@ -631,11 +634,25 @@ void Solver::read_mesh_ensight(const char *MESH){
         //as we loop through the nodes belonging to this element we store them
         //if any of these nodes belongs to this rank this list is used to store the element locally
         node_gid = atoi(&read_buffer(scan_loop,inode,0));
-        node_store(inode) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        if(zero_index_base)
+          node_store(inode) = node_gid; //subtract 1 since file index start is 1 but code expects 0
+        else
+          node_store(inode) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        if(node_store(inode) < 0){
+          negative_index_found = 1;
+        }
         //first we add the elements to a dynamically allocated list
-        if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
-          assign_flag = 1;
-          rnum_elem++;
+        if(zero_index_base){
+          if(map->isNodeGlobalElement(node_gid)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
+        }
+        else{
+          if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
         }
       }
 
@@ -724,21 +741,32 @@ void Solver::read_mesh_ensight(const char *MESH){
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    for(int inode = 0; inode < elem_words_per_line; inode++)
+    for(int inode = 0; inode < elem_words_per_line; inode++){
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
+    }
 
   //view storage for all local elements connected to local nodes on this rank
   //DCArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
   Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
+  for(int ielem = 0; ielem < rnum_elem; ielem++){
     All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
-
+    if(global_indices_temp[ielem]<0){
+      negative_index_found = 1;
+    }
+  }
+  
+  MPI_Allreduce(&negative_index_found,&global_negative_index_found,1,MPI_INT,MPI_MAX,MPI_COMM_WORLD);
+  if(global_negative_index_found){
+    if(myrank==0){
+    std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+    }
+    exit_solver(0);
+  }
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
   std::vector<size_t>().swap(global_indices_temp);
   
-  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
   All_Element_Global_Indices.modify_host();
   All_Element_Global_Indices.sync_device();
 
@@ -753,6 +781,7 @@ void Solver::read_mesh_ensight(const char *MESH){
   }
   */
 
+  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
   all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
 
   //element type selection (subject to change)
@@ -846,6 +875,8 @@ void Solver::read_mesh_vtk(const char *MESH){
   GO node_gid;
   real_t dof_value;
   bool zero_index_base = input_options.zero_index_base;
+  int negative_index_found = 0;
+  int global_negative_index_found = 0;
   //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
   //read the mesh
@@ -1162,6 +1193,9 @@ void Solver::read_mesh_vtk(const char *MESH){
           node_store(inode) = node_gid; //subtract 1 since file index start is 1 but code expects 0
         else
           node_store(inode) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        if(node_store(inode) < 0){
+          negative_index_found = 1;
+        }
         //first we add the elements to a dynamically allocated list
         if(zero_index_base){
           if(map->isNodeGlobalElement(node_gid)&&!assign_flag){
@@ -1263,21 +1297,33 @@ void Solver::read_mesh_vtk(const char *MESH){
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    for(int inode = 0; inode < elem_words_per_line; inode++)
+    for(int inode = 0; inode < elem_words_per_line; inode++){
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
+    }
 
   //view storage for all local elements connected to local nodes on this rank
   //DCArrayKokkos<GO, array_layout, device_type, memory_traits> All_Element_Global_Indices(rnum_elem);
   Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
+  for(int ielem = 0; ielem < rnum_elem; ielem++){
     All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
+    if(global_indices_temp[ielem]<0){
+      negative_index_found = 1;
+    }
+  }
+  
+  MPI_Allreduce(&negative_index_found,&global_negative_index_found,1,MPI_INT,MPI_MAX,MPI_COMM_WORLD);
+  if(global_negative_index_found){
+    if(myrank==0){
+    std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+    }
+    exit_solver(0);
+  }
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
   std::vector<size_t>().swap(global_indices_temp);
   
-  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
   All_Element_Global_Indices.modify_host();
   All_Element_Global_Indices.sync_device();
 
@@ -1292,6 +1338,7 @@ void Solver::read_mesh_vtk(const char *MESH){
   }
   */
 
+  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
   all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
 
   //element type selection (subject to change)
@@ -1384,6 +1431,9 @@ void Solver::read_mesh_tecplot(const char *MESH){
   GO node_gid;
   real_t dof_value;
   host_vec_array node_densities;
+  bool zero_index_base = input_options.zero_index_base;
+  int negative_index_found = 0;
+  int global_negative_index_found = 0;
   //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
   //read the mesh
@@ -1663,11 +1713,25 @@ void Solver::read_mesh_tecplot(const char *MESH){
         //as we loop through the nodes belonging to this element we store them
         //if any of these nodes belongs to this rank this list is used to store the element locally
         node_gid = atoi(&read_buffer(scan_loop,inode,0));
-        node_store(inode) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        if(zero_index_base)
+          node_store(inode) = node_gid; //subtract 1 since file index start is 1 but code expects 0
+        else
+          node_store(inode) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        if(node_store(inode) < 0){
+          negative_index_found = 1;
+        }
         //first we add the elements to a dynamically allocated list
-        if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
-          assign_flag = 1;
-          rnum_elem++;
+        if(zero_index_base){
+          if(map->isNodeGlobalElement(node_gid)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
+        }
+        else{
+          if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
         }
       }
 
@@ -1752,23 +1816,36 @@ void Solver::read_mesh_tecplot(const char *MESH){
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    for(int inode = 0; inode < elem_words_per_line; inode++)
+    for(int inode = 0; inode < elem_words_per_line; inode++){
       nodes_in_elem(ielem, inode) = element_temp[ielem*elem_words_per_line + inode];
+    }
 
   //view storage for all local elements connected to local nodes on this rank
   Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
+  for(int ielem = 0; ielem < rnum_elem; ielem++){
     All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
+    if(global_indices_temp[ielem]<0){
+      negative_index_found = 1;
+    }
+  }
+  
+  MPI_Allreduce(&negative_index_found,&global_negative_index_found,1,MPI_INT,MPI_MAX,MPI_COMM_WORLD);
+  if(global_negative_index_found){
+    if(myrank==0){
+    std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+    }
+    exit_solver(0);
+  }
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
   std::vector<size_t>().swap(global_indices_temp);
   
-  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
   All_Element_Global_Indices.modify_host();
   All_Element_Global_Indices.sync_device();
 
+  //construct overlapping element map (since different ranks can own the same elements due to the local node map)
   all_element_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),All_Element_Global_Indices.d_view,0,comm));
 
 
