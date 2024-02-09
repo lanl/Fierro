@@ -1094,7 +1094,6 @@ void FEA_Module_SGH::setup(){
                     global_vars,
                     elem_user_output_vars,
                     rnum_elem);
-    state_vars.update_device();
  
     // initialize strength model
     init_strength_model(elem_strength,

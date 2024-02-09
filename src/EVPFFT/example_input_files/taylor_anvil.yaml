@@ -1,19 +1,13 @@
-solver_type: Explicit 
-
-fea_modules:
-  - type: SGH 
-
 num_dims: 3
-rk_num_stages: 1
 
-time_variables:
-    time_final: 1.08e-04 #1.5e-04  #[s]
-    dt_min: 1.e-11  #[s]
-    dt_max: 1.e-3  #[s]
-    dt_start: 1.e-10  #[s]
-    dt_cfl: 0.01
-    cycle_stop: 200000000
-timer_output_level: thorough
+dynamic_options:
+  rk_num_stages: 1
+  time_final: 1.08e-04 #1.5e-04  #[s]
+  dt_min: 1.e-11  #[s]
+  dt_max: 1.e-3  #[s]
+  dt_start: 1.e-10  #[s]
+  dt_cfl: 0.01
+  cycle_stop: 200000000
 
 input_options:
     mesh_file_format: ensight
@@ -21,19 +15,43 @@ input_options:
     element_type: hex8
 
 output_options:
-    graphics_step: 2.4e-6 #1.2e-6 #6.0e-07  #[s]
-    output_file_format: vtk 
-    max_num_user_output_vars: 5
-    
-field_output:
-  - velocity
-  #- processor_id
-  #- element_id
-  #- stress
-  - user_vars
+  timer_output_level: thorough
+  output_file_format: vtk
+  graphics_step: 2.4e-6 #1.2e-6 #6.0e-07  #[s]
+  max_num_user_output_vars: 5
+  include_default_output_fields: false
+  output_fields:
+    - velocity
+    #- processor_id
+    #- element_id
+    #- stress
+    - user_vars
 
-material_options:
-  - eos_model: user_eos_model
+fea_module_parameters:
+  - type: SGH
+    material_id: 0
+    boundary_conditions:
+      # Tag X plane
+      - surface: 
+          type: x_plane
+          plane_position: 0.0
+        type: reflected
+                
+        # Tag Y plane
+      - surface: 
+          type: y_plane
+          plane_position: 0.0
+        type: reflected
+                
+        # Tag Z plane
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: reflected
+
+materials:
+  - id: 0
+    eos_model: user_eos_model
     eos_run_location: device
     strength_model: user_strength_model
     strength_type: hypo
@@ -41,37 +59,20 @@ material_options:
     q1: 0.01 # 0.01 to 0.1
     q2: 0.5 # 0.5  q2/4
     q1ex: 0.01 # 0.01 to 0.1
-    q2ex: 0.0 
+    q2ex: 0.0
+    maximum_limiter: true
     global_vars:
-      - 8 #N1
-      - 8 #N2
-      - 8 #N3
       - 0.0001 #udotAccTh
       - 3000000 #[mm/s] ref sound speed
 
-region_options:
-  - volume: global
-    mat_id: 0
+regions:
+  - volume:
+      type: global
+    material_id: 0
     den: 1.669e-8 #[tonne/mm3]
-    sie: 1.0e-11  #[mJ]
-
+    sie: 1.0e-12  #[mJ]
+        
     velocity: cartesian
     u: 0.0
     v: 0.0
     w: -175000.0  #[mm/s]
-
-boundary_conditions:
-  # Tag X plane
-  - surface: x_plane
-    value: 0.0
-    condition_type: reflected
-
-    # Tag Y plane
-  - surface: y_plane
-    value: 0.0
-    condition_type: reflected
-
-    # Tag Z plane
-  - surface: z_plane
-    value: 0.0
-    condition_type: reflected
