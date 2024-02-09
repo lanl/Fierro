@@ -153,6 +153,13 @@ struct Simulation_Parameters
                     {constraint.value, (double)component_to_int(constraint.component.value())}
                 );
                 break;
+            case CONSTRAINT_TYPE::displacement:
+                add_TO_module(
+                    TO_MODULE_TYPE::Displacement_Constraint, 
+                    f_type, 
+                    {constraint.value}
+                );
+                break;
             default:
                 throw Yaml::ConfigurationException("Unsupported constraint type " + to_string(constraint.type));
             }
@@ -283,8 +290,10 @@ struct Simulation_Parameters
             {TO_MODULE_TYPE::Heat_Capacity_Potential_Constraint,    {FEA_MODULE_TYPE::Heat_Conduction}},
             {TO_MODULE_TYPE::Thermo_Elastic_Strain_Energy_Minimize, {FEA_MODULE_TYPE::Heat_Conduction}},
             {TO_MODULE_TYPE::Mass_Constraint,                       {FEA_MODULE_TYPE::Inertial       }},
+            {TO_MODULE_TYPE::Center_of_Mass_Constraint,             {FEA_MODULE_TYPE::Inertial       }},
             {TO_MODULE_TYPE::Moment_of_Inertia_Constraint,          {FEA_MODULE_TYPE::Inertial       }},
             {TO_MODULE_TYPE::Strain_Energy_Minimize,                {FEA_MODULE_TYPE::Elasticity     }},
+            {TO_MODULE_TYPE::Displacement_Constraint,               {FEA_MODULE_TYPE::Elasticity     }},
             {TO_MODULE_TYPE::Strain_Energy_Constraint,              {FEA_MODULE_TYPE::Elasticity     }},
             {TO_MODULE_TYPE::Kinetic_Energy_Minimize,               {FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity}},
         };

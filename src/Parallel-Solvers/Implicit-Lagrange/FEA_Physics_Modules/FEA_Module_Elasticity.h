@@ -150,9 +150,9 @@ public:
   void node_density_constraints(host_vec_array node_densities_lower_bound);
 
   //for the displacement constraint adjoint solves
-  void compute_displacement_constraint_gradients(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_bool_array active_nodes, host_vec_array gradients);
+  void compute_displacement_constraint_gradients(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_int_array active_dofs, host_vec_array gradients);
 
-  void compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_bool_array active_nodes, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
+  void compute_displacement_constraint_hessian_vec(const_host_vec_array design_densities, const_host_vec_array target_displacements, const_host_int_array active_dofs, host_vec_array hessvec, Teuchos::RCP<const MV> direction_vec_distributed);
   
   Elasticity_Parameters *module_params;
   Implicit_Solver *Implicit_Solver_Pointer_;
@@ -179,10 +179,14 @@ public:
   Teuchos::RCP<MV> all_node_displacements_distributed;
   Teuchos::RCP<MV> all_cached_node_displacements_distributed;
   Teuchos::RCP<MV> all_node_strains_distributed;
-  bool adjoints_allocated;
+  bool adjoints_allocated, constraint_adjoints_allocated;
   Teuchos::RCP<MV> adjoint_displacements_distributed;
+  Teuchos::RCP<MV> psi_adjoint_vector_distributed;
+  Teuchos::RCP<MV> phi_adjoint_vector_distributed;
   Teuchos::RCP<MV> adjoint_equation_RHS_distributed;
   Teuchos::RCP<MV> all_adjoint_displacements_distributed;
+  Teuchos::RCP<MV> all_psi_adjoint_vector_distributed;
+  Teuchos::RCP<MV> all_phi_adjoint_vector_distributed;
   Teuchos::RCP<MAT> Global_Stiffness_Matrix;
   Teuchos::RCP<MAT> Global_Mass_Matrix;
   Teuchos::RCP<MV> Global_Nodal_RHS;

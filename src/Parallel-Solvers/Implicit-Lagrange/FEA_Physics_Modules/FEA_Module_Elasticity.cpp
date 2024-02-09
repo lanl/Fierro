@@ -162,7 +162,7 @@ FEA_Module_Elasticity::FEA_Module_Elasticity(
   all_node_strains_distributed = Teuchos::rcp(new MV(all_node_map, strain_count));
   Global_Nodal_Forces = Teuchos::rcp(new MV(local_dof_map, 1));
   Global_Nodal_RHS = Teuchos::rcp(new MV(local_dof_map, 1));
-  adjoints_allocated = false;
+  adjoints_allocated = constraint_adjoints_allocated = false;
 
   //initialize displacements to 0
   //local variable for host view in the dual view
@@ -974,7 +974,7 @@ void FEA_Module_Elasticity::init_assembly(){
 
   //allocate sparse graph with node repeats
   RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Repeat_Graph_Matrix(Graph_Matrix_Strides_initial);
-  RaggedRightArrayofVectorsKokkos<size_t, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial,num_dim);
+  RaggedRightArrayofVectorsKokkos<size_t, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial,3);
   
   //Fill the initial Graph with repeats
   if(num_dim == 2)
@@ -3656,9 +3656,9 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   const_host_vec_array direction_vec = direction_vec_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
   if(!adjoints_allocated){
-    adjoint_displacements_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
-    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     all_adjoint_displacements_distributed = Teuchos::rcp(new MV(all_dof_map, 1));
+    adjoint_displacements_distributed = Teuchos::rcp(new MV(*all_adjoint_displacements_distributed, local_dof_map));
+    adjoint_equation_RHS_distributed = Teuchos::rcp(new MV(local_dof_map, 1));
     adjoints_allocated = true;
   }
   Teuchos::RCP<MV> lambda = adjoint_displacements_distributed;
@@ -3673,7 +3673,7 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
   int nodes_per_elem = elem->num_basis();
   int num_gauss_points = simparam->num_gauss_points;
   int z_quad,y_quad,x_quad, direct_product_count;
-  LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz;
+  LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz, access_index;
   GO current_global_index, global_dof_id;
   size_t local_nrows = nlocal_nodes*num_dim;
 
@@ -4454,6 +4454,18 @@ void FEA_Module_Elasticity::compute_adjoint_hessian_vec(const_host_vec_array des
       }
     }
   }//end element loop for hessian vector product
+
+  //restore values of K for any scalar or matrix vector products
+  if(matrix_bc_reduced){
+    for(LO i = 0; i < local_nrows; i++){
+      for(LO j = 0; j < Original_Stiffness_Entries_Strides(i); j++){
+        access_index = Original_Stiffness_Entry_Indices(i,j);
+        Stiffness_Matrix(i,access_index) = Original_Stiffness_Entries(i,j);
+      }
+    }//row for
+    matrix_bc_reduced = false;
+  }
+
   hessvec_time += Implicit_Solver_Pointer_->CPU_Time() - current_cpu_time;
 }
 
@@ -5180,9 +5192,9 @@ int FEA_Module_Elasticity::solve(){
   int nodes_per_elem = max_nodes_per_element;
   int local_node_index, current_row, current_column;
   int max_stride = 0;
-  size_t access_index, row_access_index, row_counter;
+  size_t row_access_index, row_counter;
   GO global_index, global_dof_index;
-  LO local_dof_index;
+  LO local_dof_index, access_index;
 
   //*fos << Amesos2::version() << std::endl << std::endl;
 
