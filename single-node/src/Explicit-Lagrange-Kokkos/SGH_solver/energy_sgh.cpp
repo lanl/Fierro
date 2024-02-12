@@ -1,7 +1,21 @@
-
 #include "mesh.h"
 #include "state.h"
 
+/**
+ * \brief Update specific internal energy for the SGH solver
+ *
+ * This function updates the specific internal energy of each element by 
+ * integrating the power (Force dotted into velocity) over the element.
+ *
+ * \param rk_alpha Time integration partition
+ * \param dt time increment
+ * \param mesh simulation mesh
+ * \param node_vel view into the nodal velocity memory
+ * \param node_coords view into the nodal position memory
+ * \param elem_sie view into the specific internal energy of each element
+ * \param elem_mass view into the element mass
+ * \param corner_force view into the corner forces
+ */
 void update_energy_sgh(double                           rk_alpha,
                        double                           dt,
                        const mesh_t&                    mesh,

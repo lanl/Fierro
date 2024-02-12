@@ -6,6 +6,17 @@
 #include "mesh.h"
 #include "state.h"
 
+/**
+ * \brief Apply velocity boundary conditions
+ *
+ * This function loops over all boundary nodes and applies boundary conditions
+ * depending on the definition of boundary set.
+ *
+ * \param mesh The mesh that boundary conditions are applied to
+ * \param boundary The type of boundary condition being applied
+ * \param node_vel A view into the nodal velocity
+ * \param time_value Current simulation time, uesd to apply transient boundary conditions
+ */
 void boundary_velocity(const mesh_t&                   mesh,
                        const CArrayKokkos<boundary_t>& boundary,
                        DViewCArrayKokkos<double>&      node_vel,
