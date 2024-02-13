@@ -211,7 +211,7 @@ void EVPFFT::solve(real_t* vel_grad, real_t* stress, real_t dt, size_t cycle, si
     init_disgradmacro_velgradmacro();
     init_disgrad();
     init_sg();
-    init_c0_s0();
+    // init_c0_s0();
     init_defgrad();
   }
   active = true;
