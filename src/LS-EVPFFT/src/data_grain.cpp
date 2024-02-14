@@ -130,6 +130,14 @@ void EVPFFT::data_grain(const std::string & filetext)
   // Allreduce on c066
   MPI_Allreduce(MPI_IN_PLACE, c066.host_pointer(), c066.size(), MPI_REAL_T, MPI_SUM, mpi_comm);
   c066.update_device();
+  
+  // for single crystal only. it leads to fast convergence of the outer while loop for stress and strain fields
+  // for (int i = 1; i <= 6; i++) {
+  //   for (int j = 1; j <= 6; j++) {
+  //     c066.host(i,j) *= 1000000.0;
+  //   }
+  // }
+  // c066.update_device();
 
 #if 0
   // debug print
