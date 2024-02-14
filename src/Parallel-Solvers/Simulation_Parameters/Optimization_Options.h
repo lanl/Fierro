@@ -64,6 +64,7 @@ struct Optimization_Constraint {
   double value         = 0;
   RELATION relation    = RELATION::equality;
   std::optional<CONSTRAINT_COMPONENT> component;
+  std::string argument_file_name;
 
   // Non-serialized fields
   std::vector<std::optional<double>> inertia_centers;
@@ -81,7 +82,7 @@ struct Optimization_Constraint {
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Optimization_Constraint, value, type, relation)
 IMPL_YAML_SERIALIZABLE_FOR(Optimization_Constraint, 
-  value, type, relation, component
+  value, type, relation, component, argument_file_name
 )
 
 struct MultiObjectiveModule {
