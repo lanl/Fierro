@@ -54,7 +54,7 @@ GPU hardware will be leveraged according to the distribution of Trilinos that **
 You are welcome to only compile one solver or the other, and the one(s) that you did compile will be available through the CLI.
 
 ## Building dependencies
-**Fierro** depends on both ELEMENTS and Trilinos. If you are building **Fierro** for hardware optimizations, you should also also build ELEMENTS from source. ELEMENTS is included in the **Fierro** source distribution and building ELEMENTS is enabled by default when building **Fierro**.
+**Fierro** depends on both ELEMENTS and Trilinos. If you are building **Fierro** for hardware optimizations, you should also build ELEMENTS from source. ELEMENTS is included in the **Fierro** source distribution and building ELEMENTS is enabled by default when building **Fierro**.
 
 As for Trilinos, we recommend installing the Anaconda package for the desired build into a new Anaconda environment to satisfy **Fierro**'s dependency rather than building it from source. If you do wish to build it from source, however, sample build scripts for Trilinos can be found in `Fierro/Trilinos-Build-Scripts`. Build scripts for all Anaconda packages can be found in `Fierro/Anaconda-Packages/`.
 
@@ -110,9 +110,54 @@ The ELEMENTS library and MATAR library can be updated to the newest release usin
 git submodule update --remote --merge
 ```
 
+# Contributing to Fierro
+As an open source software team, we greatly appreciate any and all community involvement. There are many ways to contribute to Fierro, from tidying up code sections to implementing novel solvers. 
+To streamline the integration of community contributions, we follow the following guidelines.
 
+## Writing commit messages
 
+Write your commit messages using these standard prefixes:
+- `BUG:` Fix for runtime crash or incorrect result
+- `COMP:` Compiler error or warning fix
+- `DOC:` Documentation change
+- `ENH:` New functionality
+- `PERF:` Performance improvement
+- `STYLE:` No logic impact (indentation, comments)
+- `WIP:` Work In Progress not ready for merge
 
+The commit message should assist in the review process and allow future developers to understand the change.  To that end, please follow these few rules:
 
+1. Try to keep the subject line below 72 characters, ideally 50.
+2. Be concise, but honor the change.
+3. If the change is uncharacteristically large (or diverse), consider breaking the change into multiple distinct commits.
+4. If the commit references a specific issue, link it in the message
 
+[This](https://cbea.ms/git-commit/) is a great post on how to write a good commit message. 
 
+## The PR Process
+
+If you are new to Fierro development and don't have push access to the repository, here are the steps:
+1. [Fork and clone](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) the repository.
+2. Create a branch for your work.
+3. [Push](https://docs.github.com/en/get-started/using-git/pushing-commits-to-a-remote-repository) the branch to your GitHub fork.
+4. Build and test your changes.
+5. Update any necessary documentation.
+6. Create a [Pull Request](https://github.com/lanl/Fierro/pulls).
+
+This corresponds to the **Fork & Pull Model** described in the [GitHub collaborative development](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/about-collaborative-development-models) documentation.
+
+## Integrating a PR
+
+Integrating your contributions to Fierro is relatively straightforward; here is the checklist:
+- All test pass
+- The changes build with no new compiler warnings/errors
+- All feedback has been addressed
+- Consensus is reached. This usually means that at least two reviewers approved the changes (or added a `LGTM` comment) and at least one business day passed without anyone objecting. `LGTM` is an acronym for Looks Good to Me.
+- If you do NOT have push access, a Fierro core developer will integrate your PR. 
+
+## Benevolent dictators for life
+
+The [benevolent dictators](https://en.wikipedia.org/wiki/Benevolent_dictator_for_life) can integrate changes to keep the platform healthy and help interpret or address conflict related to the contribution guidelines and the platform as a whole.
+
+These currently include:
+- [Nathaniel Morgan](https://github.com/nathanielmorgan)

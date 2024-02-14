@@ -152,7 +152,7 @@ Provide a vtk file type that contains information about which grid point is soli
 
 Run EVPFFT as:
 ```
-  mpirun -n 1 -f tension_11.txt -m 2
+  mpirun -n 1 evpfft -f tension_11.txt -m 2
 ```
 the `-m 2` option tells EVPFFT to use the vtk lattice file microstructure file type.
 

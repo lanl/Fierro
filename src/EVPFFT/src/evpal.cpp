@@ -242,7 +242,7 @@ void EVPFFT::evpal(int imicro)
             } // end for jj
           } // end for ii
 
-#if 0  
+//#if 0  
           int error_flag = invert_matrix <6> (xjacobinv.pointer());
 
           // TODO: optimize indexing of this loop
@@ -251,8 +251,9 @@ void EVPFFT::evpal(int imicro)
               sg6(ii) += -xjacobinv(ii,jj)*res(jj);
             } // end for jj
           } // end for ii
-#endif
+//#endif
 
+#if 0
           // Calculate new stress by solving the system -[J][delt_sg] = [R]
           int error_flag = solve_linear_system(xjacobinv.pointer(), res.pointer(), 6);
           //if (error_flag != 0) {
@@ -264,6 +265,7 @@ void EVPFFT::evpal(int imicro)
           for (int ii = 1; ii <= 6; ii++) {
             sg6(ii) -= res(ii);
           } // end for ii
+#endif
 
           dsgnorm1 = 0.0;
           dsgnorm2 = 0.0;
