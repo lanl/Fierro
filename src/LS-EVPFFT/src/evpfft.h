@@ -291,6 +291,7 @@ public:
   void init_disgradmacro_velgradmacro();
   void init_evm();
   void init_c0_s0();
+  void deinit_c0_s0();
   void init_defgrad();
   void data_crystal(int iph, const std::string & filecryspl);
   void data_crystal_elast(int iph, const std::string & filecrysel);
