@@ -107,7 +107,7 @@ void input(CArrayKokkos <material_t> &material,
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
-    test_problem = test::TaylorGreen;//Sedov3D;
+    test_problem = test::TaylorGreen;//test::Sedov3D;//
     
     
     // ---- fill instructions and intial conditions ---- //
@@ -751,9 +751,12 @@ void input(CArrayKokkos <material_t> &material,
             mat_fill(0).volume = region::global;   // fill everywhere
             mat_fill(0).mat_id = 0;                // material id
             mat_fill(0).den = 1.0;                   // intial density
-            mat_fill(0).sie = 1.0;             // intial specific internal energy
+            mat_fill(0).sie = 0.0;             // initial specific internal energy
             
             mat_fill(0).velocity = init_conds::tg_vortex;
+            mat_fill(1).u = 0.0;   // initial x-dir velocity
+            mat_fill(1).v = 0.0;   // initial y-dir velocity
+            mat_fill(1).w = 0.0;   // initial z-dir velocity
             
             // ---- boundary conditions ---- //
             

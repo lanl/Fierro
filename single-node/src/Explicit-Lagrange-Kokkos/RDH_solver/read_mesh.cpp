@@ -298,18 +298,21 @@ void readVTKPn(char* MESH,
         
     }
     size_t p = int(std::cbrt(num_nodes_in_elem)-1);
-    num_zones_in_elem = int(std::pow(p, 3)); // one order lower than nodal index space
+    //num_zones_in_elem = int(std::pow(p, 3)); // one order lower than nodal index space
     num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
     
     // initialize reference element //
-    printf("polynomial order = %d \n", p);
-    printf("num_zones_in_elem = %d \n", num_zones_in_elem);
-    printf("num_surfs_in_elem = %d \n", num_surfs_in_elem);
+    //printf("polynomial order = %d \n", p);
+    //printf("num_zones_in_elem = %d \n", num_zones_in_elem);
+    //printf("num_surfs_in_elem = %d \n", num_surfs_in_elem);
     
     ref_elem.init(p, num_dims);
     
+    size_t num_gauss_leg_in_elem = ref_elem.num_gauss_leg_in_elem;
+    num_zones_in_elem = ref_elem.num_elem_basis;
+    size_t num_nodes_in_zone = 8;
     // intialize elem mesh
-    mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_zones_in_elem, num_surfs_in_elem, num_dims);
+    mesh.initialize_elems_Pn(num_elems, num_nodes_in_elem, num_gauss_leg_in_elem, num_zones_in_elem, num_nodes_in_zone, num_surfs_in_elem, num_dims);
     elem.initialize_Pn(rk_num_bins, num_elems, num_nodes_in_elem, num_zones_in_elem, num_surfs_in_elem, 3, p); // always 3D here, even for 2D
     
     
@@ -325,7 +328,7 @@ void readVTKPn(char* MESH,
     const int num_1D_points = std::cbrt(num_nodes_in_elem);  // cube root
     const int Pn_order = num_1D_points - 1;
     
-    mesh.Pn = p;//Pn_order;
+    mesh.Pn = Pn_order;
     
     printf("Pn_order = %d \n", Pn_order);
     

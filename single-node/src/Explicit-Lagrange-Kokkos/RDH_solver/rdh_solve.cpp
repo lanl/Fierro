@@ -57,21 +57,21 @@ void rdh_solve(CArrayKokkos <material_t> &material,
                   graphics_id,
                   time_value);
     
-        // VTKHexN(mesh,
-        //         node_coords,
-        //         node_vel,
-        //         node_mass,
-        //         elem_den,
-        //         elem_pres,
-        //         elem_stress,
-        //         elem_sspd,
-        //         elem_sie,
-        //         elem_vol,
-        //         elem_mass,
-        //         elem_mat_id,
-        //         graphics_times,
-        //         graphics_id,
-        //         time_value);
+    VTKHexN(mesh,
+            node_coords,
+            node_vel,
+            node_mass,
+            elem_den,
+            elem_pres,
+            elem_stress,
+            elem_sspd,
+            elem_sie,
+            elem_vol,
+            elem_mass,
+            elem_mat_id,
+            graphics_times,
+            graphics_id,
+            time_value);
     
     return;
     

@@ -311,6 +311,128 @@ void setup(const CArrayKokkos <material_t> &material,
                     
                 } // end logical on type
 
+                // loop over the nodes in elem and apply velocity
+                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+
+                    // get the mesh node index
+                    
+                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+
+                
+                    // --- Velocity ---
+                    switch(mat_fill(f_id).velocity)
+                    {
+                        case init_conds::cartesian:
+                        {
+                        
+                            node_vel(0, node_gid, 0) = mat_fill(f_id).u;
+                            node_vel(0, node_gid, 1) = mat_fill(f_id).v;
+                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = mat_fill(f_id).w;
+                            
+                            node_vel(1, node_gid, 0) = mat_fill(f_id).u;
+                            node_vel(1, node_gid, 1) = mat_fill(f_id).v;
+                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = mat_fill(f_id).w;
+                        
+                            break;
+                        }
+                        case init_conds::radial:
+                        {
+                            // Setting up cylindrical
+                            double dir[2]; 
+                            dir[0] = 0.0;
+                            dir[1] = 0.0;
+                            double radius_val = 0.0;
+                        
+                            for(int dim=0; dim<2; dim++){
+                                dir[dim] = node_coords(rk_level, node_gid, dim);
+                                radius_val += node_coords(rk_level, node_gid, dim)*node_coords(rk_level, node_gid, dim);
+                            } // end for
+                            radius_val = sqrt(radius_val);
+                        
+                            for(int dim=0; dim<2; dim++){
+                                if (radius_val > 1.0e-14){
+                                    dir[dim] /= (radius_val);
+                                }
+                                else{
+                                    dir[dim] = 0.0;
+                                }
+                            } // end for
+                        
+                        
+                            node_vel(0, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(0, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = 0.0;
+                            
+                            node_vel(1, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(1, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = 0.0;
+                            
+                            break;
+                        }
+                        case init_conds::spherical:
+                        {
+                            
+                            // Setting up spherical
+                            double dir[3];
+                            dir[0] = 0.0;
+                            dir[1] = 0.0;
+                            dir[2] = 0.0;
+                            double radius_val = 0.0;
+                        
+                            for(int dim=0; dim<3; dim++){
+                                dir[dim] = node_coords(rk_level, node_gid, dim);
+                                radius_val += node_coords(rk_level, node_gid, dim)*node_coords(rk_level, node_gid, dim);
+                            } // end for
+                            radius_val = sqrt(radius_val);
+                        
+                            for(int dim=0; dim<3; dim++){
+                                if (radius_val > 1.0e-14){
+                                    dir[dim] /= (radius_val);
+                                }
+                                else{
+                                    dir[dim] = 0.0;
+                                }
+                            } // end for
+                        
+                            node_vel(0, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(0, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = mat_fill(f_id).speed*dir[2];
+
+                            node_vel(1, node_gid, 0) = mat_fill(f_id).speed*dir[0];
+                            node_vel(1, node_gid, 1) = mat_fill(f_id).speed*dir[1];
+                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = mat_fill(f_id).speed*dir[2];
+                            break;
+                        }
+                        case init_conds::radial_linear:
+                        {
+                        
+                            break;
+                        }
+                        case init_conds::spherical_linear:
+                        {
+                        
+                            break;
+                        }
+                        case init_conds::tg_vortex:
+                        {
+                            //printf(" setting up tg vortex \n");
+                            node_vel(0, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
+                            node_vel(0, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
+                            if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = 0.0;
+                            
+                            // printf("node_vel at node %d and dim %d is %f \n", node_gid, 0, node_vel(0, node_gid, 0));
+                            // printf("node_vel at node %d and dim %d is %f \n", node_gid, 1, node_vel(0, node_gid, 1));
+                            // printf("node_vel at node %d and dim %d is %f \n", node_gid, 2, node_vel(0, node_gid, 2));
+
+                            node_vel(1, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
+                            node_vel(1, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
+                            if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = 0.0;
+                            break;
+                        }
+                    } // end of switch
+
+                }// end loop over nodes of element
+
                 for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
                     int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
                     // density
@@ -321,6 +443,7 @@ void setup(const CArrayKokkos <material_t> &material,
                 for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
                     
                     int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+                    //printf("zone_gid is %d \n", zone_gid);
 
                     // zonal coords for initializations that depend on functions of x
                     // calculate the coordinates and radius of the element
@@ -332,19 +455,20 @@ void setup(const CArrayKokkos <material_t> &material,
                     // get the coordinates of the element center
                     for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
                         //printf("nodes_in_zone for node_lid %d and zone_gid %d is %d \n", node_lid, zone_gid, mesh.nodes_in_zone(zone_gid, node_lid));
-                        zone_coords[0] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 0);
-                        zone_coords[1] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 1);
+                        zone_coords[0] += node_coords(1, mesh.nodes_in_zone(zone_gid, node_lid), 0);
+                        zone_coords[1] += node_coords(1, mesh.nodes_in_zone(zone_gid, node_lid), 1);
                         if (mesh.num_dims == 3){
-                            zone_coords[2] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 2);
+                            zone_coords[2] += node_coords(1, mesh.nodes_in_zone(zone_gid, node_lid), 2);
                         } else
                         {
                             zone_coords[2] = 0.0;
                         }
                     } // end loop over nodes in element
-                    zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
-                    zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
-                    zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
+                    zone_coords[0] = zone_coords[0]*0.125;
+                    zone_coords[1] = zone_coords[1]*0.125;
+                    zone_coords[2] = zone_coords[2]*0.125;
 
+                    
                     // printf("zone_coord at dim %d is %f \n", 0, zone_coords[0] );
                     // printf("zone_coord at dim %d is %f \n", 1, zone_coords[1] );
                     // printf("zone_coord at dim %d is %f \n", 2, zone_coords[2] );
@@ -382,126 +506,7 @@ void setup(const CArrayKokkos <material_t> &material,
                                             elem_sie(1,zone_gid));
                             
                     
-                    // loop over the nodes of this element and apply velocity
-                    for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
-
-                        // get the mesh node index
-                        size_t node_gid = mesh.nodes_in_zone(zone_gid, node_lid);
-
                     
-                        // --- Velocity ---
-                        switch(mat_fill(f_id).velocity)
-                        {
-                            case init_conds::cartesian:
-                            {
-                            
-                                node_vel(0, node_gid, 0) = mat_fill(f_id).u;
-                                node_vel(0, node_gid, 1) = mat_fill(f_id).v;
-                                if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = mat_fill(f_id).w;
-                                
-                                node_vel(1, node_gid, 0) = mat_fill(f_id).u;
-                                node_vel(1, node_gid, 1) = mat_fill(f_id).v;
-                                if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = mat_fill(f_id).w;
-                            
-                                break;
-                            }
-                            case init_conds::radial:
-                            {
-                                // Setting up cylindrical
-                                double dir[2]; 
-                                dir[0] = 0.0;
-                                dir[1] = 0.0;
-                                double radius_val = 0.0;
-                            
-                                for(int dim=0; dim<2; dim++){
-                                    dir[dim] = node_coords(rk_level, node_gid, dim);
-                                    radius_val += node_coords(rk_level, node_gid, dim)*node_coords(rk_level, node_gid, dim);
-                                } // end for
-                                radius_val = sqrt(radius_val);
-                            
-                                for(int dim=0; dim<2; dim++){
-                                    if (radius_val > 1.0e-14){
-                                        dir[dim] /= (radius_val);
-                                    }
-                                    else{
-                                        dir[dim] = 0.0;
-                                    }
-                                } // end for
-                            
-                            
-                                node_vel(0, node_gid, 0) = mat_fill(f_id).speed*dir[0];
-                                node_vel(0, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                                if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = 0.0;
-                                
-                                node_vel(1, node_gid, 0) = mat_fill(f_id).speed*dir[0];
-                                node_vel(1, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                                if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = 0.0;
-                                
-                                break;
-                            }
-                            case init_conds::spherical:
-                            {
-                                
-                                // Setting up spherical
-                                double dir[3];
-                                dir[0] = 0.0;
-                                dir[1] = 0.0;
-                                dir[2] = 0.0;
-                                double radius_val = 0.0;
-                            
-                                for(int dim=0; dim<3; dim++){
-                                    dir[dim] = node_coords(rk_level, node_gid, dim);
-                                    radius_val += node_coords(rk_level, node_gid, dim)*node_coords(rk_level, node_gid, dim);
-                                } // end for
-                                radius_val = sqrt(radius_val);
-                            
-                                for(int dim=0; dim<3; dim++){
-                                    if (radius_val > 1.0e-14){
-                                        dir[dim] /= (radius_val);
-                                    }
-                                    else{
-                                        dir[dim] = 0.0;
-                                    }
-                                } // end for
-                            
-                                node_vel(0, node_gid, 0) = mat_fill(f_id).speed*dir[0];
-                                node_vel(0, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                                if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = mat_fill(f_id).speed*dir[2];
-
-                                node_vel(1, node_gid, 0) = mat_fill(f_id).speed*dir[0];
-                                node_vel(1, node_gid, 1) = mat_fill(f_id).speed*dir[1];
-                                if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = mat_fill(f_id).speed*dir[2];
-                                break;
-                            }
-                            case init_conds::radial_linear:
-                            {
-                            
-                                break;
-                            }
-                            case init_conds::spherical_linear:
-                            {
-                            
-                                break;
-                            }
-                            case init_conds::tg_vortex:
-                            {
-                                //printf(" setting up tg vortex \n");
-                                node_vel(0, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
-                                node_vel(0, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
-                                if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = 0.0;
-                                
-                                // printf("node_vel at node %d and dim %d is %f \n", node_gid, 0, node_vel(0, node_gid, 0));
-                                // printf("node_vel at node %d and dim %d is %f \n", node_gid, 1, node_vel(0, node_gid, 1));
-                                // printf("node_vel at node %d and dim %d is %f \n", node_gid, 2, node_vel(0, node_gid, 2));
-
-                                node_vel(1, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
-                                node_vel(1, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
-                                if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = 0.0;
-                                break;
-                            }
-                        } // end of switch
-
-                    }// end loop over nodes of zones of element
                     
                     
                     if(mat_fill(f_id).velocity == init_conds::tg_vortex)

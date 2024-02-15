@@ -87,29 +87,29 @@ void bubble_sort(size_t arr[], const size_t num){
 
 struct zones_in_elem_t {
     private:
-	size_t num_zones_in_elem_;
+	    size_t num_zones_in_elem_;
     public:
-	zones_in_elem_t(){};
-      
-	zones_in_elem_t(const size_t num_zones_in_elem_inp){
-  		this->num_zones_in_elem_ = num_zones_in_elem_inp;
-	};
+        zones_in_elem_t(){};
+        
+        zones_in_elem_t(const size_t num_zones_in_elem_inp){
+            this->num_zones_in_elem_ = num_zones_in_elem_inp;
+        };
 
-       	// return global zone index for given local zone index in an element    
-       	size_t  host(const size_t elem_gid, const size_t zone_lid) const{
-       		return elem_gid*num_zones_in_elem_ + zone_lid;
-       	};
+        // return global zone index for given local zone index in an element    
+        size_t  host(const size_t elem_gid, const size_t zone_lid) const{
+            return elem_gid*num_zones_in_elem_ + zone_lid;
+        };
 
-       	KOKKOS_INLINE_FUNCTION	
-	size_t operator()(const size_t elem_gid, const size_t zone_lid) const{
-    		return elem_gid*num_zones_in_elem_ + zone_lid;
-	};
+        KOKKOS_INLINE_FUNCTION	
+        size_t operator()(const size_t elem_gid, const size_t zone_lid) const{
+                return elem_gid*num_zones_in_elem_ + zone_lid;
+        };
 };
 
 struct legendre_in_elem_t {
 	private:
 	  size_t num_leg_gauss_in_elem_;
-        public:
+    public:
 	  legendre_in_elem_t(){};
 
 	  legendre_in_elem_t(const size_t num_leg_gauss_in_elem_inp){
@@ -151,23 +151,23 @@ struct lobatto_in_elem_t {
 
 struct nodes_in_zone_t {
     private:
-	size_t num_nodes_in_zone_;
+	    size_t num_nodes_in_zone_;
     public:
-	nodes_in_zone_t(){};
+	    nodes_in_zone_t(){};
       
-	nodes_in_zone_t(const size_t num_nodes_in_zone_inp){
-  		this->num_nodes_in_zone_ = num_nodes_in_zone_inp;
-	};
+	    nodes_in_zone_t(const size_t num_nodes_in_zone_inp){
+  		    this->num_nodes_in_zone_ = num_nodes_in_zone_inp;
+	    };
 
-    // return global zone index for given local zone index in an element    
-    size_t  host(const size_t zone_gid, const size_t node_lid) const{
-        return zone_gid*num_nodes_in_zone_ + node_lid;
-    };
+        // return global zone index for given local zone index in an element    
+        size_t  host(const size_t zone_gid, const size_t node_lid) const{
+            return zone_gid*num_nodes_in_zone_ + node_lid;
+         };
 
-    KOKKOS_INLINE_FUNCTION	
-	size_t operator()(const size_t zone_gid, const size_t node_lid) const{
-    	return zone_gid*num_nodes_in_zone_ + node_lid;
-	};
+        KOKKOS_INLINE_FUNCTION	
+        size_t operator()(const size_t zone_gid, const size_t node_lid) const{
+            return zone_gid*num_nodes_in_zone_ + node_lid;
+        };
 };
 
 // mesh sizes and connectivity data structures
@@ -326,7 +326,9 @@ struct mesh_t {
     // initialization method
     void initialize_elems_Pn(const size_t num_elems_inp,
 		   	     const size_t num_nodes_in_elem_inp,
+                 const size_t num_gauss_leg_in_elem_inp,
 			     const size_t num_zones_in_elem_inp,
+                 const size_t num_nodes_in_zone_inp,
 			     const size_t num_surfs_in_elem_inp,
 			     const size_t num_dims_inp)
     {
@@ -335,6 +337,8 @@ struct mesh_t {
         num_elems = num_elems_inp;
         
 	    num_nodes_in_elem = num_nodes_in_elem_inp;
+        num_nodes_in_zone = num_nodes_in_zone_inp;
+        num_leg_gauss_in_elem = num_gauss_leg_in_elem_inp;
         num_zones_in_elem = num_zones_in_elem_inp;
         num_surfs_in_elem = num_surfs_in_elem_inp;
 
@@ -342,7 +346,8 @@ struct mesh_t {
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         zones_in_elem = zones_in_elem_t(num_zones_in_elem);
 	    surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
-        nodes_in_zone = nodes_in_zone_t(8); // why did we define this function?
+        nodes_in_zone = nodes_in_zone_t(num_nodes_in_zone); // why did we define this function?
+        legendre_in_elem = legendre_in_elem_t(num_leg_gauss_in_elem);
 
         return;
         
@@ -1859,8 +1864,8 @@ void ensight(const mesh_t &mesh,
              size_t &graphics_id,
              const double time_value);
 
-void VTKHexN(const mesh_t &mesh,
-             const node_t &node);
+// void VTKHexN(const mesh_t &mesh,
+//              const node_t &node);
 
 
 void VTKHexN(const mesh_t &mesh,

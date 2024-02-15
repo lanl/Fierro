@@ -103,7 +103,7 @@ struct fe_ref_elem_t{
             num_dofs_1d = p_order+1;
             num_elem_dofs_1d = p_order;
 
-            num_zones_1d = (num_dofs_1d - 1) / 2;
+            num_zones_1d = (num_dofs_1d - 1);
             num_zones_in_elem = num_zones_1d*num_zones_1d*num_zones_1d;
 
         }
