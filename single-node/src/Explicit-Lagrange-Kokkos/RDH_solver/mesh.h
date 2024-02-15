@@ -275,7 +275,7 @@ struct mesh_t {
 
     CArrayKokkos <size_t> nodes_in_surf;
     
-
+    nodes_in_zone_t nodes_in_zone;
     // Surface quadrature
     //CArrayKokkos <size_t> legendre_in_patch;
     //CArrayKokkos <size_t> lobatto_in_patch;
@@ -342,6 +342,7 @@ struct mesh_t {
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         zones_in_elem = zones_in_elem_t(num_zones_in_elem);
 	    surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
+        nodes_in_zone = nodes_in_zone_t(8); // why did we define this function?
 
         return;
         
@@ -1179,7 +1180,9 @@ struct mesh_t {
     
         // a temporary variable to help populate patch structures
         CArrayKokkos <size_t> num_elems_in_patch_saved (num_patches);
-        
+       
+        // printf("Here\n");
+
         // initialize the number of elems in a patch saved to zero
         FOR_ALL_CLASS(patch_gid, 0, num_patches, {
             num_elems_in_patch_saved(patch_gid) = 0;

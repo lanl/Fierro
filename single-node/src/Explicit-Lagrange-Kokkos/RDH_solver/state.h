@@ -139,9 +139,9 @@ struct elem_t {
         this->mat_id = CArray <size_t> (num_elems);
 
         this->den    = CArray <double> (num_leg_pts); 
-        this->pres   = CArray <double> (num_leg_pts);
-        this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);
-        this->sspd = CArray <double> (num_leg_pts);
+        this->pres   = CArray <double> (num_zones);//leg_pts);
+        this->stress = CArray <double> (num_rk, num_zones, num_dims, num_dims);//(num_rk, num_leg_pts, num_dims, num_dims);
+        this->sspd = CArray <double> (num_zones);//leg_pts);
 	
         this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);
         this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);

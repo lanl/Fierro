@@ -38,8 +38,11 @@ namespace test
         
         TriplePoint = 9,
         TaylorAnvil = 10,
-        
+
         box = 11,
+
+        TaylorGreen = 12,
+
     };
     
 } // end of initial conditions namespace
@@ -71,7 +74,7 @@ void input(CArrayKokkos <material_t> &material,
     // Dimensions
     num_dims = 3;
     
-    // ---- time varaibles and cycle info ----
+    // ---- time variables and cycle info ----
     time_final = 1.0;  // 1.0 for Sedov
     dt_min = 1.e-8;
     dt_max = 1.e-2;
@@ -95,7 +98,7 @@ void input(CArrayKokkos <material_t> &material,
     
     
     // --- number of fill regions ---
-    num_fills = 2;  // =2 for Sedov
+    num_fills = 1;  // =2 for Sedov
     mat_fill = CArrayKokkos <mat_fill_t> (num_fills); // create fills
     
     
@@ -104,12 +107,12 @@ void input(CArrayKokkos <material_t> &material,
     boundary = CArrayKokkos <boundary_t> (num_bcs);  // create boundaries
     
     // --- test problems ---
-    test_problem = test::Sedov3D;
+    test_problem = test::TaylorGreen;//Sedov3D;
     
     
     // ---- fill instructions and intial conditions ---- //
 
-    
+
     // Sedov blast wave test case
     if (test_problem == test::Sedov3D){
         time_final = 1.0;
@@ -725,6 +728,71 @@ void input(CArrayKokkos <material_t> &material,
         });  // end RUN
 
     } // end if box
+
+    // Taylor-Green Vortex
+    if (test_problem == test::TaylorGreen){
+
+        time_final = 0.5;
+        
+        RUN({
+            
+            material(0).eos_model = ideal_gas; // EOS model
+            material(0).q1        = 1.0;       // accoustic coefficient
+            material(0).q2        = 1.3333;    // linear slope of UsUp for Riemann solver
+            material(0).q1ex      = 1.0;       // accoustic coefficient in expansion
+            material(0).q2ex      = 0.0;       // linear slope of UsUp in expansion
+            
+            material(0).num_state_vars = 3;  // actual num_state_vars
+            state_vars(0,0) = 5.0/3.0; // gamma value
+            state_vars(0,1) = 1.0E-14; // minimum sound speed
+            state_vars(0,2) = 1.0;     // specific heat c_v
+            
+            // Global instructions
+            mat_fill(0).volume = region::global;   // fill everywhere
+            mat_fill(0).mat_id = 0;                // material id
+            mat_fill(0).den = 1.0;                   // intial density
+            mat_fill(0).sie = 1.0;             // intial specific internal energy
+            
+            mat_fill(0).velocity = init_conds::tg_vortex;
+            
+            // ---- boundary conditions ---- //
+            
+            // Tag X plane
+            boundary(0).surface = bdy::x_plane; 
+            boundary(0).value = 0.0;
+            boundary(0).hydro_bc = bdy::reflected;
+            
+            
+            // Tag Y plane
+            boundary(1).surface = bdy::y_plane;
+            boundary(1).value = 0.0;
+            boundary(1).hydro_bc = bdy::reflected;
+            
+            // Tag Z plane
+            boundary(2).surface = bdy::z_plane;
+            boundary(2).value = 0.0;
+            boundary(2).hydro_bc = bdy::reflected;
+
+            // Tag X plane
+            boundary(3).surface = bdy::x_plane; 
+            boundary(3).value = 1.0;
+            boundary(3).hydro_bc = bdy::reflected;
+            
+            
+            // Tag Y plane
+            boundary(4).surface = bdy::y_plane;
+            boundary(4).value = 1.0;
+            boundary(4).hydro_bc = bdy::reflected;
+            
+            // Tag Z plane
+            boundary(5).surface = bdy::z_plane;
+            boundary(5).value = 0.33;
+            boundary(5).hydro_bc = bdy::reflected;
+            
+            
+        });  // end RUN
+        
+    } // end if Taylor-Green Vortex
         
 
     return;

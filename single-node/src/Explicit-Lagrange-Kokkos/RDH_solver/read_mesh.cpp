@@ -302,7 +302,7 @@ void readVTKPn(char* MESH,
     num_surfs_in_elem = 2*num_dims; // 4 (2D) or 6 (3D)
     
     // initialize reference element //
-    //printf("polynomial order = %d \n", p);
+    printf("polynomial order = %d \n", p);
     printf("num_zones_in_elem = %d \n", num_zones_in_elem);
     printf("num_surfs_in_elem = %d \n", num_surfs_in_elem);
     
@@ -325,7 +325,7 @@ void readVTKPn(char* MESH,
     const int num_1D_points = std::cbrt(num_nodes_in_elem);  // cube root
     const int Pn_order = num_1D_points - 1;
     
-    mesh.Pn = Pn_order;
+    mesh.Pn = p;//Pn_order;
     
     printf("Pn_order = %d \n", Pn_order);
     
@@ -409,6 +409,7 @@ void readVTKPn(char* MESH,
 
             std::getline(in, str);
             elem_type = std::stoi(str);
+            printf("elem type found is %d \n", elem_type);
             
             found=true;
         } // end if

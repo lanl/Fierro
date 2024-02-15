@@ -106,7 +106,7 @@ int main(int argc, char *argv[]){
         CArrayKokkos <mat_fill_t> mat_fill;
         CArrayKokkos <boundary_t> boundary;
         
-
+        //printf("Before input \n");
         // ---------------------------------------------------------------------
         //    read the input file
         // ---------------------------------------------------------------------  
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]){
               );
         
 
-
+        printf("After input \n");
 
         // ---------------------------------------------------------------------
         //    read in supplied mesh
@@ -145,11 +145,14 @@ int main(int argc, char *argv[]){
             read_mesh_ensight(argv[1], mesh, node, elem, corner, num_dims, rk_num_bins);
         }
         else
-        {
+        {   
+            //printf("inside conditional to readVTKPn \n");
             // arbitrary order elements
             //printf("Calling readVTKPn \n");
             readVTKPn(argv[1], mesh, node, elem, corner, ref_elem, num_dims, rk_num_bins);
+            //printf("after readVTKPn \n");
         }
+
         
         // write VTKPn
         printf("writing VTK file \n");
@@ -218,16 +221,16 @@ int main(int argc, char *argv[]){
                                             num_leg_pts);
 
         DViewCArrayKokkos <double> elem_pressure(&elem.pres(0),
-                                             num_leg_pts);
+                                             num_zones);
 
         DViewCArrayKokkos <double> elem_stress(&elem.stress(0,0,0,0),
                                                rk_num_bins,
-                                               num_leg_pts,
+                                               num_zones,
                                                3,
                                                3); // always 3D even in 2D-RZ
 
         DViewCArrayKokkos <double> elem_sspd(&elem.sspd(0),
-                                             num_leg_pts);
+                                             num_zones);
 
         DViewCArrayKokkos <double> elem_sie(&elem.sie(0,0),
                                             rk_num_bins,
@@ -308,7 +311,7 @@ int main(int argc, char *argv[]){
           }
         }
         */
-        printf("calculated volume is: %f \n", elem_vol.host(0));
+        //printf("calculated volume is: %f \n", elem_vol.host(0));
         // double vol_check = 0.0;
         // for (int i = 0; i < mesh.num_elems; i++){
         //    vol_check += elem_vol(i);
@@ -393,21 +396,21 @@ int main(int argc, char *argv[]){
         // --- testing ---
         // testing high-order mesh initialization
         // --- testing ---
-        VTKHexN(mesh,
-                node_coords,
-                node_vel,
-                node_mass,
-                elem_den,
-                elem_pressure,
-                elem_stress,
-                elem_sspd,
-                elem_sie,
-                elem_vol,
-                elem_mass,
-                elem_mat_id,
-                graphics_times,
-                graphics_id,
-                time_value);
+        // VTKHexN(mesh,
+        //         node_coords,
+        //         node_vel,
+        //         node_mass,
+        //         elem_den,
+        //         elem_pressure,
+        //         elem_stress,
+        //         elem_sspd,
+        //         elem_sie,
+        //         elem_vol,
+        //         elem_mass,
+        //         elem_mat_id,
+        //         graphics_times,
+        //         graphics_id,
+        //         time_value);
         
         
 
