@@ -57,7 +57,7 @@ jobs:
 
       - name: Update environment
         run:
-          mamba env update -n build-env -f .etc/conda_build_environment.yaml
+          conda env update -n build-env -f .etc/conda_build_environment.yaml
         #if: steps.cache.outputs.cache-hit != 'true'
       - run: |
           if [ ${{ inputs.debug }} = true ] ; then export DEBUG="--debug"; fi;
