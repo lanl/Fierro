@@ -1811,6 +1811,10 @@ void Solver::read_mesh_tecplot(const char *MESH){
     max_nodes_per_element = elem->num_nodes();
   }
 
+  //1 type per mesh for now
+  for(int ielem = 0; ielem < rnum_elem; ielem++)
+    Element_Types(ielem) = mesh_element_type;
+
   dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
   host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
   dual_nodes_in_elem.modify_host();
