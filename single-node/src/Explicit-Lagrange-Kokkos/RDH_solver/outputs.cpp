@@ -26,19 +26,19 @@ void write_outputs (const mesh_t &mesh,
     // ---------------------------------------------------------------------
     //   t=tval ensight and state output
     // ---------------------------------------------------------------------
-    elem_den.update_host();
-    elem_pres.update_host();
-    elem_stress.update_host();
-    elem_sspd.update_host();
-    elem_sie.update_host();
-    elem_vol.update_host();
-    elem_mass.update_host();
-    elem_mat_id.update_host();
+    // elem_den.update_host();
+    // elem_pres.update_host();
+    // elem_stress.update_host();
+    // elem_sspd.update_host();
+    // elem_sie.update_host();
+    // elem_vol.update_host();
+    // elem_mass.update_host();
+    // elem_mat_id.update_host();
     
-    node_coords.update_host();
-    node_vel.update_host();
-    node_mass.update_host();
-    Kokkos::fence();
+    // node_coords.update_host();
+    // node_vel.update_host();
+    // node_mass.update_host();
+    // Kokkos::fence();
     
     // write out state file
     state_file(mesh,

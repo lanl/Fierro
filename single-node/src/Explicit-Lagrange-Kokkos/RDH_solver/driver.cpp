@@ -432,7 +432,19 @@ int main(int argc, char *argv[]){
 
 
         // calculate total energy at time=t_end
+        elem_den.update_host();
+        elem_pressure.update_host();
+        elem_stress.update_host();
+        elem_sspd.update_host();
+        elem_sie.update_host();
+        elem_vol.update_host();
+        elem_mass.update_host();
+        elem_mat_id.update_host();
         
+        node_coords.update_host();
+        node_vel.update_host();
+        node_mass.update_host();
+        Kokkos::fence();
         
         VTKHexN(mesh,
                 node_coords,

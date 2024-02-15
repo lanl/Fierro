@@ -149,26 +149,26 @@ struct lobatto_in_elem_t {
 	  };
 };
 
-struct nodes_in_zone_t {
-    private:
-	    size_t num_nodes_in_zone_;
-    public:
-	    nodes_in_zone_t(){};
+// struct nodes_in_zone_t {
+//     private:
+// 	    size_t num_nodes_in_zone_;
+//     public:
+// 	    nodes_in_zone_t(){};
       
-	    nodes_in_zone_t(const size_t num_nodes_in_zone_inp){
-  		    this->num_nodes_in_zone_ = num_nodes_in_zone_inp;
-	    };
+// 	    nodes_in_zone_t(const size_t num_nodes_in_zone_inp){
+//   		    this->num_nodes_in_zone_ = num_nodes_in_zone_inp;
+// 	    };
 
-        // return global zone index for given local zone index in an element    
-        size_t  host(const size_t zone_gid, const size_t node_lid) const{
-            return zone_gid*num_nodes_in_zone_ + node_lid;
-         };
+//         // return global zone index for given local zone index in an element    
+//         size_t  host(const size_t zone_gid, const size_t node_lid) const{
+//             return zone_gid*num_nodes_in_zone_ + node_lid;
+//          };
 
-        KOKKOS_INLINE_FUNCTION	
-        size_t operator()(const size_t zone_gid, const size_t node_lid) const{
-            return zone_gid*num_nodes_in_zone_ + node_lid;
-        };
-};
+//         KOKKOS_INLINE_FUNCTION	
+//         size_t operator()(const size_t zone_gid, const size_t node_lid) const{
+//             return zone_gid*num_nodes_in_zone_ + node_lid;
+//         };
+// };
 
 // mesh sizes and connectivity data structures
 struct mesh_t {
@@ -275,7 +275,9 @@ struct mesh_t {
 
     CArrayKokkos <size_t> nodes_in_surf;
     
-    nodes_in_zone_t nodes_in_zone;
+    CArrayKokkos <size_t> nodes_in_zone;
+
+    //nodes_in_zone_t nodes_in_zone;
     // Surface quadrature
     //CArrayKokkos <size_t> legendre_in_patch;
     //CArrayKokkos <size_t> lobatto_in_patch;
@@ -342,11 +344,13 @@ struct mesh_t {
         num_zones_in_elem = num_zones_in_elem_inp;
         num_surfs_in_elem = num_surfs_in_elem_inp;
 
+        num_zones = num_zones_in_elem*num_elems;
+
         nodes_in_elem = DCArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         zones_in_elem = zones_in_elem_t(num_zones_in_elem);
 	    surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
-        nodes_in_zone = nodes_in_zone_t(num_nodes_in_zone); // why did we define this function?
+        nodes_in_zone = CArrayKokkos <size_t> (num_zones*num_nodes_in_zone); 
         legendre_in_elem = legendre_in_elem_t(num_leg_gauss_in_elem);
 
         return;
@@ -994,6 +998,47 @@ struct mesh_t {
                 
             }// end else on dim
             
+
+            //build zones in high order element
+            FOR_ALL_CLASS(elem_gid, 0, num_elems, {
+                //for (int zone_lid = 0; zone_lid < num_zones_in_elem; zone_lid++){
+                    
+                    
+                    size_t node_lids[8]; // temp storage for local node ids
+                    //printf(" before loop node_lids \n");
+                    for (int k = 0; k < num_1D-1; k++){
+                        for (int j = 0; j < num_1D-1; j++){
+                            for (int i = 0; i < num_1D-1; i++){
+
+                                node_lids[0] = i   + j*num_1D     + k*num_1D*num_1D; // i,j,k
+                                node_lids[1] = i+1 + j*num_1D     + k*num_1D*num_1D; // i+1, j, k
+                                node_lids[2] = i   + (j+1)*num_1D + k*num_1D*num_1D; // i,j+1,k
+                                node_lids[3] = i+1 + (j+1)*num_1D + k*num_1D*num_1D; // i+1, j+1, k
+                                node_lids[4] = i   + j*num_1D     + (k+1)*num_1D*num_1D; // i, j , k+1
+                                node_lids[5] = i+1 + j*num_1D     + (k+1)*num_1D*num_1D; //i + 1, j , k+1
+                                node_lids[6] = i   + (j+1)*num_1D + (k+1)*num_1D*num_1D; // i,j,k
+                                node_lids[7] = i+1 + (j+1)*num_1D + (k+1)*num_1D*num_1D; // i+1, j+1, k+1
+
+                                size_t zone_lid = node_lids[0];
+
+                                size_t zone_gid = zones_in_elem(elem_gid, zone_lid);
+                                //printf(" after loop node_lids \n");
+                                for (int node_lid = 0; node_lid < 8; node_lid++){
+                                    // get global id for the node
+
+                                    size_t node_gid = nodes_in_elem(elem_gid, node_lids[node_lid]);
+                                    // if (elem_gid== 15){
+                                    //     printf(" above nodes_in_zone assignment, %zu \n", node_gid);
+                                    // }
+                                    nodes_in_zone(zone_gid, node_lid) = node_gid;
+                                }
+                            }// i
+                        }// j
+                    }// k
+                    
+            });// end FOR_ALL elem_gid
+
+
         } // end if arbitrar-order element
         else {
             printf("\nERROR: mesh type is not known \n");
@@ -1330,9 +1375,9 @@ struct mesh_t {
                 }
 
                 nodes_in_surf = CArrayKokkos <size_t> (num_surfs, num_1D*num_1D);
-                size_t num_faces = 6;
-                size_t num_nodes_in_face = num_1D*num_1D;
-                surf_node_ordering_in_elem = DViewCArrayKokkos <size_t> (&temp_surf_node_lids[0], num_faces, num_nodes_in_face);
+                
+                num_nodes_in_surf = num_1D*num_1D;
+                surf_node_ordering_in_elem = DViewCArrayKokkos <size_t> (&temp_surf_node_lids[0], num_surfs_in_elem, num_nodes_in_surf);
                 surf_node_ordering_in_elem.update_device();
                 for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
                     FOR_ALL_CLASS(surf_lid, 0 , num_surfs_in_elem, {

@@ -311,13 +311,74 @@ void setup(const CArrayKokkos <material_t> &material,
                     
                 } // end logical on type
 
+                
+
+                for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+                    int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
+                    // density
+                    elem_den(leg_gid) = mat_fill(f_id).den;
+                    //printf( "density in elem %d at legendre_pt %d is %f \n", elem_gid, leg_lid, elem_den(leg_gid) ); 
+                }
+
+                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+                    
+                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+                    //printf("zone_gid is %d \n", zone_gid);
+
+                    // zonal coords for initializations that depend on functions of x
+                    // calculate the coordinates and radius of the element
+                    double zone_coords[3]; 
+                    zone_coords[0] = 0.0;
+                    zone_coords[1] = 0.0;
+                    zone_coords[2] = 0.0;
+
+                    // get the coordinates of the element center
+                    
+
+                    
+                    // printf("zone_coord at dim %d is %f \n", 0, zone_coords[0] );
+                    // printf("zone_coord at dim %d is %f \n", 1, zone_coords[1] );
+                    // printf("zone_coord at dim %d is %f \n", 2, zone_coords[2] );
+                    
+                    // WARNING WARNING WARNING, any reason we need a zonal mass? // 
+                    elem_mass(elem_gid) = elem_den(zone_gid)/elem_vol(elem_gid);
+                    //printf( "mass in elem %d is %f \n", elem_gid, elem_mass(elem_gid) ); 
+
+                    
+                    // specific internal energy at each "time bin"
+                    elem_sie( 0, zone_gid) = mat_fill(f_id).sie;
+                    elem_sie( 1, zone_gid) = mat_fill(f_id).sie;
+            
+                    
+                    
+                    // --- stress tensor ---
+                    // always 3D even for 2D-RZ
+                    for (size_t i=0; i<3; i++){
+                        for (size_t j=0; j<3; j++){
+                            elem_stress( 0,zone_gid,i,j) = 0.0;
+                            elem_stress( 1,zone_gid,i,j) = 0.0;
+                        }        
+                    }  // end for
+                    
+                    
+                    
+                    // --- Pressure and stress ---
+                    material(mat_id).eos_model(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            elem_mat_id(elem_gid),
+                                            elem_statev,
+                                            elem_sspd,
+                                            elem_den(zone_gid),
+                                            elem_sie(1,zone_gid));
+                            
                 // loop over the nodes in elem and apply velocity
-                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++){
+                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
 
                     // get the mesh node index
-                    
-                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-
+                    printf(" before assignment of node_gid in setup \n");
+                    size_t node_gid = mesh.nodes_in_zone(zone_gid, node_lid);
+                    printf(" assigned node_gid in setup \n");
                 
                     // --- Velocity ---
                     switch(mat_fill(f_id).velocity)
@@ -432,80 +493,6 @@ void setup(const CArrayKokkos <material_t> &material,
                     } // end of switch
 
                 }// end loop over nodes of element
-
-                for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
-                    int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
-                    // density
-                    elem_den(leg_gid) = mat_fill(f_id).den;
-                    //printf( "density in elem %d at legendre_pt %d is %f \n", elem_gid, leg_lid, elem_den(leg_gid) ); 
-                }
-
-                for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
-                    
-                    int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
-                    //printf("zone_gid is %d \n", zone_gid);
-
-                    // zonal coords for initializations that depend on functions of x
-                    // calculate the coordinates and radius of the element
-                    double zone_coords[3]; 
-                    zone_coords[0] = 0.0;
-                    zone_coords[1] = 0.0;
-                    zone_coords[2] = 0.0;
-
-                    // get the coordinates of the element center
-                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
-                        //printf("nodes_in_zone for node_lid %d and zone_gid %d is %d \n", node_lid, zone_gid, mesh.nodes_in_zone(zone_gid, node_lid));
-                        zone_coords[0] += node_coords(1, mesh.nodes_in_zone(zone_gid, node_lid), 0);
-                        zone_coords[1] += node_coords(1, mesh.nodes_in_zone(zone_gid, node_lid), 1);
-                        if (mesh.num_dims == 3){
-                            zone_coords[2] += node_coords(1, mesh.nodes_in_zone(zone_gid, node_lid), 2);
-                        } else
-                        {
-                            zone_coords[2] = 0.0;
-                        }
-                    } // end loop over nodes in element
-                    zone_coords[0] = zone_coords[0]*0.125;
-                    zone_coords[1] = zone_coords[1]*0.125;
-                    zone_coords[2] = zone_coords[2]*0.125;
-
-                    
-                    // printf("zone_coord at dim %d is %f \n", 0, zone_coords[0] );
-                    // printf("zone_coord at dim %d is %f \n", 1, zone_coords[1] );
-                    // printf("zone_coord at dim %d is %f \n", 2, zone_coords[2] );
-                    
-                    // WARNING WARNING WARNING, any reason we need a zonal mass? // 
-                    elem_mass(elem_gid) = elem_den(zone_gid)/elem_vol(elem_gid);
-                    //printf( "mass in elem %d is %f \n", elem_gid, elem_mass(elem_gid) ); 
-
-                    
-                    // specific internal energy at each "time bin"
-                    elem_sie( 0, zone_gid) = mat_fill(f_id).sie;
-                    elem_sie( 1, zone_gid) = mat_fill(f_id).sie;
-            
-                    
-                    
-                    // --- stress tensor ---
-                    // always 3D even for 2D-RZ
-                    for (size_t i=0; i<3; i++){
-                        for (size_t j=0; j<3; j++){
-                            elem_stress( 0,zone_gid,i,j) = 0.0;
-                            elem_stress( 1,zone_gid,i,j) = 0.0;
-                        }        
-                    }  // end for
-                    
-                    
-                    
-                    // --- Pressure and stress ---
-                    material(mat_id).eos_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            elem_mat_id(elem_gid),
-                                            elem_statev,
-                                            elem_sspd,
-                                            elem_den(zone_gid),
-                                            elem_sie(1,zone_gid));
-                            
-                    
                     
                     
                     
