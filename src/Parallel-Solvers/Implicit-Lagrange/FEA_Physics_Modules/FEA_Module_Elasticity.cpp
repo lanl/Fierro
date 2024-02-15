@@ -2118,6 +2118,105 @@ void FEA_Module_Elasticity::Concavity_Element_Material_Properties(size_t ielem, 
 }
 
 /* ----------------------------------------------------------------------
+   Retrieve material properties associated with a finite element
+------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::Element_Anisotropic_Material_Properties(size_t ielem, real_t Element_Moduli[3],
+                                                                    real_t Poisson_Ratios[3], 
+                                                                    real_t Shear_Moduli[3], real_t density){
+  real_t unit_scaling = simparam->get_unit_scaling();
+  real_t penalty_product = 1;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
+  if(density < 0) density = 0;
+  if(module_params->material.SIMP_modulus){
+    for(int i = 0; i < penalty_power; i++)
+    penalty_product *= density;
+    //relationship between density and stiffness
+    for(int idim = 0; idim < num_dim; idim++){
+      Element_Moduli[idim] = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params->material.elastic_moduli[idim]/unit_scaling/unit_scaling;
+      Shear_Moduli[idim] = (density_epsilon + (1 - density_epsilon)*penalty_product)*module_params->material.shear_moduli[idim]/unit_scaling/unit_scaling;
+      //Element_Modulus = density*simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+      Poisson_Ratios[idim] = module_params->material.poisson_ratios[idim];
+    }
+  }
+  else if(module_params->material.linear_cell_modulus){
+    for(int idim = 0; idim < num_dim; idim++){
+      Element_Moduli[idim] = module_params->material.modulus_initial + module_params->material.modulus_density_slope*density;
+      Poisson_Ratios[idim] = module_params->material.poisson_ratio;
+      Shear_Moduli[idim] = module_params->material.shear_modulus_initial + module_params->material.shear_modulus_density_slope*density;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   Retrieve derivative of material properties with respect to local density
+------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::Gradient_Element_Anisotropic_Material_Properties(size_t ielem, real_t Element_Moduli_Derivatives[3],
+                                                                            real_t Poisson_Ratios_Derivatives[3], 
+                                                                            real_t Shear_Moduli_Derivatives[3], real_t density){
+  real_t unit_scaling = simparam->get_unit_scaling();
+  real_t penalty_product = 1;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
+  if(density < 0) density = 0;
+  
+  if(module_params->material.SIMP_modulus){
+    for(int i = 0; i < penalty_power - 1; i++)
+      penalty_product *= density;
+    //relationship between density and stiffness
+    
+    for(int idim = 0; idim < num_dim; idim++){
+      Element_Moduli_Derivatives[idim] = penalty_power*(1 - density_epsilon)*penalty_product*module_params->material.elastic_moduli[idim]/unit_scaling/unit_scaling;
+      Shear_Moduli_Derivatives[idim] = penalty_power*(1 - density_epsilon)*penalty_product*module_params->material.shear_moduli[idim]/unit_scaling/unit_scaling;
+      //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+      Poisson_Ratios_Derivatives[idim] = module_params->material.poisson_ratios[idim];
+    }
+  }
+  else if(module_params->material.linear_cell_modulus){
+    for(int idim = 0; idim < num_dim; idim++){
+      Element_Moduli_Derivatives[idim] = module_params->material.modulus_density_slope;
+      Poisson_Ratios_Derivatives[idim] = module_params->material.poisson_ratios[idim];
+      Shear_Moduli_Derivatives[idim] = module_params->material.shear_modulus_density_slope;
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------------
+   Retrieve second derivative of material properties with respect to local density
+----------------------------------------------------------------------------------- */
+
+void FEA_Module_Elasticity::Concavity_Element_Anisotropic_Material_Properties(size_t ielem, real_t Element_Moduli_Derivatives[3], real_t Poisson_Ratios_Derivatives[3], real_t Shear_Moduli_Derivatives[3], real_t density){
+  real_t unit_scaling = simparam->get_unit_scaling();
+  real_t penalty_product = 1;
+  real_t density_epsilon = simparam->optimization_options.density_epsilon;
+  if(density < 0) density = 0;
+  
+  if(module_params->material.SIMP_modulus){
+    if(penalty_power>=2){
+      for(int i = 0; i < penalty_power - 2; i++)
+        penalty_product *= density;
+      //relationship between density and stiffness
+      
+      for(int idim = 0; idim < num_dim; idim++){
+        Element_Moduli_Derivatives[idim] = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params->material.elastic_modulus/unit_scaling/unit_scaling;
+        Shear_Moduli_Derivatives[idim] = penalty_power*(penalty_power-1)*(1 - density_epsilon)*penalty_product*module_params->material.elastic_modulus/unit_scaling/unit_scaling;
+        Poisson_Ratios_Derivatives[idim] = module_params->material.poisson_ratios[idim];
+      }
+    }
+  }
+  else if(module_params->material.linear_cell_modulus){
+    
+    for(int idim = 0; idim < num_dim; idim++){
+      Element_Moduli_Derivatives[idim] = 0;
+      Shear_Moduli_Derivatives[idim] = 0;
+      Poisson_Ratios_Derivatives[idim] = module_params->material.poisson_ratios[idim];
+    }
+  }
+  //Element_Modulus_Derivative = simparam->Elastic_Modulus/unit_scaling/unit_scaling;
+  
+}
+
+/* ----------------------------------------------------------------------
    Construct the local stiffness matrix
 ------------------------------------------------------------------------- */
 
@@ -5468,7 +5567,7 @@ int FEA_Module_Elasticity::solve(){
   //*fos << std::endl;
   //std::fflush(stdout);
     
-  int num_iter = 2000;
+  int num_iter = 3000;
   double solve_tol = 1e-06;
   int cacheSize = 0;
   std::string solveType         = "belos";

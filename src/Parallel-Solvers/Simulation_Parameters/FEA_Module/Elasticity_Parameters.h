@@ -8,6 +8,7 @@ struct Elasticity_Parameters
     : virtual ImplicitModule, FEA_Module_Parameters::Register<Elasticity_Parameters, FEA_MODULE_TYPE::Elasticity> {
     bool strain_max_flag    = false;
     bool modal_analysis     = false;
+    bool anisotropic_lattice = false;
 
     Elasticity_Parameters() : FEA_Module_Parameters({
         FIELD::displacement,
@@ -16,5 +17,5 @@ struct Elasticity_Parameters
     }) { }
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Elasticity_Parameters, ImplicitModule,
-    strain_max_flag, modal_analysis
+    strain_max_flag, modal_analysis, anisotropic_lattice
 )
