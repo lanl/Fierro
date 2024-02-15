@@ -28,14 +28,14 @@ requirements:
     - fierro-heffte
     - fftw #fftw=*=mpi* fftw=*=mpi_openmpi_*
     - kokkos=4.1
-    - hdf5=*=mpi* #hdf5=*=mpi_openmpi_*
+    - hdf5-parallel #hdf5=*=mpi* #hdf5=*=mpi_openmpi_*
     - elements
   run:
     - openmpi
     - fierro-heffte
     - fftw #fftw=*=mpi_openmpi_*
     - kokkos=4.1
-    - hdf5=*=mpi* #hdf5=*=mpi_openmpi_*
+    - hdf5-parallel #hdf5=*=mpi* #hdf5=*=mpi_openmpi_*
     - elements
 
 #TODO: Add tests
