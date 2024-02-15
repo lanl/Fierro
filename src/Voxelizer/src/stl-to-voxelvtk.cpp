@@ -65,6 +65,7 @@ std::tuple<CArray<bool>, double, double, double> Voxelizer::create_voxel_vtk(std
         });
 //        Kokkos::fence();
         main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz);
+        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz);
         // Y-direction voxelization
         CArray<bool> gridOUTPUTY(gridZ+2,gridX+2,gridY+2);
         FOR_LOOP (i, 0, gridZ+2,
@@ -159,7 +160,7 @@ std::tuple<CArray<bool>, double, double, double> Voxelizer::create_voxel_vtk(std
     return {OUTPUTgrid, voxel_dx, voxel_dy, voxel_dz};
 }
 
-std::tuple<double, double, double> Voxelizer::create_voxel_vtk_GUI(std::string stl_file_path, std::string vtk_file_path, int gridX, int gridY, int gridZ, double length_x, double length_y, double length_z) {
+std::tuple<double, double, double> Voxelizer::create_voxel_vtk_GUI(std::string stl_file_path, std::string vtk_file_path, int gridX, int gridY, int gridZ, double origin_x, double origin_y, double origin_z, double length_x, double length_y, double length_z) {
     
 //    Kokkos::initialize(argc, argv);
 //    {
@@ -256,15 +257,15 @@ std::tuple<double, double, double> Voxelizer::create_voxel_vtk_GUI(std::string s
         
         fprintf(out,"X_COORDINATES %d float\n", gridX+1); // nodal x coordinates
         for (i=0; i<(gridX+1); i++) {
-            fprintf(out,"%lf ",double(i)*double(voxel_dx));
+            fprintf(out,"%lf ",double(i)*double(voxel_dx)+origin_x);
         }
         fprintf(out,"\nY_COORDINATES %d float\n", gridY+1); // nodal y coordinates
         for (i=0; i<(gridY+1); i++) {
-            fprintf(out,"%lf ",double(i)*double(voxel_dy));
+            fprintf(out,"%lf ",double(i)*double(voxel_dy)+origin_y);
         }
         fprintf(out,"\nZ_COORDINATES %d float\n", gridZ+1); // nodal z coordinates
         for (i=0; i<(gridZ+1); i++) {
-            fprintf(out,"%lf ",double(i)*double(voxel_dz));
+            fprintf(out,"%lf ",double(i)*double(voxel_dz)+origin_z);
         }
         
         fprintf(out,"\n\nCELL_DATA %d\n",gridX*gridY*gridZ); // material (1) or void (0) region definition

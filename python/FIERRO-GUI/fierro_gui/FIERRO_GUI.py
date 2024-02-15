@@ -124,6 +124,12 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.BVoxelizeGeometry.setEnabled(True)
                 self.BStlDimensions.setEnabled(True)
                 self.BCustomDimensions.setEnabled(True)
+                self.LOriginX.setEnabled(True)
+                self.LOriginY.setEnabled(True)
+                self.LOriginZ.setEnabled(True)
+                self.INOriginX.setEnabled(True)
+                self.INOriginY.setEnabled(True)
+                self.INOriginZ.setEnabled(True)
                 
             elif self.file_type == '.vt':
                 self.stl = pvsimple.LegacyVTKReader(FileNames = b3_filename)
@@ -171,7 +177,7 @@ class FIERRO_GUI(Ui_MainWindow):
         
         # Voxelize Geometry
         def voxelize_geometry_click():
-            if not self.INNumberOfVoxelsX.text() or not self.INNumberOfVoxelsY.text() or not self.INNumberOfVoxelsZ.text() or not self.INLengthX.text() or not self.INLengthY.text() or not self.INLengthZ.text():
+            if not self.INNumberOfVoxelsX.text() or not self.INNumberOfVoxelsY.text() or not self.INNumberOfVoxelsZ.text() or not self.INLengthX.text() or not self.INLengthY.text() or not self.INLengthZ.text() or not self.INOriginX.text() or not self.INOriginY.text() or not self.INOriginZ.text():
                 warning_message('ERROR: Number of voxels NOT defined')
             else:
                 try:
@@ -179,7 +185,7 @@ class FIERRO_GUI(Ui_MainWindow):
                 except:
                     # Run voxelization executable
                     executable_path = "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/build-fierro-serial/bin/fierro-voxelizer"
-                    arguments = [b3_filename[0], VTK_OUTPUT, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
+                    arguments = [b3_filename[0], VTK_OUTPUT, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INOriginX.text(), self.INOriginY.text(), self.INOriginZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
                     command = [executable_path] + arguments
                     process = subprocess.Popen(command)
                     process.wait()
@@ -189,7 +195,7 @@ class FIERRO_GUI(Ui_MainWindow):
                     
                     # Run voxelization executable
                     executable_path = "/Users/shankins/Documents/FY24/Github/XcodeFierro/Fierro/build-fierro-serial/bin/fierro-voxelizer"
-                    arguments = [b3_filename[0], VTK_OUTPUT, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
+                    arguments = [b3_filename[0], VTK_OUTPUT, self.INNumberOfVoxelsX.text(), self.INNumberOfVoxelsY.text(), self.INNumberOfVoxelsZ.text(), self.INOriginX.text(), self.INOriginY.text(), self.INOriginZ.text(), self.INLengthX.text(), self.INLengthY.text(), self.INLengthZ.text()]
                     command = [executable_path] + arguments
                     process = subprocess.Popen(command)
                     process.wait()
@@ -784,7 +790,7 @@ class FIERRO_GUI(Ui_MainWindow):
                     if self.TMaterials.item(i,1).text() == 'Void':
                         phase1 = '*INFORMATION ABOUT PHASE #1\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  f'{PLASTIC_PARAMETERS}\n' + efile + '\n'
                     else:
-                        phase2 = '*INFORMATION ABOUT PHASE #1\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  f'{PLASTIC_PARAMETERS}\n' + efile + '\n'
+                        phase2 = '*INFORMATION ABOUT PHASE #2\n' + '0                          igas(iph)\n' + '* name and path of single crystal files (filecryspl, filecrysel) (dummy if igas(iph)=1)\n' +  f'{PLASTIC_PARAMETERS}\n' + efile + '\n'
             evpfft_lattice_input.write(phase1)
             evpfft_lattice_input.write(phase2)
             if self.TBCs.item(BC_index,1).text() == "x-direction":
@@ -908,7 +914,7 @@ class FIERRO_GUI(Ui_MainWindow):
                 self.p.stateChanged.connect(handle_state)
                 self.p.finished.connect(process_finished)
                 self.p.start("evpfft",["-f", EVPFFT_INPUT, "-m", "2"])
-                self.progress_re = re.compile("       Current  Time  STEP = (\d+)")
+                self.progress_re = re.compile("       Current  Time  STEP = (\\d+)")
                 self.run_cnt += 1
         def simple_percent_parser(output):
             m = self.progress_re.search(output)

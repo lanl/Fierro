@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'FIERRO_GUIOOgkEj.ui'
+## Form generated from reading UI file 'FIERRO_GUIlBwFcJ.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.2
 ##
@@ -29,7 +29,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1022, 916)
+        MainWindow.resize(1074, 957)
         icon = QIcon()
         icon.addFile(u"Icons/EVPFFT_logo_A2.png", QSize(), QIcon.Normal, QIcon.Off)
         MainWindow.setWindowIcon(icon)
@@ -61,291 +61,721 @@ class Ui_MainWindow(object):
         self.verticalLayout = QVBoxLayout(self.centralwidget)
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.HeaderMenu = QTabWidget(self.centralwidget)
-        self.HeaderMenu.setObjectName(u"HeaderMenu")
-        self.HeaderMenu.setMaximumSize(QSize(16777215, 125))
+        self.verticalLayout.setContentsMargins(-1, 0, -1, -1)
+        self.frame_6 = QFrame(self.centralwidget)
+        self.frame_6.setObjectName(u"frame_6")
+        self.frame_6.setFrameShape(QFrame.NoFrame)
+        self.frame_6.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_10 = QHBoxLayout(self.frame_6)
+        self.horizontalLayout_10.setSpacing(0)
+        self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
+        self.horizontalLayout_10.setContentsMargins(0, 0, 0, 0)
+        self.radioButton_2 = QRadioButton(self.frame_6)
+        self.radioButton_2.setObjectName(u"radioButton_2")
+        icon1 = QIcon()
+        icon1.addFile(u":/Locks/Locks/GreenUnlock.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.radioButton_2.setIcon(icon1)
+        self.radioButton_2.setIconSize(QSize(24, 24))
+        self.radioButton_2.setChecked(True)
+
+        self.horizontalLayout_10.addWidget(self.radioButton_2, 0, Qt.AlignBottom)
+
+        self.radioButton = QRadioButton(self.frame_6)
+        self.radioButton.setObjectName(u"radioButton")
+        icon2 = QIcon()
+        icon2.addFile(u":/Locks/Locks/RedLock.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.radioButton.setIcon(icon2)
+        self.radioButton.setIconSize(QSize(24, 24))
+        self.radioButton.setChecked(False)
+
+        self.horizontalLayout_10.addWidget(self.radioButton)
+
+
+        self.verticalLayout.addWidget(self.frame_6, 0, Qt.AlignLeft|Qt.AlignBottom)
+
+        self.SolverTypeMenu = QTabWidget(self.centralwidget)
+        self.SolverTypeMenu.setObjectName(u"SolverTypeMenu")
+        self.SolverTypeMenu.setEnabled(True)
         font = QFont()
         font.setBold(True)
-        self.HeaderMenu.setFont(font)
-        self.Tools = QWidget()
-        self.Tools.setObjectName(u"Tools")
+        self.SolverTypeMenu.setFont(font)
+        self.SolverTypeMenu.setContextMenuPolicy(Qt.DefaultContextMenu)
+        self.SolverTypeMenu.setTabShape(QTabWidget.Rounded)
+        self.ChooseSolver = QWidget()
+        self.ChooseSolver.setObjectName(u"ChooseSolver")
+        self.ChooseSolver.setEnabled(True)
+        self.verticalLayout_3 = QVBoxLayout(self.ChooseSolver)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 5)
+        self.label_2 = QLabel(self.ChooseSolver)
+        self.label_2.setObjectName(u"label_2")
+
+        self.verticalLayout_3.addWidget(self.label_2)
+
+        self.SolverTypeMenu.addTab(self.ChooseSolver, "")
+        self.ExplicitSolver = QWidget()
+        self.ExplicitSolver.setObjectName(u"ExplicitSolver")
+        self.horizontalLayout_31 = QHBoxLayout(self.ExplicitSolver)
+        self.horizontalLayout_31.setObjectName(u"horizontalLayout_31")
+        self.horizontalLayout_31.setContentsMargins(0, 0, 0, 0)
+        self.ExplicitPipelines = QTabWidget(self.ExplicitSolver)
+        self.ExplicitPipelines.setObjectName(u"ExplicitPipelines")
+        self.ExplicitPipelines.setMaximumSize(QSize(16777215, 125))
         font1 = QFont()
-        font1.setPointSize(13)
         font1.setBold(False)
-        self.Tools.setFont(font1)
-        self.horizontalLayout_2 = QHBoxLayout(self.Tools)
-#ifndef Q_OS_MAC
-        self.horizontalLayout_2.setSpacing(-1)
-#endif
+        self.ExplicitPipelines.setFont(font1)
+        self.Mesh_3 = QWidget()
+        self.Mesh_3.setObjectName(u"Mesh_3")
+        self.horizontalLayout_25 = QHBoxLayout(self.Mesh_3)
+        self.horizontalLayout_25.setObjectName(u"horizontalLayout_25")
+        self.horizontalLayout_25.setContentsMargins(5, 0, 5, 0)
+        self.PartTools_4 = QFrame(self.Mesh_3)
+        self.PartTools_4.setObjectName(u"PartTools_4")
+        self.PartTools_4.setFrameShape(QFrame.NoFrame)
+        self.PartTools_4.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_55 = QVBoxLayout(self.PartTools_4)
+        self.verticalLayout_55.setSpacing(0)
+        self.verticalLayout_55.setObjectName(u"verticalLayout_55")
+        self.verticalLayout_55.setContentsMargins(0, 0, 0, 0)
+        self.frame_5 = QFrame(self.PartTools_4)
+        self.frame_5.setObjectName(u"frame_5")
+        self.frame_5.setFrameShape(QFrame.NoFrame)
+        self.frame_5.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_26 = QHBoxLayout(self.frame_5)
+        self.horizontalLayout_26.setObjectName(u"horizontalLayout_26")
+        self.horizontalLayout_26.setContentsMargins(0, 0, 0, 0)
+        self.GlobaMesh = QFrame(self.frame_5)
+        self.GlobaMesh.setObjectName(u"GlobaMesh")
+        self.GlobaMesh.setMinimumSize(QSize(70, 80))
+        self.GlobaMesh.setMaximumSize(QSize(70, 80))
+        self.GlobaMesh.setFrameShape(QFrame.NoFrame)
+        self.GlobaMesh.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_34 = QVBoxLayout(self.GlobaMesh)
+        self.verticalLayout_34.setSpacing(0)
+        self.verticalLayout_34.setObjectName(u"verticalLayout_34")
+        self.verticalLayout_34.setContentsMargins(0, 0, 0, 5)
+        self.BGlobalMesh = QPushButton(self.GlobaMesh)
+        self.BGlobalMesh.setObjectName(u"BGlobalMesh")
+        icon3 = QIcon()
+        icon3.addFile(u":/Blue Icons/Blue Icons/mesh.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BGlobalMesh.setIcon(icon3)
+        self.BGlobalMesh.setIconSize(QSize(40, 40))
+        self.BGlobalMesh.setFlat(True)
+
+        self.verticalLayout_34.addWidget(self.BGlobalMesh)
+
+        self.LGlobalMesh = QLabel(self.GlobaMesh)
+        self.LGlobalMesh.setObjectName(u"LGlobalMesh")
+        self.LGlobalMesh.setWordWrap(True)
+
+        self.verticalLayout_34.addWidget(self.LGlobalMesh)
+
+
+        self.horizontalLayout_26.addWidget(self.GlobaMesh)
+
+        self.ImportPart_4 = QFrame(self.frame_5)
+        self.ImportPart_4.setObjectName(u"ImportPart_4")
+        self.ImportPart_4.setMinimumSize(QSize(70, 80))
+        self.ImportPart_4.setMaximumSize(QSize(70, 80))
+        self.ImportPart_4.setFrameShape(QFrame.NoFrame)
+        self.ImportPart_4.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_56 = QVBoxLayout(self.ImportPart_4)
+        self.verticalLayout_56.setSpacing(0)
+        self.verticalLayout_56.setObjectName(u"verticalLayout_56")
+        self.verticalLayout_56.setContentsMargins(0, 0, 0, 5)
+        self.BImportPart_4 = QPushButton(self.ImportPart_4)
+        self.BImportPart_4.setObjectName(u"BImportPart_4")
+        icon4 = QIcon()
+        icon4.addFile(u":/Blue Icons/Blue Icons/Cube.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BImportPart_4.setIcon(icon4)
+        self.BImportPart_4.setIconSize(QSize(50, 50))
+        self.BImportPart_4.setFlat(True)
+
+        self.verticalLayout_56.addWidget(self.BImportPart_4)
+
+        self.LImportPart_4 = QLabel(self.ImportPart_4)
+        self.LImportPart_4.setObjectName(u"LImportPart_4")
+        self.LImportPart_4.setWordWrap(True)
+
+        self.verticalLayout_56.addWidget(self.LImportPart_4)
+
+
+        self.horizontalLayout_26.addWidget(self.ImportPart_4)
+
+
+        self.verticalLayout_55.addWidget(self.frame_5, 0, Qt.AlignLeft)
+
+        self.LinePartTools_4 = QFrame(self.PartTools_4)
+        self.LinePartTools_4.setObjectName(u"LinePartTools_4")
+        self.LinePartTools_4.setFrameShape(QFrame.HLine)
+        self.LinePartTools_4.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout_55.addWidget(self.LinePartTools_4)
+
+        self.LPartTools_4 = QLabel(self.PartTools_4)
+        self.LPartTools_4.setObjectName(u"LPartTools_4")
+
+        self.verticalLayout_55.addWidget(self.LPartTools_4)
+
+
+        self.horizontalLayout_25.addWidget(self.PartTools_4)
+
+        self.MaterialTools_4 = QFrame(self.Mesh_3)
+        self.MaterialTools_4.setObjectName(u"MaterialTools_4")
+        self.MaterialTools_4.setFrameShape(QFrame.NoFrame)
+        self.MaterialTools_4.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_57 = QVBoxLayout(self.MaterialTools_4)
+        self.verticalLayout_57.setSpacing(0)
+        self.verticalLayout_57.setObjectName(u"verticalLayout_57")
+        self.verticalLayout_57.setContentsMargins(0, 0, 0, 0)
+        self.MaterialToolsBtns_4 = QFrame(self.MaterialTools_4)
+        self.MaterialToolsBtns_4.setObjectName(u"MaterialToolsBtns_4")
+        self.MaterialToolsBtns_4.setFrameShape(QFrame.NoFrame)
+        self.MaterialToolsBtns_4.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_27 = QHBoxLayout(self.MaterialToolsBtns_4)
+        self.horizontalLayout_27.setSpacing(0)
+        self.horizontalLayout_27.setObjectName(u"horizontalLayout_27")
+        self.horizontalLayout_27.setContentsMargins(0, 0, 0, 0)
+        self.DefineMaterial_4 = QFrame(self.MaterialToolsBtns_4)
+        self.DefineMaterial_4.setObjectName(u"DefineMaterial_4")
+        self.DefineMaterial_4.setMinimumSize(QSize(80, 80))
+        self.DefineMaterial_4.setMaximumSize(QSize(80, 80))
+        self.DefineMaterial_4.setFrameShape(QFrame.NoFrame)
+        self.DefineMaterial_4.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_58 = QVBoxLayout(self.DefineMaterial_4)
+        self.verticalLayout_58.setSpacing(0)
+        self.verticalLayout_58.setObjectName(u"verticalLayout_58")
+        self.verticalLayout_58.setContentsMargins(0, 0, 0, 5)
+        self.BDefineMaterial_4 = QPushButton(self.DefineMaterial_4)
+        self.BDefineMaterial_4.setObjectName(u"BDefineMaterial_4")
+        icon5 = QIcon()
+        icon5.addFile(u":/Blue Icons/Blue Icons/mine.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BDefineMaterial_4.setIcon(icon5)
+        self.BDefineMaterial_4.setIconSize(QSize(50, 50))
+        self.BDefineMaterial_4.setFlat(True)
+
+        self.verticalLayout_58.addWidget(self.BDefineMaterial_4)
+
+        self.LDefineMaterial_4 = QLabel(self.DefineMaterial_4)
+        self.LDefineMaterial_4.setObjectName(u"LDefineMaterial_4")
+        self.LDefineMaterial_4.setWordWrap(True)
+
+        self.verticalLayout_58.addWidget(self.LDefineMaterial_4, 0, Qt.AlignBottom)
+
+
+        self.horizontalLayout_27.addWidget(self.DefineMaterial_4, 0, Qt.AlignLeft)
+
+
+        self.verticalLayout_57.addWidget(self.MaterialToolsBtns_4, 0, Qt.AlignLeft)
+
+        self.LineMaterialTools_4 = QFrame(self.MaterialTools_4)
+        self.LineMaterialTools_4.setObjectName(u"LineMaterialTools_4")
+        self.LineMaterialTools_4.setFrameShape(QFrame.HLine)
+        self.LineMaterialTools_4.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout_57.addWidget(self.LineMaterialTools_4)
+
+        self.LMaterialTools_4 = QLabel(self.MaterialTools_4)
+        self.LMaterialTools_4.setObjectName(u"LMaterialTools_4")
+
+        self.verticalLayout_57.addWidget(self.LMaterialTools_4)
+
+
+        self.horizontalLayout_25.addWidget(self.MaterialTools_4)
+
+        self.BCTools_4 = QFrame(self.Mesh_3)
+        self.BCTools_4.setObjectName(u"BCTools_4")
+        self.BCTools_4.setFrameShape(QFrame.NoFrame)
+        self.BCTools_4.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_59 = QVBoxLayout(self.BCTools_4)
+        self.verticalLayout_59.setSpacing(0)
+        self.verticalLayout_59.setObjectName(u"verticalLayout_59")
+        self.verticalLayout_59.setContentsMargins(0, 0, 0, 0)
+        self.ApplyBC_4 = QFrame(self.BCTools_4)
+        self.ApplyBC_4.setObjectName(u"ApplyBC_4")
+        self.ApplyBC_4.setMinimumSize(QSize(65, 80))
+        self.ApplyBC_4.setMaximumSize(QSize(70, 80))
+        self.ApplyBC_4.setFrameShape(QFrame.NoFrame)
+        self.ApplyBC_4.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_60 = QVBoxLayout(self.ApplyBC_4)
+        self.verticalLayout_60.setSpacing(0)
+        self.verticalLayout_60.setObjectName(u"verticalLayout_60")
+        self.verticalLayout_60.setContentsMargins(0, 0, 0, 5)
+        self.BApplyBC_4 = QPushButton(self.ApplyBC_4)
+        self.BApplyBC_4.setObjectName(u"BApplyBC_4")
+        icon6 = QIcon()
+        icon6.addFile(u":/Blue Icons/Blue Icons/brick.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BApplyBC_4.setIcon(icon6)
+        self.BApplyBC_4.setIconSize(QSize(50, 50))
+        self.BApplyBC_4.setFlat(True)
+
+        self.verticalLayout_60.addWidget(self.BApplyBC_4)
+
+        self.LApplyBC_4 = QLabel(self.ApplyBC_4)
+        self.LApplyBC_4.setObjectName(u"LApplyBC_4")
+        self.LApplyBC_4.setWordWrap(True)
+
+        self.verticalLayout_60.addWidget(self.LApplyBC_4)
+
+
+        self.verticalLayout_59.addWidget(self.ApplyBC_4, 0, Qt.AlignLeft)
+
+        self.LineBCTools_4 = QFrame(self.BCTools_4)
+        self.LineBCTools_4.setObjectName(u"LineBCTools_4")
+        self.LineBCTools_4.setFrameShape(QFrame.HLine)
+        self.LineBCTools_4.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout_59.addWidget(self.LineBCTools_4)
+
+        self.LBCTools_4 = QLabel(self.BCTools_4)
+        self.LBCTools_4.setObjectName(u"LBCTools_4")
+
+        self.verticalLayout_59.addWidget(self.LBCTools_4)
+
+
+        self.horizontalLayout_25.addWidget(self.BCTools_4)
+
+        self.JobTools_6 = QFrame(self.Mesh_3)
+        self.JobTools_6.setObjectName(u"JobTools_6")
+        self.JobTools_6.setFrameShape(QFrame.NoFrame)
+        self.JobTools_6.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_63 = QVBoxLayout(self.JobTools_6)
+        self.verticalLayout_63.setSpacing(0)
+        self.verticalLayout_63.setObjectName(u"verticalLayout_63")
+        self.verticalLayout_63.setContentsMargins(0, 0, 0, 0)
+        self.JobToolsBtns_6 = QFrame(self.JobTools_6)
+        self.JobToolsBtns_6.setObjectName(u"JobToolsBtns_6")
+        self.JobToolsBtns_6.setMinimumSize(QSize(0, 0))
+        self.JobToolsBtns_6.setMaximumSize(QSize(16777215, 16777215))
+        self.JobToolsBtns_6.setFrameShape(QFrame.NoFrame)
+        self.JobToolsBtns_6.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_30 = QHBoxLayout(self.JobToolsBtns_6)
+        self.horizontalLayout_30.setSpacing(0)
+        self.horizontalLayout_30.setObjectName(u"horizontalLayout_30")
+        self.horizontalLayout_30.setContentsMargins(0, 0, 0, 0)
+        self.SolverSettings_6 = QFrame(self.JobToolsBtns_6)
+        self.SolverSettings_6.setObjectName(u"SolverSettings_6")
+        self.SolverSettings_6.setMinimumSize(QSize(80, 80))
+        self.SolverSettings_6.setMaximumSize(QSize(80, 80))
+        self.SolverSettings_6.setFrameShape(QFrame.NoFrame)
+        self.SolverSettings_6.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_64 = QVBoxLayout(self.SolverSettings_6)
+        self.verticalLayout_64.setSpacing(0)
+        self.verticalLayout_64.setObjectName(u"verticalLayout_64")
+        self.verticalLayout_64.setContentsMargins(0, 0, 0, 5)
+        self.BSolverSettings_6 = QPushButton(self.SolverSettings_6)
+        self.BSolverSettings_6.setObjectName(u"BSolverSettings_6")
+        icon7 = QIcon()
+        icon7.addFile(u":/Blue Icons/Blue Icons/gear.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BSolverSettings_6.setIcon(icon7)
+        self.BSolverSettings_6.setIconSize(QSize(50, 50))
+        self.BSolverSettings_6.setFlat(True)
+
+        self.verticalLayout_64.addWidget(self.BSolverSettings_6)
+
+        self.LSolverSettings_7 = QLabel(self.SolverSettings_6)
+        self.LSolverSettings_7.setObjectName(u"LSolverSettings_7")
+        self.LSolverSettings_7.setWordWrap(True)
+
+        self.verticalLayout_64.addWidget(self.LSolverSettings_7)
+
+
+        self.horizontalLayout_30.addWidget(self.SolverSettings_6, 0, Qt.AlignLeft)
+
+        self.RunEVPFFT_6 = QFrame(self.JobToolsBtns_6)
+        self.RunEVPFFT_6.setObjectName(u"RunEVPFFT_6")
+        self.RunEVPFFT_6.setMinimumSize(QSize(75, 80))
+        self.RunEVPFFT_6.setMaximumSize(QSize(65, 80))
+        self.RunEVPFFT_6.setFrameShape(QFrame.NoFrame)
+        self.RunEVPFFT_6.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_65 = QVBoxLayout(self.RunEVPFFT_6)
+        self.verticalLayout_65.setSpacing(0)
+        self.verticalLayout_65.setObjectName(u"verticalLayout_65")
+        self.verticalLayout_65.setContentsMargins(0, 0, 0, 5)
+        self.BRunEVPFFT_6 = QPushButton(self.RunEVPFFT_6)
+        self.BRunEVPFFT_6.setObjectName(u"BRunEVPFFT_6")
+        icon8 = QIcon()
+        icon8.addFile(u":/Blue Icons/Blue Icons/Play.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BRunEVPFFT_6.setIcon(icon8)
+        self.BRunEVPFFT_6.setIconSize(QSize(40, 40))
+        self.BRunEVPFFT_6.setFlat(True)
+
+        self.verticalLayout_65.addWidget(self.BRunEVPFFT_6)
+
+        self.LRunEVPFFT_6 = QLabel(self.RunEVPFFT_6)
+        self.LRunEVPFFT_6.setObjectName(u"LRunEVPFFT_6")
+        self.LRunEVPFFT_6.setWordWrap(True)
+
+        self.verticalLayout_65.addWidget(self.LRunEVPFFT_6)
+
+
+        self.horizontalLayout_30.addWidget(self.RunEVPFFT_6)
+
+        self.ViewResults_3 = QFrame(self.JobToolsBtns_6)
+        self.ViewResults_3.setObjectName(u"ViewResults_3")
+        self.ViewResults_3.setMinimumSize(QSize(80, 80))
+        self.ViewResults_3.setMaximumSize(QSize(80, 80))
+        self.ViewResults_3.setFrameShape(QFrame.NoFrame)
+        self.ViewResults_3.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_66 = QVBoxLayout(self.ViewResults_3)
+        self.verticalLayout_66.setSpacing(0)
+        self.verticalLayout_66.setObjectName(u"verticalLayout_66")
+        self.verticalLayout_66.setContentsMargins(0, 0, 0, 5)
+        self.BViewResults_3 = QPushButton(self.ViewResults_3)
+        self.BViewResults_3.setObjectName(u"BViewResults_3")
+        icon9 = QIcon()
+        icon9.addFile(u":/Blue Icons/Blue Icons/magnify.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.BViewResults_3.setIcon(icon9)
+        self.BViewResults_3.setIconSize(QSize(40, 40))
+        self.BViewResults_3.setFlat(True)
+
+        self.verticalLayout_66.addWidget(self.BViewResults_3)
+
+        self.LViewResults_3 = QLabel(self.ViewResults_3)
+        self.LViewResults_3.setObjectName(u"LViewResults_3")
+        self.LViewResults_3.setWordWrap(True)
+
+        self.verticalLayout_66.addWidget(self.LViewResults_3)
+
+
+        self.horizontalLayout_30.addWidget(self.ViewResults_3)
+
+
+        self.verticalLayout_63.addWidget(self.JobToolsBtns_6, 0, Qt.AlignLeft)
+
+        self.LineJobTools_6 = QFrame(self.JobTools_6)
+        self.LineJobTools_6.setObjectName(u"LineJobTools_6")
+        self.LineJobTools_6.setFrameShape(QFrame.HLine)
+        self.LineJobTools_6.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout_63.addWidget(self.LineJobTools_6)
+
+        self.LJobTools_6 = QLabel(self.JobTools_6)
+        self.LJobTools_6.setObjectName(u"LJobTools_6")
+
+        self.verticalLayout_63.addWidget(self.LJobTools_6)
+
+
+        self.horizontalLayout_25.addWidget(self.JobTools_6)
+
+        self.ExplicitPipelines.addTab(self.Mesh_3, "")
+
+        self.horizontalLayout_31.addWidget(self.ExplicitPipelines)
+
+        self.SolverTypeMenu.addTab(self.ExplicitSolver, "")
+        self.ImplicitSolver = QWidget()
+        self.ImplicitSolver.setObjectName(u"ImplicitSolver")
+        self.verticalLayout_7 = QVBoxLayout(self.ImplicitSolver)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.label_4 = QLabel(self.ImplicitSolver)
+        self.label_4.setObjectName(u"label_4")
+
+        self.verticalLayout_7.addWidget(self.label_4)
+
+        self.SolverTypeMenu.addTab(self.ImplicitSolver, "")
+        self.EVPFFTSolver = QWidget()
+        self.EVPFFTSolver.setObjectName(u"EVPFFTSolver")
+        self.verticalLayout_5 = QVBoxLayout(self.EVPFFTSolver)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.EVPFFTPipelines = QTabWidget(self.EVPFFTSolver)
+        self.EVPFFTPipelines.setObjectName(u"EVPFFTPipelines")
+        self.EVPFFTPipelines.setMaximumSize(QSize(16777215, 150))
+        self.EVPFFTPipelines.setFont(font1)
+        self.ChoosePipeline = QWidget()
+        self.ChoosePipeline.setObjectName(u"ChoosePipeline")
+        self.verticalLayout_4 = QVBoxLayout(self.ChoosePipeline)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.label_3 = QLabel(self.ChoosePipeline)
+        self.label_3.setObjectName(u"label_3")
+
+        self.verticalLayout_4.addWidget(self.label_3)
+
+        self.EVPFFTPipelines.addTab(self.ChoosePipeline, "")
+        self.EVPFFTGeneral = QWidget()
+        self.EVPFFTGeneral.setObjectName(u"EVPFFTGeneral")
+        font2 = QFont()
+        font2.setPointSize(13)
+        font2.setBold(False)
+        self.EVPFFTGeneral.setFont(font2)
+        self.horizontalLayout_2 = QHBoxLayout(self.EVPFFTGeneral)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(5, 0, 5, 0)
-        self.PartTools = QFrame(self.Tools)
+        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.PartTools_5 = QFrame(self.EVPFFTGeneral)
+        self.PartTools_5.setObjectName(u"PartTools_5")
+        self.PartTools_5.setFrameShape(QFrame.NoFrame)
+        self.PartTools_5.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_68 = QVBoxLayout(self.PartTools_5)
+        self.verticalLayout_68.setSpacing(0)
+        self.verticalLayout_68.setObjectName(u"verticalLayout_68")
+        self.verticalLayout_68.setContentsMargins(0, 0, 0, 0)
+        self.ImportPart_5 = QFrame(self.PartTools_5)
+        self.ImportPart_5.setObjectName(u"ImportPart_5")
+        self.ImportPart_5.setMinimumSize(QSize(70, 80))
+        self.ImportPart_5.setMaximumSize(QSize(70, 80))
+        self.ImportPart_5.setFrameShape(QFrame.NoFrame)
+        self.ImportPart_5.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_69 = QVBoxLayout(self.ImportPart_5)
+        self.verticalLayout_69.setSpacing(0)
+        self.verticalLayout_69.setObjectName(u"verticalLayout_69")
+        self.verticalLayout_69.setContentsMargins(0, 0, 0, 5)
+        self.BImportPart_5 = QPushButton(self.ImportPart_5)
+        self.BImportPart_5.setObjectName(u"BImportPart_5")
+        self.BImportPart_5.setIcon(icon4)
+        self.BImportPart_5.setIconSize(QSize(50, 50))
+        self.BImportPart_5.setFlat(True)
+
+        self.verticalLayout_69.addWidget(self.BImportPart_5)
+
+        self.LImportPart_5 = QLabel(self.ImportPart_5)
+        self.LImportPart_5.setObjectName(u"LImportPart_5")
+        self.LImportPart_5.setWordWrap(True)
+
+        self.verticalLayout_69.addWidget(self.LImportPart_5)
+
+
+        self.verticalLayout_68.addWidget(self.ImportPart_5)
+
+        self.LinePartTools_5 = QFrame(self.PartTools_5)
+        self.LinePartTools_5.setObjectName(u"LinePartTools_5")
+        self.LinePartTools_5.setFrameShape(QFrame.HLine)
+        self.LinePartTools_5.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout_68.addWidget(self.LinePartTools_5)
+
+        self.LPartTools_5 = QLabel(self.PartTools_5)
+        self.LPartTools_5.setObjectName(u"LPartTools_5")
+
+        self.verticalLayout_68.addWidget(self.LPartTools_5)
+
+
+        self.horizontalLayout_2.addWidget(self.PartTools_5, 0, Qt.AlignLeft)
+
+        self.label_7 = QLabel(self.EVPFFTGeneral)
+        self.label_7.setObjectName(u"label_7")
+
+        self.horizontalLayout_2.addWidget(self.label_7)
+
+        self.EVPFFTPipelines.addTab(self.EVPFFTGeneral, "")
+        self.EVPFFTHomogenization = QWidget()
+        self.EVPFFTHomogenization.setObjectName(u"EVPFFTHomogenization")
+        self.verticalLayout_6 = QVBoxLayout(self.EVPFFTHomogenization)
+        self.verticalLayout_6.setSpacing(0)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.frame_8 = QFrame(self.EVPFFTHomogenization)
+        self.frame_8.setObjectName(u"frame_8")
+        self.frame_8.setFrameShape(QFrame.NoFrame)
+        self.frame_8.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_11 = QHBoxLayout(self.frame_8)
+        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
+        self.horizontalLayout_11.setContentsMargins(0, 0, 0, 0)
+        self.PartTools = QFrame(self.frame_8)
         self.PartTools.setObjectName(u"PartTools")
         self.PartTools.setFrameShape(QFrame.NoFrame)
         self.PartTools.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_7 = QVBoxLayout(self.PartTools)
-        self.verticalLayout_7.setSpacing(0)
-        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_49 = QVBoxLayout(self.PartTools)
+        self.verticalLayout_49.setSpacing(0)
+        self.verticalLayout_49.setObjectName(u"verticalLayout_49")
+        self.verticalLayout_49.setContentsMargins(0, 0, 0, 0)
         self.ImportPart = QFrame(self.PartTools)
         self.ImportPart.setObjectName(u"ImportPart")
         self.ImportPart.setMinimumSize(QSize(70, 80))
         self.ImportPart.setMaximumSize(QSize(70, 80))
         self.ImportPart.setFrameShape(QFrame.NoFrame)
         self.ImportPart.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_3 = QVBoxLayout(self.ImportPart)
-        self.verticalLayout_3.setSpacing(0)
-        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.verticalLayout_3.setContentsMargins(0, 0, 0, 5)
+        self.verticalLayout_50 = QVBoxLayout(self.ImportPart)
+        self.verticalLayout_50.setSpacing(0)
+        self.verticalLayout_50.setObjectName(u"verticalLayout_50")
+        self.verticalLayout_50.setContentsMargins(0, 0, 0, 5)
         self.BImportPart = QPushButton(self.ImportPart)
         self.BImportPart.setObjectName(u"BImportPart")
-        icon1 = QIcon()
-        icon1.addFile(u":/Blue Icons/Blue Icons/Cube.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BImportPart.setIcon(icon1)
+        self.BImportPart.setIcon(icon4)
         self.BImportPart.setIconSize(QSize(50, 50))
-        self.BImportPart.setFlat(False)
+        self.BImportPart.setFlat(True)
 
-        self.verticalLayout_3.addWidget(self.BImportPart)
+        self.verticalLayout_50.addWidget(self.BImportPart)
 
         self.LImportPart = QLabel(self.ImportPart)
         self.LImportPart.setObjectName(u"LImportPart")
         self.LImportPart.setWordWrap(True)
 
-        self.verticalLayout_3.addWidget(self.LImportPart, 0, Qt.AlignBottom)
+        self.verticalLayout_50.addWidget(self.LImportPart)
 
 
-        self.verticalLayout_7.addWidget(self.ImportPart)
+        self.verticalLayout_49.addWidget(self.ImportPart)
 
         self.LinePartTools = QFrame(self.PartTools)
         self.LinePartTools.setObjectName(u"LinePartTools")
         self.LinePartTools.setFrameShape(QFrame.HLine)
         self.LinePartTools.setFrameShadow(QFrame.Sunken)
 
-        self.verticalLayout_7.addWidget(self.LinePartTools)
+        self.verticalLayout_49.addWidget(self.LinePartTools)
 
         self.LPartTools = QLabel(self.PartTools)
         self.LPartTools.setObjectName(u"LPartTools")
 
-        self.verticalLayout_7.addWidget(self.LPartTools)
+        self.verticalLayout_49.addWidget(self.LPartTools)
 
 
-        self.horizontalLayout_2.addWidget(self.PartTools)
+        self.horizontalLayout_11.addWidget(self.PartTools)
 
-        self.line = QFrame(self.Tools)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.VLine)
-        self.line.setFrameShadow(QFrame.Sunken)
-
-        self.horizontalLayout_2.addWidget(self.line)
-
-        self.MaterialTools = QFrame(self.Tools)
+        self.MaterialTools = QFrame(self.frame_8)
         self.MaterialTools.setObjectName(u"MaterialTools")
         self.MaterialTools.setFrameShape(QFrame.NoFrame)
         self.MaterialTools.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_8 = QVBoxLayout(self.MaterialTools)
-        self.verticalLayout_8.setSpacing(0)
-        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
-        self.verticalLayout_8.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_53 = QVBoxLayout(self.MaterialTools)
+        self.verticalLayout_53.setSpacing(0)
+        self.verticalLayout_53.setObjectName(u"verticalLayout_53")
+        self.verticalLayout_53.setContentsMargins(0, 0, 0, 0)
         self.MaterialToolsBtns = QFrame(self.MaterialTools)
         self.MaterialToolsBtns.setObjectName(u"MaterialToolsBtns")
         self.MaterialToolsBtns.setFrameShape(QFrame.NoFrame)
         self.MaterialToolsBtns.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_4 = QHBoxLayout(self.MaterialToolsBtns)
-        self.horizontalLayout_4.setSpacing(0)
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_22 = QHBoxLayout(self.MaterialToolsBtns)
+        self.horizontalLayout_22.setSpacing(0)
+        self.horizontalLayout_22.setObjectName(u"horizontalLayout_22")
+        self.horizontalLayout_22.setContentsMargins(0, 0, 0, 0)
         self.DefineMaterial = QFrame(self.MaterialToolsBtns)
         self.DefineMaterial.setObjectName(u"DefineMaterial")
         self.DefineMaterial.setMinimumSize(QSize(80, 80))
         self.DefineMaterial.setMaximumSize(QSize(80, 80))
         self.DefineMaterial.setFrameShape(QFrame.NoFrame)
         self.DefineMaterial.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_4 = QVBoxLayout(self.DefineMaterial)
-        self.verticalLayout_4.setSpacing(0)
-        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.verticalLayout_4.setContentsMargins(0, 0, 0, 5)
+        self.verticalLayout_54 = QVBoxLayout(self.DefineMaterial)
+        self.verticalLayout_54.setSpacing(0)
+        self.verticalLayout_54.setObjectName(u"verticalLayout_54")
+        self.verticalLayout_54.setContentsMargins(0, 0, 0, 5)
         self.BDefineMaterial = QPushButton(self.DefineMaterial)
         self.BDefineMaterial.setObjectName(u"BDefineMaterial")
-        icon2 = QIcon()
-        icon2.addFile(u":/Blue Icons/Blue Icons/mine.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BDefineMaterial.setIcon(icon2)
+        self.BDefineMaterial.setEnabled(True)
+        self.BDefineMaterial.setIcon(icon5)
         self.BDefineMaterial.setIconSize(QSize(50, 50))
         self.BDefineMaterial.setFlat(True)
 
-        self.verticalLayout_4.addWidget(self.BDefineMaterial)
+        self.verticalLayout_54.addWidget(self.BDefineMaterial)
 
         self.LDefineMaterial = QLabel(self.DefineMaterial)
         self.LDefineMaterial.setObjectName(u"LDefineMaterial")
         self.LDefineMaterial.setWordWrap(True)
 
-        self.verticalLayout_4.addWidget(self.LDefineMaterial, 0, Qt.AlignBottom)
+        self.verticalLayout_54.addWidget(self.LDefineMaterial, 0, Qt.AlignBottom)
 
 
-        self.horizontalLayout_4.addWidget(self.DefineMaterial, 0, Qt.AlignLeft)
+        self.horizontalLayout_22.addWidget(self.DefineMaterial, 0, Qt.AlignLeft)
 
 
-        self.verticalLayout_8.addWidget(self.MaterialToolsBtns, 0, Qt.AlignLeft)
+        self.verticalLayout_53.addWidget(self.MaterialToolsBtns, 0, Qt.AlignLeft)
 
         self.LineMaterialTools = QFrame(self.MaterialTools)
         self.LineMaterialTools.setObjectName(u"LineMaterialTools")
         self.LineMaterialTools.setFrameShape(QFrame.HLine)
         self.LineMaterialTools.setFrameShadow(QFrame.Sunken)
 
-        self.verticalLayout_8.addWidget(self.LineMaterialTools)
+        self.verticalLayout_53.addWidget(self.LineMaterialTools)
 
         self.LMaterialTools = QLabel(self.MaterialTools)
         self.LMaterialTools.setObjectName(u"LMaterialTools")
 
-        self.verticalLayout_8.addWidget(self.LMaterialTools)
+        self.verticalLayout_53.addWidget(self.LMaterialTools)
 
 
-        self.horizontalLayout_2.addWidget(self.MaterialTools)
+        self.horizontalLayout_11.addWidget(self.MaterialTools)
 
-        self.line_2 = QFrame(self.Tools)
-        self.line_2.setObjectName(u"line_2")
-        self.line_2.setFrameShape(QFrame.VLine)
-        self.line_2.setFrameShadow(QFrame.Sunken)
-
-        self.horizontalLayout_2.addWidget(self.line_2)
-
-        self.BCTools = QFrame(self.Tools)
+        self.BCTools = QFrame(self.frame_8)
         self.BCTools.setObjectName(u"BCTools")
         self.BCTools.setFrameShape(QFrame.NoFrame)
         self.BCTools.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_11 = QVBoxLayout(self.BCTools)
-        self.verticalLayout_11.setSpacing(0)
-        self.verticalLayout_11.setObjectName(u"verticalLayout_11")
-        self.verticalLayout_11.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_51 = QVBoxLayout(self.BCTools)
+        self.verticalLayout_51.setSpacing(0)
+        self.verticalLayout_51.setObjectName(u"verticalLayout_51")
+        self.verticalLayout_51.setContentsMargins(0, 0, 0, 0)
         self.ApplyBC = QFrame(self.BCTools)
         self.ApplyBC.setObjectName(u"ApplyBC")
         self.ApplyBC.setMinimumSize(QSize(65, 80))
         self.ApplyBC.setMaximumSize(QSize(70, 80))
         self.ApplyBC.setFrameShape(QFrame.NoFrame)
         self.ApplyBC.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_5 = QVBoxLayout(self.ApplyBC)
-        self.verticalLayout_5.setSpacing(0)
-        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.verticalLayout_5.setContentsMargins(0, 0, 0, 5)
+        self.verticalLayout_52 = QVBoxLayout(self.ApplyBC)
+        self.verticalLayout_52.setSpacing(0)
+        self.verticalLayout_52.setObjectName(u"verticalLayout_52")
+        self.verticalLayout_52.setContentsMargins(0, 0, 0, 5)
         self.BApplyBC = QPushButton(self.ApplyBC)
         self.BApplyBC.setObjectName(u"BApplyBC")
-        icon3 = QIcon()
-        icon3.addFile(u":/Blue Icons/Blue Icons/brick.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BApplyBC.setIcon(icon3)
+        self.BApplyBC.setIcon(icon6)
         self.BApplyBC.setIconSize(QSize(50, 50))
         self.BApplyBC.setFlat(True)
 
-        self.verticalLayout_5.addWidget(self.BApplyBC)
+        self.verticalLayout_52.addWidget(self.BApplyBC)
 
         self.LApplyBC = QLabel(self.ApplyBC)
         self.LApplyBC.setObjectName(u"LApplyBC")
         self.LApplyBC.setWordWrap(True)
 
-        self.verticalLayout_5.addWidget(self.LApplyBC)
+        self.verticalLayout_52.addWidget(self.LApplyBC)
 
 
-        self.verticalLayout_11.addWidget(self.ApplyBC, 0, Qt.AlignLeft)
+        self.verticalLayout_51.addWidget(self.ApplyBC, 0, Qt.AlignLeft)
 
         self.LineBCTools = QFrame(self.BCTools)
         self.LineBCTools.setObjectName(u"LineBCTools")
         self.LineBCTools.setFrameShape(QFrame.HLine)
         self.LineBCTools.setFrameShadow(QFrame.Sunken)
 
-        self.verticalLayout_11.addWidget(self.LineBCTools)
+        self.verticalLayout_51.addWidget(self.LineBCTools)
 
         self.LBCTools = QLabel(self.BCTools)
         self.LBCTools.setObjectName(u"LBCTools")
 
-        self.verticalLayout_11.addWidget(self.LBCTools)
+        self.verticalLayout_51.addWidget(self.LBCTools)
 
 
-        self.horizontalLayout_2.addWidget(self.BCTools)
+        self.horizontalLayout_11.addWidget(self.BCTools)
 
-        self.HeaderMenu.addTab(self.Tools, "")
-        self.Mesh = QWidget()
-        self.Mesh.setObjectName(u"Mesh")
-        self.horizontalLayout_12 = QHBoxLayout(self.Mesh)
-        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
-        self.GlobaMesh = QFrame(self.Mesh)
-        self.GlobaMesh.setObjectName(u"GlobaMesh")
-        self.GlobaMesh.setMinimumSize(QSize(80, 80))
-        self.GlobaMesh.setMaximumSize(QSize(80, 80))
-        self.GlobaMesh.setFrameShape(QFrame.NoFrame)
-        self.GlobaMesh.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_30 = QVBoxLayout(self.GlobaMesh)
-        self.verticalLayout_30.setSpacing(0)
-        self.verticalLayout_30.setObjectName(u"verticalLayout_30")
-        self.verticalLayout_30.setContentsMargins(0, 0, 0, 5)
-        self.BGlobalMesh = QPushButton(self.GlobaMesh)
-        self.BGlobalMesh.setObjectName(u"BGlobalMesh")
-        icon4 = QIcon()
-        icon4.addFile(u":/Blue Icons/Blue Icons/mesh.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BGlobalMesh.setIcon(icon4)
-        self.BGlobalMesh.setIconSize(QSize(40, 40))
-        self.BGlobalMesh.setFlat(True)
-
-        self.verticalLayout_30.addWidget(self.BGlobalMesh)
-
-        self.LGlobalMesh = QLabel(self.GlobaMesh)
-        self.LGlobalMesh.setObjectName(u"LGlobalMesh")
-        self.LGlobalMesh.setWordWrap(True)
-
-        self.verticalLayout_30.addWidget(self.LGlobalMesh)
-
-
-        self.horizontalLayout_12.addWidget(self.GlobaMesh, 0, Qt.AlignLeft)
-
-        self.HeaderMenu.addTab(self.Mesh, "")
-        self.Solvers = QWidget()
-        self.Solvers.setObjectName(u"Solvers")
-        self.horizontalLayout_11 = QHBoxLayout(self.Solvers)
-        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
-        self.horizontalLayout_11.setContentsMargins(5, 0, 5, 0)
-        self.JobTools = QFrame(self.Solvers)
+        self.JobTools = QFrame(self.frame_8)
         self.JobTools.setObjectName(u"JobTools")
         self.JobTools.setFrameShape(QFrame.NoFrame)
         self.JobTools.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_12 = QVBoxLayout(self.JobTools)
-        self.verticalLayout_12.setSpacing(0)
-        self.verticalLayout_12.setObjectName(u"verticalLayout_12")
-        self.verticalLayout_12.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_30 = QVBoxLayout(self.JobTools)
+        self.verticalLayout_30.setSpacing(0)
+        self.verticalLayout_30.setObjectName(u"verticalLayout_30")
+        self.verticalLayout_30.setContentsMargins(0, 0, 0, 0)
         self.JobToolsBtns = QFrame(self.JobTools)
         self.JobToolsBtns.setObjectName(u"JobToolsBtns")
         self.JobToolsBtns.setMinimumSize(QSize(0, 0))
         self.JobToolsBtns.setMaximumSize(QSize(16777215, 16777215))
         self.JobToolsBtns.setFrameShape(QFrame.NoFrame)
         self.JobToolsBtns.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_3 = QHBoxLayout(self.JobToolsBtns)
-        self.horizontalLayout_3.setSpacing(0)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.horizontalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_4 = QHBoxLayout(self.JobToolsBtns)
+        self.horizontalLayout_4.setSpacing(0)
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.SolverSettings = QFrame(self.JobToolsBtns)
         self.SolverSettings.setObjectName(u"SolverSettings")
         self.SolverSettings.setMinimumSize(QSize(80, 80))
         self.SolverSettings.setMaximumSize(QSize(80, 80))
         self.SolverSettings.setFrameShape(QFrame.NoFrame)
         self.SolverSettings.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_6 = QVBoxLayout(self.SolverSettings)
-        self.verticalLayout_6.setSpacing(0)
-        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.verticalLayout_6.setContentsMargins(0, 0, 0, 5)
+        self.verticalLayout_8 = QVBoxLayout(self.SolverSettings)
+        self.verticalLayout_8.setSpacing(0)
+        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
+        self.verticalLayout_8.setContentsMargins(0, 0, 0, 5)
         self.BSolverSettings = QPushButton(self.SolverSettings)
         self.BSolverSettings.setObjectName(u"BSolverSettings")
-        icon5 = QIcon()
-        icon5.addFile(u":/Blue Icons/Blue Icons/gear.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BSolverSettings.setIcon(icon5)
+        self.BSolverSettings.setIcon(icon7)
         self.BSolverSettings.setIconSize(QSize(50, 50))
         self.BSolverSettings.setFlat(True)
 
-        self.verticalLayout_6.addWidget(self.BSolverSettings)
+        self.verticalLayout_8.addWidget(self.BSolverSettings)
 
         self.LSolverSettings = QLabel(self.SolverSettings)
         self.LSolverSettings.setObjectName(u"LSolverSettings")
         self.LSolverSettings.setWordWrap(True)
 
-        self.verticalLayout_6.addWidget(self.LSolverSettings)
+        self.verticalLayout_8.addWidget(self.LSolverSettings)
 
 
-        self.horizontalLayout_3.addWidget(self.SolverSettings, 0, Qt.AlignLeft)
+        self.horizontalLayout_4.addWidget(self.SolverSettings, 0, Qt.AlignLeft)
 
         self.RunEVPFFT = QFrame(self.JobToolsBtns)
         self.RunEVPFFT.setObjectName(u"RunEVPFFT")
@@ -353,152 +783,28 @@ class Ui_MainWindow(object):
         self.RunEVPFFT.setMaximumSize(QSize(65, 80))
         self.RunEVPFFT.setFrameShape(QFrame.NoFrame)
         self.RunEVPFFT.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_13 = QVBoxLayout(self.RunEVPFFT)
-        self.verticalLayout_13.setSpacing(0)
-        self.verticalLayout_13.setObjectName(u"verticalLayout_13")
-        self.verticalLayout_13.setContentsMargins(0, 0, 0, 5)
+        self.verticalLayout_67 = QVBoxLayout(self.RunEVPFFT)
+        self.verticalLayout_67.setSpacing(0)
+        self.verticalLayout_67.setObjectName(u"verticalLayout_67")
+        self.verticalLayout_67.setContentsMargins(0, 0, 0, 5)
         self.BRunEVPFFT = QPushButton(self.RunEVPFFT)
         self.BRunEVPFFT.setObjectName(u"BRunEVPFFT")
-        icon6 = QIcon()
-        icon6.addFile(u":/Blue Icons/Blue Icons/Play.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BRunEVPFFT.setIcon(icon6)
+        self.BRunEVPFFT.setIcon(icon8)
         self.BRunEVPFFT.setIconSize(QSize(40, 40))
         self.BRunEVPFFT.setFlat(True)
 
-        self.verticalLayout_13.addWidget(self.BRunEVPFFT)
+        self.verticalLayout_67.addWidget(self.BRunEVPFFT)
 
         self.LRunEVPFFT = QLabel(self.RunEVPFFT)
         self.LRunEVPFFT.setObjectName(u"LRunEVPFFT")
         self.LRunEVPFFT.setWordWrap(True)
 
-        self.verticalLayout_13.addWidget(self.LRunEVPFFT)
+        self.verticalLayout_67.addWidget(self.LRunEVPFFT)
 
 
-        self.horizontalLayout_3.addWidget(self.RunEVPFFT)
+        self.horizontalLayout_4.addWidget(self.RunEVPFFT)
 
-
-        self.verticalLayout_12.addWidget(self.JobToolsBtns, 0, Qt.AlignLeft)
-
-        self.LineJobTools = QFrame(self.JobTools)
-        self.LineJobTools.setObjectName(u"LineJobTools")
-        self.LineJobTools.setFrameShape(QFrame.HLine)
-        self.LineJobTools.setFrameShadow(QFrame.Sunken)
-
-        self.verticalLayout_12.addWidget(self.LineJobTools)
-
-        self.LJobTools = QLabel(self.JobTools)
-        self.LJobTools.setObjectName(u"LJobTools")
-
-        self.verticalLayout_12.addWidget(self.LJobTools)
-
-
-        self.horizontalLayout_11.addWidget(self.JobTools)
-
-        self.line_3 = QFrame(self.Solvers)
-        self.line_3.setObjectName(u"line_3")
-        self.line_3.setFrameShape(QFrame.VLine)
-        self.line_3.setFrameShadow(QFrame.Sunken)
-
-        self.horizontalLayout_11.addWidget(self.line_3)
-
-        self.JobTools_2 = QFrame(self.Solvers)
-        self.JobTools_2.setObjectName(u"JobTools_2")
-        self.JobTools_2.setFrameShape(QFrame.NoFrame)
-        self.JobTools_2.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_27 = QVBoxLayout(self.JobTools_2)
-        self.verticalLayout_27.setSpacing(0)
-        self.verticalLayout_27.setObjectName(u"verticalLayout_27")
-        self.verticalLayout_27.setContentsMargins(0, 0, 0, 0)
-        self.JobToolsBtns_2 = QFrame(self.JobTools_2)
-        self.JobToolsBtns_2.setObjectName(u"JobToolsBtns_2")
-        self.JobToolsBtns_2.setMinimumSize(QSize(0, 0))
-        self.JobToolsBtns_2.setMaximumSize(QSize(16777215, 16777215))
-        self.JobToolsBtns_2.setFrameShape(QFrame.NoFrame)
-        self.JobToolsBtns_2.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_10 = QHBoxLayout(self.JobToolsBtns_2)
-        self.horizontalLayout_10.setSpacing(0)
-        self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
-        self.horizontalLayout_10.setContentsMargins(0, 0, 0, 0)
-        self.SolverSettings_2 = QFrame(self.JobToolsBtns_2)
-        self.SolverSettings_2.setObjectName(u"SolverSettings_2")
-        self.SolverSettings_2.setMinimumSize(QSize(80, 80))
-        self.SolverSettings_2.setMaximumSize(QSize(80, 80))
-        self.SolverSettings_2.setFrameShape(QFrame.NoFrame)
-        self.SolverSettings_2.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_28 = QVBoxLayout(self.SolverSettings_2)
-        self.verticalLayout_28.setSpacing(0)
-        self.verticalLayout_28.setObjectName(u"verticalLayout_28")
-        self.verticalLayout_28.setContentsMargins(0, 0, 0, 5)
-        self.BSolverSettings_2 = QPushButton(self.SolverSettings_2)
-        self.BSolverSettings_2.setObjectName(u"BSolverSettings_2")
-        self.BSolverSettings_2.setIcon(icon5)
-        self.BSolverSettings_2.setIconSize(QSize(50, 50))
-        self.BSolverSettings_2.setFlat(True)
-
-        self.verticalLayout_28.addWidget(self.BSolverSettings_2)
-
-        self.LSolverSettings_3 = QLabel(self.SolverSettings_2)
-        self.LSolverSettings_3.setObjectName(u"LSolverSettings_3")
-        self.LSolverSettings_3.setWordWrap(True)
-
-        self.verticalLayout_28.addWidget(self.LSolverSettings_3)
-
-
-        self.horizontalLayout_10.addWidget(self.SolverSettings_2, 0, Qt.AlignLeft)
-
-        self.RunEVPFFT_2 = QFrame(self.JobToolsBtns_2)
-        self.RunEVPFFT_2.setObjectName(u"RunEVPFFT_2")
-        self.RunEVPFFT_2.setMinimumSize(QSize(75, 80))
-        self.RunEVPFFT_2.setMaximumSize(QSize(65, 80))
-        self.RunEVPFFT_2.setFrameShape(QFrame.NoFrame)
-        self.RunEVPFFT_2.setFrameShadow(QFrame.Raised)
-        self.verticalLayout_29 = QVBoxLayout(self.RunEVPFFT_2)
-        self.verticalLayout_29.setSpacing(0)
-        self.verticalLayout_29.setObjectName(u"verticalLayout_29")
-        self.verticalLayout_29.setContentsMargins(0, 0, 0, 5)
-        self.BRunEVPFFT_2 = QPushButton(self.RunEVPFFT_2)
-        self.BRunEVPFFT_2.setObjectName(u"BRunEVPFFT_2")
-        self.BRunEVPFFT_2.setIcon(icon6)
-        self.BRunEVPFFT_2.setIconSize(QSize(40, 40))
-        self.BRunEVPFFT_2.setFlat(True)
-
-        self.verticalLayout_29.addWidget(self.BRunEVPFFT_2)
-
-        self.LRunEVPFFT_2 = QLabel(self.RunEVPFFT_2)
-        self.LRunEVPFFT_2.setObjectName(u"LRunEVPFFT_2")
-        self.LRunEVPFFT_2.setWordWrap(True)
-
-        self.verticalLayout_29.addWidget(self.LRunEVPFFT_2)
-
-
-        self.horizontalLayout_10.addWidget(self.RunEVPFFT_2)
-
-
-        self.verticalLayout_27.addWidget(self.JobToolsBtns_2, 0, Qt.AlignLeft)
-
-        self.LineJobTools_2 = QFrame(self.JobTools_2)
-        self.LineJobTools_2.setObjectName(u"LineJobTools_2")
-        self.LineJobTools_2.setFrameShape(QFrame.HLine)
-        self.LineJobTools_2.setFrameShadow(QFrame.Sunken)
-
-        self.verticalLayout_27.addWidget(self.LineJobTools_2)
-
-        self.LJobTools_2 = QLabel(self.JobTools_2)
-        self.LJobTools_2.setObjectName(u"LJobTools_2")
-
-        self.verticalLayout_27.addWidget(self.LJobTools_2)
-
-
-        self.horizontalLayout_11.addWidget(self.JobTools_2)
-
-        self.line_4 = QFrame(self.Solvers)
-        self.line_4.setObjectName(u"line_4")
-        self.line_4.setFrameShape(QFrame.VLine)
-        self.line_4.setFrameShadow(QFrame.Sunken)
-
-        self.horizontalLayout_11.addWidget(self.line_4)
-
-        self.ViewResults = QFrame(self.Solvers)
+        self.ViewResults = QFrame(self.JobToolsBtns)
         self.ViewResults.setObjectName(u"ViewResults")
         self.ViewResults.setMinimumSize(QSize(80, 80))
         self.ViewResults.setMaximumSize(QSize(80, 80))
@@ -510,9 +816,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_14.setContentsMargins(0, 0, 0, 5)
         self.BViewResults = QPushButton(self.ViewResults)
         self.BViewResults.setObjectName(u"BViewResults")
-        icon7 = QIcon()
-        icon7.addFile(u":/Blue Icons/Blue Icons/magnify.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.BViewResults.setIcon(icon7)
+        self.BViewResults.setIcon(icon9)
         self.BViewResults.setIconSize(QSize(40, 40))
         self.BViewResults.setFlat(True)
 
@@ -525,11 +829,46 @@ class Ui_MainWindow(object):
         self.verticalLayout_14.addWidget(self.LViewResults)
 
 
-        self.horizontalLayout_11.addWidget(self.ViewResults)
+        self.horizontalLayout_4.addWidget(self.ViewResults)
 
-        self.HeaderMenu.addTab(self.Solvers, "")
 
-        self.verticalLayout.addWidget(self.HeaderMenu)
+        self.verticalLayout_30.addWidget(self.JobToolsBtns)
+
+        self.LineJobTools = QFrame(self.JobTools)
+        self.LineJobTools.setObjectName(u"LineJobTools")
+        self.LineJobTools.setFrameShape(QFrame.HLine)
+        self.LineJobTools.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout_30.addWidget(self.LineJobTools)
+
+        self.LJobTools = QLabel(self.JobTools)
+        self.LJobTools.setObjectName(u"LJobTools")
+
+        self.verticalLayout_30.addWidget(self.LJobTools)
+
+
+        self.horizontalLayout_11.addWidget(self.JobTools)
+
+
+        self.verticalLayout_6.addWidget(self.frame_8)
+
+        self.EVPFFTPipelines.addTab(self.EVPFFTHomogenization, "")
+
+        self.verticalLayout_5.addWidget(self.EVPFFTPipelines)
+
+        self.SolverTypeMenu.addTab(self.EVPFFTSolver, "")
+        self.EVPFFTLSSolver = QWidget()
+        self.EVPFFTLSSolver.setObjectName(u"EVPFFTLSSolver")
+        self.verticalLayout_11 = QVBoxLayout(self.EVPFFTLSSolver)
+        self.verticalLayout_11.setObjectName(u"verticalLayout_11")
+        self.label_5 = QLabel(self.EVPFFTLSSolver)
+        self.label_5.setObjectName(u"label_5")
+
+        self.verticalLayout_11.addWidget(self.label_5)
+
+        self.SolverTypeMenu.addTab(self.EVPFFTLSSolver, "")
+
+        self.verticalLayout.addWidget(self.SolverTypeMenu, 0, Qt.AlignVCenter)
 
         self.Main = QFrame(self.centralwidget)
         self.Main.setObjectName(u"Main")
@@ -555,8 +894,11 @@ class Ui_MainWindow(object):
         self.splitter.setHandleWidth(7)
         self.ToolSettings = QStackedWidget(self.splitter)
         self.ToolSettings.setObjectName(u"ToolSettings")
-        sizePolicy.setHeightForWidth(self.ToolSettings.sizePolicy().hasHeightForWidth())
-        self.ToolSettings.setSizePolicy(sizePolicy)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.ToolSettings.sizePolicy().hasHeightForWidth())
+        self.ToolSettings.setSizePolicy(sizePolicy1)
         self.ToolSettings.setMinimumSize(QSize(300, 0))
         self.ToolSettings.setMaximumSize(QSize(360, 16777215))
         self.ToolSettings.setSizeIncrement(QSize(0, 0))
@@ -607,9 +949,9 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
         self.LAdditionalSoftware = QLabel(self.AdditionalSoftware)
         self.LAdditionalSoftware.setObjectName(u"LAdditionalSoftware")
-        font2 = QFont()
-        font2.setPointSize(16)
-        self.LAdditionalSoftware.setFont(font2)
+        font3 = QFont()
+        font3.setPointSize(16)
+        self.LAdditionalSoftware.setFont(font3)
 
         self.verticalLayout_10.addWidget(self.LAdditionalSoftware, 0, Qt.AlignBottom)
 
@@ -1278,6 +1620,42 @@ class Ui_MainWindow(object):
         self.INNumberOfVoxelsZ.setEnabled(False)
 
         self.formLayout.setWidget(2, QFormLayout.FieldRole, self.INNumberOfVoxelsZ)
+
+        self.LOriginX = QLabel(self.GeometryInputs)
+        self.LOriginX.setObjectName(u"LOriginX")
+        self.LOriginX.setEnabled(False)
+
+        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.LOriginX)
+
+        self.INOriginX = QLineEdit(self.GeometryInputs)
+        self.INOriginX.setObjectName(u"INOriginX")
+        self.INOriginX.setEnabled(False)
+
+        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.INOriginX)
+
+        self.LOriginY = QLabel(self.GeometryInputs)
+        self.LOriginY.setObjectName(u"LOriginY")
+        self.LOriginY.setEnabled(False)
+
+        self.formLayout.setWidget(4, QFormLayout.LabelRole, self.LOriginY)
+
+        self.INOriginY = QLineEdit(self.GeometryInputs)
+        self.INOriginY.setObjectName(u"INOriginY")
+        self.INOriginY.setEnabled(False)
+
+        self.formLayout.setWidget(4, QFormLayout.FieldRole, self.INOriginY)
+
+        self.LOriginZ = QLabel(self.GeometryInputs)
+        self.LOriginZ.setObjectName(u"LOriginZ")
+        self.LOriginZ.setEnabled(False)
+
+        self.formLayout.setWidget(5, QFormLayout.LabelRole, self.LOriginZ)
+
+        self.INOriginZ = QLineEdit(self.GeometryInputs)
+        self.INOriginZ.setObjectName(u"INOriginZ")
+        self.INOriginZ.setEnabled(False)
+
+        self.formLayout.setWidget(5, QFormLayout.FieldRole, self.INOriginZ)
 
 
         self.verticalLayout_15.addWidget(self.GeometryInputs)
@@ -2116,6 +2494,8 @@ class Ui_MainWindow(object):
         self.splitter.addWidget(self.ToolSettings)
         self.ParaviewFrame = QFrame(self.splitter)
         self.ParaviewFrame.setObjectName(u"ParaviewFrame")
+        self.ParaviewFrame.setFocusPolicy(Qt.TabFocus)
+        self.ParaviewFrame.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.ParaviewFrame.setFrameShape(QFrame.Box)
         self.ParaviewFrame.setFrameShadow(QFrame.Plain)
         self.ParaviewFrame.setLineWidth(1)
@@ -2185,10 +2565,14 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.Main)
 
+        self.verticalSpacer_10 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer_10)
+
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1022, 24))
+        self.menubar.setGeometry(QRect(0, 0, 1074, 24))
         self.menuHelp = QMenu(self.menubar)
         self.menuHelp.setObjectName(u"menuHelp")
         MainWindow.setMenuBar(self.menubar)
@@ -2201,7 +2585,9 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.HeaderMenu.setCurrentIndex(0)
+        self.SolverTypeMenu.setCurrentIndex(0)
+        self.ExplicitPipelines.setCurrentIndex(0)
+        self.EVPFFTPipelines.setCurrentIndex(0)
         self.ToolSettings.setCurrentIndex(0)
         self.MeshInputs2.setCurrentIndex(0)
         self.MaterialTypeTool.setCurrentIndex(0)
@@ -2214,6 +2600,39 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"EVPFFT", None))
         self.actionEVPFFT_Manual.setText(QCoreApplication.translate("MainWindow", u"EVPFFT Manual", None))
+        self.radioButton_2.setText("")
+        self.radioButton.setText("")
+        self.label_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span><span style=\" font-size:18pt; font-weight:700;\"> SELECT A TYPE OF SOLVER </span><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span></p></body></html>", None))
+        self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.ChooseSolver), "")
+        self.BGlobalMesh.setText("")
+        self.LGlobalMesh.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Global        Mesh</span></p></body></html>", None))
+        self.BImportPart_4.setText("")
+        self.LImportPart_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Import Part</span></p></body></html>", None))
+        self.LPartTools_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Geometry</span></p></body></html>", None))
+        self.BDefineMaterial_4.setText("")
+        self.LDefineMaterial_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Define Material</span></p></body></html>", None))
+        self.LMaterialTools_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Material</span></p></body></html>", None))
+        self.BApplyBC_4.setText("")
+        self.LApplyBC_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Apply BCs</span></p></body></html>", None))
+        self.LBCTools_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Boundary Conditions</span></p></body></html>", None))
+        self.BSolverSettings_6.setText("")
+        self.LSolverSettings_7.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Explicit Settings</span></p></body></html>", None))
+        self.BRunEVPFFT_6.setText("")
+        self.LRunEVPFFT_6.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Run Explicit</span></p></body></html>", None))
+        self.BViewResults_3.setText("")
+        self.LViewResults_3.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">View Results</span></p></body></html>", None))
+        self.LJobTools_6.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Explicit Solver</span></p></body></html>", None))
+        self.ExplicitPipelines.setTabText(self.ExplicitPipelines.indexOf(self.Mesh_3), QCoreApplication.translate("MainWindow", u"General", None))
+        self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.ExplicitSolver), QCoreApplication.translate("MainWindow", u"Explicit", None))
+        self.label_4.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700;\">COMING SOON </span><span style=\" font-size:18pt;\">\u203c\ufe0f</span></p></body></html>", None))
+        self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.ImplicitSolver), QCoreApplication.translate("MainWindow", u"Implicit", None))
+        self.label_3.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span><span style=\" font-size:18pt; font-weight:700;\"> SELECT A PIPELINE </span><span style=\" font-size:18pt; font-weight:700; color:#ff2600;\">\u2b06</span></p></body></html>", None))
+        self.EVPFFTPipelines.setTabText(self.EVPFFTPipelines.indexOf(self.ChoosePipeline), "")
+        self.BImportPart_5.setText("")
+        self.LImportPart_5.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Import Part</span></p></body></html>", None))
+        self.LPartTools_5.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Geometry</span></p></body></html>", None))
+        self.label_7.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-size:18pt; font-weight:700;\">UNDER CONSTRUCTION \u26a0\ufe0f</span></p></body></html>", None))
+        self.EVPFFTPipelines.setTabText(self.EVPFFTPipelines.indexOf(self.EVPFFTGeneral), QCoreApplication.translate("MainWindow", u"General", None))
         self.BImportPart.setText("")
         self.LImportPart.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Import Part</span></p></body></html>", None))
         self.LPartTools.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Geometry</span></p></body></html>", None))
@@ -2223,23 +2642,24 @@ class Ui_MainWindow(object):
         self.BApplyBC.setText("")
         self.LApplyBC.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Apply BCs</span></p></body></html>", None))
         self.LBCTools.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Boundary Conditions</span></p></body></html>", None))
-        self.HeaderMenu.setTabText(self.HeaderMenu.indexOf(self.Tools), QCoreApplication.translate("MainWindow", u"Part", None))
-        self.BGlobalMesh.setText("")
-        self.LGlobalMesh.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Global        Mesh</span></p></body></html>", None))
-        self.HeaderMenu.setTabText(self.HeaderMenu.indexOf(self.Mesh), QCoreApplication.translate("MainWindow", u"Mesh", None))
         self.BSolverSettings.setText("")
-        self.LSolverSettings.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">EVPFFT Settings</span></p></body></html>", None))
+        self.LSolverSettings.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Solver Settings</span></p></body></html>", None))
         self.BRunEVPFFT.setText("")
-        self.LRunEVPFFT.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Run EVPFFT</span></p></body></html>", None))
-        self.LJobTools.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">EVPFFT Solver</span></p></body></html>", None))
-        self.BSolverSettings_2.setText("")
-        self.LSolverSettings_3.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Explicit Settings</span></p></body></html>", None))
-        self.BRunEVPFFT_2.setText("")
-        self.LRunEVPFFT_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">Run Explicit</span></p></body></html>", None))
-        self.LJobTools_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Explicit Solver</span></p></body></html>", None))
+        self.LRunEVPFFT.setText(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:700;\">Run Job</span></p></body></html>", None))
         self.BViewResults.setText("")
         self.LViewResults.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700;\">View Results</span></p></body></html>", None))
-        self.HeaderMenu.setTabText(self.HeaderMenu.indexOf(self.Solvers), QCoreApplication.translate("MainWindow", u"Solvers", None))
+        self.LJobTools.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#a9a9a9;\">Simulation</span></p></body></html>", None))
+        self.EVPFFTPipelines.setTabText(self.EVPFFTPipelines.indexOf(self.EVPFFTHomogenization), QCoreApplication.translate("MainWindow", u"Homogenization", None))
+        self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.EVPFFTSolver), QCoreApplication.translate("MainWindow", u"EVPFFT", None))
+        self.label_5.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-size:18pt; font-weight:700;\">COMING SOON </span><span style=\" font-size:18pt;\">\u203c\ufe0f</span></p></body></html>", None))
+        self.SolverTypeMenu.setTabText(self.SolverTypeMenu.indexOf(self.EVPFFTLSSolver), QCoreApplication.translate("MainWindow", u"EVPFFT-LS", None))
         self.LosAlamosLogo.setText("")
         self.EVPFFTLogo.setText("")
         self.LAdditionalSoftware.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p align=\"center\"><span style=\" font-weight:700; color:#000000;\">Additional Software Packages:</span></p></body></html>", None))
@@ -2354,6 +2774,9 @@ class Ui_MainWindow(object):
         self.LNumberOfVoxelsX.setText(QCoreApplication.translate("MainWindow", u"Number of voxels x: ", None))
         self.LNumberOfVoxelsY.setText(QCoreApplication.translate("MainWindow", u"Number of voxels y: ", None))
         self.LNumberOfVoxelsZ.setText(QCoreApplication.translate("MainWindow", u"Number of voxels z: ", None))
+        self.LOriginX.setText(QCoreApplication.translate("MainWindow", u"Origin x:", None))
+        self.LOriginY.setText(QCoreApplication.translate("MainWindow", u"Origin y:", None))
+        self.LOriginZ.setText(QCoreApplication.translate("MainWindow", u"Origin z:", None))
         self.BStlDimensions.setText(QCoreApplication.translate("MainWindow", u"stl dimensions", None))
         self.BCustomDimensions.setText(QCoreApplication.translate("MainWindow", u"custom dimensions", None))
         self.LLengthX.setText(QCoreApplication.translate("MainWindow", u"Length x:", None))

@@ -9,6 +9,10 @@
     <file>Blue Icons/mine.svg</file>
     <file>Blue Icons/Play.svg</file>
   </qresource>
+  <qresource prefix="Locks">
+    <file>Locks/GreenUnlock.svg</file>
+    <file>Locks/RedLock.svg</file>
+  </qresource>
   <qresource prefix="Logos">
     <file>Logos/EVPFFT_logo_horse_ppt.png</file>
     <file>Logos/FIERRO.png</file>
