@@ -11,14 +11,14 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
- 
+
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
- 
+
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
- 
+
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -52,80 +52,94 @@
 
 using namespace mtr;
 
-struct Simulation_Parameters_Eulerian : Simulation_Parameters {
-  Time_Variables time_variables;
-  std::vector<MaterialFill> region_options;
-  std::vector<Material> material_options;
-  std::vector<Boundary> boundary_conditions;
-  Graphics_Options graphics_options;
+struct Simulation_Parameters_Eulerian : Simulation_Parameters
+{
+    Time_Variables time_variables;
+    std::vector<MaterialFill> region_options;
+    std::vector<Material> material_options;
+    std::vector<Boundary> boundary_conditions;
+    Graphics_Options graphics_options;
 
-  bool gravity_flag   = false;
-  bool report_runtime = true;
+    bool gravity_flag   = false;
+    bool report_runtime = true;
 
-  size_t rk_num_stages = 2;
-  int NB   = 6; // number of boundaries
-  int NBSF = 4; //number of surface density force conditions
-  int NBV  = 2; //number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
+    size_t rk_num_stages = 2;
+    int NB   = 6; // number of boundaries
+    int NBSF = 4; // number of surface density force conditions
+    int NBV  = 2; // number of surface sets used to specify a fixed displacement on nodes belonging to respective surfaces
 
-  //Non-serialized fields
-  int num_gauss_points = 2;
-  size_t max_num_global_vars;
-  size_t rk_num_bins;
-  double time_value = 0.0;
-  DCArrayKokkos<double> global_vars;
+    // Non-serialized fields
+    int num_gauss_points = 2;
+    size_t max_num_global_vars;
+    size_t rk_num_bins;
+    double time_value = 0.0;
+    DCArrayKokkos<double> global_vars;
 
-  DCArrayKokkos<mat_fill_t> mat_fill;
-  DCArrayKokkos<material_t> material;
-  DCArrayKokkos<boundary_t> boundary; 
-  std::vector<double> gravity_vector {9.81, 0., 0.};
+    DCArrayKokkos<mat_fill_t> mat_fill;
+    DCArrayKokkos<material_t> material;
+    DCArrayKokkos<boundary_t> boundary;
+    std::vector<double> gravity_vector { 9.81, 0., 0. };
 
-  void init_material_variable_arrays(size_t nglobal_vars) {
-    global_vars = DCArrayKokkos <double> (material_options.size(), nglobal_vars);
+    void init_material_variable_arrays(size_t nglobal_vars)
+    {
+        global_vars = DCArrayKokkos<double>(material_options.size(), nglobal_vars);
 
-    for (size_t i = 0; i < material_options.size(); i++) {
-      auto mat = material_options[i];
+        for (size_t i = 0; i < material_options.size(); i++)
+        {
+            auto mat = material_options[i];
 
-      for (size_t j = 0; j < mat.global_vars.size(); j++)
-        global_vars.host(i, j) = mat.global_vars[j];
+            for (size_t j = 0; j < mat.global_vars.size(); j++)
+            {
+                global_vars.host(i, j) = mat.global_vars[j];
+            }
+        }
     }
-  }
 
-  template<typename T, typename K> void from_vector(DCArrayKokkos<T>& array, const std::vector<K>& vec) {
-    array = DCArrayKokkos<T>(vec.size());
-    for (size_t i = 0; i < vec.size(); i++)
-      array.host(i) = *(T*)&vec[i];
-  }
-  void derive_kokkos_arrays() {
-    max_num_global_vars = 0;
-    for (auto mo : material_options) 
-      max_num_global_vars = std::max(max_num_global_vars, mo.global_vars.size());
+    template<typename T, typename K> void from_vector(DCArrayKokkos<T>& array, const std::vector<K>& vec)
+    {
+        array = DCArrayKokkos<T>(vec.size());
+        for (size_t i = 0; i < vec.size(); i++)
+        {
+            array.host(i) = *(T*)&vec[i];
+        }
+    }
 
-    init_material_variable_arrays(max_num_global_vars);
+    void derive_kokkos_arrays()
+    {
+        max_num_global_vars = 0;
+        for (auto mo : material_options)
+        {
+            max_num_global_vars = std::max(max_num_global_vars, mo.global_vars.size());
+        }
 
-    from_vector(mat_fill, region_options);
-    from_vector(material, material_options);
-    from_vector(boundary, boundary_conditions);
+        init_material_variable_arrays(max_num_global_vars);
 
-    // Send to device.
-    mat_fill.update_device();
-    boundary.update_device();
-    material.update_device();
-    global_vars.update_device();
+        from_vector(mat_fill, region_options);
+        from_vector(material, material_options);
+        from_vector(boundary, boundary_conditions);
 
-  }
+        // Send to device.
+        mat_fill.update_device();
+        boundary.update_device();
+        material.update_device();
+        global_vars.update_device();
+    }
 
-  void derive() {
-    derive_kokkos_arrays();
-    rk_num_bins = rk_num_stages;
-  }
-  void validate() {
-    validate_module_is_specified(FEA_MODULE_TYPE::Eulerian);
-  }
+    void derive()
+    {
+        derive_kokkos_arrays();
+        rk_num_bins = rk_num_stages;
+    }
+
+    void validate()
+    {
+        validate_module_is_specified(FEA_MODULE_TYPE::Eulerian);
+    }
 };
-IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Eulerian, Simulation_Parameters, 
-  time_variables, material_options, region_options, 
+IMPL_YAML_SERIALIZABLE_WITH_BASE(Simulation_Parameters_Eulerian, Simulation_Parameters,
+  time_variables, material_options, region_options,
   boundary_conditions, gravity_flag, report_runtime, rk_num_stages,
   NB, NBSF, NBV,
   graphics_options
-)
+    )
 #endif // end HEADER_H

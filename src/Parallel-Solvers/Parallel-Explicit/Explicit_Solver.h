@@ -11,14 +11,14 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
- 
+
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
- 
+
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
- 
+
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -34,10 +34,9 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
- 
-#ifndef ELEMENTS_EXPLICIT_SOLVER_H
-#define ELEMENTS_EXPLICIT_SOLVER_H  
 
+#ifndef ELEMENTS_EXPLICIT_SOLVER_H
+#define ELEMENTS_EXPLICIT_SOLVER_H
 
 #include "Solver.h"
 #include "utilities.h"
@@ -60,124 +59,124 @@
 
 using namespace mtr;
 
-class Explicit_Solver: public Solver {
-
+class Explicit_Solver : public Solver
+{
 public:
-  Explicit_Solver(Simulation_Parameters_Explicit);
-  ~Explicit_Solver();
+    Explicit_Solver(Simulation_Parameters_Explicit);
+    ~Explicit_Solver();
 
-  virtual void run();
+    virtual void run();
 
-  //void read_mesh_ensight(char *MESH);
+    // void read_mesh_ensight(char *MESH);
 
-  void read_mesh_ansys_dat(const char *MESH);
+    void read_mesh_ansys_dat(const char* MESH);
 
-  void init_state_vectors();
+    void init_state_vectors();
 
-  //void repartition_nodes();
+    // void repartition_nodes();
 
-  void comm_velocities();
+    void comm_velocities();
 
-  void comm_densities();
+    void comm_densities();
 
-  void init_design();
+    void init_design();
 
-  void collect_information();
+    void collect_information();
 
-  void sort_information();
+    void sort_information();
 
-  //process input to decide TO problem and FEA modules
-  void FEA_module_setup();
+    // process input to decide TO problem and FEA modules
+    void FEA_module_setup();
 
-  void setup_optimization_problem();
-  
-  //initialize data for boundaries of the model and storage for boundary conditions and applied loads
-  void init_boundaries();
-  
-  //interfaces between user input and creating data structures for bcs
-  void topology_conditions();
+    void setup_optimization_problem();
 
-  //void vtk_writer();
+    // initialize data for boundaries of the model and storage for boundary conditions and applied loads
+    void init_boundaries();
 
-  //void ensight_writer();
+    // interfaces between user input and creating data structures for bcs
+    void topology_conditions();
 
-  //interfaces between user input and creating data structures for topology conditions
-  void generate_tcs();
+    // void vtk_writer();
 
-  void init_topology_conditions (int num_sets);
+    // void ensight_writer();
 
-  void tecplot_writer();
+    // interfaces between user input and creating data structures for topology conditions
+    void generate_tcs();
 
-  void parallel_tecplot_writer();
+    void init_topology_conditions(int num_sets);
 
-  void parallel_vtk_writer();
+    void tecplot_writer();
 
-  void write_outputs();
-  void parallel_vtk_writer_new();
-  void parallel_vtu_writer_new(); // not yet added
-  // maps for variable_name:pointer
-  std::map <std::string, const double*> point_data_scalars_double;
-  std::map <std::string, const double*> point_data_vectors_double;
-  std::map <std::string, const double*> cell_data_scalars_double;
-  std::map <std::string, const int*> cell_data_scalars_int;
-  std::map <std::string, std::pair<const double*, size_t> > cell_data_fields_double;
- 
-  //void init_boundary_sets(int num_boundary_sets);
+    void parallel_tecplot_writer();
 
-  void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t *patch_limits = NULL);
+    void parallel_vtk_writer();
 
-  int check_boundary(Node_Combination &Patch_Nodes, int this_bc_tag, real_t val, real_t *patch_limits);
-  
-  mesh_t *init_mesh;
-  std::shared_ptr<mesh_t> mesh;
-  
-  Simulation_Parameters_Explicit simparam;
+    void write_outputs();
+    void parallel_vtk_writer_new();
+    void parallel_vtu_writer_new(); // not yet added
+    // maps for variable_name:pointer
+    std::map<std::string, const double*> point_data_scalars_double;
+    std::map<std::string, const double*> point_data_vectors_double;
+    std::map<std::string, const double*> cell_data_scalars_double;
+    std::map<std::string, const int*>    cell_data_scalars_int;
+    std::map<std::string, std::pair<const double*, size_t>> cell_data_fields_double;
 
-  //FEA simulations
-  class FEA_Module_SGH *sgh_module;
+    // void init_boundary_sets(int num_boundary_sets);
 
-  //Global FEA data
-  Teuchos::RCP<MV> node_velocities_distributed;
-  Teuchos::RCP<MV> initial_node_velocities_distributed;
-  Teuchos::RCP<MV> all_node_velocities_distributed;
-  Teuchos::RCP<MV> ghost_node_velocities_distributed;
-  Teuchos::RCP<MV> all_cached_node_velocities_distributed;
+    void tag_boundaries(int this_bc_tag, real_t val, int bdy_set, real_t* patch_limits = NULL);
 
-  //Distributions of data used to print
-  Teuchos::RCP<MV> collected_node_velocities_distributed;
-  Teuchos::RCP<MV> sorted_node_velocities_distributed;
-  
-  //Boundary Conditions Data
-  DCArrayKokkos<size_t> Local_Index_Boundary_Patches;
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Topology_Condition_Patches; //set of patches corresponding to each boundary condition
-  CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> NTopology_Condition_Patches;
+    int check_boundary(Node_Combination& Patch_Nodes, int this_bc_tag, real_t val, real_t* patch_limits);
 
-  //types of boundary conditions
-  enum tc_type {NONE, TO_SURFACE_CONSTRAINT, TO_BODY_CONSTRAINT};
+    mesh_t* init_mesh;
+    std::shared_ptr<mesh_t> mesh;
 
-  //lists what kind of boundary condition each boundary set is assigned to
-  CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
+    Simulation_Parameters_Explicit simparam;
 
-  //time data
-  real_t time_value;
-  
-  //number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
-  size_t Number_DOF_BCS;
+    // FEA simulations
+    class FEA_Module_SGH* sgh_module;
 
-  //! mapping used to get local ghost index from the global ID.
-  //typedef ::Tpetra::Details::FixedHashTable<GO, LO, Kokkos::HostSpace::device_type>
-    //global_to_local_table_host_type;
+    // Global FEA data
+    Teuchos::RCP<MV> node_velocities_distributed;
+    Teuchos::RCP<MV> initial_node_velocities_distributed;
+    Teuchos::RCP<MV> all_node_velocities_distributed;
+    Teuchos::RCP<MV> ghost_node_velocities_distributed;
+    Teuchos::RCP<MV> all_cached_node_velocities_distributed;
 
-  //global_to_local_table_host_type global2local_map;
-  //CArrayKokkos<int, Kokkos::LayoutLeft, Kokkos::HostSpace::device_type> active_ranks;
+    // Distributions of data used to print
+    Teuchos::RCP<MV> collected_node_velocities_distributed;
+    Teuchos::RCP<MV> sorted_node_velocities_distributed;
 
-  //allocation flags to avoid repeat MV and global matrix construction
-  int Matrix_alloc;
+    // Boundary Conditions Data
+    DCArrayKokkos<size_t> Local_Index_Boundary_Patches;
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Topology_Condition_Patches; // set of patches corresponding to each boundary condition
+    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> NTopology_Condition_Patches;
 
-  //debug flags
-  int gradient_print_sync;
+    // types of boundary conditions
+    enum tc_type { NONE, TO_SURFACE_CONSTRAINT, TO_BODY_CONSTRAINT };
 
-  Teuchos::RCP<MV> initial_node_coords_distributed;
+    // lists what kind of boundary condition each boundary set is assigned to
+    CArrayKokkos<int, array_layout, HostSpace, memory_traits> Boundary_Condition_Type_List;
+
+    // time data
+    real_t time_value;
+
+    // number of displacement boundary conditions acting on nodes; used to size the reduced global stiffness map
+    size_t Number_DOF_BCS;
+
+    // ! mapping used to get local ghost index from the global ID.
+    // typedef ::Tpetra::Details::FixedHashTable<GO, LO, Kokkos::HostSpace::device_type>
+    // global_to_local_table_host_type;
+
+    // global_to_local_table_host_type global2local_map;
+    // CArrayKokkos<int, Kokkos::LayoutLeft, Kokkos::HostSpace::device_type> active_ranks;
+
+    // allocation flags to avoid repeat MV and global matrix construction
+    int Matrix_alloc;
+
+    // debug flags
+    int gradient_print_sync;
+
+    Teuchos::RCP<MV> initial_node_coords_distributed;
 };
 
 #endif // end Header Guard

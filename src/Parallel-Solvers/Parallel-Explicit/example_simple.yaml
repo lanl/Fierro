@@ -10,7 +10,7 @@ mesh_generation_options:
   type: Box
   origin: [0, 0, 0]
   length: [1.2, 1.2, 1.2]
-  num_elems: [32, 32, 32]
+  num_elems: [40, 40, 40]
 
 output_options:
   timer_output_level: thorough
@@ -87,7 +87,7 @@ regions:
   - volume: 
       type: sphere
       radius1: 0.0
-      radius2: 0.0375
+      radius2: 0.03
     material_id: 0
     den: 1.0
     ie: 0.25833839995946534

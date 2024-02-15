@@ -1,17 +1,17 @@
 
 #include "mesh.h"
 #include "state.h"
-#include "FEA_Module_Eulerian.h"
+#include "FEA_Module_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function saves the variables at rk_stage = 0, which is t_n
 // ------------------------------------------------------------------------------
-void FEA_Module_Eulerian::rk_init(DViewCArrayKokkos<double>& node_coords,
-                                  DViewCArrayKokkos<double>& node_vel,
-                                  DViewCArrayKokkos<double>& elem_sie,
-                                  DViewCArrayKokkos<double>& elem_stress,
-                                  const size_t               num_elems,
-                                  const size_t               num_nodes)
+void FEA_Module_SGH::rk_init(DViewCArrayKokkos<double>& node_coords,
+                             DViewCArrayKokkos<double>& node_vel,
+                             DViewCArrayKokkos<double>& elem_sie,
+                             DViewCArrayKokkos<double>& elem_stress,
+                             const size_t               num_elems,
+                             const size_t               num_nodes)
 {
     const size_t rk_level = rk_num_bins - 1;
     int          num_dims = num_dim;
@@ -47,13 +47,13 @@ void FEA_Module_Eulerian::rk_init(DViewCArrayKokkos<double>& node_coords,
 // between any two nodes in the mesh
 // ------------------------------------------------------------------------------
 // WARNING WARNING :  Only works for 3D, 8 node elements
-void FEA_Module_Eulerian::get_timestep(mesh_t&                    mesh,
-                                       DViewCArrayKokkos<double>& node_coords,
-                                       DViewCArrayKokkos<double>& node_vel,
-                                       DViewCArrayKokkos<double>& elem_sspd,
-                                       DViewCArrayKokkos<double>& elem_vol)
+void FEA_Module_SGH::get_timestep(mesh_t&                    mesh,
+                                  DViewCArrayKokkos<double>& node_coords,
+                                  DViewCArrayKokkos<double>& node_vel,
+                                  DViewCArrayKokkos<double>& elem_sspd,
+                                  DViewCArrayKokkos<double>& elem_vol)
 {
-    ->const size_t rk_level = rk_num_bins - 1;
+    const size_t rk_level = rk_num_bins - 1;
 
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
@@ -148,13 +148,13 @@ void FEA_Module_Eulerian::get_timestep(mesh_t&                    mesh,
 // between any two nodes in the mesh
 // ------------------------------------------------------------------------------
 // WARNING WARNING :  Only works for 3D, 8 node elements
-void FEA_Module_Eulerian::get_timestep2D(mesh_t&                    mesh,
-                                         DViewCArrayKokkos<double>& node_coords,
-                                         DViewCArrayKokkos<double>& node_vel,
-                                         DViewCArrayKokkos<double>& elem_sspd,
-                                         DViewCArrayKokkos<double>& elem_vol)
+void FEA_Module_SGH::get_timestep2D(mesh_t&                    mesh,
+                                    DViewCArrayKokkos<double>& node_coords,
+                                    DViewCArrayKokkos<double>& node_vel,
+                                    DViewCArrayKokkos<double>& elem_sspd,
+                                    DViewCArrayKokkos<double>& elem_vol)
 {
-    ->const size_t rk_level = rk_num_bins - 1;
+    const size_t rk_level = rk_num_bins - 1;
 
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;

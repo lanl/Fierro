@@ -1,77 +1,73 @@
 
-#include "mesh.h"
 #include "state.h"
-#include "FEA_Module_Dynamic_Elasticity.h"
+#include "FEA_Module_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function evolves the velocity at the nodes of the mesh
 // ------------------------------------------------------------------------------
-/*
-void FEA_Module_Dynamic_Elasticity::update_velocity_elastic(double rk_alpha,
-                         const mesh_t &mesh,
-                         DViewCArrayKokkos <double> &node_vel,
-                         const DViewCArrayKokkos <double> &node_mass,
-                         const DViewCArrayKokkos <double> &corner_force
-                         ){
-
-    const size_t rk_level = simparam->rk_num_bins - 1;
-    const size_t num_dims = mesh.num_dims;
+void FEA_Module_SGH::update_velocity_sgh(double                           rk_alpha,
+                                         DViewCArrayKokkos<double>&       node_vel,
+                                         const DViewCArrayKokkos<double>& node_mass,
+                                         const DViewCArrayKokkos<double>& corner_force
+                                         )
+{
+    const size_t rk_level = rk_num_bins - 1;
+    const size_t num_dims = num_dim;
 
     // walk over the nodes to update the velocity
     FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-
         double node_force[3];
-        for (size_t dim = 0; dim < num_dims; dim++){
+        for (size_t dim = 0; dim < num_dims; dim++)
+        {
             node_force[dim] = 0.0;
         } // end for dim
 
         // loop over all corners around the node and calculate the nodal force
-        for (size_t corner_lid=0; corner_lid<num_corners_in_node(node_gid); corner_lid++){
-
+        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
+        {
             // Get corner gid
             size_t corner_gid = corners_in_node(node_gid, corner_lid);
 
             // loop over dimension
-            for (size_t dim = 0; dim < num_dims; dim++){
+            for (size_t dim = 0; dim < num_dims; dim++)
+            {
                 node_force[dim] += corner_force(corner_gid, dim);
             } // end for dim
-
         } // end for corner_lid
 
         // update the velocity
-        for (int dim = 0; dim < num_dims; dim++){
+        for (int dim = 0; dim < num_dims; dim++)
+        {
             node_vel(rk_level, node_gid, dim) = node_vel(0, node_gid, dim) +
-                                         rk_alpha * dt*node_force[dim]/node_mass(node_gid);
+                                                rk_alpha * dt * node_force[dim] / node_mass(node_gid);
         } // end for dim
-
     }); // end for parallel for over nodes
 
     return;
-
 } // end subroutine update_velocity
-*/
 
 // -----------------------------------------------------------------------------
 // This function calculates the velocity gradient
 // ------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_velgrad(ViewCArrayKokkos<double>&        vel_grad,
-                                                const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                const DViewCArrayKokkos<double>& node_vel,
-                                                const ViewCArrayKokkos<double>&  b_matrix,
-                                                const double                     elem_vol,
-                                                const size_t                     elem_gid,
-                                                const size_t                     rk_level
-                                                ) const
+void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>&        vel_grad,
+                                 const ViewCArrayKokkos<size_t>&  elem_node_gids,
+                                 const DViewCArrayKokkos<double>& node_vel,
+                                 const ViewCArrayKokkos<double>&  b_matrix,
+                                 const double                     elem_vol,
+                                 const size_t                     elem_gid,
+                                 const size_t                     rk_level
+                                 ) const
 {
     const size_t num_nodes_in_elem = 8;
 
-    double                   u_array[num_nodes_in_elem];
-    double                   v_array[num_nodes_in_elem];
-    double                   w_array[num_nodes_in_elem];
-    ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
-    ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
-    ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir vel component
+    double                   u_array[num_nodes_in_elem]; // x-dir vel component
+    double                   v_array[num_nodes_in_elem]; // y-dir vel component
+    double                   w_array[num_nodes_in_elem]; // z-dir vel component
+    
+    ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); 
+    ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); 
+    ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); 
 
     // get the vertex velocities for the cell
     for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
@@ -141,15 +137,15 @@ void FEA_Module_Dynamic_Elasticity::get_velgrad(ViewCArrayKokkos<double>&       
 // This function calculates the velocity gradient
 // ------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_velgrad2D(ViewCArrayKokkos<double>&        vel_grad,
-                                                  const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                  const DViewCArrayKokkos<double>& node_vel,
-                                                  const ViewCArrayKokkos<double>&  b_matrix,
-                                                  const double                     elem_vol,
-                                                  const double                     elem_area,
-                                                  const size_t                     elem_gid,
-                                                  const size_t                     rk_level
-                                                  ) const
+void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos<double>&        vel_grad,
+                                   const ViewCArrayKokkos<size_t>&  elem_node_gids,
+                                   const DViewCArrayKokkos<double>& node_vel,
+                                   const ViewCArrayKokkos<double>&  b_matrix,
+                                   const double                     elem_vol,
+                                   const double                     elem_area,
+                                   const size_t                     elem_gid,
+                                   const size_t                     rk_level
+                                   ) const
 {
     const size_t num_nodes_in_elem = 4;
 
@@ -205,12 +201,11 @@ void FEA_Module_Dynamic_Elasticity::get_velgrad2D(ViewCArrayKokkos<double>&     
 // -----------------------------------------------------------------------------
 // This subroutine to calculate the velocity divergence in all elements
 // ------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos<double>&       elem_div,
-                                                   const mesh_t                     mesh,
-                                                   const DViewCArrayKokkos<double>& node_coords,
-                                                   const DViewCArrayKokkos<double>& node_vel,
-                                                   const DViewCArrayKokkos<double>& elem_vol
-                                                   )
+void FEA_Module_SGH::get_divergence(DViewCArrayKokkos<double>&       elem_div,
+                                    const DViewCArrayKokkos<double>& node_coords,
+                                    const DViewCArrayKokkos<double>& node_vel,
+                                    const DViewCArrayKokkos<double>& elem_vol
+                                    )
 {
     const size_t rk_level = rk_num_bins - 1;
 
@@ -279,12 +274,11 @@ void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos<double>&   
 // -----------------------------------------------------------------------------
 // This subroutine to calculate the velocity divergence in all elements
 // ------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos<double>&       elem_div,
-                                                     const mesh_t                     mesh,
-                                                     const DViewCArrayKokkos<double>& node_coords,
-                                                     const DViewCArrayKokkos<double>& node_vel,
-                                                     const DViewCArrayKokkos<double>& elem_vol
-                                                     )
+void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos<double>&       elem_div,
+                                      const DViewCArrayKokkos<double>& node_coords,
+                                      const DViewCArrayKokkos<double>& node_vel,
+                                      const DViewCArrayKokkos<double>& elem_vol
+                                      )
 {
     const size_t rk_level = rk_num_bins - 1;
 
@@ -360,15 +354,15 @@ void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos<double>& 
 // D = sym(L)
 // W = antisym(L)
 KOKKOS_INLINE_FUNCTION
-void FEA_Module_Dynamic_Elasticity::decompose_vel_grad(ViewCArrayKokkos<double>&        D_tensor,
-                                                       ViewCArrayKokkos<double>&        W_tensor,
-                                                       const ViewCArrayKokkos<double>&  vel_grad,
-                                                       const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                       const size_t                     elem_gid,
-                                                       const DViewCArrayKokkos<double>& node_coords,
-                                                       const DViewCArrayKokkos<double>& node_vel,
-                                                       const double                     vol
-                                                       ) const
+void FEA_Module_SGH::decompose_vel_grad(ViewCArrayKokkos<double>&        D_tensor,
+                                        ViewCArrayKokkos<double>&        W_tensor,
+                                        const ViewCArrayKokkos<double>&  vel_grad,
+                                        const ViewCArrayKokkos<size_t>&  elem_node_gids,
+                                        const size_t                     elem_gid,
+                                        const DViewCArrayKokkos<double>& node_coords,
+                                        const DViewCArrayKokkos<double>& node_vel,
+                                        const double                     vol
+                                        ) const
 {
     // --- Calculate the velocity gradient ---
 

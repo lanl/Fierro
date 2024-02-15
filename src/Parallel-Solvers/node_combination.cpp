@@ -11,14 +11,14 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
- 
+
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
- 
+
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
- 
+
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -34,43 +34,58 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
- 
+
 #include "node_combination.h"
 #include "utilities.h"
 #include "matar.h"
 
 using namespace utils;
 
-//overload < operator
-  bool operator< (const Node_Combination &object1, const Node_Combination &object2){
+// overload < operator
+bool operator<(const Node_Combination& object1, const Node_Combination& object2)
+{
     int size1 = object1.node_set.size();
-    //check if this node combination is identical
-    //first check size of the combination; if smaller evaluate to true
-    //the set using this is then ordered first according to size of the combinations
-    if(size1<object2.node_set.size())
-      return true;
-    else if(size1>object2.node_set.size())
-      return false;
-    
+    // check if this node combination is identical
+    // first check size of the combination; if smaller evaluate to true
+    // the set using this is then ordered first according to size of the combinations
+    if (size1 < object2.node_set.size())
+    {
+        return true;
+    }
+    else if (size1 > object2.node_set.size())
+    {
+        return false;
+    }
+
     CArray<Node_Combination::GO> sort_set1 = object1.sort_set;
     CArray<Node_Combination::GO> sort_set2 = object2.sort_set;
-    for(int i = 0; i < size1; i++){
-      sort_set1(i) = object1.node_set(i);
-      sort_set2(i) = object2.node_set(i);
+    for (int i = 0; i < size1; i++)
+    {
+        sort_set1(i) = object1.node_set(i);
+        sort_set2(i) = object2.node_set(i);
     }
-    //This part sorts for segments of the set where combinations have the same size
-    //define < using the sort of both combinations. If the first nonequal element of the lhs combination, w.r.t to 
-    //the corresponding element of the rhs, is less than the respective element of the rhs < evaluates to true
-    std::sort(sort_set1.pointer(),sort_set1.pointer()+sort_set1.size());
-    std::sort(sort_set2.pointer(),sort_set2.pointer()+sort_set2.size());
+    // This part sorts for segments of the set where combinations have the same size
+    // define < using the sort of both combinations. If the first nonequal element of the lhs combination, w.r.t to
+    // the corresponding element of the rhs, is less than the respective element of the rhs < evaluates to true
+    std::sort(sort_set1.pointer(), sort_set1.pointer() + sort_set1.size());
+    std::sort(sort_set2.pointer(), sort_set2.pointer() + sort_set2.size());
 
-    //loop through the sorted nodes to check for <
-    for(int i = 0; i < size1; i++){
-      if(sort_set1(i)<sort_set2(i)) return true;
-      else if(sort_set1(i)==sort_set2(i)) continue;
-      else break;
+    // loop through the sorted nodes to check for <
+    for (int i = 0; i < size1; i++)
+    {
+        if (sort_set1(i) < sort_set2(i))
+        {
+            return true;
+        }
+        else if (sort_set1(i) == sort_set2(i))
+        {
+            continue;
+        }
+        else
+        {
+            break;
+        }
     }
 
     return false;
-    
-  }
+}
