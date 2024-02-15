@@ -38,32 +38,15 @@ struct node_t
 // elem_state
 struct elem_t
 {
-    // den
-    CArray<double> den;
-
-    // pres
-    CArray<double> pres;
-
-    // stress
-    CArray<double> stress;
-
-    // sspd
-    CArray<double> sspd;
-
-    // sie
-    CArray<double> sie;
-
-    // vol
-    CArray<double> vol;
-
-    // divergence of velocity
-    CArray<double> div;
-
-    // mass of elem
-    CArray<double> mass;
-
-    // mat ids
-    CArray<size_t> mat_id;
+    CArray<double> den; ///< element density
+    CArray<double> pres; ///< element pressure
+    CArray<double> stress; ///< element stress
+    CArray<double> sspd; ///< element sound speed
+    CArray<double> sie; ///< specific internal energy
+    CArray<double> vol; ///< element volume
+    CArray<double> div; ///< divergence of velocity
+    CArray<double> mass; ///< element mass
+    CArray<size_t> mat_id; ///< element material id
 
     // initialization method (num_rk_storage_bins, num_cells, num_dims)
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
@@ -83,11 +66,8 @@ struct elem_t
 // corner_state
 struct corner_t
 {
-    // force
-    CArray<double> force;
-
-    // mass of corner
-    CArray<double> mass;
+    CArray<double> force; ///< Force acting on a corner
+    CArray<double> mass; ///< Partitioned mass of the corner
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims)
