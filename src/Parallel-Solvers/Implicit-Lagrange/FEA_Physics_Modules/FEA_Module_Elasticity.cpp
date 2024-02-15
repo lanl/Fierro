@@ -2238,8 +2238,9 @@ void FEA_Module_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, array_l
   int z_quad,y_quad,x_quad, direct_product_count;
   size_t local_node_id;
 
+  bool anisotropic_lattice = module_params->anisotropic_lattice;
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
+  real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term, Elastic_Moduli[3], Shear_Moduli[3], Poisson_Ratios[3];
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, Jacobian, invJacobian, weight_multiply;
   real_t Element_Modulus, Poisson_Ratio;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -2326,11 +2327,17 @@ void FEA_Module_Elasticity::local_matrix(int ielem, CArrayKokkos<real_t, array_l
     }
 
     //look up element material properties as a function of density at the point
-    Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
-    Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5-Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
-
+    if(anisotropic_lattice){
+      Element_Anisotropic_Material_Properties((size_t) ielem,Elastic_Moduli, Poisson_Ratios ,Shear_Moduli, current_density);
+      Elastic_Constant = (1-Poisson_Ratios[0]*Poisson_Ratios[0]-Poisson_Ratios[1]*Poisson_Ratios[1]-Poisson_Ratios[2]*Poisson_Ratios[2]
+                          -2*Poisson_Ratios[0]*Poisson_Ratios[1]*Poisson_Ratios[2])/(Elastic_Moduli[0]*Elastic_Moduli[1]*Elastic_Moduli[2]);
+    }
+    else{
+      Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
+      Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+      Shear_Term = 0.5-Poisson_Ratio;
+      Pressure_Term = 1 - Poisson_Ratio;
+    }
     //compute all the necessary coordinates and derivatives at this point
 
     //compute shape function derivatives
@@ -2635,7 +2642,7 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   real_t unit_scaling = simparam->get_unit_scaling();
   bool topology_optimization_on = simparam->topology_optimization_on;
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term;
+  real_t Elastic_Constant, Shear_Term, Pressure_Term, matrix_term, Elastic_Moduli[3], Shear_Moduli[3], Poisson_Ratios[3];
   real_t matrix_subterm1, matrix_subterm2, matrix_subterm3, invJacobian, Jacobian, weight_multiply;
   real_t Element_Modulus, Poisson_Ratio;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -2678,6 +2685,7 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
   //initialize weights
   elements::legendre_nodes_1D(legendre_nodes_1D,num_gauss_points);
   elements::legendre_weights_1D(legendre_weights_1D,num_gauss_points);
+  bool anisotropic_lattice = module_params->anisotropic_lattice;
 
   real_t current_density = 1;
 
@@ -2754,17 +2762,26 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
 
     //look up element material properties at this point as a function of density
     if(topology_optimization_on){
-      Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
+      if(anisotropic_lattice){
+      Element_Anisotropic_Material_Properties((size_t) ielem,Elastic_Moduli, Poisson_Ratios ,Shear_Moduli, current_density);
+      }
+      else{
+        Element_Material_Properties((size_t) ielem,Element_Modulus,Poisson_Ratio, current_density);
+      }
     }
     else{
       Element_Modulus = module_params->material.elastic_modulus/unit_scaling/unit_scaling;
       Poisson_Ratio = module_params->material.poisson_ratio;
     }
     
-    Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5-Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
-
+    if(anisotropic_lattice){
+      Elastic_Constant = (1-Poisson_Ratios[0]*Poisson_Ratios[0] - Poisson_Ratios[1]*Poisson_Ratios[1] - Poisson_Ratios[2]*Poisson_Ratios[2]
+                          -2*Poisson_Ratios[0]*Poisson_Ratios[1]*Poisson_Ratios[2])/(Elastic_Moduli[0]*Elastic_Moduli[1]*Elastic_Moduli[2]);}
+    else{
+      Elastic_Constant = Element_Modulus/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+      Shear_Term = 0.5-Poisson_Ratio;
+      Pressure_Term = 1 - Poisson_Ratio;
+    }
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
@@ -2777,18 +2794,35 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
       C_matrix(2,2) = Shear_Term;
     }
     if(num_dim==3){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(2,2) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(0,2) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(1,2) = Poisson_Ratio;
-      C_matrix(2,0) = Poisson_Ratio;
-      C_matrix(2,1) = Poisson_Ratio;
-      C_matrix(3,3) = Shear_Term;
-      C_matrix(4,4) = Shear_Term;
-      C_matrix(5,5) = Shear_Term;
+      if(anisotropic_lattice){
+        C_matrix(0,0) = (1-Poisson_Ratios[2]*Poisson_Ratios[2])/(Elastic_Moduli[1]*Elastic_Moduli[2]*Elastic_Constant);
+        C_matrix(1,1) = (1-Poisson_Ratios[1]*Poisson_Ratios[1])/(Elastic_Moduli[0]*Elastic_Moduli[2]*Elastic_Constant);
+        C_matrix(2,2) = (1-Poisson_Ratios[0]*Poisson_Ratios[0])/(Elastic_Moduli[0]*Elastic_Moduli[1]*Elastic_Constant);
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(0,2) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(1,2) = Poisson_Ratio;
+        C_matrix(2,0) = Poisson_Ratio;
+        C_matrix(2,1) = Poisson_Ratio;
+        C_matrix(3,3) = 2*Shear_Moduli[0];
+        C_matrix(4,4) = 2*Shear_Moduli[1];
+        C_matrix(5,5) = 2*Shear_Moduli[2];
+
+      }
+      else{
+        C_matrix(0,0) = Pressure_Term;
+        C_matrix(1,1) = Pressure_Term;
+        C_matrix(2,2) = Pressure_Term;
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(0,2) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(1,2) = Poisson_Ratio;
+        C_matrix(2,0) = Poisson_Ratio;
+        C_matrix(2,1) = Poisson_Ratio;
+        C_matrix(3,3) = Shear_Term;
+        C_matrix(4,4) = Shear_Term;
+        C_matrix(5,5) = Shear_Term;
+      }
     }
   
   /*
