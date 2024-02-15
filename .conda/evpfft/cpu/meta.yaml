@@ -26,9 +26,9 @@ requirements:
   host:
     - openmpi
     - fierro-heffte
-    - fftw=*=mpi* #fftw3 fftw=*=mpi_openmpi_*
+    - fftw3 #fftw=*=mpi* fftw=*=mpi_openmpi_*
     - kokkos=4.1
-    - hdf5=*=mpi* #hdf5=*=mpi_openmpi_*
+    - hdf5 #hdf5=*=mpi* hdf5=*=mpi_openmpi_*
     - elements
   run:
     - openmpi
