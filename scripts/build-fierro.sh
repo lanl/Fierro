@@ -43,6 +43,7 @@ show_help() {
     echo "          darwin                      The darwin cluster at LANL. Uses module loads for software"
     echo "          linux                       A general linux machine (that does not use modules)"
     echo "          mac                         A Mac computer. This option does not allow for cuda and hip builds, and build_cores will be set to 1"
+    echo "          msu                         A linux computer managed by the HPCC group at Mississippi State University"
     echo " "
     echo "      --heffte_build_type             The build type for the heffte installation. The default is 'fftw'"
     echo " "
@@ -67,7 +68,7 @@ valid_build_action=("full-app" "set-env" "install-trilinos" "install-hdf5" "inst
 valid_solver=("all" "explicit" "explicit-evpfft" "explicit-ls-evpfft" "explicit-evp" "implicit")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
-valid_machines=("darwin" "chicoma" "linux" "mac")
+valid_machines=("darwin" "chicoma" "linux" "mac" "msu")
 
 # Parse command line arguments
 for arg in "$@"; do
@@ -168,6 +169,7 @@ echo "Building based on these argument options:"
 echo "Build action - ${build_action}"
 echo "Solver - ${solver}"
 echo "Kokkos backend - ${kokkos_build_type}"
+echo "Machine - ${machine}"
 if [ "${solver}" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
     echo "HEFFTE - ${heffte_build_type}"
 fi
@@ -180,14 +182,14 @@ source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
 
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
-    source trilinos-install.sh ${kokkos_build_type}
+    source trilinos-install.sh ${kokkos_build_type} ${machine}
     if [ "$solver" = "explicit-evpfft" ] || [ "${solver}" = "explicit-ls-evpfft" ]; then
         source hdf5-install.sh
         source heffte-install.sh ${heffte_build_type} ${machine}
     fi
     source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type}
 elif [ "$build_action" = "install-trilinos" ]; then
-    source trilinos-install.sh ${kokkos_build_type}
+    source trilinos-install.sh ${kokkos_build_type} ${machine}
 elif [ "$build_action" = "install-hdf5" ]; then
     source hdf5-install.sh
 elif [ "$build_action" = "install-heffte" ]; then
