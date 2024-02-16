@@ -15,11 +15,31 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: configure
-      run: ./configure
-
-    - uses: actions/checkout@v2
-    - name: Run script file
+    - name: update the package list
+      run:
+        sudo apt-get update
+      shell: bash
+    - name: Install build tools
+      run:
+        sudo apt-get install build-essential
+      shell: bash
+    - name: Install LaPack
+      run:
+        sudo apt-get install libblas-dev liblapack-dev
+      shell: bash
+    - name: Install MPI
+      run: |
+        sudo apt-get install libopenmpi-dev openmpi-bin
+        echo "MPI_OPTS=--oversubscribe" >> $GITHUB_ENV
+    - name: Install cmake
+      run:
+        sudo apt-get -y install cmake
+      shell: bash
+    - name: Install python
+      run:
+        sudo apt-get install python3.6
+      shell: bash
+    - name: Run build script
       run: |
          chmod +x ./scripts/build-fierro.sh
          ./scripts/build-fierro.sh --build_action=full-app --solver=all --kokkos_build_type=openmp --build_cores=2
