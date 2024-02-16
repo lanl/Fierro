@@ -25,17 +25,19 @@ requirements:
     - openmpi
   host:
     - openmpi
-      #- fierro-heffte
-    - fftw=*=mpi_openmpi_*
+    - fierro-heffte
+      #- fftw=*=mpi_openmpi_*
     - kokkos=4.1
-    - hdf5 #=*=mpi_openmpi_*
+      #- hdf5 #=*=mpi_openmpi_*
+    - clawpack::hdf5-parallel
     - elements
   run:
     - openmpi
-      #- fierro-heffte
-    - fftw=*=mpi_openmpi_*
+    - fierro-heffte
+      #- fftw=*=mpi_openmpi_*
     - kokkos=4.1
-    - hdf5 #=*=mpi_openmpi_*
+      #- hdf5 #=*=mpi_openmpi_*
+    - clawpack::hdf5-parallel
     - elements
 
 #TODO: Add tests
