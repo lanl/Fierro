@@ -56,6 +56,7 @@ materials:
     q2: 1.3333
     q1ex: 1.0
     q2ex: 0.0
+    # num_state_vars: 5
     global_vars:
       - 0.0 #0.0001 #udotAccTh
       - 100000 #2400000 #[mm/s] ref sound speed

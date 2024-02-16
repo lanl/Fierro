@@ -1,5 +1,6 @@
 #include "defgrad_dcmp.h"
 #include "math_functions.h"
+#include "utilities.h"
 
 KOKKOS_FUNCTION
 real_t frobenius_norm(const real_t* A, int m, int n);
@@ -7,6 +8,7 @@ real_t frobenius_norm(const real_t* A, int m, int n);
 KOKKOS_FUNCTION
 void defgrad_dcmp(real_t *F_, real_t *V_, real_t *R_)
 {
+
   ViewMatrixTypeReal F (F_,3,3);
   ViewMatrixTypeReal V (V_,3,3);
   ViewMatrixTypeReal R (R_,3,3);
@@ -22,7 +24,7 @@ void defgrad_dcmp(real_t *F_, real_t *V_, real_t *R_)
   ViewMatrixTypeReal A_trans  (A_trans_,3,3);
   ViewMatrixTypeReal R_inv  (R_inv_,3,3);
 
-  const int iter_max = 20;
+  const int iter_max = 50;
   const real_t tol = 1.0e-12;
   real_t conv_err = 1;
 

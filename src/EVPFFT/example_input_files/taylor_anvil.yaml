@@ -61,6 +61,7 @@ materials:
     q1ex: 0.01 # 0.01 to 0.1
     q2ex: 0.0
     maximum_limiter: true
+    # num_state_vars: 5
     global_vars:
       - 0.0001 #udotAccTh
       - 3000000 #[mm/s] ref sound speed
