@@ -93,13 +93,14 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos<material_
                                                    const size_t                     cycle
                                                    )
 {
-    const size_t    rk_level = simparam->dynamic_options.rk_num_bins - 1;
-    const size_t    num_dim  = mesh.num_dims;
-    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-    const size_t    num_lcs = module_params->loading.size();
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    const size_t num_dim  = mesh.num_dims;
+    const size_t num_lcs  = module_params->loading.size();
 
     const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos<loading_t>  loading  = module_params->loading;
+
+    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
     // debug check
     // std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
@@ -118,7 +119,10 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos<material_
             node_force[dim] = 0.0;
             current_node_coords[dim] = all_initial_node_coords(node_gid, dim);
         } // end for dim
-        radius = sqrt(current_node_coords[0] * current_node_coords[0] + current_node_coords[1] * current_node_coords[1] + current_node_coords[2] * current_node_coords[2]);
+        radius = sqrt(current_node_coords[0] * current_node_coords[0]
+            + current_node_coords[1] * current_node_coords[1]
+            + current_node_coords[2] * current_node_coords[2]);
+
         for (size_t ilc = 0; ilc < num_lcs; ilc++)
         {
             // debug check
@@ -138,7 +142,9 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos<material_
                     // loop over dimension
                     for (size_t dim = 0; dim < num_dim; dim++)
                     {
-                        node_force[dim] += applied_force[dim] * (all_initial_node_coords(node_gid, 0) + all_initial_node_coords(node_gid, 1) + all_initial_node_coords(node_gid, 2)) / radius;
+                        node_force[dim] += applied_force[dim] * (all_initial_node_coords(node_gid, 0)
+                                                                 + all_initial_node_coords(node_gid, 1)
+                                                                 + all_initial_node_coords(node_gid, 2)) / radius;
                     } // end for dim
                 } // end for corner_lid
 
@@ -226,13 +232,8 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix()
                     {
                         for (int jdim = 0; jdim < num_dim; jdim++)
                         {
-                            // debug print
-                            // if(current_row + idim==15&&current_column + jdim==4)
-                            // std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
-                            // Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
-                            // end debug
-
-                            Stiffness_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim * inode + idim, num_dim * jnode + jdim);
+                            Stiffness_Matrix(current_row + idim, current_column + jdim) +=
+                                Local_Stiffness_Matrix(num_dim * inode + idim, num_dim * jnode + jdim);
                         }
                     }
                 }
@@ -266,13 +267,8 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix()
                     {
                         for (int jdim = 0; jdim < num_dim; jdim++)
                         {
-                            // debug print
-                            // if(current_row + idim==15&&current_column + jdim==4)
-                            // std::cout << " Local stiffness matrix contribution for row " << current_row + idim +1 << " and column " << current_column + jdim + 1 << " : " <<
-                            // Local_Stiffness_Matrix(num_dim*inode + idim,num_dim*jnode + jdim) << " from " << ielem +1 << " i: " << num_dim*inode+idim+1 << " j: " << num_dim*jnode + jdim +1 << std::endl << std::endl;
-                            // end debug
-
-                            Stiffness_Matrix(current_row + idim, current_column + jdim) += Local_Stiffness_Matrix(num_dim * inode + idim, num_dim * jnode + jdim);
+                            Stiffness_Matrix(current_row + idim, current_column + jdim) +=
+                                Local_Stiffness_Matrix(num_dim * inode + idim, num_dim * jnode + jdim);
                         }
                     }
                 }
@@ -386,29 +382,31 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
     real_t Element_Modulus, Poisson_Ratio;
     // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
     // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
-    CArray<real_t>     legendre_weights_1D(num_gauss_points);
-    real_t             pointer_quad_coordinate[num_dim];
-    real_t             pointer_quad_coordinate_weight[num_dim];
-    real_t             pointer_interpolated_point[num_dim];
-    real_t             pointer_JT_row1[num_dim];
-    real_t             pointer_JT_row2[num_dim];
-    real_t             pointer_JT_row3[num_dim];
+    CArray<real_t> legendre_nodes_1D(num_gauss_points);
+    CArray<real_t> legendre_weights_1D(num_gauss_points);
+
+    real_t pointer_quad_coordinate[num_dim];
+    real_t pointer_quad_coordinate_weight[num_dim];
+    real_t pointer_interpolated_point[num_dim];
+    real_t pointer_JT_row1[num_dim];
+    real_t pointer_JT_row2[num_dim];
+    real_t pointer_JT_row3[num_dim];
+    real_t pointer_basis_values[elem->num_basis()];
+    real_t pointer_basis_derivative_s1[elem->num_basis()];
+    real_t pointer_basis_derivative_s2[elem->num_basis()];
+    real_t pointer_basis_derivative_s3[elem->num_basis()];
+
     ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
     ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
     ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
     ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
     ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
     ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
+    ViewCArray<real_t> basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
 
-    real_t                                                       pointer_basis_values[elem->num_basis()];
-    real_t                                                       pointer_basis_derivative_s1[elem->num_basis()];
-    real_t                                                       pointer_basis_derivative_s2[elem->num_basis()];
-    real_t                                                       pointer_basis_derivative_s3[elem->num_basis()];
-    ViewCArray<real_t>                                           basis_values(pointer_basis_values, elem->num_basis());
-    ViewCArray<real_t>                                           basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
-    ViewCArray<real_t>                                           basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
-    ViewCArray<real_t>                                           basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_positions(elem->num_basis(), num_dim);
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_density(elem->num_basis());
 
@@ -857,16 +855,18 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     {
         Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-    int          num_dim = simparam->num_dims;
-    int          nodes_per_elem   = elem->num_basis();
-    int          num_gauss_points = simparam->num_gauss_points;
-    int          z_quad, y_quad, x_quad, direct_product_count;
+    int num_dim = simparam->num_dims;
+    int nodes_per_elem   = elem->num_basis();
+    int num_gauss_points = simparam->num_gauss_points;
+    int z_quad, y_quad, x_quad, direct_product_count;
+
     size_t       local_node_id, local_dof_idx, local_dof_idy, local_dof_idz;
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     GO           current_global_index;
 
-    real_t                                                       global_dt;
-    size_t                                                       current_data_index, next_data_index;
+    real_t global_dt;
+    size_t current_data_index, next_data_index;
+
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, HostSpace, memory_traits>(num_nodes_in_elem * num_dim);
 
     direct_product_count = std::pow(num_gauss_points, num_dim);
@@ -875,29 +875,31 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     real_t inner_product, matrix_term, Jacobian, invJacobian, weight_multiply;
     // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
     // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
-    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
-    CArray<real_t>     legendre_weights_1D(num_gauss_points);
-    real_t             pointer_quad_coordinate[num_dim];
-    real_t             pointer_quad_coordinate_weight[num_dim];
-    real_t             pointer_interpolated_point[num_dim];
-    real_t             pointer_JT_row1[num_dim];
-    real_t             pointer_JT_row2[num_dim];
-    real_t             pointer_JT_row3[num_dim];
+    CArray<real_t> legendre_nodes_1D(num_gauss_points);
+    CArray<real_t> legendre_weights_1D(num_gauss_points);
+
+    real_t pointer_quad_coordinate[num_dim];
+    real_t pointer_quad_coordinate_weight[num_dim];
+    real_t pointer_interpolated_point[num_dim];
+    real_t pointer_JT_row1[num_dim];
+    real_t pointer_JT_row2[num_dim];
+    real_t pointer_JT_row3[num_dim];
+    real_t pointer_basis_values[elem->num_basis()];
+    real_t pointer_basis_derivative_s1[elem->num_basis()];
+    real_t pointer_basis_derivative_s2[elem->num_basis()];
+    real_t pointer_basis_derivative_s3[elem->num_basis()];
+
     ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
     ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
     ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
     ViewCArray<real_t> JT_row1(pointer_JT_row1, num_dim);
     ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
     ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
+    ViewCArray<real_t> basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
 
-    real_t                                                       pointer_basis_values[elem->num_basis()];
-    real_t                                                       pointer_basis_derivative_s1[elem->num_basis()];
-    real_t                                                       pointer_basis_derivative_s2[elem->num_basis()];
-    real_t                                                       pointer_basis_derivative_s3[elem->num_basis()];
-    ViewCArray<real_t>                                           basis_values(pointer_basis_values, elem->num_basis());
-    ViewCArray<real_t>                                           basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
-    ViewCArray<real_t>                                           basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
-    ViewCArray<real_t>                                           basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_positions(elem->num_basis(), num_dim);
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> current_nodal_displacements(elem->num_basis() * num_dim);
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_density(elem->num_basis());
@@ -923,7 +925,8 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
     Solver::node_ordering_convention active_node_ordering_convention = Explicit_Solver_Pointer_->active_node_ordering_convention;
 
-    real_t                                                       current_density = 1;
+    real_t current_density = 1;
+
     CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
     if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
     {
@@ -1030,10 +1033,15 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
 
                     nodal_positions(node_loop, 0) = all_initial_node_coords(local_node_id, 0);
                     nodal_positions(node_loop, 1) = all_initial_node_coords(local_node_id, 1);
-                    current_nodal_displacements(node_loop * num_dim)     = 0.5 * (next_coordinate_vector(local_node_id, 0) - all_initial_node_coords(local_node_id,
-                    0) + current_coordinate_vector(local_node_id, 0) - all_initial_node_coords(local_node_id, 0));
-                    current_nodal_displacements(node_loop * num_dim + 1) = 0.5 * (next_coordinate_vector(local_node_id, 1) - all_initial_node_coords(local_node_id,
-                    1) + current_coordinate_vector(local_node_id, 1) - all_initial_node_coords(local_node_id, 1));
+
+                    current_nodal_displacements(node_loop * num_dim) = 0.5
+                                                                       * (next_coordinate_vector(local_node_id, 0) - all_initial_node_coords(local_node_id, 0)
+                                                                          + current_coordinate_vector(local_node_id, 0) - all_initial_node_coords(local_node_id, 0));
+
+                    current_nodal_displacements(node_loop * num_dim + 1) = 0.5
+                                                                           * (next_coordinate_vector(local_node_id, 1) - all_initial_node_coords(local_node_id, 1)
+                                                                              + current_coordinate_vector(local_node_id, 1) - all_initial_node_coords(local_node_id, 1));
+
                     current_element_adjoint(node_loop * num_dim)     = 0.5 * (current_adjoint_vector(local_node_id, 0) + next_adjoint_vector(local_node_id, 0));
                     current_element_adjoint(node_loop * num_dim + 1) = 0.5 * (current_adjoint_vector(local_node_id, 1) + next_adjoint_vector(local_node_id, 1));
 
@@ -1042,7 +1050,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                         nodal_positions(node_loop, 2) = all_initial_node_coords(local_node_id, 2);
                         current_nodal_displacements(node_loop * num_dim + 2) = 0.5 * (next_coordinate_vector(local_node_id, 2) - all_initial_node_coords(local_node_id,
                         2) + current_coordinate_vector(local_node_id, 2) - all_initial_node_coords(local_node_id, 2));
-                        current_element_adjoint(node_loop * num_dim + 2)     = 0.5 * (current_adjoint_vector(local_node_id, 2) + next_adjoint_vector(local_node_id, 2));
+                        current_element_adjoint(node_loop * num_dim + 2) = 0.5 * (current_adjoint_vector(local_node_id, 2) + next_adjoint_vector(local_node_id, 2));
                     }
 
                     if (nodal_density_flag)

@@ -280,7 +280,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                 mu_term = muc(node_lid) *
                           fabs(shock_dir(0) * area_normal(node_lid, 0)
                     + shock_dir(1) * area_normal(node_lid, 1)
-                    + shock_dir(2) * area_normal(node_lid, 2) );         // code gradient for shock dir w.r.t velocity if using shock_dir
+                    + shock_dir(2) * area_normal(node_lid, 2) ); // code gradient for shock dir w.r.t velocity if using shock_dir
             }
             else
             {
@@ -994,14 +994,19 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
         // gradients of the element volume
         get_vol_hex_ugradient(volume_gradients, elem_gid, node_coords, elem_node_gids, rk_level);
 
-        // //debug
-        // for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-        //     for (size_t dim = 0; dim < num_dims; dim++){
-        //         if(volume_gradients(node_lid, dim)>1 || volume_gradients(node_lid, dim) < -1)
-        //         std::cout << volume_gradients(node_lid, dim) << " ";
-        //     } // end for
-        // } // end for
-        // std::cout << std::endl;
+#ifdef DEBUG
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
+        {
+            for (size_t dim = 0; dim < num_dims; dim++)
+            {
+                if (volume_gradients(node_lid, dim) > 1 || volume_gradients(node_lid, dim) < -1)
+                {
+                    std::cout << volume_gradients(node_lid, dim) << " ";
+                }
+            } // end for
+        } // end for
+        std::cout << std::endl;
+#endif
 
         // get the B matrix which are the OUTWARD corner area normals
         get_bmatrix(area_normal,
@@ -1483,16 +1488,21 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
 
 void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients)
 {
-    size_t                                                         num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos<boundary_t>                                boundary      = module_params->boundary;
-    const DCArrayKokkos<material_t>                                material      = simparam->material;
-    const int                                                      num_dim       = simparam->num_dims;
-    size_t                                                         num_corners   = rnum_elem * num_nodes_in_elem;
-    real_t                                                         global_dt;
-    bool                                                           element_constant_density = true;
-    size_t                                                         current_data_index, next_data_index;
-    const size_t                                                   rk_level = simparam->dynamic_options.rk_num_bins - 1;
-    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    bool element_constant_density = true;
+
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
+    size_t num_corners   = rnum_elem * num_nodes_in_elem;
+    size_t current_data_index, next_data_index;
+
+    real_t global_dt;
+
+    const int    num_dim  = simparam->num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+
+    auto current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
 
     // gradient contribution from gradient of Force vector with respect to design variable.
     if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
@@ -1545,12 +1555,12 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
                     node_vel(rk_level, node_gid, idim)    = current_velocity_vector(node_gid, idim);
                     node_coords(rk_level, node_gid, idim) = current_coord_vector(node_gid, idim);
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
                 elem_sie(rk_level, elem_gid) = current_element_internal_energy(elem_gid, 0);
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             get_vol();
@@ -1645,7 +1655,7 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
                     corner_id = elem_id * num_nodes_in_elem + inode;
                     corner_value_storage(corner_id) = inner_product;
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // accumulate node values from corner storage
@@ -1657,7 +1667,7 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += -corner_value_storage(corner_id) * global_dt;
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
     }

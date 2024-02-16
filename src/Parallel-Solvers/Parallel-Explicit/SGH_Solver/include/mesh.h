@@ -67,17 +67,13 @@ void bubble_sort(size_t arr[], const size_t num)
 struct mesh_t
 {
     size_t num_dims;
-
-    size_t num_nodes, num_local_nodes;
-
+    size_t num_nodes;
+    size_t num_local_nodes;
     size_t num_elems;
     size_t num_nodes_in_elem;
     size_t num_patches_in_elem;
-
     size_t num_corners;
-
     size_t num_patches;
-
     size_t num_bdy_patches;
     size_t num_bdy_nodes;
     size_t num_bdy_sets;

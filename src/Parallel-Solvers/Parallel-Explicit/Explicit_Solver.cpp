@@ -409,25 +409,35 @@ void Explicit_Solver::run()
 ------------------------------------------------------------------------- */
 void Explicit_Solver::read_mesh_ansys_dat(const char* MESH)
 {
-    char                                                       ch;
-    int                                                        num_dim       = simparam.num_dims;
-    Input_Options                                              input_options = simparam.input_options.value();
-    int                                                        p_order       = input_options.p_order;
-    real_t                                                     unit_scaling  = input_options.unit_scaling;
-    bool                                                       restart_file  = simparam.restart_file;
-    int                                                        local_node_index, current_column_index;
-    size_t                                                     strain_count;
-    std::string                                                skip_line, read_line, substring, token;
-    std::stringstream                                          line_parse;
+    Input_Options input_options = simparam.input_options.value();
+
+    bool restart_file    = simparam.restart_file;
+    bool zero_index_base = input_options.zero_index_base;
+
+    char              ch;
+    std::string       skip_line, read_line, substring, token;
+    std::stringstream line_parse;
+
+    int num_dim = simparam.num_dims;
+    int p_order = input_options.p_order;
+    int local_node_index, current_column_index;
+    int buffer_loop, buffer_iteration, buffer_iterations;
+    int dof_limit, scan_loop, nodes_per_element;
+    int negative_index_found = 0;
+    int global_negative_index_found = 0;
+
+    real_t unit_scaling = input_options.unit_scaling;
+    real_t dof_value;
+
+    size_t read_index_start, node_rid, elem_gid;
+    size_t strain_count;
+
     CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-    int                                                        buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop, nodes_per_element;
-    size_t                                                     read_index_start, node_rid, elem_gid;
-    GO                                                         node_gid;
-    real_t                                                     dof_value;
-    host_vec_array                                             node_densities;
-    bool                                                       zero_index_base      = input_options.zero_index_base;
-    int                                                        negative_index_found = 0;
-    int                                                        global_negative_index_found = 0;
+
+    GO node_gid;
+
+    host_vec_array node_densities;
+
     // Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
     // read the mesh
@@ -1216,26 +1226,29 @@ void Explicit_Solver::setup_optimization_problem()
     std::vector<int>            TO_Module_My_FEA_Module = simparam.TO_Module_My_FEA_Module;
     // std::vector<int> Multi_Objective_Modules = simparam->Multi_Objective_Modules;
     // std::vector<real_t> Multi_Objective_Weights = simparam->Multi_Objective_Weights;
-    std::vector<std::vector<real_t>>              Function_Arguments = simparam.Function_Arguments;
-    std::vector<FUNCTION_TYPE>                    TO_Function_Type   = simparam.TO_Function_Type;
+    std::vector<std::vector<real_t>> Function_Arguments = simparam.Function_Arguments;
+    std::vector<FUNCTION_TYPE>       TO_Function_Type   = simparam.TO_Function_Type;
+
     std::vector<ROL::Ptr<ROL::Objective<real_t>>> Multi_Objective_Terms;
 
-    std::string          constraint_base, constraint_name;
-    std::stringstream    number_union;
-    CArray<GO>           Surface_Nodes;
-    GO                   current_node_index, current_element_index;
-    LO                   local_node_index, local_element_id;
-    int                  num_bdy_patches_in_set;
-    size_t               node_id, patch_id, module_id;
-    int                  num_boundary_sets;
-    int                  local_surface_id;
+    std::string       constraint_base, constraint_name;
+    std::stringstream number_union;
+
+    CArray<GO> Surface_Nodes;
+    GO         current_node_index, current_element_index;
+    LO         local_node_index, local_element_id;
+    int        num_bdy_patches_in_set;
+    size_t     node_id, patch_id, module_id;
+    int        num_boundary_sets;
+    int        local_surface_id;
+
     const_host_vec_array design_densities;
     typedef ROL::TpetraMultiVector<real_t, LO, GO, node_type> ROL_MV;
     const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
     // fill parameter list with desired algorithmic options or leave as default
     // Read optimization input parameter list.
-    std::string filename = "optimization_parameters.xml";
+    std::string filename = "/var/tmp/repos/Fierro/Fierro/src/Parallel-Solvers/Parallel-Explicit/optimization_parameters.xml";
     auto        parlist  = ROL::getParametersFromXmlFile(filename);
     // ROL::ParameterList parlist;
 
@@ -2054,19 +2067,22 @@ void Explicit_Solver::comm_densities()
 
 void Explicit_Solver::parallel_tecplot_writer()
 {
-    int               num_dim = simparam.num_dims;
-    std::string       current_file_name;
-    std::string       base_file_name = "TecplotTO";
-    std::string       base_file_name_undeformed = "TecplotTO_undeformed";
-    std::stringstream current_line_stream;
-    std::string       current_line;
-    std::string       file_extension = ".dat";
-    std::string       file_count;
+    int num_dim   = simparam.num_dims;
+    int time_step = 0;
+    int temp_convert;
+    int noutput, nvector;
+
+    std::string current_file_name;
+    std::string base_file_name = "TecplotTO";
+    std::string base_file_name_undeformed = "TecplotTO_undeformed";
+    std::string current_line;
+    std::string file_extension = ".dat";
+    std::string file_count;
+
     std::stringstream count_temp;
-    int               time_step = 0;
-    int               temp_convert;
-    int               noutput, nvector;
-    bool              displace_geometry = false;
+    std::stringstream current_line_stream;
+
+    bool displace_geometry = false;
     // Convert ijk index system to the finite element numbering convention
     // for vertices in cell
 
@@ -2320,27 +2336,31 @@ void Explicit_Solver::parallel_tecplot_writer()
 
 void Explicit_Solver::parallel_vtk_writer()
 {
-    int               num_dim = simparam.num_dims;
-    std::string       current_file_name;
-    std::string       base_file_name = "VTK";
-    std::string       base_file_name_undeformed = "VTK_undeformed";
-    std::stringstream current_line_stream;
-    std::string       current_line;
-    std::string       file_extension = ".vtk";
-    std::string       file_count;
+    int  num_dim   = simparam.num_dims;
+    int  time_step = 0;
+    int  temp_convert;
+    int  noutput, nvector;
+    int  buffer_size_per_element_line, nlocal_elements;
+    int  default_vector_count;
+    int  buffer_size_per_node_line;
+    int  nlocal_sorted_nodes;
+    bool displace_geometry = false;
+
+    std::string current_file_name;
+    std::string base_file_name = "VTK";
+    std::string base_file_name_undeformed = "VTK_undeformed";
+    std::string current_line;
+    std::string file_extension = ".vtk";
+    std::string file_count;
+
     std::stringstream count_temp;
-    int               time_step = 0;
-    int               temp_convert;
-    int               noutput, nvector;
-    bool              displace_geometry = false;
-    MPI_Offset        current_stream_position, header_stream_offset, file_stream_offset;
-    MPI_File          myfile_parallel;
-    int               buffer_size_per_element_line, nlocal_elements;
-    GO                first_element_global_id;
-    int               default_vector_count;
-    int               buffer_size_per_node_line;
-    int               nlocal_sorted_nodes;
-    GO                first_node_global_id;
+    std::stringstream current_line_stream;
+
+    MPI_Offset current_stream_position, header_stream_offset, file_stream_offset;
+    MPI_File   myfile_parallel;
+
+    GO first_element_global_id;
+    GO first_node_global_id;
     // Convert ijk index system to the finite element numbering convention
     // for vertices in cell
 
@@ -2364,6 +2384,7 @@ void Explicit_Solver::parallel_vtk_writer()
     convert_ijk_to_ensight(1) = 1;
     convert_ijk_to_ensight(2) = 3;
     convert_ijk_to_ensight(3) = 2;
+
     if (num_dim == 3)
     {
         convert_ijk_to_ensight(4) = 4;

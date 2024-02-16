@@ -69,6 +69,7 @@ void FEA_Module_Dynamic_Elasticity::get_velgrad(ViewCArrayKokkos<double>&       
     double                   u_array[num_nodes_in_elem];
     double                   v_array[num_nodes_in_elem];
     double                   w_array[num_nodes_in_elem];
+    
     ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
     ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
     ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir vel component
@@ -155,6 +156,7 @@ void FEA_Module_Dynamic_Elasticity::get_velgrad2D(ViewCArrayKokkos<double>&     
 
     double                   u_array[num_nodes_in_elem];
     double                   v_array[num_nodes_in_elem];
+    
     ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
     ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
 
@@ -222,6 +224,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos<double>&   
         double u_array[num_nodes_in_elem];
         double v_array[num_nodes_in_elem];
         double w_array[num_nodes_in_elem];
+        
         ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
         ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
         ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir vel component
@@ -295,6 +298,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos<double>& 
 
         double u_array[num_nodes_in_elem];
         double v_array[num_nodes_in_elem];
+        
         ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
         ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
 

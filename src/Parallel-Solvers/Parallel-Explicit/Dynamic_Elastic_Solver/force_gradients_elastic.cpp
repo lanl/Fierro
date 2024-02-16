@@ -768,15 +768,17 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
 
 void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients)
 {
-    size_t                                                         num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos<boundary_t>                                boundary      = module_params->boundary;
-    const DCArrayKokkos<material_t>                                material      = simparam->material;
-    const int                                                      num_dim       = simparam->num_dims;
-    int                                                            num_corners   = rnum_elem * num_nodes_in_elem;
-    real_t                                                         global_dt;
-    bool                                                           element_constant_density = true;
-    size_t                                                         current_data_index, next_data_index;
-    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    bool   element_constant_density = true;
+    int    num_corners   = rnum_elem * num_nodes_in_elem;
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
+    size_t current_data_index, next_data_index;
+    real_t global_dt;
+
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+    const int                       num_dim  = simparam->num_dims;
+
+    auto current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
 
     // gradient contribution from gradient of Force vector with respect to design variable.
     for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++)
@@ -819,11 +821,11 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
                 for (int inode = 0; inode < num_nodes_in_elem; inode++)
                 {
                     node_id = nodes_in_elem(elem_id, inode);
-                    current_element_adjoint(inode, 0) = (current_adjoint_vector(node_id, 0) + next_adjoint_vector(node_id, 0)) / 2;
-                    current_element_adjoint(inode, 1) = (current_adjoint_vector(node_id, 1) + next_adjoint_vector(node_id, 1)) / 2;
+                    current_element_adjoint(inode, 0) = 0.5 * (current_adjoint_vector(node_id, 0) + next_adjoint_vector(node_id, 0));
+                    current_element_adjoint(inode, 1) = 0.5 * (current_adjoint_vector(node_id, 1) + next_adjoint_vector(node_id, 1));
                     if (num_dim == 3)
                     {
-                        current_element_adjoint(inode, 2) = (current_adjoint_vector(node_id, 2) + next_adjoint_vector(node_id, 2)) / 2;
+                        current_element_adjoint(inode, 2) = 0.5 * (current_adjoint_vector(node_id, 2) + next_adjoint_vector(node_id, 2));
                     }
                 }
 
