@@ -1,9 +1,11 @@
 #!/bin/bash -e
 
 kokkos_build_type="${1}"
+machine="${2}"
 
 # If all arguments are valid, you can use them in your script as needed
 echo "Trilinos Kokkos Build Type: $kokkos_build_type"
+
 
 #check if Trilinos directory exists, git clone Trilinos if it doesn't
 [ -d "${TRILINOS_SOURCE_DIR}" ] && echo "Directory Trilinos exists, skipping Trilinos download"
@@ -68,12 +70,35 @@ OPENMP_ADDITIONS=(
 -D Trilinos_ENABLE_OpenMP=ON
 )
 
+# Flags for building with MKL, which is supported at MSU HPCC
+MSU_ADDITIONS=(
+-D BLAS_LIBRARY_NAMES="libmkl_rt.so"
+-D BLAS_LIBRARY_DIRS="/apps/spack-managed/gcc-11.3.1/intel-oneapi-mkl-2022.2.1-7l7jlsd56x2kljiskrcvsoenmq4y3cu7/mkl/2022.2.1/lib/intel64"
+-D LAPACK_LIBRARY_NAMES="libmkl_rt.so"
+-D LAPACK_LIBRARY_DIRS="/apps/spack-managed/gcc-11.3.1/intel-oneapi-mkl-2022.2.1-7l7jlsd56x2kljiskrcvsoenmq4y3cu7/mkl/2022.2.1/lib/intel64"
+-D TPL_ENABLE_MKL:BOOL=ON
+-D MKL_LIBRARY_DIRS:FILEPATH="/apps/spack-managed/gcc-11.3.1/intel-oneapi-mkl-2022.2.1-7l7jlsd56x2kljiskrcvsoenmq4y3cu7/mkl/2022.2.1/lib/intel64"
+-D MKL_LIBRARY_NAMES:STRING="mkl_rt"
+-D MKL_INCLUDE_DIRS:FILEPATH="/apps/spack-managed/gcc-11.3.1/intel-oneapi-mkl-2022.2.1-7l7jlsd56x2kljiskrcvsoenmq4y3cu7/mkl/2022.2.1/include"
+)
+
 # Configure kokkos using CMake
 cmake_options=(
 -D CMAKE_BUILD_TYPE=Release
 -D Trilinos_MUST_FIND_ALL_TPL_LIBS=TRUE
 -D CMAKE_CXX_STANDARD=17
 -D TPL_ENABLE_MPI=ON
+)
+
+echo "**** Machine = ${machine} ****"
+if [ "$machine" = "msu" ]; then
+    echo "**** WARNING: Verify MKL path in trilinos-install.sh ****"
+    cmake_options+=(
+        ${MSU_ADDITIONS[@]}
+    )
+fi
+
+cmake_options+=(
 -D Trilinos_ENABLE_Kokkos=ON
 ${ADDITIONS[@]}
 -D Trilinos_ENABLE_Amesos2=ON
@@ -89,6 +114,8 @@ ${ADDITIONS[@]}
 -D Trilinos_ENABLE_TESTS=OFF 
 -D CMAKE_INSTALL_PREFIX=${TRILINOS_INSTALL_DIR} 
 )
+
+
 
 if [ "$kokkos_build_type" = "openmp" ]; then
     cmake_options+=(
