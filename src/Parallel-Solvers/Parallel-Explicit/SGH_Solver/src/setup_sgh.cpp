@@ -8,6 +8,8 @@
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 #include "Explicit_Solver.h"
 
+// #define DEBUG
+
 void FEA_Module_SGH::setup()
 {
     const size_t rk_level      = simparam->dynamic_options.rk_num_bins - 1;
@@ -28,40 +30,36 @@ void FEA_Module_SGH::setup()
     sgh_interface_setup(node_interface, elem_interface, corner_interface);
     mesh->build_corner_connectivity();
     // debug print of corner ids
-    /*
-    if(myrank==1){
-          for(int i = 0; i < mesh.num_nodes; i++){
-
+#ifdef DEBUG
+    if (myrank == 1)
+    {
+        for (int i = 0; i < mesh.num_nodes; i++)
+        {
             // loop over all corners around the node and calculate the nodal force
-            for (size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(i); corner_lid++){
-
-              // Get corner gid
-              size_t corner_gid = mesh.corners_in_node(i, corner_lid);
-              std::cout << map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
-
+            for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(i); corner_lid++)
+            {
+                // Get corner gid
+                size_t corner_gid = mesh.corners_in_node(i, corner_lid);
+                std::cout << map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
             } // end for corner_lid
-            //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
-            //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
-          }
         }
-      */
-    /*
-      if(myrank==1){
-          for(int i = 0; i < mesh.num_elems; i++){
+    }
 
+    if (myrank == 1)
+    {
+        for (int i = 0; i < mesh.num_elems; i++)
+        {
             // loop over all corners around the node and calculate the nodal force
-            for (size_t corner_lid=0; corner_lid<max_nodes_per_element; corner_lid++){
-
-              // Get corner gid
-              size_t corner_gid = mesh.corners_in_elem(i, corner_lid);
-              std::cout << i  << " " << mesh.nodes_in_elem(i, corner_lid) << " " << all_node_map->getGlobalElement(mesh.nodes_in_elem(i, corner_lid)) <<" " << corner_gid << " " << std::endl;
-
+            for (size_t corner_lid = 0; corner_lid < max_nodes_per_element; corner_lid++)
+            {
+                // Get corner gid
+                size_t corner_gid = mesh.corners_in_elem(i, corner_lid);
+                std::cout << i << " " << mesh.nodes_in_elem(i, corner_lid) << " " << all_node_map->getGlobalElement(mesh.nodes_in_elem(i, corner_lid)) << " " << corner_gid << " " << std::endl;
             } // end for corner_lid
-            //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
-            //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
-          }
         }
-        */
+    }
+#endif
+
     mesh->build_elem_elem_connectivity();
     mesh->num_bdy_patches = nboundary_patches;
     if (num_dim == 2)
@@ -517,7 +515,7 @@ void FEA_Module_SGH::setup()
 
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                 node_mass_interface(node_gid, 0) = node_mass(node_gid);
-        }); // end parallel for
+            }); // end parallel for
         } // end view scope
         Kokkos::fence();
         // communicate ghost densities
@@ -530,7 +528,7 @@ void FEA_Module_SGH::setup()
 
             FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
                 node_mass(node_gid) = ghost_node_mass_interface(node_gid - nlocal_nodes, 0);
-        }); // end parallel for
+            }); // end parallel for
         } // end view scope
         Kokkos::fence();
     } // endif
@@ -635,76 +633,78 @@ void FEA_Module_SGH::sgh_interface_setup(node_t&   node,
             for (int inode = 0; inode < num_nodes_in_elem; inode++)
             {
                 nodes_in_elem.host(ielem, inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem, inode));
-                // debug print
-                // std::cout << nodes_in_elem.get_kokkos_dual_view().h_view(ielem*num_nodes_in_elem + inode)+1<< " ";
             }
-            // std::cout << std::endl;
         }
     }
     // update device side
     nodes_in_elem.update_device();
 
     // debug print
+#ifdef DEBUG
+    CArrayKokkos<size_t> device_mesh_nodes_in_elem(rnum_elem, num_nodes_in_elem);
+    device_mesh_nodes_in_elem.get_kokkos_view() = nodes_in_elem.get_kokkos_dual_view().d_view;
+    host_mesh_nodes_in_elem.get_kokkos_view()   = nodes_in_elem.get_kokkos_dual_view().view_host();
 
-    // CArrayKokkos<size_t> device_mesh_nodes_in_elem(rnum_elem, num_nodes_in_elem);
-    // device_mesh_nodes_in_elem.get_kokkos_view() = nodes_in_elem.get_kokkos_dual_view().d_view;
-    // host_mesh_nodes_in_elem.get_kokkos_view() = nodes_in_elem.get_kokkos_dual_view().view_host();
-    /*
-    if(myrank==1){
-    std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in LOCAL INDICES" << myrank << std::endl;
-    for(int ielem = 0; ielem < rnum_elem; ielem++){
-        std::cout << "Element index " << ielem+1 << " ";
-        for(int inode = 0; inode < num_nodes_in_elem; inode++){
-            //debug print
-            //device_mesh_nodes_in_elem(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
-            std::cout << nodes_in_elem(ielem, inode)+1<< " ";
+    if (myrank == 1)
+    {
+        std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in LOCAL INDICES" << myrank << std::endl;
+        for (int ielem = 0; ielem < rnum_elem; ielem++)
+        {
+            std::cout << "Element index " << ielem + 1 << " ";
+            for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            {
+                // debug print
+                device_mesh_nodes_in_elem(ielem, inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem, inode));
+                std::cout << nodes_in_elem(ielem, inode) + 1 << " ";
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
     }
-    }
-    */
-    /*
+
     std::cout.flush();
-    if(myrank==1){
-    std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in GLOBAL INDICES" << myrank << std::endl;
-    std::cout << "local node index of global index 275 on rank 1 " << Explicit_Solver_Pointer_->all_node_map->getLocalElement(275) << std::endl;
-    for(int ielem = 0; ielem < rnum_elem; ielem++){
-        std::cout << ielem << " ";
-        for(int inode = 0; inode < num_nodes_in_elem; inode++){
-            //debug print
-            //device_mesh_nodes_in_elem(ielem,inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem,inode));
-            std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(nodes_in_elem(ielem, inode))<< " ";
+    if (myrank == 1)
+    {
+        std::cout << "ELEMENT CONNECTIVITY ON RANK 1 in GLOBAL INDICES" << myrank << std::endl;
+        std::cout << "local node index of global index 275 on rank 1 " << Explicit_Solver_Pointer_->all_node_map->getLocalElement(275) << std::endl;
+        for (int ielem = 0; ielem < rnum_elem; ielem++)
+        {
+            std::cout << ielem << " ";
+            for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            {
+                // debug print
+                device_mesh_nodes_in_elem(ielem, inode) = Explicit_Solver_Pointer_->all_node_map->getLocalElement(interface_nodes_in_elem(ielem, inode));
+                std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(nodes_in_elem(ielem, inode)) << " ";
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
-    }
     }
     std::cout.flush();
-    */
-    /*
+
     size_t nall_nodes = Explicit_Solver_Pointer_->nall_nodes;
-    node.all_coords = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dim);
-    node.all_vel    = DCArrayKokkos <double> (rk_num_bins, nall_nodes, num_dim);
-    node.all_mass   = DCArrayKokkos <double> (nall_nodes);
+    node.all_coords = DCArrayKokkos<double>(rk_num_bins, nall_nodes, num_dim);
+    node.all_vel    = DCArrayKokkos<double>(rk_num_bins, nall_nodes, num_dim);
+    node.all_mass   = DCArrayKokkos<double>(nall_nodes);
 
-    //save all data (nlocal +nghost)
+    // save all data (nlocal +nghost)
     CArrayKokkos<double, DefaultLayout, HostSpace> host_all_node_coords_state(rk_num_bins, nall_nodes, num_dim);
-    host_vec_array interface_all_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+    host_vec_array                                 interface_all_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     host_all_node_coords_state.get_kokkos_view() = node.all_coords.get_kokkos_dual_view().view_host();
-    //host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, nall_nodes, num_dim);
-    //host_all_node_coords_state.get_kokkos_view() = Kokkos::View<double*,DefaultLayout, HostSpace>("debug", rk_num_bins*nall_nodes*num_dim);
-    //save node data to node.coords
+    host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, nall_nodes, num_dim);
+    host_all_node_coords_state.get_kokkos_view() = Kokkos::View<double*, DefaultLayout, HostSpace>("debug", rk_num_bins * nall_nodes * num_dim);
+    // save node data to node.coords
 
-    //std::cout << "ALL NODE DATA ON RANK " << myrank << std::endl;
-    for(int inode = 0; inode < nall_nodes; inode++){
-        //std::cout << "Node index " << inode+1 << " ";
-        node.all_coords.host(0,inode,0) = interface_all_node_coords(inode,0);
-        //std::cout << host_all_node_coords_state(0,inode,0)+1<< " ";
-        node.all_coords.host(0,inode,1) = interface_all_node_coords(inode,1);
-        //std::cout << host_all_node_coords_state(0,inode,1)+1<< " ";
-        node.all_coords.host(0,inode,2) = interface_all_node_coords(inode,2);
-        //std::cout << host_all_node_coords_state(0,inode,2)+1<< std::endl;
+    std::cout << "ALL NODE DATA ON RANK " << myrank << std::endl;
+    for (int inode = 0; inode < nall_nodes; inode++)
+    {
+        // std::cout << "Node index " << inode+1 << " ";
+        node.all_coords.host(0, inode, 0) = interface_all_node_coords(inode, 0);
+        // std::cout << host_all_node_coords_state(0,inode,0)+1<< " ";
+        node.all_coords.host(0, inode, 1) = interface_all_node_coords(inode, 1);
+        // std::cout << host_all_node_coords_state(0,inode,1)+1<< " ";
+        node.all_coords.host(0, inode, 2) = interface_all_node_coords(inode, 2);
+        // std::cout << host_all_node_coords_state(0,inode,2)+1<< std::endl;
     }
-    */
+#endif
 
     // save the node coords to the current RK value
     for (size_t node_gid = 0; node_gid < nall_nodes; node_gid++)
@@ -932,7 +932,9 @@ void FEA_Module_SGH::grow_boundary_sets(int num_sets)
         Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_boundary_sets, nboundary_patches, "Boundary_Condition_Patches");
 
         // copy previous data back over
-        // std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR COPY " << max_boundary_sets <<std::endl;
+#ifdef DEBUG
+        std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR COPY " << max_boundary_sets <<std::endl;
+#endif
         for (int iset = 0; iset < num_boundary_conditions; iset++)
         {
             Boundary_Condition_Type_List(iset) = Temp_Boundary_Condition_Type_List(iset);

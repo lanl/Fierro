@@ -179,7 +179,8 @@ public:
                  const double x3,
                  const double y3) const;
 
-    double average_element_density(const int nodes_per_elem, const CArray<double> current_element_densities) const;
+    double average_element_density(const int nodes_per_elem, 
+                                   const CArray<double> current_element_densities) const;
 
     void get_divergence(DViewCArrayKokkos<double>&       elem_div,
                         const mesh_t                     mesh,

@@ -147,7 +147,7 @@ void FEA_Module_SGH::get_timestep(mesh_t&                    mesh,
 // This function calculates the time step by finding the shortest distance
 // between any two nodes in the mesh
 // ------------------------------------------------------------------------------
-// WARNING WARNING :  Only works for 3D, 8 node elements
+// WARNING WARNING :  Only works for 2D, 4 node elements
 void FEA_Module_SGH::get_timestep2D(mesh_t&                    mesh,
                                     DViewCArrayKokkos<double>& node_coords,
                                     DViewCArrayKokkos<double>& node_vel,

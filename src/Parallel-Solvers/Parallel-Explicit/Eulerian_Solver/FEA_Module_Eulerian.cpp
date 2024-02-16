@@ -207,24 +207,29 @@ FEA_Module_Eulerian::~FEA_Module_Eulerian()
 ------------------------------------------------------------------------- */
 void FEA_Module_Eulerian::read_conditions_ansys_dat(std::ifstream* in, std::streampos before_condition_header)
 {
-    char                                                                ch;
-    int                                                                 num_dim      = simparam->num_dims;
-    int                                                                 buffer_lines = 1000;
-    int                                                                 max_word     = 30;
-    int                                                                 p_order      = simparam->p_order;
-    real_t                                                              unit_scaling = simparam->get_unit_scaling();
-    int                                                                 local_node_index, current_column_index;
-    size_t                                                              strain_count;
-    std::string                                                         skip_line, read_line, substring, token;
-    std::stringstream                                                   line_parse, line_parse2;
+    char              ch;
+    std::string       skip_line, read_line, substring, token;
+    std::stringstream line_parse, line_parse2;
+
+    int num_dim      = simparam->num_dims;
+    int buffer_lines = 1000;
+    int max_word     = 30;
+    int p_order      = simparam->p_order;
+    int local_node_index, current_column_index;
+    int buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
+
+    real_t unit_scaling = simparam->get_unit_scaling();
+
+    size_t strain_count;
+    size_t read_index_start, node_rid, elem_gid;
+
     CArrayKokkos<char, array_layout, HostSpace, memory_traits>          read_buffer;
     CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
-    int                                                                 buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
-    size_t                                                              read_index_start, node_rid, elem_gid;
-    LO                                                                  local_dof_id;
-    GO                                                                  node_gid;
-    real_t                                                              dof_value;
-    host_vec_array                                                      node_densities;
+
+    LO             local_dof_id;
+    GO             node_gid;
+    real_t         dof_value;
+    host_vec_array node_densities;
 } // end read_conditions_ansys_dat
 
 /* ----------------------------------------------------------------------------
@@ -902,17 +907,19 @@ void FEA_Module_Eulerian::euler_solve()
         {
             const_vec_array node_velocities_interface       = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            vec_array       all_node_velocities_interface   = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             const_vec_array node_coords_interface       = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            vec_array       all_node_coords_interface   = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+
+            vec_array all_node_coords_interface     = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                 for (int idim = 0; idim < num_dim; idim++)
                 {
                     all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
                     all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
@@ -921,7 +928,7 @@ void FEA_Module_Eulerian::euler_solve()
                     all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                     all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
 
@@ -1026,7 +1033,7 @@ void FEA_Module_Eulerian::euler_solve()
                     {
                         node_vel(rk_level, node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                     }
-              }); // end parallel for
+                }); // end parallel for
             } // end view scope
             Kokkos::fence();
 
@@ -1193,7 +1200,7 @@ void FEA_Module_Eulerian::euler_solve()
                         node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                         node_coords_interface(node_gid, idim)     = node_coords(rk_level, node_gid, idim);
                     }
-          });
+                });
             } // end view scope
             Kokkos::fence();
 
@@ -1228,7 +1235,7 @@ void FEA_Module_Eulerian::euler_solve()
                         all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
                         all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
 
                 FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
@@ -1237,7 +1244,7 @@ void FEA_Module_Eulerian::euler_solve()
                         all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                         all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
             } // end view scope
 
@@ -1273,12 +1280,12 @@ void FEA_Module_Eulerian::euler_solve()
                     {
                         KE_loc_sum += node_mass(node_gid) * ke;
                     }
-          }, KE_sum);
+                }, KE_sum);
                 Kokkos::fence();
                 KE_sum = 0.5 * KE_sum;
                 objective_accumulation += KE_sum * dt;
             }
-        }
+        } // end topology optimization if check
 
         size_t write = 0;
         if ((cycle + 1) % graphics_cyc_ival == 0 && cycle > 0)

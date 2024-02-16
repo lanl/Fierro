@@ -135,23 +135,27 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
 
     // set parameters
     Dynamic_Options dynamic_options = simparam->dynamic_options;
-    time_value        = dynamic_options.time_value;
-    time_final        = dynamic_options.time_final;
-    dt_max            = dynamic_options.dt_max;
-    dt_min            = dynamic_options.dt_min;
-    dt_cfl            = dynamic_options.dt_cfl;
+
+    dt = dynamic_options.dt;
+    time_value  = dynamic_options.time_value;
+    time_final  = dynamic_options.time_final;
+    dt_max      = dynamic_options.dt_max;
+    dt_min      = dynamic_options.dt_min;
+    dt_cfl      = dynamic_options.dt_cfl;
+    rk_num_bins = simparam->dynamic_options.rk_num_bins;
+
     graphics_time     = simparam->output_options.graphics_time;
     graphics_dt_ival  = simparam->output_options.graphics_dt_ival;
     graphics_cyc_ival = simparam->output_options.graphics_cyc_ival;
-    cycle_stop        = dynamic_options.cycle_stop;
-    rk_num_stages     = dynamic_options.rk_num_stages;
-    dt    = dynamic_options.dt;
+    graphics_times    = simparam->output_options.graphics_times;
+    graphics_id       = simparam->output_options.graphics_id;
+
+    cycle_stop    = dynamic_options.cycle_stop;
+    rk_num_stages = dynamic_options.rk_num_stages;
+
     fuzz  = dynamic_options.fuzz;
     tiny  = dynamic_options.tiny;
     small = dynamic_options.small;
-    graphics_times = simparam->output_options.graphics_times;
-    graphics_id    = simparam->output_options.graphics_id;
-    rk_num_bins    = simparam->dynamic_options.rk_num_bins;
 
     if (simparam->topology_optimization_on)
     {
@@ -182,25 +186,33 @@ FEA_Module_Dynamic_Elasticity::~FEA_Module_Dynamic_Elasticity()
 ------------------------------------------------------------------------- */
 void FEA_Module_Dynamic_Elasticity::read_conditions_ansys_dat(std::ifstream* in, std::streampos before_condition_header)
 {
-    char                                                                ch;
-    int                                                                 num_dim       = simparam->num_dims;
-    int                                                                 buffer_lines  = 1000;
-    int                                                                 max_word      = 30;
-    auto                                                                input_options = simparam->input_options.value();
-    int                                                                 p_order       = input_options.p_order;
-    real_t                                                              unit_scaling  = input_options.unit_scaling;
-    int                                                                 local_node_index, current_column_index;
-    size_t                                                              strain_count;
-    std::string                                                         skip_line, read_line, substring, token;
-    std::stringstream                                                   line_parse, line_parse2;
+    Input_Options input_options = simparam->input_options.value();
+
+    char              ch;
+    std::string       skip_line, read_line, substring, token;
+    std::stringstream line_parse, line_parse2;
+
+    int num_dim      = simparam->num_dims;
+    int buffer_lines = 1000;
+    int max_word     = 30;
+    int local_node_index, current_column_index;
+    int p_order = input_options.p_order;
+    int buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
+
+    size_t strain_count;
+    size_t read_index_start;
+    size_t node_rid;
+    size_t elem_gid;
+
+    real_t unit_scaling = input_options.unit_scaling;
+
     CArrayKokkos<char, array_layout, HostSpace, memory_traits>          read_buffer;
     CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
-    int                                                                 buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
-    size_t                                                              read_index_start, node_rid, elem_gid;
-    LO                                                                  local_dof_id;
-    GO                                                                  node_gid;
-    real_t                                                              dof_value;
-    host_vec_array                                                      node_densities;
+
+    LO             local_dof_id;
+    GO             node_gid;
+    real_t         dof_value;
+    host_vec_array node_densities;
 } // end read_conditions_ansys_dat
 
 // -----------------------------------------------------------------------------
@@ -554,8 +566,10 @@ void FEA_Module_Dynamic_Elasticity::init_output()
     bool output_velocity_flag = simparam->output(FIELD::velocity);
     bool output_strain_flag   = simparam->output(FIELD::strain);
     bool output_stress_flag   = simparam->output(FIELD::stress);
-    int  num_dim = simparam->num_dims;
-    int  Brows;
+
+    int num_dim = simparam->num_dims;
+    int Brows;
+
     if (num_dim == 3)
     {
         Brows = 6;
@@ -842,15 +856,13 @@ void FEA_Module_Dynamic_Elasticity::comm_variables(Teuchos::RCP<const MV> zp)
 
 void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array& node_densities_lower_bound)
 {
-    const size_t    num_dim = mesh->num_dims;
     const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-    const size_t    num_lcs = module_params->loading_conditions.size();
+
+    const size_t num_dim = mesh->num_dims;
+    const size_t num_lcs = module_params->loading_conditions.size();
 
     const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos<loading_t>  loading  = module_params->loading;
-
-    // debug check
-    // std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;
 
     // walk over the nodes to update the velocity
     FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -872,7 +884,7 @@ void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array& nod
                 node_densities_lower_bound(node_gid, 0) = 1;
             }
         }
-  }); // end for parallel for over nodes
+    }); // end for parallel for over nodes
 }
 
 /* ----------------------------------------------------------------------------
@@ -882,12 +894,14 @@ void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array& nod
 void FEA_Module_Dynamic_Elasticity::setup()
 {
     Dynamic_Options dynamic_options = simparam->dynamic_options;
-    const size_t    rk_level      = dynamic_options.rk_num_bins - 1;
-    const size_t    num_fills     = simparam->regions.size();
-    const size_t    rk_num_bins   = dynamic_options.rk_num_bins;
-    const size_t    num_bcs       = module_params->boundary_conditions.size();
-    const size_t    num_materials = simparam->materials.size();
-    const int       num_dim       = simparam->num_dims;
+
+    const size_t rk_level      = dynamic_options.rk_num_bins - 1;
+    const size_t num_fills     = simparam->regions.size();
+    const size_t rk_num_bins   = dynamic_options.rk_num_bins;
+    const size_t num_bcs       = module_params->boundary_conditions.size();
+    const size_t num_materials = simparam->materials.size();
+
+    const int num_dim = simparam->num_dims;
 
     // ---------------------------------------------------------------------
     //    obtain mesh data
@@ -960,50 +974,28 @@ void FEA_Module_Dynamic_Elasticity::setup()
 
     // create Dual Views of the individual node struct variables
     node_coords = DViewCArrayKokkos<double>(node_interface.coords.get_kokkos_dual_view().view_host().data(), rk_num_bins, num_nodes, num_dim);
-
-    node_vel = DViewCArrayKokkos<double>(node_interface.vel.get_kokkos_dual_view().view_host().data(), rk_num_bins, num_nodes, num_dim);
-
-    node_mass = DViewCArrayKokkos<double>(node_interface.mass.get_kokkos_dual_view().view_host().data(), num_nodes);
+    node_vel    = DViewCArrayKokkos<double>(node_interface.vel.get_kokkos_dual_view().view_host().data(), rk_num_bins, num_nodes, num_dim);
+    node_mass   = DViewCArrayKokkos<double>(node_interface.mass.get_kokkos_dual_view().view_host().data(), num_nodes);
 
     // create Dual Views of the individual elem struct variables
-    elem_den = DViewCArrayKokkos<double>(&elem_interface.den(0),
-                                            num_elems);
-
-    elem_pres = DViewCArrayKokkos<double>(&elem_interface.pres(0),
-                                              num_elems);
-
+    elem_den    = DViewCArrayKokkos<double>(&elem_interface.den(0), num_elems);
+    elem_pres   = DViewCArrayKokkos<double>(&elem_interface.pres(0), num_elems);
     elem_stress = DViewCArrayKokkos<double>(&elem_interface.stress(0, 0, 0, 0),
-                                                rk_num_bins,
-                                                num_elems,
-                                                3,
-                                                3); // always 3D even in 2D-RZ
-
-    elem_sspd = DViewCArrayKokkos<double>(&elem_interface.sspd(0),
-                                              num_elems);
-
-    elem_sie = DViewCArrayKokkos<double>(&elem_interface.sie(0, 0),
                                             rk_num_bins,
-                                            num_elems);
-
-    elem_vol = DViewCArrayKokkos<double>(&elem_interface.vol(0),
-                                            num_elems);
-
-    elem_div = DViewCArrayKokkos<double>(&elem_interface.div(0),
-                                            num_elems);
-
-    elem_mass = DViewCArrayKokkos<double>(&elem_interface.mass(0),
-                                              num_elems);
-
-    elem_mat_id = DViewCArrayKokkos<size_t>(&elem_interface.mat_id(0),
-                                                num_elems);
+                                            num_elems,
+                                            3, 3); // always 3D even in 2D-RZ
+    elem_sspd = DViewCArrayKokkos<double>(&elem_interface.sspd(0), num_elems);
+    elem_sie  = DViewCArrayKokkos<double>(&elem_interface.sie(0, 0),
+                                        rk_num_bins,
+                                        num_elems);
+    elem_vol    = DViewCArrayKokkos<double>(&elem_interface.vol(0), num_elems);
+    elem_div    = DViewCArrayKokkos<double>(&elem_interface.div(0), num_elems);
+    elem_mass   = DViewCArrayKokkos<double>(&elem_interface.mass(0), num_elems);
+    elem_mat_id = DViewCArrayKokkos<size_t>(&elem_interface.mat_id(0), num_elems);
 
     // create Dual Views of the corner struct variables
-    corner_force = DViewCArrayKokkos<double>(&corner_interface.force(0, 0),
-                                                num_corners,
-                                                num_dim);
-
-    corner_mass = DViewCArrayKokkos<double>(&corner_interface.mass(0),
-                                                num_corners);
+    corner_force = DViewCArrayKokkos<double>(&corner_interface.force(0, 0), num_corners, num_dim);
+    corner_mass  = DViewCArrayKokkos<double>(&corner_interface.mass(0), num_corners);
 
     // allocate elem_vel_grad
     elem_vel_grad = DCArrayKokkos<double>(num_elems, 3, 3);
@@ -1026,6 +1018,7 @@ void FEA_Module_Dynamic_Elasticity::setup()
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos<material_t> material = simparam->material;
+
     global_vars = simparam->global_vars;
     state_vars  = DCArrayKokkos<double>(rnum_elem, simparam->max_num_state_vars);
     elem_user_output_vars = DCArrayKokkos<double>(rnum_elem, simparam->output_options.max_num_user_output_vars);
@@ -1093,7 +1086,7 @@ void FEA_Module_Dynamic_Elasticity::setup()
     {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             elem_mat_id(elem_gid) = mat_fill(f_id).material_id;
-      });
+        });
     }
     elem_mat_id.update_host();
 
@@ -1411,7 +1404,7 @@ void FEA_Module_Dynamic_Elasticity::setup()
 
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                 node_mass_interface(node_gid, 0) = node_mass(node_gid);
-        }); // end parallel for
+            }); // end parallel for
         } // end view scope
         Kokkos::fence();
         // communicate ghost densities
@@ -1424,7 +1417,7 @@ void FEA_Module_Dynamic_Elasticity::setup()
 
             FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
                 node_mass(node_gid) = ghost_node_mass_interface(node_gid - nlocal_nodes, 0);
-        }); // end parallel for
+            }); // end parallel for
         } // end view scope
         Kokkos::fence();
     } // endif
@@ -1549,7 +1542,7 @@ void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos<boundary_t>& bo
                 bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
             } // end if
         } // end for bdy_patch
-        // }
+          // }
     });  // end FOR_ALL_CLASS bdy_sets
 
     // debug check
@@ -1737,6 +1730,8 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
     Dynamic_Options dynamic_options = simparam->dynamic_options;
 
     const size_t rk_level = dynamic_options.rk_num_bins - 1;
+    const int    num_dim  = simparam->num_dims;
+
     time_value       = dynamic_options.time_initial;
     time_final       = dynamic_options.time_final;
     dt_max           = dynamic_options.dt_max;
@@ -1752,15 +1747,19 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
     small = dynamic_options.small;
     graphics_times = simparam->output_options.graphics_times;
     graphics_id    = simparam->output_options.graphics_id;
-    size_t                          num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos<boundary_t> boundary      = module_params->boundary;
-    const DCArrayKokkos<material_t> material      = simparam->material;
-    int                             nTO_modules;
-    int                             old_max_forward_buffer;
-    unsigned long                   cycle;
-    const int                       num_dim = simparam->num_dims;
-    real_t                          objective_accumulation, global_objective_accumulation;
-    std::vector<std::vector<int>>   FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
+
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+
+    int nTO_modules;
+    int old_max_forward_buffer;
+
+    unsigned long cycle;
+
+    real_t objective_accumulation, global_objective_accumulation;
+
+    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
@@ -1915,7 +1914,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                     node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                     node_coords_interface(node_gid, idim)     = node_coords(rk_level, node_gid, idim);
                 }
-      });
+            });
         } // end view scope
         Kokkos::fence();
 
@@ -1950,7 +1949,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                     all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
                     all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
@@ -1959,7 +1958,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                     all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                     all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
 
@@ -2114,7 +2113,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                     {
                         node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                     }
-              }); // end parallel for
+                }); // end parallel for
             } // end view scope
             Kokkos::fence();
 
@@ -2138,7 +2137,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                     {
                         node_vel(rk_level, node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                     }
-              }); // end parallel for
+                }); // end parallel for
             } // end view scope
             Kokkos::fence();
 
@@ -2225,7 +2224,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                     vec_array node_mass_interface = node_masses_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                     FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                         node_mass_interface(node_gid, 0) = node_mass(node_gid);
-                  }); // end parallel for
+                    }); // end parallel for
                 } // end view scope
                 Kokkos::fence();
                 // communicate ghost densities
@@ -2238,7 +2237,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
 
                     FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
                         node_mass(node_gid) = ghost_node_mass_interface(node_gid - nlocal_nodes, 0);
-                  }); // end parallel for
+                    }); // end parallel for
                 } // end view scope
                 Kokkos::fence();
 
@@ -2379,17 +2378,19 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
             {
                 const_vec_array node_velocities_interface       = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                vec_array       all_node_velocities_interface   = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 const_vec_array node_coords_interface       = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                
                 vec_array       all_node_coords_interface   = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                vec_array       all_node_velocities_interface   = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                     for (int idim = 0; idim < num_dim; idim++)
                     {
                         all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
                         all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
 
                 FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
@@ -2398,7 +2399,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                         all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                         all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
             } // end view scope
 
@@ -2434,7 +2435,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                     {
                         KE_loc_sum += node_mass(node_gid) * ke;
                     }
-          }, KE_sum);
+                }, KE_sum);
                 Kokkos::fence();
                 KE_sum = 0.5 * KE_sum;
                 objective_accumulation += KE_sum * dt;

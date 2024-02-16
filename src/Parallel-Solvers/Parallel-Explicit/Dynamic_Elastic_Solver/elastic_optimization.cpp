@@ -264,27 +264,27 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
 
                     // --- Pressure ---
                     eos_model->calc_pressure(elem_pres,
-                                         elem_stress,
-                                         elem_gid,
-                                         elem_mat_id(elem_gid),
-                                         state_vars,
-                                         global_vars,
-                                         elem_user_output_vars,
-                                         elem_sspd,
-                                         elem_den(elem_gid),
-                                         elem_sie(rk_level, elem_gid));
+                                             elem_stress,
+                                             elem_gid,
+                                             elem_mat_id(elem_gid),
+                                             state_vars,
+                                             global_vars,
+                                             elem_user_output_vars,
+                                             elem_sspd,
+                                             elem_den(elem_gid),
+                                             elem_sie(rk_level, elem_gid));
 
                     // --- Sound speed ---
                     eos_model->calc_sound_speed(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            elem_mat_id(elem_gid),
-                                            state_vars,
-                                            global_vars,
-                                            elem_user_output_vars,
-                                            elem_sspd,
-                                            elem_den(elem_gid),
-                                            elem_sie(rk_level, elem_gid));
+                                                elem_stress,
+                                                elem_gid,
+                                                elem_mat_id(elem_gid),
+                                                state_vars,
+                                                global_vars,
+                                                elem_user_output_vars,
+                                                elem_sspd,
+                                                elem_den(elem_gid),
+                                                elem_sie(rk_level, elem_gid));
 
                     // loop over the nodes of this element and apply velocity
                     for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
@@ -412,7 +412,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
                             elem_pres(elem_gid) / (mat_fill(f_id).den * (gamma - 1.0));
                     } // end if
                 } // end if fill
-        }); // end FOR_ALL_CLASS element loop
+            }); // end FOR_ALL_CLASS element loop
             Kokkos::fence();
         } // end for loop over fills
     } // end view scope
@@ -477,7 +477,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
         vec_array node_mass_interface = node_masses_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
             node_mass_interface(node_gid, 0) = node_mass(node_gid);
-      }); // end parallel for
+        }); // end parallel for
     } // end view scope
     Kokkos::fence();
     // communicate ghost densities
@@ -490,7 +490,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
 
         FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
             node_mass(node_gid) = ghost_node_mass_interface(node_gid - nlocal_nodes, 0);
-      }); // end parallel for
+        }); // end parallel for
     } // end view scope
     Kokkos::fence();
 
@@ -526,13 +526,17 @@ double FEA_Module_Dynamic_Elasticity::average_element_density(const int nodes_pe
 
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint()
 {
-    size_t                          num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos<boundary_t> boundary      = module_params->boundary;
-    const DCArrayKokkos<material_t> material      = simparam->material;
-    const int                       num_dim       = simparam->num_dims;
-    real_t                          global_dt;
-    size_t                          current_data_index, next_data_index;
-    Teuchos::RCP<MV>                previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
+    size_t current_data_index, next_data_index;
+    real_t global_dt;
+
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+    const int                       num_dim  = simparam->num_dims;
+
+    Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_velocity_vector_distributed, current_velocity_vector_distributed;
+
     // initialize first adjoint vector at last_time_step to 0 as the terminal value
     (*adjoint_vector_data)[last_time_step + 1]->putScalar(0);
 
@@ -585,10 +589,12 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint()
                 for (int idim = 0; idim < num_dim; idim++)
                 {
                     // cancellation of half from midpoint and 2 from adjoint equation already done
-                    current_adjoint_vector(node_gid, idim) = -0.5 * (current_velocity_vector(node_gid, idim) + previous_velocity_vector(node_gid, idim)) * global_dt + previous_adjoint_vector(node_gid,
-                    idim);
+                    current_adjoint_vector(node_gid, idim) =
+                        -0.5 * (current_velocity_vector(node_gid, idim)
+                                + previous_velocity_vector(node_gid, idim)) * global_dt
+                        + previous_adjoint_vector(node_gid, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
     }
@@ -600,16 +606,21 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint()
 
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
 {
-    const size_t                    rk_level         = simparam->dynamic_options.rk_num_bins - 1;
-    size_t                          num_bdy_nodes    = mesh->num_bdy_nodes;
-    const DCArrayKokkos<boundary_t> boundary         = module_params->boundary;
-    const DCArrayKokkos<material_t> material         = simparam->material;
-    const int                       num_dim          = simparam->num_dims;
-    const real_t                    damping_constant = module_params->damping_constant;
-    real_t                          global_dt;
-    size_t                          current_data_index, next_data_index;
-    Teuchos::RCP<MV>                previous_adjoint_vector_distributed, current_adjoint_vector_distributed, previous_velocity_vector_distributed, current_velocity_vector_distributed;
-    Teuchos::RCP<MV>                previous_phi_adjoint_vector_distributed, current_phi_adjoint_vector_distributed;
+    const int    num_dim  = simparam->num_dims;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    const real_t damping_constant = module_params->damping_constant;
+
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+
+    real_t global_dt;
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
+    size_t current_data_index, next_data_index;
+
+    Teuchos::RCP<MV> revious_adjoint_vector_distributed, current_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_velocity_vector_distributed, current_velocity_vector_distributed;
+    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, current_phi_adjoint_vector_distributed;
+
     // initialize first adjoint vector at last_time_step to 0 as the terminal value
     (*adjoint_vector_data)[last_time_step + 1]->putScalar(0);
     (*phi_adjoint_vector_data)[last_time_step + 1]->putScalar(0);
@@ -663,7 +674,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
                     node_vel(rk_level, node_gid, idim)    = previous_velocity_vector(node_gid, idim);
                     node_coords(rk_level, node_gid, idim) = previous_coordinate_vector(node_gid, idim);
                 }
-      });
+            });
             Kokkos::fence();
 
             get_force_vgradient_elastic(material,
@@ -689,9 +700,10 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
             // compute gradient of force with respect to velocity
 
             const_vec_array previous_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array phi_previous_adjoint_vector =  (*phi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            vec_array       midpoint_adjoint_vector     = adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-            vec_array       phi_midpoint_adjoint_vector =  phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            const_vec_array phi_previous_adjoint_vector = (*phi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+
+            vec_array midpoint_adjoint_vector     = adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array phi_midpoint_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
 
             // half step update for RK2 scheme
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -713,22 +725,25 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
                                           matrix_contribution / node_mass(node_gid) -
                                           phi_previous_adjoint_vector(node_gid, idim) / node_mass(node_gid);
                     midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + previous_adjoint_vector(node_gid, idim);
+
                     matrix_contribution = 0;
                     // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
                     for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++)
                     {
                         dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
-                        matrix_contribution += -previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Positions(node_gid * num_dim + idim, idof);
+                        matrix_contribution += -previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim)
+                                               * Force_Gradient_Positions(node_gid * num_dim + idim, idof);
                     }
                     rate_of_change = -matrix_contribution;
                     // rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
                     phi_midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + phi_previous_adjoint_vector(node_gid, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             boundary_adjoint(*mesh, boundary, midpoint_adjoint_vector, phi_midpoint_adjoint_vector);
             comm_adjoint_vectors(cycle);
+
             // swap names to get ghost nodes for the midpoint vectors
             vec_array current_adjoint_vector     = adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             vec_array phi_current_adjoint_vector = phi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
@@ -766,7 +781,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
                     // rate_of_change = -0.0000001*midpoint_adjoint_vector(node_gid,idim);
                     phi_current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + phi_previous_adjoint_vector(node_gid, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             boundary_adjoint(*mesh, boundary, current_adjoint_vector, phi_current_adjoint_vector);
@@ -783,15 +798,18 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
 
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const_vec_array design_variables, vec_array design_gradients)
 {
-    size_t                                                         num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos<boundary_t>                                boundary      = module_params->boundary;
-    const DCArrayKokkos<material_t>                                material      = simparam->material;
-    const int                                                      num_dim       = simparam->num_dims;
-    int                                                            num_corners   = rnum_elem * num_nodes_in_elem;
-    real_t                                                         global_dt;
-    size_t                                                         current_data_index, next_data_index;
-    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
-    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
+    size_t current_data_index, next_data_index;
+
+    int    num_corners = rnum_elem * num_nodes_in_elem;
+    real_t global_dt;
+
+    const int                       num_dim  = simparam->num_dims;
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+
+    auto current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    auto current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
 
     if (myrank == 0)
     {
@@ -803,7 +821,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
     // compute design gradients
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         design_gradients(node_id, 0) = 0;
-  }); // end parallel for
+    }); // end parallel for
     Kokkos::fence();
 
     // gradient contribution from kinetic energy vMv product.
@@ -874,7 +892,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
                     corner_id = elem_id * num_nodes_in_elem + inode;
                     corner_value_storage(corner_id) = inner_product * global_dt;
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // accumulate node values from corner storage
@@ -886,7 +904,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += corner_value_storage(corner_id);
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // test code
@@ -928,7 +946,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         design_gradients(node_id, 0) *= -0.5 / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
         // design_gradients(node_id,0) =0.00001;
-  }); // end parallel for
+    }); // end parallel for
     Kokkos::fence();
 
     // gradient contribution from Force vector.
@@ -1007,7 +1025,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
                     corner_id = elem_id * num_nodes_in_elem + inode;
                     corner_value_storage(corner_id) = -inner_product * global_dt / (double)num_nodes_in_elem;
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // accumulate node values from corner storage
@@ -1019,7 +1037,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += corner_value_storage(corner_id);
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
     }
@@ -1031,16 +1049,18 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
 
 void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed)
 {
-    size_t                                                         num_bdy_nodes = mesh->num_bdy_nodes;
-    const DCArrayKokkos<boundary_t>                                boundary      = module_params->boundary;
-    const DCArrayKokkos<material_t>                                material      = simparam->material;
-    const int                                                      num_dim       = simparam->num_dims;
-    int                                                            num_corners   = rnum_elem * num_nodes_in_elem;
-    real_t                                                         global_dt;
-    bool                                                           element_constant_density = true;
-    size_t                                                         current_data_index, next_data_index;
-    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
-    CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    bool   element_constant_density = true;
+    size_t num_bdy_nodes = mesh->num_bdy_nodes;
+    size_t current_data_index, next_data_index;
+    int    num_corners = rnum_elem * num_nodes_in_elem;
+    real_t global_dt;
+
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+    const int                       num_dim  = simparam->num_dims;
+
+    auto current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
+    auto current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
 
     if (myrank == 0)
     {
@@ -1055,7 +1075,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
         // compute design gradients
         FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
             design_gradients(node_id, 0) = 0;
-    }); // end parallel for
+        }); // end parallel for
         Kokkos::fence();
 
         // gradient contribution from kinetic energy v(dM/drho)v product.
@@ -1135,7 +1155,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
                         // division by design ratio recovers nominal element mass used in the gradient operator
                         corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
 
                 // accumulate node values from corner storage
@@ -1147,7 +1167,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
                         corner_id = corners_in_node(node_id, icorner);
                         design_gradients(node_id, 0) += corner_value_storage(corner_id);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
             } // end view scope
         }
@@ -1156,7 +1176,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
         FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
             design_gradients(node_id, 0) *= 0.5 / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
             // design_gradients(node_id,0) =0.00001;
-    }); // end parallel for
+        }); // end parallel for
         Kokkos::fence();
 
         // gradient contribution from time derivative of adjoint \dot{lambda}(dM/drho)v product.
@@ -1203,7 +1223,9 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
                 const_vec_array next_phi_adjoint_vector = (*phi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
                 const real_t damping_constant = module_params->damping_constant;
-                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+
+                FOR_ALL_CLASS(elem_id, 0, rnum_elem,
+                {
                     real_t lambda_dot_current;
                     real_t lambda_dot_next;
                     size_t node_id;
@@ -1230,10 +1252,14 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
                         for (int idim = 0; idim < num_dim; idim++)
                         {
                             // lambda_dot_current = lambda_dot_next = (next_adjoint_vector(node_id,idim)-current_adjoint_vector(node_id,idim))/global_dt;
-                            lambda_dot_current = current_velocity_vector(node_id, idim) + damping_constant * current_adjoint_vector(node_id,
-                            idim) / node_mass(node_id) - current_phi_adjoint_vector(node_id, idim) / node_mass(node_id);
-                            lambda_dot_next = next_velocity_vector(node_id, idim) + damping_constant * next_adjoint_vector(node_id, idim) / node_mass(node_id) - next_phi_adjoint_vector(node_id,
-                            idim) / node_mass(node_id);
+                            lambda_dot_current = current_velocity_vector(node_id, idim)
+                                                 + damping_constant * current_adjoint_vector(node_id, idim) / node_mass(node_id)
+                                                 - current_phi_adjoint_vector(node_id, idim) / node_mass(node_id);
+
+                            lambda_dot_next = next_velocity_vector(node_id, idim)
+                                              + damping_constant * next_adjoint_vector(node_id, idim) / node_mass(node_id)
+                                              - next_phi_adjoint_vector(node_id, idim) / node_mass(node_id);
+
                             inner_product += elem_mass(elem_id) * (lambda_dot_current + lambda_dot_next) * current_element_velocities(ifill, idim) / 2;
                         }
                     }
@@ -1245,7 +1271,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
                         // division by design ratio recovers nominal element mass used in the gradient operator
                         corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
 
                 // accumulate node values from corner storage
@@ -1257,7 +1283,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
                         corner_id = corners_in_node(node_id, icorner);
                         design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
             } // end view scope
         }
@@ -1268,7 +1294,8 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
             const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array current_adjoint_vector  = (*adjoint_vector_data)[0]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
-            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem,
+            {
                 real_t lambda_dot;
                 size_t node_id;
                 size_t corner_id;
@@ -1304,7 +1331,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
                     // division by design ratio recovers nominal element mass used in the gradient operator
                     corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // accumulate node values from corner storage
@@ -1316,7 +1343,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
     } // end view scope
@@ -1335,14 +1362,18 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
 ------------------------------------------------------------------------- */
 void FEA_Module_Dynamic_Elasticity::init_assembly()
 {
-    int num_dim = simparam->num_dims;
+    int    num_dim = simparam->num_dims;
+    int    local_node_index;
+    int    current_column_index;
+    size_t max_stride = 0;
+    size_t nodes_per_element;
+
     // const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     Gradient_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes * num_dim, "Gradient_Matrix_Strides");
+
     CArrayKokkos<size_t, array_layout, device_type, memory_traits> Graph_Fill(nall_nodes, "nall_nodes");
     CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
-    int                                                            local_node_index, current_column_index;
-    size_t                                                         max_stride = 0;
-    size_t                                                         nodes_per_element;
+
     nodal_density_flag = simparam->nodal_density_flag;
     penalty_power      = simparam->optimization_options.simp_penalty_power;
 
@@ -1352,8 +1383,8 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
     Graph_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes, "Graph_Matrix_Strides");
 
     // allocate storage for the sparse stiffness matrix map used in the assembly process
-    Global_Stiffness_Matrix_Assembly_Map = Global_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(rnum_elem,
-                                         max_nodes_per_element, max_nodes_per_element, "Global_Gradient_Matrix_Assembly_Map");
+    Global_Stiffness_Matrix_Assembly_Map = Global_Gradient_Matrix_Assembly_Map = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(
+                                                    rnum_elem, max_nodes_per_element, max_nodes_per_element, "Global_Gradient_Matrix_Assembly_Map");
 
     // allocate array used to determine global node repeats in the sparse graph later
     DCArrayKokkos<int, array_layout, device_type, memory_traits> node_indices_used(nall_nodes, "node_indices_used");
@@ -1367,7 +1398,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
         Graph_Matrix_Strides_initial(inode) = 0;
         Graph_Matrix_Strides(inode) = 0;
         Graph_Fill(inode) = 0;
-  }); // end parallel for
+    }); // end parallel for
     Kokkos::fence();
 
     // initialize nall arrays
@@ -1375,7 +1406,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
     FOR_ALL_CLASS(inode, 0, nall_nodes, {
         node_indices_used(inode) = 0;
         column_index(inode)      = 0;
-  }); // end parallel for
+    }); // end parallel for
     Kokkos::fence();
 
     // count upper bound of strides for Sparse Pattern Graph by allowing repeats due to connectivity
@@ -1418,7 +1449,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
     // equate strides for later
     FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
         Graph_Matrix_Strides(inode) = Graph_Matrix_Strides_initial(inode) = Dual_Graph_Matrix_Strides_initial(inode);
-  }); // end parallel for
+    }); // end parallel for
 
     // for (int inode = 0; inode < nlocal_nodes; inode++)
     // std::cout << Graph_Matrix_Strides_initial(inode) << std::endl;
@@ -1430,7 +1461,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
         {
             update = Graph_Matrix_Strides_initial(inode);
         }
-  }, max_stride);
+    }, max_stride);
 
     // std::cout << "THE MAX STRIDE" << max_stride << std::endl;
     // allocate array used in the repeat removal process
@@ -1515,6 +1546,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
         int element_column_index;
         int current_stride;
         int current_row_n_nodes_scanned;
+
         for (int inode = 0; inode < nlocal_nodes; inode++)
         {
             current_row_n_nodes_scanned = 0;
@@ -1575,7 +1607,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
                 node_indices_used(current_row_nodes_scanned(node_reset)) = 0;
             }
         }
-  });
+    });
     Kokkos::fence();
 
     Graph_Matrix_Strides.update_host();
@@ -1587,7 +1619,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
         {
             Graph_Matrix(inode, istride) = Repeat_Graph_Matrix(inode, istride);
         }
-  }); // end parallel for
+    }); // end parallel for
 
     // deallocate repeat matrix
 
@@ -1598,11 +1630,13 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
     // expand strides for stiffness matrix by multipling by dim
     FOR_ALL_CLASS(idof, 0, num_dim * nlocal_nodes, {
         Gradient_Matrix_Strides(idof) = num_dim * Graph_Matrix_Strides(idof / num_dim);
-  }); // end parallel for
+    }); // end parallel for
 
-    Stiffness_Matrix = Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
-    Force_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
+    Stiffness_Matrix = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
     DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits>(Gradient_Matrix_Strides);
+
+    Force_Gradient_Positions  = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
+    Force_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
 
     // set stiffness Matrix Graph
     // debug print
@@ -1612,7 +1646,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
         {
             DOF_Graph_Matrix(idof, istride) = Graph_Matrix(idof / num_dim, istride / num_dim) * num_dim + istride % num_dim;
         }
-  }); // end parallel for
+    }); // end parallel for
 
     Stiffness_Matrix_Strides = Gradient_Matrix_Strides;
 

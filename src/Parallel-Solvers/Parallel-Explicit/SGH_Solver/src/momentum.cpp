@@ -61,13 +61,13 @@ void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>&        vel_grad,
 {
     const size_t num_nodes_in_elem = 8;
 
-    double                   u_array[num_nodes_in_elem]; // x-dir vel component
-    double                   v_array[num_nodes_in_elem]; // y-dir vel component
-    double                   w_array[num_nodes_in_elem]; // z-dir vel component
-    
-    ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); 
-    ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); 
-    ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); 
+    double u_array[num_nodes_in_elem]; // x-dir vel component
+    double v_array[num_nodes_in_elem]; // y-dir vel component
+    double w_array[num_nodes_in_elem]; // z-dir vel component
+
+    ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem);
+    ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem);
+    ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem);
 
     // get the vertex velocities for the cell
     for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
@@ -149,8 +149,9 @@ void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos<double>&        vel_grad,
 {
     const size_t num_nodes_in_elem = 4;
 
-    double                   u_array[num_nodes_in_elem];
-    double                   v_array[num_nodes_in_elem];
+    double u_array[num_nodes_in_elem];
+    double v_array[num_nodes_in_elem];
+
     ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
     ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
 
@@ -217,6 +218,7 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos<double>&       elem_div,
         double u_array[num_nodes_in_elem];
         double v_array[num_nodes_in_elem];
         double w_array[num_nodes_in_elem];
+
         ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
         ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
         ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir vel component

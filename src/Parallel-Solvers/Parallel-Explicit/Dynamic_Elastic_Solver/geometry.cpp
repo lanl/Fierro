@@ -335,19 +335,12 @@ void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos<double>
     */
 
     B_matrix(0, 0) = -0.5 * (y(3) - y(1));
-
     B_matrix(1, 0) = -0.5 * (y(0) - y(2));
-
     B_matrix(2, 0) = -0.5 * (y(1) - y(3));
-
     B_matrix(3, 0) = -0.5 * (y(2) - y(0));
-
     B_matrix(0, 1) = -0.5 * (x(1) - x(3));
-
     B_matrix(1, 1) = -0.5 * (x(2) - x(0));
-
     B_matrix(2, 1) = -0.5 * (x(3) - x(1));
-
     B_matrix(3, 1) = -0.5 * (x(0) - x(2));
 
     //
@@ -425,7 +418,7 @@ void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos<double>
     */
     elem_vol(elem_gid) =
         ( (y(2) + y(3) + y(0)) * ((y(2) - y(3)) * (x(0) - x(3)) - (y(0) - y(3)) * (x(2) - x(3)) )
-          + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / 6.0;
+        + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / 6.0;
 
     return;
 } // end subroutine

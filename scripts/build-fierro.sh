@@ -28,7 +28,7 @@ show_help() {
     echo "          explicit-evpfft             builds the explicit solver with the EVPFFT material model"
     echo "          explicit-ls-evpfft          builds the explicit solver with the LS-EVPFFT material model"
     echo "          explicit-evp                builds the explicit solver with the EVP material model"    
-    echo "          implicit                    builds the explicit solver"
+    echo "          implicit                    builds the implicit solver"
     echo " "
     echo "      --kokkos_build_type             The desired kokkos parallel backend to use. The default is 'serial'"
     echo " "
