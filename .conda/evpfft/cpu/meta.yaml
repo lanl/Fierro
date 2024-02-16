@@ -24,16 +24,16 @@ requirements:
     - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
     - openmpi
   host:
-    - openmpi
-      #- fierro-heffte
-    - fftw #fftw=*=mpi_openmpi_*
+    #- openmpi
+    - fierro-heffte
+      #- fftw #fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
     - elements
   run:
-    - openmpi
-      #- fierro-heffte
-    - fftw #fftw=*=mpi_openmpi_*
+    #- openmpi
+    - fierro-heffte
+      #- fftw #fftw=*=mpi_openmpi_*
     - kokkos=4.1
     - hdf5=*=mpi_openmpi_*
     - elements
