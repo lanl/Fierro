@@ -2306,6 +2306,53 @@ void Solver::init_maps(){
   //construct distributed element connectivity multivector
   global_nodes_in_elem_distributed = Teuchos::rcp(new MCONN(all_element_map, dual_nodes_in_elem));
 
+  if(nlocal_elem_non_overlapping >= 1) {
+  //construct map of nodes that belong to the non-overlapping element set (contained by ghost + local node set but not all of them)
+  std::set<GO> nonoverlap_elem_node_set;
+
+    //search through local elements for global node indices not owned by this MPI rank
+    if(num_dim==2)
+    for (int cell_rid = 0; cell_rid < nlocal_elem_non_overlapping; cell_rid++) {
+      //set nodes per element
+      element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
+      nodes_per_element = elem2D->num_nodes();  
+      for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
+        node_gid = nodes_in_elem(cell_rid, node_lid);
+        nonoverlap_elem_node_set.insert(node_gid);
+      }
+    }
+
+    if(num_dim==3)
+    for (int cell_rid = 0; cell_rid < nlocal_elem_non_overlapping; cell_rid++) {
+      //set nodes per element
+      element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
+      nodes_per_element = elem->num_nodes();  
+      for (int node_lid = 0; node_lid < nodes_per_element; node_lid++){
+        node_gid = nodes_in_elem(cell_rid, node_lid);
+        nonoverlap_elem_node_set.insert(node_gid);
+      }
+    }
+
+    //by now the set contains, with no repeats, all the global node indices belonging to the non overlapping element list on this MPI rank
+    //now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
+    nnonoverlap_elem_nodes = nonoverlap_elem_node_set.size();
+    nonoverlap_elem_nodes = Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits>("nonoverlap_elem_nodes", nnonoverlap_elem_nodes);
+    int inonoverlap_elem_node = 0;
+    auto it = nonoverlap_elem_node_set.begin();
+    while(it!=nonoverlap_elem_node_set.end()){
+      nonoverlap_elem_nodes.h_view(inonoverlap_elem_node++) = *it;
+      it++;
+    }
+
+    
+    nonoverlap_elem_nodes.modify_host();
+    nonoverlap_elem_nodes.sync_device();
+    // create a Map for ghost node indices
+    nonoverlap_element_node_map = Teuchos::rcp( new Tpetra::Map<LO,GO,node_type>(Teuchos::OrdinalTraits<GO>::invalid(),nonoverlap_elem_nodes.d_view,0,comm));
+
+  }
+
+
   //debug print
   //std::ostream &out = std::cout;
   //Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
