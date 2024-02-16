@@ -125,6 +125,12 @@ public:
 
   void Concavity_Element_Material_Properties(size_t ielem, real_t &Element_Modulus, real_t &Poisson_Ratio, real_t density);
 
+  void Element_Anisotropic_Material_Properties(size_t ielem, real_t Element_Moduli[3], real_t Poisson_Ratios[3], real_t Shear_Moduli[3], real_t density);
+
+  void Gradient_Element_Anisotropic_Material_Properties(size_t ielem, real_t Element_Moduli[3], real_t Poisson_Ratios[3], real_t Shear_Moduli[3], real_t density);
+
+  void Concavity_Element_Anisotropic_Material_Properties(size_t ielem, real_t Element_Moduli[3], real_t Poisson_Ratios[3], real_t Shear_Moduli[3], real_t density);
+
   void Body_Term(size_t ielem, real_t density, real_t *forces);
 
   void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces);

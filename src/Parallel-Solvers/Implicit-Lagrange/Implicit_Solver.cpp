@@ -1360,44 +1360,48 @@ void Implicit_Solver::setup_optimization_problem(){
         active_dofs->putScalar(0);
         host_vec_array target_displacements_view = target_displacements->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
         host_ivec_array active_dofs_view = active_dofs->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-        if(map->isNodeGlobalElement(12100)){
-          LO local_node_id = map->getLocalElement(12100);
-          active_dofs_view(local_node_id*num_dim,0) = 1;
-          target_displacements_view(local_node_id*num_dim,0) = 3.5e-04;
-        }
-        if(map->isNodeGlobalElement(12110)){
-          LO local_node_id = map->getLocalElement(12110);
-          active_dofs_view(local_node_id*num_dim,0) = 1;
-          target_displacements_view(local_node_id*num_dim,0) = 3.5e-04;
+        std::string constraint_filename = simparam.optimization_options.constraints[imodule-nmulti_objective_modules-1].argument_file_name;
+        //std::cout << "DISPLACEMENT CONSTRAINT SETTING FILE NAME " << constraint_filename << std::endl;
+        std::ifstream *disp_in = NULL;
+        disp_in = new std::ifstream();
+        disp_in->open(constraint_filename);
+        if (!(*disp_in)) throw std::runtime_error(std::string("Can't open ") + constraint_filename);
+        if (disp_in->is_open()) {
+        std::string line;
+          while (std::getline(*disp_in, line)) { // Read each line until the end of the file
+            std::istringstream ss(line); // Create a string stream from the line
+            GO tag_id;
+            real_t target_displacement_value;
+              // Process each number (replace this with your own logic)
+              ss >> tag_id;
+              ss >> target_displacement_value;
+              //std::cout << "Read number: " << tag_id << " " << target_displacement_value << std::endl;
+              if(map->isNodeGlobalElement(tag_id)){
+                LO local_node_id = map->getLocalElement(tag_id);
+                active_dofs_view(local_node_id*num_dim,0) = 1;
+                target_displacements_view(local_node_id*num_dim,0) = target_displacement_value;
+              }
+
+          }
+          disp_in->close(); // Close the file
         }
         *fos << " DISPLACEMENT CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;
         eq_constraint = ROL::makePtr<DisplacementConstraint_TopOpt>(fea_modules[TO_Module_My_FEA_Module[imodule]], nodal_density_flag, target_displacements, active_dofs, 0, false);
 
-        ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_x =
-        ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
+        //ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_x =
+        //ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
         //construct direction vector for check
-        Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
+        //Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
         //directions_distributed->putScalar(1);
-        directions_distributed->randomize(-0.8,1);
-        //real_t normd = directions_distributed->norm2();
-        //directions_distributed->scale(normd);
-        //set all but first component to 0 for debug
-        host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-        //for(int init = 1; init < nlocal_nodes; init++)
-        //directions(4,0) = -0.3;
-        ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
-        ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
+        //directions_distributed->randomize(-0.8,1);
+        // ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
+        // ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
         
-        ROL::Ptr<std::vector<real_t> > c_ptr = ROL::makePtr<std::vector<real_t>>(1,1.0);
-        ROL::Ptr<ROL::Vector<real_t> > constraint_buf = ROL::makePtr<ROL::StdVector<real_t>>(c_ptr);
+        // ROL::Ptr<std::vector<real_t> > c_ptr = ROL::makePtr<std::vector<real_t>>(1,1.0);
+        // ROL::Ptr<ROL::Vector<real_t> > constraint_buf = ROL::makePtr<ROL::StdVector<real_t>>(c_ptr);
         //std::cout << " VALUE TEST " << obj_value << std::endl;
         //eq_constraint->checkApplyJacobian(*rol_x, *rol_d, *constraint_buf);
-        eq_constraint->checkApplyAdjointHessian(*rol_x, *constraint_buf, *rol_d, *rol_x);
-        //obj->checkHessVec(*rol_x, *rol_d);
-        //directions_distributed->putScalar(-0.000001);
-        //obj->checkGradient(*rol_x, *rol_d);
-        //directions_distributed->putScalar(-0.0000001);
-        //obj->checkGradient(*rol_x, *rol_d);
+        //eq_constraint->checkApplyAdjointHessian(*rol_x, *constraint_buf, *rol_d, *rol_x);
       }
       else if(TO_Module_List[imodule] == TO_MODULE_TYPE::Moment_of_Inertia_Constraint){
         *fos << " MOMENT OF INERTIA CONSTRAINT EXPECTS FEA MODULE INDEX " <<TO_Module_My_FEA_Module[imodule] << std::endl;

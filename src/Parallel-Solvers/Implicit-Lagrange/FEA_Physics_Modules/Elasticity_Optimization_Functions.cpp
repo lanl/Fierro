@@ -125,9 +125,10 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
   LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz, access_index;
   GO current_global_index, global_dof_id;
   size_t local_nrows = nlocal_nodes*num_dim;
+  bool anisotropic_lattice = module_params->anisotropic_lattice;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
-  real_t Element_Modulus_Gradient, Poisson_Ratio, gradient_force_density[3];
+  real_t Element_Modulus_Gradient, Poisson_Ratio, gradient_force_density[3], Elastic_Moduli[3], Shear_Moduli[3], Poisson_Ratios[3], Lower_Poisson_Ratios[3];
   real_t Elastic_Constant, Shear_Term, Pressure_Term;
   real_t inner_product, matrix_term, Jacobian, invJacobian, weight_multiply;
   //CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_nodes_1D(num_gauss_points);
@@ -511,11 +512,25 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
     }
     
     //look up element material properties at this point as a function of density
-    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
-    Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5 - Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
-
+    if(anisotropic_lattice){
+      Gradient_Element_Anisotropic_Material_Properties((size_t) ielem,Elastic_Moduli, Poisson_Ratios, Shear_Moduli, current_density);
+    }
+    else{
+      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+    }
+    
+    if(anisotropic_lattice){
+      Lower_Poisson_Ratios[0] = Poisson_Ratios[0]*Elastic_Moduli[1]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[1] = Poisson_Ratios[1]*Elastic_Moduli[2]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[2] = Poisson_Ratios[2]*Elastic_Moduli[2]/Elastic_Moduli[1];
+      Elastic_Constant = 1/(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0] - Poisson_Ratios[1]*Lower_Poisson_Ratios[1] - Poisson_Ratios[2]*Lower_Poisson_Ratios[2]
+                          -2*Poisson_Ratios[0]*Poisson_Ratios[1]*Poisson_Ratios[2]);
+    }
+    else{
+      Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+      Shear_Term = 0.5-Poisson_Ratio;
+      Pressure_Term = 1 - Poisson_Ratio;
+    }
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
@@ -528,18 +543,35 @@ void FEA_Module_Elasticity::compute_displacement_constraint_gradients(const_host
       C_matrix(2,2) = Shear_Term;
     }
     if(num_dim==3){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(2,2) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(0,2) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(1,2) = Poisson_Ratio;
-      C_matrix(2,0) = Poisson_Ratio;
-      C_matrix(2,1) = Poisson_Ratio;
-      C_matrix(3,3) = Shear_Term;
-      C_matrix(4,4) = Shear_Term;
-      C_matrix(5,5) = Shear_Term;
+      if(anisotropic_lattice){
+        C_matrix(0,0) = Elastic_Moduli[0]*(1-Poisson_Ratios[2]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,1) = Elastic_Moduli[1]*(1-Poisson_Ratios[1]*Lower_Poisson_Ratios[1]);
+        C_matrix(2,2) = Elastic_Moduli[2]*(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0]);
+        C_matrix(0,1) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[0]+Lower_Poisson_Ratios[1]*Poisson_Ratios[2]);
+        C_matrix(0,2) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[1]+Lower_Poisson_Ratios[0]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,0) = C_matrix(0,1);
+        C_matrix(1,2) = Elastic_Moduli[1]*(Lower_Poisson_Ratios[2]+Lower_Poisson_Ratios[1]*Poisson_Ratios[0]);
+        C_matrix(2,0) = C_matrix(0,2);
+        C_matrix(2,1) = C_matrix(1,2);
+        C_matrix(3,3) = 2*Shear_Moduli[0]/Elastic_Constant;
+        C_matrix(4,4) = 2*Shear_Moduli[1]/Elastic_Constant;
+        C_matrix(5,5) = 2*Shear_Moduli[2]/Elastic_Constant;
+
+      }
+      else{
+        C_matrix(0,0) = Pressure_Term;
+        C_matrix(1,1) = Pressure_Term;
+        C_matrix(2,2) = Pressure_Term;
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(0,2) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(1,2) = Poisson_Ratio;
+        C_matrix(2,0) = Poisson_Ratio;
+        C_matrix(2,1) = Poisson_Ratio;
+        C_matrix(3,3) = Shear_Term;
+        C_matrix(4,4) = Shear_Term;
+        C_matrix(5,5) = Shear_Term;
+      }
     }
 
     //compute the previous multiplied by the Elastic (C) Matrix
@@ -679,9 +711,11 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
   LO local_node_id, jlocal_node_id, temp_id, local_dof_id, local_dof_idx, local_dof_idy, local_dof_idz, access_index;
   GO current_global_index, global_dof_id;
   size_t local_nrows = nlocal_nodes*num_dim;
+  bool anisotropic_lattice = module_params->anisotropic_lattice;
 
   direct_product_count = std::pow(num_gauss_points,num_dim);
   real_t Element_Modulus_Gradient, Element_Modulus_Concavity, Poisson_Ratio, gradient_force_density[3];
+  real_t Elastic_Moduli[3], Shear_Moduli[3], Poisson_Ratios[3], Lower_Poisson_Ratios[3];
   real_t Elastic_Constant, Gradient_Elastic_Constant, Concavity_Elastic_Constant, Shear_Term, Pressure_Term;
   real_t inner_product, matrix_term, Jacobian, invJacobian, weight_multiply;
   real_t direction_vec_reduce, local_direction_vec_reduce;
@@ -1054,12 +1088,25 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
     }
     
     //look up element material properties at this point as a function of density
-    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+    if(anisotropic_lattice){
+      Gradient_Element_Anisotropic_Material_Properties((size_t) ielem,Elastic_Moduli, Poisson_Ratios, Shear_Moduli, current_density);
+    }
+    else{
+      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+    }
     
-    Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5 - Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
-
+    if(anisotropic_lattice){
+      Lower_Poisson_Ratios[0] = Poisson_Ratios[0]*Elastic_Moduli[1]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[1] = Poisson_Ratios[1]*Elastic_Moduli[2]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[2] = Poisson_Ratios[2]*Elastic_Moduli[2]/Elastic_Moduli[1];
+      Gradient_Elastic_Constant = 1/(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0] - Poisson_Ratios[1]*Lower_Poisson_Ratios[1] - Poisson_Ratios[2]*Lower_Poisson_Ratios[2]
+                          -2*Poisson_Ratios[0]*Poisson_Ratios[1]*Poisson_Ratios[2]);
+    }
+    else{
+      Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+      Shear_Term = 0.5-Poisson_Ratio;
+      Pressure_Term = 1 - Poisson_Ratio;
+    }
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
@@ -1072,18 +1119,35 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
       C_matrix(2,2) = Shear_Term;
     }
     if(num_dim==3){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(2,2) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(0,2) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(1,2) = Poisson_Ratio;
-      C_matrix(2,0) = Poisson_Ratio;
-      C_matrix(2,1) = Poisson_Ratio;
-      C_matrix(3,3) = Shear_Term;
-      C_matrix(4,4) = Shear_Term;
-      C_matrix(5,5) = Shear_Term;
+      if(anisotropic_lattice){
+        C_matrix(0,0) = Elastic_Moduli[0]*(1-Poisson_Ratios[2]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,1) = Elastic_Moduli[1]*(1-Poisson_Ratios[1]*Lower_Poisson_Ratios[1]);
+        C_matrix(2,2) = Elastic_Moduli[2]*(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0]);
+        C_matrix(0,1) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[0]+Lower_Poisson_Ratios[1]*Poisson_Ratios[2]);
+        C_matrix(0,2) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[1]+Lower_Poisson_Ratios[0]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,0) = C_matrix(0,1);
+        C_matrix(1,2) = Elastic_Moduli[1]*(Lower_Poisson_Ratios[2]+Lower_Poisson_Ratios[1]*Poisson_Ratios[0]);
+        C_matrix(2,0) = C_matrix(0,2);
+        C_matrix(2,1) = C_matrix(1,2);
+        C_matrix(3,3) = 2*Shear_Moduli[0]/Gradient_Elastic_Constant;
+        C_matrix(4,4) = 2*Shear_Moduli[1]/Gradient_Elastic_Constant;
+        C_matrix(5,5) = 2*Shear_Moduli[2]/Gradient_Elastic_Constant;
+
+      }
+      else{
+        C_matrix(0,0) = Pressure_Term;
+        C_matrix(1,1) = Pressure_Term;
+        C_matrix(2,2) = Pressure_Term;
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(0,2) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(1,2) = Poisson_Ratio;
+        C_matrix(2,0) = Poisson_Ratio;
+        C_matrix(2,1) = Poisson_Ratio;
+        C_matrix(3,3) = Shear_Term;
+        C_matrix(4,4) = Shear_Term;
+        C_matrix(5,5) = Shear_Term;
+      }
     }
 
     //compute the previous multiplied by the Elastic (C) Matrix
@@ -1388,12 +1452,25 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
     }
     
     //look up element material properties at this point as a function of density
-    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+    if(anisotropic_lattice){
+      Gradient_Element_Anisotropic_Material_Properties((size_t) ielem,Elastic_Moduli, Poisson_Ratios, Shear_Moduli, current_density);
+    }
+    else{
+      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+    }
     
-    Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5 - Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
-
+    if(anisotropic_lattice){
+      Lower_Poisson_Ratios[0] = Poisson_Ratios[0]*Elastic_Moduli[1]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[1] = Poisson_Ratios[1]*Elastic_Moduli[2]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[2] = Poisson_Ratios[2]*Elastic_Moduli[2]/Elastic_Moduli[1];
+      Gradient_Elastic_Constant = 1/(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0] - Poisson_Ratios[1]*Lower_Poisson_Ratios[1] - Poisson_Ratios[2]*Lower_Poisson_Ratios[2]
+                          -2*Poisson_Ratios[0]*Poisson_Ratios[1]*Poisson_Ratios[2]);
+    }
+    else{
+      Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+      Shear_Term = 0.5-Poisson_Ratio;
+      Pressure_Term = 1 - Poisson_Ratio;
+    }
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
@@ -1406,18 +1483,35 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
       C_matrix(2,2) = Shear_Term;
     }
     if(num_dim==3){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(2,2) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(0,2) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(1,2) = Poisson_Ratio;
-      C_matrix(2,0) = Poisson_Ratio;
-      C_matrix(2,1) = Poisson_Ratio;
-      C_matrix(3,3) = Shear_Term;
-      C_matrix(4,4) = Shear_Term;
-      C_matrix(5,5) = Shear_Term;
+      if(anisotropic_lattice){
+        C_matrix(0,0) = Elastic_Moduli[0]*(1-Poisson_Ratios[2]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,1) = Elastic_Moduli[1]*(1-Poisson_Ratios[1]*Lower_Poisson_Ratios[1]);
+        C_matrix(2,2) = Elastic_Moduli[2]*(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0]);
+        C_matrix(0,1) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[0]+Lower_Poisson_Ratios[1]*Poisson_Ratios[2]);
+        C_matrix(0,2) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[1]+Lower_Poisson_Ratios[0]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,0) = C_matrix(0,1);
+        C_matrix(1,2) = Elastic_Moduli[1]*(Lower_Poisson_Ratios[2]+Lower_Poisson_Ratios[1]*Poisson_Ratios[0]);
+        C_matrix(2,0) = C_matrix(0,2);
+        C_matrix(2,1) = C_matrix(1,2);
+        C_matrix(3,3) = 2*Shear_Moduli[0]/Gradient_Elastic_Constant;
+        C_matrix(4,4) = 2*Shear_Moduli[1]/Gradient_Elastic_Constant;
+        C_matrix(5,5) = 2*Shear_Moduli[2]/Gradient_Elastic_Constant;
+
+      }
+      else{
+        C_matrix(0,0) = Pressure_Term;
+        C_matrix(1,1) = Pressure_Term;
+        C_matrix(2,2) = Pressure_Term;
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(0,2) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(1,2) = Poisson_Ratio;
+        C_matrix(2,0) = Poisson_Ratio;
+        C_matrix(2,1) = Poisson_Ratio;
+        C_matrix(3,3) = Shear_Term;
+        C_matrix(4,4) = Shear_Term;
+        C_matrix(5,5) = Shear_Term;
+      }
     }
 
     //compute the previous multiplied by the Elastic (C) Matrix
@@ -1735,14 +1829,28 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
     }
 
     //look up element material properties at this point as a function of density
-    Concavity_Element_Material_Properties(ielem, Element_Modulus_Concavity, Poisson_Ratio, current_density);
-    Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+    //look up element material properties at this point as a function of density
+    if(anisotropic_lattice){
+      Concavity_Element_Anisotropic_Material_Properties((size_t) ielem,Elastic_Moduli, Poisson_Ratios, Shear_Moduli, current_density);
+    }
+    else{
+      Concavity_Element_Material_Properties(ielem, Element_Modulus_Concavity, Poisson_Ratio, current_density);
+      Gradient_Element_Material_Properties(ielem, Element_Modulus_Gradient, Poisson_Ratio, current_density);
+    }
     
-    Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Concavity_Elastic_Constant = Element_Modulus_Concavity/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
-    Shear_Term = 0.5 - Poisson_Ratio;
-    Pressure_Term = 1 - Poisson_Ratio;
-    //*fos << "Elastic Modulus Concavity" << Element_Modulus_Concavity << " " << Element_Modulus_Gradient << std::endl;
+    if(anisotropic_lattice){
+      Lower_Poisson_Ratios[0] = Poisson_Ratios[0]*Elastic_Moduli[1]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[1] = Poisson_Ratios[1]*Elastic_Moduli[2]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[2] = Poisson_Ratios[2]*Elastic_Moduli[2]/Elastic_Moduli[1];
+      Concavity_Elastic_Constant = 1/(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0] - Poisson_Ratios[1]*Lower_Poisson_Ratios[1] - Poisson_Ratios[2]*Lower_Poisson_Ratios[2]
+                          -2*Poisson_Ratios[0]*Poisson_Ratios[1]*Poisson_Ratios[2]);
+    }
+    else{
+      Gradient_Elastic_Constant = Element_Modulus_Gradient/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+      Concavity_Elastic_Constant = Element_Modulus_Concavity/((1 + Poisson_Ratio)*(1 - 2*Poisson_Ratio));
+      Shear_Term = 0.5-Poisson_Ratio;
+      Pressure_Term = 1 - Poisson_Ratio;
+    }
     //debug print
     //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
@@ -1755,18 +1863,35 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
       C_matrix(2,2) = Shear_Term;
     }
     if(num_dim==3){
-      C_matrix(0,0) = Pressure_Term;
-      C_matrix(1,1) = Pressure_Term;
-      C_matrix(2,2) = Pressure_Term;
-      C_matrix(0,1) = Poisson_Ratio;
-      C_matrix(0,2) = Poisson_Ratio;
-      C_matrix(1,0) = Poisson_Ratio;
-      C_matrix(1,2) = Poisson_Ratio;
-      C_matrix(2,0) = Poisson_Ratio;
-      C_matrix(2,1) = Poisson_Ratio;
-      C_matrix(3,3) = Shear_Term;
-      C_matrix(4,4) = Shear_Term;
-      C_matrix(5,5) = Shear_Term;
+      if(anisotropic_lattice){
+        C_matrix(0,0) = Elastic_Moduli[0]*(1-Poisson_Ratios[2]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,1) = Elastic_Moduli[1]*(1-Poisson_Ratios[1]*Lower_Poisson_Ratios[1]);
+        C_matrix(2,2) = Elastic_Moduli[2]*(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0]);
+        C_matrix(0,1) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[0]+Lower_Poisson_Ratios[1]*Poisson_Ratios[2]);
+        C_matrix(0,2) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[1]+Lower_Poisson_Ratios[0]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,0) = C_matrix(0,1);
+        C_matrix(1,2) = Elastic_Moduli[1]*(Lower_Poisson_Ratios[2]+Lower_Poisson_Ratios[1]*Poisson_Ratios[0]);
+        C_matrix(2,0) = C_matrix(0,2);
+        C_matrix(2,1) = C_matrix(1,2);
+        C_matrix(3,3) = 2*Shear_Moduli[0]/Concavity_Elastic_Constant;
+        C_matrix(4,4) = 2*Shear_Moduli[1]/Concavity_Elastic_Constant;
+        C_matrix(5,5) = 2*Shear_Moduli[2]/Concavity_Elastic_Constant;
+
+      }
+      else{
+        C_matrix(0,0) = Pressure_Term;
+        C_matrix(1,1) = Pressure_Term;
+        C_matrix(2,2) = Pressure_Term;
+        C_matrix(0,1) = Poisson_Ratio;
+        C_matrix(0,2) = Poisson_Ratio;
+        C_matrix(1,0) = Poisson_Ratio;
+        C_matrix(1,2) = Poisson_Ratio;
+        C_matrix(2,0) = Poisson_Ratio;
+        C_matrix(2,1) = Poisson_Ratio;
+        C_matrix(3,3) = Shear_Term;
+        C_matrix(4,4) = Shear_Term;
+        C_matrix(5,5) = Shear_Term;
+      }
     }
 
     //compute the previous multiplied by the Elastic (C) Matrix
@@ -1821,6 +1946,66 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
           hessvec(jlocal_node_id,0) += inner_product*Concavity_Elastic_Constant*basis_values(igradient)*all_direction_vec(local_node_id,0)*
                                       basis_values(jgradient)*weight_multiply*invJacobian;
 
+        }
+      }
+    }
+
+    //look up element material properties at this point as a function of density
+    if(anisotropic_lattice){
+      Gradient_Element_Anisotropic_Material_Properties((size_t) ielem,Elastic_Moduli, Poisson_Ratios, Shear_Moduli, current_density);
+    }
+    
+    if(anisotropic_lattice){
+      Lower_Poisson_Ratios[0] = Poisson_Ratios[0]*Elastic_Moduli[1]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[1] = Poisson_Ratios[1]*Elastic_Moduli[2]/Elastic_Moduli[0];
+      Lower_Poisson_Ratios[2] = Poisson_Ratios[2]*Elastic_Moduli[2]/Elastic_Moduli[1];
+      Gradient_Elastic_Constant = 1/(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0] - Poisson_Ratios[1]*Lower_Poisson_Ratios[1] - Poisson_Ratios[2]*Lower_Poisson_Ratios[2]
+                          -2*Poisson_Ratios[0]*Poisson_Ratios[1]*Poisson_Ratios[2]);
+    }
+    //debug print
+    //std::cout << "Element Material Params " << Elastic_Constant << std::endl;
+
+    //compute Elastic (C) matrix
+    if(num_dim==3){
+      if(anisotropic_lattice){
+        C_matrix(0,0) = Elastic_Moduli[0]*(1-Poisson_Ratios[2]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,1) = Elastic_Moduli[1]*(1-Poisson_Ratios[1]*Lower_Poisson_Ratios[1]);
+        C_matrix(2,2) = Elastic_Moduli[2]*(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0]);
+        C_matrix(0,1) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[0]+Lower_Poisson_Ratios[1]*Poisson_Ratios[2]);
+        C_matrix(0,2) = Elastic_Moduli[0]*(Lower_Poisson_Ratios[1]+Lower_Poisson_Ratios[0]*Lower_Poisson_Ratios[2]);
+        C_matrix(1,0) = C_matrix(0,1);
+        C_matrix(1,2) = Elastic_Moduli[1]*(Lower_Poisson_Ratios[2]+Lower_Poisson_Ratios[1]*Poisson_Ratios[0]);
+        C_matrix(2,0) = C_matrix(0,2);
+        C_matrix(2,1) = C_matrix(1,2);
+        C_matrix(3,3) = 2*Shear_Moduli[0]/Gradient_Elastic_Constant;
+        C_matrix(4,4) = 2*Shear_Moduli[1]/Gradient_Elastic_Constant;
+        C_matrix(5,5) = 2*Shear_Moduli[2]/Gradient_Elastic_Constant;
+
+      }
+    }
+
+    
+    if(anisotropic_lattice){
+      //compute the previous multiplied by the Elastic (C) Matrix
+      for(int irow=0; irow < Brows; irow++){
+        for(int icol=0; icol < num_dim*nodes_per_elem; icol++){
+          CB_matrix_contribution(irow,icol) = 0;
+          for(int span=0; span < Brows; span++){
+            CB_matrix_contribution(irow,icol) += C_matrix(irow,span)*B_matrix_contribution(span,icol);
+          }
+        }
+      }
+      
+      //compute the contributions of this quadrature point to all the local stiffness matrix elements
+      for(int ifill=0; ifill < num_dim*nodes_per_elem; ifill++){
+        for(int jfill=ifill; jfill < num_dim*nodes_per_elem; jfill++){
+          matrix_term = 0;
+          for(int span = 0; span < Brows; span++){
+            matrix_term += B_matrix_contribution(span,ifill)*CB_matrix_contribution(span,jfill);
+          }
+          Local_Matrix_Contribution(ifill,jfill) = matrix_term;
+          if(jfill!=ifill)
+            Local_Matrix_Contribution(jfill,ifill) = Local_Matrix_Contribution(ifill,jfill);
         }
       }
     }
