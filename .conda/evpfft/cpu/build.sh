@@ -9,7 +9,6 @@ cmake ../src/ \
     -D VECTOR_ARCH_FLAGS="$VECTOR_ARCH_FLAGS" \
     -D USE_FFTW=1 \
     $CMAKE_ARGS \
-    -D HDF5_MPI=ON
     -D CMAKE_CXX_FLAGS="$PATCHED_CXXFLAGS" \
     -D CMAKE_CXX_COMPILER=$BUILD_PREFIX/bin/mpicxx \
     -D CMAKE_C_COMPILER=$BUILD_PREFIX/bin/mpicc \
