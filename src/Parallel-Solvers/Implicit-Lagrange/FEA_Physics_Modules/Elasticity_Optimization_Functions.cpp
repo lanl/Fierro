@@ -1463,7 +1463,7 @@ void FEA_Module_Elasticity::compute_displacement_constraint_hessian_vec(const_ho
       Lower_Poisson_Ratios[0] = Poisson_Ratios[0]*Elastic_Moduli[1]/Elastic_Moduli[0];
       Lower_Poisson_Ratios[1] = Poisson_Ratios[1]*Elastic_Moduli[2]/Elastic_Moduli[0];
       Lower_Poisson_Ratios[2] = Poisson_Ratios[2]*Elastic_Moduli[2]/Elastic_Moduli[1];
-      Elastic_Constant = 1/(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0] - Poisson_Ratios[1]*Lower_Poisson_Ratios[1] - Poisson_Ratios[2]*Lower_Poisson_Ratios[2]
+      Gradient_Elastic_Constant = 1/(1-Poisson_Ratios[0]*Lower_Poisson_Ratios[0] - Poisson_Ratios[1]*Lower_Poisson_Ratios[1] - Poisson_Ratios[2]*Lower_Poisson_Ratios[2]
                           -2*Poisson_Ratios[0]*Poisson_Ratios[1]*Poisson_Ratios[2]);
     }
     else{
