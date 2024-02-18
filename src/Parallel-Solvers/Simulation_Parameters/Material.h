@@ -1,8 +1,8 @@
 #pragma once
 #include "yaml-serializable.h"
 
-SERIALIZABLE_ENUM(EOS_MODEL, ideal_gas, user_eos_model)
-SERIALIZABLE_ENUM(STRENGTH_MODEL, none, ideal_gas, user_strength_model)
+SERIALIZABLE_ENUM(EOS_MODEL, ideal_gas, user_defined, constant)
+SERIALIZABLE_ENUM(STRENGTH_MODEL, none, user_defined, vumat, evp, evpfft, ls_evpfft)
 SERIALIZABLE_ENUM(STRENGTH_TYPE, none, hypo, hyper)
 SERIALIZABLE_ENUM(RUN_LOCATION, device, host)
 
@@ -32,18 +32,22 @@ struct material_t {
     double q2ex = 0.0;
     bool maximum_limiter = false;
 
-    size_t num_state_vars = 0;
+    size_t num_eos_state_vars = 0;
+    size_t num_strength_state_vars = 0;
     
     // Non-serialized fields
-    size_t num_global_vars = 0;
+    size_t num_eos_global_vars = 0;
+    size_t num_strength_global_vars = 0;
 };
 
 struct Material : Yaml::DerivedFields, material_t {
     size_t id;
-    std::vector<double> global_vars;
+    std::vector<double> eos_global_vars;
+    std::vector<double> strength_global_vars;
 
     void derive() {
-        num_global_vars = global_vars.size();
+        num_eos_global_vars = eos_global_vars.size();
+        num_strength_global_vars = strength_global_vars.size();
         if(linear_cell_modulus) SIMP_modulus = false;
     }
 };
@@ -52,8 +56,10 @@ IMPL_YAML_SERIALIZABLE_FOR(Material,
     id, eos_model, strength_model, strength_type,
     strength_run_location, eos_run_location,
     q1, q2, q1ex, q2ex, maximum_limiter,
-    num_state_vars,
-    global_vars,
+    num_eos_state_vars,
+    num_strength_state_vars,
+    eos_global_vars,
+    strength_global_vars,
     elastic_modulus, poisson_ratio,
     density, initial_temperature, thermal_conductivity,
     specific_internal_energy_rate, expansion_coefficients,

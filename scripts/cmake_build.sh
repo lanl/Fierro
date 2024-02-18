@@ -87,12 +87,6 @@ elif [ "$solver" = "explicit-evpfft" ] || [ "$solver" = "explicit-ls-evpfft" ]; 
             -D USE_FFTW=ON
         )
     fi
-elif [ "$solver" = "explicit-evp" ]; then
-    cmake_options+=(
-        -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
-        -D BUILD_IMPLICIT_SOLVER=OFF
-        -D BUILD_EVP_FIERRO=ON
-    )
 else
     cmake_options+=(
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
