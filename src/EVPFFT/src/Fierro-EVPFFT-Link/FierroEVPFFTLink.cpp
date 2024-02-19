@@ -5,7 +5,7 @@
 
 MPI_Comm evpfft_mpi_comm = MPI_COMM_NULL;
 // to hold all evpfft in each element
-std::vector<std::shared_ptr<EVPFFT>> elem_evpfft;
+std::vector<EVPFFT*> elem_evpfft;
 
 namespace FierroEVPFFTLink
 {
@@ -19,6 +19,8 @@ namespace FierroEVPFFTLink
     const DCArrayKokkos <double> &elem_user_output_vars,
     const size_t num_elems)
     {
+      printf("Executing FierroEVPFFTLink::init_strength_state_vars ...\n");
+
       // First, lets create a new communicator with each rank having its own communicator containing only itself.
       if (evpfft_mpi_comm == MPI_COMM_NULL) {
         int global_rank;
@@ -28,7 +30,7 @@ namespace FierroEVPFFTLink
       //...
 
       // assign correct size to elem_evpfft, all element are nullptr during initialization
-      elem_evpfft = std::vector<std::shared_ptr<EVPFFT>> (num_elems, nullptr);
+      elem_evpfft = std::vector<EVPFFT*> (num_elems, nullptr);
 
       for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
 
@@ -54,10 +56,10 @@ namespace FierroEVPFFTLink
           cmd.check_cmd_args();
 
           // create EVPFFT model in element that used evpfft
-          elem_evpfft[elem_gid] = std::make_shared<EVPFFT>(evpfft_mpi_comm,
-                                                          cmd,
-                                                          stress_scale,
-                                                          time_scale);
+          elem_evpfft[elem_gid] = new EVPFFT(evpfft_mpi_comm,
+                                             cmd,
+                                             stress_scale,
+                                             time_scale);
 
         } // end if (material.host(mat_id).strength_model...
 
@@ -140,6 +142,11 @@ namespace FierroEVPFFTLink
     const DCArrayKokkos <double> &elem_user_output_vars,
     const size_t num_elems)
     {
+      printf("Executing FierroEVPFFTLink::destroy ...\n");
+
+      for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+        delete elem_evpfft[elem_gid];
+      }
       return;
     }
     

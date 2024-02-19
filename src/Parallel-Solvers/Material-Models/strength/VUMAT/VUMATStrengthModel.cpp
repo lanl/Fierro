@@ -5,7 +5,7 @@
 
 
 // to hold all vumat in each element
-std::vector<std::shared_ptr<VUMAT>> elem_vumat;
+std::vector<VUMAT*> elem_vumat;
 
 namespace VUMATStrengthModel
 {
@@ -27,7 +27,7 @@ namespace VUMATStrengthModel
     */
 
     // assign correct size to elem_vumat, all element are nullptr during initialization
-    elem_vumat = std::vector<std::shared_ptr<VUMAT>> (num_elems, nullptr);
+    elem_vumat = std::vector<VUMAT*> (num_elems, nullptr);
 
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
 
@@ -42,14 +42,14 @@ namespace VUMATStrengthModel
         }
 
         // create VUMAT model in element that used vumat
-        elem_vumat[elem_gid] = std::make_shared<VUMAT>(material,
-                                                       eos_state_vars,
-                                                       strength_state_vars,
-                                                       eos_global_vars,
-                                                       strength_global_vars,
-                                                       elem_user_output_vars,
-                                                       mat_id,
-                                                       elem_gid);
+        elem_vumat[elem_gid] = new VUMAT(material,
+                                         eos_state_vars,
+                                         strength_state_vars,
+                                         eos_global_vars,
+                                         strength_global_vars,
+                                         elem_user_output_vars,
+                                         mat_id,
+                                         elem_gid);
 
       } // end if (material.host(mat_id).strength_model...
 
@@ -123,7 +123,9 @@ namespace VUMATStrengthModel
     const DCArrayKokkos <double> &elem_user_output_vars,
     const size_t num_elems)
   {
-
+    for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+      delete elem_vumat[elem_gid];
+    }
   } 
      
 } // end namespace VUMATStrengthModel
