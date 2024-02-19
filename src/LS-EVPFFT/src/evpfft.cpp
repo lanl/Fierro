@@ -161,7 +161,7 @@ void EVPFFT::init_after_reading_input_data()
 // needs to be initialized after udot and dt are know from fierro
 #ifndef BUILD_LS_EVPFFT_FIERRO
     init_sg();
-    init_c0_s0();
+    // init_c0_s0();
 #endif
 }
 
@@ -361,6 +361,32 @@ void EVPFFT::init_c0_s0()
   Kokkos::fence();
 }
 
+void EVPFFT::deinit_c0_s0()
+{
+  for (int ii = 1; ii <= 6; ii++) {
+    for (int jj = 1; jj <= 6; jj++) {
+      c066.host(ii,jj) /= tdot;
+    }
+  }
+
+  for (int ii = 1; ii <= 3; ii++) {
+    for (int jj = 1; jj <= 3; jj++) {
+      for (int kk = 1; kk <= 3; kk ++) {
+        for (int ll = 1; ll <= 3; ll ++) {
+          c0.host(ii,jj,kk,ll)  /= tdot;
+          s0.host(ii,jj,kk,ll)  *= tdot;
+        }
+      }
+    }
+  }
+
+  // update_device
+  c066.update_device();
+  c0.update_device();
+  s0.update_device();
+  Kokkos::fence();
+}
+
 void EVPFFT::init_defgrad() {
 
   FOR_ALL_CLASS(k, 1, npts3+1,
@@ -409,10 +435,16 @@ void EVPFFT::evolve()
         fprintf(ofile_mgr.conv_file.get(), "STEP = %d\n", imicro);
       }
 #endif
-
-      if (imicro == 1) {
-        step_update_velgrad();
+      init_c0_s0();
+      for (int ii = 1; ii <= 3; ii++) {
+        for (int jj = 1; jj <= 3; jj++) {
+          velgradmacro.host(ii,jj)  = udot.host(ii,jj);
+        }
       }
+      // if (imicro == 1) {
+      //   step_update_velgrad();
+      // }
+      step_update_velgrad();
 
       if (imicro == 1 || iupdate == 1) {
         update_schmid();
@@ -517,7 +549,8 @@ void EVPFFT::evolve()
         harden(imicro);
       }
 
-      calc_c0();
+      // calc_c0();
+      deinit_c0_s0();
 
 #ifndef ABSOLUTE_NO_OUTPUT
       write_macro_state();
