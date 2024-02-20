@@ -2772,6 +2772,13 @@ void FEA_Module_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t
     else{
       Element_Modulus = module_params->material.elastic_modulus/unit_scaling/unit_scaling;
       Poisson_Ratio = module_params->material.poisson_ratio;
+      if(anisotropic_lattice){
+        for(int idim=0 ; idim < num_dim; idim++){
+          Elastic_Moduli[idim] = module_params->material.elastic_moduli[idim];
+          Shear_Moduli[idim] = module_params->material.shear_moduli[idim];
+          Poisson_Ratios[idim] = module_params->material.poisson_ratios[idim];
+        }
+      }
     }
     
     if(anisotropic_lattice){

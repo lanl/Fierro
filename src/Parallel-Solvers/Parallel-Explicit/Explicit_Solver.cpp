@@ -90,6 +90,7 @@
 #include "Mass_Constraint.h"
 #include "Moment_of_Inertia_Constraint.h"
 #include "Kinetic_Energy_Minimize.h"
+#include "Area_Normals.h"
 
 #define BUFFER_LINES 20000
 #define MAX_WORD 30
@@ -1401,6 +1402,30 @@ void Explicit_Solver::setup_optimization_problem(){
   //finalize problem
   problem->finalize(false,true,*fos);
   //problem->check(true,std::cout);
+
+  // //check area normal gradients
+  // ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_debug_coords =
+  // ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(all_node_coords_distributed);
+  // Teuchos::RCP<MV> debug_directions_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  // ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> debug_rol_d =
+  // ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(debug_directions_distributed);
+  // debug_directions_distributed->randomize(-0.00375,0.00375);
+  // if(myrank==0){
+  // for(int inode = 0; inode < 8; inode++){
+  //   for(int idim = 0; idim < num_dim; idim++){
+  //     std::cout<< "AREA NORMALS GRADIENT FOR NODE " << inode << " AND DIM " << idim << std::endl;
+  //     ROL::Ptr<ROL::Objective<real_t>> debug_obj = ROL::makePtr<AreaNormals>(this, inode, idim, nodal_density_flag);
+  //     //debug_directions_distributed->putScalar(-0.1);
+  //     //debug_directions_distributed->norm2(debug_direction_norm);
+  //     //debug_directions_distributed->scale(1/debug_direction_norm(0));
+  //     //set all but first component to 0 for debug
+  //     host_vec_array debug_directions = debug_directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //     //for(int init = 1; init < nlocal_nodes; init++)
+  //     //directions(4,0) = -0.3;
+  //     debug_obj->checkGradient(*rol_debug_coords, *debug_rol_d);
+  //   }
+  // }
+  // }
 
   //debug checks
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_x =
