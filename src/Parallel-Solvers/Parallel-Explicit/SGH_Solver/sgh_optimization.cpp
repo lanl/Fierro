@@ -782,7 +782,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
             elem_id = elems_in_node(node_gid,ielem);
             matrix_contribution += psi_previous_adjoint_vector(elem_id,0)*Power_Gradient_Velocities(node_gid*num_dim+idim,ielem);
           }
-          
           rate_of_change = previous_velocity_vector(node_gid,idim)- 
                             matrix_contribution/node_mass(node_gid)-
                             phi_previous_adjoint_vector(node_gid,idim)/node_mass(node_gid);
@@ -791,11 +790,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
         } 
       }); // end parallel for
       Kokkos::fence();
-
-      //apply BCs to adjoint vector, only matters for the momentum adjoint if using strictly velocity boundary conditions
-      boundary_adjoint(*mesh, boundary,midpoint_adjoint_vector, phi_midpoint_adjoint_vector, psi_midpoint_adjoint_vector);
-      
-      comm_adjoint_vector(cycle);
       
       //half step update for RK2 scheme; EQUATION 2
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
@@ -827,8 +821,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       }); // end parallel for
       Kokkos::fence();
       
-      comm_phi_adjoint_vector(cycle);
-      
       //phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
 
       //half step update for RK2 scheme; EQUATION 3
@@ -850,6 +842,11 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       }); // end parallel for
       Kokkos::fence();
       
+      //apply BCs to adjoint vector, only matters for the momentum adjoint if using strictly velocity boundary conditions
+      boundary_adjoint(*mesh, boundary,midpoint_adjoint_vector, phi_midpoint_adjoint_vector, psi_midpoint_adjoint_vector);
+      comm_adjoint_vector(cycle);
+      comm_phi_adjoint_vector(cycle);
+      
       //save for second half of RK
       (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
 
@@ -860,6 +857,177 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       midpoint_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       phi_midpoint_adjoint_vector =  (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
       psi_midpoint_adjoint_vector =  (*psi_adjoint_vector_data)[cycle]->getLocalView<device_type> (Tpetra::Access::ReadWrite);
+
+      //compute gradients at midpoint
+      FOR_ALL_CLASS(node_gid, 0, nlocal_nodes+nghost_nodes, {
+        for (int idim = 0; idim < num_dim; idim++){
+          node_vel(rk_level,node_gid,idim) = 0.5*(previous_velocity_vector(node_gid,idim)+current_velocity_vector(node_gid,idim));
+          node_coords(rk_level,node_gid,idim) = 0.5*(previous_coordinate_vector(node_gid,idim)+current_coordinate_vector(node_gid,idim));
+        }
+      });
+      Kokkos::fence();
+
+      FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+        elem_sie(rk_level,elem_gid) = 0.5*(previous_element_internal_energy(elem_gid,0)+current_element_internal_energy(elem_gid,0));
+      });
+      Kokkos::fence();
+
+      //set state according to phase data at this timestep
+
+      get_vol();
+
+      // ---- Calculate velocity diveregence for the element ----
+      if(num_dim==2){
+          get_divergence2D(elem_div,
+                          node_coords,
+                          node_vel,
+                          elem_vol);
+      }
+      else {
+          get_divergence(elem_div,
+                        node_coords,
+                        node_vel,
+                        elem_vol);
+      } // end if 2D
+
+      // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
+      if(num_dim==2){
+          update_state2D(material,
+                          *mesh,
+                          node_coords,
+                          node_vel,
+                          elem_den,
+                          elem_pres,
+                          elem_stress,
+                          elem_sspd,
+                          elem_sie,
+                          elem_vol,
+                          elem_mass,
+                          elem_mat_id,
+                          1.0,
+                          cycle);
+      }
+      else{
+          update_state(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_sie,
+                        elem_vol,
+                        elem_mass,
+                        elem_mat_id,
+                        1.0,
+                        cycle);
+      }
+
+      if(num_dim==2){
+            get_force_sgh2D(material,
+                            *mesh,
+                            node_coords,
+                            node_vel,
+                            elem_den,
+                            elem_sie,
+                            elem_pres,
+                            elem_stress,
+                            elem_sspd,
+                            elem_vol,
+                            elem_div,
+                            elem_mat_id,
+                            corner_force,
+                            1.0,
+                            cycle);
+        }
+        else {
+            get_force_sgh(material,
+                        *mesh,
+                        node_coords,
+                        node_vel,
+                        elem_den,
+                        elem_sie,
+                        elem_pres,
+                        elem_stress,
+                        elem_sspd,
+                        elem_vol,
+                        elem_div,
+                        elem_mat_id,
+                        corner_force,
+                        1.0,
+                        cycle);
+        }
+
+      //compute gradient matrices
+      get_force_egradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+
+      get_power_egradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
+
+      get_force_vgradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+      
+      get_power_vgradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
+
+      get_force_ugradient_sgh(material,
+                              *mesh,
+                              node_coords,
+                              node_vel,
+                              elem_den,
+                              elem_sie,
+                              elem_pres,
+                              elem_stress,
+                              elem_sspd,
+                              elem_vol,
+                              elem_div,
+                              elem_mat_id,
+                              1.0,
+                              cycle);
+
+      get_power_ugradient_sgh(1.0,
+                              *mesh,
+                              node_vel,
+                              node_coords,
+                              elem_sie,
+                              elem_mass,
+                              corner_force);
 
       
       //full step update with midpoint gradient for RK2 scheme; EQUATION 1
@@ -892,9 +1060,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       }); // end parallel for
       Kokkos::fence();
 
-      boundary_adjoint(*mesh, boundary,current_adjoint_vector, phi_current_adjoint_vector, psi_midpoint_adjoint_vector);
-      comm_adjoint_vector(cycle);
-
       //full step update with midpoint gradient for RK2 scheme; EQUATION 2
       FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         real_t rate_of_change;
@@ -924,8 +1089,6 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       }); // end parallel for
       Kokkos::fence();
 
-      comm_phi_adjoint_vector(cycle);
-
       //full step update for RK2 scheme; EQUATION 3
       FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
         real_t rate_of_change;
@@ -946,6 +1109,9 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full(){
       }); // end parallel for
       Kokkos::fence();
 
+      boundary_adjoint(*mesh, boundary,current_adjoint_vector, phi_current_adjoint_vector, psi_current_adjoint_vector);
+      comm_adjoint_vector(cycle);
+      comm_phi_adjoint_vector(cycle);
       //save data from time-step completion
       (*psi_adjoint_vector_data)[cycle]->assign(*psi_adjoint_vector_distributed);
 
@@ -1070,7 +1236,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     //multiply by Hex8 constants (the diagonlization here only works for Hex8 anyway)
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
       design_gradients(node_id,0) *=0.5/(double)num_nodes_in_elem/(double)num_nodes_in_elem;
-      //design_gradients(node_id,0) =0.00001;
     }); // end parallel for
     Kokkos::fence();
 
@@ -1195,7 +1360,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
             size_t node_id;
             size_t corner_id;
             real_t inner_product;
-            //std::cout << elem_mass(elem_id) <<std::endl;
 
             psi_dot_current = (next_psi_adjoint_vector(elem_id,0) - current_psi_adjoint_vector(elem_id,0))/global_dt;
             inner_product = elem_mass(elem_id)*(psi_dot_current+psi_dot_current)*current_element_internal_energy(elem_id,0)/2;
@@ -1428,8 +1592,8 @@ void FEA_Module_SGH::init_assembly(){
   current_row_nodes_scanned = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_stride, "current_row_nodes_scanned");
 
   //allocate sparse graph with node repeats
-  RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Repeat_Graph_Matrix(Graph_Matrix_Strides_initial);
-  RaggedRightArrayofVectorsKokkos<size_t, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial,num_dim);
+  RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits> Repeat_Graph_Matrix(Graph_Matrix_Strides_initial);
+  RaggedRightArrayofVectorsKokkos<LO, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial,3);
   
   //Fill the initial Graph with repeats
   if(num_dim == 2){
@@ -1556,7 +1720,7 @@ void FEA_Module_SGH::init_assembly(){
     
   Graph_Matrix_Strides.update_host();
   //copy reduced content to non_repeat storage
-  Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
+  Graph_Matrix = RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
 
   FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
     for(int istride = 0; istride < Graph_Matrix_Strides(inode); istride++){
@@ -1595,7 +1759,7 @@ void FEA_Module_SGH::init_assembly(){
       Kokkos::fence();  
   } // end for elem_gid
   
-  DOF_Graph_Matrix = RaggedRightArrayKokkos<GO, array_layout, device_type, memory_traits>(Gradient_Matrix_Strides);
+  DOF_Graph_Matrix = RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>(Gradient_Matrix_Strides);
   Force_Gradient_Positions = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   Force_Gradient_Velocities = RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout>(Gradient_Matrix_Strides);
   //needs different graph of node to elem rather than node to node
@@ -1705,8 +1869,10 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
                     
                 // Set velocity to zero in that directdion
-                if(bdy_node_gid<nlocal_nodes)
+                if(bdy_node_gid<nlocal_nodes){
                   node_adjoint(bdy_node_gid, direction) = 0.0;
+                  node_phi_adjoint(bdy_node_gid, direction) = 0.0;
+                }
                 //node_phi_adjoint(bdy_node_gid, direction) = 0.0;
                         
             }
@@ -1719,8 +1885,10 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t &mesh,
 
                 for(size_t dim=0; dim < num_dims; dim++){
                     // Set velocity to zero
-                  if(bdy_node_gid<nlocal_nodes)
+                  if(bdy_node_gid<nlocal_nodes){
                     node_adjoint(bdy_node_gid, dim) = 0.0;
+                    node_phi_adjoint(bdy_node_gid, dim) = 0.0;
+                  }
                   //node_phi_adjoint(bdy_node_gid, dim) = 0.0;
                 }
                 
