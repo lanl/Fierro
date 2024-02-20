@@ -55,6 +55,7 @@ jobs:
       #     CACHE_NUMBER: 1
       #   id: cache
 
+      # Will this run with just a comment update?
       - name: Update environment
         run:
           conda env update -n build-env -f .etc/conda_build_environment.yaml
