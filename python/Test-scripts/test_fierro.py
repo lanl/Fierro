@@ -5,7 +5,6 @@ import os.path
 import sys
 import math
 
-ground_truth_path = ""
 
 
 # print("you passed in", len(sys.argv), "argument(s)")
