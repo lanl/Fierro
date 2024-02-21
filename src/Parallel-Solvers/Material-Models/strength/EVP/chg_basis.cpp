@@ -44,6 +44,11 @@
 
 // }
 
+
+// using namespace to avoid collision of functions that are the same in other models like EVPFFT or LS-EVPFFT
+namespace EVP
+{
+
 KOKKOS_FUNCTION
 void chg_basis_1(real_t *CE2_, real_t *C2_, int IOPT, int KDIM, real_t *B_basis_) //ptr) const
 {
@@ -131,6 +136,9 @@ void chg_basis_4(real_t *CE4_, real_t *C4_, int IOPT, int KDIM, real_t *B_basis_
     }
   }
 }
+
+
+} // end namespace EVP
 
 // KOKKOS_FUNCTION
 // real_t* ChgBasis::B_basis_device_pointer() const

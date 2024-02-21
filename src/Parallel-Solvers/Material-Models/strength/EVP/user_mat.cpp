@@ -1,5 +1,9 @@
 #include "user_mat.h"
 
+// using namespace to avoid collision of functions that are the same in other models like EVPFFT or LS-EVPFFT
+namespace EVP
+{
+
 // euler <-> rotation matrix transformation function
 KOKKOS_FUNCTION
 void euler(int iopt, real_t &ph, real_t &th, real_t &tm, real_t *a_){
@@ -381,3 +385,5 @@ void harden(real_t *crss_, real_t &gacumgr, real_t *gamdot_, real_t *voceParam_,
 
     return;
 } // end harden
+
+} // end namespace EVP

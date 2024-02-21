@@ -1,5 +1,10 @@
 #include "user_mat.h"
 
+
+// using namespace to avoid collision of functions that are the same in other models like EVPFFT or LS-EVPFFT
+namespace EVP
+{
+
 // evaluate elasto-viscoplastic crystal plasticity model using Newton-Raphson solve
 KOKKOS_FUNCTION
 void evpal(real_t *stress_, real_t *edotp_, real_t *gamdot_, real_t *stress_n_, real_t *strain_,
@@ -494,3 +499,5 @@ void lubksb(real_t *a_, int n, int np, int *indx_, real_t *b_)
   } // end loop 14
 
 }
+
+} // end namespace EVP

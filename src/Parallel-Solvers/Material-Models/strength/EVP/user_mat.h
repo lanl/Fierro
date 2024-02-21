@@ -17,6 +17,10 @@ using real_t = double;
 
 //     void set_b_basis();
 
+// using namespace to avoid collision of functions that are the same in other models like EVPFFT or LS-EVPFFT
+namespace EVP
+{
+
     KOKKOS_FUNCTION
     void chg_basis_1(real_t *CE2_, real_t *C2_, int IOPT, int KDIM, real_t *B_basis_);//ptr) const;
 
@@ -73,3 +77,5 @@ void orient(real_t *a_, real_t *c_);
 
 KOKKOS_FUNCTION
 void harden(real_t *crss_, real_t &gacumgr, real_t *gamdot_, real_t *voceParam_, real_t *hard_, const int nsm, const real_t dt);
+
+} // end namespace EVP

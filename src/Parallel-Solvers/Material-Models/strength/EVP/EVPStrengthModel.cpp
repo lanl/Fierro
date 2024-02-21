@@ -43,6 +43,8 @@ namespace EVPStrengthModel
     initialization location leading to overwriting of data.
     */
 
+    using namespace EVP;
+
     // for the reason given in the opening comment we will create a state_var,
     // populate it as needed and copy needed data to strength_state_vars
     DCArrayKokkos <double> state_vars (strength_state_vars.dims(0), strength_state_vars.dims(1));
@@ -484,6 +486,9 @@ namespace EVPStrengthModel
     const size_t rk_level,
     const double time)
   {
+    
+    using namespace EVP;
+
     // ChgBasis cb;
 
     // -----------------------------------------------------------------------------
