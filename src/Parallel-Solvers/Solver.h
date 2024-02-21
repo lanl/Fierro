@@ -207,6 +207,7 @@ public:
     Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits> ghost_nodes;
     Kokkos::DualView<int*, array_layout, device_type, memory_traits>      ghost_node_ranks;
 
+
     // Node set corresponding to uniquely assigned list of elements on this MPI rank
     size_t nnonoverlap_elem_nodes;
     Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits> nonoverlap_elem_nodes;
@@ -262,6 +263,7 @@ public:
     int    current_bdy_id;
     CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
     std::map<Node_Combination, LO> boundary_patch_to_index; // maps patches to corresponding patch index (inverse of Boundary Patches array)
+
 
     // file readin variables
     std::ifstream* in = NULL;

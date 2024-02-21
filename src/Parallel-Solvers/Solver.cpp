@@ -2081,227 +2081,131 @@ void Solver::read_mesh_tecplot(const char* MESH)
             }
             exit_solver(0);
         }
-            << << << < HEAD
-            global_indices_temp[rnum_elem - 1] = elem_gid;
-    }
-}
-
-read_index_start += BUFFER_LINES;
-}
-
-// Close mesh input file
-if (myrank == 0)
-{
-    in->close();
-}
-
-std::cout << "RNUM ELEMENTS IS: " << rnum_elem << std::endl;
-// copy temporary element storage to multivector storage
-Element_Types = CArrayKokkos<elements::elem_types::elem_type, array_layout, HostSpace, memory_traits>(rnum_elem);
-
-elements::elem_types::elem_type mesh_element_type;
-
-if (simparam.num_dims == 2)
-{
-    if (input_options.element_type == ELEMENT_TYPE::quad4)
-    {
-        mesh_element_type = elements::elem_types::Quad4;
-        max_nodes_per_patch = 2;
-    }
-    else if (input_options.element_type == ELEMENT_TYPE::quad8)
-    {
-        mesh_element_type = elements::elem_types::Quad8;
-        max_nodes_per_patch = 3;
-    }
-    else if (input_options.element_type == ELEMENT_TYPE::quad12)
-    {
-        mesh_element_type = elements::elem_types::Quad12;
-        max_nodes_per_patch = 4;
-    }
-    else
-    {
-        if (myrank == 0)
-        {
-            std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
-        }
-        exit_solver(0);
-    }
-    element_select->choose_2Delem_type(mesh_element_type, elem2D);
-    max_nodes_per_element = elem2D->num_nodes();
-}
-
-if (simparam.num_dims == 3)
-{
-    if (input_options.element_type == ELEMENT_TYPE::hex8)
-    {
-        mesh_element_type = elements::elem_types::Hex8;
-        max_nodes_per_patch = 4;
-    }
-    else if (input_options.element_type == ELEMENT_TYPE::hex20)
-    {
-        mesh_element_type = elements::elem_types::Hex20;
-        max_nodes_per_patch = 8;
-    }
-    else if (input_options.element_type == ELEMENT_TYPE::hex32)
-    {
-        mesh_element_type = elements::elem_types::Hex32;
-        max_nodes_per_patch = 12;
-    }
-    else
-    {
-        if (myrank == 0)
-        {
-            std::cout << "ELEMENT TYPE UNRECOGNIZED" << std::endl;
-        }
-        exit_solver(0);
-    }
-    element_select->choose_3Delem_type(mesh_element_type, elem);
-    max_nodes_per_element = elem->num_nodes();
-}
-
-// 1 type per mesh for now
-for (int ielem = 0; ielem < rnum_elem; ielem++)
-{
-    Element_Types(ielem) = mesh_element_type;
-}
-
-dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
-dual_nodes_in_elem.modify_host();
-
-for (int ielem = 0; ielem < rnum_elem; ielem++)
-{
-    for (int inode = 0; inode < elem_words_per_line; inode++)
-    {
-        nodes_in_elem(ielem, inode) = element_temp[ielem * elem_words_per_line + inode];
-        == == == =
-            element_select->choose_3Delem_type(mesh_element_type, elem);
+        element_select->choose_3Delem_type(mesh_element_type, elem);
         max_nodes_per_element = elem->num_nodes();
-        >> >> >> > f635e485(STYLE: Uncrustify Parallel - Explicit solvers)
     }
-}
 
-dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
-host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
-dual_nodes_in_elem.modify_host();
+    dual_nodes_in_elem = dual_elem_conn_array("dual_nodes_in_elem", rnum_elem, max_nodes_per_element);
+    host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
+    dual_nodes_in_elem.modify_host();
 
-for (int ielem = 0; ielem < rnum_elem; ielem++)
-{
-    for (int inode = 0; inode < elem_words_per_line; inode++)
+    for (int ielem = 0; ielem < rnum_elem; ielem++)
     {
-        nodes_in_elem(ielem, inode) = element_temp[ielem * elem_words_per_line + inode];
-    }
-}
-
-// view storage for all local elements connected to local nodes on this rank
-Kokkos::DualView<GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices", rnum_elem);
-// copy temporary global indices storage to view storage
-for (int ielem = 0; ielem < rnum_elem; ielem++)
-{
-    All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
-    if (global_indices_temp[ielem] < 0)
-    {
-        negative_index_found = 1;
-    }
-}
-
-MPI_Allreduce(&negative_index_found, &global_negative_index_found, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-if (global_negative_index_found)
-{
-    if (myrank == 0)
-    {
-        std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
-    }
-    exit_solver(0);
-}
-
-// delete temporary element connectivity and index storage
-std::vector<size_t>().swap(element_temp);
-std::vector<size_t>().swap(global_indices_temp);
-
-All_Element_Global_Indices.modify_host();
-All_Element_Global_Indices.sync_device();
-
-// construct overlapping element map (since different ranks can own the same elements due to the local node map)
-all_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), All_Element_Global_Indices.d_view, 0, comm));
-
-// element type selection (subject to change)
-// ---- Set Element Type ---- //
-// allocate element type memory
-// elements::elem_type_t* elem_choice;
-
-int NE = 1;     // number of element types in problem
-
-// Convert ijk index system to the finite element numbering convention
-// for vertices in cell
-if (active_node_ordering_convention == IJK)
-{
-    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
-    CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
-    convert_ensight_to_ijk(0) = 0;
-    convert_ensight_to_ijk(1) = 1;
-    convert_ensight_to_ijk(2) = 3;
-    convert_ensight_to_ijk(3) = 2;
-    convert_ensight_to_ijk(4) = 4;
-    convert_ensight_to_ijk(5) = 5;
-    convert_ensight_to_ijk(6) = 7;
-    convert_ensight_to_ijk(7) = 6;
-
-    int nodes_per_element;
-
-    if (num_dim == 2)
-    {
-        for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++)
+        for (int inode = 0; inode < elem_words_per_line; inode++)
         {
-            // set nodes per element
-            element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
-            nodes_per_element = elem2D->num_nodes();
-            for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
-            {
-                tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-            }
+            nodes_in_elem(ielem, inode) = element_temp[ielem * elem_words_per_line + inode];
+        }
+    }
 
-            for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
+    // view storage for all local elements connected to local nodes on this rank
+    Kokkos::DualView<GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices", rnum_elem);
+    // copy temporary global indices storage to view storage
+    for (int ielem = 0; ielem < rnum_elem; ielem++)
+    {
+        All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
+        if (global_indices_temp[ielem] < 0)
+        {
+            negative_index_found = 1;
+        }
+    }
+
+    MPI_Allreduce(&negative_index_found, &global_negative_index_found, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+    if (global_negative_index_found)
+    {
+        if (myrank == 0)
+        {
+            std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+        }
+        exit_solver(0);
+    }
+
+    // delete temporary element connectivity and index storage
+    std::vector<size_t>().swap(element_temp);
+    std::vector<size_t>().swap(global_indices_temp);
+
+    All_Element_Global_Indices.modify_host();
+    All_Element_Global_Indices.sync_device();
+
+    // construct overlapping element map (since different ranks can own the same elements due to the local node map)
+    all_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(Teuchos::OrdinalTraits<GO>::invalid(), All_Element_Global_Indices.d_view, 0, comm));
+
+    // element type selection (subject to change)
+    // ---- Set Element Type ---- //
+    // allocate element type memory
+    // elements::elem_type_t* elem_choice;
+
+    int NE = 1; // number of element types in problem
+
+    // Convert ijk index system to the finite element numbering convention
+    // for vertices in cell
+    if (active_node_ordering_convention == IJK)
+    {
+        CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_ensight_to_ijk(max_nodes_per_element);
+        CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> tmp_ijk_indx(max_nodes_per_element);
+        convert_ensight_to_ijk(0) = 0;
+        convert_ensight_to_ijk(1) = 1;
+        convert_ensight_to_ijk(2) = 3;
+        convert_ensight_to_ijk(3) = 2;
+        convert_ensight_to_ijk(4) = 4;
+        convert_ensight_to_ijk(5) = 5;
+        convert_ensight_to_ijk(6) = 7;
+        convert_ensight_to_ijk(7) = 6;
+
+        int nodes_per_element;
+
+        if (num_dim == 2)
+        {
+            for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++)
             {
-                nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
+                // set nodes per element
+                element_select->choose_2Delem_type(Element_Types(cell_rid), elem2D);
+                nodes_per_element = elem2D->num_nodes();
+                for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
+                {
+                    tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
+                }
+
+                for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
+                {
+                    nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
+                }
+            }
+        }
+
+        if (num_dim == 3)
+        {
+            for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++)
+            {
+                // set nodes per element
+                element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
+                nodes_per_element = elem->num_nodes();
+                for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
+                {
+                    tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
+                }
+
+                for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
+                {
+                    nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
+                }
             }
         }
     }
 
-    if (num_dim == 3)
-    {
-        for (int cell_rid = 0; cell_rid < rnum_elem; cell_rid++)
-        {
-            // set nodes per element
-            element_select->choose_3Delem_type(Element_Types(cell_rid), elem);
-            nodes_per_element = elem->num_nodes();
-            for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
-            {
-                tmp_ijk_indx(node_lid) = nodes_in_elem(cell_rid, convert_ensight_to_ijk(node_lid));
-            }
+    // debug print element edof
 
-            for (int node_lid = 0; node_lid < nodes_per_element; node_lid++)
-            {
-                nodes_in_elem(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
-            }
-        }
-    }
-}
+    // std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
 
-// debug print element edof
+    // for (int ielem = 0; ielem < rnum_elem; ielem++){
+    // std::cout << "elem:  " << ielem+1 << std::endl;
+    // for (int lnode = 0; lnode < 8; lnode++){
+    // std::cout << "{ ";
+    // std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
 
-// std::cout << " ------------ELEMENT EDOF ON TASK " << myrank << " --------------"<<std::endl;
-
-// for (int ielem = 0; ielem < rnum_elem; ielem++){
-// std::cout << "elem:  " << ielem+1 << std::endl;
-// for (int lnode = 0; lnode < 8; lnode++){
-// std::cout << "{ ";
-// std::cout << lnode+1 << " = " << nodes_in_elem(ielem,lnode) + 1 << " ";
-
-// std::cout << " }"<< std::endl;
-// }
-// std::cout << std::endl;
-// }
+    // std::cout << " }"<< std::endl;
+    // }
+    // std::cout << std::endl;
+    // }
 } // end read_mesh
 
 /* ----------------------------------------------------------------------
@@ -2310,14 +2214,14 @@ if (active_node_ordering_convention == IJK)
 
 void Solver::repartition_nodes()
 {
-    char ch;
-    int num_dim = simparam.num_dims;
-    int local_node_index, current_column_index;
-    size_t strain_count;
-    std::stringstream line_parse;
+    char                                                       ch;
+    int                                                        num_dim = simparam.num_dims;
+    int                                                        local_node_index, current_column_index;
+    size_t                                                     strain_count;
+    std::stringstream                                          line_parse;
     CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-    int nodes_per_element;
-    GO node_gid;
+    int                                                        nodes_per_element;
+    GO                                                         node_gid;
 
     // construct input adapted needed by Zoltan2 problem
     typedef Xpetra::MultiVector<real_t, LO, GO, node_type> xvector_t;
@@ -2325,7 +2229,8 @@ void Solver::repartition_nodes()
     typedef Zoltan2::EvaluatePartition<inputAdapter_t> quality_t;
 
     Teuchos::RCP<xvector_t> xpetra_node_coords = Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t, LO, GO, node_type>(node_coords_distributed));
-    Teuchos::RCP<inputAdapter_t> problem_adapter    =  Teuchos::rcp(new inputAdapter_t(xpetra_node_coords));
+
+    Teuchos::RCP<inputAdapter_t> problem_adapter =  Teuchos::rcp(new inputAdapter_t(xpetra_node_coords));
 
     // Create parameters for an RCB problem
 
@@ -2376,13 +2281,17 @@ void Solver::repartition_nodes()
     delete metricObject1;
 
     // migrate rows of the vector so they correspond to the partition recommended by Zoltan2
-    Teuchos::RCP<MV> partitioned_node_coords_distributed  = Teuchos::rcp(new MV(map, num_dim));
+
+    Teuchos::RCP<MV> partitioned_node_coords_distributed = Teuchos::rcp(new MV(map, num_dim));
+
     Teuchos::RCP<xvector_t> xpartitioned_node_coords_distributed =
         Teuchos::rcp(new Xpetra::TpetraMultiVector<real_t, LO, GO, node_type>(partitioned_node_coords_distributed));
 
     problem_adapter->applyPartitioningSolution(*xpetra_node_coords, xpartitioned_node_coords_distributed, problem->getSolution());
     *partitioned_node_coords_distributed = Xpetra::toTpetra<real_t, LO, GO, node_type>(*xpartitioned_node_coords_distributed);
+
     Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> partitioned_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(*(partitioned_node_coords_distributed->getMap())));
+
     Teuchos::RCP<const Tpetra::Map<LO, GO, node_type>> partitioned_map_one_to_one;
     partitioned_map_one_to_one = Tpetra::createOneToOne<LO, GO, node_type>(partitioned_map);
     Teuchos::RCP<MV> partitioned_node_coords_one_to_one_distributed = Teuchos::rcp(new MV(partitioned_map_one_to_one, num_dim));
@@ -2417,10 +2326,11 @@ void Solver::repartition_nodes()
 void Solver::init_maps()
 {
     char ch;
-    int num_dim = simparam.num_dims;
-    int local_node_index, current_column_index;
-    int nodes_per_element;
-    GO node_gid;
+    int  num_dim = simparam.num_dims;
+    int  local_node_index, current_column_index;
+    int  nodes_per_element;
+    GO   node_gid;
+
     host_elem_conn_array nodes_in_elem = dual_nodes_in_elem.view_host();
 
     if (rnum_elem >= 1)
@@ -2446,6 +2356,7 @@ void Solver::init_maps()
         }
 
         CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> ghost_node_buffer(buffer_limit);
+
         std::set<GO> ghost_node_set;
 
         // search through local elements for global node indices not owned by this MPI rank
@@ -2487,11 +2398,13 @@ void Solver::init_maps()
 
         // by now the set contains, with no repeats, all the global node indices that are ghosts for this rank
         // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
-        nghost_nodes = ghost_node_set.size();
-        ghost_nodes = Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits>("ghost_nodes", nghost_nodes);
+
+        nghost_nodes     = ghost_node_set.size();
+        ghost_nodes      = Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits>("ghost_nodes", nghost_nodes);
         ghost_node_ranks = Kokkos::DualView<int*, array_layout, device_type, memory_traits>("ghost_node_ranks", nghost_nodes);
-        int ighost = 0;
-        auto it = ghost_node_set.begin();
+        int  ighost = 0;
+        auto it     = ghost_node_set.begin();
+
         while (it != ghost_node_set.end()) {
             ghost_nodes.h_view(ighost++) = *it;
             it++;
@@ -2505,7 +2418,9 @@ void Solver::init_maps()
         // find which mpi rank each ghost node belongs to and store the information in a CArrayKokkos
         // allocate Teuchos Views since they are the only input available at the moment in the map definitions
         Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.h_view.data(), nghost_nodes);
+
         Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.h_view.data(), nghost_nodes);
+
         map->getRemoteIndexList(ghost_nodes_pass, ghost_node_ranks_pass);
 
         // debug print of ghost nodes
@@ -2555,8 +2470,10 @@ void Solver::init_maps()
 
     // local elements belonging to the non-overlapping element distribution to each rank with buffer
     Kokkos::DualView<GO*, array_layout, device_type, memory_traits> Initial_Element_Global_Indices("Initial_Element_Global_Indices", rnum_elem);
+
     size_t nonoverlapping_count = 0;
-    int my_element_flag;
+    int    my_element_flag;
+
     // loop through local element set
     if (num_dim == 2)
     {
@@ -2564,6 +2481,7 @@ void Solver::init_maps()
         {
             element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
             nodes_per_element = elem2D->num_nodes();
+
             my_element_flag = 1;
             for (int lnode = 0; lnode < nodes_per_element; lnode++)
             {
@@ -2590,7 +2508,9 @@ void Solver::init_maps()
         {
             element_select->choose_3Delem_type(Element_Types(ielem), elem);
             nodes_per_element = elem->num_nodes();
+
             my_element_flag = 1;
+
             for (int lnode = 0; lnode < nodes_per_element; lnode++)
             {
                 node_gid = nodes_in_elem(ielem, lnode);
@@ -2634,8 +2554,10 @@ void Solver::init_maps()
 
     // re-sort so local elements in the nonoverlapping map are first in storage
     CArrayKokkos<GO, array_layout, HostSpace, memory_traits> Temp_Nodes(max_nodes_per_element);
-    GO temp_element_gid, current_element_gid;
+
+    GO  temp_element_gid, current_element_gid;
     int last_storage_index = rnum_elem - 1;
+
     for (int ielem = 0; ielem < nlocal_elem_non_overlapping; ielem++)
     {
         current_element_gid = Initial_Element_Global_Indices.h_view(ielem);
@@ -2704,7 +2626,9 @@ void Solver::init_maps()
 
     // debug print of map
     // debug print
+
     std::ostream& out = std::cout;
+
     Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
     // if(myrank==0)
     // *fos << "Ghost Node Map :" << std::endl;
@@ -2736,7 +2660,8 @@ void Solver::init_maps()
     }
 
     // create distributed multivector of the local node data and all (local + ghost) node storage
-    all_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+
+    all_node_coords_distributed   = Teuchos::rcp(new MV(all_node_map, num_dim));
     ghost_node_coords_distributed = Teuchos::rcp(new MV(ghost_node_map, num_dim));
 
     // create import object using local node indices map and all indices map
@@ -2790,8 +2715,8 @@ void Solver::init_maps()
         // by now the set contains, with no repeats, all the global node indices belonging to the non overlapping element list on this MPI rank
         // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
         nnonoverlap_elem_nodes = nonoverlap_elem_node_set.size();
-        nonoverlap_elem_nodes = Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits>("nonoverlap_elem_nodes", nnonoverlap_elem_nodes);
-        int inonoverlap_elem_node = 0;
+        nonoverlap_elem_nodes  = Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits>("nonoverlap_elem_nodes", nnonoverlap_elem_nodes);
+        int  inonoverlap_elem_node = 0;
         auto it = nonoverlap_elem_node_set.begin();
         while (it != nonoverlap_elem_node_set.end()) {
             nonoverlap_elem_nodes.h_view(inonoverlap_elem_node++) = *it;
@@ -2817,16 +2742,18 @@ void Solver::init_maps()
 
 void Solver::Get_Boundary_Patches()
 {
-    size_t npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
-    int local_node_id;
-    int num_dim = simparam.num_dims;
+    size_t     npatches_repeat, npatches, element_npatches, num_nodes_in_patch, node_gid;
+    int        local_node_id;
+    int        num_dim = simparam.num_dims;
     CArray<GO> Surface_Nodes;
+
     const_host_elem_conn_array nodes_in_elem = global_nodes_in_elem_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     // Surface_Nodes = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(4, "Surface_Nodes");
 
     std::set<Node_Combination> my_patches;
     // inititializes type for the pair variable (finding the iterator type is annoying)
     std::pair<std::set<Node_Combination>::iterator, bool> current_combination;
+
     std::set<Node_Combination>::iterator it;
 
     CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
@@ -2883,7 +2810,9 @@ void Solver::Get_Boundary_Patches()
     // std::cout << "Starting boundary patch allocation of size " << npatches_repeat << std::endl <<std::flush;
     // information for all patches on this rank
     CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Patch_Nodes(npatches_repeat, "Patch_Nodes");
+
     CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> Patch_Boundary_Flags(npatches_repeat, "Patch_Boundary_Flags");
+
     if (myrank == 0)
     {
         std::cout << "Done with boundary patch allocation" << std::endl << std::flush;
@@ -3009,7 +2938,9 @@ void Solver::Get_Boundary_Patches()
     // upper bound that is not much larger
     Boundary_Patches  = CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits>(nboundary_patches, "Boundary_Patches");
     nboundary_patches = 0;
+
     bool my_rank_flag;
+
     size_t remote_count;
     for (int ipatch = 0 ; ipatch < npatches_repeat; ipatch++)
     {
@@ -3109,9 +3040,11 @@ void Solver::comm_coordinates()
 double Solver::CPU_Time()
 {
     std::chrono::system_clock::time_point zero_time;
+
     auto zero_time_duration = zero_time.time_since_epoch();
     auto time = std::chrono::system_clock::now();
     auto time_duration = time.time_since_epoch();
+
     // double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_duration - zero_time_duration).count();
     calc_time *= 1e-09;
