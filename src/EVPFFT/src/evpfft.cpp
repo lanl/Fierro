@@ -148,8 +148,14 @@ void EVPFFT::init_after_reading_input_data()
     init_xk_gb();
     init_disgradmacro();
     init_ept();
-    init_sg();
     init_evm();
+
+// the variables initialized in the funcitons below are reduced into
+// and should be done once, hence the need for #if guard since the variables
+// needs to be initialized after udot and dt are know from fierro
+#ifndef BUILD_EVPFFT_FIERRO
+    init_sg();
+#endif
 }
 
 void EVPFFT::init_xk_gb()
