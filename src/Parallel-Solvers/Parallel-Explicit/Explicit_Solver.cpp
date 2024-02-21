@@ -1338,30 +1338,28 @@ void Explicit_Solver::setup_optimization_problem()
     // ROL::Ptr<ROL::Vector<double>>     emul = ROL::makePtr<MyEqualityConstraintMultiplier<double>>();
     // problem.addConstraint("Equality Constraint",econ,emul);
 
-    //debug checks
-    ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_x =
-    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
-    //construct direction vector for check
+    // debug checks
+    ROL::Ptr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>> rol_x =
+        ROL::makePtr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>>(design_node_densities_distributed);
+    // construct direction vector for check
     Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
     directions_distributed->putScalar(-0.1);
-    directions_distributed->randomize(-0.8,1);
-    Kokkos::View <real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm",1);
+    directions_distributed->randomize(-0.8, 1);
+    Kokkos::View<real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm", 1);
     directions_distributed->norm2(direction_norm);
-    directions_distributed->scale(1/direction_norm(0));
-    //set all but first component to 0 for debug
-    host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
-    //for(int init = 1; init < nlocal_nodes; init++)
-    //directions(4,0) = -0.3;
-    ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
-    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
+    directions_distributed->scale(1 / direction_norm(0));
+    // set all but first component to 0 for debug
+    host_vec_array directions = directions_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+    // for(int init = 1; init < nlocal_nodes; init++)
+    // directions(4,0) = -0.3;
+    ROL::Ptr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>> rol_d =
+        ROL::makePtr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>>(directions_distributed);
     obj->checkGradient(*rol_x, *rol_d);
-    //obj->checkHessVec(*rol_x, *rol_d);
-    //directions_distributed->putScalar(-0.000001);
-    //obj->checkGradient(*rol_x, *rol_d);
-    //directions_distributed->putScalar(-0.0000001);
-    //obj->checkGradient(*rol_x, *rol_d);
-  
-
+    // obj->checkHessVec(*rol_x, *rol_d);
+    // directions_distributed->putScalar(-0.000001);
+    // obj->checkGradient(*rol_x, *rol_d);
+    // directions_distributed->putScalar(-0.0000001);
+    // obj->checkGradient(*rol_x, *rol_d);
 
     // ROL::Ptr<ROL::Constraint<real_t>> ineq_constraint = ROL::makePtr<MassConstraint_TopOpt>(fea_elasticity, nodal_density_flag);
     // problem->addConstraint("Inequality Constraint",ineq_constraint,constraint_mul,constraint_bnd);
@@ -2208,12 +2206,14 @@ void Explicit_Solver::parallel_tecplot_writer()
 
     // output nodal data
     // compute buffer output size and file stream offset for this MPI rank
-    int                                                        default_vector_count      = 2;
-    int                                                        buffer_size_per_node_line = 26 * default_vector_count * num_dim + 1; // 25 width per number + 1 space times 6 entries plus line terminator
-    int                                                        nlocal_sorted_nodes       = sorted_map->getLocalNumElements();
-    GO                                                         first_node_global_id      = sorted_map->getGlobalElement(0);
+    int default_vector_count      = 2;
+    int buffer_size_per_node_line = 26 * default_vector_count * num_dim + 1; // 25 width per number + 1 space times 6 entries plus line terminator
+    int nlocal_sorted_nodes       = sorted_map->getLocalNumElements();
+    GO  first_node_global_id      = sorted_map->getGlobalElement(0);
+
     CArrayKokkos<char, array_layout, HostSpace, memory_traits> print_buffer(buffer_size_per_node_line * nlocal_sorted_nodes);
-    MPI_Offset                                                 file_stream_offset = buffer_size_per_node_line * first_node_global_id;
+
+    MPI_Offset file_stream_offset = buffer_size_per_node_line * first_node_global_id;
 
     // populate buffer
     long long current_buffer_position = 0;
@@ -2845,21 +2845,25 @@ void Explicit_Solver::parallel_vtk_writer()
 
 void Explicit_Solver::tecplot_writer()
 {
-    int                  num_dim = simparam.num_dims;
-    std::string          current_file_name;
-    std::string          base_file_name = "TecplotTO";
-    std::string          base_file_name_undeformed = "TecplotTO_undeformed";
-    std::stringstream    ss;
-    std::string          file_extension = ".dat";
-    std::string          file_count;
-    std::stringstream    count_temp;
-    int                  time_step = 0;
-    int                  temp_convert;
-    int                  noutput, nvector;
-    bool                 displace_geometry = false;
+    int  num_dim   = simparam.num_dims;
+    int  time_step = 0;
+    int  temp_convert;
+    int  noutput, nvector;
+    bool displace_geometry = false;
+    int  displacement_index;
+
+    std::string       current_file_name;
+    std::string       base_file_name = "TecplotTO";
+    std::string       base_file_name_undeformed = "TecplotTO_undeformed";
+    std::string       file_extension = ".dat";
+    std::string       file_count;
+    std::stringstream count_temp;
+    std::stringstream ss;
+
     const_host_vec_array current_collected_output;
-    int                  displacement_index;
+
     collect_information();
+
     // set host views of the collected data to print out from
     const_host_vec_array collected_node_coords     = collected_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     const_host_vec_array collected_node_velocities = collected_node_velocities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);

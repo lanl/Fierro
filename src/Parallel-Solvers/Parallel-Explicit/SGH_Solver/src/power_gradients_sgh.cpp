@@ -343,8 +343,8 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double                           rk
                         {
                             continue;
                         }
-                        Power_Gradient_Positions(gradient_node_id * num_dims + jdim, column_id) -= corner_gradient_storage(corner_gid, dim, igradient, jdim) * node_vel(rk_level, node_gid,
-                        dim) * node_radius;
+                        Power_Gradient_Positions(gradient_node_id * num_dims + jdim, column_id) -=
+                            corner_gradient_storage(corner_gid, dim, igradient, jdim) * node_vel(rk_level, node_gid, dim) * node_radius;
                     }
                 }
             } // end for dim
@@ -420,14 +420,14 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double                           rk
                     }
                     if (node_lid == igradient)
                     {
-                        Power_Gradient_Velocities(gradient_node_id * num_dims + dim, column_id) -= corner_gradient_storage(corner_gid, dim, igradient, dim) * node_vel(rk_level, node_gid,
-                        dim) * node_radius +
-                                                                                                   corner_force(corner_gid, dim) * node_radius;
+                        Power_Gradient_Velocities(gradient_node_id * num_dims + dim, column_id) -=
+                            corner_gradient_storage(corner_gid, dim, igradient, dim) * node_vel(rk_level, node_gid, dim)
+                            * node_radius + corner_force(corner_gid, dim) * node_radius;
                     }
                     else
                     {
-                        Power_Gradient_Velocities(gradient_node_id * num_dims + dim, column_id) -= corner_gradient_storage(corner_gid, dim, igradient, dim) * node_vel(rk_level, node_gid,
-                        dim) * node_radius;
+                        Power_Gradient_Velocities(gradient_node_id * num_dims + dim, column_id) -=
+                            corner_gradient_storage(corner_gid, dim, igradient, dim) * node_vel(rk_level, node_gid, dim) * node_radius;
                     }
                 }
             } // end for dim
