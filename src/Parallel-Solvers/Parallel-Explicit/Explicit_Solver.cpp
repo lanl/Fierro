@@ -1579,22 +1579,22 @@ void Explicit_Solver::setup_optimization_problem()
     // problem->check(true,std::cout);
 
     // debug checks
-    ROL::Ptr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>> rol_x =
-        ROL::makePtr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>>(design_node_densities_distributed);
-    // construct direction vector for check
-    Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
-    directions_distributed->putScalar(-0.1);
-    directions_distributed->randomize(-0.8, 1);
-    Kokkos::View<real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm", 1);
-    directions_distributed->norm2(direction_norm);
-    directions_distributed->scale(1 / direction_norm(0));
-    // set all but first component to 0 for debug
-    host_vec_array directions = directions_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-    // for(int init = 1; init < nlocal_nodes; init++)
-    // directions(4,0) = -0.3;
-    ROL::Ptr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>> rol_d =
-        ROL::makePtr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>>(directions_distributed);
-    obj->checkGradient(*rol_x, *rol_d);
+    // ROL::Ptr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>> rol_x =
+    //     ROL::makePtr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>>(design_node_densities_distributed);
+    // // construct direction vector for check
+    // Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
+    // directions_distributed->putScalar(-0.1);
+    // directions_distributed->randomize(-0.8, 1);
+    // Kokkos::View<real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm", 1);
+    // directions_distributed->norm2(direction_norm);
+    // directions_distributed->scale(1 / direction_norm(0));
+    // // set all but first component to 0 for debug
+    // host_vec_array directions = directions_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+    // // for(int init = 1; init < nlocal_nodes; init++)
+    // // directions(4,0) = -0.3;
+    // ROL::Ptr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>> rol_d =
+    //     ROL::makePtr<ROL::TpetraMultiVector<real_t, LO, GO, node_type>>(directions_distributed);
+    // obj->checkGradient(*rol_x, *rol_d);
     // obj->checkHessVec(*rol_x, *rol_d);
     // directions_distributed->putScalar(-0.000001);
     // obj->checkGradient(*rol_x, *rol_d);
