@@ -908,7 +908,7 @@ void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_v
 
   //initialize design gradients to 0
   for(int init = 0; init < nlocal_nodes; init++)
-    design_gradients(init,moment_component) = 0;
+    design_gradients(init,0) = 0;
 
   //loop over elements and use quadrature rule to compute volume from Jacobian determinant
   for(int ielem = 0; ielem < rnum_elem; ielem++){
@@ -1047,7 +1047,7 @@ void FEA_Module_Inertial::compute_moment_gradients(const_host_vec_array design_v
       for(int node_loop=0; node_loop < elem->num_basis(); node_loop++){
         if(map->isNodeGlobalElement(nodes_in_elem(ielem, node_loop))){
           local_node_id = map->getLocalElement(nodes_in_elem(ielem, node_loop));
-            design_gradients(local_node_id,moment_component)+=weight_multiply*basis_values(node_loop)*current_position(moment_component)*Jacobian;
+            design_gradients(local_node_id,0)+=weight_multiply*basis_values(node_loop)*current_position(moment_component)*Jacobian;
         }
       }
     }

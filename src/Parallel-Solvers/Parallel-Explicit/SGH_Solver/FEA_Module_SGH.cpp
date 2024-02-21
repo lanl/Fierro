@@ -1094,7 +1094,6 @@ void FEA_Module_SGH::setup(){
                     global_vars,
                     elem_user_output_vars,
                     rnum_elem);
-    state_vars.update_device();
  
     // initialize strength model
     init_strength_model(elem_strength,
@@ -1420,7 +1419,7 @@ void FEA_Module_SGH::setup(){
     //initialize if topology optimization is used
     if(simparam->topology_optimization_on || simparam->shape_optimization_on){
       init_assembly();
-      assemble_matrix();
+      //assemble_matrix();
     }
 
     // update host copies of arrays modified in this function
@@ -2018,14 +2017,12 @@ void FEA_Module_SGH::sgh_solve(){
             // ---- Calculate velocity diveregence for the element ----
             if(num_dim==2){
                 get_divergence2D(elem_div,
-                                 *mesh,
                                  node_coords,
                                  node_vel,
                                  elem_vol);
             }
             else {
                 get_divergence(elem_div,
-                               *mesh,
                                node_coords,
                                node_vel,
                                elem_vol);
@@ -2104,7 +2101,6 @@ void FEA_Module_SGH::sgh_solve(){
 
             // ---- Update nodal velocities ---- //
             update_velocity_sgh(rk_alpha,
-                              *mesh,
                               node_vel,
                               node_mass,
                               corner_force);
