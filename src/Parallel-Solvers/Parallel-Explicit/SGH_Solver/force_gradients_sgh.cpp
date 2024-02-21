@@ -267,7 +267,6 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
                 muc(node_lid) = elem_den(elem_gid) *
                                (material(mat_id).q1ex*elem_sspd(elem_gid) + material(mat_id).q2ex*mag_vel);
             } // end if on divergence sign
-           
 
             size_t use_shock_dir = 0;
             double mu_term;
@@ -940,7 +939,6 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
       }
     }); // end parallel for loop over nodes
     Kokkos::fence();
-
     // --- calculate the forces acting on the nodes from the element ---
     for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++){
     //FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
@@ -964,7 +962,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
         
         // the sums in the Riemann solver
         double sum_array[4];
-        double sum_gradient_array[4*max_nodes_per_element*num_dim];
+        double sum_gradient_array[4*max_nodes_per_element*num_dims];
         
         // corner shock impeadance x |corner area normal dot shock_dir|
         double muc_array[8];
@@ -980,7 +978,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
         // --- Create views of arrays to aid the force calculation ---
     
         ViewCArrayKokkos <double> tau(tau_array, num_dims, num_dims);
-        ViewCArrayKokkos <double> tau_gradient(tau_gradient_array, num_dims, num_dims,max_nodes_per_element, num_dims);
+        ViewCArrayKokkos <double> tau_gradient(tau_gradient_array, num_dims, num_dims, max_nodes_per_element, num_dims);
         ViewCArrayKokkos <double> volume_gradients(volume_gradients_array, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> area_normal(area_normal_array, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> area_normal_gradients(area_normal_gradients_array, num_nodes_in_elem, num_dims, num_nodes_in_elem, num_dims);

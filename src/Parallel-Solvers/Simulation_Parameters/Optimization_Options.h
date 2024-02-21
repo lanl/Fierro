@@ -22,13 +22,14 @@ SERIALIZABLE_ENUM(TO_MODULE_TYPE,
   Heat_Capacity_Potential_Constraint,
   MULTI_OBJECTIVE_TERM,
   Thermo_Elastic_Strain_Energy_Minimize,
-  Strain_Energy_Constraint
+  Strain_Energy_Constraint,
+  Displacement_Constraint
 )
 
 
 SERIALIZABLE_ENUM(OPTIMIZATION_PROCESS, none, topology_optimization, shape_optimization)
 SERIALIZABLE_ENUM(OPTIMIZATION_OBJECTIVE, none, minimize_kinetic_energy, multi_objective, minimize_compliance, minimize_thermal_resistance)
-SERIALIZABLE_ENUM(CONSTRAINT_TYPE, mass, moment_of_inertia, center_of_mass)
+SERIALIZABLE_ENUM(CONSTRAINT_TYPE, mass, moment_of_inertia, center_of_mass, displacement)
 SERIALIZABLE_ENUM(RELATION, equality)
 SERIALIZABLE_ENUM(DENSITY_FILTER, none, helmholtz_filter)
 SERIALIZABLE_ENUM(MULTI_OBJECTIVE_STRUCTURE, linear)
@@ -63,6 +64,7 @@ struct Optimization_Constraint {
   double value         = 0;
   RELATION relation    = RELATION::equality;
   std::optional<CONSTRAINT_COMPONENT> component;
+  std::string argument_file_name;
 
   // Non-serialized fields
   std::vector<std::optional<double>> inertia_centers;
@@ -80,7 +82,7 @@ struct Optimization_Constraint {
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Optimization_Constraint, value, type, relation)
 IMPL_YAML_SERIALIZABLE_FOR(Optimization_Constraint, 
-  value, type, relation, component
+  value, type, relation, component, argument_file_name
 )
 
 struct MultiObjectiveModule {

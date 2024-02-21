@@ -14,7 +14,10 @@ struct material_t {
     RUN_LOCATION eos_run_location      = RUN_LOCATION::device; 
 
     double elastic_modulus  = 200000000000;
+    double elastic_moduli[3];
     double poisson_ratio    = 0.3;
+    double poisson_ratios[3];
+    double shear_moduli[3];
     double density          = 7850;
     double initial_temperature  = 293;
     double thermal_conductivity = 10;
@@ -25,6 +28,8 @@ struct material_t {
     bool linear_cell_modulus = false;
     double modulus_density_slope = 200000000000;
     double modulus_initial = 0;
+    double shear_modulus_density_slope = 200000000000;
+    double shear_modulus_initial = 0;
 
     double q1 = 1.0;
     double q2 = 0.0;
@@ -63,5 +68,6 @@ IMPL_YAML_SERIALIZABLE_FOR(Material,
     elastic_modulus, poisson_ratio,
     density, initial_temperature, thermal_conductivity,
     specific_internal_energy_rate, expansion_coefficients,
-    SIMP_modulus, linear_cell_modulus, modulus_density_slope, modulus_initial
+    SIMP_modulus, linear_cell_modulus, modulus_density_slope, modulus_initial,
+    elastic_moduli, poisson_ratios, shear_moduli
 )

@@ -173,7 +173,7 @@ public:
     mass_gradients_distributed = FEM_->mass_gradients_distributed; 
 
     if(FEM_->center_of_mass_gradients_distributed.is_null()) 
-      FEM_->center_of_mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, num_dim));
+      FEM_->center_of_mass_gradients_distributed = Teuchos::rcp(new MV(FEM_->map, 1));
     constraint_gradients_distributed = FEM_->center_of_mass_gradients_distributed;
   }
 
@@ -425,10 +425,12 @@ public:
     
     ROL_Gradients = ROL::makePtr<ROL_MV>(constraint_gradients_distributed);
     ROL_Mass_Gradients = ROL::makePtr<ROL_MV>(mass_gradients_distributed);
+    real_t dot_product_moment = ROL_Gradients->dot(v);
+    real_t dot_product_mass = ROL_Mass_Gradients->dot(v);
     for(int i = 0; i < FEM_->nlocal_nodes; i++){
-        constraint_adjoint_hess(i,0) = -ROL_Gradients->dot(v)*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass-
-                      moment_gradients(i,0)*(*up)[0]*ROL_Mass_Gradients->dot(v)/current_mass/current_mass+
-                      2*current_com*ROL_Mass_Gradients->dot(v)*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass;
+        constraint_adjoint_hess(i,0) = -dot_product_moment*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass-
+                      moment_gradients(i,0)*(*up)[0]*dot_product_mass/current_mass/current_mass+
+                      2*current_com*dot_product_mass*mass_gradients(i,0)*(*up)[0]/current_mass/current_mass;
         constraint_adjoint_hess(i,0) /= normalization_value;
     }
     

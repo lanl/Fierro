@@ -90,6 +90,7 @@
 #include "Mass_Constraint.h"
 #include "Moment_of_Inertia_Constraint.h"
 #include "Kinetic_Energy_Minimize.h"
+#include "Area_Normals.h"
 
 #define BUFFER_LINES 20000
 #define MAX_WORD 30
@@ -400,6 +401,9 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   GO node_gid;
   real_t dof_value;
   host_vec_array node_densities;
+  bool zero_index_base = input_options.zero_index_base;
+  int negative_index_found = 0;
+  int global_negative_index_found = 0;
   //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
   //read the mesh
@@ -838,11 +842,25 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
         //as we loop through the nodes belonging to this element we store them
         //if any of these nodes belongs to this rank this list is used to store the element locally
         node_gid = atoi(&read_buffer(scan_loop,inode,0));
-        node_store(inode-elem_words_per_line_no_nodes) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        if(zero_index_base)
+          node_store(inode-elem_words_per_line_no_nodes) = node_gid; //subtract 1 since file index start is 1 but code expects 0
+        else
+          node_store(inode-elem_words_per_line_no_nodes) = node_gid - 1; //subtract 1 since file index start is 1 but code expects 0
+        if(node_store(inode-elem_words_per_line_no_nodes) < 0){
+          negative_index_found = 1;
+        }
         //first we add the elements to a dynamically allocated list
-        if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
-          assign_flag = 1;
-          rnum_elem++;
+        if(zero_index_base){
+          if(map->isNodeGlobalElement(node_gid)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
+        }
+        else{
+          if(map->isNodeGlobalElement(node_gid-1)&&!assign_flag){
+            assign_flag = 1;
+            rnum_elem++;
+          }
         }
       }
 
@@ -929,14 +947,27 @@ void Explicit_Solver::read_mesh_ansys_dat(const char *MESH){
   dual_nodes_in_elem.modify_host();
 
   for(int ielem = 0; ielem < rnum_elem; ielem++)
-    for(int inode = 0; inode < nodes_per_element; inode++)
+    for(int inode = 0; inode < nodes_per_element; inode++){
       nodes_in_elem(ielem, inode) = element_temp[ielem*nodes_per_element + inode];
+    }
 
   //view storage for all local elements connected to local nodes on this rank
   Kokkos::DualView <GO*, array_layout, device_type, memory_traits> All_Element_Global_Indices("All_Element_Global_Indices",rnum_elem);
   //copy temporary global indices storage to view storage
-  for(int ielem = 0; ielem < rnum_elem; ielem++)
+  for(int ielem = 0; ielem < rnum_elem; ielem++){
     All_Element_Global_Indices.h_view(ielem) = global_indices_temp[ielem];
+    if(global_indices_temp[ielem]<0){
+      negative_index_found = 1;
+    }
+  }
+  
+  MPI_Allreduce(&negative_index_found,&global_negative_index_found,1,MPI_INT,MPI_MAX,MPI_COMM_WORLD);
+  if(global_negative_index_found){
+    if(myrank==0){
+    std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+    }
+    exit_solver(0);
+  }
 
   //delete temporary element connectivity and index storage
   std::vector<size_t>().swap(element_temp);
@@ -1372,13 +1403,37 @@ void Explicit_Solver::setup_optimization_problem(){
   problem->finalize(false,true,*fos);
   //problem->check(true,std::cout);
 
+  // //check area normal gradients
+  // ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_debug_coords =
+  // ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(all_node_coords_distributed);
+  // Teuchos::RCP<MV> debug_directions_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+  // ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> debug_rol_d =
+  // ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(debug_directions_distributed);
+  // debug_directions_distributed->randomize(-0.00375,0.00375);
+  // if(myrank==0){
+  // for(int inode = 0; inode < 8; inode++){
+  //   for(int idim = 0; idim < num_dim; idim++){
+  //     std::cout<< "AREA NORMALS GRADIENT FOR NODE " << inode << " AND DIM " << idim << std::endl;
+  //     ROL::Ptr<ROL::Objective<real_t>> debug_obj = ROL::makePtr<AreaNormals>(this, inode, idim, nodal_density_flag);
+  //     //debug_directions_distributed->putScalar(-0.1);
+  //     //debug_directions_distributed->norm2(debug_direction_norm);
+  //     //debug_directions_distributed->scale(1/debug_direction_norm(0));
+  //     //set all but first component to 0 for debug
+  //     host_vec_array debug_directions = debug_directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+  //     //for(int init = 1; init < nlocal_nodes; init++)
+  //     //directions(4,0) = -0.3;
+  //     debug_obj->checkGradient(*rol_debug_coords, *debug_rol_d);
+  //   }
+  // }
+  // }
+
   //debug checks
   ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_x =
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
   directions_distributed->putScalar(-0.1);
-  //directions_distributed->randomize(-0.8,1);
+  directions_distributed->randomize(-0.8,1);
   Kokkos::View <real_t*, array_layout, HostSpace, memory_traits> direction_norm("gradient norm",1);
   directions_distributed->norm2(direction_norm);
   directions_distributed->scale(1/direction_norm(0));

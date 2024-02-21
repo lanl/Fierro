@@ -108,6 +108,8 @@ public:
   typedef MV::dual_view_type::t_host host_vec_array;
   typedef Kokkos::View<const real_t**, array_layout, HostSpace, memory_traits> const_host_vec_array;
   typedef Kokkos::View<const real_t**, array_layout, device_type, memory_traits> const_vec_array;
+  typedef Kokkos::View<const int**, array_layout, HostSpace, memory_traits> const_host_ivec_array;
+  typedef Kokkos::View<int**, array_layout, HostSpace, memory_traits> host_ivec_array;
   typedef MV::dual_view_type dual_vec_array;
   typedef MCONN::dual_view_type dual_elem_conn_array;
   typedef MCONN::dual_view_type::t_host host_elem_conn_array;
@@ -204,6 +206,10 @@ public:
   Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits> ghost_nodes;
   Kokkos::DualView <int*, array_layout, device_type, memory_traits> ghost_node_ranks;
 
+  //Node set corresponding to uniquely assigned list of elements on this MPI rank
+  size_t nnonoverlap_elem_nodes;
+  Kokkos::DualView <GO*, Kokkos::LayoutLeft, device_type, memory_traits> nonoverlap_elem_nodes;
+
   //Local FEA data including ghosts
   size_t nall_nodes;
   size_t rnum_elem;
@@ -215,6 +221,7 @@ public:
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_map; //sorted contiguous map of node indices
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > ghost_node_map; //map of node indices with ghosts on each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_node_map; //map of node indices with ghosts on each rank
+  Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > nonoverlap_element_node_map; //map of node indices with ghosts on each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > element_map; //non overlapping map of elements owned by each rank used in reduction ops
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > all_element_map; //overlapping map of elements connected to the local nodes in each rank
   Teuchos::RCP<Tpetra::Map<LO,GO,node_type> > sorted_element_map; //sorted contiguous map of element indices owned by each rank used in parallel IO

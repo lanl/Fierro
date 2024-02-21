@@ -1429,7 +1429,7 @@ void FEA_Module_SGH::setup(){
     //initialize if topology optimization is used
     if(simparam->topology_optimization_on || simparam->shape_optimization_on){
       init_assembly();
-      assemble_matrix();
+      //assemble_matrix();
     }
 
     // update host copies of arrays modified in this function
