@@ -2,6 +2,7 @@
 
 solver="${1}"
 heffte_build_type="${2}"
+kokkos_build_type="${3}"
 
 #inititialize submodules if they aren't downloaded
 [ -d "${libdir}/Elements/elements" ] && echo "Elements submodule exists"
@@ -97,6 +98,18 @@ else
     cmake_options+=(
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
         -D BUILD_IMPLICIT_SOLVER=OFF
+    )
+fi
+
+if [ "$kokkos_build_type" = "cuda" ]; then
+    export OMPI_CXX=${TRILINOS_SOURCE_DIR}/packages/kokkos/bin/nvcc_wrapper
+    cmake_options+=(
+        -D CMAKE_CXX_COMPILER=${TRILINOS_SOURCE_DIR}/packages/kokkos/bin/nvcc_wrapper
+    )
+elif [ "$kokkos_build_type" = "hip" ]; then
+    export OMPI_CXX=hipcc
+    cmake_options+=(
+        -D CMAKE_CXX_COMPILER=hipcc
     )
 fi
 

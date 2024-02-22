@@ -2,7 +2,7 @@
 #include "matar.h"
 using namespace mtr;
 
-
+/*
 void init_state_vars(
   const DCArrayKokkos <material_t> &material,
   const DViewCArrayKokkos <size_t> &elem_mat_id,
@@ -24,3 +24,4 @@ void init_state_vars(
     
 	  return;
 }
+*/
