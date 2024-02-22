@@ -2,25 +2,25 @@ cmake_minimum_required(VERSION 3.17)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-if(NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
+if(BUILD_EVPFFT_FIERRO)
   add_definitions(-DBUILD_EVPFFT_FIERRO=1)
 endif()
 
 if (BUILD_EVPFFT_FIERRO)
-  set(This user_material_models)
+  set(This evpfft-fierro)
 else()
   set(This evpfft)
   project (${This})
-enable_language(C)
+  enable_language(C)
 
-# CMAKE_BUILD_TYPE:
-# 1. Release: `-O3 -DNDEBUG`
-# 2. Debug: `-O0 -g`
-# 3. RelWithDebInfo: `-O2 -g -DNDEBUG`
-# 4. MinSizeRel: `-Os -DNDEBUG`
-if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif(NOT CMAKE_BUILD_TYPE)
+  # CMAKE_BUILD_TYPE:
+  # 1. Release: `-O3 -DNDEBUG`
+  # 2. Debug: `-O0 -g`
+  # 3. RelWithDebInfo: `-O2 -g -DNDEBUG`
+  # 4. MinSizeRel: `-Os -DNDEBUG`
+  if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo)
+  endif(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Set default values for EVPFFT options
@@ -112,9 +112,7 @@ set( Sources
 
 if (BUILD_EVPFFT_FIERRO)
   list(APPEND Sources
-       Fierro-EVPFFT-Link/UserStrengthModel.cpp 
-       Fierro-EVPFFT-Link/UserEOSModel.cpp
-       Fierro-EVPFFT-Link/init_state_vars.cpp)
+       Fierro-EVPFFT-Link/FierroEVPFFTLink.cpp)
 
   add_library(${This} STATIC ${Sources})
   target_link_libraries(${This} PRIVATE ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} Elements)

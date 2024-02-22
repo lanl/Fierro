@@ -269,10 +269,12 @@ public:
   DCArrayKokkos <double> elem_vel_grad;
 
   // for storing global variables used in user material model
-  DCArrayKokkos <double> global_vars;
+  DCArrayKokkos <double> eos_global_vars;
+  DCArrayKokkos <double> strength_global_vars;
 
   // for storing global variables used in user material model
-  DCArrayKokkos <double> state_vars;
+  DCArrayKokkos <double> eos_state_vars;
+  DCArrayKokkos <double> strength_state_vars;
 
   // Dual Views of the corner struct variables
   DViewCArrayKokkos <double> corner_force;
