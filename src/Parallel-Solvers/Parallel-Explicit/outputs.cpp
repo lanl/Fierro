@@ -146,7 +146,7 @@ Explicit_Solver::write_outputs()
       parallel_vtk_writer_new();
       break;
 
-    case OUTPUT_FORMAT::vtu:
+    case OUTPUT_FORMAT::pvtu:
       parallel_vtu_writer_new();
       break;
 
