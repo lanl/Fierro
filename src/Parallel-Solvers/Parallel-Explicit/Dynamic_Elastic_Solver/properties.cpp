@@ -107,8 +107,6 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos<material_t>
                         elem_gid,
                         rk_level);
 
-            StrengthParent* strength_model = elem_strength(elem_gid).model;
-
             // reinit values
             for (size_t i = 0; i < 3; i++)
             {
@@ -119,12 +117,14 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos<material_t>
             }  // end for
 
             // --- call strength model ---
-            strength_model->calc_stress(elem_pres,
+            elem_strength(elem_gid).calc_stress(elem_pres,
                                         elem_stress,
                                         elem_gid,
                                         mat_id,
-                                        state_vars,
-                                        global_vars,
+                                        eos_state_vars,
+                                        strength_state_vars,
+                                        eos_global_vars,
+                                        strength_global_vars,
                                         elem_user_output_vars,
                                         elem_sspd,
                                         elem_den(elem_gid),
@@ -137,30 +137,34 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos<material_t>
                                         dt,
                                         rk_alpha,
                                         cycle,
-                                        rk_level);
+                                        rk_level,
+                                        time_value);
+
         } // end logical on hyper strength model
 
-        EOSParent* eos_model = elem_eos(elem_gid).model;
-
         // --- Pressure ---
-        eos_model->calc_pressure(elem_pres,
+        elem_eos(elem_gid).calc_pressure(elem_pres,
                                  elem_stress,
                                  elem_gid,
                                  elem_mat_id(elem_gid),
-                                 state_vars,
-                                 global_vars,
+                                 eos_state_vars,
+                                 strength_state_vars,
+                                 eos_global_vars,
+                                 strength_global_vars,
                                  elem_user_output_vars,
                                  elem_sspd,
                                  elem_den(elem_gid),
                                  elem_sie(rk_level, elem_gid));
 
         // --- Sound speed ---
-        eos_model->calc_sound_speed(elem_pres,
+        elem_eos(elem_gid).calc_sound_speed(elem_pres,
                                     elem_stress,
                                     elem_gid,
                                     elem_mat_id(elem_gid),
-                                    state_vars,
-                                    global_vars,
+                                    eos_state_vars,
+                                    strength_state_vars,
+                                    eos_global_vars,
+                                    strength_global_vars,
                                     elem_user_output_vars,
                                     elem_sspd,
                                     elem_den(elem_gid),
@@ -240,15 +244,16 @@ void FEA_Module_Dynamic_Elasticity::update_state2D(const DCArrayKokkos<material_
                         elem_gid,
                         rk_level);
 
-            StrengthParent* strength_model = elem_strength(elem_gid).model;
 
             // --- call strength model ---
-            strength_model->calc_stress(elem_pres,
+            elem_strength(elem_gid).calc_stress(elem_pres,
                                         elem_stress,
                                         elem_gid,
                                         mat_id,
-                                        state_vars,
-                                        global_vars,
+                                        eos_state_vars,
+                                        strength_state_vars,
+                                        eos_global_vars,
+                                        strength_global_vars,
                                         elem_user_output_vars,
                                         elem_sspd,
                                         elem_den(elem_gid),
@@ -261,30 +266,34 @@ void FEA_Module_Dynamic_Elasticity::update_state2D(const DCArrayKokkos<material_
                                         dt,
                                         rk_alpha,
                                         cycle,
-                                        rk_level);
+                                        rk_level,
+                                        time_value);
+
         } // end logical on hyper strength model
 
-        EOSParent* eos_model = elem_eos(elem_gid).model;
-
         // --- Pressure ---
-        eos_model->calc_pressure(elem_pres,
+        elem_eos(elem_gid).calc_pressure(elem_pres,
                                  elem_stress,
                                  elem_gid,
                                  elem_mat_id(elem_gid),
-                                 state_vars,
-                                 global_vars,
+                                 eos_state_vars,
+                                 strength_state_vars,
+                                 eos_global_vars,
+                                 strength_global_vars,
                                  elem_user_output_vars,
                                  elem_sspd,
                                  elem_den(elem_gid),
                                  elem_sie(rk_level, elem_gid));
 
         // --- Sound speed ---
-        eos_model->calc_sound_speed(elem_pres,
+        elem_eos(elem_gid).calc_sound_speed(elem_pres,
                                     elem_stress,
                                     elem_gid,
                                     elem_mat_id(elem_gid),
-                                    state_vars,
-                                    global_vars,
+                                    eos_state_vars,
+                                    strength_state_vars,
+                                    eos_global_vars,
+                                    strength_global_vars,
                                     elem_user_output_vars,
                                     elem_sspd,
                                     elem_den(elem_gid),

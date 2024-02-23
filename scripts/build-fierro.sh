@@ -2,7 +2,7 @@
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
-    echo "  --solver=<all|explicit|explicit-evpfft|explicit-ls-evpfft|explicit-evp|implicit>. Default is 'explicit'"
+    echo "  --solver=<all|explicit|explicit-evpfft|explicit-ls-evpfft|implicit>. Default is 'explicit'"
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>. Default is 'serial'"
     echo "  --build_action=<full-app|set-env|install-trilinos|install-hdf5|install-heffte|fierro>. Default is 'full-app'"
     echo "  --machine=<darwin|chicoma|linux|mac>. Default is 'linux'"
@@ -65,7 +65,7 @@ build_cores="1"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-trilinos" "install-hdf5" "install-heffte" "fierro")
-valid_solver=("all" "explicit" "explicit-evpfft" "explicit-ls-evpfft" "explicit-evp" "implicit")
+valid_solver=("all" "explicit" "explicit-evpfft" "explicit-ls-evpfft" "implicit")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
 valid_machines=("darwin" "chicoma" "linux" "mac" "msu")

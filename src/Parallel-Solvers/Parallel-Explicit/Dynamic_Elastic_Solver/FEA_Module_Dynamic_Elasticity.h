@@ -438,12 +438,15 @@ public:
     RaggedRightArrayKokkos<size_t> corners_in_node;
     CArrayKokkos<size_t> num_corners_in_node;
 
-    // elem ids in node
-    RaggedRightArrayKokkos<size_t> elems_in_node;
 
-    // node ids in node
-    RaggedRightArrayKokkos<size_t> nodes_in_node;
-    CArrayKokkos<size_t> num_nodes_in_node;
+    // for storing global variables used in user material model
+    DCArrayKokkos <double> eos_global_vars;
+    DCArrayKokkos <double> strength_global_vars;
+
+    // for storing state variables used in user material model
+    DCArrayKokkos <double> eos_state_vars;
+    DCArrayKokkos <double> strength_state_vars;
+
 
     // node ids in elem
     DCArrayKokkos<size_t> nodes_in_elem;

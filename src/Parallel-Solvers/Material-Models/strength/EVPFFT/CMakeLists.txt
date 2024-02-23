@@ -1,0 +1,12 @@
+if(BUILD_EVPFFT_FIERRO)
+  add_definitions(-DBUILD_EVPFFT_FIERRO=1)
+  add_subdirectory(../../../../EVPFFT/src EVPFFT)
+endif()
+
+set(SRC_Files EVPFFTStrengthModel.cpp)
+add_library(EVPFFTStrengthModel OBJECT ${SRC_Files})
+target_include_directories(EVPFFTStrengthModel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(EVPFFTStrengthModel Elements)
+if(BUILD_EVPFFT_FIERRO)
+  target_link_libraries(EVPFFTStrengthModel evpfft-fierro)
+endif()
