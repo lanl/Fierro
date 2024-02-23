@@ -139,7 +139,6 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos<material_t>
                                         cycle,
                                         rk_level,
                                         time_value);
-
         } // end logical on hyper strength model
 
         // --- Pressure ---
@@ -244,7 +243,6 @@ void FEA_Module_Dynamic_Elasticity::update_state2D(const DCArrayKokkos<material_
                         elem_gid,
                         rk_level);
 
-
             // --- call strength model ---
             elem_strength(elem_gid).calc_stress(elem_pres,
                                         elem_stress,
@@ -268,7 +266,6 @@ void FEA_Module_Dynamic_Elasticity::update_state2D(const DCArrayKokkos<material_
                                         cycle,
                                         rk_level,
                                         time_value);
-
         } // end logical on hyper strength model
 
         // --- Pressure ---

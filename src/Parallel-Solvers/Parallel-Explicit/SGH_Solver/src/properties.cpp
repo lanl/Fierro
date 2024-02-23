@@ -107,7 +107,6 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos<material_t>& material,
                         elem_gid,
                         rk_level);
 
-
             // --- call strength model ---
             elem_strength(elem_gid).calc_stress(elem_pres,
                                         elem_stress,
@@ -131,7 +130,6 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos<material_t>& material,
                                         cycle,
                                         rk_level,
                                         time_value);
-
         } // end logical on hyper strength model
 
         // --- Pressure ---
@@ -259,8 +257,6 @@ void FEA_Module_SGH::update_state2D(const DCArrayKokkos<material_t>& material,
                                         cycle,
                                         rk_level,
                                         time_value);
-
-
         } // end logical on hyper strength model
 
         // --- Pressure ---

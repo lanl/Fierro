@@ -1012,19 +1012,18 @@ void FEA_Module_Dynamic_Elasticity::setup()
     // FEA_Module bc variable
     num_boundary_conditions = num_bcs;
 
-
-    const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
-    const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
-    const DCArrayKokkos <material_t> material = simparam->material;
+    const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
+    const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
+    const DCArrayKokkos<material_t> material = simparam->material;
     eos_global_vars = simparam->eos_global_vars;
     strength_global_vars = simparam->strength_global_vars;
-    eos_state_vars = DCArrayKokkos <double> (rnum_elem, simparam->max_num_eos_state_vars);
-    strength_state_vars = DCArrayKokkos <double> (rnum_elem, simparam->max_num_strength_state_vars);
-    elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam->output_options.max_num_user_output_vars);
- 
-    //--- calculate bdy sets ---//
-    mesh->num_nodes_in_patch = 2*(num_dim-1);  // 2 (2D) or 4 (3D)
-    mesh->num_patches_in_elem = 2*num_dim; // 4 (2D) or 6 (3D)
+    eos_state_vars = DCArrayKokkos<double>(rnum_elem, simparam->max_num_eos_state_vars);
+    strength_state_vars   = DCArrayKokkos<double>(rnum_elem, simparam->max_num_strength_state_vars);
+    elem_user_output_vars = DCArrayKokkos<double>(rnum_elem, simparam->output_options.max_num_user_output_vars);
+
+    // --- calculate bdy sets ---//
+    mesh->num_nodes_in_patch  = 2 * (num_dim - 1); // 2 (2D) or 4 (3D)
+    mesh->num_patches_in_elem = 2 * num_dim; // 4 (2D) or 6 (3D)
 
     mesh->init_bdy_sets(num_bcs);
     num_bdy_sets = mesh->num_bdy_sets;
@@ -1339,11 +1338,11 @@ void FEA_Module_Dynamic_Elasticity::setup()
 
                     // p = rho*ie*(gamma - 1)
                     size_t mat_id = f_id;
-<<<<<<< HEAD
-                    double gamma  = global_vars(mat_id, 0); // gamma value
-=======
-                    double gamma = eos_global_vars(mat_id,0); // gamma value
->>>>>>> main
+                        << << << < HEAD
+                        double gamma = global_vars(mat_id, 0); // gamma value
+                    == == == =
+                        double gamma = eos_global_vars(mat_id, 0); // gamma value
+                    >> >> >> > main
                     elem_sie(rk_level, elem_gid) =
                         elem_pres(elem_gid) / (mat_fill(f_id).den * (gamma - 1.0));
                 } // end if
