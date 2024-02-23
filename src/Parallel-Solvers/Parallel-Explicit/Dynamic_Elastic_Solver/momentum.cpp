@@ -1,4 +1,36 @@
-
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
@@ -55,21 +87,21 @@ void FEA_Module_Dynamic_Elasticity::update_velocity_elastic(double rk_alpha,
 // This function calculates the velocity gradient
 // ------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_velgrad(ViewCArrayKokkos<double>&        vel_grad,
-                                                const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                const DViewCArrayKokkos<double>& node_vel,
-                                                const ViewCArrayKokkos<double>&  b_matrix,
-                                                const double                     elem_vol,
-                                                const size_t                     elem_gid,
-                                                const size_t                     rk_level
-                                                ) const
+void FEA_Module_Dynamic_Elasticity::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const DViewCArrayKokkos<double>& node_vel,
+    const ViewCArrayKokkos<double>&  b_matrix,
+    const double elem_vol,
+    const size_t elem_gid,
+    const size_t rk_level
+    ) const
 {
     const size_t num_nodes_in_elem = 8;
 
-    double                   u_array[num_nodes_in_elem];
-    double                   v_array[num_nodes_in_elem];
-    double                   w_array[num_nodes_in_elem];
-    
+    double u_array[num_nodes_in_elem];
+    double v_array[num_nodes_in_elem];
+    double w_array[num_nodes_in_elem];
+
     ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
     ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
     ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir vel component
@@ -142,21 +174,21 @@ void FEA_Module_Dynamic_Elasticity::get_velgrad(ViewCArrayKokkos<double>&       
 // This function calculates the velocity gradient
 // ------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_velgrad2D(ViewCArrayKokkos<double>&        vel_grad,
-                                                  const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                  const DViewCArrayKokkos<double>& node_vel,
-                                                  const ViewCArrayKokkos<double>&  b_matrix,
-                                                  const double                     elem_vol,
-                                                  const double                     elem_area,
-                                                  const size_t                     elem_gid,
-                                                  const size_t                     rk_level
-                                                  ) const
+void FEA_Module_Dynamic_Elasticity::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const DViewCArrayKokkos<double>& node_vel,
+    const ViewCArrayKokkos<double>&  b_matrix,
+    const double elem_vol,
+    const double elem_area,
+    const size_t elem_gid,
+    const size_t rk_level
+    ) const
 {
     const size_t num_nodes_in_elem = 4;
 
-    double                   u_array[num_nodes_in_elem];
-    double                   v_array[num_nodes_in_elem];
-    
+    double u_array[num_nodes_in_elem];
+    double v_array[num_nodes_in_elem];
+
     ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
     ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
 
@@ -207,12 +239,12 @@ void FEA_Module_Dynamic_Elasticity::get_velgrad2D(ViewCArrayKokkos<double>&     
 // -----------------------------------------------------------------------------
 // This subroutine to calculate the velocity divergence in all elements
 // ------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos<double>&       elem_div,
-                                                   const mesh_t                     mesh,
-                                                   const DViewCArrayKokkos<double>& node_coords,
-                                                   const DViewCArrayKokkos<double>& node_vel,
-                                                   const DViewCArrayKokkos<double>& elem_vol
-                                                   )
+void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos<double>& elem_div,
+    const mesh_t mesh,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_vol
+    )
 {
     const size_t rk_level = rk_num_bins - 1;
 
@@ -224,7 +256,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos<double>&   
         double u_array[num_nodes_in_elem];
         double v_array[num_nodes_in_elem];
         double w_array[num_nodes_in_elem];
-        
+
         ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
         ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
         ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir vel component
@@ -282,12 +314,12 @@ void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos<double>&   
 // -----------------------------------------------------------------------------
 // This subroutine to calculate the velocity divergence in all elements
 // ------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos<double>&       elem_div,
-                                                     const mesh_t                     mesh,
-                                                     const DViewCArrayKokkos<double>& node_coords,
-                                                     const DViewCArrayKokkos<double>& node_vel,
-                                                     const DViewCArrayKokkos<double>& elem_vol
-                                                     )
+void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos<double>& elem_div,
+    const mesh_t mesh,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_vol
+    )
 {
     const size_t rk_level = rk_num_bins - 1;
 
@@ -298,7 +330,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos<double>& 
 
         double u_array[num_nodes_in_elem];
         double v_array[num_nodes_in_elem];
-        
+
         ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
         ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
 
@@ -364,15 +396,15 @@ void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos<double>& 
 // D = sym(L)
 // W = antisym(L)
 KOKKOS_INLINE_FUNCTION
-void FEA_Module_Dynamic_Elasticity::decompose_vel_grad(ViewCArrayKokkos<double>&        D_tensor,
-                                                       ViewCArrayKokkos<double>&        W_tensor,
-                                                       const ViewCArrayKokkos<double>&  vel_grad,
-                                                       const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                       const size_t                     elem_gid,
-                                                       const DViewCArrayKokkos<double>& node_coords,
-                                                       const DViewCArrayKokkos<double>& node_vel,
-                                                       const double                     vol
-                                                       ) const
+void FEA_Module_Dynamic_Elasticity::decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
+    ViewCArrayKokkos<double>& W_tensor,
+    const ViewCArrayKokkos<double>& vel_grad,
+    const ViewCArrayKokkos<size_t>& elem_node_gids,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const double vol
+    ) const
 {
     // --- Calculate the velocity gradient ---
 

@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -91,7 +88,7 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
     // recast solver pointer for non-base class access
     Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
     module_params = &params;
-    simparam      = &(Explicit_Solver_Pointer_->simparam);
+    simparam = &(Explicit_Solver_Pointer_->simparam);
 
     mesh = mesh_in;
 
@@ -120,7 +117,7 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
 
     if (simparam->topology_optimization_on || simparam->shape_optimization_on || simparam->num_dims == 2)
     {
-        node_masses_distributed        = Teuchos::rcp(new MV(map, 1));
+        node_masses_distributed = Teuchos::rcp(new MV(map, 1));
         ghost_node_masses_distributed  = Teuchos::rcp(new MV(ghost_node_map, 1));
         adjoint_vector_distributed     = Teuchos::rcp(new MV(map, simparam->num_dims));
         phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam->num_dims));
@@ -148,7 +145,7 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
     graphics_dt_ival  = simparam->output_options.graphics_dt_ival;
     graphics_cyc_ival = simparam->output_options.graphics_cyc_ival;
     graphics_times    = simparam->output_options.graphics_times;
-    graphics_id       = simparam->output_options.graphics_id;
+    graphics_id = simparam->output_options.graphics_id;
 
     cycle_stop    = dynamic_options.cycle_stop;
     rk_num_stages = dynamic_options.rk_num_stages;
@@ -188,11 +185,11 @@ void FEA_Module_Dynamic_Elasticity::read_conditions_ansys_dat(std::ifstream* in,
 {
     Input_Options input_options = simparam->input_options.value();
 
-    char              ch;
-    std::string       skip_line, read_line, substring, token;
+    char ch;
+    std::string skip_line, read_line, substring, token;
     std::stringstream line_parse, line_parse2;
 
-    int num_dim      = simparam->num_dims;
+    int num_dim = simparam->num_dims;
     int buffer_lines = 1000;
     int max_word     = 30;
     int local_node_index, current_column_index;
@@ -206,21 +203,21 @@ void FEA_Module_Dynamic_Elasticity::read_conditions_ansys_dat(std::ifstream* in,
 
     real_t unit_scaling = input_options.unit_scaling;
 
-    CArrayKokkos<char, array_layout, HostSpace, memory_traits>          read_buffer;
+    CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
     CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
 
-    LO             local_dof_id;
-    GO             node_gid;
-    real_t         dof_value;
+    LO     local_dof_id;
+    GO     node_gid;
+    real_t dof_value;
     host_vec_array node_densities;
 } // end read_conditions_ansys_dat
 
 // -----------------------------------------------------------------------------
 // Interfaces read in data with the elastic solver data; currently a hack to streamline
 // ------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::elastic_interface_setup(node_t&   node,
-                                                            elem_t&   elem,
-                                                            corner_t& corner)
+void FEA_Module_Dynamic_Elasticity::elastic_interface_setup(node_t& node,
+    elem_t&   elem,
+    corner_t& corner)
 {
     const size_t num_dim     = simparam->num_dims;
     const size_t rk_num_bins = simparam->dynamic_options.rk_num_bins;
@@ -503,9 +500,9 @@ void FEA_Module_Dynamic_Elasticity::grow_boundary_sets(int num_sets)
     if (num_sets > max_boundary_sets)
     {
         // temporary storage for previous data
-        CArrayKokkos<int, array_layout, HostSpace, memory_traits>      Temp_Boundary_Condition_Type_List = Boundary_Condition_Type_List;
-        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_NBoundary_Condition_Patches  = NBoundary_Condition_Patches;
-        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_Boundary_Condition_Patches   = Boundary_Condition_Patches;
+        CArrayKokkos<int, array_layout, HostSpace, memory_traits> Temp_Boundary_Condition_Type_List     = Boundary_Condition_Type_List;
+        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_NBoundary_Condition_Patches = NBoundary_Condition_Patches;
+        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_Boundary_Condition_Patches  = Boundary_Condition_Patches;
 
         max_boundary_sets = num_sets + 5; // 5 is an arbitrary buffer
         Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(max_boundary_sets, "Boundary_Condition_Type_List");
@@ -675,11 +672,11 @@ void FEA_Module_Dynamic_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO, GO,
    populate requests this module makes for output data
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_Dynamic_Elasticity::write_data(std::map<std::string, const double*>&                    point_data_scalars_double,
-                                               std::map<std::string, const double*>&                    point_data_vectors_double,
-                                               std::map<std::string, const double*>&                    cell_data_scalars_double,
-                                               std::map<std::string, const int*>&                       cell_data_scalars_int,
-                                               std::map<std::string, std::pair<const double*, size_t>>& cell_data_fields_double)
+void FEA_Module_Dynamic_Elasticity::write_data(std::map<std::string, const double*>& point_data_scalars_double,
+    std::map<std::string, const double*>& point_data_vectors_double,
+    std::map<std::string, const double*>& cell_data_scalars_double,
+    std::map<std::string, const int*>&    cell_data_scalars_int,
+    std::map<std::string, std::pair<const double*, size_t>>& cell_data_fields_double)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
 
@@ -1001,7 +998,7 @@ void FEA_Module_Dynamic_Elasticity::setup()
     elem_vel_grad = DCArrayKokkos<double>(num_elems, 3, 3);
 
     // allocate material models
-    elem_eos      = DCArrayKokkos<eos_t>(num_elems);
+    elem_eos = DCArrayKokkos<eos_t>(num_elems);
     elem_strength = DCArrayKokkos<strength_t>(num_elems);
 
     // ---------------------------------------------------------------------
@@ -1363,7 +1360,7 @@ void FEA_Module_Dynamic_Elasticity::setup()
             // loop over the corners of the element and calculate the mass
             for (size_t corner_lid = 0; corner_lid < 4; corner_lid++)
             {
-                size_t corner_gid       = corners_in_elem(elem_gid, corner_lid);
+                size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
                 corner_mass(corner_gid) = corner_areas(corner_lid) * elem_den(elem_gid); // node radius is added later
             } // end for over corners
         });
@@ -1483,13 +1480,13 @@ void FEA_Module_Dynamic_Elasticity::cleanup_material_models()
  * Modifies: bdy_patches_in_set
 */
 void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
-                                             mesh_t&                          mesh,
-                                             const DViewCArrayKokkos<double>& node_coords)
+    mesh_t& mesh,
+    const DViewCArrayKokkos<double>& node_coords)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
-    size_t       num_dim  = simparam->num_dims;
-    int          nboundary_patches  = Explicit_Solver_Pointer_->nboundary_patches;
-    int          num_nodes_in_patch = mesh.num_nodes_in_patch;
+    size_t num_dim = simparam->num_dims;
+    int    nboundary_patches  = Explicit_Solver_Pointer_->nboundary_patches;
+    int    num_nodes_in_patch = mesh.num_nodes_in_patch;
 
     // if (bdy_set == mesh.num_bdy_sets){
     //    printf(" ERROR: number of boundary sets must be increased by %zu",
@@ -1553,13 +1550,13 @@ void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos<boundary_t>& bo
 } // end tag
 
 KOKKOS_INLINE_FUNCTION
-bool FEA_Module_Dynamic_Elasticity::check_bdy(const size_t                     patch_gid,
-                                              const int                        num_dim,
-                                              const int                        num_nodes_in_patch,
-                                              const BOUNDARY_TYPE              bc_type,
-                                              const double                     val,
-                                              const DViewCArrayKokkos<double>& node_coords,
-                                              const size_t                     rk_level) const
+bool FEA_Module_Dynamic_Elasticity::check_bdy(const size_t patch_gid,
+    const int num_dim,
+    const int num_nodes_in_patch,
+    const BOUNDARY_TYPE bc_type,
+    const double val,
+    const DViewCArrayKokkos<double>& node_coords,
+    const size_t rk_level) const
 {
     // default bool is not on the boundary
     size_t is_on_bdy = 0;
@@ -1780,7 +1777,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
         kinetic_energy_minimize_function.objective_accumulation = 0;
         global_objective_accumulation = objective_accumulation = 0;
-        kinetic_energy_objective      = true;
+        kinetic_energy_objective = true;
         if (max_time_steps + 1 > forward_solve_velocity_data->size())
         {
             old_max_forward_buffer = forward_solve_velocity_data->size();
@@ -1937,12 +1934,12 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
 
         // view scope
         {
-            const_vec_array node_velocities_interface       = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            vec_array       all_node_velocities_interface   = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array all_node_velocities_interface     = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             const_vec_array node_coords_interface       = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            vec_array       all_node_coords_interface   = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                 for (int idim = 0; idim < num_dim; idim++)
                 {
@@ -2142,7 +2139,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
             Kokkos::fence();
 
             double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
-            Explicit_Solver_Pointer_->host2dev_time      += comm_time4 - comm_time3;
+            Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
             Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
             // debug print vector values on a rank
             /*
@@ -2376,14 +2373,14 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
 
             // view scope
             {
-                const_vec_array node_velocities_interface       = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array node_coords_interface       = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                
-                vec_array       all_node_coords_interface   = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-                vec_array       all_node_velocities_interface   = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-                
+
+                vec_array all_node_coords_interface     = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                     for (int idim = 0; idim < num_dim; idim++)
                     {
@@ -2404,7 +2401,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
             } // end view scope
 
             double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
-            Explicit_Solver_Pointer_->host2dev_time      += comm_time4 - comm_time3;
+            Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
             Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
 
             (*forward_solve_velocity_data)[cycle + 1]->assign(*Explicit_Solver_Pointer_->all_node_velocities_distributed);

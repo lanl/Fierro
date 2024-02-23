@@ -1,4 +1,36 @@
-
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 #include "mesh.h"
 #include "state.h"
 #include <iostream>
@@ -27,24 +59,24 @@
 // current implementation assumes material.q2 = 0
 // ------------------------------------------------------------------------------
 void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& material,
-                                             const mesh_t&                    mesh,
-                                             const DViewCArrayKokkos<double>& node_coords,
-                                             const DViewCArrayKokkos<double>& node_vel,
-                                             const DViewCArrayKokkos<double>& elem_den,
-                                             const DViewCArrayKokkos<double>& elem_sie,
-                                             const DViewCArrayKokkos<double>& elem_pres,
-                                             const DViewCArrayKokkos<double>& elem_stress,
-                                             const DViewCArrayKokkos<double>& elem_sspd,
-                                             const DViewCArrayKokkos<double>& elem_vol,
-                                             const DViewCArrayKokkos<double>& elem_div,
-                                             const DViewCArrayKokkos<size_t>& elem_mat_id,
-                                             const double                     rk_alpha,
-                                             const size_t                     cycle
-                                             )
+    const mesh_t& mesh,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_den,
+    const DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_pres,
+    const DViewCArrayKokkos<double>& elem_stress,
+    const DViewCArrayKokkos<double>& elem_sspd,
+    const DViewCArrayKokkos<double>& elem_vol,
+    const DViewCArrayKokkos<double>& elem_div,
+    const DViewCArrayKokkos<size_t>& elem_mat_id,
+    const double rk_alpha,
+    const size_t cycle
+    )
 {
-    const size_t rk_level    = simparam->dynamic_options.rk_num_bins - 1;
-    const size_t num_dims    = simparam->num_dims;
-    size_t       num_corners = rnum_elem * num_nodes_in_elem;
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    const size_t num_dims = simparam->num_dims;
+    size_t num_corners    = rnum_elem * num_nodes_in_elem;
 
     // initialize gradient matrix
     FOR_ALL_CLASS(dof_gid, 0, nlocal_nodes * num_dims, {
@@ -77,7 +109,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
         // FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
         const size_t num_nodes_in_elem = 8;
-        real_t       gradient_result[num_dims];
+        real_t gradient_result[num_dims];
         /// total Cauchy stress
         double tau_array[9];
         double tau_gradient_array[9];
@@ -466,20 +498,20 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
 // This function calculates the corner forces and the evolves stress (hypo)
 // ------------------------------------------------------------------------------
 void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos<material_t>& material,
-                                             const mesh_t&                    mesh,
-                                             const DViewCArrayKokkos<double>& node_coords,
-                                             const DViewCArrayKokkos<double>& node_vel,
-                                             const DViewCArrayKokkos<double>& elem_den,
-                                             const DViewCArrayKokkos<double>& elem_sie,
-                                             const DViewCArrayKokkos<double>& elem_pres,
-                                             const DViewCArrayKokkos<double>& elem_stress,
-                                             const DViewCArrayKokkos<double>& elem_sspd,
-                                             const DViewCArrayKokkos<double>& elem_vol,
-                                             const DViewCArrayKokkos<double>& elem_div,
-                                             const DViewCArrayKokkos<size_t>& elem_mat_id,
-                                             const double                     rk_alpha,
-                                             const size_t                     cycle
-                                             )
+    const mesh_t& mesh,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_den,
+    const DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_pres,
+    const DViewCArrayKokkos<double>& elem_stress,
+    const DViewCArrayKokkos<double>& elem_sspd,
+    const DViewCArrayKokkos<double>& elem_vol,
+    const DViewCArrayKokkos<double>& elem_div,
+    const DViewCArrayKokkos<size_t>& elem_mat_id,
+    const double rk_alpha,
+    const size_t cycle
+    )
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     const size_t num_dims = simparam->num_dims;
@@ -500,7 +532,7 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos<material_t>& ma
         // FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
         const size_t num_nodes_in_elem = 8;
-        real_t       gradient_result[num_dims];
+        real_t gradient_result[num_dims];
         // total Cauchy stress
         double tau_array[9];
         double tau_gradient_array[9];
@@ -898,20 +930,20 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos<material_t>& ma
 // This function calculates the corner forces and the evolves stress (hypo)
 // ------------------------------------------------------------------------------
 void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& material,
-                                             const mesh_t&                    mesh,
-                                             const DViewCArrayKokkos<double>& node_coords,
-                                             const DViewCArrayKokkos<double>& node_vel,
-                                             const DViewCArrayKokkos<double>& elem_den,
-                                             const DViewCArrayKokkos<double>& elem_sie,
-                                             const DViewCArrayKokkos<double>& elem_pres,
-                                             const DViewCArrayKokkos<double>& elem_stress,
-                                             const DViewCArrayKokkos<double>& elem_sspd,
-                                             const DViewCArrayKokkos<double>& elem_vol,
-                                             const DViewCArrayKokkos<double>& elem_div,
-                                             const DViewCArrayKokkos<size_t>& elem_mat_id,
-                                             const double                     rk_alpha,
-                                             const size_t                     cycle
-                                             )
+    const mesh_t& mesh,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_den,
+    const DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_pres,
+    const DViewCArrayKokkos<double>& elem_stress,
+    const DViewCArrayKokkos<double>& elem_sspd,
+    const DViewCArrayKokkos<double>& elem_vol,
+    const DViewCArrayKokkos<double>& elem_div,
+    const DViewCArrayKokkos<size_t>& elem_mat_id,
+    const double rk_alpha,
+    const size_t cycle
+    )
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     const size_t num_dims = simparam->num_dims;
@@ -931,7 +963,7 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
         // FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
         const size_t num_nodes_in_elem = 8;
-        real_t       gradient_result[num_dims];
+        real_t gradient_result[num_dims];
         // total Cauchy stress
         double tau_array[9];
         double tau_gradient_array[9 * max_nodes_per_element * num_dims];
@@ -1232,9 +1264,9 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
                 // on velocity in the numerator.  It filters on the shock
                 // direction
                 mu_term = muc(node_lid) *
-                          fabs(shock_dir(0) * area_normal(node_lid, 0)
-                    + shock_dir(1) * area_normal(node_lid, 1)
-                    + shock_dir(2) * area_normal(node_lid, 2) );
+                          fabs(shock_dir(0) * area_normal(node_lid, 0) +
+                          shock_dir(1) * area_normal(node_lid, 1) +
+                          shock_dir(2) * area_normal(node_lid, 2) );
                 // muc_gradient(node_lid) = muc_gradient(node_lid)*
                 //            fabs( shock_dir(0)*area_normal(node_lid,0)
                 //                + shock_dir(1)*area_normal(node_lid,1)
@@ -1422,24 +1454,25 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
                         column_index = num_dims * Global_Gradient_Matrix_Assembly_Map(elem_gid, igradient, node_lid);
                         if (map->isNodeLocalElement(gradient_node_gid))
                         {
-                            Force_Gradient_Positions(gradient_node_gid * num_dims + jdim, column_index + dim) += area_normal(node_lid, 0) * tau_gradient(0, dim, igradient, jdim)
-                                                                                                                 + area_normal(node_lid, 1) * tau_gradient(1, dim, igradient, jdim)
-                                                                                                                 + area_normal(node_lid, 2) * tau_gradient(2, dim, igradient, jdim)
-                                                                                                                 + area_normal_gradients(node_lid, 0, igradient, jdim) * tau(0, dim)
-                                                                                                                 + area_normal_gradients(node_lid, 1, igradient, jdim) * tau(1, dim)
-                                                                                                                 + area_normal_gradients(node_lid, 2, igradient, jdim) * tau(2, dim)
-                                                                                                                 + phi * muc_gradient(node_lid, igradient,
-                            jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim))
-                                                                                                                 + phi * muc(node_lid) * (vel_star_gradient(dim, igradient, jdim));
+                            Force_Gradient_Positions(gradient_node_gid * num_dims + jdim, column_index + dim) +=
+                                area_normal(node_lid, 0) * tau_gradient(0, dim, igradient, jdim)
+                                + area_normal(node_lid, 1) * tau_gradient(1, dim, igradient, jdim)
+                                + area_normal(node_lid, 2) * tau_gradient(2, dim, igradient, jdim)
+                                + area_normal_gradients(node_lid, 0, igradient, jdim) * tau(0, dim)
+                                + area_normal_gradients(node_lid, 1, igradient, jdim) * tau(1, dim)
+                                + area_normal_gradients(node_lid, 2, igradient, jdim) * tau(2, dim)
+                                + phi * muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim))
+                                + phi * muc(node_lid) * (vel_star_gradient(dim, igradient, jdim));
                         }
-                        corner_gradient_storage(corner_gid, dim, igradient, jdim) = area_normal(node_lid, 0) * tau_gradient(0, dim, igradient, jdim)
-                                                                                    + area_normal(node_lid, 1) * tau_gradient(1, dim, igradient, jdim)
-                                                                                    + area_normal(node_lid, 2) * tau_gradient(2, dim, igradient, jdim)
-                                                                                    + area_normal_gradients(node_lid, 0, igradient, jdim) * tau(0, dim)
-                                                                                    + area_normal_gradients(node_lid, 1, igradient, jdim) * tau(1, dim)
-                                                                                    + area_normal_gradients(node_lid, 2, igradient, jdim) * tau(2, dim)
-                                                                                    + phi * muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim))
-                                                                                    + phi * muc(node_lid) * (vel_star_gradient(dim, igradient, jdim));
+                        corner_gradient_storage(corner_gid, dim, igradient, jdim) =
+                            area_normal(node_lid, 0) * tau_gradient(0, dim, igradient, jdim)
+                            + area_normal(node_lid, 1) * tau_gradient(1, dim, igradient, jdim)
+                            + area_normal(node_lid, 2) * tau_gradient(2, dim, igradient, jdim)
+                            + area_normal_gradients(node_lid, 0, igradient, jdim) * tau(0, dim)
+                            + area_normal_gradients(node_lid, 1, igradient, jdim) * tau(1, dim)
+                            + area_normal_gradients(node_lid, 2, igradient, jdim) * tau(2, dim)
+                            + phi * muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim))
+                            + phi * muc(node_lid) * (vel_star_gradient(dim, igradient, jdim));
                         // if(map->isNodeLocalElement(gradient_node_gid)){
                         //     Force_Gradient_Positions(gradient_node_gid*num_dims+jdim, column_index+dim) +=
                         //             + area_normal_gradients(node_lid, 0, igradient, jdim)*tau(0, dim)
@@ -1541,9 +1574,9 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
         {
             const_vec_array current_velocity_vector = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array current_element_internal_energy = (*forward_solve_internal_energy_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array current_coord_vector         = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array current_adjoint_vector       = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array next_velocity_vector         = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array current_coord_vector   = (*forward_solve_coordinate_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array next_velocity_vector   = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array next_element_internal_energy = (*forward_solve_internal_energy_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array next_coord_vector   = (*forward_solve_coordinate_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array next_adjoint_vector = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -1677,20 +1710,20 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
 // This function calculates the corner forces and the evolves stress (hypo)
 // ------------------------------------------------------------------------------
 void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos<material_t>& material,
-                                             const mesh_t&                    mesh,
-                                             const DViewCArrayKokkos<double>& node_coords,
-                                             const DViewCArrayKokkos<double>& node_vel,
-                                             const DViewCArrayKokkos<double>& elem_den,
-                                             const DViewCArrayKokkos<double>& elem_sie,
-                                             const DViewCArrayKokkos<double>& elem_pres,
-                                             const DViewCArrayKokkos<double>& elem_stress,
-                                             const DViewCArrayKokkos<double>& elem_sspd,
-                                             const DViewCArrayKokkos<double>& elem_vol,
-                                             const DViewCArrayKokkos<double>& elem_div,
-                                             const DViewCArrayKokkos<size_t>& elem_mat_id,
-                                             const double                     rk_alpha,
-                                             const size_t                     cycle
-                                             )
+    const mesh_t& mesh,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_den,
+    const DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_pres,
+    const DViewCArrayKokkos<double>& elem_stress,
+    const DViewCArrayKokkos<double>& elem_sspd,
+    const DViewCArrayKokkos<double>& elem_vol,
+    const DViewCArrayKokkos<double>& elem_div,
+    const DViewCArrayKokkos<size_t>& elem_mat_id,
+    const double rk_alpha,
+    const size_t cycle
+    )
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     const size_t num_dims = simparam->num_dims;
@@ -1700,7 +1733,7 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos<material_t>& ma
         // FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
         const size_t num_nodes_in_elem = 8;
-        real_t       gradient_result[num_dims];
+        real_t gradient_result[num_dims];
         // total Cauchy stress
         double tau_array[9];
         double tau_gradient_array[9];

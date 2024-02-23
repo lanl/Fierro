@@ -71,7 +71,7 @@ typedef Tpetra::MultiVector<real_t, LO, GO, Node> MV;
 typedef ROL::Vector<real_t> V;
 typedef ROL::TpetraMultiVector<real_t, LO, GO, Node> ROL_MV;
 
-using traits          = Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>;
+using traits = Kokkos::ViewTraits<LO*, Kokkos::LayoutLeft, void, void>;
 using array_layout    = typename traits::array_layout;
 using execution_space = typename traits::execution_space;
 using device_type     = typename traits::device_type;
@@ -146,9 +146,9 @@ public:
             }
         }
         nodal_density_flag_ = nodal_density_flag;
-        last_comm_step      = last_solve_step = -1;
-        current_step           = 0;
-        time_accumulation      = true;
+        last_comm_step    = last_solve_step = -1;
+        current_step      = 0;
+        time_accumulation = true;
         objective_accumulation = 0;
 
         // ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
@@ -182,7 +182,7 @@ public:
     void update_elasticity(const ROL::Vector<real_t>& z, ROL::UpdateType type, int iter = -1)
     {
         // debug
-        std::ostream&                       out = std::cout;
+        std::ostream& out = std::cout;
         Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
 
         current_step++;
@@ -247,7 +247,7 @@ public:
     void update_sgh(const ROL::Vector<real_t>& z, ROL::UpdateType type, int iter = -1)
     {
         // debug
-        std::ostream&                       out = std::cout;
+        std::ostream& out = std::cout;
         Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
 
         current_step++;
@@ -313,7 +313,7 @@ public:
     {
         // std::cout << "Started obj value on task " <<FEM_->myrank  << std::endl;
         ROL::Ptr<const MV> zp = getVector(z);
-        real_t             c  = 0.0;
+        real_t c = 0.0;
 
         // debug print
         // std::ostream &out = std::cout;
@@ -376,7 +376,7 @@ public:
         // std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
         // get Tpetra multivector pointer from the ROL vector
         ROL::Ptr<const MV> zp = getVector(z);
-        ROL::Ptr<MV>       gp = getVector(g);
+        ROL::Ptr<MV> gp = getVector(g);
 
         // communicate ghosts and solve for nodal degrees of freedom as a function of the current design variables
         // FEM_->gradient_print_sync=1;

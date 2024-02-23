@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -101,22 +98,22 @@ public:
                  DViewCArrayKokkos<double>& node_vel,
                  DViewCArrayKokkos<double>& elem_sie,
                  DViewCArrayKokkos<double>& elem_stress,
-                 const size_t               num_elems,
-                 const size_t               num_nodes);
+                 const size_t num_elems,
+                 const size_t num_nodes);
 
-    void get_timestep(mesh_t&                    mesh,
+    void get_timestep(mesh_t& mesh,
                       DViewCArrayKokkos<double>& node_coords,
                       DViewCArrayKokkos<double>& node_vel,
                       DViewCArrayKokkos<double>& elem_sspd,
                       DViewCArrayKokkos<double>& elem_vol);
 
-    void get_timestep2D(mesh_t&                    mesh,
+    void get_timestep2D(mesh_t& mesh,
                         DViewCArrayKokkos<double>& node_coords,
                         DViewCArrayKokkos<double>& node_vel,
                         DViewCArrayKokkos<double>& elem_sspd,
                         DViewCArrayKokkos<double>& elem_vol);
 
-    void write_outputs(const mesh_t&              mesh,
+    void write_outputs(const mesh_t& mesh,
                        DViewCArrayKokkos<double>& node_coords,
                        DViewCArrayKokkos<double>& node_vel,
                        DViewCArrayKokkos<double>& node_mass,
@@ -131,17 +128,17 @@ public:
 
     void node_density_constraints(host_vec_array node_densities_lower_bound);
 
-    void example_function(double                           rk_alpha,
-                          const size_t                     num_nodes,
-                          DViewCArrayKokkos<double>&       node_coords,
+    void example_function(double rk_alpha,
+                          const size_t num_nodes,
+                          DViewCArrayKokkos<double>& node_coords,
                           const DViewCArrayKokkos<double>& node_vel);
 
     KOKKOS_FUNCTION
-    void example_device_function(const ViewCArrayKokkos<double>&  B_matrix,
-                                 const size_t                     elem_gid,
+    void example_device_function(const ViewCArrayKokkos<double>& B_matrix,
+                                 const size_t elem_gid,
                                  const DViewCArrayKokkos<double>& node_coords,
                                  const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                 const size_t                     rk_level) const;
+                                 const size_t rk_level) const;
 
     bool   nodal_density_flag;
     real_t penalty_power;

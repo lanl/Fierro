@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -146,7 +143,7 @@ FEA_Module_Eulerian::FEA_Module_Eulerian(Solver* Solver_Pointer, mesh_t& mesh, c
 
     if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on || simparam->num_dims == 2)
     {
-        node_masses_distributed        = Teuchos::rcp(new MV(map, 1));
+        node_masses_distributed = Teuchos::rcp(new MV(map, 1));
         ghost_node_masses_distributed  = Teuchos::rcp(new MV(ghost_node_map, 1));
         adjoint_vector_distributed     = Teuchos::rcp(new MV(map, simparam->num_dims));
         phi_adjoint_vector_distributed = Teuchos::rcp(new MV(map, simparam->num_dims));
@@ -207,14 +204,14 @@ FEA_Module_Eulerian::~FEA_Module_Eulerian()
 ------------------------------------------------------------------------- */
 void FEA_Module_Eulerian::read_conditions_ansys_dat(std::ifstream* in, std::streampos before_condition_header)
 {
-    char              ch;
-    std::string       skip_line, read_line, substring, token;
+    char ch;
+    std::string skip_line, read_line, substring, token;
     std::stringstream line_parse, line_parse2;
 
-    int num_dim      = simparam->num_dims;
+    int num_dim = simparam->num_dims;
     int buffer_lines = 1000;
     int max_word     = 30;
-    int p_order      = simparam->p_order;
+    int p_order = simparam->p_order;
     int local_node_index, current_column_index;
     int buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
 
@@ -223,12 +220,12 @@ void FEA_Module_Eulerian::read_conditions_ansys_dat(std::ifstream* in, std::stre
     size_t strain_count;
     size_t read_index_start, node_rid, elem_gid;
 
-    CArrayKokkos<char, array_layout, HostSpace, memory_traits>          read_buffer;
+    CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
     CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
 
-    LO             local_dof_id;
-    GO             node_gid;
-    real_t         dof_value;
+    LO     local_dof_id;
+    GO     node_gid;
+    real_t dof_value;
     host_vec_array node_densities;
 } // end read_conditions_ansys_dat
 
@@ -317,9 +314,9 @@ void FEA_Module_Eulerian::grow_boundary_sets(int num_sets)
     if (num_sets > max_boundary_sets)
     {
         // temporary storage for previous data
-        CArrayKokkos<int, array_layout, HostSpace, memory_traits>      Temp_Boundary_Condition_Type_List = Boundary_Condition_Type_List;
-        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_NBoundary_Condition_Patches  = NBoundary_Condition_Patches;
-        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_Boundary_Condition_Patches   = Boundary_Condition_Patches;
+        CArrayKokkos<int, array_layout, HostSpace, memory_traits> Temp_Boundary_Condition_Type_List     = Boundary_Condition_Type_List;
+        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_NBoundary_Condition_Patches = NBoundary_Condition_Patches;
+        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_Boundary_Condition_Patches  = Boundary_Condition_Patches;
 
         max_boundary_sets = num_sets + 5; // 5 is an arbitrary buffer
         Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(max_boundary_sets, "Boundary_Condition_Type_List");
@@ -701,15 +698,15 @@ void FEA_Module_Eulerian::euler_solve()
     small = tv.small;
     graphics_times = simparam->graphics_options.graphics_times;
     graphics_id    = simparam->graphics_options.graphics_id;
-    size_t                          num_bdy_nodes = mesh.num_bdy_nodes;
-    const DCArrayKokkos<boundary_t> boundary      = simparam->boundary;
-    const DCArrayKokkos<material_t> material      = simparam->material;
-    int                             nTO_modules;
-    int                             old_max_forward_buffer;
-    size_t                          cycle;
-    const int                       num_dim = simparam->num_dims;
-    real_t                          objective_accumulation, global_objective_accumulation;
-    std::vector<std::vector<int>>   FEA_Module_My_TO_Modules = simparam_dynamic_opt.FEA_Module_My_TO_Modules;
+    size_t num_bdy_nodes = mesh.num_bdy_nodes;
+    const DCArrayKokkos<boundary_t> boundary = simparam->boundary;
+    const DCArrayKokkos<material_t> material = simparam->material;
+    int       nTO_modules;
+    int       old_max_forward_buffer;
+    size_t    cycle;
+    const int num_dim = simparam->num_dims;
+    real_t    objective_accumulation, global_objective_accumulation;
+    std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam_dynamic_opt.FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
     ROL::Ptr<ROL::Objective<real_t>> obj_pointer;
 
@@ -730,7 +727,7 @@ void FEA_Module_Eulerian::euler_solve()
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
         kinetic_energy_minimize_function.objective_accumulation = 0;
         global_objective_accumulation = objective_accumulation = 0;
-        kinetic_energy_objective      = true;
+        kinetic_energy_objective = true;
         if (max_time_steps + 1 > forward_solve_velocity_data->size())
         {
             old_max_forward_buffer = forward_solve_velocity_data->size();
@@ -905,9 +902,9 @@ void FEA_Module_Eulerian::euler_solve()
 
         // view scope
         {
-            const_vec_array node_velocities_interface       = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            const_vec_array node_coords_interface       = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
             vec_array all_node_coords_interface     = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
@@ -1038,7 +1035,7 @@ void FEA_Module_Eulerian::euler_solve()
             Kokkos::fence();
 
             double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
-            Explicit_Solver_Pointer_->host2dev_time      += comm_time4 - comm_time3;
+            Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
             Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
             // debug print vector values on a rank
             /*
@@ -1223,12 +1220,12 @@ void FEA_Module_Eulerian::euler_solve()
 
             // view scope
             {
-                const_vec_array node_velocities_interface       = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                vec_array       all_node_velocities_interface   = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                vec_array all_node_velocities_interface     = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 const_vec_array node_coords_interface       = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                vec_array       all_node_coords_interface   = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                     for (int idim = 0; idim < num_dim; idim++)
                     {
@@ -1249,7 +1246,7 @@ void FEA_Module_Eulerian::euler_solve()
             } // end view scope
 
             double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
-            Explicit_Solver_Pointer_->host2dev_time      += comm_time4 - comm_time3;
+            Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
             Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
 
             (*forward_solve_velocity_data)[cycle + 1]->assign(*Explicit_Solver_Pointer_->all_node_velocities_distributed);

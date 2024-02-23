@@ -1,3 +1,36 @@
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 /* ----------------------------------------------------------------------------
    Setup SGH solver data
 ------------------------------------------------------------------------------- */
@@ -113,7 +146,7 @@ void FEA_Module_SGH::setup()
     elem_vel_grad = DCArrayKokkos<double>(num_elems, 3, 3);
 
     // allocate material models
-    elem_eos      = DCArrayKokkos<eos_t>(num_elems);
+    elem_eos = DCArrayKokkos<eos_t>(num_elems);
     elem_strength = DCArrayKokkos<strength_t>(num_elems);
 
     // ---------------------------------------------------------------------
@@ -474,7 +507,7 @@ void FEA_Module_SGH::setup()
             // loop over the corners of the element and calculate the mass
             for (size_t corner_lid = 0; corner_lid < 4; corner_lid++)
             {
-                size_t corner_gid       = corners_in_elem(elem_gid, corner_lid);
+                size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
                 corner_mass(corner_gid) = corner_areas(corner_lid) * elem_den(elem_gid); // node radius is added later
             } // end for over corners
         });
@@ -554,9 +587,9 @@ void FEA_Module_SGH::setup()
 // -----------------------------------------------------------------------------
 // Interfaces read in data with the SGH solver data; currently a hack to streamline
 // ------------------------------------------------------------------------------
-void FEA_Module_SGH::sgh_interface_setup(node_t&   node,
-                                         elem_t&   elem,
-                                         corner_t& corner)
+void FEA_Module_SGH::sgh_interface_setup(node_t& node,
+    elem_t&   elem,
+    corner_t& corner)
 {
     const size_t num_dim     = simparam->num_dims;
     const size_t rk_num_bins = simparam->dynamic_options.rk_num_bins;
@@ -687,7 +720,7 @@ void FEA_Module_SGH::sgh_interface_setup(node_t&   node,
 
     // save all data (nlocal +nghost)
     CArrayKokkos<double, DefaultLayout, HostSpace> host_all_node_coords_state(rk_num_bins, nall_nodes, num_dim);
-    host_vec_array                                 interface_all_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+    host_vec_array interface_all_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
     host_all_node_coords_state.get_kokkos_view() = node.all_coords.get_kokkos_dual_view().view_host();
     host_node_coords_state = CArrayKokkos<double, DefaultLayout, HostSpace>(rk_num_bins, nall_nodes, num_dim);
     host_all_node_coords_state.get_kokkos_view() = Kokkos::View<double*, DefaultLayout, HostSpace>("debug", rk_num_bins * nall_nodes * num_dim);
@@ -921,9 +954,9 @@ void FEA_Module_SGH::grow_boundary_sets(int num_sets)
     if (num_sets > max_boundary_sets)
     {
         // temporary storage for previous data
-        CArrayKokkos<int, array_layout, HostSpace, memory_traits>      Temp_Boundary_Condition_Type_List = Boundary_Condition_Type_List;
-        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_NBoundary_Condition_Patches  = NBoundary_Condition_Patches;
-        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_Boundary_Condition_Patches   = Boundary_Condition_Patches;
+        CArrayKokkos<int, array_layout, HostSpace, memory_traits> Temp_Boundary_Condition_Type_List     = Boundary_Condition_Type_List;
+        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_NBoundary_Condition_Patches = NBoundary_Condition_Patches;
+        CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_Boundary_Condition_Patches  = Boundary_Condition_Patches;
 
         max_boundary_sets = num_sets + 5; // 5 is an arbitrary buffer
         Boundary_Condition_Type_List = CArrayKokkos<int, array_layout, HostSpace, memory_traits>(max_boundary_sets, "Boundary_Condition_Type_List");
@@ -933,7 +966,7 @@ void FEA_Module_SGH::grow_boundary_sets(int num_sets)
 
         // copy previous data back over
 #ifdef DEBUG
-        std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR COPY " << max_boundary_sets <<std::endl;
+        std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR COPY " << max_boundary_sets << std::endl;
 #endif
         for (int iset = 0; iset < num_boundary_conditions; iset++)
         {

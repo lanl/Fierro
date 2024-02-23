@@ -1,3 +1,37 @@
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
+
 // -----------------------------------------------------------------------------
 // This code handles the geometric information for the mesh for the SHG solver
 // ------------------------------------------------------------------------------
@@ -5,13 +39,13 @@
 #include "state.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 
-void FEA_Module_Dynamic_Elasticity::update_position_elastic(double                           rk_alpha,
-                                                            const size_t                     num_nodes,
-                                                            DViewCArrayKokkos<double>&       node_coords,
-                                                            const DViewCArrayKokkos<double>& node_vel)
+void FEA_Module_Dynamic_Elasticity::update_position_elastic(double rk_alpha,
+    const size_t num_nodes,
+    DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel)
 {
     const size_t rk_level = rk_num_bins - 1;
-    int          num_dims = num_dims;
+    int num_dims = num_dims;
 
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
@@ -35,11 +69,11 @@ void FEA_Module_Dynamic_Elasticity::update_position_elastic(double              
 //   B_p is the OUTWARD corner area normal at node p
 // ------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_bmatrix(const ViewCArrayKokkos<double>&  B_matrix,
-                                                const size_t                     elem_gid,
-                                                const DViewCArrayKokkos<double>& node_coords,
-                                                const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                const size_t                     rk_level) const
+void FEA_Module_Dynamic_Elasticity::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
 {
     const size_t num_nodes = 8;
 
@@ -265,10 +299,10 @@ void FEA_Module_Dynamic_Elasticity::get_vol()
 // Exact volume for a hex element
 KOKKOS_INLINE_FUNCTION
 void FEA_Module_Dynamic_Elasticity::get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
-                                                const size_t                     elem_gid,
-                                                const DViewCArrayKokkos<double>& node_coords,
-                                                const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                const size_t                     rk_level) const
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
 {
     const size_t num_nodes = 8;
 
@@ -308,11 +342,11 @@ void FEA_Module_Dynamic_Elasticity::get_vol_hex(const DViewCArrayKokkos<double>&
 } // end subroutine
 
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos<double>&  B_matrix,
-                                                  const size_t                     elem_gid,
-                                                  const DViewCArrayKokkos<double>& node_coords,
-                                                  const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                  const size_t                     rk_level) const
+void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
 {
     const size_t num_nodes = 4;
 
@@ -367,10 +401,10 @@ void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos<double>
 // true volume of a quad in RZ coords
 KOKKOS_INLINE_FUNCTION
 void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos<double>& elem_vol,
-                                                 const size_t                     elem_gid,
-                                                 const DViewCArrayKokkos<double>& node_coords,
-                                                 const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                 const size_t                     rk_level) const
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
 {
     // --- testing here ---
     /*
@@ -418,17 +452,17 @@ void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos<double>
     */
     elem_vol(elem_gid) =
         ( (y(2) + y(3) + y(0)) * ((y(2) - y(3)) * (x(0) - x(3)) - (y(0) - y(3)) * (x(2) - x(3)) )
-        + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / 6.0;
+          + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / 6.0;
 
     return;
 } // end subroutine
 
 // element facial area
 KOKKOS_FUNCTION
-double FEA_Module_Dynamic_Elasticity::get_area_quad(const size_t                     elem_gid,
-                                                    const DViewCArrayKokkos<double>& node_coords,
-                                                    const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                    const size_t                     rk_level) const
+double FEA_Module_Dynamic_Elasticity::get_area_quad(const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
 {
     double elem_area = 0.0;
 
@@ -460,11 +494,11 @@ double FEA_Module_Dynamic_Elasticity::get_area_quad(const size_t                
 
 KOKKOS_INLINE_FUNCTION
 double FEA_Module_Dynamic_Elasticity::heron(const double x1,
-                                            const double y1,
-                                            const double x2,
-                                            const double y2,
-                                            const double x3,
-                                            const double y3) const
+    const double y1,
+    const double x2,
+    const double y2,
+    const double x3,
+    const double y3) const
 {
     double S, a, b, c, area;
 
@@ -483,11 +517,11 @@ double FEA_Module_Dynamic_Elasticity::heron(const double x1,
 }
 
 KOKKOS_FUNCTION
-void FEA_Module_Dynamic_Elasticity::get_area_weights2D(const ViewCArrayKokkos<double>&  corner_areas,
-                                                       const size_t                     elem_gid,
-                                                       const DViewCArrayKokkos<double>& node_coords,
-                                                       const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                                       const size_t                     rk_level) const
+void FEA_Module_Dynamic_Elasticity::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const size_t rk_level) const
 {
     const size_t num_nodes = 4;
 

@@ -1,4 +1,36 @@
-
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 #include "mesh.h"
 #include "state.h"
 #include <iostream>
@@ -59,7 +91,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
     const size_t rk_num_bins   = simparam->dynamic_options.rk_num_bins;
     const size_t num_bcs       = module_params->boundary_conditions.size();
     const size_t num_materials = simparam->materials.size();
-    real_t       objective_accumulation;
+    real_t objective_accumulation;
 
     // --- Read in the nodes in the mesh ---
     int myrank = Explicit_Solver_Pointer_->myrank;
@@ -68,7 +100,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
     const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
-    CArray<double>                  current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
+    CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
 
     std::vector<std::vector<int>> FEA_Module_My_TO_Modules = simparam->FEA_Module_My_TO_Modules;
     problem = Explicit_Solver_Pointer_->problem; // Pointer to ROL optimization problem object
@@ -103,9 +135,9 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
 
     // view scope
     {
-        const_vec_array node_coords_interface       = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+        const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
         const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-        vec_array       all_node_coords_interface   = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+        vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
             for (int idim = 0; idim < num_dim; idim++)
             {
@@ -439,7 +471,7 @@ void FEA_Module_Dynamic_Elasticity::update_forward_solve(Teuchos::RCP<const MV> 
             // loop over the corners of the element and calculate the mass
             for (size_t corner_lid = 0; corner_lid < 4; corner_lid++)
             {
-                size_t corner_gid       = corners_in_elem(elem_gid, corner_lid);
+                size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
                 corner_mass(corner_gid) = corner_areas(corner_lid) * elem_den(elem_gid); // node radius is added later
             } // end for over corners
         });
@@ -532,7 +564,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint()
 
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
-    const int                       num_dim  = simparam->num_dims;
+    const int num_dim = simparam->num_dims;
 
     Teuchos::RCP<MV> previous_adjoint_vector_distributed, current_adjoint_vector_distributed;
     Teuchos::RCP<MV> previous_velocity_vector_distributed, current_velocity_vector_distributed;
@@ -583,7 +615,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint()
             const_vec_array current_velocity_vector  = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
             const_vec_array previous_adjoint_vector = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            vec_array       current_adjoint_vector  = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array current_adjoint_vector = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadWrite);
 
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
                 for (int idim = 0; idim < num_dim; idim++)
@@ -721,9 +753,9 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
                     }
                     */
                     matrix_contribution = -damping_constant * previous_adjoint_vector(node_gid, idim);
-                    rate_of_change      = previous_velocity_vector(node_gid, idim) -
-                                          matrix_contribution / node_mass(node_gid) -
-                                          phi_previous_adjoint_vector(node_gid, idim) / node_mass(node_gid);
+                    rate_of_change = previous_velocity_vector(node_gid, idim) -
+                                     matrix_contribution / node_mass(node_gid) -
+                                     phi_previous_adjoint_vector(node_gid, idim) / node_mass(node_gid);
                     midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + previous_adjoint_vector(node_gid, idim);
 
                     matrix_contribution = 0;
@@ -766,9 +798,9 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_adjoint_full()
                     }
                     */
                     matrix_contribution = -damping_constant * midpoint_adjoint_vector(node_gid, idim);
-                    rate_of_change      =  (previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim)) / 2 -
-                                          matrix_contribution / node_mass(node_gid) -
-                                          phi_midpoint_adjoint_vector(node_gid, idim) / node_mass(node_gid);
+                    rate_of_change =  (previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim)) / 2 -
+                                     matrix_contribution / node_mass(node_gid) -
+                                     phi_midpoint_adjoint_vector(node_gid, idim) / node_mass(node_gid);
                     current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + previous_adjoint_vector(node_gid, idim);
                     matrix_contribution = 0;
                     // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
@@ -804,7 +836,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient(const
     int    num_corners = rnum_elem * num_nodes_in_elem;
     real_t global_dt;
 
-    const int                       num_dim  = simparam->num_dims;
+    const int num_dim = simparam->num_dims;
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
 
@@ -1057,7 +1089,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
 
     const DCArrayKokkos<boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos<material_t> material = simparam->material;
-    const int                       num_dim  = simparam->num_dims;
+    const int num_dim = simparam->num_dims;
 
     auto current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
     auto current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
@@ -1070,7 +1102,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
     compute_topology_optimization_adjoint_full();
 
     { // view scope
-        vec_array       design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+        vec_array design_gradients = design_gradients_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
         const_vec_array design_densities = design_densities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
         // compute design gradients
         FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
@@ -1218,7 +1250,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
                 const_vec_array current_velocity_vector    = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array current_adjoint_vector     = (*adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array current_phi_adjoint_vector = (*phi_adjoint_vector_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                const_vec_array next_velocity_vector       = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array next_velocity_vector    = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array next_adjoint_vector     = (*adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array next_phi_adjoint_vector = (*phi_adjoint_vector_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
@@ -1351,7 +1383,7 @@ void FEA_Module_Dynamic_Elasticity::compute_topology_optimization_gradient_full(
     // force_design_gradient_term(design_variables, design_gradients);
     // view scope
     {
-        host_vec_array       host_design_gradients = design_gradients_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
+        host_vec_array host_design_gradients = design_gradients_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
         const_host_vec_array host_design_variables = design_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
         compute_stiffness_gradients(host_design_variables, host_design_gradients);
     } // end view scope
@@ -1375,7 +1407,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
     CArrayKokkos<size_t, array_layout, device_type, memory_traits> current_row_nodes_scanned;
 
     nodal_density_flag = simparam->nodal_density_flag;
-    penalty_power      = simparam->optimization_options.simp_penalty_power;
+    penalty_power = simparam->optimization_options.simp_penalty_power;
 
     // allocate stride arrays
     CArrayKokkos<size_t, array_layout, device_type, memory_traits>  Graph_Matrix_Strides_initial(nlocal_nodes, "Graph_Matrix_Strides_initial");
@@ -1405,7 +1437,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
     // initialize nlocal arrays
     FOR_ALL_CLASS(inode, 0, nall_nodes, {
         node_indices_used(inode) = 0;
-        column_index(inode)      = 0;
+        column_index(inode) = 0;
     }); // end parallel for
     Kokkos::fence();
 
@@ -1468,7 +1500,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
     current_row_nodes_scanned = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(max_stride, "current_row_nodes_scanned");
 
     // allocate sparse graph with node repeats
-    RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits>          Repeat_Graph_Matrix(Graph_Matrix_Strides_initial);
+    RaggedRightArrayKokkos<size_t, array_layout, device_type, memory_traits> Repeat_Graph_Matrix(Graph_Matrix_Strides_initial);
     RaggedRightArrayofVectorsKokkos<size_t, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial, num_dim);
 
     // Fill the initial Graph with repeats
@@ -1596,7 +1628,7 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
                       that have been scanned uniquely. Use this list to reset the flag array
                       afterwards without having to loop over all the nodes in the system*/
                     node_indices_used(current_node) = 1;
-                    column_index(current_node)      = istride;
+                    column_index(current_node) = istride;
                     current_row_nodes_scanned(current_row_n_nodes_scanned) = current_node;
                     current_row_n_nodes_scanned++;
                 }
@@ -1701,10 +1733,10 @@ void FEA_Module_Dynamic_Elasticity::init_assembly()
    Enforce boundary conditions on the adjoint vectors
 ------------------------------------------------------------------------- */
 
-void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t&                    mesh,
-                                                     const DCArrayKokkos<boundary_t>& boundary,
-                                                     vec_array&                       node_adjoint,
-                                                     vec_array&                       node_phi_adjoint)
+void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t& mesh,
+    const DCArrayKokkos<boundary_t>& boundary,
+    vec_array& node_adjoint,
+    vec_array& node_phi_adjoint)
 {
     // error and debug flag
     // DCArrayKokkos<bool> print_flag(1, "print_flag");
@@ -1712,7 +1744,7 @@ void FEA_Module_Dynamic_Elasticity::boundary_adjoint(const mesh_t&              
     // print_flag.update_device();
 
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
-    int          num_dims = simparam->num_dims;
+    int num_dims = simparam->num_dims;
     // Loop over boundary sets
     for (size_t bdy_set = 0; bdy_set < num_bdy_sets; bdy_set++)
     {

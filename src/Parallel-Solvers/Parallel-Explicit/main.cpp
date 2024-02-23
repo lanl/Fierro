@@ -49,9 +49,8 @@
 
 void solver_setup(const char* filename)
 {
-    Explicit_Solver solver(
-        Yaml::from_file_strict<Simulation_Parameters_Explicit>(filename)
-        );
+    Explicit_Solver solver(Yaml::from_file_strict<Simulation_Parameters_Explicit>(filename));
+    
     // checks for optional solver routines
     if (solver.setup_flag)
     {

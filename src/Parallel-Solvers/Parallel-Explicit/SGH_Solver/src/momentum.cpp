@@ -1,15 +1,47 @@
-
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 #include "state.h"
 #include "FEA_Module_SGH.h"
 
 // -----------------------------------------------------------------------------
 // This function evolves the velocity at the nodes of the mesh
 // ------------------------------------------------------------------------------
-void FEA_Module_SGH::update_velocity_sgh(double                           rk_alpha,
-                                         DViewCArrayKokkos<double>&       node_vel,
-                                         const DViewCArrayKokkos<double>& node_mass,
-                                         const DViewCArrayKokkos<double>& corner_force
-                                         )
+void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
+    DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& node_mass,
+    const DViewCArrayKokkos<double>& corner_force
+    )
 {
     const size_t rk_level = rk_num_bins - 1;
     const size_t num_dims = num_dim;
@@ -50,14 +82,14 @@ void FEA_Module_SGH::update_velocity_sgh(double                           rk_alp
 // This function calculates the velocity gradient
 // ------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>&        vel_grad,
-                                 const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                 const DViewCArrayKokkos<double>& node_vel,
-                                 const ViewCArrayKokkos<double>&  b_matrix,
-                                 const double                     elem_vol,
-                                 const size_t                     elem_gid,
-                                 const size_t                     rk_level
-                                 ) const
+void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const DViewCArrayKokkos<double>& node_vel,
+    const ViewCArrayKokkos<double>&  b_matrix,
+    const double elem_vol,
+    const size_t elem_gid,
+    const size_t rk_level
+    ) const
 {
     const size_t num_nodes_in_elem = 8;
 
@@ -137,15 +169,15 @@ void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>&        vel_grad,
 // This function calculates the velocity gradient
 // ------------------------------------------------------------------------------
 KOKKOS_FUNCTION
-void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos<double>&        vel_grad,
-                                   const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                   const DViewCArrayKokkos<double>& node_vel,
-                                   const ViewCArrayKokkos<double>&  b_matrix,
-                                   const double                     elem_vol,
-                                   const double                     elem_area,
-                                   const size_t                     elem_gid,
-                                   const size_t                     rk_level
-                                   ) const
+void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
+    const ViewCArrayKokkos<size_t>&  elem_node_gids,
+    const DViewCArrayKokkos<double>& node_vel,
+    const ViewCArrayKokkos<double>&  b_matrix,
+    const double elem_vol,
+    const double elem_area,
+    const size_t elem_gid,
+    const size_t rk_level
+    ) const
 {
     const size_t num_nodes_in_elem = 4;
 
@@ -202,11 +234,11 @@ void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos<double>&        vel_grad,
 // -----------------------------------------------------------------------------
 // This subroutine to calculate the velocity divergence in all elements
 // ------------------------------------------------------------------------------
-void FEA_Module_SGH::get_divergence(DViewCArrayKokkos<double>&       elem_div,
-                                    const DViewCArrayKokkos<double>& node_coords,
-                                    const DViewCArrayKokkos<double>& node_vel,
-                                    const DViewCArrayKokkos<double>& elem_vol
-                                    )
+void FEA_Module_SGH::get_divergence(DViewCArrayKokkos<double>& elem_div,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_vol
+    )
 {
     const size_t rk_level = rk_num_bins - 1;
 
@@ -276,11 +308,11 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos<double>&       elem_div,
 // -----------------------------------------------------------------------------
 // This subroutine to calculate the velocity divergence in all elements
 // ------------------------------------------------------------------------------
-void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos<double>&       elem_div,
-                                      const DViewCArrayKokkos<double>& node_coords,
-                                      const DViewCArrayKokkos<double>& node_vel,
-                                      const DViewCArrayKokkos<double>& elem_vol
-                                      )
+void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos<double>& elem_div,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_vol
+    )
 {
     const size_t rk_level = rk_num_bins - 1;
 
@@ -356,15 +388,15 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos<double>&       elem_div,
 // D = sym(L)
 // W = antisym(L)
 KOKKOS_INLINE_FUNCTION
-void FEA_Module_SGH::decompose_vel_grad(ViewCArrayKokkos<double>&        D_tensor,
-                                        ViewCArrayKokkos<double>&        W_tensor,
-                                        const ViewCArrayKokkos<double>&  vel_grad,
-                                        const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                                        const size_t                     elem_gid,
-                                        const DViewCArrayKokkos<double>& node_coords,
-                                        const DViewCArrayKokkos<double>& node_vel,
-                                        const double                     vol
-                                        ) const
+void FEA_Module_SGH::decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
+    ViewCArrayKokkos<double>& W_tensor,
+    const ViewCArrayKokkos<double>& vel_grad,
+    const ViewCArrayKokkos<size_t>& elem_node_gids,
+    const size_t elem_gid,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const double vol
+    ) const
 {
     // --- Calculate the velocity gradient ---
 

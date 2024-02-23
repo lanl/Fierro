@@ -1,4 +1,36 @@
-
+/**********************************************************************************************
+ © 2020. Triad National Security, LLC. All rights reserved.
+ This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+ National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+ Department of Energy/National Nuclear Security Administration. All rights in the program are
+ reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+ Security Administration. The Government is granted for itself and others acting on its behalf a
+ nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+ derivative works, distribute copies to the public, perform publicly and display publicly, and
+ to permit others to do so.
+ This program is open source under the BSD-3 License.
+ Redistribution and use in source and binary forms, with or without modification, are permitted
+ provided that the following conditions are met:
+ 1.  Redistributions of source code must retain the above copyright notice, this list of
+ conditions and the following disclaimer.
+ 2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+ conditions and the following disclaimer in the documentation and/or other materials
+ provided with the distribution.
+ 3.  Neither the name of the copyright holder nor the names of its contributors may be used
+ to endorse or promote products derived from this software without specific prior
+ written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ **********************************************************************************************/
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_SGH.h"
@@ -7,14 +39,14 @@
 // This function saves the variables at rk_stage = 0, which is t_n
 // ------------------------------------------------------------------------------
 void FEA_Module_SGH::rk_init(DViewCArrayKokkos<double>& node_coords,
-                             DViewCArrayKokkos<double>& node_vel,
-                             DViewCArrayKokkos<double>& elem_sie,
-                             DViewCArrayKokkos<double>& elem_stress,
-                             const size_t               num_elems,
-                             const size_t               num_nodes)
+    DViewCArrayKokkos<double>& node_vel,
+    DViewCArrayKokkos<double>& elem_sie,
+    DViewCArrayKokkos<double>& elem_stress,
+    const size_t num_elems,
+    const size_t num_nodes)
 {
     const size_t rk_level = rk_num_bins - 1;
-    int          num_dims = num_dim;
+    int num_dims = num_dim;
     // save elem quantities
     FOR_ALL_CLASS(elem_gid, 0, num_elems, {
         // stress is always 3D even with 2D-RZ
@@ -47,11 +79,11 @@ void FEA_Module_SGH::rk_init(DViewCArrayKokkos<double>& node_coords,
 // between any two nodes in the mesh
 // ------------------------------------------------------------------------------
 // WARNING WARNING :  Only works for 3D, 8 node elements
-void FEA_Module_SGH::get_timestep(mesh_t&                    mesh,
-                                  DViewCArrayKokkos<double>& node_coords,
-                                  DViewCArrayKokkos<double>& node_vel,
-                                  DViewCArrayKokkos<double>& elem_sspd,
-                                  DViewCArrayKokkos<double>& elem_vol)
+void FEA_Module_SGH::get_timestep(mesh_t& mesh,
+    DViewCArrayKokkos<double>& node_coords,
+    DViewCArrayKokkos<double>& node_vel,
+    DViewCArrayKokkos<double>& elem_sspd,
+    DViewCArrayKokkos<double>& elem_vol)
 {
     const size_t rk_level = rk_num_bins - 1;
 
@@ -148,11 +180,11 @@ void FEA_Module_SGH::get_timestep(mesh_t&                    mesh,
 // between any two nodes in the mesh
 // ------------------------------------------------------------------------------
 // WARNING WARNING :  Only works for 2D, 4 node elements
-void FEA_Module_SGH::get_timestep2D(mesh_t&                    mesh,
-                                    DViewCArrayKokkos<double>& node_coords,
-                                    DViewCArrayKokkos<double>& node_vel,
-                                    DViewCArrayKokkos<double>& elem_sspd,
-                                    DViewCArrayKokkos<double>& elem_vol)
+void FEA_Module_SGH::get_timestep2D(mesh_t& mesh,
+    DViewCArrayKokkos<double>& node_coords,
+    DViewCArrayKokkos<double>& node_vel,
+    DViewCArrayKokkos<double>& elem_sspd,
+    DViewCArrayKokkos<double>& elem_vol)
 {
     const size_t rk_level = rk_num_bins - 1;
 

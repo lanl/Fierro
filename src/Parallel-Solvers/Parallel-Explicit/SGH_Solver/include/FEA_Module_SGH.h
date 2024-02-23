@@ -1,5 +1,5 @@
 /**********************************************************************************************
- Â© 2020. Triad National Security, LLC. All rights reserved.
+ © 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -34,7 +31,6 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-
 #ifndef FEA_MODULE_SGH_H
 #define FEA_MODULE_SGH_H
 
@@ -69,7 +65,7 @@ public:
 
     void cleanup_material_models();
 
-    int solve();
+    int  solve();
 
     void module_cleanup();
 
@@ -99,23 +95,23 @@ public:
     *
     */
     void get_force_sgh(const DCArrayKokkos<material_t>& material,
-                       const mesh_t&                    mesh,
+                       const mesh_t& mesh,
                        const DViewCArrayKokkos<double>& node_coords,
                        const DViewCArrayKokkos<double>& node_vel,
                        const DViewCArrayKokkos<double>& elem_den,
                        const DViewCArrayKokkos<double>& elem_sie,
                        const DViewCArrayKokkos<double>& elem_pres,
-                       DViewCArrayKokkos<double>&       elem_stress,
+                       DViewCArrayKokkos<double>& elem_stress,
                        const DViewCArrayKokkos<double>& elem_sspd,
                        const DViewCArrayKokkos<double>& elem_vol,
                        const DViewCArrayKokkos<double>& elem_div,
                        const DViewCArrayKokkos<size_t>& elem_mat_id,
-                       DViewCArrayKokkos<double>&       corner_force,
-                       const double                     rk_alpha,
-                       const size_t                     cycle);
+                       DViewCArrayKokkos<double>& corner_force,
+                       const double rk_alpha,
+                       const size_t cycle);
 
     void get_force_vgradient_sgh(const DCArrayKokkos<material_t>& material,
-                                 const mesh_t&                    mesh,
+                                 const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_coords,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& elem_den,
@@ -126,11 +122,11 @@ public:
                                  const DViewCArrayKokkos<double>& elem_vol,
                                  const DViewCArrayKokkos<double>& elem_div,
                                  const DViewCArrayKokkos<size_t>& elem_mat_id,
-                                 const double                     rk_alpha,
-                                 const size_t                     cycle);
+                                 const double rk_alpha,
+                                 const size_t cycle);
 
     void get_force_ugradient_sgh(const DCArrayKokkos<material_t>& material,
-                                 const mesh_t&                    mesh,
+                                 const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_coords,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& elem_den,
@@ -141,11 +137,11 @@ public:
                                  const DViewCArrayKokkos<double>& elem_vol,
                                  const DViewCArrayKokkos<double>& elem_div,
                                  const DViewCArrayKokkos<size_t>& elem_mat_id,
-                                 const double                     rk_alpha,
-                                 const size_t                     cycle);
+                                 const double rk_alpha,
+                                 const size_t cycle);
 
     void get_force_egradient_sgh(const DCArrayKokkos<material_t>& material,
-                                 const mesh_t&                    mesh,
+                                 const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_coords,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& elem_den,
@@ -156,11 +152,11 @@ public:
                                  const DViewCArrayKokkos<double>& elem_vol,
                                  const DViewCArrayKokkos<double>& elem_div,
                                  const DViewCArrayKokkos<size_t>& elem_mat_id,
-                                 const double                     rk_alpha,
-                                 const size_t                     cycle);
+                                 const double rk_alpha,
+                                 const size_t cycle);
 
     void get_force_dgradient_sgh(const DCArrayKokkos<material_t>& material,
-                                 const mesh_t&                    mesh,
+                                 const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_coords,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& elem_den,
@@ -171,13 +167,13 @@ public:
                                  const DViewCArrayKokkos<double>& elem_vol,
                                  const DViewCArrayKokkos<double>& elem_div,
                                  const DViewCArrayKokkos<size_t>& elem_mat_id,
-                                 const double                     rk_alpha,
-                                 const size_t                     cycle);
+                                 const double rk_alpha,
+                                 const size_t cycle);
 
     void force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
 
     void get_force_sgh2D(const DCArrayKokkos<material_t>& material,
-                         const mesh_t&                    mesh,
+                         const mesh_t& mesh,
                          const DViewCArrayKokkos<double>& node_coords,
                          const DViewCArrayKokkos<double>& node_vel,
                          const DViewCArrayKokkos<double>& elem_den,
@@ -188,13 +184,13 @@ public:
                          const DViewCArrayKokkos<double>& elem_vol,
                          const DViewCArrayKokkos<double>& elem_div,
                          const DViewCArrayKokkos<size_t>& elem_mat_id,
-                         DViewCArrayKokkos<double>&       corner_force,
-                         const double                     rk_alpha,
-                         const size_t                     cycle);
+                         DViewCArrayKokkos<double>& corner_force,
+                         const double rk_alpha,
+                         const size_t cycle);
 
-    void update_position_sgh(double                           rk_alpha,
-                             const size_t                     num_nodes,
-                             DViewCArrayKokkos<double>&       node_coords,
+    void update_position_sgh(double rk_alpha,
+                             const size_t num_nodes,
+                             DViewCArrayKokkos<double>& node_coords,
                              const DViewCArrayKokkos<double>& node_vel);
 
     void get_vol();
@@ -205,58 +201,58 @@ public:
 
     KOKKOS_INLINE_FUNCTION
     void get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
-                     const size_t                     elem_gid,
+                     const size_t elem_gid,
                      const DViewCArrayKokkos<double>& node_coords,
                      const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                     const size_t                     rk_level) const;
+                     const size_t rk_level) const;
 
     KOKKOS_FUNCTION
-    void get_vol_hex_ugradient(const ViewCArrayKokkos<double>&  elem_vol_gradients,
-                               const size_t                     elem_gid,
+    void get_vol_hex_ugradient(const ViewCArrayKokkos<double>& elem_vol_gradients,
+                               const size_t elem_gid,
                                const DViewCArrayKokkos<double>& node_coords,
                                const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                               const size_t                     rk_level) const;
+                               const size_t rk_level) const;
 
     KOKKOS_INLINE_FUNCTION
     void get_vol_quad(const DViewCArrayKokkos<double>& elem_vol,
-                      const size_t                     elem_gid,
+                      const size_t elem_gid,
                       const DViewCArrayKokkos<double>& node_coords,
                       const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                      const size_t                     rk_level) const;
+                      const size_t rk_level) const;
 
     KOKKOS_FUNCTION
-    double get_area_quad(const size_t                     elem_gid,
+    double get_area_quad(const size_t elem_gid,
                          const DViewCArrayKokkos<double>& node_coords,
                          const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                         const size_t                     rk_level) const;
+                         const size_t rk_level) const;
 
     KOKKOS_FUNCTION
-    void get_bmatrix(const ViewCArrayKokkos<double>&  B_matrix,
-                     const size_t                     elem_gid,
+    void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
+                     const size_t elem_gid,
                      const DViewCArrayKokkos<double>& node_coords,
                      const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                     const size_t                     rk_level) const;
+                     const size_t rk_level) const;
 
     KOKKOS_FUNCTION
-    void get_bmatrix_gradients(const ViewCArrayKokkos<double>&  B_matrix_gradients,
-                               const size_t                     elem_gid,
+    void get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_matrix_gradients,
+                               const size_t elem_gid,
                                const DViewCArrayKokkos<double>& node_coords,
                                const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                               const size_t                     rk_level) const;
+                               const size_t rk_level) const;
 
     KOKKOS_FUNCTION
-    void get_bmatrix2D(const ViewCArrayKokkos<double>&  B_matrix,
-                       const size_t                     elem_gid,
+    void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
+                       const size_t elem_gid,
                        const DViewCArrayKokkos<double>& node_coords,
                        const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                       const size_t                     rk_level) const;
+                       const size_t rk_level) const;
 
     KOKKOS_FUNCTION
-    void get_area_weights2D(const ViewCArrayKokkos<double>&  corner_areas,
-                            const size_t                     elem_gid,
+    void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
+                            const size_t elem_gid,
                             const DViewCArrayKokkos<double>& node_coords,
                             const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                            const size_t                     rk_level) const;
+                            const size_t rk_level) const;
 
     KOKKOS_INLINE_FUNCTION
     double heron(const double x1,
@@ -268,158 +264,158 @@ public:
 
     double average_element_density(const int nodes_per_elem, const CArray<double> current_element_densities) const;
 
-    void get_divergence(DViewCArrayKokkos<double>&       elem_div,
-                        const DViewCArrayKokkos<double>& node_coords,
-                        const DViewCArrayKokkos<double>& node_vel,
-                        const DViewCArrayKokkos<double>& elem_vol);
-
-    void get_divergence2D(DViewCArrayKokkos<double>&       elem_div,
+    void   get_divergence(DViewCArrayKokkos<double>& elem_div,
                           const DViewCArrayKokkos<double>& node_coords,
                           const DViewCArrayKokkos<double>& node_vel,
                           const DViewCArrayKokkos<double>& elem_vol);
 
+    void   get_divergence2D(DViewCArrayKokkos<double>& elem_div,
+                            const DViewCArrayKokkos<double>& node_coords,
+                            const DViewCArrayKokkos<double>& node_vel,
+                            const DViewCArrayKokkos<double>& elem_vol);
+
     KOKKOS_FUNCTION
-    void get_velgrad(ViewCArrayKokkos<double>&        vel_grad,
+    void get_velgrad(ViewCArrayKokkos<double>& vel_grad,
                      const ViewCArrayKokkos<size_t>&  elem_node_gids,
                      const DViewCArrayKokkos<double>& node_vel,
                      const ViewCArrayKokkos<double>&  b_matrix,
-                     const double                     elem_vol,
-                     const size_t                     elem_gid,
-                     const size_t                     rk_level) const;
+                     const double elem_vol,
+                     const size_t elem_gid,
+                     const size_t rk_level) const;
 
     KOKKOS_FUNCTION
-    void get_velgrad2D(ViewCArrayKokkos<double>&        vel_grad,
+    void get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
                        const ViewCArrayKokkos<size_t>&  elem_node_gids,
                        const DViewCArrayKokkos<double>& node_vel,
                        const ViewCArrayKokkos<double>&  b_matrix,
-                       const double                     elem_vol,
-                       const double                     elem_area,
-                       const size_t                     elem_gid,
-                       const size_t                     rk_level) const;
+                       const double elem_vol,
+                       const double elem_area,
+                       const size_t elem_gid,
+                       const size_t rk_level) const;
 
     KOKKOS_INLINE_FUNCTION
-    void decompose_vel_grad(ViewCArrayKokkos<double>&        D_tensor,
-                            ViewCArrayKokkos<double>&        W_tensor,
-                            const ViewCArrayKokkos<double>&  vel_grad,
-                            const ViewCArrayKokkos<size_t>&  elem_node_gids,
-                            const size_t                     elem_gid,
+    void decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
+                            ViewCArrayKokkos<double>& W_tensor,
+                            const ViewCArrayKokkos<double>& vel_grad,
+                            const ViewCArrayKokkos<size_t>& elem_node_gids,
+                            const size_t elem_gid,
                             const DViewCArrayKokkos<double>& node_coords,
                             const DViewCArrayKokkos<double>& node_vel,
-                            const double                     vol) const;
+                            const double vol) const;
 
-    void update_velocity_sgh(double                           rk_alpha,
-                             DViewCArrayKokkos<double>&       node_vel,
+    void update_velocity_sgh(double rk_alpha,
+                             DViewCArrayKokkos<double>& node_vel,
                              const DViewCArrayKokkos<double>& node_mass,
                              const DViewCArrayKokkos<double>& corner_force);
 
     void tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
-                  mesh_t&                          mesh,
+                  mesh_t& mesh,
                   const DViewCArrayKokkos<double>& node_coords);
 
-    void boundary_velocity(const mesh_t&                    mesh,
+    void boundary_velocity(const mesh_t& mesh,
                            const DCArrayKokkos<boundary_t>& boundary,
-                           DViewCArrayKokkos<double>&       node_vel);
+                           DViewCArrayKokkos<double>& node_vel);
 
     KOKKOS_INLINE_FUNCTION
-    bool check_bdy(const size_t                     patch_gid,
-                   const int                        num_dim,
-                   const int                        num_nodes_in_patch,
-                   const BOUNDARY_TYPE              this_bc_tag,
-                   const double                     val,
+    bool check_bdy(const size_t patch_gid,
+                   const int    num_dim,
+                   const int    num_nodes_in_patch,
+                   const BOUNDARY_TYPE this_bc_tag,
+                   const double val,
                    const DViewCArrayKokkos<double>& node_coords,
-                   const size_t                     rk_level) const;
+                   const size_t rk_level) const;
 
     void rk_init(DViewCArrayKokkos<double>& node_coords,
                  DViewCArrayKokkos<double>& node_vel,
                  DViewCArrayKokkos<double>& elem_sie,
                  DViewCArrayKokkos<double>& elem_stress,
-                 const size_t               num_elems,
-                 const size_t               num_nodes);
+                 const size_t num_elems,
+                 const size_t num_nodes);
 
-    void get_timestep(mesh_t&                    mesh,
+    void get_timestep(mesh_t& mesh,
                       DViewCArrayKokkos<double>& node_coords,
                       DViewCArrayKokkos<double>& node_vel,
                       DViewCArrayKokkos<double>& elem_sspd,
                       DViewCArrayKokkos<double>& elem_vol);
 
-    void get_timestep2D(mesh_t&                    mesh,
+    void get_timestep2D(mesh_t& mesh,
                         DViewCArrayKokkos<double>& node_coords,
                         DViewCArrayKokkos<double>& node_vel,
                         DViewCArrayKokkos<double>& elem_sspd,
                         DViewCArrayKokkos<double>& elem_vol);
 
-    void update_energy_sgh(double                           rk_alpha,
-                           const mesh_t&                    mesh,
+    void update_energy_sgh(double rk_alpha,
+                           const mesh_t& mesh,
                            const DViewCArrayKokkos<double>& node_vel,
                            const DViewCArrayKokkos<double>& node_coords,
-                           DViewCArrayKokkos<double>&       elem_sie,
+                           DViewCArrayKokkos<double>& elem_sie,
                            const DViewCArrayKokkos<double>& elem_mass,
                            const DViewCArrayKokkos<double>& corner_force);
 
     void power_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
 
-    void get_power_dgradient_sgh(double                           rk_alpha,
-                                 const mesh_t&                    mesh,
+    void get_power_dgradient_sgh(double rk_alpha,
+                                 const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& node_coords,
-                                 DViewCArrayKokkos<double>&       elem_sie,
+                                 DViewCArrayKokkos<double>& elem_sie,
                                  const DViewCArrayKokkos<double>& elem_mass,
                                  const DViewCArrayKokkos<double>& corner_force,
-                                 DCArrayKokkos<real_t>            elem_power_dgradients);
+                                 DCArrayKokkos<real_t> elem_power_dgradients);
 
-    void get_power_ugradient_sgh(double                           rk_alpha,
-                                 const mesh_t&                    mesh,
+    void get_power_ugradient_sgh(double rk_alpha,
+                                 const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& node_coords,
-                                 DViewCArrayKokkos<double>&       elem_sie,
+                                 DViewCArrayKokkos<double>& elem_sie,
                                  const DViewCArrayKokkos<double>& elem_mass,
                                  const DViewCArrayKokkos<double>& corner_force);
 
-    void get_power_vgradient_sgh(double                           rk_alpha,
-                                 const mesh_t&                    mesh,
+    void get_power_vgradient_sgh(double rk_alpha,
+                                 const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& node_coords,
-                                 DViewCArrayKokkos<double>&       elem_sie,
+                                 DViewCArrayKokkos<double>& elem_sie,
                                  const DViewCArrayKokkos<double>& elem_mass,
                                  const DViewCArrayKokkos<double>& corner_force);
 
-    void get_power_egradient_sgh(double                           rk_alpha,
-                                 const mesh_t&                    mesh,
+    void get_power_egradient_sgh(double rk_alpha,
+                                 const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& node_coords,
-                                 DViewCArrayKokkos<double>&       elem_sie,
+                                 DViewCArrayKokkos<double>& elem_sie,
                                  const DViewCArrayKokkos<double>& elem_mass,
                                  const DViewCArrayKokkos<double>& corner_force);
 
     void update_state(const DCArrayKokkos<material_t>& material,
-                      const mesh_t&                    mesh,
+                      const mesh_t& mesh,
                       const DViewCArrayKokkos<double>& node_coords,
                       const DViewCArrayKokkos<double>& node_vel,
-                      DViewCArrayKokkos<double>&       elem_den,
-                      DViewCArrayKokkos<double>&       elem_pres,
-                      DViewCArrayKokkos<double>&       elem_stress,
-                      DViewCArrayKokkos<double>&       elem_sspd,
+                      DViewCArrayKokkos<double>& elem_den,
+                      DViewCArrayKokkos<double>& elem_pres,
+                      DViewCArrayKokkos<double>& elem_stress,
+                      DViewCArrayKokkos<double>& elem_sspd,
                       const DViewCArrayKokkos<double>& elem_sie,
                       const DViewCArrayKokkos<double>& elem_vol,
                       const DViewCArrayKokkos<double>& elem_mass,
                       const DViewCArrayKokkos<size_t>& elem_mat_id,
-                      const double                     rk_alpha,
-                      const size_t                     cycle);
+                      const double rk_alpha,
+                      const size_t cycle);
 
     void update_state2D(const DCArrayKokkos<material_t>& material,
-                        const mesh_t&                    mesh,
+                        const mesh_t& mesh,
                         const DViewCArrayKokkos<double>& node_coords,
                         const DViewCArrayKokkos<double>& node_vel,
-                        DViewCArrayKokkos<double>&       elem_den,
-                        DViewCArrayKokkos<double>&       elem_pres,
-                        DViewCArrayKokkos<double>&       elem_stress,
-                        DViewCArrayKokkos<double>&       elem_sspd,
+                        DViewCArrayKokkos<double>& elem_den,
+                        DViewCArrayKokkos<double>& elem_pres,
+                        DViewCArrayKokkos<double>& elem_stress,
+                        DViewCArrayKokkos<double>& elem_sspd,
                         const DViewCArrayKokkos<double>& elem_sie,
                         const DViewCArrayKokkos<double>& elem_vol,
                         const DViewCArrayKokkos<double>& elem_mass,
                         const DViewCArrayKokkos<size_t>& elem_mat_id,
-                        const double                     rk_alpha,
-                        const size_t                     cycle);
+                        const double rk_alpha,
+                        const size_t cycle);
 
     void build_boundry_node_sets(mesh_t& mesh);
 
@@ -459,13 +455,13 @@ public:
 
     void collect_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> global_reduce_map);
 
-    void write_data(std::map<std::string, const double*>&                    point_data_scalars_double,
-                    std::map<std::string, const double*>&                    point_data_vectors_double,
-                    std::map<std::string, const double*>&                    cell_data_scalars_double,
-                    std::map<std::string, const int*>&                       cell_data_scalars_int,
+    void write_data(std::map<std::string, const double*>& point_data_scalars_double,
+                    std::map<std::string, const double*>& point_data_vectors_double,
+                    std::map<std::string, const double*>& cell_data_scalars_double,
+                    std::map<std::string, const int*>&    cell_data_scalars_int,
                     std::map<std::string, std::pair<const double*, size_t>>& cell_data_fields_double);
 
-    void write_outputs(const mesh_t&              mesh,
+    void write_outputs(const mesh_t& mesh,
                        DViewCArrayKokkos<double>& node_coords,
                        DViewCArrayKokkos<double>& node_vel,
                        DViewCArrayKokkos<double>& node_mass,
@@ -478,7 +474,7 @@ public:
                        DViewCArrayKokkos<double>& elem_mass,
                        DViewCArrayKokkos<size_t>& elem_mat_id);
 
-    void ensight(const mesh_t&                    mesh,
+    void ensight(const mesh_t& mesh,
                  const DViewCArrayKokkos<double>& node_coords,
                  const DViewCArrayKokkos<double>& node_vel,
                  const DViewCArrayKokkos<double>& node_mass,
@@ -491,7 +487,7 @@ public:
                  const DViewCArrayKokkos<double>& elem_mass,
                  const DViewCArrayKokkos<size_t>& elem_mat_id);
 
-    void state_file(const mesh_t&                    mesh,
+    void state_file(const mesh_t& mesh,
                     const DViewCArrayKokkos<double>& node_coords,
                     const DViewCArrayKokkos<double>& node_vel,
                     const DViewCArrayKokkos<double>& node_mass,
@@ -510,14 +506,14 @@ public:
 
     void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
-    void boundary_adjoint(const mesh_t&                    mesh,
+    void boundary_adjoint(const mesh_t& mesh,
                           const DCArrayKokkos<boundary_t>& boundary,
-                          vec_array&                       node_adjoint,
-                          vec_array&                       node_phi_adjoint,
-                          vec_array&                       node_psi_adjoint);
+                          vec_array& node_adjoint,
+                          vec_array& node_phi_adjoint,
+                          vec_array& node_psi_adjoint);
 
     void applied_forces(const DCArrayKokkos<material_t>& material,
-                        const mesh_t&                    mesh,
+                        const mesh_t& mesh,
                         const DViewCArrayKokkos<double>& node_coords,
                         const DViewCArrayKokkos<double>& node_vel,
                         const DViewCArrayKokkos<double>& node_mass,
@@ -525,9 +521,9 @@ public:
                         const DViewCArrayKokkos<double>& elem_vol,
                         const DViewCArrayKokkos<double>& elem_div,
                         const DViewCArrayKokkos<size_t>& elem_mat_id,
-                        DViewCArrayKokkos<double>&       corner_force,
-                        const double                     rk_alpha,
-                        const size_t                     cycle);
+                        DViewCArrayKokkos<double>& corner_force,
+                        const double rk_alpha,
+                        const size_t cycle);
 
     bool   have_loading_conditions;
     bool   nodal_density_flag;
@@ -614,14 +610,16 @@ public:
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> Force_Gradient_Energies; // transposed such that elem ids correspond to rows
     RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Positions; // transposed such that node dofs correspond to rows
     RaggedRightArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits, array_layout> Power_Gradient_Velocities; // transposed such that node dofs correspond to rows
-    CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits>    Power_Gradient_Energies;
-    DCArrayKokkos<size_t, array_layout, device_type, memory_traits>          Gradient_Matrix_Strides;
-    DCArrayKokkos<size_t, array_layout, device_type, memory_traits>          DOF_to_Elem_Matrix_Strides;
-    DCArrayKokkos<size_t, array_layout, device_type, memory_traits>          Elem_to_Elem_Matrix_Strides;
-    DCArrayKokkos<size_t, array_layout, device_type, memory_traits>          Graph_Matrix_Strides;
+
+    CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits> Power_Gradient_Energies;
+    DCArrayKokkos<size_t, array_layout, device_type, memory_traits>       Gradient_Matrix_Strides;
+    DCArrayKokkos<size_t, array_layout, device_type, memory_traits>       DOF_to_Elem_Matrix_Strides;
+    DCArrayKokkos<size_t, array_layout, device_type, memory_traits>       Elem_to_Elem_Matrix_Strides;
+    DCArrayKokkos<size_t, array_layout, device_type, memory_traits>       Graph_Matrix_Strides;
+
     RaggedRightArrayKokkos<real_t, array_layout, device_type, memory_traits> Original_Gradient_Entries;
     RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>     Original_Gradient_Entry_Indices;
-    DCArrayKokkos<size_t, array_layout, device_type, memory_traits>          Original_Gradient_Entries_Strides;
+    DCArrayKokkos<size_t, array_layout, device_type, memory_traits> Original_Gradient_Entries_Strides;
 
     // distributed matrices
     Teuchos::RCP<MAT> distributed_force_gradient_positions;

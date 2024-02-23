@@ -92,7 +92,7 @@ FEA_Module_SGH::FEA_Module_SGH(
 
     // recast solver pointer for non-base class access
     Explicit_Solver_Pointer_ = dynamic_cast<Explicit_Solver*>(Solver_Pointer);
-    simparam      = &(Explicit_Solver_Pointer_->simparam);
+    simparam = &(Explicit_Solver_Pointer_->simparam);
     module_params = &params;
 
     // create ref element object
@@ -133,7 +133,7 @@ FEA_Module_SGH::FEA_Module_SGH(
 
     if (simparam->topology_optimization_on || simparam->shape_optimization_on || simparam->num_dims == 2)
     {
-        node_masses_distributed       = Teuchos::rcp(new MV(map, 1));
+        node_masses_distributed = Teuchos::rcp(new MV(map, 1));
         ghost_node_masses_distributed = Teuchos::rcp(new MV(ghost_node_map, 1));
     }
 
@@ -169,8 +169,8 @@ FEA_Module_SGH::FEA_Module_SGH(
         max_time_steps = BUFFER_GROW;
         time_data.resize(max_time_steps + 1);
         element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
-        forward_solve_velocity_data        = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
-        forward_solve_coordinate_data      = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
+        forward_solve_velocity_data   = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
+        forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_internal_energy_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         adjoint_vector_data     = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
@@ -179,8 +179,8 @@ FEA_Module_SGH::FEA_Module_SGH(
         // assign a multivector of corresponding size to each new timestep in the buffer
         for (int istep = 0; istep < max_time_steps + 1; istep++)
         {
-            (*forward_solve_velocity_data)[istep]        = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
-            (*forward_solve_coordinate_data)[istep]      = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+            (*forward_solve_velocity_data)[istep]   = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+            (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
             (*forward_solve_internal_energy_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
             (*adjoint_vector_data)[istep]     = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
             (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -203,11 +203,11 @@ void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream* in, std::streampos
 {
     auto input_options = simparam->input_options.value();
 
-    char              ch;
-    std::string       skip_line, read_line, substring, token;
+    char ch;
+    std::string skip_line, read_line, substring, token;
     std::stringstream line_parse, line_parse2;
 
-    int num_dim      = simparam->num_dims;
+    int num_dim = simparam->num_dims;
     int buffer_lines = 1000;
     int max_word     = 30;
     int local_node_index, current_column_index;
@@ -220,7 +220,7 @@ void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream* in, std::streampos
     real_t unit_scaling = input_options.unit_scaling;
     real_t dof_value;
 
-    CArrayKokkos<char, array_layout, HostSpace, memory_traits>          read_buffer;
+    CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
     CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
 
     LO local_dof_id;
@@ -372,11 +372,11 @@ void FEA_Module_SGH::sort_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> so
    populate requests this module makes for output data
 ---------------------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::write_data(std::map<std::string, const double*>&                    point_data_scalars_double,
-                                std::map<std::string, const double*>&                    point_data_vectors_double,
-                                std::map<std::string, const double*>&                    cell_data_scalars_double,
-                                std::map<std::string, const int*>&                       cell_data_scalars_int,
-                                std::map<std::string, std::pair<const double*, size_t>>& cell_data_fields_double)
+void FEA_Module_SGH::write_data(std::map<std::string, const double*>& point_data_scalars_double,
+    std::map<std::string, const double*>& point_data_vectors_double,
+    std::map<std::string, const double*>& cell_data_scalars_double,
+    std::map<std::string, const int*>&    cell_data_scalars_int,
+    std::map<std::string, std::pair<const double*, size_t>>& cell_data_fields_double)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
 
@@ -503,7 +503,7 @@ void FEA_Module_SGH::comm_node_masses()
 {
     // debug print of design vector
 #ifdef DEBUG
-    std::ostream&                       out = std::cout;
+    std::ostream& out = std::cout;
     Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
     if (myrank == 0)
     {
@@ -513,7 +513,7 @@ void FEA_Module_SGH::comm_node_masses()
     *fos << std::endl;
     std::fflush(stdout);
     communicate design densities
-    create import          object using local node indices map and all indices map
+    create import object using local node indices map and all indices map
     Tpetra::Import<LO, GO> importer(map, ghost_node_map);
 #endif
 
@@ -545,7 +545,7 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp)
         test_node_densities_distributed = zp;
 #ifdef DEBUG
         // debug print of design vector
-        std::ostream&                       out = std::cout;
+        std::ostream& out = std::cout;
         Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
         if (myrank == 0)
         {
@@ -653,13 +653,13 @@ void FEA_Module_SGH::cleanup_material_models()
  * Modifies: bdy_patches_in_set
 */
 void FEA_Module_SGH::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
-                              mesh_t&                          mesh,
-                              const DViewCArrayKokkos<double>& node_coords)
+    mesh_t& mesh,
+    const DViewCArrayKokkos<double>& node_coords)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
-    size_t       num_dim  = simparam->num_dims;
-    int          nboundary_patches  = Explicit_Solver_Pointer_->nboundary_patches;
-    int          num_nodes_in_patch = mesh.num_nodes_in_patch;
+    size_t num_dim = simparam->num_dims;
+    int    nboundary_patches  = Explicit_Solver_Pointer_->nboundary_patches;
+    int    num_nodes_in_patch = mesh.num_nodes_in_patch;
 #ifdef DEBUG
     if (bdy_set == mesh.num_bdy_sets)
     {
@@ -730,13 +730,13 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
 } // end tag
 
 KOKKOS_INLINE_FUNCTION
-bool FEA_Module_SGH::check_bdy(const size_t                     patch_gid,
-                               const int                        num_dim,
-                               const int                        num_nodes_in_patch,
-                               const BOUNDARY_TYPE              bc_type,
-                               const double                     val,
-                               const DViewCArrayKokkos<double>& node_coords,
-                               const size_t                     rk_level) const
+bool FEA_Module_SGH::check_bdy(const size_t patch_gid,
+    const int num_dim,
+    const int num_nodes_in_patch,
+    const BOUNDARY_TYPE bc_type,
+    const double val,
+    const DViewCArrayKokkos<double>& node_coords,
+    const size_t rk_level) const
 {
     // default bool is not on the boundary
     size_t is_on_bdy = 0;
@@ -838,10 +838,10 @@ void FEA_Module_SGH::sgh_solve()
 
     graphics_time    = simparam->output_options.graphics_step;
     graphics_dt_ival = simparam->output_options.graphics_step;
-    cycle_stop       = dynamic_options.cycle_stop;
-    rk_num_stages    = dynamic_options.rk_num_stages;
-    graphics_times   = simparam->output_options.graphics_times;
-    graphics_id      = simparam->output_options.graphics_id;
+    cycle_stop     = dynamic_options.cycle_stop;
+    rk_num_stages  = dynamic_options.rk_num_stages;
+    graphics_times = simparam->output_options.graphics_times;
+    graphics_id    = simparam->output_options.graphics_id;
 
     fuzz  = dynamic_options.fuzz;
     tiny  = dynamic_options.tiny;
@@ -875,7 +875,7 @@ void FEA_Module_SGH::sgh_solve()
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
         kinetic_energy_minimize_function.objective_accumulation = 0;
         global_objective_accumulation = objective_accumulation = 0;
-        kinetic_energy_objective      = true;
+        kinetic_energy_objective = true;
         if (max_time_steps + 1 > forward_solve_velocity_data->size())
         {
             old_max_forward_buffer = forward_solve_velocity_data->size();
@@ -889,8 +889,8 @@ void FEA_Module_SGH::sgh_solve()
             // assign a multivector of corresponding size to each new timestep in the buffer
             for (int istep = old_max_forward_buffer; istep < max_time_steps + 1; istep++)
             {
-                (*forward_solve_velocity_data)[istep]        = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
-                (*forward_solve_coordinate_data)[istep]      = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+                (*forward_solve_velocity_data)[istep]   = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+                (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                 (*forward_solve_internal_energy_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
                 (*adjoint_vector_data)[istep]     = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                 (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -1036,13 +1036,13 @@ void FEA_Module_SGH::sgh_solve()
 
         // view scope
         {
-            const_vec_array node_velocities_interface       = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            vec_array       all_node_velocities_interface   = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-            vec_array       element_internal_energy     = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-            const_vec_array node_coords_interface       = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array element_internal_energy     = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-            vec_array       all_node_coords_interface   = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+            vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                 for (int idim = 0; idim < num_dim; idim++)
                 {
@@ -1296,9 +1296,9 @@ void FEA_Module_SGH::sgh_solve()
             Kokkos::fence();
 
             double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
-            Explicit_Solver_Pointer_->host2dev_time      += comm_time4 - comm_time3;
+            Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
             Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
-            
+
 #ifdef DEBUG
             // debug print vector values on a rank
             if (myrank == 0)
@@ -1502,8 +1502,8 @@ void FEA_Module_SGH::sgh_solve()
                 // assign a multivector of corresponding size to each new timestep in the buffer
                 for (int istep = old_max_forward_buffer; istep < max_time_steps + BUFFER_GROW + 1; istep++)
                 {
-                    (*forward_solve_velocity_data)[istep]        = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
-                    (*forward_solve_coordinate_data)[istep]      = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+                    (*forward_solve_velocity_data)[istep]   = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
+                    (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                     (*forward_solve_internal_energy_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
                     (*adjoint_vector_data)[istep]     = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                     (*phi_adjoint_vector_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -1524,7 +1524,7 @@ void FEA_Module_SGH::sgh_solve()
                         node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                         node_coords_interface(node_gid, idim)     = node_coords(rk_level, node_gid, idim);
                     }
-          });
+                });
             } // end view scope
             Kokkos::fence();
 
@@ -1547,20 +1547,20 @@ void FEA_Module_SGH::sgh_solve()
 
             // view scope
             {
-                const_vec_array node_velocities_interface       = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                const_vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                vec_array       all_node_velocities_interface   = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-                vec_array       element_internal_energy     = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
-                const_vec_array node_coords_interface       = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                vec_array element_internal_energy     = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                const_vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
-                vec_array       all_node_coords_interface   = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
+                vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                     for (int idim = 0; idim < num_dim; idim++)
                     {
                         all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
                         all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
 
                 FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
@@ -1569,18 +1569,18 @@ void FEA_Module_SGH::sgh_solve()
                         all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                         all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
 
                 // interface for element internal energies
                 FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
                     element_internal_energy(elem_gid, 0) = elem_sie(rk_level, elem_gid);
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
             } // end view scope
 
             double comm_time4 = Explicit_Solver_Pointer_->CPU_Time();
-            Explicit_Solver_Pointer_->host2dev_time      += comm_time4 - comm_time3;
+            Explicit_Solver_Pointer_->host2dev_time += comm_time4 - comm_time3;
             Explicit_Solver_Pointer_->communication_time += comm_time4 - comm_time1;
 
             (*forward_solve_internal_energy_data)[cycle + 1]->assign(*element_internal_energy_distributed);
@@ -1649,7 +1649,7 @@ void FEA_Module_SGH::sgh_solve()
                     {
                         node_coords_interface(node_gid, idim) = node_coords(rk_level, node_gid, idim);
                     }
-              }); // end parallel for
+                }); // end parallel for
             } // end view scope
             if (simparam->output_options.output_file_format == OUTPUT_FORMAT::vtk)
             {
