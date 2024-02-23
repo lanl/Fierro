@@ -138,7 +138,7 @@ for arg in "$@"; do
             return 1
             ;;
         *)
-            echo "Error: Invalid argument or value specified."
+            echo "Error: Invalid argument or value specified.scriptdir"
             show_help
             return 1
             ;;
@@ -179,6 +179,19 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 # Always setup the environment
 source setup-env.sh ${machine} ${kokkos_build_type} ${build_cores}
+
+# Install Uncrustify
+if [ -d "${UNCRUSTIFY_BUILD_DIR}" ]; then
+    cd ${topdir}
+    echo "Installing Uncrustify..."
+    cd ${UNCRUSTIFY_BUILD_DIR}
+    echo $(pwd)
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+    make -j ${build_cores}
+    cd ${topdir}
+fi
+
+cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 # Next, do action based on args
 if [ "$build_action" = "full-app" ]; then
