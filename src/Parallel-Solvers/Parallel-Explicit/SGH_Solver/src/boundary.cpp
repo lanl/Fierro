@@ -36,6 +36,22 @@
 #include "FEA_Module_SGH.h"
 #include "Simulation_Parameters/FEA_Module/Boundary_Conditions.h"
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn boundary_velocity
+///
+/// \brief <insert brief description>
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param <function parameter description>
+/// \param <function parameter description>
+/// \param <function parameter description>
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::boundary_velocity(const mesh_t& mesh,
     const DCArrayKokkos<boundary_t>& boundary,
     DViewCArrayKokkos<double>& node_vel)

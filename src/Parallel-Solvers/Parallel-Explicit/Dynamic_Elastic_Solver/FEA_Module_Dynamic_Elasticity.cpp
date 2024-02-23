@@ -1338,11 +1338,9 @@ void FEA_Module_Dynamic_Elasticity::setup()
 
                     // p = rho*ie*(gamma - 1)
                     size_t mat_id = f_id;
-                        << << << < HEAD
-                        double gamma = global_vars(mat_id, 0); // gamma value
-                    == == == =
-                        double gamma = eos_global_vars(mat_id, 0); // gamma value
-                    >> >> >> > main
+
+                    double gamma = eos_global_vars(mat_id, 0); // gamma value
+
                     elem_sie(rk_level, elem_gid) =
                         elem_pres(elem_gid) / (mat_fill(f_id).den * (gamma - 1.0));
                 } // end if

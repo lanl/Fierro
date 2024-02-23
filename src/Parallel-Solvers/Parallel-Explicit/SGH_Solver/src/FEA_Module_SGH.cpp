@@ -623,16 +623,18 @@ void FEA_Module_SGH::module_cleanup()
     Deallocate memory used for  material models
 ------------------------------------------------------------------------------- */
 
-void FEA_Module_SGH::cleanup_material_models()
-{
-    const DCArrayKokkos<material_t> material = simparam->material;
+void FEA_Module_SGH::cleanup_material_models() {
+
+    const DCArrayKokkos <material_t> material = simparam->material;
 
     // destroy strength model
     destroy_strength_model(elem_strength,
                            material,
                            elem_mat_id,
-                           state_vars,
-                           global_vars,
+                           eos_state_vars,
+                           strength_state_vars,
+                           eos_global_vars,
+                           strength_global_vars,
                            elem_user_output_vars,
                            rnum_elem);
 
@@ -640,11 +642,14 @@ void FEA_Module_SGH::cleanup_material_models()
     destroy_eos_model(elem_eos,
                       material,
                       elem_mat_id,
-                      state_vars,
-                      global_vars,
+                      eos_state_vars,
+                      strength_state_vars,
+                      eos_global_vars,
+                      strength_global_vars,
                       elem_user_output_vars,
                       rnum_elem);
     return;
+
 } // end cleanup_user_strength_model;
 
 /**

@@ -36,7 +36,9 @@
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 #include "FEA_Module_SGH.h"
-
+// -----------------------------------------------------------------------------
+// This function calculates the corner forces and the evolves stress (hypo)
+// ------------------------------------------------------------------------------
 void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
@@ -883,6 +885,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
 // -----------------------------------------------------------------------------
 // This function calculates the corner forces and the evolves stress (hypo)
 // ------------------------------------------------------------------------------
+
 void FEA_Module_SGH::applied_forces(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
@@ -897,14 +900,13 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos<material_t>& material,
     const size_t cycle
     )
 {
-    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
-    const size_t num_dim  = mesh.num_dims;
-    const size_t num_lcs  = module_params->loading.size();
+    const size_t    rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    const size_t    num_dim  = mesh.num_dims;
+    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+    const size_t    num_lcs = module_params->loading.size();
 
     const DCArrayKokkos<mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos<loading_t>  loading  = module_params->loading;
-
-    const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
 
     // debug check
     // std::cout << "NUMBER OF LOADING CONDITIONS: " << num_lcs << std::endl;

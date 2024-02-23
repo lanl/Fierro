@@ -35,6 +35,22 @@
 #include "state.h"
 #include "FEA_Module_SGH.h"
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_energy_sgh
+///
+/// \brief <insert brief description>
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param <function parameter description>
+/// \param <function parameter description>
+/// \param <function parameter description>
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_vel,
