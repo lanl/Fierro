@@ -72,10 +72,10 @@ FEA_Module::FEA_Module(Solver* Solver_Pointer)
     (*fos).setOutputToRootOnly(0);
 
     // MPI Data copy
-    myrank         = Solver_Pointer->myrank;
-    nranks         = Solver_Pointer->nranks;
-    world          = Solver_Pointer->world;
-    importer       = Solver_Pointer->importer;
+    myrank   = Solver_Pointer->myrank;
+    nranks   = Solver_Pointer->nranks;
+    world    = Solver_Pointer->world;
+    importer = Solver_Pointer->importer;
     ghost_importer = Solver_Pointer->ghost_importer;
     node_sorting_importer    = Solver_Pointer->node_sorting_importer;
     element_sorting_importer = Solver_Pointer->element_sorting_importer;
@@ -244,16 +244,16 @@ void FEA_Module::comm_filtered_densities()
 
 int FEA_Module::check_boundary(Node_Combination& Patch_Nodes, int bc_tag, real_t val, real_t* patch_limits)
 {
-    int                  is_on_set       = 1;
+    int is_on_set = 1;
     const_host_vec_array all_node_coords = all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
     // Nodes on the Patch
-    auto                                                           node_list = Patch_Nodes.node_set;
-    int                                                            num_dim   = simparam->num_dims;
-    size_t                                                         nnodes    = node_list.size();
-    size_t                                                         node_rid;
-    real_t                                                         node_coord[num_dim];
-    int                                                            dim_other1, dim_other2;
+    auto   node_list = Patch_Nodes.node_set;
+    int    num_dim   = simparam->num_dims;
+    size_t nnodes    = node_list.size();
+    size_t node_rid;
+    real_t node_coord[num_dim];
+    int    dim_other1, dim_other2;
     CArrayKokkos<size_t, array_layout, device_type, memory_traits> node_on_flags(nnodes, "node_on_flags");
 
     // initialize
