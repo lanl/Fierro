@@ -997,7 +997,7 @@ void FEA_Module_SGH::sgh_solve()
     }
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if (simparam->output_options.output_file_format == OUTPUT_FORMAT::vtk && simparam->output_options.write_initial)
+    if(simparam->output_options.write_initial)
     {
         if (myrank == 0)
         {
@@ -1743,19 +1743,17 @@ void FEA_Module_SGH::sgh_solve()
                     }
                 }); // end parallel for
             } // end view scope
-            if (simparam->output_options.output_file_format == OUTPUT_FORMAT::vtk)
-            {
-                if (myrank == 0)
-                {
-                    printf("Writing outputs to file at %f \n", graphics_time);
-                }
-
-                double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
-                Explicit_Solver_Pointer_->write_outputs();
-
-                double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
-                Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
+            
+            if(myrank==0){
+              printf("Writing outputs to file at %f \n", graphics_time);
             }
+
+            double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
+            Explicit_Solver_Pointer_->write_outputs();
+
+            double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+            Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
+
 
             graphics_time = time_value + graphics_dt_ival;
         } // end if

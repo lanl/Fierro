@@ -3,7 +3,7 @@
 #include "Fields.h"
 #include <set>
 
-SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk, vtu, none)
+SERIALIZABLE_ENUM(OUTPUT_FORMAT, vtk, pvtu, none)
 SERIALIZABLE_ENUM(TIMER_VERBOSITY, standard, thorough)
 struct Output_Options : Yaml::DerivedFields, Yaml::ValidatedYaml {
   TIMER_VERBOSITY timer_output_level = TIMER_VERBOSITY::standard;
