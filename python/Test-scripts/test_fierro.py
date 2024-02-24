@@ -5,15 +5,6 @@ import os.path
 import sys
 import math
 
-
-
-# print("you passed in", len(sys.argv), "argument(s)")
-# print("those arguments are: ", str(sys.argv))
-
-# print("hello", sys.argv[0])
-
-# os.system('pwd')
-
 executable = "./../../build-fierro-openmp/bin/fierro-parallel-explicit"
 sim_input = "Solver-Inputs/SGH_Sedov_12x12x12.yaml"
 
@@ -22,7 +13,6 @@ os.system(executable + ' ' + sim_input)
 
 
 # Functions for reading results from vtk file
-
 def extract_vector_data(filename, keyword):
     data = []
     found_keyword = False

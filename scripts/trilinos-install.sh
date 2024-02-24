@@ -6,7 +6,6 @@ machine="${2}"
 # If all arguments are valid, you can use them in your script as needed
 echo "Trilinos Kokkos Build Type: $kokkos_build_type"
 
-
 #check if Trilinos directory exists, git clone Trilinos if it doesn't
 [ -d "${TRILINOS_SOURCE_DIR}" ] && echo "Directory Trilinos exists, skipping Trilinos download"
 
@@ -114,8 +113,6 @@ ${ADDITIONS[@]}
 -D Trilinos_ENABLE_TESTS=OFF 
 -D CMAKE_INSTALL_PREFIX=${TRILINOS_INSTALL_DIR} 
 )
-
-
 
 if [ "$kokkos_build_type" = "openmp" ]; then
     cmake_options+=(

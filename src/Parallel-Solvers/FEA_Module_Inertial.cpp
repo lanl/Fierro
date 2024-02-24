@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -161,12 +158,14 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
     // CArrayKokkos<real_t, array_layout, device_type, memory_traits> legendre_weights_1D(num_gauss_points);
     CArray<real_t>     legendre_nodes_1D(num_gauss_points);
     CArray<real_t>     legendre_weights_1D(num_gauss_points);
-    real_t             pointer_quad_coordinate[num_dim];
-    real_t             pointer_quad_coordinate_weight[num_dim];
-    real_t             pointer_interpolated_point[num_dim];
-    real_t             pointer_JT_row1[num_dim];
-    real_t             pointer_JT_row2[num_dim];
-    real_t             pointer_JT_row3[num_dim];
+    
+    real_t pointer_quad_coordinate[num_dim];
+    real_t pointer_quad_coordinate_weight[num_dim];
+    real_t pointer_interpolated_point[num_dim];
+    real_t pointer_JT_row1[num_dim];
+    real_t pointer_JT_row2[num_dim];
+    real_t pointer_JT_row3[num_dim];
+    
     ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
     ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
     ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
@@ -174,14 +173,16 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
     ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
     ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
 
-    real_t                                                         pointer_basis_values[elem->num_basis()];
-    real_t                                                         pointer_basis_derivative_s1[elem->num_basis()];
-    real_t                                                         pointer_basis_derivative_s2[elem->num_basis()];
-    real_t                                                         pointer_basis_derivative_s3[elem->num_basis()];
-    ViewCArray<real_t>                                             basis_values(pointer_basis_values, elem->num_basis());
-    ViewCArray<real_t>                                             basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
-    ViewCArray<real_t>                                             basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
-    ViewCArray<real_t>                                             basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    real_t pointer_basis_values[elem->num_basis()];
+    real_t pointer_basis_derivative_s1[elem->num_basis()];
+    real_t pointer_basis_derivative_s2[elem->num_basis()];
+    real_t pointer_basis_derivative_s3[elem->num_basis()];
+    
+    ViewCArray<real_t> basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 
@@ -189,8 +190,10 @@ void FEA_Module_Inertial::compute_element_masses(const_host_vec_array design_den
     elements::legendre_nodes_1D(legendre_nodes_1D, num_gauss_points);
     elements::legendre_weights_1D(legendre_weights_1D, num_gauss_points);
 
-    Solver::node_ordering_convention                             active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    Solver::node_ordering_convention active_node_ordering_convention = Solver_Pointer_->active_node_ordering_convention;
+    
     CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
+    
     if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
     {
         convert_node_order(0) = 0;
@@ -414,14 +417,14 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
     real_t Jacobian, weight_multiply;
     // CArrayKokkos<real_t> legendre_nodes_1D(num_gauss_points);
     // CArrayKokkos<real_t> legendre_weights_1D(num_gauss_points);
-    CArray<real_t>     legendre_nodes_1D(num_gauss_points);
-    CArray<real_t>     legendre_weights_1D(num_gauss_points);
-    real_t             pointer_quad_coordinate[num_dim];
-    real_t             pointer_quad_coordinate_weight[num_dim];
-    real_t             pointer_interpolated_point[num_dim];
-    real_t             pointer_JT_row1[num_dim];
-    real_t             pointer_JT_row2[num_dim];
-    real_t             pointer_JT_row3[num_dim];
+    CArray<real_t> legendre_nodes_1D(num_gauss_points);
+    CArray<real_t> legendre_weights_1D(num_gauss_points);
+    real_t pointer_quad_coordinate[num_dim];
+    real_t pointer_quad_coordinate_weight[num_dim];
+    real_t pointer_interpolated_point[num_dim];
+    real_t pointer_JT_row1[num_dim];
+    real_t pointer_JT_row2[num_dim];
+    real_t pointer_JT_row3[num_dim];
     ViewCArray<real_t> quad_coordinate(pointer_quad_coordinate, num_dim);
     ViewCArray<real_t> quad_coordinate_weight(pointer_quad_coordinate_weight, num_dim);
     ViewCArray<real_t> interpolated_point(pointer_interpolated_point, num_dim);
@@ -429,14 +432,14 @@ void FEA_Module_Inertial::compute_nodal_gradients(const_host_vec_array design_va
     ViewCArray<real_t> JT_row2(pointer_JT_row2, num_dim);
     ViewCArray<real_t> JT_row3(pointer_JT_row3, num_dim);
 
-    real_t                                                         pointer_basis_values[elem->num_basis()];
-    real_t                                                         pointer_basis_derivative_s1[elem->num_basis()];
-    real_t                                                         pointer_basis_derivative_s2[elem->num_basis()];
-    real_t                                                         pointer_basis_derivative_s3[elem->num_basis()];
-    ViewCArray<real_t>                                             basis_values(pointer_basis_values, elem->num_basis());
-    ViewCArray<real_t>                                             basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
-    ViewCArray<real_t>                                             basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
-    ViewCArray<real_t>                                             basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
+    real_t pointer_basis_values[elem->num_basis()];
+    real_t pointer_basis_derivative_s1[elem->num_basis()];
+    real_t pointer_basis_derivative_s2[elem->num_basis()];
+    real_t pointer_basis_derivative_s3[elem->num_basis()];
+    ViewCArray<real_t> basis_values(pointer_basis_values, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s1(pointer_basis_derivative_s1, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s2(pointer_basis_derivative_s2, elem->num_basis());
+    ViewCArray<real_t> basis_derivative_s3(pointer_basis_derivative_s3, elem->num_basis());
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_positions(elem->num_basis(), num_dim);
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> nodal_density(elem->num_basis());
 

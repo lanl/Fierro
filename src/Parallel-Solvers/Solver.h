@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -207,7 +204,6 @@ public:
     Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits> ghost_nodes;
     Kokkos::DualView<int*, array_layout, device_type, memory_traits>      ghost_node_ranks;
 
-
     // Node set corresponding to uniquely assigned list of elements on this MPI rank
     size_t nnonoverlap_elem_nodes;
     Kokkos::DualView<GO*, Kokkos::LayoutLeft, device_type, memory_traits> nonoverlap_elem_nodes;
@@ -263,7 +259,6 @@ public:
     int    current_bdy_id;
     CArrayKokkos<Node_Combination, array_layout, HostSpace, memory_traits> Boundary_Patches;
     std::map<Node_Combination, LO> boundary_patch_to_index; // maps patches to corresponding patch index (inverse of Boundary Patches array)
-
 
     // file readin variables
     std::ifstream* in = NULL;

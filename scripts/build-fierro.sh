@@ -138,7 +138,7 @@ for arg in "$@"; do
             return 1
             ;;
         *)
-            echo "Error: Invalid argument or value specified.scriptdir"
+            echo "Error: Invalid argument or value specified."
             show_help
             return 1
             ;;

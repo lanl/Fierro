@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -101,6 +98,13 @@ Solver::Solver(Simulation_Parameters& _simparam) : simparam(_simparam)
     displacement_module = -1;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn exit_solver
+///
+/// \brief End the solve
+///
+/////////////////////////////////////////////////////////////////////////////
 void Solver::exit_solver(int status)
 {
     Kokkos::finalize();
@@ -122,6 +126,13 @@ namespace elements
 {
 namespace elem_types
 {
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn from_vtk
+///
+/// \brief Check the VTK element type read in
+///
+/////////////////////////////////////////////////////////////////////////////
 elem_type from_vtk(const int& vtk_elem)
 {
     switch (vtk_elem)
@@ -141,6 +152,15 @@ elem_type from_vtk(const int& vtk_elem)
 } // namespace elem_types
 } // namespace elements
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn generate_mesh
+///
+/// \brief Generate simulation mesh
+///
+/// \param Options for generating the mesh
+///
+/////////////////////////////////////////////////////////////////////////////
 void Solver::generate_mesh(const std::shared_ptr<MeshBuilderInput>& mesh_generation_options)
 {
     auto mesh = MeshBuilder::build_mesh(mesh_generation_options);
@@ -156,7 +176,7 @@ void Solver::generate_mesh(const std::shared_ptr<MeshBuilderInput>& mesh_generat
 
     num_nodes = mesh.points.dims(0);
     num_elem  = mesh.element_point_index.dims(0);
-    map       = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_nodes, 0, comm));
+    map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_nodes, 0, comm));
 
     nlocal_nodes = map->getLocalNumElements();
 
@@ -279,7 +299,7 @@ void Solver::read_mesh_ensight(const char* MESH)
     size_t strain_count;
     size_t read_index_start, node_rid, elem_gid;
 
-    std::string       skip_line, read_line, substring;
+    std::string skip_line, read_line, substring;
     std::stringstream line_parse;
 
     CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
@@ -362,7 +382,7 @@ void Solver::read_mesh_ensight(const char* MESH)
         stores node data in a buffer and communicates once the buffer cap is reached
         or the data ends*/
 
-        words_per_line      = input_options.words_per_line;
+        words_per_line = input_options.words_per_line;
         elem_words_per_line = input_options.elem_words_per_line;
 
         // allocate read buffer
@@ -651,8 +671,8 @@ void Solver::read_mesh_ensight(const char* MESH)
     // dynamic buffer used to store elements before we know how many this rank needs
     std::vector<size_t> element_temp(BUFFER_LINES * elem_words_per_line);
     std::vector<size_t> global_indices_temp(BUFFER_LINES);
-    size_t              buffer_max = BUFFER_LINES * elem_words_per_line;
-    size_t              indices_buffer_max = BUFFER_LINES;
+    size_t buffer_max = BUFFER_LINES * elem_words_per_line;
+    size_t indices_buffer_max = BUFFER_LINES;
 
     if (num_elem % BUFFER_LINES != 0)
     {
@@ -992,8 +1012,8 @@ void Solver::read_mesh_vtk(const char* MESH)
 {
     Input_Options input_options = simparam.input_options.value();
 
-    char              ch;
-    std::string       skip_line, read_line, substring;
+    char ch;
+    std::string skip_line, read_line, substring;
     std::stringstream line_parse;
 
     int num_dim = simparam.num_dims;
@@ -1101,7 +1121,7 @@ void Solver::read_mesh_vtk(const char* MESH)
         stores node data in a buffer and communicates once the buffer cap is reached
         or the data ends*/
 
-        words_per_line      = input_options.words_per_line;
+        words_per_line = input_options.words_per_line;
         elem_words_per_line = input_options.elem_words_per_line;
 
         // allocate read buffer
@@ -1282,8 +1302,8 @@ void Solver::read_mesh_vtk(const char* MESH)
     // dynamic buffer used to store elements before we know how many this rank needs
     std::vector<size_t> element_temp(BUFFER_LINES * elem_words_per_line);
     std::vector<size_t> global_indices_temp(BUFFER_LINES);
-    size_t              buffer_max = BUFFER_LINES * elem_words_per_line;
-    size_t              indices_buffer_max = BUFFER_LINES;
+    size_t buffer_max = BUFFER_LINES * elem_words_per_line;
+    size_t indices_buffer_max = BUFFER_LINES;
 
     if (num_elem % BUFFER_LINES != 0)
     {
@@ -1630,25 +1650,33 @@ void Solver::read_mesh_vtk(const char* MESH)
 ------------------------------------------------------------------------- */
 void Solver::read_mesh_tecplot(const char* MESH)
 {
-    char                                                       ch;
-    int                                                        num_dim       = simparam.num_dims;
-    Input_Options                                              input_options = simparam.input_options.value();
-    int                                                        p_order       = input_options.p_order;
-    real_t                                                     unit_scaling  = input_options.unit_scaling;
-    bool                                                       restart_file  = simparam.restart_file;
-    int                                                        local_node_index, current_column_index;
-    size_t                                                     strain_count;
-    std::string                                                skip_line, read_line, substring;
-    std::stringstream                                          line_parse;
+    Input_Options input_options = simparam.input_options.value();
+
+    char ch;
+    int  num_dim = simparam.num_dims;
+    int  p_order = input_options.p_order;
+    int  negative_index_found = 0;
+    int  global_negative_index_found = 0;
+    int  buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
+    int  local_node_index, current_column_index;
+
+    bool restart_file    = simparam.restart_file;
+    bool zero_index_base = input_options.zero_index_base;
+
+    size_t strain_count, read_index_start, node_rid, elem_gid;
+
+    std::string skip_line, read_line, substring;
+    std::stringstream line_parse;
+
     CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-    int                                                        buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
-    size_t                                                     read_index_start, node_rid, elem_gid;
-    GO                                                         node_gid;
-    real_t                                                     dof_value;
-    host_vec_array                                             node_densities;
-    bool                                                       zero_index_base      = input_options.zero_index_base;
-    int                                                        negative_index_found = 0;
-    int                                                        global_negative_index_found = 0;
+
+    GO node_gid;
+
+    real_t unit_scaling = input_options.unit_scaling;
+    real_t dof_value;
+
+    host_vec_array node_densities;
+
     // Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
 
     // read the mesh
@@ -1892,8 +1920,8 @@ void Solver::read_mesh_tecplot(const char* MESH)
     // dynamic buffer used to store elements before we know how many this rank needs
     std::vector<size_t> element_temp(BUFFER_LINES * elem_words_per_line);
     std::vector<size_t> global_indices_temp(BUFFER_LINES);
-    size_t              buffer_max = BUFFER_LINES * elem_words_per_line;
-    size_t              indices_buffer_max = BUFFER_LINES;
+    size_t buffer_max = BUFFER_LINES * elem_words_per_line;
+    size_t indices_buffer_max = BUFFER_LINES;
 
     if (num_elem % BUFFER_LINES != 0)
     {
@@ -2214,14 +2242,17 @@ void Solver::read_mesh_tecplot(const char* MESH)
 
 void Solver::repartition_nodes()
 {
-    char                                                       ch;
-    int                                                        num_dim = simparam.num_dims;
-    int                                                        local_node_index, current_column_index;
-    size_t                                                     strain_count;
-    std::stringstream                                          line_parse;
+    char ch;
+
+    int num_dim = simparam.num_dims;
+    int local_node_index, current_column_index, nodes_per_element;
+
+    size_t strain_count;
+
+    std::stringstream line_parse;
     CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
-    int                                                        nodes_per_element;
-    GO                                                         node_gid;
+
+    GO node_gid;
 
     // construct input adapted needed by Zoltan2 problem
     typedef Xpetra::MultiVector<real_t, LO, GO, node_type> xvector_t;
@@ -2842,7 +2873,7 @@ void Solver::Get_Boundary_Patches()
             for (int isurface = 0; isurface < element_npatches; isurface++)
             {
                 num_nodes_in_patch = elem2D->surface_to_dof_lid.stride(isurface);
-                Surface_Nodes      = CArray<GO>(num_nodes_in_patch);
+                Surface_Nodes = CArray<GO>(num_nodes_in_patch);
                 for (int inode = 0; inode < num_nodes_in_patch; inode++)
                 {
                     local_node_id = elem2D->surface_to_dof_lid(isurface, inode);
@@ -2952,8 +2983,8 @@ void Solver::Get_Boundary_Patches()
               If only a subset of the nodes are local it must be a boundary patch; this
               case assigns the patch to the lowest mpi rank index the nodes in this patch belong to */
             num_nodes_in_patch = Patch_Nodes(ipatch).node_set.size();
-            my_rank_flag       = true;
-            remote_count       = 0;
+            my_rank_flag = true;
+            remote_count = 0;
 
             // assign as a local boundary patch if any of the nodes on the patch are local
             // only the local nodes on the patch will contribute to the equation assembly on this rank
@@ -3005,7 +3036,7 @@ void Solver::Get_Boundary_Patches()
 void Solver::comm_importer_setup()
 {
     // create import object using local node indices map and ghost indices map
-    importer       = Teuchos::rcp(new Tpetra::Import<LO, GO>(map, all_node_map));
+    importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(map, all_node_map));
     ghost_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(map, ghost_node_map));
     dof_importer   = Teuchos::rcp(new Tpetra::Import<LO, GO>(local_dof_map, all_dof_map));
 
@@ -3013,7 +3044,7 @@ void Solver::comm_importer_setup()
     sorted_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_nodes, 0, comm));
     node_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(map, sorted_map));
     // sorted element mapping
-    sorted_element_map       = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_elem, 0, comm));
+    sorted_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_elem, 0, comm));
     element_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(all_element_map, sorted_element_map));;
 }
 
