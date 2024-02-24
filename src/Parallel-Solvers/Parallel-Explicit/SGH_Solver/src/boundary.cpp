@@ -40,16 +40,11 @@
 ///
 /// \fn boundary_velocity
 ///
-/// \brief <insert brief description>
+/// \brief Evolves the boundary according to a give velocity
 ///
-/// <Insert longer more detailed description which
-/// can span multiple lines if needed>
-///
-/// \param <function parameter description>
-/// \param <function parameter description>
-/// \param <function parameter description>
-///
-/// \return <return type and definition description if not void>
+/// \param The simulation mesh
+/// \param An array of boundary_t that contain information about BCs
+/// \param A view into the nodal velocity array
 ///
 /////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::boundary_velocity(const mesh_t& mesh,

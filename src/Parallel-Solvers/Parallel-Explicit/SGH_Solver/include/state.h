@@ -81,7 +81,21 @@ struct elem_t
     CArray<double> mass; ///< element mass
     CArray<size_t> mat_id; ///< element material id
 
-    // initialization method (num_rk_storage_bins, num_cells, num_dims)
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn initialize
+    ///
+    /// \brief Initialize state data associated with the element
+    ///
+    /// This function initializes storage for density, pressure, stress,
+    /// sound speed, specific internal energy, volume, divergence of velocity,
+    /// mass, and a material ID for each element in the mesh.
+    ///
+    /// \param Number of time integration bins required for the Runge Kutta scheme
+    /// \param Number of elements in the mesh
+    /// \param Number of spatial dimnesions
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize(size_t num_rk, size_t num_elems, size_t num_dims)
     {
         this->den    = CArray<double>(num_elems);
@@ -102,7 +116,19 @@ struct corner_t
     CArray<double> force; ///< Force acting on a corner
     CArray<double> mass; ///< Partitioned mass of the corner
 
-    // initialization method (num_corners, num_dims)
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn initialize
+    ///
+    /// \brief Initialize state data associated with the corners
+    ///
+    /// This function initializes storage for force and mass associated with each
+    /// corner
+    ///
+    /// \param Number of corners in the mesh
+    /// \param Number of spatial dimnesions
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize(size_t num_corners, size_t num_dims)
     {
         this->force = CArray<double>(num_corners, num_dims);

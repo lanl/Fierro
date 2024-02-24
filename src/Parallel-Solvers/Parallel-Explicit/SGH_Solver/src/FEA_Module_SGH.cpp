@@ -196,9 +196,13 @@ FEA_Module_SGH::~FEA_Module_SGH()
     // delete simparam;
 }
 
-/* ----------------------------------------------------------------------
-   Read ANSYS dat format mesh file
-------------------------------------------------------------------------- */
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn read_conditions_ansys_dat
+///
+/// \brief Read ANSYS dat format mesh file
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream* in, std::streampos before_condition_header)
 {
     auto input_options = simparam->input_options.value();
@@ -229,35 +233,46 @@ void FEA_Module_SGH::read_conditions_ansys_dat(std::ifstream* in, std::streampos
     host_vec_array node_densities;
 } // end read_conditions_ansys_dat
 
-/* ----------------------------------------------------------------------
-   Assign sets of element boundary surfaces corresponding to user BCs
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn generate_bcs
+///
+/// \brief Assign sets of element boundary surfaces corresponding to user BCs
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::generate_bcs()
 {
 } // end generate_bcs
 
-/* ----------------------------------------------------------------------
-   Loop through applied boundary conditions and tag node ids to remove
-   necessary rows and columns from the assembled linear system
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn Displacement_Boundary_Conditions
+///
+/// \brief Apply displacement boundary conditions
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::Displacement_Boundary_Conditions()
 {
 }
 
-/* ----------------------------------------------------------------------------
-   Output field settings and file settings
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn output_control
+///
+/// \brief Output field settings and file settings
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::output_control()
 {
 }
 
-/* ----------------------------------------------------------------------------
-   Initialize output data structures
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_output
+///
+/// \brief  Initialize output data structures
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::init_output()
 {
     // check user parameters for output
@@ -360,18 +375,31 @@ void FEA_Module_SGH::init_output()
     }
 }
 
-/* -------------------------------------------------------------------------------------------
-   Prompts sorting for elastic response output data. For now, nodal strains.
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn sort_output
+///
+/// \brief Prompts sorting for elastic response output data. For now, nodal strains.
+///        Inactive in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::sort_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> sorted_map)
 {
 }
 
-/* -------------------------------------------------------------------------------------------
-   populate requests this module makes for output data
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn write_data
+///
+/// \brief Populate requests this module makes for output data
+///
+/// \param Scalar point data
+/// \param Vector point data
+/// \param Scalar cell data (double)
+/// \param Scalar cell data (int)
+/// \param Cell field data
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::write_data(std::map<std::string, const double*>& point_data_scalars_double,
     std::map<std::string, const double*>& point_data_vectors_double,
     std::map<std::string, const double*>& cell_data_scalars_double,
@@ -462,10 +490,13 @@ void FEA_Module_SGH::write_data(std::map<std::string, const double*>& point_data
     // cell_data_fields_double["stress"] = std::make_pair(&sgh_module->elem_stress.host(rk_level,0,0,0), 9);
 }
 
-/* -------------------------------------------------------------------------------------------
-   Prompts sorting for elastic response output data. For now, nodal strains.
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn sort_element_output
+///
+/// \brief Prompts sorting for elementoutput data. For now, density.
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::sort_element_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> sorted_map)
 {
     // interface element density data
@@ -479,26 +510,35 @@ void FEA_Module_SGH::sort_element_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_t
     }
 }
 
-/* -------------------------------------------------------------------------------------------
-   Prompts computation of elastic response output data. For now, nodal strains.
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn collect_output
+///
+/// \brief Inactive in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::collect_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> global_reduce_map)
 {
 }
 
-/* -------------------------------------------------------------------------------------------
-   Prompts computation of elastic response output data. For now, nodal strains.
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn compute_output
+///
+/// \brief Inactive in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::compute_output()
 {
 }
 
-/* ----------------------------------------------------------------------
-   Communicate updated nodal velocities to ghost nodes
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_node_masses
+///
+/// \brief Communicate updated nodal mass to ghost nodes
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::comm_node_masses()
 {
     // debug print of design vector
@@ -533,10 +573,13 @@ void FEA_Module_SGH::comm_node_masses()
 #endif
 }
 
-/* -------------------------------------------------------------------------------------------
-   Communicate ghosts using the current optimization design data
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_variables
+///
+/// \brief Communicate ghosts using the current optimization design data
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp)
 {
     if (simparam->topology_optimization_on)
@@ -568,9 +611,13 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp)
     }
 }
 
-/* -------------------------------------------------------------------------------------------
-   enforce density constraints on nodes due to BCS
----------------------------------------------------------------------------------------------- */
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn node_density_constraints
+///
+/// \brief Enforce density constraints on nodes due to BCS
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lower_bound)
 {
     const size_t    num_dim = mesh->num_dims;
@@ -610,22 +657,28 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
     }); // end for parallel for over nodes
 }
 
-/* ----------------------------------------------------------------------------
-   solve function called by solver
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn module_cleanup
+///
+/// \brief Cleanup function called by solver
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::module_cleanup()
 {
     cleanup_material_models();
 }
 
-/* ----------------------------------------------------------------------------
-    Deallocate memory used for  material models
-------------------------------------------------------------------------------- */
-
-void FEA_Module_SGH::cleanup_material_models() {
-
-    const DCArrayKokkos <material_t> material = simparam->material;
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn cleanup_material_models
+///
+/// \brief Deallocate memory used for  material models
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_SGH::cleanup_material_models()
+{
+    const DCArrayKokkos<material_t> material = simparam->material;
 
     // destroy strength model
     destroy_strength_model(elem_strength,
@@ -649,14 +702,23 @@ void FEA_Module_SGH::cleanup_material_models() {
                       elem_user_output_vars,
                       rnum_elem);
     return;
-
 } // end cleanup_user_strength_model;
 
-/**
- * Determines which of the boundary patches are associated with which boundary.
- *
- * Modifies: bdy_patches_in_set
-*/
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn tag_bdys
+///
+/// \brief Determines which of the boundary patches are associated with which boundary.
+///
+/// Modifies: bdy_patches_in_set
+///
+/// \param Array of boundary sets
+/// \param Simulation mesh
+/// \param View into nodal position data
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
     mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords)
@@ -734,6 +796,25 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
     return;
 } // end tag
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn check_bdy
+///
+/// \brief Checks if a given patch is on a defined boundary
+///
+/// The test is done by checking if the centroid of the patch is within
+/// 1.0e-7 of the boundary
+///
+/// \param Global index of a patch
+/// \param Number of spatial dimensions
+/// \param Number of nodes in a patch
+/// \param Type of boundary condition applied
+/// \param View of nodal position data
+/// \param Current Runge Kutta time integration step
+///
+/// \return True if patch is on the surface of a defined boundary, else false
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
 bool FEA_Module_SGH::check_bdy(const size_t patch_gid,
     const int num_dim,
@@ -809,10 +890,13 @@ bool FEA_Module_SGH::check_bdy(const size_t patch_gid,
     return is_on_bdy == num_nodes_in_patch;
 } // end method to check bdy
 
-/* ----------------------------------------------------------------------------
-   solve function called by solver
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn solve
+///
+/// \brief Solve function called by solver
+///
+/////////////////////////////////////////////////////////////////////////////
 int FEA_Module_SGH::solve()
 {
     sgh_solve();
@@ -820,10 +904,13 @@ int FEA_Module_SGH::solve()
     return 0;
 }
 
-/* ----------------------------------------------------------------------------
-   SGH solver loop
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn sgh_solve
+///
+/// \brief SGH solver loop
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::sgh_solve()
 {
     Dynamic_Options dynamic_options = simparam->dynamic_options;

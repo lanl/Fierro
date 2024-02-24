@@ -54,10 +54,30 @@
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner force gradients w.r.t velocity; the
-// current implementation assumes material.q2 = 0
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_vgradient_sgh
+///
+/// \brief This function calculates the corner force gradients w.r.t velocity
+///
+/// The current implementation assumes material.q2 = 0
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
@@ -492,9 +512,30 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
     return;
 } // end of routine
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_egradient_sgh
+///
+/// \brief This function calculates the corner force gradients w.r.t energy
+///
+/// The current implementation assumes material.q2 = 0
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
@@ -926,9 +967,30 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos<material_t>& ma
     return;
 } // end of routine
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_ugradient_sgh
+///
+/// \brief This function calculates the corner force gradients w.r.t position
+///
+/// The current implementation assumes material.q2 = 0
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
@@ -1506,10 +1568,17 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
     return;
 } // end of routine
 
-// --------------------------------------------------------------------------------------------------------
-// Computes term objective derivative term involving gradient of power with respect to the design variable
-// ---------------------------------------------------------------------------------------------------------
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn force_design_gradient_term
+///
+/// \brief Computes term objective derivative term involving gradient of power
+///        with respect to the design variable
+///
+/// \param Design variables
+/// \param Design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients)
 {
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
@@ -1574,12 +1643,12 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
                     node_vel(rk_level, node_gid, idim)    = current_velocity_vector(node_gid, idim);
                     node_coords(rk_level, node_gid, idim) = current_coord_vector(node_gid, idim);
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
                 elem_sie(rk_level, elem_gid) = current_element_internal_energy(elem_gid, 0);
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             get_vol();
@@ -1674,7 +1743,7 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
                     corner_id = elem_id * num_nodes_in_elem + inode;
                     corner_value_storage(corner_id) = inner_product;
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // accumulate node values from corner storage
@@ -1686,15 +1755,34 @@ void FEA_Module_SGH::force_design_gradient_term(const_vec_array design_variables
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += -corner_value_storage(corner_id) * global_dt;
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
     }
 }
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_dgradient_sgh
+///
+/// \brief This function calculates the force design gradients
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,

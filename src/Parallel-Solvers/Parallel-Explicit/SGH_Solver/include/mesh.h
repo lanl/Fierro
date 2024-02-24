@@ -163,7 +163,15 @@ struct mesh_t
     RaggedRightArrayKokkos<size_t> bdy_nodes_in_set;
     DCArrayKokkos<size_t> num_bdy_nodes_in_set;
 
-    // initialization methods
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn initialize_nodes
+    ///
+    /// \brief Initialize the number of nodes in the mesh
+    ///
+    /// \param The number of nodes in the mesh
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize_nodes(const size_t num_nodes_inp)
     {
         num_nodes = num_nodes_inp;
@@ -171,7 +179,16 @@ struct mesh_t
         return;
     }; // end method
 
-    // initialization methods
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn initialize_local_nodes
+    ///
+    /// \brief Initialize the number of nodes in the mesh owned by a particular
+    //         MPI rank
+    ///
+    /// \param The number of nodes in the mesh on this MPI rank
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize_local_nodes(const size_t num_nodes_inp)
     {
         num_local_nodes = num_nodes_inp;
@@ -179,7 +196,20 @@ struct mesh_t
         return;
     }; // end method
 
-    // initialization methods
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn initialize_elems
+    ///
+    /// \brief Initialize the elements and some associated connectivity memory
+    ///
+    /// Saves the number of elements and dimensions, as well as creates
+    /// storage for the data structures for nodes-element connectivity and
+    /// corner-element connectivity
+    ///
+    /// \param Number of elements in the mesh
+    /// \param The number of spacial dimensions the mesh containts (3D, 2D)
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize_elems(const size_t num_elems_inp, const size_t num_dims_inp)
     {
         num_dims = num_dims_inp;
@@ -195,7 +225,15 @@ struct mesh_t
         return;
     }; // end method
 
-    // initialization methods
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn initialize_corners
+    ///
+    /// \brief Initialize num_corners data
+    ///
+    /// \param Number of corners read in
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void initialize_corners(const size_t num_corners_inp)
     {
         num_corners = num_corners_inp;
@@ -203,7 +241,16 @@ struct mesh_t
         return;
     }; // end method
 
-    // build the corner mesh connectivity arrays
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn build_corner_connectivity
+    ///
+    /// \brief This class builds the corners-node, element-node, and
+    ///        corner-element data structures.
+    ///
+    /// A corner is defined as a cell-node pair.
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void build_corner_connectivity()
     {
         num_corners_in_node = CArrayKokkos<size_t>(num_nodes); // stride sizes
@@ -234,7 +281,7 @@ struct mesh_t
             count_saved_corners_in_node(node_gid) = 0;
         });
 
-        // he elems_in_elem data type
+        // The elems_in_elem data type
         elems_in_node = RaggedRightArrayKokkos<size_t>(num_corners_in_node, "elems_in_node");
 
         // populate the elems connected to a node list and corners in a node
@@ -265,7 +312,13 @@ struct mesh_t
         return;
     } // end of build_corner_connectivity
 
-    // build elem connectivity arrays
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn build_elem_elem_connectivity
+    ///
+    /// \brief This class builds the element-element connectivity structure
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void build_elem_elem_connectivity()
     {
         // find the max number of elems around a node
@@ -353,7 +406,17 @@ struct mesh_t
         return;
     } // end of build_elem_elem_connectivity
 
-    // build the patches
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn build_patch_connectivity
+    ///
+    /// \brief Builds the patch-element, node-patch, and element-patch as well as
+    ///        tags all boundary nodes.
+    ///
+    /// A patch is defined a the surface of a linear element, for high order elements
+    /// a patch is the surface of a zone that is on the surface of an element.
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void build_patch_connectivity()
     {
         // building patches
@@ -638,7 +701,13 @@ struct mesh_t
         return;
     } // end patch connectivity method
 
-    // build the node-node connectivity data
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn build_node_node_connectivity
+    ///
+    /// \brief Builds the nodes-node connectivity structure
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void build_node_node_connectivity()
     {
         // find the max number of elems around a node
@@ -778,6 +847,15 @@ struct mesh_t
         }); // end parallel for over nodes
     } // end of node node connectivity
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn init_bdy_sets
+    ///
+    /// \brief Initialize boundary sets as dynamic ragged right arrays
+    ///
+    /// \param Number of boundary conditions
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void init_bdy_sets(size_t num_bcs)
     {
         if (num_bcs == 0)

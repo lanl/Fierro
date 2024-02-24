@@ -70,10 +70,15 @@
 #include "ROL_Solver.hpp"
 #include "Kinetic_Energy_Minimize.h"
 
-/* ----------------------------------------------------------------------
-   Compute new system response due to the design variable update
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_forward_solve
+///
+/// \brief Compute new system response due to the design variable update
+///
+/// \param  Current density value vector chosen by the optimizer
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
@@ -544,25 +549,36 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     sgh_solve();
 }
 
-/* -------------------------------------------------------------------------------------------
-   Compute average density of an element from nodal densities
----------------------------------------------------------------------------------------------- */
-
-double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const CArray<double> current_element_densities) const
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn average_element_density
+///
+/// \brief Compute average density of an element from nodal densities
+///
+/// \param Nodes per elements
+/// \param Current element densities
+///
+/// \return average element density as a double
+///
+/////////////////////////////////////////////////////////////////////////////
+double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const CArray<double> current_nodal_densities) const
 {
     double result = 0;
     for (int i = 0; i < nodes_per_elem; i++)
     {
-        result += current_element_densities(i) / nodes_per_elem;
+        result += current_nodal_densities(i) / nodes_per_elem;
     }
 
     return result;
 }
 
-/* ------------------------------------------------------------------------------
-  Coupled adjoint problem for the kinetic energy minimization problem
---------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn compute_topology_optimization_adjoint_full
+///
+/// \brief Coupled adjoint problem for the kinetic energy minimization problem
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
@@ -1194,10 +1210,16 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
     }
 }
 
-/* ----------------------------------------------------------------------------
-   Gradient for the (unsimplified) kinetic energy minimization problem
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn compute_topology_optimization_gradient_full
+///
+/// \brief Gradient for the (unsimplified) kinetic energy minimization problem
+///
+/// \param Distributed design densities
+/// \param Distributed design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed)
 {
     size_t num_bdy_nodes = mesh->num_bdy_nodes;
@@ -1600,9 +1622,13 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     } // end view scope
 }
 
-/* ----------------------------------------------------------------------
-   Initialize global vectors and array maps needed for matrix assembly
-------------------------------------------------------------------------- */
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_assembly
+///
+/// \brief Initialize global vectors and array maps needed for matrix assembly
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::init_assembly()
 {
     int num_dim = simparam->num_dims;
@@ -1973,10 +1999,19 @@ void FEA_Module_SGH::init_assembly()
     // distributed_force_gradient_velocities->describe(*fos,Teuchos::VERB_EXTREME);
 }
 
-/* ----------------------------------------------------------------------
-   Enforce boundary conditions on the adjoint vectors
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn boundary_adjoint
+///
+/// \brief Enforce boundary conditions on the adjoint vectors
+///
+/// \param Simulation mesh
+/// \param Boundary condition array
+/// \param Adjoint associated with the nodes
+/// \param Phi adjoint associated with the nodes
+/// \param Psi adjoint associated with the nodes
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::boundary_adjoint(const mesh_t& mesh,
     const DCArrayKokkos<boundary_t>& boundary,
     vec_array& node_adjoint,
@@ -2041,20 +2076,30 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t& mesh,
     return;
 } // end boundary_velocity function
 
-/* ----------------------------------------------------------------------
-   Communicate updated nodal adjoint vectors to ghost nodes
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_adjoint_vector
+///
+/// \brief Communicate updated nodal adjoint vectors to ghost nodes
+///
+/// \param Simulation cycle
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::comm_adjoint_vector(int cycle)
 {
     // comms to get ghosts
     (*adjoint_vector_data)[cycle]->doImport(*adjoint_vector_distributed, *importer, Tpetra::INSERT);
 }
 
-/* ----------------------------------------------------------------------
-   Communicate updated nodal adjoint vectors to ghost nodes
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_phi_adjoint_vector
+///
+/// \brief Communicate updated nodal adjoint vectors to ghost nodes
+///
+/// \param Simulation cycle
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::comm_phi_adjoint_vector(int cycle)
 {
     // comms to get ghosts

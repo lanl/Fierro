@@ -34,9 +34,18 @@
 #include "state.h"
 #include "FEA_Module_SGH.h"
 
-// -----------------------------------------------------------------------------
-// This function evolves the velocity at the nodes of the mesh
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_velocity_sgh
+///
+/// \brief This function evolves the velocity at the nodes of the mesh
+///
+/// \param Runge Kutta time integration alpha
+/// \param View of the nodal velocity array
+/// \param View of the nodal mass array
+/// \param View of the corner forces
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
     DViewCArrayKokkos<double>& node_vel,
     const DViewCArrayKokkos<double>& node_mass,
@@ -78,9 +87,23 @@ void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
     return;
 } // end subroutine update_velocity
 
-// -----------------------------------------------------------------------------
-// This function calculates the velocity gradient
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_velgrad
+///
+/// \brief This function calculates the velocity gradient
+///
+/// \param Velocity gradient
+/// \param Global ids of the nodes in this element
+/// \param View of the nodal velocity data
+/// \param The finite element B matrix
+/// \param The volume of the particular element
+/// \param The global id of this particular element
+/// \param The Runge Kutta time integration level
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>&  elem_node_gids,
@@ -165,9 +188,24 @@ void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     return;
 } // end function
 
-// -----------------------------------------------------------------------------
-// This function calculates the velocity gradient
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_velgrad
+///
+/// \brief This function calculates the velocity gradient for a 2D element
+///
+/// \param Velocity gradient
+/// \param Global ids of the nodes in this element
+/// \param View of the nodal velocity data
+/// \param The finite element B matrix
+/// \param The volume of the particular element
+/// \param The elements surface area
+/// \param The global id of this particular element
+/// \param The Runge Kutta time integration level
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>&  elem_node_gids,
@@ -231,9 +269,18 @@ void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
     return;
 } // end function
 
-// -----------------------------------------------------------------------------
-// This subroutine to calculate the velocity divergence in all elements
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_divergence
+///
+/// \brief This function calculates the divergence of velocity for all elements
+///
+/// \param Divergence of velocity for all elements
+/// \param iew of the nodal position data
+/// \param View of the nodal velocity data
+/// \param View of the volumes of each element
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_divergence(DViewCArrayKokkos<double>& elem_div,
     const DViewCArrayKokkos<double>& node_coords,
     const DViewCArrayKokkos<double>& node_vel,
@@ -305,9 +352,18 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos<double>& elem_div,
     return;
 } // end subroutine
 
-// -----------------------------------------------------------------------------
-// This subroutine to calculate the velocity divergence in all elements
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_divergence
+///
+/// \brief This function calculates the divergence of velocity for all 2D elements
+///
+/// \param Divergence of velocity for all elements
+/// \param iew of the nodal position data
+/// \param View of the nodal velocity data
+/// \param View of the volumes of each element
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos<double>& elem_div,
     const DViewCArrayKokkos<double>& node_coords,
     const DViewCArrayKokkos<double>& node_vel,
@@ -383,10 +439,25 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos<double>& elem_div,
     return;
 } // end subroutine
 
-// The velocity gradient can be decomposed into symmetric and antisymmetric tensors
-// L = vel_grad
-// D = sym(L)
-// W = antisym(L)
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn decompose_vel_grad
+///
+/// \brief Decomposes the velocity gradient into symmetric and antisymmetric tensors
+///
+/// L = D*W, where L = vel_grad, D = sym(L), W = antisym(L)
+/// can span multiple lines if needed>
+///
+/// \param Symmetric decomposition of velocity gradient
+/// \param Antisymmetric decomposition of velocity gradient
+/// \param Gradient of velocity
+/// \param Global ids of the nodes associated with this element
+/// \param Global id of a specific element
+/// \param View of the nodal coordinate data
+/// \param View of the nodal velocity data
+/// \param Volume of the element
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
 void FEA_Module_SGH::decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
     ViewCArrayKokkos<double>& W_tensor,

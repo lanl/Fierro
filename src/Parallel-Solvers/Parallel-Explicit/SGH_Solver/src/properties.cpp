@@ -31,13 +31,32 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-// -----------------------------------------------------------------------------
-// This calls the models to update state
-// ------------------------------------------------------------------------------
 #include "state.h"
 #include "mesh.h"
 #include "FEA_Module_SGH.h"
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_state
+///
+/// \brief This calls the models to update state
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::update_state(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
@@ -165,6 +184,28 @@ void FEA_Module_SGH::update_state(const DCArrayKokkos<material_t>& material,
     return;
 } // end method to update state
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_state2D
+///
+/// \brief Updates the state for 2D elements
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::update_state2D(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,

@@ -36,9 +36,29 @@
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 #include "FEA_Module_SGH.h"
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_sgh
+///
+/// \brief This function calculates the corner forces and the evolves stress (hypo)
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
@@ -503,9 +523,28 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
     return;
 } // end of routine
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_sgh2D
+///
+/// \brief This function calculates the corner forces and the evolves stress (hypo)
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
@@ -882,10 +921,28 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
     return;
 } // end of routine for 2D force and stress update
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn applied_forces
+///
+/// \brief This function apploes force loading conditions
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy array
+/// \param A view into the element pressure array
+/// \param A view into the element stress array
+/// \param A view into the element sound speed array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element material identifier array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::applied_forces(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,

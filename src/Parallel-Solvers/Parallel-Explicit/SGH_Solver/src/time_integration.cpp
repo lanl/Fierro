@@ -35,9 +35,20 @@
 #include "state.h"
 #include "FEA_Module_SGH.h"
 
-// -----------------------------------------------------------------------------
-// This function saves the variables at rk_stage = 0, which is t_n
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn rk_init
+///
+/// \brief This function saves the variables at rk_stage = 0, which is t_n
+///
+/// \param View of nodal position data
+/// \param View of nodal velocity data
+/// \param View of element specific internal energy data
+/// \param View of element stress
+/// \param Number of elements
+/// \param Number of nodes
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::rk_init(DViewCArrayKokkos<double>& node_coords,
     DViewCArrayKokkos<double>& node_vel,
     DViewCArrayKokkos<double>& elem_sie,
@@ -74,11 +85,22 @@ void FEA_Module_SGH::rk_init(DViewCArrayKokkos<double>& node_coords,
     return;
 } // end rk_init
 
-// -----------------------------------------------------------------------------
-// This function calculates the time step by finding the shortest distance
-// between any two nodes in the mesh
-// ------------------------------------------------------------------------------
-// WARNING WARNING :  Only works for 3D, 8 node elements
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_timestep
+///
+/// \brief This function calculates the time step by finding the shortest distance
+///        between any two nodes in the mesh.
+///
+/// WARNING WARNING :  Only works for 3D, 8 node elements
+///
+/// \param Simulation mesh
+/// \param View of nodal position data
+/// \param View of nodal velocity data
+/// \param View of element sound speed
+/// \param View of element volume
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_timestep(mesh_t& mesh,
     DViewCArrayKokkos<double>& node_coords,
     DViewCArrayKokkos<double>& node_vel,
@@ -175,11 +197,22 @@ void FEA_Module_SGH::get_timestep(mesh_t& mesh,
     return;
 } // end get_timestep
 
-// -----------------------------------------------------------------------------
-// This function calculates the time step by finding the shortest distance
-// between any two nodes in the mesh
-// ------------------------------------------------------------------------------
-// WARNING WARNING :  Only works for 2D, 4 node elements
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_timestep2D
+///
+/// \brief This function calculates the time step by finding the shortest distance
+///        between any two nodes in the mesh.
+///
+/// WARNING WARNING :  Only works for 2D, 4 node elements
+///
+/// \param Simulation mesh
+/// \param View of nodal position data
+/// \param View of nodal velocity data
+/// \param View of element sound speed
+/// \param View of element volume
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_timestep2D(mesh_t& mesh,
     DViewCArrayKokkos<double>& node_coords,
     DViewCArrayKokkos<double>& node_vel,

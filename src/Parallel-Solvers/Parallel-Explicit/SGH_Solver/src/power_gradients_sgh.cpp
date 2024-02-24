@@ -37,10 +37,17 @@
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "Simulation_Parameters/FEA_Module/SGH_Parameters.h"
 
-// --------------------------------------------------------------------------------------------------------
-// Computes term objective derivative term involving gradient of power with respect to the design variable
-// ---------------------------------------------------------------------------------------------------------
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn power_design_gradient_term
+///
+/// \brief Computes term objective derivative term involving gradient of power
+///        with respect to the design variable
+///
+/// \param Vector of design variables
+/// \param Vector of design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables, vec_array design_gradients)
 {
     bool   element_constant_density = true;
@@ -259,10 +266,23 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
     }
 }
 
-// ---------------------------------------------------------------------------------------
-// This function calculates the gradient for element power with respect to design variable
-// ----------------------------------------------------------------------------------------
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_power_dgradient_sgh
+///
+/// \brief This function calculates the gradient for element power with
+///        respect to design variable
+///
+/// \param The current Runge Kutta alpha value
+/// \param The simulation mesh
+/// \param A view into the nodal velocity data
+/// \param A view into the nodal position data
+/// \param A view into the element specific internal energy data
+/// \param A view into the element mass data
+/// \param A view into the corner force data
+/// \param Array of design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_vel,
@@ -311,10 +331,24 @@ void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
     return;
 } // end subroutine
 
-// -----------------------------------------------------------------------------
-// This function calculates the gradient for element power with respect to position
-// ------------------------------------------------------------------------------
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_power_ugradient_sgh
+///
+/// \brief This function calculates the gradient for element power with
+///        respect to position
+///
+/// \param The current Runge Kutta alpha value
+/// \param The simulation mesh
+/// \param A view into the nodal velocity data
+/// \param A view into the nodal position data
+/// \param A view into the element specific internal energy data
+/// \param A view into the element mass data
+/// \param A view into the corner force data
+///
+/// \return <return type and definition description if not void>
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_vel,
@@ -388,10 +422,15 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
     return;
 } // end subroutine
 
-// -----------------------------------------------------------------------------
-// This function calculates the gradient for element power with respect to velocity
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_power_vgradient_sgh
+///
+/// \brief This function calculates the gradient for element power with respect to velocity
+///
 
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_vel,
@@ -471,10 +510,22 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
     return;
 } // end subroutine
 
-// -----------------------------------------------------------------------------
-// This function calculates the gradient for element power with respect to energy
-// ------------------------------------------------------------------------------
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_power_egradient_sgh
+///
+/// \brief This function calculates the gradient for element power with
+///        respect to energy
+///
+/// \param The current Runge Kutta alpha value
+/// \param The simulation mesh
+/// \param A view into the nodal velocity data
+/// \param A view into the nodal position data
+/// \param A view into the element specific internal energy data
+/// \param A view into the element mass data
+/// \param A view into the corner force data
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::get_power_egradient_sgh(double rk_alpha,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_vel,
