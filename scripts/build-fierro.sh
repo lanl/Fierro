@@ -2,7 +2,7 @@
 show_help() {
     echo "Usage: source $(basename "$BASH_SOURCE") [OPTION]"
     echo "Valid options:"
-    echo "  --solver=<all|explicit|explicit-evpfft|explicit-ls-evpfft|explicit-evp|implicit>. Default is 'explicit'"
+    echo "  --solver=<all|explicit|explicit-evpfft|explicit-ls-evpfft|implicit>. Default is 'explicit'"
     echo "  --kokkos_build_type=<serial|openmp|pthreads|cuda|hip>. Default is 'serial'"
     echo "  --build_action=<full-app|set-env|install-trilinos|install-hdf5|install-heffte|fierro>. Default is 'full-app'"
     echo "  --machine=<darwin|chicoma|linux|mac>. Default is 'linux'"
@@ -27,7 +27,6 @@ show_help() {
     echo "          explicit                    builds the explicit solver"
     echo "          explicit-evpfft             builds the explicit solver with the EVPFFT material model"
     echo "          explicit-ls-evpfft          builds the explicit solver with the LS-EVPFFT material model"
-    echo "          explicit-evp                builds the explicit solver with the EVP material model"    
     echo "          implicit                    builds the explicit solver"
     echo " "
     echo "      --kokkos_build_type             The desired kokkos parallel backend to use. The default is 'serial'"
@@ -64,7 +63,7 @@ build_cores="1"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-trilinos" "install-hdf5" "install-heffte" "fierro")
-valid_solver=("all" "explicit" "explicit-evpfft" "explicit-ls-evpfft" "explicit-evp" "implicit")
+valid_solver=("all" "explicit" "explicit-evpfft" "explicit-ls-evpfft" "implicit")
 valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_heffte_build_types=("fftw" "cufft" "rocfft")
 valid_machines=("darwin" "chicoma" "linux" "mac")
@@ -185,7 +184,7 @@ if [ "$build_action" = "full-app" ]; then
         source hdf5-install.sh
         source heffte-install.sh ${heffte_build_type} ${machine}
     fi
-    source cmake_build.sh ${solver}
+    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type}
 elif [ "$build_action" = "install-trilinos" ]; then
     source trilinos-install.sh ${kokkos_build_type}
 elif [ "$build_action" = "install-hdf5" ]; then
@@ -193,7 +192,7 @@ elif [ "$build_action" = "install-hdf5" ]; then
 elif [ "$build_action" = "install-heffte" ]; then
     source heffte-install.sh ${heffte_build_type} ${machine}
 elif [ "$build_action" = "fierro" ]; then
-    source cmake_build.sh ${solver} ${heffte_build_type}
+    source cmake_build.sh ${solver} ${heffte_build_type} ${kokkos_build_type}
 else
     echo "No build action, only setup the environment."
 fi

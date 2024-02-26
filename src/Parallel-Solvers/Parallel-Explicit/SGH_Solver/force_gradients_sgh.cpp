@@ -111,8 +111,6 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos <material_t> &m
         ViewCArrayKokkos <double> vel_star_gradient(vel_star_gradient_array, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
 
-        EOSParent* eos_model = elem_eos(elem_gid).model;
-
         // --- abviatations of variables ---
         
         // element volume
@@ -538,8 +536,6 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         ViewCArrayKokkos <double> vel_star_gradient(vel_star_gradient_array, num_dims);
         ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
 
-        EOSParent* eos_model = elem_eos(elem_gid).model;
-
         // --- abviatations of variables ---
         
         // element volume
@@ -608,12 +604,14 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
         // add the pressure
         for (int i = 0; i < num_dims; i++){
             tau(i, i) -= elem_pres(elem_gid);
-            tau_gradient(i, i) = -eos_model->calc_pressure_gradient_internal_energy(elem_pres,
+            tau_gradient(i, i) = -elem_eos(elem_gid).calc_pressure_gradient_internal_energy(elem_pres,
                                  elem_stress,
                                  elem_gid,
                                  elem_mat_id(elem_gid),
-                                 state_vars,
-                                 global_vars,
+                                 eos_state_vars,
+                                 strength_state_vars,
+                                 eos_global_vars,
+                                 strength_global_vars,
                                  elem_user_output_vars,
                                  elem_sspd,
                                  elem_den(elem_gid),
@@ -660,12 +658,14 @@ void FEA_Module_SGH::get_force_egradient_sgh(const DCArrayKokkos <material_t> &m
 
         // --- Sound speed ---
         real_t sound_speed_gradient_energy = 
-        eos_model->calc_sound_speed_gradient_internal_energy(elem_pres,
+        elem_eos(elem_gid).calc_sound_speed_gradient_internal_energy(elem_pres,
                                                             elem_stress,
                                                             elem_gid,
                                                             elem_mat_id(elem_gid),
-                                                            state_vars,
-                                                            global_vars,
+                                                            eos_state_vars,
+                                                            strength_state_vars,
+                                                            eos_global_vars,
+                                                            strength_global_vars,
                                                             elem_user_output_vars,
                                                             elem_sspd,
                                                             elem_den(elem_gid),
@@ -990,8 +990,6 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos <material_t> &m
         ViewCArrayKokkos <double> vel_star(vel_star_array, num_dims);
         ViewCArrayKokkos <double> vel_star_gradient(vel_star_gradient_array, num_dims, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
-
-        EOSParent* eos_model = elem_eos(elem_gid).model;
 
         // --- abviatations of variables ---
         
@@ -1707,8 +1705,6 @@ void FEA_Module_SGH::get_force_dgradient_sgh(const DCArrayKokkos <material_t> &m
         ViewCArrayKokkos <double> vel_star(vel_star_array, num_dims);
         ViewCArrayKokkos <double> vel_star_gradient(vel_star_gradient_array, num_dims);
         ViewCArrayKokkos <double> vel_grad(vel_grad_array, num_dims, num_dims);
-
-        EOSParent* eos_model = elem_eos(elem_gid).model;
 
         // --- abviatations of variables ---
         
