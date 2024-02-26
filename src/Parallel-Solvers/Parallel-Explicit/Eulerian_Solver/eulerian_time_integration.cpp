@@ -35,9 +35,20 @@
 #include "state.h"
 #include "FEA_Module_Eulerian.h"
 
-// -----------------------------------------------------------------------------
-// This function saves the variables at rk_stage = 0, which is t_n
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn rk_init
+///
+/// \brief This function saves the variables at rk_stage = 0, which is t_n
+///
+/// \param Nodal positions
+/// \param Nodal velocities
+/// \param Element specific internal energy
+/// \param Element stress
+/// \param Number of elements
+/// \param Number of nodes
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::rk_init(DViewCArrayKokkos<double>& node_coords,
     DViewCArrayKokkos<double>& node_vel,
     DViewCArrayKokkos<double>& elem_sie,
@@ -74,11 +85,24 @@ void FEA_Module_Eulerian::rk_init(DViewCArrayKokkos<double>& node_coords,
     return;
 } // end rk_init
 
-// -----------------------------------------------------------------------------
-// This function calculates the time step by finding the shortest distance
-// between any two nodes in the mesh
-// ------------------------------------------------------------------------------
-// WARNING WARNING :  Only works for 3D, 8 node elements
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_timestep
+///
+/// \brief Calculates CFL compliant timestep
+///
+/// This function calculates the time step by finding the shortest distance
+/// between any two nodes in the mesh
+///
+/// WARNING WARNING :  Only works for 3D, 8 node elements
+///
+/// \param Simulation mesh
+/// \param Nodal positions
+/// \param Nodal velocities
+/// \param Element sound speed
+/// \param Element volume
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::get_timestep(mesh_t& mesh,
     DViewCArrayKokkos<double>& node_coords,
     DViewCArrayKokkos<double>& node_vel,
@@ -175,11 +199,24 @@ void FEA_Module_Eulerian::get_timestep(mesh_t& mesh,
     return;
 } // end get_timestep
 
-// -----------------------------------------------------------------------------
-// This function calculates the time step by finding the shortest distance
-// between any two nodes in the mesh
-// ------------------------------------------------------------------------------
-// WARNING WARNING :  Only works for 3D, 8 node elements
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_timestep2D
+///
+/// \brief Calculates CFL compliant timestep
+///
+/// This function calculates the time step by finding the shortest distance
+/// between any two nodes in the mesh
+///
+/// WARNING WARNING :  Only works for 2D, 4 node elements
+///
+/// \param Simulation mesh
+/// \param Nodal positions
+/// \param Nodal velocities
+/// \param Element sound speed
+/// \param Element volume
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::get_timestep2D(mesh_t& mesh,
     DViewCArrayKokkos<double>& node_coords,
     DViewCArrayKokkos<double>& node_vel,

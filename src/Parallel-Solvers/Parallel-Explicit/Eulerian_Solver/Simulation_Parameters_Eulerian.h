@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -82,6 +79,16 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters
     DCArrayKokkos<boundary_t> boundary;
     std::vector<double> gravity_vector { 9.81, 0., 0. };
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn init_material_variable_arrays
+    ///
+    /// \brief Initialize data for EOS and material strength models
+    ///
+    /// \param Number of global EOS variables
+    /// \param Number of global strength variables
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void init_material_variable_arrays(size_t num_eos_global_vars, size_t num_strength_global_vars)
     {
         eos_global_vars = DCArrayKokkos<double>(material_options.size(), num_eos_global_vars);
@@ -103,6 +110,16 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn from_vector
+    ///
+    /// \brief Copies data from a vector on the host device
+    ///
+    /// \param Array data is coped into
+    /// \param Vector on the host device
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     template<typename T, typename K> void from_vector(DCArrayKokkos<T>& array, const std::vector<K>& vec)
     {
         array = DCArrayKokkos<T>(vec.size());
@@ -112,6 +129,13 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn derive_kokkos_arrays
+    ///
+    /// \brief Updates arrays on the device
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void derive_kokkos_arrays()
     {
         max_num_eos_global_vars = 0;
@@ -136,12 +160,26 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters
         strength_global_vars.update_device();
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn derive
+    ///
+    /// \brief Calls derive_kokkos_arrays and sets the number or Runge Kutta integration
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void derive()
     {
         derive_kokkos_arrays();
         rk_num_bins = rk_num_stages;
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn validate
+    ///
+    /// \brief Validates the specified FEA module
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void validate()
     {
         validate_module_is_specified(FEA_MODULE_TYPE::Eulerian);

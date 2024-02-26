@@ -199,9 +199,16 @@ FEA_Module_Eulerian::~FEA_Module_Eulerian()
     // delete simparam;
 }
 
-/* ----------------------------------------------------------------------
-   Read ANSYS dat format mesh file
-------------------------------------------------------------------------- */
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn read_conditions_ansys_dat
+///
+/// \brief Read ANSYS dat format mesh file
+///
+/// \param Input file path
+/// \param Before conditions
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::read_conditions_ansys_dat(std::ifstream* in, std::streampos before_condition_header)
 {
     char ch;
@@ -229,10 +236,13 @@ void FEA_Module_Eulerian::read_conditions_ansys_dat(std::ifstream* in, std::stre
     host_vec_array node_densities;
 } // end read_conditions_ansys_dat
 
-/* ----------------------------------------------------------------------------
-   Initialize sets of element boundary surfaces and arrays for input conditions
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_boundaries
+///
+/// \brief Initialize sets of element boundary surfaces and arrays for input conditions
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::init_boundaries()
 {
     max_boundary_sets = simparam->NB;
@@ -264,10 +274,16 @@ void FEA_Module_Eulerian::init_boundaries()
     Number_DOF_BCS = 0;
 }
 
-/* ----------------------------------------------------------------------
-   initialize storage for element boundary surfaces corresponding to user BCs
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_boundary_sets
+///
+/// \brief initialize storage for element boundary surfaces corresponding
+///        to user BCs
+///
+/// \param Number of boundary sets
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::init_boundary_sets(int num_sets)
 {
     if (num_sets == 0)
@@ -296,10 +312,15 @@ void FEA_Module_Eulerian::init_boundary_sets(int num_sets)
     }
 }
 
-/* ----------------------------------------------------------------------------
-   Grow boundary conditions sets of element boundary surfaces
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn grow_boundary_sets
+///
+/// \brief Grow boundary conditions sets of element boundary surfaces
+///
+/// \param Number of boundary sets
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::grow_boundary_sets(int num_sets)
 {
     int num_dim = simparam->num_dims;
@@ -350,27 +371,40 @@ void FEA_Module_Eulerian::grow_boundary_sets(int num_sets)
     }
 }
 
-/* ----------------------------------------------------------------------
-   Assign sets of element boundary surfaces corresponding to user BCs
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn generate_bcs
+///
+/// \brief Assign sets of element boundary surfaces corresponding to user BCs
+///
+/// Unused in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::generate_bcs()
 {
 } // end generate_bcs
 
-/* ----------------------------------------------------------------------
-   Loop through applied boundary conditions and tag node ids to remove
-   necessary rows and columns from the assembled linear system
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn generate_bcs
+///
+/// \brief Loop through applied boundary conditions and tag node ids to remove
+///        necessary rows and columns from the assembled linear system
+///
+/// Unused in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::Displacement_Boundary_Conditions()
 {
 }
 
-/* ----------------------------------------------------------------------------
-   Initialize output data structures
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_output
+///
+/// \brief Initialize output data structures
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::init_output()
 {
     // check user parameters for output
@@ -496,10 +530,13 @@ void FEA_Module_Eulerian::compute_output()
 {
 }
 
-/* ----------------------------------------------------------------------
-   Communicate updated nodal velocities to ghost nodes
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_node_masses
+///
+/// \brief Communicate updated nodal velocities to ghost nodes
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::comm_node_masses()
 {
     // debug print of design vector
@@ -527,10 +564,15 @@ void FEA_Module_Eulerian::comm_node_masses()
     // }
 }
 
-/* ----------------------------------------------------------------------
-   Communicate updated nodal adjoint vectors to ghost nodes
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_adjoint_vectors
+///
+/// \brief  Communicate updated nodal adjoint vectors to ghost nodes
+///
+/// \param Optimization iteration cycle count
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::comm_adjoint_vectors(int cycle)
 {
     // debug print of design vector
@@ -559,10 +601,15 @@ void FEA_Module_Eulerian::comm_adjoint_vectors(int cycle)
     // }
 }
 
-/* -------------------------------------------------------------------------------------------
-   Communicate ghosts using the current optimization design data
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_variables
+///
+/// \brief Communicate ghosts using the current optimization design data
+///
+/// \param Design variables
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::comm_variables(Teuchos::RCP<const MV> zp)
 {
     if (simparam_dynamic_opt.topology_optimization_on)
@@ -600,10 +647,13 @@ void FEA_Module_Eulerian::node_density_constraints(host_vec_array node_densities
 {
 }
 
-/* ----------------------------------------------------------------------------
-   Setup Eulerian solver data
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn setup
+///
+/// \brief Setup Eulerian solver data
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::setup()
 {
     const size_t rk_level      = simparam->rk_num_bins - 1;
@@ -676,10 +726,13 @@ void FEA_Module_Eulerian::setup()
     return;
 } // end of setup
 
-/* ----------------------------------------------------------------------------
-   Eulerian solver loop
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn euler_solve
+///
+/// \brief Eulerian solver loop
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::euler_solve()
 {
     Time_Variables tv = simparam->time_variables;
