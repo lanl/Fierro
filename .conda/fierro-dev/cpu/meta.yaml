@@ -16,6 +16,8 @@ requirements:
   run:
     - cmake >=3.17
     - {{ compiler('cxx') }}={{ compiler_version }}
+    - {{ compiler('c') }}={{ compiler_version }}
+    - {{ compiler('fortran') }}
     - fierro-trilinos-cpu
     - mpi
     - elements
