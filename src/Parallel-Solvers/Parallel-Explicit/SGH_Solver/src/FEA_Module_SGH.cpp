@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -997,7 +994,7 @@ void FEA_Module_SGH::sgh_solve()
     }
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if(simparam->output_options.write_initial)
+    if (simparam->output_options.write_initial)
     {
         if (myrank == 0)
         {
@@ -1743,9 +1740,10 @@ void FEA_Module_SGH::sgh_solve()
                     }
                 }); // end parallel for
             } // end view scope
-            
-            if(myrank==0){
-              printf("Writing outputs to file at %f \n", graphics_time);
+
+            if (myrank == 0)
+            {
+                printf("Writing outputs to file at %f \n", graphics_time);
             }
 
             double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
@@ -1753,7 +1751,6 @@ void FEA_Module_SGH::sgh_solve()
 
             double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
             Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
-
 
             graphics_time = time_value + graphics_dt_ival;
         } // end if

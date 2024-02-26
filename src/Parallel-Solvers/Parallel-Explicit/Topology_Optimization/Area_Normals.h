@@ -11,14 +11,11 @@
  This program is open source under the BSD-3 License.
  Redistribution and use in source and binary forms, with or without modification, are permitted
  provided that the following conditions are met:
-
  1.  Redistributions of source code must retain the above copyright notice, this list of
  conditions and the following disclaimer.
-
  2.  Redistributions in binary form must reproduce the above copyright notice, this list of
  conditions and the following disclaimer in the documentation and/or other materials
  provided with the distribution.
-
  3.  Neither the name of the copyright holder nor the names of its contributors may be used
  to endorse or promote products derived from this software without specific prior
  written permission.
@@ -98,11 +95,33 @@ private:
     ROL::Ptr<ROL_MV> ROL_Velocities;
     ROL::Ptr<ROL_MV> ROL_Gradients;
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn getVector
+    ///
+    /// \brief Retrieves ROL vector at desired location
+    ///
+    /// \param Pointer to desired ROL vector
+    ///
+    /// \return Returns const ROL MV vector
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     ROL::Ptr<const MV> getVector(const V& x)
     {
         return dynamic_cast<const ROL_MV&>(x).getVector();
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn getVector
+    ///
+    /// \brief Retrieves ROL vector at desired location
+    ///
+    /// \param Pointer to desired ROL vector
+    ///
+    /// \return Returns ROL MV vector
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     ROL::Ptr<MV> getVector(V& x)
     {
         return dynamic_cast<ROL_MV&>(x).getVector();
@@ -154,10 +173,35 @@ public:
         // std::cout << "INITIAL KINETIC ENERGY " << current_kinetic_energy << std::endl;
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn update
+    ///
+    /// \brief Unused update function
+    ///
+    /// \param Unused in this context
+    /// \param Unused in this context
+    /// \param Unused in this context
+    ///
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void update(const ROL::Vector<real_t>& z, ROL::UpdateType type, int iter = -1)
     {
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn value
+    ///
+    /// \brief Returns objective value for optimiation
+    ///
+    ///
+    /// \param Objective value vector
+    /// \param Value tolerance
+    ///
+    /// \return Objective value
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     real_t value(const ROL::Vector<real_t>& z, real_t& tol)
     {
         double area_normal_array[24];
@@ -197,10 +241,17 @@ public:
         return objective_value;
     }
 
-    // void gradient_1( ROL::Vector<real_t> &g, const ROL::Vector<real_t> &u, const ROL::Vector<real_t> &z, real_t &tol ) {
-    // g.zero();
-    // }
-
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn gradient
+    ///
+    /// \brief Calculate design gradient
+    ///
+    /// \param Vector of gradient values
+    /// \param Objective value vector
+    /// \param Design tolerance
+    ///
+    /////////////////////////////////////////////////////////////////////////////
     void gradient(ROL::Vector<real_t>& g, const ROL::Vector<real_t>& z, real_t& tol)
     {
         // std::cout << "Started obj gradient on task " <<FEM_->myrank  << std::endl;
