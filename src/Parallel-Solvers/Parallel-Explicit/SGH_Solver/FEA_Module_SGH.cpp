@@ -107,9 +107,6 @@ FEA_Module_SGH::FEA_Module_SGH(
 
   //set Tpetra vector pointers
   initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
-  initial_node_coords_distributed = Explicit_Solver_Pointer_->initial_node_coords_distributed;
-  all_initial_node_coords_distributed = Explicit_Solver_Pointer_->all_initial_node_coords_distributed;
-  node_coords_distributed = Explicit_Solver_Pointer_->node_coords_distributed;
   node_velocities_distributed = Explicit_Solver_Pointer_->node_velocities_distributed;
   all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
   if(simparam->topology_optimization_on||simparam->shape_optimization_on){
@@ -1117,12 +1114,30 @@ void FEA_Module_SGH::setup(){
     
     //initialize if topology optimization is used
     if(simparam->topology_optimization_on){
+      //compute element averaged density ratios corresponding to nodal density design variables
+      CArray<double> current_element_nodal_densities = CArray<double>(num_nodes_in_elem);
+      {//view scope
+        const_host_vec_array all_node_densities = all_node_densities_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+        //debug print
+        //std::cout << "NODE DENSITY TEST " << all_node_densities(0,0) << std::endl;
+        for(int elem_id = 0; elem_id < rnum_elem; elem_id++){
+          for(int inode = 0; inode < num_nodes_in_elem; inode++){
+            current_element_nodal_densities(inode) = all_node_densities(nodes_in_elem(elem_id,inode),0);
+          }
+          relative_element_densities.host(elem_id) = average_element_density(num_nodes_in_elem, current_element_nodal_densities);
+        }//for
+      } //view scope
+      //debug print
+      //std::cout << "ELEMENT RELATIVE DENSITY TEST " << relative_element_densities.host(0) << std::endl;
+    }
+    else{
       for(int elem_id = 0; elem_id < rnum_elem; elem_id++){
         relative_element_densities.host(elem_id) = 1;
       }//for
-      relative_element_densities.update_device();
     }
     
+    relative_element_densities.update_device();
+
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++){
             
@@ -1158,7 +1173,7 @@ void FEA_Module_SGH::setup(){
             if (fill_this){
                     
                 // density
-                elem_den(elem_gid) = mat_fill(f_id).den;
+                elem_den(elem_gid) = mat_fill(f_id).den*relative_element_densities(elem_gid);
                 
                 // mass
                 elem_mass(elem_gid) = elem_den(elem_gid)*elem_vol(elem_gid);
