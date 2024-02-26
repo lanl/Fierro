@@ -101,8 +101,6 @@ void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
 /// \param The global id of this particular element
 /// \param The Runge Kutta time integration level
 ///
-/// \return <return type and definition description if not void>
-///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
@@ -190,7 +188,7 @@ void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn get_velgrad
+/// \fn get_velgrad2D
 ///
 /// \brief This function calculates the velocity gradient for a 2D element
 ///
@@ -202,8 +200,6 @@ void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
 /// \param The elements surface area
 /// \param The global id of this particular element
 /// \param The Runge Kutta time integration level
-///
-/// \return <return type and definition description if not void>
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION

@@ -39,10 +39,28 @@
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Explicit_Solver.h"
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_force_elastic(const DCArrayKokkos<material_t>& material,
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_elastic
+///
+/// \brief This function calculates the corner forces and the evolves stress
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the nodal mass array
+/// \param A view into the element density array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element element material ID
+/// \param A view into the corner force array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_Dynamic_Elasticity::get_force_elastic(
+    const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
     const DViewCArrayKokkos<double>& node_vel,
@@ -108,10 +126,28 @@ void FEA_Module_Dynamic_Elasticity::get_force_elastic(const DCArrayKokkos<materi
     return;
 } // end of routine
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos<material_t>& material,
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn applied_forces
+///
+/// \brief This function applies force to the nodes as a boundary condition
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the nodal mass array
+/// \param A view into the element density array
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element element material ID
+/// \param A view into the corner force array
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_Dynamic_Elasticity::applied_forces(
+    const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
     const DViewCArrayKokkos<double>& node_vel,
@@ -194,10 +230,13 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(const DCArrayKokkos<material_
     return;
 } // end of routine
 
-/* ----------------------------------------------------------------------
-   Assemble the Sparse Stiffness Matrix
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn assemble_matrix
+///
+/// \brief Assemble the Sparse Stiffness Matrix
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::assemble_matrix()
 {
     int num_dim = simparam->num_dims;
@@ -307,31 +346,20 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix()
             }
         }
     }
-
-    // debug print of A matrix
-    // *fos << "Global Stiffness Matrix :" << std::endl;
-    // Global_Stiffness_Matrix->describe(*fos,Teuchos::VERB_EXTREME);
-    // *fos << std::endl;
-
-    // filter small negative numbers (that should have been 0 from cancellation) from floating point error
-    /*
-    for (int idof = 0; idof < num_dim*nlocal_nodes; idof++){
-      for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++){
-        if(Stiffness_Matrix(idof,istride)<0.000000001*simparam->Elastic_Modulus*density_epsilon||Stiffness_Matrix(idof,istride)>-0.000000001*simparam->Elastic_Modulus*density_epsilon)
-        Stiffness_Matrix(idof,istride) = 0;
-        //debug print
-        //std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
-      }
-      //debug print
-      //std::cout << std::endl;
-    }
-    */
 }
 
-/* ----------------------------------------------------------------------
-   Retrieve material properties associated with a finite element
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn Element_Material_Properties
+///
+/// \brief Retrieve material properties associated with a finite element
+///
+/// \param Element ID
+/// \param Element youngs modulus
+/// \param Element poisson ration
+/// \param Element density
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, real_t& Element_Modulus, real_t& Poisson_Ratio, real_t density)
 {
     real_t unit_scaling    = simparam->get_unit_scaling();
@@ -351,10 +379,18 @@ void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, re
     Poisson_Ratio = module_params->material.poisson_ratio;
 }
 
-/* ----------------------------------------------------------------------
-   Retrieve derivative of material properties with respect to local density
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn Gradient_Element_Material_Properties
+///
+/// \brief Retrieve derivative of material properties with respect to local density
+///
+/// \param Element ID
+/// \param Element youngs modulus derivative
+/// \param Element poisson ration
+/// \param Element density
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::Gradient_Element_Material_Properties(size_t ielem, real_t& Element_Modulus_Derivative, real_t& Poisson_Ratio, real_t density)
 {
     real_t unit_scaling    = simparam->get_unit_scaling();
@@ -375,10 +411,16 @@ void FEA_Module_Dynamic_Elasticity::Gradient_Element_Material_Properties(size_t 
     Poisson_Ratio = module_params->material.poisson_ratio;
 }
 
-/* ----------------------------------------------------------------------
-   Construct the local stiffness matrix
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn local_matrix_multiply
+///
+/// \brief Construct the local stiffness matrix
+///
+/// \param Element ID
+/// \param Local matrix
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits>& Local_Matrix)
 {
     // local variable for host view in the dual view
@@ -866,10 +908,16 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
     */
 }
 
-/* ----------------------------------------------------------------------
-   Compute the gradient of strain energy with respect to nodal densities
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn compute_stiffness_gradients
+///
+/// \brief  Compute the gradient of strain energy with respect to nodal densities
+///
+/// \param Vector of design variables
+/// \param Vector of design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_array& design_variables, host_vec_array& design_gradients)
 {
     // local variable for host view in the dual view

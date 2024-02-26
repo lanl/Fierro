@@ -31,14 +31,23 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-
-// -----------------------------------------------------------------------------
-// This code handles the geometric information for the mesh for the SHG solver
-// ------------------------------------------------------------------------------
 #include "matar.h"
 #include "state.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn update_position_elastic
+///
+/// \brief Updates the nodal potitions for the dynamic elastic solver
+///
+///
+/// \param Runge Kutta time integration alpha value
+/// \param Number of nodes
+/// \param Array of nodal potitions
+/// \param Array of nodal velocities
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::update_position_elastic(double rk_alpha,
     const size_t num_nodes,
     DViewCArrayKokkos<double>& node_coords,
@@ -57,17 +66,26 @@ void FEA_Module_Dynamic_Elasticity::update_position_elastic(double rk_alpha,
     }); // end parallel for over nodes
 } // end subroutine
 
-// -----------------------------------------------------------------------------
-//  This function claculates
-//    B_p =  J^{-T} \cdot (\nabla_{xi} \phi_p w
-//  where
-//    \phi_p is the basis function for vertex p
-//    w is the 1 gauss point for the cell (everything is evaluted at this point)
-//    J^{-T} is the inverse transpose of the Jacobi matrix
-//    \nabla_{xi} is the gradient opperator in the reference coordinates
-//
-//   B_p is the OUTWARD corner area normal at node p
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_bmatrix
+///
+/// \brief Theis function calculate the finite element B matrix:
+///
+///  B_p =  J^{-T} \cdot (\nabla_{xi} \phi_p w,   where:
+///  \phi_p is the basis function for vertex p
+///  w is the 1 gauss point for the cell (everything is evaluted at this point)
+///  J^{-T} is the inverse transpose of the Jacobi matrix
+///  \nabla_{xi} is the gradient opperator in the reference coordinates
+///  B_p is the OUTWARD corner area normal at node p
+///
+/// \param B matrix
+/// \param Global index of the element
+/// \param View of nodal position data
+/// \param View of the elements node ids
+/// \param Runge Kutta time integration level
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void FEA_Module_Dynamic_Elasticity::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
@@ -265,10 +283,13 @@ void FEA_Module_Dynamic_Elasticity::get_bmatrix(const ViewCArrayKokkos<double>& 
                       + x(6) * (+y(2) + y(3) - y(4) - y(5) ) ) * twelth;
 } // end subroutine
 
-/* ----------------------------------------------------------------------------
-   Compute Volume of each finite element
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_vol
+///
+/// \brief Compute Volume of each finite element
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::get_vol()
 {
     const size_t rk_level = rk_num_bins - 1;
@@ -296,7 +317,19 @@ void FEA_Module_Dynamic_Elasticity::get_vol()
     return;
 } // end subroutine
 
-// Exact volume for a hex element
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_vol_hex
+///
+/// \brief Exact volume for a hex element
+///
+/// \param View of element volume data
+/// \param Global element index
+/// \param View into nodal position data
+/// \param Runge Kutta time integration level
+/// WARNING: How does this work with const elem_vol?
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
 void FEA_Module_Dynamic_Elasticity::get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
@@ -341,6 +374,22 @@ void FEA_Module_Dynamic_Elasticity::get_vol_hex(const DViewCArrayKokkos<double>&
     return;
 } // end subroutine
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_bmatrix2D
+///
+/// \brief Calculate the 2D finite element B matrix
+///
+/// <Insert longer more detailed description which
+/// can span multiple lines if needed>
+///
+/// \param B Matrix
+/// \param Global index of the element
+/// \param Nodal coordinates
+/// \param Global indices of the nodes of this element
+/// \param Runge Kutta time integration step
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
@@ -398,7 +447,19 @@ void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos<double>
     return;
 } // end subroutine
 
-// true volume of a quad in RZ coords
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_vol_quad
+///
+/// \brief True volume of a quad in RZ coords
+///
+/// \param Element volume
+/// \param Global index of the element
+/// \param Nodal coordinates
+/// \param Global ids of the nodes in this element
+/// \param Runge Kutta time integration level
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
 void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
@@ -457,7 +518,20 @@ void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos<double>
     return;
 } // end subroutine
 
-// element facial area
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_area_quad
+///
+/// \brief Calculate the area of a elements face
+///
+/// \param Global index of the element
+/// \param Nodal coordinates
+/// \param Global ids of the nodes in this element
+/// \param Runge Kutta time integration level
+///
+/// \return Elements face area (double)
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 double FEA_Module_Dynamic_Elasticity::get_area_quad(const size_t elem_gid,
     const DViewCArrayKokkos<double>& node_coords,
@@ -492,6 +566,23 @@ double FEA_Module_Dynamic_Elasticity::get_area_quad(const size_t elem_gid,
     return elem_area;
 } // end subroutine
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn heron
+///
+/// \brief Calculate the area of a triangle using the heron algorithm
+///
+///
+/// \param Node 1 X coordinate
+/// \param Node 1 Y coordinate
+/// \param Node 2 X coordinate
+/// \param Node 2 Y coordinate
+/// \param Node 3 X coordinate
+/// \param Node 3 Y coordinate
+///
+/// \return Triangle area
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
 double FEA_Module_Dynamic_Elasticity::heron(const double x1,
     const double y1,
@@ -516,6 +607,13 @@ double FEA_Module_Dynamic_Elasticity::heron(const double x1,
     return area;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_area_weights2D
+///
+/// \brief Calculate the corner weighted area
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void FEA_Module_Dynamic_Elasticity::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     const size_t elem_gid,

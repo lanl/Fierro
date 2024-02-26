@@ -31,16 +31,24 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-// -------------------------------------------------------
-// This function applys the boundary condition
-// to points on a list of patches created at setup
-// --------------------------------------------------------
 
 #include "mesh.h"
 #include "state.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 #include "Simulation_Parameters/FEA_Module/Boundary_Conditions.h"
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn boundary_velocity
+///
+/// \brief This function applys the velocity  boundary condition
+///        to points on a list of patches created at setup
+///
+/// \param The simulation mesh
+/// \param Array of boundary sets
+/// \param View of the nodal velocity data
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::boundary_velocity(const mesh_t& mesh,
     const DCArrayKokkos<boundary_t>& boundary,
     DViewCArrayKokkos<double>& node_vel)

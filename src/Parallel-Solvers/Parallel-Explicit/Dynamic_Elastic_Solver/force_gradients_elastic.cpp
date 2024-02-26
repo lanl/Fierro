@@ -54,10 +54,30 @@
 #include "Simulation_Parameters/Simulation_Parameters_Explicit.h"
 #include "FEA_Module_Dynamic_Elasticity.h"
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKokkos<material_t>& material,
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_vgradient_elastic
+///
+/// \brief Computes corner contribution of gradient of force with respect to velocity
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy
+/// \param A view into the element pressure
+/// \param A view into the element stress
+/// \param A view into the element sound speed
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element element material ID
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
+    const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
     const DViewCArrayKokkos<double>& node_vel,
@@ -429,9 +449,28 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(const DCArrayKok
     return;
 } // end of routine
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_ugradient_elastic
+///
+/// \brief Computes corner contribution of gradient of force with respect to position
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy
+/// \param A view into the element pressure
+/// \param A view into the element stress
+/// \param A view into the element sound speed
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element element material ID
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
@@ -794,10 +833,17 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
     return;
 } // end of routine
 
-// --------------------------------------------------------------------------------------
-// Computes corner contribution of gradient of force with respect to the design variable
-// ---------------------------------------------------------------------------------------
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn force_design_gradient_term
+///
+/// \brief Computes corner contribution of gradient of force with respect
+///        to the design variable
+///
+/// \param Vector of design variables
+/// \param Vector of design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients)
 {
     bool   element_constant_density = true;
@@ -906,7 +952,7 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
                         corner_value_storage(corner_id) = -inner_products(inode) * global_dt;
                     }
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // accumulate node values from corner storage
@@ -918,16 +964,37 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += corner_value_storage(corner_id);
                 }
-        }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
     }
 }
 
-// -----------------------------------------------------------------------------
-// This function calculates the corner forces and the evolves stress (hypo)
-// ------------------------------------------------------------------------------
-void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(const DCArrayKokkos<material_t>& material,
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_force_dgradient_elastic
+///
+/// \brief Computes corner contribution of gradient of force with respect to
+///        the design gradient
+///
+/// \param An array of material_t that contains material specific data
+/// \param The simulation mesh
+/// \param A view into the nodal position array
+/// \param A view into the nodal velocity array
+/// \param A view into the element density array
+/// \param A view into the element specific internal energy
+/// \param A view into the element pressure
+/// \param A view into the element stress
+/// \param A view into the element sound speed
+/// \param A view into the element volume array
+/// \param A view into the element divergence of velocity array
+/// \param A view into the element element material ID
+/// \param The current Runge Kutta integration alpha value
+/// \param The current cycle index
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
+    const DCArrayKokkos<material_t>& material,
     const mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords,
     const DViewCArrayKokkos<double>& node_vel,

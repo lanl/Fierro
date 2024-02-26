@@ -178,9 +178,15 @@ FEA_Module_Dynamic_Elasticity::~FEA_Module_Dynamic_Elasticity()
     // delete simparam;
 }
 
-/* ----------------------------------------------------------------------
-   Read ANSYS dat format mesh file
-------------------------------------------------------------------------- */
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn read_conditions_ansys_dat
+///
+/// \brief Read ANSYS dat format mesh file
+///
+/// \param Initial conditions header
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::read_conditions_ansys_dat(std::ifstream* in, std::streampos before_condition_header)
 {
     Input_Options input_options = simparam->input_options.value();
@@ -212,9 +218,17 @@ void FEA_Module_Dynamic_Elasticity::read_conditions_ansys_dat(std::ifstream* in,
     host_vec_array node_densities;
 } // end read_conditions_ansys_dat
 
-// -----------------------------------------------------------------------------
-// Interfaces read in data with the elastic solver data; currently a hack to streamline
-// ------------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn elastic_interface_setup
+///
+/// \brief Interfaces read in data with the elastic solver data; currently a hack to streamline
+///
+/// \param Nodal state data
+/// \param Element state data
+/// \param Corner state data
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::elastic_interface_setup(node_t& node,
     elem_t&   elem,
     corner_t& corner)
@@ -415,10 +429,13 @@ void FEA_Module_Dynamic_Elasticity::elastic_interface_setup(node_t& node,
     return;
 }
 
-/* ----------------------------------------------------------------------------
-   Initialize sets of element boundary surfaces and arrays for input conditions
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_boundaries
+///
+/// \brief Initialize sets of element boundary surfaces and arrays for input conditions
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::init_boundaries()
 {
     max_boundary_sets = module_params->boundary_conditions.size();
@@ -450,10 +467,15 @@ void FEA_Module_Dynamic_Elasticity::init_boundaries()
     Number_DOF_BCS = 0;
 }
 
-/* ----------------------------------------------------------------------
-   initialize storage for element boundary surfaces corresponding to user BCs
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_boundary_sets
+///
+/// \brief Initialize storage for element boundary surfaces corresponding to user BCs
+///
+/// \param Number of boundary sets
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::init_boundary_sets(int num_sets)
 {
     if (num_sets == 0)
@@ -482,10 +504,15 @@ void FEA_Module_Dynamic_Elasticity::init_boundary_sets(int num_sets)
     }
 }
 
-/* ----------------------------------------------------------------------------
-   Grow boundary conditions sets of element boundary surfaces
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn grow_boundary_sets
+///
+/// \brief Grow boundary conditions sets of element boundary surfaces
+///
+/// \param Number of boundary sets
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::grow_boundary_sets(int num_sets)
 {
     int num_dim = simparam->num_dims;
@@ -536,27 +563,40 @@ void FEA_Module_Dynamic_Elasticity::grow_boundary_sets(int num_sets)
     }
 }
 
-/* ----------------------------------------------------------------------
-   Assign sets of element boundary surfaces corresponding to user BCs
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn generate_bcs
+///
+/// \brief Assign sets of element boundary surfaces corresponding to user BCs
+///
+/// Unused in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::generate_bcs()
 {
 } // end generate_bcs
 
-/* ----------------------------------------------------------------------
-   Loop through applied boundary conditions and tag node ids to remove
-   necessary rows and columns from the assembled linear system
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn Displacement_Boundary_Conditions
+///
+/// \brief Loop through applied boundary conditions and tag node ids to remove
+///        necessary rows and columns from the assembled linear system
+///
+/// Unused in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::Displacement_Boundary_Conditions()
 {
 }
 
-/* ----------------------------------------------------------------------------
-   Initialize output data structures
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_output
+///
+/// \brief Initialize output data structures
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::init_output()
 {
     // check user parameters for output
@@ -660,18 +700,32 @@ void FEA_Module_Dynamic_Elasticity::init_output()
     }
 }
 
-/* -------------------------------------------------------------------------------------------
-   Prompts sorting for elastic response output data. For now, nodal strains.
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn sort_output
+///
+/// \brief Prompts sorting for elastic response output data. For now, nodal strains.
+///
+/// Unused in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::sort_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> sorted_map)
 {
 }
 
-/* -------------------------------------------------------------------------------------------
-   populate requests this module makes for output data
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn write_data
+///
+/// \brief Populate requests this module makes for output data
+///
+/// \param Map of scalar point data
+/// \param Map of vector point data
+/// \param Map of scalar cell data
+/// \param Map of int cell data
+/// \param Map of cell field data
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::write_data(std::map<std::string, const double*>& point_data_scalars_double,
     std::map<std::string, const double*>& point_data_vectors_double,
     std::map<std::string, const double*>& cell_data_scalars_double,
@@ -750,10 +804,15 @@ void FEA_Module_Dynamic_Elasticity::write_data(std::map<std::string, const doubl
     // cell_data_fields_double["stress"] = std::make_pair(&sgh_module->elem_stress.host(rk_level,0,0,0), 9);
 }
 
-/* -------------------------------------------------------------------------------------------
-   Prompts sorting for elastic response output data. For now, nodal strains.
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn sort_element_output
+///
+/// \brief  Prompts sorting for elastic response output data. For now, element densities
+///
+/// \param Sorted element data map
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::sort_element_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> sorted_map)
 {
     // interface element density data
@@ -767,26 +826,39 @@ void FEA_Module_Dynamic_Elasticity::sort_element_output(Teuchos::RCP<Tpetra::Map
     }
 }
 
-/* -------------------------------------------------------------------------------------------
-   Prompts computation of elastic response output data. For now, nodal strains.
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn collect_output
+///
+/// \brief Prompts computation of elastic response output data.
+///
+/// Unused in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::collect_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_type>> global_reduce_map)
 {
 }
 
-/* -------------------------------------------------------------------------------------------
-   Prompts computation of elastic response output data. For now, nodal strains.
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn compute_output
+///
+/// \brief Prompts computation of elastic response output data.
+///
+/// Unused in this context
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::compute_output()
 {
 }
 
-/* ----------------------------------------------------------------------
-   Communicate updated nodal velocities to ghost nodes
-------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_node_masses
+///
+/// \brief Communicate updated nodal velocities to ghost nodes
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::comm_node_masses()
 {
     // debug print of design vector
@@ -814,10 +886,15 @@ void FEA_Module_Dynamic_Elasticity::comm_node_masses()
     // }
 }
 
-/* -------------------------------------------------------------------------------------------
-   Communicate ghosts using the current optimization design data
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn comm_variables
+///
+/// \brief Communicate ghosts using the current optimization design data
+///
+/// \param Design variables
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::comm_variables(Teuchos::RCP<const MV> zp)
 {
     if (simparam->topology_optimization_on)
@@ -847,10 +924,15 @@ void FEA_Module_Dynamic_Elasticity::comm_variables(Teuchos::RCP<const MV> zp)
     }
 }
 
-/* -------------------------------------------------------------------------------------------
-   enforce constraints on nodes due to BCS
----------------------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn node_density_constraints
+///
+/// \brief Enforce constraints on nodes due to BCS
+///
+/// \param Lower bound of nodal densities
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array& node_densities_lower_bound)
 {
     const_vec_array all_initial_node_coords = all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -884,10 +966,13 @@ void FEA_Module_Dynamic_Elasticity::node_density_constraints(host_vec_array& nod
     }); // end for parallel for over nodes
 }
 
-/* ----------------------------------------------------------------------------
-   Setup elastic solver data
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn setup
+///
+/// \brief Setup elastic solver data
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::setup()
 {
     Dynamic_Options dynamic_options = simparam->dynamic_options;
@@ -905,41 +990,6 @@ void FEA_Module_Dynamic_Elasticity::setup()
     // ---------------------------------------------------------------------
     elastic_interface_setup(node_interface, elem_interface, corner_interface);
     mesh->build_corner_connectivity();
-    // debug print of corner ids
-    /*
-    if(myrank==1){
-          for(int i = 0; i < mesh.num_nodes; i++){
-
-            // loop over all corners around the node and calculate the nodal force
-            for (size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(i); corner_lid++){
-
-              // Get corner gid
-              size_t corner_gid = mesh.corners_in_node(i, corner_lid);
-              std::cout << map->getGlobalElement(i) << " " << i << " " << all_node_map->getLocalElement(all_node_map->getGlobalElement(i)) << " " << corner_gid << " " << std::endl;
-
-            } // end for corner_lid
-            //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
-            //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
-          }
-        }
-      */
-    /*
-      if(myrank==1){
-          for(int i = 0; i < mesh.num_elems; i++){
-
-            // loop over all corners around the node and calculate the nodal force
-            for (size_t corner_lid=0; corner_lid<max_nodes_per_element; corner_lid++){
-
-              // Get corner gid
-              size_t corner_gid = mesh.corners_in_elem(i, corner_lid);
-              std::cout << i  << " " << mesh.nodes_in_elem(i, corner_lid) << " " << all_node_map->getGlobalElement(mesh.nodes_in_elem(i, corner_lid)) <<" " << corner_gid << " " << std::endl;
-
-            } // end for corner_lid
-            //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
-            //std::cout << explicit_solver_pointer->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
-          }
-        }
-        */
     mesh->build_elem_elem_connectivity();
     mesh->num_bdy_patches = nboundary_patches;
     if (num_dim == 2)
@@ -977,14 +1027,9 @@ void FEA_Module_Dynamic_Elasticity::setup()
     // create Dual Views of the individual elem struct variables
     elem_den    = DViewCArrayKokkos<double>(&elem_interface.den(0), num_elems);
     elem_pres   = DViewCArrayKokkos<double>(&elem_interface.pres(0), num_elems);
-    elem_stress = DViewCArrayKokkos<double>(&elem_interface.stress(0, 0, 0, 0),
-                                            rk_num_bins,
-                                            num_elems,
-                                            3, 3); // always 3D even in 2D-RZ
-    elem_sspd = DViewCArrayKokkos<double>(&elem_interface.sspd(0), num_elems);
-    elem_sie  = DViewCArrayKokkos<double>(&elem_interface.sie(0, 0),
-                                        rk_num_bins,
-                                        num_elems);
+    elem_stress = DViewCArrayKokkos<double>(&elem_interface.stress(0, 0, 0, 0), rk_num_bins, num_elems, 3, 3); // always 3D even in 2D-RZ
+    elem_sspd   = DViewCArrayKokkos<double>(&elem_interface.sspd(0), num_elems);
+    elem_sie    = DViewCArrayKokkos<double>(&elem_interface.sie(0, 0), rk_num_bins, num_elems);
     elem_vol    = DViewCArrayKokkos<double>(&elem_interface.vol(0), num_elems);
     elem_div    = DViewCArrayKokkos<double>(&elem_interface.div(0), num_elems);
     elem_mass   = DViewCArrayKokkos<double>(&elem_interface.mass(0), num_elems);
@@ -1374,7 +1419,7 @@ void FEA_Module_Dynamic_Elasticity::setup()
                 size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
                 corner_mass(corner_gid) = corner_areas(corner_lid) * elem_den(elem_gid); // node radius is added later
             } // end for over corners
-        });
+        }); // end of FOR_ALL_CLASS
     } // end of
 
     // calculate the nodal mass
@@ -1448,19 +1493,25 @@ void FEA_Module_Dynamic_Elasticity::setup()
     return;
 } // end of setup
 
-/* ----------------------------------------------------------------------------
-   solve function called by solver
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn module_cleanup
+///
+/// \brief Deallocate memory associated with the module
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::module_cleanup()
 {
     cleanup_material_models();
 }
 
-/* ----------------------------------------------------------------------------
-    Deallocate memory used for  material models
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn cleanup_material_models
+///
+/// \brief Deallocate memory used for  material models
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::cleanup_material_models()
 {
     const DCArrayKokkos<material_t> material = simparam->material;
@@ -1489,11 +1540,18 @@ void FEA_Module_Dynamic_Elasticity::cleanup_material_models()
     return;
 } // end cleanup_user_strength_model;
 
-/**
- * Determines which of the boundary patches are associated with which boundary.
- *
- * Modifies: bdy_patches_in_set
-*/
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn tag_bdys
+///
+/// \brief Determines which of the boundary patches are associated with which boundary.
+///        Modifies: bdy_patches_in_set
+///
+/// \param Array of boundaries
+/// \param The simulation mesh
+/// \param Nodal coordinates
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
     mesh_t& mesh,
     const DViewCArrayKokkos<double>& node_coords)
@@ -1534,16 +1592,7 @@ void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos<boundary_t>& bo
                                          bc_type,
                                          val,
                                          node_coords,
-                                         rk_level); // no=0, yes=1
-
-            // debug check
-            /*
-            for (size_t patch_node_lid=0; patch_node_lid<mesh.num_nodes_in_patch; patch_node_lid++){
-              size_t node_gid = mesh.nodes_in_patch(bdy_patch_gid, patch_node_lid);
-              //if(bdy_node_gid==549412) print_flag(0) = true;
-            }
-            */
-
+                                         rk_level); // no=0, yes=1 WARNING: POSSIBLE BUG
             if (is_on_bdy)
             {
                 size_t index = bdy_patches_in_set.stride(bdy_set);
@@ -1564,6 +1613,21 @@ void FEA_Module_Dynamic_Elasticity::tag_bdys(const DCArrayKokkos<boundary_t>& bo
     return;
 } // end tag
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn check_bdy
+///
+/// \brief Determines which of the boundary patches are associated with which boundary.
+///
+/// \param Global index of the patch
+/// \param Number of spatial dimensions
+/// \param Number of the nodes in the patch
+/// \param Type of boundary condition
+/// \param Boundary value
+/// \param Nodal coordinates
+/// \param Runge Kutta integration level
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
 bool FEA_Module_Dynamic_Elasticity::check_bdy(const size_t patch_gid,
     const int num_dim,
@@ -1639,10 +1703,15 @@ bool FEA_Module_Dynamic_Elasticity::check_bdy(const size_t patch_gid,
     return is_on_bdy == num_nodes_in_patch;
 } // end method to check bdy
 
-/* ----------------------------------------------------------------------------
-   Build set of nodes assigned to each boundary condition
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn build_boundry_node_sets
+///
+/// \brief Build set of nodes assigned to each boundary condition
+///
+/// \param The simulation mesh
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::build_boundry_node_sets(mesh_t& mesh)
 {
     // build boundary nodes in each boundary set
@@ -1722,10 +1791,17 @@ void FEA_Module_Dynamic_Elasticity::build_boundry_node_sets(mesh_t& mesh)
     return;
 } // end method to build boundary nodes
 
-/* ----------------------------------------------------------------------------
-   solve function called by solver
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn solve
+///
+/// \brief Solve function called by solver
+///
+/// Calls elastic_solve
+///
+/// \return 0 if the solver finishes
+///
+/////////////////////////////////////////////////////////////////////////////
 int FEA_Module_Dynamic_Elasticity::solve()
 {
     elastic_solve();
@@ -1733,10 +1809,13 @@ int FEA_Module_Dynamic_Elasticity::solve()
     return 0;
 }
 
-/* ----------------------------------------------------------------------------
-   SGH solver loop
-------------------------------------------------------------------------------- */
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn elastic_solve
+///
+/// \brief Elastic solver loop
+///
+/////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Dynamic_Elasticity::elastic_solve()
 {
     Dynamic_Options dynamic_options = simparam->dynamic_options;
@@ -2050,41 +2129,6 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                                node_vel,
                                elem_vol);
 
-            /*
-            debug block
-            if(myrank==1){
-             std::cout << rk_alpha << " " << dt << std::endl;
-             for(int i = 0; i < nall_nodes; i++){
-               double node_force[3];
-               for (size_t dim = 0; dim < num_dim; dim++){
-                 node_force[dim] = 0.0;
-               } // end for dim
-
-               // loop over all corners around the node and calculate the nodal force
-               for (size_t corner_lid=0; corner_lid<mesh.num_corners_in_node(i); corner_lid++){
-
-                 // Get corner gid
-                 size_t corner_gid = mesh.corners_in_node(i, corner_lid);
-                 std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << corner_gid << " " << corner_force(corner_gid, 0) << " " << corner_force(corner_gid, 1) << " " << corner_force(corner_gid, 2) << std::endl;
-                 // loop over dimension
-                 for (size_t dim = 0; dim < num_dim; dim++){
-                   node_force[dim] += corner_force(corner_gid, dim);
-                 } // end for dim
-
-               } // end for corner_lid
-               //std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_force[0] << " " << node_force[1] << " " << node_force[2] << std::endl;
-               //std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_mass(i) << std::endl;
-             }
-            }
-            /*
-            //debug print vector values on a rank
-            /*
-            if(myrank==0)
-             for(int i = 0; i < nall_nodes; i++){
-               std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(rk_level,i,0) << " " << node_vel(rk_level,i,1) << " " << node_vel(rk_level,i,2) << std::endl;
-             }
-            */
-
             // ---- Update nodal velocities ---- //
             get_force_elastic(material,
                             *mesh,
@@ -2365,7 +2409,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                         node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                         node_coords_interface(node_gid, idim)     = node_coords(rk_level, node_gid, idim);
                     }
-          });
+                });
             } // end view scope
             Kokkos::fence();
 
@@ -2484,7 +2528,7 @@ void FEA_Module_Dynamic_Elasticity::elastic_solve()
                     {
                         node_coords_interface(node_gid, idim) = node_coords(rk_level, node_gid, idim);
                     }
-              }); // end parallel for
+                }); // end parallel for
             } // end view scope
             if (simparam->output_options.output_file_format == OUTPUT_FORMAT::vtk)
             {
