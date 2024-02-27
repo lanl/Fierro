@@ -146,7 +146,7 @@ Explicit_Solver::write_outputs()
       parallel_vtk_writer_new();
       break;
 
-    case OUTPUT_FORMAT::vtu:
+    case OUTPUT_FORMAT::pvtu:
       parallel_vtu_writer_new();
       break;
 
@@ -159,7 +159,581 @@ void
 Explicit_Solver::parallel_vtu_writer_new()
 {
   /* to be added... */
-  throw std::runtime_error("parallel_vtu_writer_new() not yet implemented. use parallel_vtk_writer_new()");
+  //throw std::runtime_error("parallel_vtu_writer_new() not yet implemented. use parallel_vtk_writer_new()");
+
+  std::string tmp_str;
+  std::stringstream mixed_str;
+
+  char name[128];
+  char pfilename[128];
+  char filename[128];
+  char pvtu_dir[128];
+  char dirname[128];
+  char subdirname[128];
+  char tmp[128];
+
+  int num_dims = simparam.num_dims;
+  int graphics_idx = simparam.output_options.graphics_id;
+  int num_nodes_in_elem = 8;
+  int num_points = nnonoverlap_elem_nodes;
+  int num_cells = nlocal_elem_non_overlapping;
+  host_vec_array node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
+
+  CArray <size_t> nodes_in_elem (rnum_elem, max_nodes_per_element);
+  {
+  auto host_view = global_nodes_in_elem_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+  for (size_t ielem = 0; ielem < nodes_in_elem.dims(0); ielem++) {
+    for (size_t inode = 0; inode < nodes_in_elem.dims(1); inode++) {
+      nodes_in_elem(ielem, inode) = nonoverlap_element_node_map->getLocalElement(host_view(ielem, inode));
+    }
+  }
+  }
+
+  sprintf(name,"FierroOut");
+  sprintf(pvtu_dir, "vtu");
+  sprintf(subdirname, "%s_%05lu", name, graphics_idx);
+
+  // mkdir if needed
+  struct stat st;
+  if (myrank == 0) {
+    if (stat(pvtu_dir, &st) != 0) {
+      // str_stream.str("");
+      // str_stream << "mkdir" << " " << pvtu_dir;
+      // system(str_stream.str().c_str());
+      //tmp = "";
+      sprintf(tmp, "mkdir %s",pvtu_dir);
+      system(tmp);
+    }
+    sprintf(dirname,"%s/%s",pvtu_dir,subdirname);
+    if (stat(dirname, &st) != 0) {
+      // str_stream.str("");
+      // str_stream << "mkdir" << " " << vtu_dir;
+      // system(str_stream.str().c_str());
+      //tmp = "";
+      sprintf(tmp, "mkdir %s", dirname);
+      system(tmp);
+    }
+  }
+  MPI_Barrier(world);
+
+  //  ---------------------------------------------------------------------------
+  //  Write the PVTU file (only done by a single rank)
+  //  ---------------------------------------------------------------------------
+  unsigned long int byte_offset = 0;
+  int block_header_size = sizeof(unsigned long int);
+  unsigned long int data_block_size;
+
+  if (myrank == 0){
+    sprintf(pfilename, "%s/%s_%05lu.pvtu",pvtu_dir, name, graphics_idx);
+    std::ofstream pout;  // FILE *out;
+    pout.open(pfilename,std::ofstream::binary);
+
+    //  Write Header
+    tmp_str = "<VTKFile type=\"PUnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    tmp_str = "<PUnstructuredGrid GhostLevel=\"1\">\n"; //unsure of exact correct usage of ghostlevel, leaving as 1 for now
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    //  Write Field Data (only part in pvtu using byte_offset)
+    tmp_str = "<FieldData>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    mixed_str.str("");
+    mixed_str << "<DataArray type=\"Float64\" Name=\"TimeValue\" NumberOfTuples=\"1\" format=\"appended\" offset=\"" << byte_offset << "\"/>\n";
+    byte_offset += sizeof(double)+block_header_size;
+    tmp_str = mixed_str.str();
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    tmp_str = "</FieldData>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    //  Write PPoints Section
+    tmp_str = "<PPoints>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    mixed_str.str("");
+    mixed_str << "<PDataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\"/>\n";
+    tmp_str = mixed_str.str();
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    tmp_str = "</PPoints>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    //  Write PPoint Data List
+    tmp_str = "<PPointData>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    //
+    //SCALARS float
+    for (auto it = point_data_scalars_double.begin(); it != point_data_scalars_double.end(); it++) {
+      mixed_str.str("");
+      mixed_str << "<PDataArray type=\"Float64\" Name=\"" << it->first << "\"/>\n";
+      tmp_str = mixed_str.str();
+      pout.write(tmp_str.c_str(), tmp_str.length());
+    }
+    //VECTORS float
+    for (auto it = point_data_vectors_double.begin(); it != point_data_vectors_double.end(); it++) {
+      mixed_str.str("");
+      mixed_str << "<PDataArray type=\"Float64\" Name=\"" << it->first << "\" NumberOfComponents=\"" << num_dims << "\"/>\n";
+      tmp_str = mixed_str.str();
+      pout.write(tmp_str.c_str(), tmp_str.length());
+    }
+    // //  Velocity
+    // mixed_str.str("");
+    // mixed_str << "<PDataArray type=\"Float64\" Name=\"velocity\" NumberOfComponents=\"3\"/>\n";
+    // tmp_str = mixed_str.str();
+    // pout.write(tmp_str.c_str(), tmp_str.length());
+    //
+    tmp_str = "</PPointData>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    //  Write PCell Data List
+    tmp_str = "<PCellData>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    //
+    //SCALARS float
+    for (auto it = cell_data_scalars_double.begin(); it != cell_data_scalars_double.end(); it++) {
+      mixed_str.str("");
+      mixed_str << "<PDataArray type=\"Float64\" Name=\"" << it->first << "\"/>\n";
+      tmp_str = mixed_str.str();
+      pout.write(tmp_str.c_str(), tmp_str.length());
+    }
+    //SCALARS int
+    for (auto it = cell_data_scalars_int.begin(); it != cell_data_scalars_int.end(); it++) {
+      mixed_str.str("");
+      mixed_str << "<PDataArray type=\"Int32\" Name=\"" << it->first << "\"/>\n";
+      tmp_str = mixed_str.str();
+      pout.write(tmp_str.c_str(), tmp_str.length());
+    }
+    // NON-SCALARS float
+    for (auto it = cell_data_fields_double.begin(); it != cell_data_fields_double.end(); it++) {
+      auto data_name = it->first;
+      auto [data_ptr, data_num_comps] = it->second; // Structured binding C++17
+      mixed_str.str("");
+      mixed_str << "<PDataArray type=\"Float64\" Name=\"" << data_name << "\" NumberOfComponents=\"" << data_num_comps << "\"/>\n";
+      tmp_str = mixed_str.str();
+      pout.write(tmp_str.c_str(), tmp_str.length());
+    }
+    //  Rank
+    mixed_str.str("");
+    mixed_str << "<PDataArray type=\"Int32\" Name=\"rank\"/>\n";
+    tmp_str = mixed_str.str();
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    // //  Stress
+    // mixed_str.str("");
+    // mixed_str << "<PDataArray type=\"Float64\" Name=\"Stress\" NumberOfComponents=\"9\"/>\n";
+    // tmp_str = mixed_str.str();
+    // pout.write(tmp_str.c_str(), tmp_str.length());
+    // //  Density
+    // mixed_str.str("");
+    // mixed_str << "<PDataArray type=\"Float64\" Name=\"density\"/>\n";
+    // tmp_str = mixed_str.str();
+    // pout.write(tmp_str.c_str(), tmp_str.length());
+    // //  IPFColor
+    // mixed_str.str("");
+    // mixed_str << "<PDataArray type=\"unsigned_char\" Name=\"IPFColor\" NumberOfComponents=\"3\"/>\n";
+    // tmp_str = mixed_str.str();
+    // pout.write(tmp_str.c_str(), tmp_str.length());
+    //
+    tmp_str = "</PCellData>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    //  Write Partition Piece List
+    char piecename[128];
+    for (int rank = 0; rank < nranks; rank++){
+      sprintf(piecename, "%s/%s_%05lu_%05lu.vtu",subdirname, name, graphics_idx, rank);
+      mixed_str.str("");
+      mixed_str << "<Piece Source=\"" << piecename << "\"/>\n";
+      tmp_str = mixed_str.str();
+      pout.write(tmp_str.c_str(), tmp_str.length());
+    }
+    //
+    tmp_str = "</PUnstructuredGrid>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    //  Write Appended Data
+    tmp_str = "<AppendedData encoding=\"raw\">\n_";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+    //  Write Time Value
+    data_block_size = sizeof(double);
+    pout.write((char *) &data_block_size,block_header_size);
+    pout.write((char *) &time_value,sizeof(time_value));
+    pout.put('\n');
+    tmp_str = "</AppendedData>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());  
+
+    tmp_str = "</VTKFile>\n";
+    pout.write(tmp_str.c_str(), tmp_str.length());
+
+    pout.close();
+  }
+
+  //  ---------------------------------------------------------------------------
+  //  Write the VTU file
+  //  ---------------------------------------------------------------------------
+  sprintf(filename, "%s/%s/%s_%05lu_%05lu.vtu",pvtu_dir ,subdirname, name, graphics_idx, myrank);
+  // filename has the full string
+  
+  std::ofstream out;  // FILE *out;
+  out.open(filename,std::ofstream::binary);
+
+  byte_offset = 0;
+  double crap = 0.0;
+  
+  //  Write Header
+  //tmp_str = "<?xml version=\"1.0\"?>\n";
+  //out.write(tmp_str.c_str(), tmp_str.length());
+  tmp_str = "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+  tmp_str = "<UnstructuredGrid>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+
+  //  Write Time Value Header
+  tmp_str = "<FieldData>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+  mixed_str.str("");
+  mixed_str << "<DataArray type=\"Float64\" Name=\"TimeValue\" NumberOfTuples=\"1\" format=\"appended\" offset=\"" << byte_offset << "\"/>\n";
+  byte_offset += sizeof(double)+block_header_size;
+  tmp_str = mixed_str.str();
+  out.write(tmp_str.c_str(), tmp_str.length());
+  tmp_str = "</FieldData>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+
+  mixed_str.str("");
+  mixed_str << "<Piece NumberOfPoints=\"" << num_points << "\" NumberOfCells=\"" << num_cells << "\">\n";
+  tmp_str = mixed_str.str();
+  out.write(tmp_str.c_str(), tmp_str.length());
+
+  //  **Write Points Header**
+  tmp_str = "<Points>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());   
+  //tmp_str = "<DataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\" format=\"appended\">\n"; 
+  mixed_str.str("");
+  mixed_str << "<DataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+  byte_offset += num_points*num_dims*sizeof(double)+block_header_size;
+  tmp_str = mixed_str.str();
+  out.write(tmp_str.c_str(), tmp_str.length());
+  tmp_str = "</DataArray>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+  // tmp_str = "</DataArray>\n";
+  // out.write(tmp_str.c_str(), tmp_str.length());  
+  tmp_str = "</Points>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+
+  //  **Write Cells Header**
+  tmp_str = "<Cells>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+  //  Connectivity
+  mixed_str.str("");
+  mixed_str << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"appended\" offset=\"" << byte_offset << "\"/>\n";
+  byte_offset += num_cells*num_nodes_in_elem*sizeof(int)+block_header_size;
+  tmp_str = mixed_str.str();
+  out.write(tmp_str.c_str(), tmp_str.length());
+  //  Offsets
+  mixed_str.str("");
+  mixed_str << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"appended\" offset=\"" << byte_offset << "\"/>\n";
+  byte_offset += num_cells*sizeof(int)+block_header_size;
+  tmp_str = mixed_str.str();
+  out.write(tmp_str.c_str(), tmp_str.length());
+  //  Types
+  mixed_str.str("");
+  mixed_str << "<DataArray type=\"Int32\" Name=\"types\" format=\"appended\" offset=\"" << byte_offset << "\"/>\n"; 
+  byte_offset += num_cells*sizeof(int)+block_header_size;
+  tmp_str = mixed_str.str();
+  out.write(tmp_str.c_str(), tmp_str.length());
+  tmp_str = "</Cells>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+
+  //  **Write Point Data Headers**
+  tmp_str = "<PointData>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+  //
+  //SCALARS float
+  for (auto it = point_data_scalars_double.begin(); it != point_data_scalars_double.end(); it++) {
+    mixed_str.str("");
+    mixed_str << "<DataArray type=\"Float64\" Name=\"" << it->first << "\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+    byte_offset += num_points*sizeof(double)+block_header_size;
+    tmp_str = mixed_str.str();
+    out.write(tmp_str.c_str(), tmp_str.length());
+    tmp_str = "</DataArray>\n";
+    out.write(tmp_str.c_str(), tmp_str.length());
+  }
+  //VECTORS float
+  for (auto it = point_data_vectors_double.begin(); it != point_data_vectors_double.end(); it++) {
+    mixed_str.str("");
+    mixed_str << "<DataArray type=\"Float64\" Name=\"" << it->first << "\" NumberOfComponents=\"" << num_dims << "\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+    byte_offset += num_points*num_dims*sizeof(double)+block_header_size;
+    tmp_str = mixed_str.str();
+    out.write(tmp_str.c_str(), tmp_str.length());
+    tmp_str = "</DataArray>\n";
+    out.write(tmp_str.c_str(), tmp_str.length());
+  }
+  // //  Velocity
+  // mixed_str.str("");
+  // mixed_str << "<DataArray type=\"Float64\" Name=\"velocity\" NumberOfComponents=\"3\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+  // byte_offset += num_points*num_dims*sizeof(double)+block_header_size;
+  // tmp_str = mixed_str.str();
+  // out.write(tmp_str.c_str(), tmp_str.length());
+  // tmp_str = "</DataArray>\n";
+  // out.write(tmp_str.c_str(), tmp_str.length());
+  tmp_str = "</PointData>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+
+  //  **Write Cell Data Headers**
+  tmp_str = "<CellData>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+  //
+  //SCALARS float
+  for (auto it = cell_data_scalars_double.begin(); it != cell_data_scalars_double.end(); it++) {
+    mixed_str.str("");
+    mixed_str << "<DataArray type=\"Float64\" Name=\"" << it->first << "\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+    byte_offset += num_cells*sizeof(double)+block_header_size;
+    tmp_str = mixed_str.str();
+    out.write(tmp_str.c_str(), tmp_str.length());
+    tmp_str = "</DataArray>\n";
+    out.write(tmp_str.c_str(), tmp_str.length());
+  }
+  //SCALARS int
+  for (auto it = cell_data_scalars_int.begin(); it != cell_data_scalars_int.end(); it++) {
+    mixed_str.str("");
+    mixed_str << "<DataArray type=\"Int32\" Name=\"" << it->first << "\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+    byte_offset += num_cells*sizeof(int)+block_header_size;
+    tmp_str = mixed_str.str();
+    out.write(tmp_str.c_str(), tmp_str.length());
+    tmp_str = "</DataArray>\n";
+    out.write(tmp_str.c_str(), tmp_str.length());
+  }
+  // NON-SCALARS float
+  for (auto it = cell_data_fields_double.begin(); it != cell_data_fields_double.end(); it++) {
+    auto data_name = it->first;
+    auto [data_ptr, data_num_comps] = it->second; // Structured binding C++17
+    mixed_str.str("");
+    mixed_str << "<DataArray type=\"Float64\" Name=\"" << data_name << "\" NumberOfComponents=\"" << data_num_comps << "\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+    byte_offset += num_cells*data_num_comps*sizeof(double)+block_header_size;
+    tmp_str = mixed_str.str();
+    out.write(tmp_str.c_str(), tmp_str.length());
+    tmp_str = "</DataArray>\n";
+    out.write(tmp_str.c_str(), tmp_str.length());
+  }
+  //  Rank
+  mixed_str.str("");
+  mixed_str << "<DataArray type=\"Int32\" Name=\"rank\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+  byte_offset += num_cells*sizeof(int)+block_header_size;
+  tmp_str = mixed_str.str();
+  out.write(tmp_str.c_str(), tmp_str.length());
+  tmp_str = "</DataArray>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+  // //  Stress
+  // mixed_str.str("");
+  // mixed_str << "<DataArray type=\"Float64\" Name=\"stress\" NumberOfComponents=\"9\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+  // byte_offset += num_cells*sizeof(double)+block_header_size;
+  // tmp_str = mixed_str.str();
+  // out.write(tmp_str.c_str(), tmp_str.length());
+  // tmp_str = "</DataArray>\n";
+  // out.write(tmp_str.c_str(), tmp_str.length());
+  // //  Density
+  // mixed_str.str("");
+  // mixed_str << "<DataArray type=\"Float64\" Name=\"density\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+  // byte_offset += num_cells*sizeof(double)+block_header_size;
+  // tmp_str = mixed_str.str();
+  // out.write(tmp_str.c_str(), tmp_str.length());
+  // tmp_str = "</DataArray>\n";
+  // out.write(tmp_str.c_str(), tmp_str.length());
+  // //  IPFColor
+  // mixed_str.str("");
+  // mixed_str << "<DataArray type=\"UInt8\" Name=\"IPFColor\" NumberOfComponents=\"3\" format=\"appended\" offset=\"" << byte_offset << "\">\n";
+  // byte_offset += num_cells*num_dims*sizeof(unsigned char)+block_header_size;
+  // tmp_str = mixed_str.str();
+  // out.write(tmp_str.c_str(), tmp_str.length());
+  // tmp_str = "</DataArray>\n";
+  // out.write(tmp_str.c_str(), tmp_str.length());
+  //
+  tmp_str = "</CellData>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());
+
+  //  Write Mesh Close
+  tmp_str = "</Piece>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());  
+  tmp_str = "</UnstructuredGrid>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());  
+
+  //  Write Appended Data
+  tmp_str = "<AppendedData encoding=\"raw\">\n_";
+  out.write(tmp_str.c_str(), tmp_str.length());  
+
+  //  Write Time Value
+  data_block_size = sizeof(double);
+  out.write((char *) &data_block_size,block_header_size);
+  out.write((char *) &time_value,sizeof(time_value));
+
+  //  **Write Points Data**
+  //double coords[num_points*num_dims];
+  data_block_size = num_points*num_dims*sizeof(double);
+  out.write((char *) &data_block_size,block_header_size);
+  double coord_tmp;
+  // for (int node_gid = 0; node_gid < num_points; node_gid++){
+  //   for (int dim = 0; dim < num_dims; dim++){
+  //     coord_tmp = node_coords(node_gid,dim);
+  //     out.write((char *) &coord_tmp,sizeof(coord_tmp));
+  //   }
+  // }
+  for (int node_id = 0; node_id < num_points; node_id++){
+    int node_gid = nonoverlap_element_node_map->getGlobalElement(node_id);
+    int node_lid = all_node_map->getLocalElement(node_gid);
+    for (int dim = 0; dim < num_dims; dim++){
+      //printf("rank %d point %d coord %d = %g \n",myrank,node_lid,dim,node_coords(node_lid,dim));
+      coord_tmp = node_coords(node_lid,dim);
+      out.write((char *) &coord_tmp,sizeof(coord_tmp));
+    }
+  }
+
+  //  **Write Cells Data**
+  //int connect[num_cells*mesh.num_nodes_in_elem];
+  data_block_size = num_cells*num_nodes_in_elem*sizeof(int);
+  out.write((char *) &data_block_size,block_header_size);
+  int connect_tmp;
+  for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+    for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+      connect_tmp = nodes_in_elem(elem_gid, node_lid);
+      out.write((char *) &connect_tmp,sizeof(connect_tmp));
+    }
+  }
+  //int offsets[num_cells];
+  data_block_size = num_cells*sizeof(int);
+  out.write((char *) &data_block_size,block_header_size);
+  int offset_tmp;
+  for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+    offset_tmp = (elem_gid+1)*num_nodes_in_elem;
+    out.write((char *) &offset_tmp,sizeof(offset_tmp));
+  }
+  //int types[num_cells];
+  data_block_size = num_cells*sizeof(int);
+  out.write((char *) &data_block_size,block_header_size);
+  int type_tmp;
+  for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+    type_tmp = 12;
+    out.write((char *) &type_tmp,sizeof(type_tmp));
+  }
+
+  //  **Write Point Data**
+  //SCALARS float
+  for (auto it = point_data_scalars_double.begin(); it != point_data_scalars_double.end(); it++) {
+    auto data_ptr = it->second;
+    ViewCArrayKokkos <const double> data_tmp(data_ptr,nall_nodes);
+
+    data_block_size = num_points*sizeof(double);
+    out.write((char *) &data_block_size,block_header_size);
+    double pscalar_tmp;
+    for (int node_id = 0; node_id < num_points; node_id++){
+      int node_gid = nonoverlap_element_node_map->getGlobalElement(node_id);
+      int node_lid = all_node_map->getLocalElement(node_gid);
+      //printf("rank %d point %d coord %d = %g \n",myrank,node_lid,dim,node_coords(node_lid,dim));
+      pscalar_tmp = data_tmp(node_lid);
+      out.write((char *) &pscalar_tmp,sizeof(pscalar_tmp));
+    }
+  }
+  //VECTORS float
+  for (auto it = point_data_vectors_double.begin(); it != point_data_vectors_double.end(); it++) {
+    auto data_ptr = it->second;
+    ViewCArrayKokkos <const double> data_tmp(data_ptr,nall_nodes,num_dims);
+
+    data_block_size = num_points*num_dims*sizeof(double);
+    out.write((char *) &data_block_size,block_header_size);
+    double pvector_tmp;
+    for (int node_id = 0; node_id < num_points; node_id++){
+      int node_gid = nonoverlap_element_node_map->getGlobalElement(node_id);
+      int node_lid = all_node_map->getLocalElement(node_gid);
+      for (int dim = 0; dim < num_dims; dim++){
+        //printf("rank %d point %d coord %d = %g \n",myrank,node_lid,dim,node_coords(node_lid,dim));
+        pvector_tmp = data_tmp(node_lid,dim);
+        out.write((char *) &pvector_tmp,sizeof(pvector_tmp));
+      }
+    }
+  }
+  // //  Velocity
+  // data_block_size = num_points*num_dims*sizeof(double);
+  // out.write((char *) &data_block_size,block_header_size);
+  // for (int node_gid = 0; node_gid < num_points; node_gid++){
+  //   for (int dim = 0; dim < num_dims; dim++){
+  //     //out.write((char *) &node_vel.host(1, node_gid, dim),sizeof(double));
+  //     out.write((char *) &crap,sizeof(double));
+  //   }
+  // }
+
+  //  **Write Cell Data**
+  //SCALARS float
+  for (auto it = cell_data_scalars_double.begin(); it != cell_data_scalars_double.end(); it++) {
+    auto data_ptr = it->second;
+    ViewCArrayKokkos <const double> data_tmp(data_ptr,rnum_elem);
+
+    data_block_size = num_cells*sizeof(double);
+    out.write((char *) &data_block_size,block_header_size);
+    double cscalar_ftmp;
+    for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+      cscalar_ftmp = data_tmp(elem_gid);
+      out.write((char *) &cscalar_ftmp,sizeof(double));
+    }
+  }
+  //SCALARS int
+  for (auto it = cell_data_scalars_int.begin(); it != cell_data_scalars_int.end(); it++) {
+    auto data_ptr = it->second;
+    ViewCArrayKokkos <const int> data_tmp(data_ptr,rnum_elem);
+
+    data_block_size = num_cells*sizeof(int);
+    out.write((char *) &data_block_size,block_header_size);
+    double cscalar_itmp;
+    for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+      cscalar_itmp = data_tmp(elem_gid);
+      out.write((char *) &cscalar_itmp,sizeof(int));
+    }
+  }
+  // NON-SCALARS float
+  for (auto it = cell_data_fields_double.begin(); it != cell_data_fields_double.end(); it++) {
+    auto data_name = it->first;
+    auto [data_ptr, data_num_comps] = it->second; // Structured binding C++17
+    ViewCArrayKokkos <const double> data_tmp(data_ptr,rnum_elem,data_num_comps);
+
+    data_block_size = num_cells*data_num_comps*sizeof(double);
+    out.write((char *) &data_block_size,block_header_size);
+    double cfield_ftmp;
+    for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+      for (int comp = 0; comp < data_num_comps; comp++){
+        cfield_ftmp = data_tmp(elem_gid,comp);
+        out.write((char *) &cfield_ftmp,sizeof(double));
+      }
+    }
+  }
+  //  Rank
+  data_block_size = num_cells*sizeof(int);
+  out.write((char *) &data_block_size,block_header_size);
+  for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+      out.write((char *) &myrank,sizeof(int));
+  }
+  // //  Stress
+  // data_block_size = num_cells*sizeof(double);
+  // out.write((char *) &data_block_size,block_header_size);
+  // for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+  //   for (int ii = 0; ii < 9; ii++){
+  //     //out.write((char *) &elem_stress.host(1,elem_gid,ii),sizeof(double));
+  //     out.write((char *) &crap,sizeof(double));
+  //   }
+  // }
+  // //  Density
+  // data_block_size = num_cells*sizeof(double);
+  // out.write((char *) &data_block_size,block_header_size);
+  // for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+  //     out.write((char *) &elem_den.host(elem_gid),sizeof(double));
+  // }
+  // //  IPFColor
+  // data_block_size = num_cells*num_dims*sizeof(unsigned char);
+  // out.write((char *) &data_block_size,block_header_size);
+  // for (int elem_gid = 0; elem_gid < num_cells; elem_gid++){
+  //     for (int dim = 0; dim < num_dims; dim++){
+  //         out.write((char *) &elem_IPF_colors.host(elem_gid,dim),sizeof(unsigned char));
+  //     }
+  // }
+  
+  out.put('\n');
+  tmp_str = "</AppendedData>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());  
+
+  //  Write File Close
+  tmp_str = "</VTKFile>\n";
+  out.write(tmp_str.c_str(), tmp_str.length());  
+
+  out.close();
+
+  simparam.output_options.graphics_id++;
+
 }
 
 std::string

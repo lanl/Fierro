@@ -1020,8 +1020,10 @@ void FEA_Module_SGH::setup(){
     const DCArrayKokkos <boundary_t> boundary = module_params->boundary;
     const DCArrayKokkos <mat_fill_t> mat_fill = simparam->mat_fill;
     const DCArrayKokkos <material_t> material = simparam->material;
-    global_vars = simparam->global_vars;
-    state_vars = DCArrayKokkos <double> (rnum_elem, simparam->max_num_state_vars);
+    eos_global_vars = simparam->eos_global_vars;
+    strength_global_vars = simparam->strength_global_vars;
+    eos_state_vars = DCArrayKokkos <double> (rnum_elem, simparam->max_num_eos_state_vars);
+    strength_state_vars = DCArrayKokkos <double> (rnum_elem, simparam->max_num_strength_state_vars);
     elem_user_output_vars = DCArrayKokkos <double> (rnum_elem, simparam->output_options.max_num_user_output_vars); 
  
     //--- calculate bdy sets ---//
@@ -1091,8 +1093,10 @@ void FEA_Module_SGH::setup(){
     // function for initializing state_vars
     init_state_vars(material,
                     elem_mat_id,
-                    state_vars,
-                    global_vars,
+                    eos_state_vars,
+                    strength_state_vars,
+                    eos_global_vars,
+                    strength_global_vars,
                     elem_user_output_vars,
                     rnum_elem);
  
@@ -1100,8 +1104,10 @@ void FEA_Module_SGH::setup(){
     init_strength_model(elem_strength,
                         material,
                         elem_mat_id,
-                        state_vars,
-                        global_vars,
+                        eos_state_vars,
+                        strength_state_vars,
+                        eos_global_vars,
+                        strength_global_vars,
                         elem_user_output_vars,
                         rnum_elem);
 
@@ -1109,8 +1115,10 @@ void FEA_Module_SGH::setup(){
     init_eos_model(elem_eos,
                    material,
                    elem_mat_id,
-                   state_vars,
-                   global_vars,
+                   eos_state_vars,
+                   strength_state_vars,
+                   eos_global_vars,
+                   strength_global_vars,
                    elem_user_output_vars,
                    rnum_elem);
     
@@ -1203,27 +1211,29 @@ void FEA_Module_SGH::setup(){
                     }        
                 }  // end for
                 
-                // short form for clean code
-                EOSParent * eos_model = elem_eos(elem_gid).model;
                 // --- Pressure ---
-                eos_model->calc_pressure(elem_pres,
+                elem_eos(elem_gid).calc_pressure(elem_pres,
                                          elem_stress,
                                          elem_gid,
                                          elem_mat_id(elem_gid),
-                                         state_vars,
-                                         global_vars,
+                                         eos_state_vars,
+                                         strength_state_vars,
+                                         eos_global_vars,
+                                         strength_global_vars,
                                          elem_user_output_vars,
                                          elem_sspd,
                                          elem_den(elem_gid),
                                          elem_sie(rk_level,elem_gid));
 
                 // --- Sound speed ---
-                eos_model->calc_sound_speed(elem_pres,
+                elem_eos(elem_gid).calc_sound_speed(elem_pres,
                                             elem_stress,
                                             elem_gid,
                                             elem_mat_id(elem_gid),
-                                            state_vars,
-                                            global_vars,
+                                            eos_state_vars,
+                                            strength_state_vars,
+                                            eos_global_vars,
+                                            strength_global_vars,
                                             elem_user_output_vars,
                                             elem_sspd,
                                             elem_den(elem_gid),
@@ -1340,7 +1350,7 @@ void FEA_Module_SGH::setup(){
                 
                     // p = rho*ie*(gamma - 1)
                     size_t mat_id = f_id;
-                    double gamma = global_vars(mat_id,0); // gamma value
+                    double gamma = eos_global_vars(mat_id,0); // gamma value
                     elem_sie(rk_level, elem_gid) =
                                     elem_pres(elem_gid)/(mat_fill(f_id).den*(gamma - 1.0));
                 } // end if
@@ -1485,8 +1495,10 @@ void FEA_Module_SGH::cleanup_material_models() {
     destroy_strength_model(elem_strength,
                            material,
                            elem_mat_id,
-                           state_vars,
-                           global_vars,
+                           eos_state_vars,
+                           strength_state_vars,
+                           eos_global_vars,
+                           strength_global_vars,
                            elem_user_output_vars,
                            rnum_elem);
 
@@ -1494,8 +1506,10 @@ void FEA_Module_SGH::cleanup_material_models() {
     destroy_eos_model(elem_eos,
                       material,
                       elem_mat_id,
-                      state_vars,
-                      global_vars,
+                      eos_state_vars,
+                      strength_state_vars,
+                      eos_global_vars,
+                      strength_global_vars,
                       elem_user_output_vars,
                       rnum_elem);
     return;
@@ -1818,7 +1832,7 @@ void FEA_Module_SGH::sgh_solve(){
       nTO_modules = simparam->TO_Module_List.size();
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if(simparam->output_options.output_file_format==OUTPUT_FORMAT::vtk&&simparam->output_options.write_initial)
+    if(simparam->output_options.write_initial)
     {
       if(myrank==0)
       printf("Writing outputs to file at %f \n", time_value);
@@ -2538,17 +2552,15 @@ void FEA_Module_SGH::sgh_solve(){
                 }
               }); // end parallel for
             } //end view scope
-            if(simparam->output_options.output_file_format==OUTPUT_FORMAT::vtk){
-              if(myrank==0){
-                printf("Writing outputs to file at %f \n", graphics_time);
-              }
-
-              double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
-              Explicit_Solver_Pointer_->write_outputs();
-
-              double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
-              Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
+            if(myrank==0){
+              printf("Writing outputs to file at %f \n", graphics_time);
             }
+
+            double comm_time1 = Explicit_Solver_Pointer_->CPU_Time();
+            Explicit_Solver_Pointer_->write_outputs();
+
+            double comm_time2 = Explicit_Solver_Pointer_->CPU_Time();
+            Explicit_Solver_Pointer_->output_time += comm_time2 - comm_time1;
 
             graphics_time = time_value + graphics_dt_ival;
       } // end if

@@ -69,24 +69,32 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters {
 
   //Non-serialized fields
   int num_gauss_points = 2;
-  size_t max_num_global_vars;
+  size_t max_num_eos_global_vars;
+  size_t max_num_strength_global_vars;
   size_t rk_num_bins;
   double time_value = 0.0;
-  DCArrayKokkos<double> global_vars;
+  DCArrayKokkos<double> eos_global_vars;
+  DCArrayKokkos<double> strength_global_vars;
 
   DCArrayKokkos<mat_fill_t> mat_fill;
   DCArrayKokkos<material_t> material;
   DCArrayKokkos<boundary_t> boundary; 
   std::vector<double> gravity_vector {9.81, 0., 0.};
 
-  void init_material_variable_arrays(size_t nglobal_vars) {
-    global_vars = DCArrayKokkos <double> (material_options.size(), nglobal_vars);
+  void init_material_variable_arrays(size_t num_eos_global_vars, size_t num_strength_global_vars) {
+    eos_global_vars = DCArrayKokkos <double> (material_options.size(), num_eos_global_vars);
+    strength_global_vars = DCArrayKokkos <double> (material_options.size(), num_strength_global_vars);
 
     for (size_t i = 0; i < material_options.size(); i++) {
       auto mat = material_options[i];
 
-      for (size_t j = 0; j < mat.global_vars.size(); j++)
-        global_vars.host(i, j) = mat.global_vars[j];
+      for (size_t j = 0; j < mat.eos_global_vars.size(); j++) {
+        eos_global_vars.host(i, j) = mat.eos_global_vars[j];
+      }
+
+      for (size_t j = 0; j < mat.strength_global_vars.size(); j++) {
+        strength_global_vars.host(i, j) = mat.strength_global_vars[j];
+      }
     }
   }
 
@@ -96,11 +104,14 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters {
       array.host(i) = *(T*)&vec[i];
   }
   void derive_kokkos_arrays() {
-    max_num_global_vars = 0;
-    for (auto mo : material_options) 
-      max_num_global_vars = std::max(max_num_global_vars, mo.global_vars.size());
+    max_num_eos_global_vars = 0;
+    max_num_strength_global_vars = 0;
+    for (auto mo : material_options) {
+      max_num_eos_global_vars = std::max(max_num_eos_global_vars, mo.eos_global_vars.size());
+      max_num_strength_global_vars = std::max(max_num_strength_global_vars, mo.strength_global_vars.size());
+    }
 
-    init_material_variable_arrays(max_num_global_vars);
+    init_material_variable_arrays(max_num_eos_global_vars, max_num_strength_global_vars);
 
     from_vector(mat_fill, region_options);
     from_vector(material, material_options);
@@ -110,7 +121,8 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters {
     mat_fill.update_device();
     boundary.update_device();
     material.update_device();
-    global_vars.update_device();
+    eos_global_vars.update_device();
+    strength_global_vars.update_device();
 
   }
 
