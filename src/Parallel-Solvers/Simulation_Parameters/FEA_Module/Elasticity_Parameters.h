@@ -9,6 +9,10 @@ struct Elasticity_Parameters
     bool strain_max_flag    = false;
     bool modal_analysis     = false;
     bool anisotropic_lattice = false;
+    int num_modes = 10;
+    bool smallest_modes = true;
+    bool largest_modes = false;
+    real_t convergence_tolerance = 1.0e-18;
 
     Elasticity_Parameters() : FEA_Module_Parameters({
         FIELD::displacement,
@@ -17,5 +21,5 @@ struct Elasticity_Parameters
     }) { }
 };
 IMPL_YAML_SERIALIZABLE_WITH_BASE(Elasticity_Parameters, ImplicitModule,
-    strain_max_flag, modal_analysis, anisotropic_lattice
+    strain_max_flag, modal_analysis, anisotropic_lattice, num_modes, smallest_modes, largest_modes, convergence_tolerance
 )
