@@ -176,6 +176,8 @@ Explicit_Solver::parallel_vtu_writer_new()
   int num_nodes_in_elem = 8;
   int num_points = nnonoverlap_elem_nodes;
   int num_cells = nlocal_elem_non_overlapping;
+
+  all_node_coords_distributed->doImport(*node_coords_distributed, *importer, Tpetra::INSERT);
   host_vec_array node_coords = all_node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
   CArray <size_t> nodes_in_elem (rnum_elem, max_nodes_per_element);
