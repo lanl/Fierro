@@ -135,7 +135,6 @@ FEA_Module_SGH::FEA_Module_SGH(
   //optimization flags
   kinetic_energy_objective = false;
   
-
   //set parameters
   Dynamic_Options dynamic_options = simparam->dynamic_options;
   time_value = dynamic_options.time_value;
@@ -1000,7 +999,12 @@ void FEA_Module_SGH::setup(){
 
     // allocate material models
     elem_eos = DCArrayKokkos <eos_t> (num_elems);
-    elem_strength = DCArrayKokkos <strength_t> (num_elems); 
+    elem_strength = DCArrayKokkos <strength_t> (num_elems);
+
+    //optimization flags
+    if(simparam->topology_optimization_on){
+      elem_extensive_initial_energy_condition = DCArrayKokkos <bool> (num_elems);
+    }
       
     // ---------------------------------------------------------------------
     //   calculate geometry
@@ -1180,6 +1184,14 @@ void FEA_Module_SGH::setup(){
                 
                 // specific internal energy
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
+                if(simparam->topology_optimization_on&&mat_fill(f_id).extensive_energy_setting){
+                  elem_sie(rk_level, elem_gid) = elem_sie(rk_level, elem_gid)/relative_element_densities(elem_gid);
+                  elem_extensive_initial_energy_condition(elem_gid) = true;
+                }
+                else if(simparam->topology_optimization_on&&!mat_fill(f_id).extensive_energy_setting){
+                  elem_extensive_initial_energy_condition(elem_gid) = false;
+                }
+
 		
                 size_t mat_id = elem_mat_id(elem_gid); // short name
                 
@@ -1443,7 +1455,11 @@ void FEA_Module_SGH::setup(){
     elem_sie.update_host();
     elem_stress.update_host();
     elem_pres.update_host();
-    elem_sspd.update_host(); 
+    elem_sspd.update_host();
+
+    if(simparam->topology_optimization_on){
+      elem_extensive_initial_energy_condition.update_host();
+    }
 
     return;
     

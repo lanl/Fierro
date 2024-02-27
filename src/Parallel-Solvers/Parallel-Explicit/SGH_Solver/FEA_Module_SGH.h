@@ -645,7 +645,7 @@ public:
   DViewCArrayKokkos <double> elem_sspd;
   DViewCArrayKokkos <double> elem_sie;
   DViewCArrayKokkos <double> elem_vol;
-  DViewCArrayKokkos <double> elem_div;    
+  DViewCArrayKokkos <double> elem_div;
   DViewCArrayKokkos <double> elem_mass;
   DViewCArrayKokkos <size_t> elem_mat_id;
 
@@ -664,6 +664,9 @@ public:
   //material models
   DCArrayKokkos <eos_t> elem_eos;
   DCArrayKokkos <strength_t> elem_strength;
+
+  //per element optimization flags
+  DCArrayKokkos <bool> elem_extensive_initial_energy_condition;
 
   // Dual Views of the corner struct variables
   DViewCArrayKokkos <double> corner_force;
