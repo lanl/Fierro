@@ -281,10 +281,10 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
 
                     // specific internal energy
                     elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
-                    
-                    if(simparam->topology_optimization_on && mat_fill(f_id).extensive_energy_setting)
+
+                    if (simparam->topology_optimization_on && mat_fill(f_id).extensive_energy_setting)
                     {
-                        elem_sie(rk_level, elem_gid) = elem_sie(rk_level, elem_gid)/relative_element_densities(elem_gid);
+                        elem_sie(rk_level, elem_gid) = elem_sie(rk_level, elem_gid) / relative_element_densities(elem_gid);
                     }
 
                     elem_mat_id(elem_gid) = mat_fill(f_id).material_id;
@@ -1251,7 +1251,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         // initialize design gradients
         FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
             design_gradients(node_id, 0) = 0;
-    }); // end parallel for
+        }); // end parallel for
         Kokkos::fence();
 
         // gradient contribution from kinetic energy v(dM/drho)v product.
@@ -1297,15 +1297,6 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                     size_t corner_id;
                     real_t inner_product;
                     // std::cout << elem_mass(elem_id) <<std::endl;
-                    
-                    if(elem_extensive_initial_energy_condition(elem_id)){
-                        inner_product = 0;
-                    }
-                    else{
-                        inner_product = elem_mass(elem_id)*current_psi_adjoint_vector(elem_id,0)*current_element_internal_energy(elem_id,0);
-                    }
-
-
 
                     // current_nodal_velocities
                     for (int inode = 0; inode < num_nodes_in_elem; inode++)
@@ -1337,7 +1328,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                         // division by design ratio recovers nominal element mass used in the gradient operator
                         corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
 
                 // accumulate node values from corner storage
@@ -1440,7 +1431,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
 
                 // accumulate node values from corner storage
@@ -1452,7 +1443,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                         corner_id = corners_in_node(node_id, icorner);
                         design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
             } // end view scope
         }
@@ -1514,7 +1505,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
 
                 // accumulate node values from corner storage
@@ -1526,7 +1517,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                         corner_id = corners_in_node(node_id, icorner);
                         design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem;
                     }
-          }); // end parallel for
+                }); // end parallel for
                 Kokkos::fence();
             } // end view scope
         }
@@ -1572,7 +1563,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                     corner_id = elem_id * num_nodes_in_elem + inode;
                     corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // accumulate node values from corner storage
@@ -1584,7 +1575,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
 
@@ -1601,7 +1592,15 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                 size_t corner_id;
                 real_t inner_product;
                 // std::cout << elem_mass(elem_id) <<std::endl;
-                inner_product = elem_mass(elem_id) * current_psi_adjoint_vector(elem_id, 0) * current_element_internal_energy(elem_id, 0);
+                
+                if (elem_extensive_initial_energy_condition(elem_id))
+                {
+                    inner_product = 0;
+                }
+                else
+                {
+                    inner_product = elem_mass(elem_id) * current_psi_adjoint_vector(elem_id, 0) * current_element_internal_energy(elem_id, 0);
+                }
 
                 for (int inode = 0; inode < num_nodes_in_elem; inode++)
                 {
@@ -1609,7 +1608,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                     corner_id = elem_id * num_nodes_in_elem + inode;
                     corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // accumulate node values from corner storage
@@ -1621,7 +1620,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem;
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
         } // end view scope
     } // end view scope design gradients
@@ -1685,7 +1684,7 @@ void FEA_Module_SGH::init_assembly()
         Graph_Matrix_Strides_initial(inode) = 0;
         Graph_Matrix_Strides(inode) = 0;
         Graph_Fill(inode) = 0;
-  }); // end parallel for
+    }); // end parallel for
     Kokkos::fence();
 
     // initialize nall arrays
@@ -1694,7 +1693,7 @@ void FEA_Module_SGH::init_assembly()
         node_indices_used(inode) = 0;
         column_index(inode) = 0;
         count_saved_corners_in_node(inode) = 0;
-  }); // end parallel for
+    }); // end parallel for
     Kokkos::fence();
 
     // count upper bound of strides for Sparse Pattern Graph by allowing repeats due to connectivity
@@ -1737,7 +1736,7 @@ void FEA_Module_SGH::init_assembly()
     // equate strides for later
     FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
         Graph_Matrix_Strides(inode) = Graph_Matrix_Strides_initial(inode) = Dual_Graph_Matrix_Strides_initial(inode);
-  }); // end parallel for
+    }); // end parallel for
 
     // for (int inode = 0; inode < nlocal_nodes; inode++)
     // std::cout << Graph_Matrix_Strides_initial(inode) << std::endl;
@@ -1749,7 +1748,7 @@ void FEA_Module_SGH::init_assembly()
         {
             update = Graph_Matrix_Strides_initial(inode);
         }
-  }, max_stride);
+    }, max_stride);
 
     // std::cout << "THE MAX STRIDE" << max_stride << std::endl;
     // allocate array used in the repeat removal process
@@ -1894,7 +1893,7 @@ void FEA_Module_SGH::init_assembly()
                 node_indices_used(current_row_nodes_scanned(node_reset)) = 0;
             }
         }
-  });
+    });
     Kokkos::fence();
 
     Graph_Matrix_Strides.update_host();
@@ -1906,7 +1905,7 @@ void FEA_Module_SGH::init_assembly()
         {
             Graph_Matrix(inode, istride) = Repeat_Graph_Matrix(inode, istride);
         }
-  }); // end parallel for
+    }); // end parallel for
 
     // deallocate repeat matrix
 
@@ -1917,7 +1916,7 @@ void FEA_Module_SGH::init_assembly()
     // expand strides for stiffness matrix by multipling by dim
     FOR_ALL_CLASS(idof, 0, num_dim * nlocal_nodes, {
         Gradient_Matrix_Strides(idof) = num_dim * Graph_Matrix_Strides(idof / num_dim);
-  }); // end parallel for
+    }); // end parallel for
 
     Gradient_Matrix_Strides.update_host();
 
@@ -1934,7 +1933,7 @@ void FEA_Module_SGH::init_assembly()
 
             // increment the number of corners saved to this node_gid
             count_saved_corners_in_node(node_gid)++;
-      });  // end FOR_ALL over nodes in element
+        });  // end FOR_ALL over nodes in element
         Kokkos::fence();
     } // end for elem_gid
 
@@ -1950,7 +1949,7 @@ void FEA_Module_SGH::init_assembly()
         {
             DOF_to_Elem_Matrix_Strides(inode * num_dim + idim) = count_saved_corners_in_node(inode);
         }
-  }); // end parallel for
+    }); // end parallel for
     DOF_to_Elem_Matrix_Strides.update_host();
     Force_Gradient_Energies   = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(rnum_elem, num_nodes_in_elem * num_dim);
     Power_Gradient_Energies   = CArrayKokkos<real_t, Kokkos::LayoutRight, device_type, memory_traits>(rnum_elem);
@@ -1965,7 +1964,7 @@ void FEA_Module_SGH::init_assembly()
         {
             DOF_Graph_Matrix(idof, istride) = Graph_Matrix(idof / num_dim, istride / num_dim) * num_dim + istride % num_dim;
         }
-  }); // end parallel for
+    }); // end parallel for
 
     /*
     //construct distributed gradient matrix from local kokkos data

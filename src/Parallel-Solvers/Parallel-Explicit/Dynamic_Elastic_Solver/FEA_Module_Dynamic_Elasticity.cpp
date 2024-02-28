@@ -92,7 +92,6 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
 
     mesh = mesh_in;
 
-
     // boundary condition data
     max_boundary_sets = 0;
     Local_Index_Boundary_Patches = Explicit_Solver_Pointer_->Local_Index_Boundary_Patches;
