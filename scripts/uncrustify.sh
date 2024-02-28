@@ -62,14 +62,14 @@ echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Topology_Optimiz
 cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Topology_Optimization" || exit
 treeProcess
 
-# # Uncrustify Eulerian Solver
-# echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Eulerian_Solver"
-# cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Eulerian_Solver" || exit
-# treeProcess
+# Uncrustify Eulerian Solver
+echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Eulerian_Solver"
+cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Eulerian_Solver" || exit
+treeProcess
 
-# # Uncrustify Dynamic Elastic
-# echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Dynamic_Elastic_Solver"
-# cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Dynamic_Elastic_Solver" || exit
+# Uncrustify Dynamic Elastic
+echo "Uncrusting: $sourceDir/Parallel-Solvers/Parallel-Explicit/Dynamic_Elastic_Solver"
+cd "$sourceDir/Parallel-Solvers/Parallel-Explicit/Dynamic_Elastic_Solver" || exit
 treeProcess
 
 exit
