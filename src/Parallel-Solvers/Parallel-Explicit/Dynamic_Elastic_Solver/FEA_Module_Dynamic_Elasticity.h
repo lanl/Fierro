@@ -416,6 +416,7 @@ public:
 
     void Gradient_Element_Material_Properties(size_t ielem, real_t& Element_Modulus, real_t& Poisson_Ratio, real_t density);
 
+
     void local_matrix_multiply(int ielem, CArrayKokkos<real_t, array_layout, device_type, memory_traits>& Local_Matrix);
 
     void assemble_matrix();
@@ -478,8 +479,6 @@ public:
 
     // Global FEA data
     Teuchos::RCP<MV> node_velocities_distributed;
-    Teuchos::RCP<MV> initial_node_coords_distributed;
-    Teuchos::RCP<MV> all_initial_node_coords_distributed;
     Teuchos::RCP<MV> initial_node_velocities_distributed;
     Teuchos::RCP<MV> all_node_velocities_distributed;
     Teuchos::RCP<MV> all_cached_node_velocities_distributed;

@@ -175,8 +175,6 @@ public:
 
     // debug flags
     int gradient_print_sync;
-
-    Teuchos::RCP<MV> initial_node_coords_distributed;
 };
 
 #endif // end Header Guard

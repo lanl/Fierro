@@ -92,14 +92,13 @@ FEA_Module_Dynamic_Elasticity::FEA_Module_Dynamic_Elasticity(
 
     mesh = mesh_in;
 
+
     // boundary condition data
     max_boundary_sets = 0;
     Local_Index_Boundary_Patches = Explicit_Solver_Pointer_->Local_Index_Boundary_Patches;
 
     // set Tpetra vector pointers
     initial_node_velocities_distributed = Explicit_Solver_Pointer_->initial_node_velocities_distributed;
-    initial_node_coords_distributed     = Explicit_Solver_Pointer_->initial_node_coords_distributed;
-    all_initial_node_coords_distributed = Explicit_Solver_Pointer_->all_initial_node_coords_distributed;
     node_coords_distributed         = Explicit_Solver_Pointer_->node_coords_distributed;
     node_velocities_distributed     = Explicit_Solver_Pointer_->node_velocities_distributed;
     all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;

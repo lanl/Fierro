@@ -571,8 +571,6 @@ public:
 
     // Global FEA data
     Teuchos::RCP<MV> node_velocities_distributed;
-    Teuchos::RCP<MV> initial_node_coords_distributed;
-    Teuchos::RCP<MV> all_initial_node_coords_distributed;
     Teuchos::RCP<MV> initial_node_velocities_distributed;
     Teuchos::RCP<MV> all_node_velocities_distributed;
     Teuchos::RCP<MV> all_cached_node_velocities_distributed;
@@ -659,6 +657,9 @@ public:
     // material models
     DCArrayKokkos<eos_t>      elem_eos;
     DCArrayKokkos<strength_t> elem_strength;
+
+    //per element optimization flags
+    DCArrayKokkos <bool> elem_extensive_initial_energy_condition;
 
     // Dual Views of the corner struct variables
     DViewCArrayKokkos<double> corner_force;

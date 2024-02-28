@@ -179,11 +179,6 @@ public:
         {
             ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_Dynamic_Elasticity_->node_velocities_distributed);
         }
-
-        // real_t current_kinetic_energy = ROL_Velocities->dot(*ROL_Force)/2;
-        // std::cout.precision(10);
-        // if(FEM_->myrank==0)
-        // std::cout << "INITIAL KINETIC ENERGY " << current_kinetic_energy << std::endl;
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -234,7 +229,9 @@ public:
         {
             // This is the first call to update
             // first linear solve was done in FEA class run function already
-            FEM_Dynamic_Elasticity_->elastic_solve();
+            FEM_Dynamic_Elasticity_->comm_variables(zp);
+            //update deformation variables
+            FEM_Dynamic_Elasticity_->update_forward_solve(zp);
             // initial design density data was already communicated for ghost nodes in init_design()
             // decide to output current optimization state
             FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
@@ -287,7 +284,7 @@ public:
 
     /////////////////////////////////////////////////////////////////////////////
     ///
-    /// \fn update_elasticity
+    /// \fn update_sgh
     ///
     /// \brief Evolve the simulation using staggered grid hydrodynamics
     ///
@@ -309,11 +306,16 @@ public:
         if (type == ROL::UpdateType::Initial)
         {
             // This is the first call to update
-            // first linear solve was done in FEA class run function already
-            FEM_SGH_->sgh_solve();
-            // initial design density data was already communicated for ghost nodes in init_design()
-            // decide to output current optimization state
-            FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
+            if(Explicit_Solver_Pointer_->myrank==0)
+            {
+                *fos << "called SGH Initial" << std::endl;
+            }
+                
+            FEM_SGH_->comm_variables(zp);
+            FEM_SGH_->update_forward_solve(zp);
+            //initial design density data was already communicated for ghost nodes in init_design()
+            //decide to output current optimization state
+            //FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
         }
         else if (type == ROL::UpdateType::Accept)
         {
@@ -325,6 +327,8 @@ public:
             // Revert to cached value
             // This is a new value of x
             // communicate density variables for ghosts
+            if(Explicit_Solver_Pointer_->myrank == 0) *fos << "called SGH Revert" << std::endl;
+            
             FEM_SGH_->comm_variables(zp);
             // update deformation variables
             FEM_SGH_->update_forward_solve(zp);
@@ -346,7 +350,7 @@ public:
             }
 
             // decide to output current optimization state
-            FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
+            // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
         }
         else // ROL::UpdateType::Temp
         // This is a new value of x used for,
@@ -354,7 +358,7 @@ public:
         {
             if (Explicit_Solver_Pointer_->myrank == 0)
             {
-                *fos << "called Temp" << std::endl;
+                *fos << "called SGH Temp" << std::endl;
             }
             FEM_SGH_->comm_variables(zp);
             FEM_SGH_->update_forward_solve(zp);
