@@ -5941,7 +5941,7 @@ void FEA_Module_Elasticity::node_density_constraints(host_vec_array node_densiti
 ------------------------------------------------------------------------- */
 
 int FEA_Module_Elasticity::eigensolve(){
-  int nev = 9;
+  int nev = module_params->num_modes;
   int blocksize = 1.5*nev;
   int num_dim = simparam->num_dims;
   GO global_index, global_dof_index;
@@ -6192,7 +6192,11 @@ int FEA_Module_Elasticity::eigensolve(){
 				"SR" - smallest real part
 				"SI" - smallest imaginary part
   */
-  std::string which("SM");
+  std::string which;
+  if(module_params->smallest_modes)
+    which = "SM";
+  if(module_params->largest_modes)
+    which = "LM";
   int NumImages = nranks;
   int numBlocks = 3 * NumImages;
   int maxRestarts = 50;
@@ -6203,7 +6207,7 @@ int FEA_Module_Elasticity::eigensolve(){
   //
   real_t mat_norm = std::max(Global_Stiffness_Matrix->getFrobeniusNorm(),Global_Mass_Matrix->getFrobeniusNorm());
   
-  real_t tol = 1.0e-18*mat_norm;
+  real_t tol = module_params->convergence_tolerance*mat_norm;
   //tol = tol*mat_norm;
   // Create parameter list to pass into the solver manager
   Teuchos::ParameterList MyPL;

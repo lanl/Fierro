@@ -232,6 +232,9 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp){
                 
                 // specific internal energy
                 elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
+                if(simparam->topology_optimization_on&&mat_fill(f_id).extensive_energy_setting){
+                  elem_sie(rk_level, elem_gid) = elem_sie(rk_level, elem_gid)/relative_element_densities(elem_gid);
+                }
 		
                 elem_mat_id(elem_gid) = mat_fill(f_id).material_id;
                 size_t mat_id = elem_mat_id(elem_gid); // short name
@@ -1453,7 +1456,12 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         size_t corner_id;
         real_t inner_product;
         //std::cout << elem_mass(elem_id) <<std::endl;
-        inner_product = elem_mass(elem_id)*current_psi_adjoint_vector(elem_id,0)*current_element_internal_energy(elem_id,0);
+        if(elem_extensive_initial_energy_condition(elem_id)){
+          inner_product = 0;
+        }
+        else{
+          inner_product = elem_mass(elem_id)*current_psi_adjoint_vector(elem_id,0)*current_element_internal_energy(elem_id,0);
+        }
 
         for (int inode = 0; inode < num_nodes_in_elem; inode++){
           //compute gradient of local element contribution to v^t*M*v product
