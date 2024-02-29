@@ -1863,14 +1863,14 @@ void Explicit_Solver::comm_densities(){
 
 void Explicit_Solver::parallel_tecplot_writer(){
   int num_dim = simparam.num_dims;
-	std::string current_file_name;
-	std::string base_file_name= "TecplotTO";
+    std::string current_file_name;
+    std::string base_file_name= "TecplotTO";
   std::string base_file_name_undeformed= "TecplotTO_undeformed";
   std::stringstream current_line_stream;
   std::string current_line;
-	std::string file_extension= ".dat";
+    std::string file_extension= ".dat";
   std::string file_count;
-	std::stringstream count_temp;
+    std::stringstream count_temp;
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
@@ -1908,7 +1908,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
   count_temp.str("");
   count_temp << file_index;
   file_index++;
-	file_count = count_temp.str();
+    file_count = count_temp.str();
   if(displace_geometry&&displacement_module>=0)
     current_file_name = base_file_name_undeformed + file_count + file_extension;
   else
@@ -1929,7 +1929,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
   //output header of the tecplot file
   
   //std::cout << current_file_name << std::endl;
-	current_line_stream << "TITLE=\"results for FEA simulation\"" "\n";
+    current_line_stream << "TITLE=\"results for FEA simulation\"" "\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -1938,7 +1938,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
   //else
   current_line_stream.str("");
   if(num_dim==3)
-	  current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+      current_line_stream << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
   else if(num_dim==2)
     current_line_stream << "VARIABLES = \"x\", \"y\", \"vx\", \"vy\"";
   current_line = current_line_stream.str();
@@ -1956,20 +1956,20 @@ void Explicit_Solver::parallel_tecplot_writer(){
     }
     */
   current_line_stream.str("");
-	current_line_stream << "\n";
+    current_line_stream << "\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   header_stream_offset += current_line.length();
 
-	current_line_stream.str("");
+    current_line_stream.str("");
   if(num_dim==2){
-	  current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-		  << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+      current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+          << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
   }
   else if(num_dim==3){
-   	current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-		<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
+    current_line_stream << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+        << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n"; 
   }
   current_line = current_line_stream.str();
   if(myrank == 0)
@@ -1990,16 +1990,16 @@ void Explicit_Solver::parallel_tecplot_writer(){
   current_line_stream << std::fixed << std::setprecision(8);
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
-		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
-		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
+        current_line_stream << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+        current_line_stream << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
     if(num_dim==3)
-		current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+        current_line_stream << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
 
     //velocity print
     current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,0) << " ";
-		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
+        current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
     if(num_dim==3)
-		current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
+        current_line_stream << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
     
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         /*
@@ -2030,7 +2030,7 @@ void Explicit_Solver::parallel_tecplot_writer(){
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
 
   //print buffers at offsets with collective MPI write
   //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
@@ -2064,21 +2064,21 @@ void Explicit_Solver::parallel_tecplot_writer(){
   for (int elementline = 0; elementline < nlocal_elements; elementline++) {
     current_line_stream.str("");
     //convert node ordering
-		for (int ii = 0; ii < max_nodes_per_element; ii++) {
+        for (int ii = 0; ii < max_nodes_per_element; ii++) {
       if(active_node_ordering_convention == IJK)
         temp_convert = convert_ijk_to_ensight(ii);
       else
         temp_convert = ii;
-				current_line_stream << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
-		}
-		current_line_stream << std::endl;
+                current_line_stream << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+        }
+        current_line_stream << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2093,14 +2093,14 @@ void Explicit_Solver::parallel_tecplot_writer(){
 
 void Explicit_Solver::parallel_vtk_writer(){
   int num_dim = simparam.num_dims;
-	std::string current_file_name;
-	std::string base_file_name= "VTK";
+    std::string current_file_name;
+    std::string base_file_name= "VTK";
   std::string base_file_name_undeformed= "VTK_undeformed";
   std::stringstream current_line_stream;
   std::string current_line;
-	std::string file_extension= ".vtk";
+    std::string file_extension= ".vtk";
   std::string file_count;
-	std::stringstream count_temp;
+    std::stringstream count_temp;
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
@@ -2147,7 +2147,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   count_temp.str("");
   count_temp << file_index;
   file_index++;
-	file_count = count_temp.str();
+    file_count = count_temp.str();
   if(displace_geometry&&displacement_module>=0)
     current_file_name = base_file_name_undeformed + file_count + file_extension;
   else
@@ -2168,7 +2168,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //output header of the tecplot file
   
   //std::cout << current_file_name << std::endl;
-	current_line_stream << "# vtk DataFile Version 2.0\n";
+    current_line_stream << "# vtk DataFile Version 2.0\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2176,7 +2176,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
   //else
   current_line_stream.str("");
-	current_line_stream << "Mesh for Fierro\n";
+    current_line_stream << "Mesh for Fierro\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2192,23 +2192,23 @@ void Explicit_Solver::parallel_vtk_writer(){
     }
     */
 
-	current_line_stream.str("");
-	current_line_stream << "ASCII\n";
+    current_line_stream.str("");
+    current_line_stream << "ASCII\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   header_stream_offset += current_line.length();
 
   current_line_stream.str("");
-	current_line_stream << "DATASET UNSTRUCTURED_GRID\n\n";
+    current_line_stream << "DATASET UNSTRUCTURED_GRID\n\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
   header_stream_offset += current_line.length();
 
   current_line_stream.str("");
-	current_line_stream << "POINTS " << num_nodes
-		  << " float\n";
+    current_line_stream << "POINTS " << num_nodes
+          << " float\n";
   current_line = current_line_stream.str();
   if(myrank == 0)
     MPI_File_write(myfile_parallel,current_line.c_str(),current_line.length(), MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2228,10 +2228,10 @@ void Explicit_Solver::parallel_vtk_writer(){
   current_line_stream << std::fixed << std::setprecision(8);
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
-		current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
-		current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,0) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,1) << " ";
     if(num_dim==3)
-		current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_coords(nodeline,2) << " ";
     
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         /*
@@ -2262,7 +2262,7 @@ void Explicit_Solver::parallel_vtk_writer(){
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
 
   //print buffers at offsets with collective MPI write
   //MPI_Offset current_stream_position = MPI_File_get_position(myfile_parallel,0);
@@ -2285,7 +2285,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "CELLS " << num_elem << " " << num_elem*(max_nodes_per_element+1) << std::endl;
+    current_line_stream << std::endl << "CELLS " << num_elem << " " << num_elem*(max_nodes_per_element+1) << std::endl;
   current_line = current_line_stream.str();
   //std::cout << current_line;
   file_stream_offset = current_stream_position;
@@ -2306,21 +2306,21 @@ void Explicit_Solver::parallel_vtk_writer(){
     current_line_stream.str("");
     //convert node ordering
     current_line_stream << std::left << std::setw(10) << max_nodes_per_element << " ";
-		for (int ii = 0; ii < max_nodes_per_element; ii++) {
+        for (int ii = 0; ii < max_nodes_per_element; ii++) {
       if(active_node_ordering_convention == IJK)
         temp_convert = convert_ijk_to_ensight(ii);
       else
         temp_convert = ii;
-				current_line_stream << std::left << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert)<< " ";
-		}
-		current_line_stream << std::endl;
+                current_line_stream << std::left << std::setw(10) << sorted_nodes_in_elem(elementline, temp_convert)<< " ";
+        }
+        current_line_stream << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2339,7 +2339,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "CELL_TYPES " << num_elem << std::endl;
+    current_line_stream << std::endl << "CELL_TYPES " << num_elem << std::endl;
   current_line = current_line_stream.str();
   //std::cout << current_line;
   file_stream_offset = current_stream_position;
@@ -2359,14 +2359,14 @@ void Explicit_Solver::parallel_vtk_writer(){
   for (int elementline = 0; elementline < nlocal_elements; elementline++) {
     current_line_stream.str("");
     //convert node ordering
-		current_line_stream << std::left << std::setw(10) << 12 << std::endl;
+        current_line_stream << std::left << std::setw(10) << 12 << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2385,7 +2385,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "POINT_DATA " << num_nodes << std::endl;
+    current_line_stream << std::endl << "POINT_DATA " << num_nodes << std::endl;
   current_line_stream << "SCALARS design_density float 1" << std::endl;
   current_line_stream << "LOOKUP_TABLE default" << std::endl;
   current_line = current_line_stream.str();
@@ -2410,16 +2410,16 @@ void Explicit_Solver::parallel_vtk_writer(){
     current_line_stream.str("");
     //convert node ordering
     if(simparam.topology_optimization_on)
-		  current_line_stream << std::left << std::setw(25) << sorted_node_densities(nodeline,0) << std::endl;
+          current_line_stream << std::left << std::setw(25) << sorted_node_densities(nodeline,0) << std::endl;
     else
-		  current_line_stream << std::left << std::setw(25) << 1 << std::endl;
+          current_line_stream << std::left << std::setw(25) << 1 << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2438,7 +2438,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "VECTORS velocity float" << std::endl;
+    current_line_stream << std::endl << "VECTORS velocity float" << std::endl;
   current_line = current_line_stream.str();
   //std::cout << current_line;
   file_stream_offset = current_stream_position;
@@ -2460,11 +2460,11 @@ void Explicit_Solver::parallel_vtk_writer(){
   for (int nodeline = 0; nodeline < nlocal_sorted_nodes; nodeline++) {
     current_line_stream.str("");
     //convert node ordering
-		//velocity print
+        //velocity print
     current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,0) << " ";
-		current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,1) << " ";
     if(num_dim==3)
-		current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
+        current_line_stream << std::left << std::setw(25) << sorted_node_velocities(nodeline,2) << " ";
 
     current_line_stream << std::endl;
     current_line = current_line_stream.str();
@@ -2473,7 +2473,7 @@ void Explicit_Solver::parallel_vtk_writer(){
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_node_line*nlocal_sorted_nodes, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2492,7 +2492,7 @@ void Explicit_Solver::parallel_vtk_writer(){
   //std::cout << "get position on rank " << myrank << " is " << current_stream_position << std::endl;
 
   current_line_stream.str("");
-	current_line_stream << std::endl << "CELL_DATA " << num_elem << std::endl;
+    current_line_stream << std::endl << "CELL_DATA " << num_elem << std::endl;
   current_line_stream << "SCALARS element_density float 1" << std::endl;
   current_line_stream << "LOOKUP_TABLE default" << std::endl;
   current_line = current_line_stream.str();
@@ -2515,14 +2515,14 @@ void Explicit_Solver::parallel_vtk_writer(){
   for (int elementline = 0; elementline < nlocal_elements; elementline++) {
     current_line_stream.str("");
     //convert node ordering
-		current_line_stream << std::left << std::setw(25) << sorted_element_densities(elementline,0) << std::endl;
+        current_line_stream << std::left << std::setw(25) << sorted_element_densities(elementline,0) << std::endl;
     current_line = current_line_stream.str();
 
     //copy current line over to C style string buffer (wrapped by matar)
     strcpy(&print_buffer(current_buffer_position),current_line.c_str());
 
     current_buffer_position += current_line.length();
-	}
+    }
   
   MPI_Barrier(world);
   MPI_File_write_at_all(myfile_parallel, file_stream_offset, print_buffer.get_kokkos_view().data(), buffer_size_per_element_line*nlocal_elements, MPI_CHAR, MPI_STATUS_IGNORE);
@@ -2540,13 +2540,13 @@ void Explicit_Solver::parallel_vtk_writer(){
 void Explicit_Solver::tecplot_writer(){
   
   int num_dim = simparam.num_dims;
-	std::string current_file_name;
-	std::string base_file_name= "TecplotTO";
+    std::string current_file_name;
+    std::string base_file_name= "TecplotTO";
   std::string base_file_name_undeformed= "TecplotTO_undeformed";
-	std::stringstream ss;
-	std::string file_extension= ".dat";
+    std::stringstream ss;
+    std::string file_extension= ".dat";
   std::string file_count;
-	std::stringstream count_temp;
+    std::stringstream count_temp;
   int time_step = 0;
   int temp_convert;
   int noutput, nvector;
@@ -2581,21 +2581,21 @@ void Explicit_Solver::tecplot_writer(){
       count_temp.str("");
       count_temp << file_index;
       file_index++;
-	    file_count = count_temp.str();
+        file_count = count_temp.str();
       if(displace_geometry&&displacement_module>=0)
         current_file_name = base_file_name_undeformed + file_count + file_extension;
       else
         current_file_name = base_file_name + file_count + file_extension;
       std::ofstream myfile (current_file_name.c_str()); //output filestream object for file output
-	    //read in position data
-	    myfile << std::fixed << std::setprecision(8);
-		
-		  //output header of the tecplot file
+        //read in position data
+        myfile << std::fixed << std::setprecision(8);
+        
+          //output header of the tecplot file
 
-		  myfile << "TITLE=\"results for TO code\"" "\n";
+          myfile << "TITLE=\"results for TO code\"" "\n";
       //myfile << "VARIABLES = \"x\", \"y\", \"z\", \"density\", \"sigmaxx\", \"sigmayy\", \"sigmazz\", \"sigmaxy\", \"sigmaxz\", \"sigmayz\"" "\n";
       //else
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+          myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -2609,25 +2609,25 @@ void Explicit_Solver::tecplot_writer(){
       myfile << "\n";
       
       if(num_dim==2){
-		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
+            myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+                << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL" "\n";
       }
       else if(num_dim==3){
-		    myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
-			    << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+            myfile << "ZONE T=\"load step " << time_step << "\", NODES= " << num_nodes
+                << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
       }
 
-		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
+          for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
+              myfile << std::setw(25) << collected_node_coords(nodeline,0) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,1) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,2) << " ";
 
         //velocity print
         myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
-			  myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
+              myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
+              myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
 
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         /*
@@ -2651,18 +2651,18 @@ void Explicit_Solver::tecplot_writer(){
         }
         */
         myfile << std::endl;
-		  }
-		  for (int elementline = 0; elementline < num_elem; elementline++) {
+          }
+          for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
-			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
+              for (int ii = 0; ii < max_nodes_per_element; ii++) {
           if(active_node_ordering_convention == IJK)
             temp_convert = convert_ijk_to_ensight(ii);
           else
             temp_convert = ii;
-				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
-			  }
-			  myfile << " \n";
-		  }
+                  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+              }
+              myfile << " \n";
+          }
       myfile.close();
     }
     if(myrank==0&&(displacement_module>=0&&displace_geometry)){
@@ -2670,17 +2670,17 @@ void Explicit_Solver::tecplot_writer(){
       count_temp.str("");
       count_temp << file_index;
       file_index++;
-	    file_count = count_temp.str();
+        file_count = count_temp.str();
     
       current_file_name = base_file_name + file_count + file_extension;
       std::ofstream myfile (current_file_name.c_str()); //output filestream object for file output
-	    //read in position data
-	    myfile << std::fixed << std::setprecision(8);
-		
-		  //output header of the tecplot file
+        //read in position data
+        myfile << std::fixed << std::setprecision(8);
+        
+          //output header of the tecplot file
 
-		  myfile << "TITLE=\"results for TO code\" \n";
-		  myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
+          myfile << "TITLE=\"results for TO code\" \n";
+          myfile << "VARIABLES = \"x\", \"y\", \"z\", \"vx\", \"vy\", \"vz\"";
       /*
       for (int imodule = 0; imodule < nfea_modules; imodule++){
         for(int ioutput = 0; ioutput < fea_modules[imodule]->noutput; ioutput++){
@@ -2693,21 +2693,21 @@ void Explicit_Solver::tecplot_writer(){
       */
       myfile << "\n";
 
-		  myfile << "ZONE T=\"load step " << time_step + 1 << "\", NODES= " << num_nodes
-			<< ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
+          myfile << "ZONE T=\"load step " << time_step + 1 << "\", NODES= " << num_nodes
+            << ", ELEMENTS= " << num_elem << ", DATAPACKING=POINT, ZONETYPE=FEBRICK" "\n";
 
-		  for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
+          for (int nodeline = 0; nodeline < num_nodes; nodeline++) {
         current_collected_output = fea_modules[displacement_module]->module_outputs[displacement_index];
-			  myfile << std::setw(25) << collected_node_coords(nodeline,0) + current_collected_output(nodeline*num_dim,0) << " ";
-			  myfile << std::setw(25) << collected_node_coords(nodeline,1) + current_collected_output(nodeline*num_dim + 1,0) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,0) + current_collected_output(nodeline*num_dim,0) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,1) + current_collected_output(nodeline*num_dim + 1,0) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_coords(nodeline,2) + current_collected_output(nodeline*num_dim + 2,0) << " ";
+              myfile << std::setw(25) << collected_node_coords(nodeline,2) + current_collected_output(nodeline*num_dim + 2,0) << " ";
 
         //velocity print
         myfile << std::setw(25) << collected_node_velocities(nodeline,0) << " ";
-			  myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
+              myfile << std::setw(25) << collected_node_velocities(nodeline,1) << " ";
         if(num_dim==3)
-			  myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
+              myfile << std::setw(25) << collected_node_velocities(nodeline,2) << " ";
 
         //myfile << std::setw(25) << collected_node_densities(nodeline,0) << " ";
         for (int imodule = 0; imodule < nfea_modules; imodule++){
@@ -2729,18 +2729,18 @@ void Explicit_Solver::tecplot_writer(){
           }
         }
         myfile << std::endl;
-		  }
-		  for (int elementline = 0; elementline < num_elem; elementline++) {
+          }
+          for (int elementline = 0; elementline < num_elem; elementline++) {
         //convert node ordering
-			  for (int ii = 0; ii < max_nodes_per_element; ii++) {
+              for (int ii = 0; ii < max_nodes_per_element; ii++) {
           if(active_node_ordering_convention == IJK)
             temp_convert = convert_ijk_to_ensight(ii);
           else
             temp_convert = ii;
-				  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
-			  }
-			  myfile << " \n";
-		  }
+                  myfile << std::setw(10) << collected_nodes_in_elem(elementline, temp_convert) + 1 << " ";
+              }
+              myfile << " \n";
+          }
       myfile.close();
     }
 }
