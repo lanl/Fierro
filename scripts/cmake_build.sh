@@ -3,6 +3,7 @@
 solver="${1}"
 heffte_build_type="${2}"
 kokkos_build_type="${3}"
+build_source="${4}"
 
 #inititialize submodules if they aren't downloaded
 [ -d "${libdir}/Elements/elements" ] && echo "Elements submodule exists"
@@ -11,8 +12,10 @@ kokkos_build_type="${3}"
 
 if { [ ! -d "${ELEMENTS_SOURCE_DIR}/elements" ] || [ ! -d "${ELEMENTS_SOURCE_DIR}/matar/src" ] ;}
 then
-    echo "Missing submodules, downloading them...."
-    git submodule update --init --recursive
+    if [ "$build_source" = "scratch" ]; then
+        echo "Missing submodules, downloading them...."
+        git submodule update --init --recursive
+    fi
 fi
 
 if [ ! -d "${TRILINOS_INSTALL_DIR}/lib" ]; then
@@ -23,10 +26,12 @@ fi
 
 # Install Elements
 if [ ! -d "${ELEMENTS_INSTALL_DIR}/lib" ]; then
-    echo "Installing Elements..."
-    cmake -D CMAKE_INSTALL_PREFIX="$ELEMENTS_INSTALL_DIR" -D Trilinos_DIR="${Trilinos_DIR}" -D Matar_ENABLE_KOKKOS=ON -D Matar_KOKKOS_PACKAGE=Trilinos -B "${ELEMENTS_BUILD_DIR}" -S "${ELEMENTS_SOURCE_DIR}"
-    make -C "${ELEMENTS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
-    make -C "${ELEMENTS_BUILD_DIR}" install
+    if [ "$build_source" = "scratch" ]; then
+        echo "Installing Elements..."
+        cmake -D CMAKE_INSTALL_PREFIX="$ELEMENTS_INSTALL_DIR" -D Trilinos_DIR="${Trilinos_DIR}" -D Matar_ENABLE_KOKKOS=ON -D Matar_KOKKOS_PACKAGE=Trilinos -B "${ELEMENTS_BUILD_DIR}" -S "${ELEMENTS_SOURCE_DIR}"
+        make -C "${ELEMENTS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
+        make -C "${ELEMENTS_BUILD_DIR}" install
+    fi
 fi
 
 # Removing stale build directory
@@ -88,6 +93,12 @@ elif [ "$solver" = "explicit-evpfft" ] || [ "$solver" = "explicit-ls-evpfft" ]; 
             -D USE_FFTW=ON
         )
     fi
+elif [ "$solver" = "explicit-evp" ]; then
+    cmake_options+=(
+        -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
+        -D BUILD_IMPLICIT_SOLVER=OFF
+        -D BUILD_EVP_FIERRO=ON
+    )
 else
     cmake_options+=(
         -D BUILD_PARALLEL_EXPLICIT_SOLVER=ON
