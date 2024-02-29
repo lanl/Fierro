@@ -14,6 +14,16 @@ build:
     - PLATFORM={{ target_platform }}
 
 requirements:
+  host:
+    - cmake >=3.17
+    - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('c') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('cxx') }}={{ linux_compiler_version }} # [linux]
+    - {{ compiler('cxx') }}={{ macos_compiler_version }} # [osx]
+    - {{ compiler('fortran') }}
+    - fierro-trilinos-cpu
+    - mpi
+    - elements
   run:
     #- cmake >=3.17
     - {{ compiler('c') }}={{ linux_compiler_version }} # [linux]
