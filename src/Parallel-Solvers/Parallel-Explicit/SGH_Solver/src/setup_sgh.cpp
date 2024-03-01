@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -271,16 +271,10 @@ void FEA_Module_SGH::setup()
         } // view scope
           // debug print
           // std::cout << "ELEMENT RELATIVE DENSITY TEST " << relative_element_densities.host(0) << std::endl;
-    }
-    else
-    {
-        for (int elem_id = 0; elem_id < rnum_elem; elem_id++)
-        {
-            relative_element_densities.host(elem_id) = 1;
-        } // for
+          
+        relative_element_densities.update_device();
     }
 
-    relative_element_densities.update_device();
 
     // loop over the fill instructures
     for (int f_id = 0; f_id < num_fills; f_id++)
@@ -319,7 +313,12 @@ void FEA_Module_SGH::setup()
             if (fill_this)
             {
                 // density
-                elem_den(elem_gid) = mat_fill(f_id).den * relative_element_densities(elem_gid);
+                if (simparam->topology_optimization_on){
+                    elem_den(elem_gid) = mat_fill(f_id).den * relative_element_densities(elem_gid);
+                }
+                else{
+                    elem_den(elem_gid) = mat_fill(f_id).den;
+                }
 
                 // mass
                 elem_mass(elem_gid) = elem_den(elem_gid) * elem_vol(elem_gid);
