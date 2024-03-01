@@ -1205,7 +1205,29 @@ void Implicit_Solver::setup_optimization_problem(){
         }//boundary patch for
     }
     }//if to check if shell should have any constraints
-  
+
+    //constraints due to specified user regions
+    const size_t num_fills = simparam.optimization_options.volume_bound_constraints.size();
+    const_host_vec_array node_coords_view = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
+    const DCArrayKokkos <Optimization_Bound_Constraint_Region> mat_fill = simparam.optimization_options.optimization_bound_constraint_volumes;
+    
+    for(int ifill = 0; ifill < num_fills; ifill++){
+      for(int inode = 0; inode < nlocal_nodes; inode++){
+        real_t node_coords[3];
+        node_coords[0] = node_coords_view(inode,0);
+        node_coords[1] = node_coords_view(inode,1);
+        node_coords[2] = node_coords_view(inode,2);
+        bool fill_this = mat_fill(ifill).volume.contains(node_coords);
+        if(fill_this){
+          node_densities_lower_bound(inode,0) = mat_fill(ifill).set_lower_density_bound;
+          //make sure 0 setting is increased to the epsilon value setting
+          if(node_densities_lower_bound(inode,0) < simparam.optimization_options.density_epsilon){
+            node_densities_lower_bound(inode,0) = simparam.optimization_options.density_epsilon;
+          }
+          node_densities_upper_bound(inode,0) = mat_fill(ifill).set_upper_density_bound;
+        }
+      }//node for
+    }//fill region for
   }
   else{
     //initialize memory for volume storage
