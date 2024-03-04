@@ -2479,12 +2479,14 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
         node_rid = map->getLocalElement(node_gid);
         //extract nodal position from the read buffer
         //for tecplot format this is the three coords in the same line
-        dof_value = atof(&read_buffer(scan_loop,1,0));
+        dof_value = atof(&read_buffer(scan_loop,0,0));
         node_coords(node_rid, 0) = dof_value * unit_scaling;
-        dof_value = atof(&read_buffer(scan_loop,2,0));
+        dof_value = atof(&read_buffer(scan_loop,1,0));
         node_coords(node_rid, 1) = dof_value * unit_scaling;
-        dof_value = atof(&read_buffer(scan_loop,3,0));
-        node_coords(node_rid, 2) = dof_value * unit_scaling;
+        if(num_dim==3){
+            dof_value = atof(&read_buffer(scan_loop,2,0));
+            node_coords(node_rid, 2) = dof_value * unit_scaling;
+        }
         //extract density if restarting
       }
     }
@@ -2555,13 +2557,14 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
     int elem_tally = 0;
     while (searching_for_elements&&in->good()) {
       getline(*in, read_line);
-      //std::cout << read_line << std::endl;
+    //   if(elem_tally < 1000)
+    //   std::cout << read_line << std::endl;
       line_parse.clear();
       line_parse.str(read_line);
       line_parse >> substring;
       
       //std::cout << substring << std::endl;
-      if(substring == "*End Part"){
+      if(substring == "*End"){
         searching_for_elements = false;
           break;
       }
@@ -2584,19 +2587,19 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
   if(etype_index==1){
     mesh_element_type = elements::elem_types::Hex8;
     nodes_per_element = 8;
-    //elem_words_per_line += 8;
+    elem_words_per_line = 8;
     max_nodes_per_patch = 4;
   }
   else if(etype_index==2){
     mesh_element_type = elements::elem_types::Hex20;
     nodes_per_element = 20;
-    //elem_words_per_line += 20;
+    elem_words_per_line = 20;
     max_nodes_per_patch = 8;
   }
   else if(etype_index==3){
     mesh_element_type = elements::elem_types::Hex32;
     nodes_per_element = 32;
-    //elem_words_per_line += 32;
+    elem_words_per_line = 32;
     max_nodes_per_patch = 12;
   }
   else{
@@ -2618,7 +2621,6 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
   //calculate buffer iterations to read number of lines
   buffer_iterations = num_elem/BUFFER_LINES;
   int assign_flag;
-
   //dynamic buffer used to store elements before we know how many this rank needs
   std::vector<size_t> element_temp(BUFFER_LINES*elem_words_per_line);
   std::vector<size_t> global_indices_temp(BUFFER_LINES);
@@ -2635,15 +2637,21 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
     if(myrank==0&&buffer_iteration<buffer_iterations-1){
       for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++) {
         getline(*in,read_line);
+        // if(buffer_iteration==0&&buffer_loop<100){
+        //     std::cout << read_line << std::endl;
+        // }
         line_parse.clear();
         line_parse.str(read_line);
-        line_parse >> substring; //skip elem gid since coding for sorted inp
+        std::getline(line_parse, substring, ',');; //skip elem gid since coding for sorted inp
         for(int iword = 0; iword < elem_words_per_line; iword++){
         //read portions of the line into the substring variable
-        line_parse >> substring;
+        std::getline(line_parse, substring, ',');
+        //line_parse >> substring;
         //assign the substring variable as a word of the read buffer
         strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
+        std::cout<< substring << " ";
         }
+        std::cout<< std::endl;
       }
     }
     else if(myrank==0){
@@ -2652,10 +2660,11 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
         getline(*in,read_line);
         line_parse.clear();
         line_parse.str(read_line);
-        line_parse >> substring; //skip elem gid since coding for sorted inp
+        std::getline(line_parse, substring, ','); //skip elem gid since coding for sorted inp
         for(int iword = 0; iword < elem_words_per_line; iword++){
         //read portions of the line into the substring variable
-        line_parse >> substring;
+        std::getline(line_parse, substring, ',');
+        //line_parse >> substring;
         //assign the substring variable as a word of the read buffer
         strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
         }

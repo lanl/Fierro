@@ -166,6 +166,9 @@ void Implicit_Solver::run(){
         case MESH_FORMAT::ensight:
           read_mesh_ensight(mesh_file_name);
           break;
+        case MESH_FORMAT::abaqus_inp:
+          read_mesh_abaqus_inp(mesh_file_name);
+          break;
       }
     } else {
       generate_mesh(simparam.mesh_generation_options.value());
