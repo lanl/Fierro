@@ -99,7 +99,7 @@ def magnitude(array):
     mag = math.sqrt(sum(x**2 for x in array))
     return mag
 
-
+# Run each test
 for i in range(len(tests)):
     
     # Run simulation
