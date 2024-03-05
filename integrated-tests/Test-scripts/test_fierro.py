@@ -117,7 +117,7 @@ for i in range(len(tests)):
 
     for i in range(len(position_diff)):
         if position_diff[i] >= 1.0e-6:
-            raise ValueError("Position difference out of range")
+            raise ValueError(" ****************** ERROR: Position difference out of range for "+tests[i]+" problem ****************** ")
 
     print("Removing simulation outputs")
     os.system('rm -rf  vtk' )
