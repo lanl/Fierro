@@ -44,5 +44,7 @@ jobs:
 
     - name: Run tests
       run: |
-         cd integrated-tests; python3 test_fierro.py
+         cd integrated-tests
+         chmod +x test_fierro.py
+         python3 test_fierro.py
       shell: bash
