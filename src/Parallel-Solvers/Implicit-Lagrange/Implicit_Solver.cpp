@@ -169,6 +169,9 @@ void Implicit_Solver::run(){
         case MESH_FORMAT::abaqus_inp:
           read_mesh_abaqus_inp(mesh_file_name);
           break;
+        default:
+          *fos << "ERROR: MESH FILE FORMAT NOT SUPPORTED BY IMPLICIT SOLVER" << std::endl;
+          exit_solver(0);
       }
     } else {
       generate_mesh(simparam.mesh_generation_options.value());

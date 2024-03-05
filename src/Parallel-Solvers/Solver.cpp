@@ -2649,9 +2649,7 @@ void Solver::read_mesh_abaqus_inp(const char *MESH){
         //line_parse >> substring;
         //assign the substring variable as a word of the read buffer
         strcpy(&read_buffer(buffer_loop,iword,0),substring.c_str());
-        std::cout<< substring << " ";
         }
-        std::cout<< std::endl;
       }
     }
     else if(myrank==0){

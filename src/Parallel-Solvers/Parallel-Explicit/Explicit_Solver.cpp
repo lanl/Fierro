@@ -176,6 +176,13 @@ void Explicit_Solver::run() {
       case MESH_FORMAT::ensight:
         read_mesh_ensight(mesh_file_name);
         break;
+      case MESH_FORMAT::abaqus_inp:
+        read_mesh_abaqus_inp(mesh_file_name);
+        break;
+      default:
+        *fos << "ERROR: MESH FILE FORMAT NOT SUPPORTED BY EXPLICIT SOLVER" << std::endl;
+        exit_solver(0);
+  
     }
   } else {
     generate_mesh(simparam.mesh_generation_options.value());
@@ -1355,7 +1362,7 @@ void Explicit_Solver::setup_optimization_problem(){
     const size_t num_fills = simparam.optimization_options.volume_bound_constraints.size();
     const_host_vec_array node_coords_view = node_coords_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadOnly);
     const DCArrayKokkos <Optimization_Bound_Constraint_Region> mat_fill = simparam.optimization_options.optimization_bound_constraint_volumes;
-    
+
     for(int ifill = 0; ifill < num_fills; ifill++){
       for(int inode = 0; inode < nlocal_nodes; inode++){
         real_t node_coords[3];
