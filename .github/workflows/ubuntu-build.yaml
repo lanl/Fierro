@@ -41,6 +41,7 @@ jobs:
     - name: Run tests
       run: |
          pwd
+         ls -al
          python3 test_fierro.py
       working-directory: ./integrated-tests
       shell: bash
