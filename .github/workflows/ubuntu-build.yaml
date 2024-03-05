@@ -36,12 +36,14 @@ jobs:
       run:
         sudo apt-get install python3.6
       shell: bash
-   
+    - name: Run build script
+      run: |
+         chmod +x ./scripts/build-fierro.sh
+         ./scripts/build-fierro.sh --build_action=full-app --solver=all --kokkos_build_type=openmp --build_cores=2
+      shell: bash
 
     - name: Run tests
       run: |
-         pwd
-         ls -al
          python3 test_fierro.py
       working-directory: ./integrated-tests/Test-scripts
       shell: bash
