@@ -869,7 +869,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                                      phi_previous_adjoint_vector(node_gid, idim) / node_mass(node_gid);
                     midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + previous_adjoint_vector(node_gid, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // half step update for RK2 scheme; EQUATION 2
@@ -900,7 +900,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                     // rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
                     phi_midpoint_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt / 2 + phi_previous_adjoint_vector(node_gid, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // phi_adjoint_vector_distributed->describe(*fos,Teuchos::VERB_EXTREME);
@@ -922,7 +922,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                 rate_of_change = -(matrix_contribution + psi_previous_adjoint_vector(elem_gid, 0) * Power_Gradient_Energies(elem_gid)) / elem_mass(elem_gid);
                 // rate_of_change = -0.0000001*previous_adjoint_vector(node_gid,idim);
                 psi_midpoint_adjoint_vector(elem_gid, 0) = -rate_of_change * global_dt / 2 + psi_previous_adjoint_vector(elem_gid, 0);
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // apply BCs to adjoint vector, only matters for the momentum adjoint if using strictly velocity boundary conditions
@@ -948,12 +948,12 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                     node_vel(rk_level, node_gid, idim)    = 0.5 * (previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim));
                     node_coords(rk_level, node_gid, idim) = 0.5 * (previous_coordinate_vector(node_gid, idim) + current_coordinate_vector(node_gid, idim));
                 }
-      });
+            });
             Kokkos::fence();
 
             FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
                 elem_sie(rk_level, elem_gid) = 0.5 * (previous_element_internal_energy(elem_gid, 0) + current_element_internal_energy(elem_gid, 0));
-      });
+            });
             Kokkos::fence();
 
             // set state according to phase data at this timestep
@@ -1149,7 +1149,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                                      phi_midpoint_adjoint_vector(node_gid, idim) / node_mass(node_gid);
                     current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + previous_adjoint_vector(node_gid, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // full step update with midpoint gradient for RK2 scheme; EQUATION 2
@@ -1180,7 +1180,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                     // rate_of_change = -0.0000001*midpoint_adjoint_vector(node_gid,idim);
                     phi_current_adjoint_vector(node_gid, idim) = -rate_of_change * global_dt + phi_previous_adjoint_vector(node_gid, idim);
                 }
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             // full step update for RK2 scheme; EQUATION 3
@@ -1201,7 +1201,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                 // debug
                 // std::cout << "PSI RATE OF CHANGE " << rate_of_change << std::endl;
                 psi_current_adjoint_vector(elem_gid, 0) = -rate_of_change * global_dt + psi_previous_adjoint_vector(elem_gid, 0);
-      }); // end parallel for
+            }); // end parallel for
             Kokkos::fence();
 
             boundary_adjoint(*mesh, boundary, current_adjoint_vector, phi_current_adjoint_vector, psi_current_adjoint_vector);
