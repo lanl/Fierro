@@ -628,6 +628,7 @@ void VTKHexN(const mesh_t &mesh,
     
     
     const int num_scalar_vars = 9;
+
     const int num_vec_vars = 2;
 
 
@@ -637,9 +638,8 @@ void VTKHexN(const mesh_t &mesh,
     char * name = new char [name_tmp.length()+1];
     std::strcpy (name, name_tmp.c_str());
 
-
     const char scalar_var_names[num_scalar_vars][15] = {
-        "den" ,"pres","sie","vol", "mass", "sspd", "speed", "mat_id", "elem_switch"
+        "vol", "mat_id", "elem_switch", "speed", "sie", "den", "pres", "mass", "sspd"
     };
 
     const char vec_var_names[num_vec_vars][15] = {
@@ -649,11 +649,14 @@ void VTKHexN(const mesh_t &mesh,
     // short hand
     const size_t num_nodes = mesh.num_nodes;
     const size_t num_elems = mesh.num_elems;
+    const size_t num_zones = mesh.num_zones_in_elem*num_elems;
+    const size_t num_legendre_pts = mesh.num_leg_gauss_in_elem*num_elems;
+    //printf(" num legendre pts = %zu \n", num_legndre_pts);
     const size_t num_dims  = mesh.num_dims;
 
     // save the cell state to an array for exporting to graphics files
-    auto elem_fields = CArray <double> (num_elems, num_scalar_vars);
-    int elem_switch = 1;
+    CArray <double> elem_fields(num_elems, num_scalar_vars);
+    size_t elem_switch = 1;
 
 
     DCArrayKokkos <double> speed(num_elems);
@@ -686,24 +689,43 @@ void VTKHexN(const mesh_t &mesh,
     }); // end parallel for
     speed.update_host();
 
+   
 
+    
     // save the output scale fields to a single 2D array
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++){
         
         // save outputs
-        elem_fields(elem_gid, 0) = elem_den.host(elem_gid);
-        elem_fields(elem_gid, 1) = elem_pres.host(elem_gid);
-        elem_fields(elem_gid, 2) = elem_sie.host(1, elem_gid);
-        elem_fields(elem_gid, 3) = elem_vol.host(elem_gid);
-        elem_fields(elem_gid, 4) = elem_mass.host(elem_gid);
-        elem_fields(elem_gid, 5) = elem_sspd.host(elem_gid);
-        elem_fields(elem_gid, 6) = speed.host(elem_gid);
-        elem_fields(elem_gid, 7) = (double)elem_mat_id.host(elem_gid);
-        elem_fields(elem_gid, 8) = (double)elem_switch;
+        elem_fields(elem_gid, 0) = elem_vol.host(elem_gid);        
+        elem_fields(elem_gid, 1) = (double)elem_mat_id.host(elem_gid);
+        elem_fields(elem_gid, 2) = (double)elem_switch;
+        elem_fields(elem_gid, 3) = speed.host(elem_gid);
+        
+
+        for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
+            int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
+            elem_fields(elem_gid,4) += elem_sie.host(1, zone_gid);
+        }
+        elem_fields(elem_gid, 4) = elem_fields(elem_gid,4)/mesh.num_zones_in_elem;
+        
+        for (int legendre_lid = 0; legendre_lid < mesh.num_leg_gauss_in_elem; legendre_lid++){
+            int legendre_gid = mesh.legendre_in_elem(elem_gid, legendre_lid);
+            
+            elem_fields(elem_gid, 5) += elem_den.host(legendre_gid);
+            elem_fields(elem_gid, 6) += elem_pres.host(legendre_gid);
+            elem_fields(elem_gid, 7) += elem_mass.host(legendre_gid);
+            elem_fields(elem_gid, 8) += elem_sspd.host(legendre_gid);
+        }
+        elem_fields(elem_gid, 5) = elem_fields(elem_gid, 5)/mesh.num_leg_gauss_in_elem;
+        elem_fields(elem_gid, 6) = elem_fields(elem_gid, 6)/mesh.num_leg_gauss_in_elem;
+        elem_fields(elem_gid, 7) = elem_fields(elem_gid, 7)/mesh.num_leg_gauss_in_elem;
+        elem_fields(elem_gid, 8) = elem_fields(elem_gid, 8)/mesh.num_leg_gauss_in_elem;
+
         elem_switch *= -1;
+
+
     } // end for elements
-    
-    
+        
     // save the vertex vector fields to an array for exporting to graphics files
     CArray <double> vec_fields(num_nodes, num_vec_vars, 3);
 
@@ -864,20 +886,44 @@ void VTKHexN(const mesh_t &mesh,
     ---------------------------------------------------------------------------
     */
     
-    fprintf(out[0],"\n");
-    fprintf(out[0],"CELL_DATA %zu \n", mesh.num_elems);
+    // fprintf(out[0],"\n");
+    // fprintf(out[0],"ELEM_DATA %zu \n", mesh.num_elems);
     
-    // ensight_vars = (den, pres,...)
+    // for (int var=0; var<num_elem_scalar_vars; var++){
+
+    //     fprintf(out[0],"SCALARS %s float 1\n", elem_scalar_var_names[var]); // the 1 is number of scalar components [1:4]
+    //     fprintf(out[0],"LOOKUP_TABLE default\n");
+    //     for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++) {
+    //         fprintf(out[0],"%f\n",elem_fields(elem_gid, var));
+    //     } // end for elem
+        
+    // } // end for scalar_vars
+    
+    fprintf(out[0],"\n");
+    fprintf(out[0],"CELL_DATA %zu \n", num_zones);
+    
     for (int var=0; var<num_scalar_vars; var++){
 
         fprintf(out[0],"SCALARS %s float 1\n", scalar_var_names[var]); // the 1 is number of scalar components [1:4]
         fprintf(out[0],"LOOKUP_TABLE default\n");
-        for (size_t elem_gid=0; elem_gid<mesh.num_elems; elem_gid++) {
-            fprintf(out[0],"%f\n",elem_fields(elem_gid, var));
+        for (size_t elem_gid=0; elem_gid < mesh.num_elems; elem_gid++) {
+            fprintf(out[0],"%f\n", elem_fields(elem_gid, var));
         } // end for elem
         
     } // end for scalar_vars
+
+    // fprintf(out[0],"\n");
+    // fprintf(out[0],"STRONG_DATA %zu \n", num_legendre_pts);
     
+    // for (int var=0; var<num_strong_scalar_vars; var++){
+
+    //     fprintf(out[0],"SCALARS %s float 1\n", strong_scalar_var_names[var]); // the 1 is number of scalar components [1:4]
+    //     fprintf(out[0],"LOOKUP_TABLE default\n");
+    //     for (size_t legendre_gid=0; legendre_gid < num_legendre_pts; legendre_gid++) {
+    //         fprintf(out[0],"%f\n",strong_fields(legendre_gid, var));
+    //     } // end for elem
+        
+    // } // end for scalar_vars
     
     fclose(out[0]);
 

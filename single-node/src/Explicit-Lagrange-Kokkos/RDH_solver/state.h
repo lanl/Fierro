@@ -134,14 +134,14 @@ struct elem_t {
         this->sie = CArray <double> (num_rk, num_zones);
 
         this->vol    = CArray <double> (num_elems);
-        this->div    = CArray <double> (num_elems);
-        this->mass   = CArray <double> (num_elems);
+        this->div    = CArray <double> (num_leg_pts);
+        this->mass   = CArray <double> (num_leg_pts);
         this->mat_id = CArray <size_t> (num_elems);
 
         this->den    = CArray <double> (num_leg_pts); 
-        this->pres   = CArray <double> (num_zones);//leg_pts);
-        this->stress = CArray <double> (num_rk, num_zones, num_dims, num_dims);//(num_rk, num_leg_pts, num_dims, num_dims);
-        this->sspd = CArray <double> (num_zones);//leg_pts);
+        this->pres   = CArray <double> (num_leg_pts);//leg_pts);
+        this->stress = CArray <double> (num_rk, num_leg_pts, num_dims, num_dims);//(num_rk, num_leg_pts, num_dims, num_dims);
+        this->sspd = CArray <double> (num_leg_pts);//leg_pts);
 	
         this->gauss_lobatto_jacobian = CArray <double> (num_lob_pts, num_dims, num_dims);
         this->gauss_legendre_jacobian = CArray <double> (num_leg_pts, num_dims, num_dims);
@@ -197,6 +197,7 @@ struct material_t {
     void (*eos_model) (const DViewCArrayKokkos <double> &elem_pres,
                        const DViewCArrayKokkos <double> &elem_stress,
                        const size_t elem_gid,
+                       const size_t legendre_gid,
                        const size_t mat_id,
                        const DViewCArrayKokkos <double> &elem_state_vars,
                        const DViewCArrayKokkos <double> &elem_sspd,

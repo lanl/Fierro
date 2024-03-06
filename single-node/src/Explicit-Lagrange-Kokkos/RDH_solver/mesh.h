@@ -350,7 +350,7 @@ struct mesh_t {
         corners_in_elem = CArrayKokkos <size_t> (num_elems, num_nodes_in_elem);
         zones_in_elem = zones_in_elem_t(num_zones_in_elem);
 	    surfs_in_elem = CArrayKokkos <size_t> (num_elems, num_surfs_in_elem);
-        nodes_in_zone = CArrayKokkos <size_t> (num_zones*num_nodes_in_zone); 
+        nodes_in_zone = CArrayKokkos <size_t> (num_zones, num_nodes_in_zone); 
         legendre_in_elem = legendre_in_elem_t(num_leg_gauss_in_elem);
 
         return;
@@ -581,8 +581,8 @@ struct mesh_t {
 
             //legendre_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_legendre_in_patch);
             
-            printf("num_patches_in_elem = %zu \n", num_patches_in_elem);
-            printf("num_nodes_in_patch = %zu \n", num_nodes_in_patch);
+            //printf("num_patches_in_elem = %zu \n", num_patches_in_elem);
+            //printf("num_nodes_in_patch = %zu \n", num_nodes_in_patch);
             //printf("num_lobatto_in_patch = %zu \n", num_lobatto_in_patch);
             //printf("num_legendre_in_patch = %zu \n", num_legendre_in_patch);
             printf("num_surfaces = %zu \n", num_surfs_in_elem);
@@ -732,12 +732,12 @@ struct mesh_t {
                     } // end for k
                 } // end for j
                 
-                printf("i-minus\n");
+                //printf("i-minus\n");
                 
                 // i-plus-dir patches
                 i_patch = num_1D-1;
-                printf("num_1D = %zu \n", num_1D);
-                printf("i_patch = %d \n", i_patch);
+                // printf("num_1D = %zu \n", num_1D);
+                // printf("i_patch = %d \n", i_patch);
                 printf("num_nodes_in_elem %zu \n", num_nodes_in_elem);
                 for (int k=0; k<num_1D-1; k++){
                     for (int j=0; j<num_1D-1; j++){
@@ -765,7 +765,7 @@ struct mesh_t {
                     } // end for j
                 } // end for k
                 
-                printf("i-plus\n");
+                //printf("i-plus\n");
                 
                 /*
                     
@@ -808,7 +808,7 @@ struct mesh_t {
                     } // end for i
                 } // end for k
                 
-                printf("j-minus\n");
+                //printf("j-minus\n");
                 
                 j_patch=num_1D-1;
                 for (int k=0; k<num_1D-1; k++){
@@ -833,7 +833,7 @@ struct mesh_t {
                     } // end for i
                 } // end for k
                 
-                printf("j-plus\n");
+                //printf("j-plus\n");
                 
                 
                 
@@ -879,7 +879,7 @@ struct mesh_t {
                         
                     } // end for i
                 } // end for j
-                printf("k-minus\n");
+                //printf("k-minus\n");
                 
                 k_patch=num_1D-1;
                 for (int j=0; j<num_1D-1; j++){
@@ -905,7 +905,7 @@ struct mesh_t {
                 } // end for j
                 
                 
-                printf("k-plus\n");
+                //printf("k-plus\n");
                 
                 
                 count = 0;
@@ -1001,41 +1001,33 @@ struct mesh_t {
 
             //build zones in high order element
             FOR_ALL_CLASS(elem_gid, 0, num_elems, {
-                //for (int zone_lid = 0; zone_lid < num_zones_in_elem; zone_lid++){
-                    
-                    
-                    size_t node_lids[8]; // temp storage for local node ids
-                    //printf(" before loop node_lids \n");
-                    for (int k = 0; k < num_1D-1; k++){
-                        for (int j = 0; j < num_1D-1; j++){
-                            for (int i = 0; i < num_1D-1; i++){
-
-                                node_lids[0] = i   + j*num_1D     + k*num_1D*num_1D; // i,j,k
-                                node_lids[1] = i+1 + j*num_1D     + k*num_1D*num_1D; // i+1, j, k
-                                node_lids[2] = i   + (j+1)*num_1D + k*num_1D*num_1D; // i,j+1,k
-                                node_lids[3] = i+1 + (j+1)*num_1D + k*num_1D*num_1D; // i+1, j+1, k
-                                node_lids[4] = i   + j*num_1D     + (k+1)*num_1D*num_1D; // i, j , k+1
-                                node_lids[5] = i+1 + j*num_1D     + (k+1)*num_1D*num_1D; //i + 1, j , k+1
-                                node_lids[6] = i   + (j+1)*num_1D + (k+1)*num_1D*num_1D; // i,j,k
-                                node_lids[7] = i+1 + (j+1)*num_1D + (k+1)*num_1D*num_1D; // i+1, j+1, k+1
-
-                                size_t zone_lid = node_lids[0];
-
-                                size_t zone_gid = zones_in_elem(elem_gid, zone_lid);
-                                //printf(" after loop node_lids \n");
-                                for (int node_lid = 0; node_lid < 8; node_lid++){
-                                    // get global id for the node
-
-                                    size_t node_gid = nodes_in_elem(elem_gid, node_lids[node_lid]);
-                                    // if (elem_gid== 15){
-                                    //     printf(" above nodes_in_zone assignment, %zu \n", node_gid);
-                                    // }
-                                    nodes_in_zone(zone_gid, node_lid) = node_gid;
-                                }
-                            }// i
-                        }// j
-                    }// k
-                    
+                
+                size_t node_lids[8]; // temp storage for local node ids
+                for (int k = 0; k < num_1D-1; k++){
+                    for (int j = 0; j < num_1D-1; j++){
+                        for (int i = 0; i < num_1D-1; i++){
+                            node_lids[0] = i   + j*(num_1D)     + k*(num_1D)*(num_1D); // i,j,k
+                            node_lids[1] = i+1 + j*(num_1D)     + k*(num_1D)*(num_1D); // i+1, j, k
+                            node_lids[2] = i  + (j+1)*(num_1D) + k*(num_1D)*(num_1D); // i,j+1,k
+                            node_lids[3] = i+1 + (j+1)*(num_1D) + k*(num_1D)*(num_1D); // i+1, j+1, k
+                            node_lids[4] = i   + j*(num_1D)     + (k+1)*(num_1D)*(num_1D); // i, j , k+1
+                            node_lids[5] = i+1 + j*(num_1D)     + (k+1)*(num_1D)*(num_1D); //i + 1, j , k+1
+                            node_lids[6] = i   + (j+1)*(num_1D) + (k+1)*(num_1D)*(num_1D); // i,j+1,k+1
+                            node_lids[7] = i+1 + (j+1)*(num_1D) + (k+1)*(num_1D)*(num_1D); // i+1, j+1, k+1
+                            
+                            size_t zone_lid = i + j*(num_1D-1) + k*(num_1D-1)*(num_1D-1);
+                            size_t zone_gid = zones_in_elem(elem_gid, zone_lid);
+                            
+                            for (int node_lid = 0; node_lid < 8; node_lid++){
+                                // get global id for the node
+                                size_t node_gid = nodes_in_elem(elem_gid, node_lids[node_lid]);
+                                nodes_in_zone(zone_gid, node_lid) = node_gid;
+                                
+                            }
+                        }// i
+                    }// j
+                }// k
+                
             });// end FOR_ALL elem_gid
 
 
@@ -1222,8 +1214,9 @@ struct mesh_t {
         //size_t exact_num_bdy_patches = (mesh_1D*mesh_1D)*6;
         //printf("num_patches = %lu, exact = %lu \n", num_patches, exact_num_patches);
         //printf("num_bdy_patches = %lu exact = %lu \n", num_bdy_patches, exact_num_bdy_patches);
-        printf("Num patches = %lu \n", num_patches);
-        printf("Num boundary patches = %lu \n", num_bdy_patches);
+        
+        // printf("Num patches = %lu \n", num_patches);
+        // printf("Num boundary patches = %lu \n", num_bdy_patches);
         
         elems_in_patch = CArrayKokkos <size_t> (num_patches, 2);
         nodes_in_patch = CArrayKokkos <size_t> (num_patches, num_nodes_in_patch);
@@ -1458,7 +1451,7 @@ struct mesh_t {
             bdy_nodes(node_gid) = temp_bdy_nodes(node_gid);
         }); // end for boundary node_gid
         
-        printf("Num boundary nodes = %lu \n", num_bdy_nodes);
+        //printf("Num boundary nodes = %lu \n", num_bdy_nodes);
         
         return;
         
@@ -1855,6 +1848,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <boundary_t> &boundary,
            mesh_t &mesh,
            elem_t &elem,
+           fe_ref_elem_t &ref_elem,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
            DViewCArrayKokkos <double> &node_mass,
@@ -1972,6 +1966,7 @@ KOKKOS_FUNCTION
 void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
                const DViewCArrayKokkos <double> &elem_stress,
                const size_t elem_gid,
+               const size_t legendre_gid,
                const size_t mat_id,
                const DViewCArrayKokkos <double> &elem_state_vars,
                const DViewCArrayKokkos <double> &elem_sspd,

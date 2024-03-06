@@ -181,7 +181,8 @@ int main(int argc, char *argv[]){
         const size_t num_leg_pts = elem.num_leg_pts;//*num_elems;
         const size_t num_lob_pts_per_elem = ref_elem.num_gauss_lob_in_elem;
         const size_t num_leg_pts_per_elem = ref_elem.num_gauss_leg_in_elem;
-        //printf(" num_leg_pts_per_elem = %d\n", num_leg_pts_per_elem);
+        // printf(" num_leg_pts_per_elem = %d\n", num_leg_pts_per_elem);
+        //printf(" num_zones_in_elem = %zu and num_zones = %zu \n", mesh.num_zones_in_elem, num_zones);
         // allocate elem_statev
         elem.statev = CArray <double> (num_elems, num_state_vars);
 
@@ -221,30 +222,30 @@ int main(int argc, char *argv[]){
                                             num_leg_pts);
 
         DViewCArrayKokkos <double> elem_pressure(&elem.pres(0),
-                                             num_zones);
+                                             num_leg_pts);
 
         DViewCArrayKokkos <double> elem_stress(&elem.stress(0,0,0,0),
                                                rk_num_bins,
-                                               num_zones,
+                                               num_leg_pts,
                                                3,
                                                3); // always 3D even in 2D-RZ
 
         DViewCArrayKokkos <double> elem_sspd(&elem.sspd(0),
-                                             num_zones);
+                                             num_leg_pts);
 
         DViewCArrayKokkos <double> elem_sie(&elem.sie(0,0),
                                             rk_num_bins,
                                             num_zones);
 
         DViewCArrayKokkos <double> elem_div(&elem.div(0),
-                                            num_elems);
+                                            num_leg_pts);
 
         DViewCArrayKokkos <double> elem_vol(&elem.vol(0),
                                             num_elems);
         
 
         DViewCArrayKokkos <double> elem_mass(&elem.mass(0),
-                                             num_elems);
+                                             num_leg_pts);
 
         DViewCArrayKokkos <size_t> elem_mat_id(&elem.mat_id(0),
                                                num_elems);
@@ -365,6 +366,7 @@ int main(int argc, char *argv[]){
               boundary,
               mesh,
               elem,
+              ref_elem,
               node_coords,
               node_vel,
               node_mass,

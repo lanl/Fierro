@@ -46,7 +46,7 @@ show_help() {
 build_action="full-app"
 solver="RDH"
 machine="darwin"
-kokkos_build_type="cuda"
+kokkos_build_type="serial"
 build_corer="32"
 
 

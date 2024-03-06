@@ -59,6 +59,7 @@ void setup(const CArrayKokkos <material_t> &material,
            const CArrayKokkos <boundary_t> &boundary,
            mesh_t &mesh,
            elem_t &elem,
+           fe_ref_elem_t &ref_elem,
            const DViewCArrayKokkos <double> &node_coords,
            DViewCArrayKokkos <double> &node_vel,
            DViewCArrayKokkos <double> &node_mass,
@@ -90,16 +91,16 @@ void setup(const CArrayKokkos <material_t> &material,
     build_boundry_node_sets(boundary, mesh);
     
     // loop over BCs
-    for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
+    // for (size_t this_bdy = 0; this_bdy < num_bcs; this_bdy++){
         
-        RUN({
-            printf("Boundary Condition number %lu \n", this_bdy);
-            printf("  Num bdy patches in this set = %lu \n", mesh.bdy_patches_in_set.stride(this_bdy));
-            printf("  Num bdy nodes in this set = %lu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
-        });
-        Kokkos::fence();
+    //     RUN({
+    //         printf("Boundary Condition number %lu \n", this_bdy);
+    //         printf("  Num bdy patches in this set = %lu \n", mesh.bdy_patches_in_set.stride(this_bdy));
+    //         printf("  Num bdy nodes in this set = %lu \n", mesh.bdy_nodes_in_set.stride(this_bdy));
+    //     });
+    //     Kokkos::fence();
 
-    }// end for
+    // }// end for
     
     
     // ---- Read model values from a file ----
@@ -312,14 +313,13 @@ void setup(const CArrayKokkos <material_t> &material,
                 } // end logical on type
 
                 
+                
 
-                for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
-                    int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
-                    // density
-                    elem_den(leg_gid) = mat_fill(f_id).den;
-                    //printf( "density in elem %d at legendre_pt %d is %f \n", elem_gid, leg_lid, elem_den(leg_gid) ); 
-                }
+                
+                    // loop over the nodes in elem and apply velocity
+                
 
+                // Building polynomial coefficients for elem fields //
                 for (int zone_lid = 0; zone_lid < mesh.num_zones_in_elem; zone_lid++){
                     
                     int zone_gid = mesh.zones_in_elem(elem_gid, zone_lid);
@@ -332,54 +332,42 @@ void setup(const CArrayKokkos <material_t> &material,
                     zone_coords[1] = 0.0;
                     zone_coords[2] = 0.0;
 
-                    // get the coordinates of the element center
-                    
+                    // get the coordinates of the zone center
+                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
+                        zone_coords[0] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 0);
+                        zone_coords[1] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 1);
+                        if (mesh.num_dims == 3){
+                            zone_coords[2] += node_coords(rk_level, mesh.nodes_in_zone(zone_gid, node_lid), 2);
+                        } else
+                        {
+                            zone_coords[2] = 0.0;
+                        }
+                    } // end loop over nodes in element
+                    zone_coords[0] = zone_coords[0]/mesh.num_nodes_in_zone;
+                    zone_coords[1] = zone_coords[1]/mesh.num_nodes_in_zone;
+                    zone_coords[2] = zone_coords[2]/mesh.num_nodes_in_zone;
 
                     
                     // printf("zone_coord at dim %d is %f \n", 0, zone_coords[0] );
                     // printf("zone_coord at dim %d is %f \n", 1, zone_coords[1] );
                     // printf("zone_coord at dim %d is %f \n", 2, zone_coords[2] );
                     
-                    // WARNING WARNING WARNING, any reason we need a zonal mass? // 
-                    elem_mass(elem_gid) = elem_den(zone_gid)/elem_vol(elem_gid);
-                    //printf( "mass in elem %d is %f \n", elem_gid, elem_mass(elem_gid) ); 
-
                     
                     // specific internal energy at each "time bin"
                     elem_sie( 0, zone_gid) = mat_fill(f_id).sie;
                     elem_sie( 1, zone_gid) = mat_fill(f_id).sie;
-            
-                    
-                    
-                    // --- stress tensor ---
-                    // always 3D even for 2D-RZ
-                    for (size_t i=0; i<3; i++){
-                        for (size_t j=0; j<3; j++){
-                            elem_stress( 0,zone_gid,i,j) = 0.0;
-                            elem_stress( 1,zone_gid,i,j) = 0.0;
-                        }        
-                    }  // end for
                     
                     
                     
-                    // --- Pressure and stress ---
-                    material(mat_id).eos_model(elem_pres,
-                                            elem_stress,
-                                            elem_gid,
-                                            elem_mat_id(elem_gid),
-                                            elem_statev,
-                                            elem_sspd,
-                                            elem_den(zone_gid),
-                                            elem_sie(1,zone_gid));
                             
-                // loop over the nodes in elem and apply velocity
+
                 for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_zone; node_lid++){
 
                     // get the mesh node index
-                    printf(" before assignment of node_gid in setup \n");
+                    
                     size_t node_gid = mesh.nodes_in_zone(zone_gid, node_lid);
-                    printf(" assigned node_gid in setup \n");
-                
+                    
+                    
                     // --- Velocity ---
                     switch(mat_fill(f_id).velocity)
                     {
@@ -475,10 +463,17 @@ void setup(const CArrayKokkos <material_t> &material,
                             break;
                         }
                         case init_conds::tg_vortex:
-                        {
+                        {   
+                            //printf(" In zone %zu for node_lid %zu returning node_gid %zu \n", zone_gid, node_lid, node_gid);
+
                             //printf(" setting up tg vortex \n");
-                            node_vel(0, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
-                            node_vel(0, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
+
+                            // printf("node_coords at node %d and dim %d is %f \n", node_gid, 0, node_coords(0, node_gid, 0));
+                            // printf("node_coords at node %d and dim %d is %f \n", node_gid, 1, node_coords(0, node_gid, 1));
+                            // printf("node_coords at node %d and dim %d is %f \n", node_gid, 2, node_coords(0, node_gid, 2));
+
+                            node_vel(0, node_gid, 0) = sin( PI * node_coords(1, node_gid, 0) ) * cos(PI * node_coords(1, node_gid, 1)); 
+                            node_vel(0, node_gid, 1) =  -1.0*cos(PI * node_coords(1, node_gid, 0)) * sin(PI * node_coords(1, node_gid, 1)); 
                             if (mesh.num_dims == 3) node_vel(0, node_gid, 2) = 0.0;
                             
                             // printf("node_vel at node %d and dim %d is %f \n", node_gid, 0, node_vel(0, node_gid, 0));
@@ -488,6 +483,7 @@ void setup(const CArrayKokkos <material_t> &material,
                             node_vel(1, node_gid, 0) = sin(PI * node_coords(1,node_gid, 0)) * cos(PI * node_coords(1,node_gid, 1)); 
                             node_vel(1, node_gid, 1) =  -1.0*cos(PI * node_coords(1,node_gid, 0)) * sin(PI * node_coords(1,node_gid, 1)); 
                             if (mesh.num_dims == 3) node_vel(1, node_gid, 2) = 0.0;
+
                             break;
                         }
                     } // end of switch
@@ -502,18 +498,55 @@ void setup(const CArrayKokkos <material_t> &material,
                         size_t mat_id = f_id;
                         double gamma = state_vars(0,0);//elem_statev(elem_gid,4); // gamma value
 
-                        elem_pres(zone_gid) = 0.25*( cos(2.0*PI*zone_coords[0]) + cos(2.0*PI*zone_coords[1]) ) + 1.0;
+                        double temp_pres = 0.0;
+                        temp_pres = 0.25*( cos(2.0*PI*zone_coords[0]) + cos(2.0*PI*zone_coords[1]) ) + 1.0;
                         //printf("elem_pres in zone %d is %f \n", zone_gid, elem_pres(zone_gid));
 
                         //printf("density is %f \n", mat_fill(f_id).den);
                         //printf("gamma is %f \n", gamma);
 
-                        elem_sie(0, zone_gid) = elem_pres(zone_gid)/(mat_fill(f_id).den*(gamma - 1.0));
-                        elem_sie(1, zone_gid) = elem_pres(zone_gid)/(mat_fill(f_id).den*(gamma - 1.0));
+                        elem_sie(0, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
+                        elem_sie(1, zone_gid) = temp_pres/(mat_fill(f_id).den*(gamma - 1.0));
                         //printf("elem_sie in zone %d is %f \n", zone_gid, elem_sie(1, zone_gid));
 
                     } // end if
                 }// end loop over zones
+
+                // -- FIX to be mat_pt_den -- //
+                for (int leg_lid = 0; leg_lid < mesh.num_leg_gauss_in_elem; leg_lid++){
+                    int leg_gid = mesh.legendre_in_elem(elem_gid, leg_lid);
+                    // density
+                    elem_den(leg_gid) = mat_fill(f_id).den;
+                    //printf( "density in elem %d at legendre_pt %d is %f \n", elem_gid, leg_lid, elem_den(leg_gid) ); 
+                    // --- stress tensor ---
+                    // always 3D even for 2D-RZ
+                    for (size_t i=0; i<3; i++){
+                        for (size_t j=0; j<3; j++){
+                            elem_stress( 0, leg_gid, i, j) = 0.0;
+                            elem_stress( 1, leg_gid, i, j) = 0.0;
+                        }        
+                    }  // end for
+                    // WARNING WARNING : Note elem_vol //
+                    elem_mass(leg_gid) = elem_den(leg_gid)/elem_vol(elem_gid);
+                    
+                    // interpolate sie at quad point //
+                    double interp_sie = 0.0;
+                    for (int T_dof = 0; T_dof < ref_elem.num_elem_basis; T_dof++){
+                        int T_dof_gid = mesh.zones_in_elem(elem_gid, T_dof);
+                        interp_sie += ref_elem.gauss_leg_elem_basis(leg_lid, T_dof)*elem_sie(1, T_dof_gid);
+                    }
+                    // -- FIX make over legendre points
+                    // --- Pressure and stress ---
+                    material(mat_id).eos_model(elem_pres,
+                                            elem_stress,
+                                            elem_gid,
+                                            leg_gid,
+                                            elem_mat_id(elem_gid),
+                                            elem_statev,
+                                            elem_sspd,
+                                            elem_den(leg_gid),
+                                            interp_sie);
+                }
             } // end if fill
           
         }); // end FOR_ALL element loop

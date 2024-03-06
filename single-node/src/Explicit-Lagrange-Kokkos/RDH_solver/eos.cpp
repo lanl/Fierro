@@ -13,6 +13,7 @@ KOKKOS_FUNCTION
 void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
                const DViewCArrayKokkos <double> &elem_stress,
                const size_t elem_gid,
+               const size_t legendre_gid,
                const size_t mat_id,
                const DViewCArrayKokkos <double> &elem_state_vars,
                const DViewCArrayKokkos <double> &elem_sspd,
@@ -32,14 +33,14 @@ void ideal_gas(const DViewCArrayKokkos <double> &elem_pres,
     
     
     // pressure
-    elem_pres(elem_gid) = (gamma - 1.0)*sie*den;
+    elem_pres(legendre_gid) = (gamma - 1.0)*sie*den;
     
     // sound speed
-    elem_sspd(elem_gid) = sqrt(gamma*(gamma - 1.0)*sie);
+    elem_sspd(legendre_gid) = sqrt(gamma*(gamma - 1.0)*sie);
     
     // ensure soundspeed is great than min specified
-    if (elem_sspd(elem_gid) < csmin){
-        elem_sspd(elem_gid) = csmin;
+    if (elem_sspd(legendre_gid) < csmin){
+        elem_sspd(legendre_gid) = csmin;
     } // end if
 
     return;
