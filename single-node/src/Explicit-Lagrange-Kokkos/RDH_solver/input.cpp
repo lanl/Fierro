@@ -754,9 +754,9 @@ void input(CArrayKokkos <material_t> &material,
             mat_fill(0).sie = 0.0;             // initial specific internal energy
             
             mat_fill(0).velocity = init_conds::tg_vortex;
-            mat_fill(1).u = 0.0;   // initial x-dir velocity
-            mat_fill(1).v = 0.0;   // initial y-dir velocity
-            mat_fill(1).w = 0.0;   // initial z-dir velocity
+            mat_fill(0).u = 0.0;   // initial x-dir velocity
+            mat_fill(0).v = 0.0;   // initial y-dir velocity
+            mat_fill(0).w = 0.0;   // initial z-dir velocity
             
             // ---- boundary conditions ---- //
             

@@ -900,7 +900,7 @@ void VTKHexN(const mesh_t &mesh,
     // } // end for scalar_vars
     
     fprintf(out[0],"\n");
-    fprintf(out[0],"CELL_DATA %zu \n", num_zones);
+    fprintf(out[0],"CELL_DATA %zu \n", mesh.num_elems);
     
     for (int var=0; var<num_scalar_vars; var++){
 
