@@ -58,27 +58,23 @@ void FEA_Module_SGH::update_velocity_sgh(double rk_alpha,
     // walk over the nodes to update the velocity
     FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         double node_force[3];
-        for (size_t dim = 0; dim < num_dims; dim++)
-        {
+        for (size_t dim = 0; dim < num_dims; dim++) {
             node_force[dim] = 0.0;
         } // end for dim
 
         // loop over all corners around the node and calculate the nodal force
-        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
-        {
+        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
             // Get corner gid
             size_t corner_gid = corners_in_node(node_gid, corner_lid);
 
             // loop over dimension
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 node_force[dim] += corner_force(corner_gid, dim);
             } // end for dim
         } // end for corner_lid
 
         // update the velocity
-        for (int dim = 0; dim < num_dims; dim++)
-        {
+        for (int dim = 0; dim < num_dims; dim++) {
             node_vel(rk_level, node_gid, dim) = node_vel(0, node_gid, dim) +
                                                 rk_alpha * dt * node_force[dim] / node_mass(node_gid);
         } // end for dim
@@ -123,8 +119,7 @@ void FEA_Module_SGH::get_velgrad(ViewCArrayKokkos<double>& vel_grad,
     ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem);
 
     // get the vertex velocities for the cell
-    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-    {
+    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
         // Get node gid
         size_t node_gid = elem_node_gids(node_lid);
 
@@ -222,8 +217,7 @@ void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
     ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
 
     // get the vertex velocities for the cell
-    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-    {
+    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
         // Get node gid
         size_t node_gid = elem_node_gids(node_lid);
 
@@ -232,10 +226,8 @@ void FEA_Module_SGH::get_velgrad2D(ViewCArrayKokkos<double>& vel_grad,
     } // end for
 
     // initialize to zero
-    for (size_t i = 0; i < 3; i++)
-    {
-        for (size_t j = 0; j < 3; j++)
-        {
+    for (size_t i = 0; i < 3; i++) {
+        for (size_t j = 0; j < 3; j++) {
             vel_grad(i, j) = 0.0;
         }
     }
@@ -311,8 +303,7 @@ void FEA_Module_SGH::get_divergence(DViewCArrayKokkos<double>& elem_div,
                     rk_level);
 
         // get the vertex velocities for the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
 
@@ -399,8 +390,7 @@ void FEA_Module_SGH::get_divergence2D(DViewCArrayKokkos<double>& elem_div,
         // true volume uses the elem_vol
 
         // get the vertex velocities and node coordinate for the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
 
@@ -470,19 +460,15 @@ void FEA_Module_SGH::decompose_vel_grad(ViewCArrayKokkos<double>& D_tensor,
     const size_t num_dims = 3;
 
     // initialize to zero
-    for (size_t i = 0; i < num_dims; i++)
-    {
-        for (size_t j = 0; j < num_dims; j++)
-        {
+    for (size_t i = 0; i < num_dims; i++) {
+        for (size_t j = 0; j < num_dims; j++) {
             D_tensor(i, j) = 0.0;
             W_tensor(i, j) = 0.0;
         }
     } // end for
 
-    for (size_t i = 0; i < num_dims; i++)
-    {
-        for (size_t j = 0; j < num_dims; j++)
-        {
+    for (size_t i = 0; i < num_dims; i++) {
+        for (size_t j = 0; j < num_dims; j++) {
             D_tensor(i, j) = 0.5 * (vel_grad(i, j) + vel_grad(j, i));
             W_tensor(i, j) = 0.5 * (vel_grad(i, j) - vel_grad(j, i));
         }

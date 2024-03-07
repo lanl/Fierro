@@ -82,12 +82,9 @@ patch 6: [4,5,6,7]  zeta-plus  dir
 KOKKOS_INLINE_FUNCTION
 void bubble_sort(size_t arr[], const size_t num)
 {
-    for (size_t i = 0; i < (num - 1); i++)
-    {
-        for (size_t j = 0; j < (num - i - 1); j++)
-        {
-            if (arr[j] > arr[j + 1])
-            {
+    for (size_t i = 0; i < (num - 1); i++) {
+        for (size_t j = 0; j < (num - i - 1); j++) {
+            if (arr[j] > arr[j + 1]) {
                 size_t temp = arr[j];
                 arr[j]     = arr[j + 1];
                 arr[j + 1] = temp;
@@ -214,8 +211,7 @@ struct mesh_t
     {
         num_dims = num_dims_inp;
         num_nodes_in_elem = 1;
-        for (int dim = 0; dim < num_dims; dim++)
-        {
+        for (int dim = 0; dim < num_dims; dim++) {
             num_nodes_in_elem *= 2;
         }
         num_elems       = num_elems_inp;
@@ -260,8 +256,7 @@ struct mesh_t
             num_corners_in_node(node_gid) = 0;
         });
 
-        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++)
-        {
+        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             FOR_ALL_CLASS(node_lid, 0, num_nodes_in_elem, {
                 // get the global_id of the node
                 size_t node_gid = nodes_in_elem(elem_gid, node_lid);
@@ -285,8 +280,7 @@ struct mesh_t
         elems_in_node = RaggedRightArrayKokkos<size_t>(num_corners_in_node, "elems_in_node");
 
         // populate the elems connected to a node list and corners in a node
-        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++)
-        {
+        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             FOR_ALL_CLASS(node_lid, 0, num_nodes_in_elem, {
                 // get the global_id of the node
                 size_t node_gid = nodes_in_elem(elem_gid, node_lid);
@@ -328,8 +322,7 @@ struct mesh_t
             // num_corners_in_node = num_elems_in_node
             size_t max_num = num_corners_in_node(node_gid);
 
-            if (max_num > max_num_lcl)
-            {
+            if (max_num > max_num_lcl) {
                 max_num_lcl = max_num;
             }
         }, max_num_elems_in_node); // end parallel reduction on max
@@ -346,14 +339,12 @@ struct mesh_t
 
         // find and save neighboring elem_gids of an elem
         FOR_ALL_CLASS(elem_gid, 0, num_elems, {
-            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-            {
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
                 // get the gid for the node
                 size_t node_id = nodes_in_elem(elem_gid, node_lid);
 
                 // loop over all elems connected to node_gid
-                for (int elem_lid = 0; elem_lid < num_corners_in_node(node_id); elem_lid++)
-                {
+                for (int elem_lid = 0; elem_lid < num_corners_in_node(node_id); elem_lid++) {
                     // get the global id for the neighboring elem
                     size_t neighbor_elem_gid = elems_in_node(node_id, elem_lid);
 
@@ -361,23 +352,19 @@ struct mesh_t
                     size_t save = 1;
 
                     // a true neighbor_elem_id is not equal to elem_gid
-                    if (neighbor_elem_gid == elem_gid)
-                    {
+                    if (neighbor_elem_gid == elem_gid) {
                         save = 0;  // don't save
                     } // end if
 
                     // check to see if the neighbor_elem_gid has been saved already
                     size_t num_saved = temp_elems_in_elem.stride(elem_gid);
-                    for (size_t i = 0; i < num_saved; i++)
-                    {
-                        if (neighbor_elem_gid == temp_elems_in_elem(elem_gid, i))
-                        {
+                    for (size_t i = 0; i < num_saved; i++) {
+                        if (neighbor_elem_gid == temp_elems_in_elem(elem_gid, i)) {
                             save = 0;   // don't save, it has been saved already
                         } // end if
                     } // end for i
 
-                    if (save == 1)
-                    {
+                    if (save == 1) {
                         // increment the number of neighboring elements saved
                         temp_elems_in_elem.stride(elem_gid)++;
 
@@ -396,8 +383,7 @@ struct mesh_t
         elems_in_elem = RaggedRightArrayKokkos<size_t>(num_elems_in_elem, "elems_in_elem");
 
         FOR_ALL_CLASS(elem_gid, 0, num_elems, {
-            for (size_t i = 0; i < num_elems_in_elem(elem_gid); i++)
-            {
+            for (size_t i = 0; i < num_elems_in_elem(elem_gid); i++) {
                 elems_in_elem(elem_gid, i) = temp_elems_in_elem(elem_gid, i);
             } // end for i
         });  // end FOR_ALL elems
@@ -427,8 +413,7 @@ struct mesh_t
 
         size_t node_lids_in_patch_in_elem[24];
 
-        if (num_dims == 3)
-        {
+        if (num_dims == 3) {
             size_t temp_node_lids[24] = { 0, 4, 7, 3,
                                           1, 2, 6, 5,
                                           0, 1, 5, 4,
@@ -436,13 +421,11 @@ struct mesh_t
                                           0, 3, 2, 1,
                                           4, 5, 6, 7 };
 
-            for (size_t i = 0; i < 24; i++)
-            {
+            for (size_t i = 0; i < 24; i++) {
                 node_lids_in_patch_in_elem[i] = temp_node_lids[i];
             } // end for i
         }
-        else
-        {
+        else{
             //   J
             //   |
             // 3---2
@@ -455,8 +438,7 @@ struct mesh_t
               0, 1,
               3, 2 };
 
-            for (size_t i = 0; i < 8; i++)
-            {
+            for (size_t i = 0; i < 8; i++) {
                 node_lids_in_patch_in_elem[i] = temp_node_lids[i];
             } // end for i
         } // end if on dims
@@ -477,13 +459,11 @@ struct mesh_t
 
         // step 1) calculate the hash values for each patch in the element
         FOR_ALL_CLASS(elem_gid, 0, num_elems, {
-            for (size_t patch_lid = 0; patch_lid < num_patches_in_elem; patch_lid++)
-            {
+            for (size_t patch_lid = 0; patch_lid < num_patches_in_elem; patch_lid++) {
                 size_t sorted_patch_nodes[4];  // note: cannot be allocated with num_nodes_in_patch
 
                 // first save the patch nodes
-                for (size_t patch_node_lid = 0; patch_node_lid < num_nodes_in_patch; patch_node_lid++)
-                {
+                for (size_t patch_node_lid = 0; patch_node_lid < num_nodes_in_patch; patch_node_lid++) {
                     // get the local node index of the element for this patch and node in patch
                     size_t node_lid = node_ordering_in_elem(patch_lid, patch_node_lid);
 
@@ -495,12 +475,10 @@ struct mesh_t
                 bubble_sort(sorted_patch_nodes, num_nodes_in_patch);
 
                 long long int hash_key;
-                if (num_dims == 2)
-                {
+                if (num_dims == 2) {
                     hash_key = (sorted_patch_nodes[0] + num_nodes * sorted_patch_nodes[1]);
                 }
-                else
-                {
+                else{
                     hash_key = (sorted_patch_nodes[1] + num_nodes * sorted_patch_nodes[2] +
                                 num_nodes * num_nodes * sorted_patch_nodes[3]);  // 3 largest node values
                 } // end if on dims
@@ -518,29 +496,23 @@ struct mesh_t
 
             size_t patch_gid     = 0;
             size_t bdy_patch_gid = 0;
-            for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++)
-            {
-                for (size_t patch_lid = 0; patch_lid < num_patches_in_elem; patch_lid++)
-                {
+            for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+                for (size_t patch_lid = 0; patch_lid < num_patches_in_elem; patch_lid++) {
                     long long int hash_key = hash_keys_in_elem(elem_gid, patch_lid);
                     size_t exit = 0;
 
-                    if (hash_key < 0)
-                    {
+                    if (hash_key < 0) {
                         // find the nighboring patch with the same hash_key
 
-                        for (size_t neighbor_elem_lid = 0; neighbor_elem_lid < num_elems_in_elem(elem_gid); neighbor_elem_lid++)
-                        {
+                        for (size_t neighbor_elem_lid = 0; neighbor_elem_lid < num_elems_in_elem(elem_gid); neighbor_elem_lid++) {
                             // get the neighboring element global index
                             size_t neighbor_elem_gid = elems_in_elem(elem_gid, neighbor_elem_lid);
 
-                            for (size_t neighbor_patch_lid = 0; neighbor_patch_lid < num_patches_in_elem; neighbor_patch_lid++)
-                            {
+                            for (size_t neighbor_patch_lid = 0; neighbor_patch_lid < num_patches_in_elem; neighbor_patch_lid++) {
                                 // this hash is from the nodes on the patch
                                 long long int neighbor_hash_key = hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid);
 
-                                if (neighbor_hash_key == hash_keys_in_elem(elem_gid, patch_lid))
-                                {
+                                if (neighbor_hash_key == hash_keys_in_elem(elem_gid, patch_lid)) {
                                     // save the respective elem_gid's as they are patch neighbors
                                     hash_keys_in_elem(elem_gid, patch_lid) = neighbor_elem_gid;
                                     hash_keys_in_elem(neighbor_elem_gid, neighbor_patch_lid) = elem_gid;
@@ -560,8 +532,7 @@ struct mesh_t
                                 } // end if
                             } // end for loop over a neighbors patch set
 
-                            if (exit == 1)
-                            {
+                            if (exit == 1) {
                                 break;
                             }
                         } // end for loop over elem neighbors
@@ -569,10 +540,8 @@ struct mesh_t
                 } // end for patch_lid
 
                 // remaining negative hash key values are the boundary patches
-                for (size_t patch_lid = 0; patch_lid < num_patches_in_elem; patch_lid++)
-                {
-                    if (hash_keys_in_elem(elem_gid, patch_lid) < 0)
-                    {
+                for (size_t patch_lid = 0; patch_lid < num_patches_in_elem; patch_lid++) {
+                    if (hash_keys_in_elem(elem_gid, patch_lid) < 0) {
                         hash_keys_in_elem(elem_gid, patch_lid) = elem_gid;
                         // neighboring_side_lids(elem_gid, patch_lid) = patch_lid;
 
@@ -616,8 +585,7 @@ struct mesh_t
             num_elems_in_patch_saved(patch_gid) = 0;
         });
 
-        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++)
-        {
+        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             FOR_ALL_CLASS(patch_lid, 0, num_patches_in_elem, {
                 size_t patch_gid = patches_in_elem(elem_gid, patch_lid);
 
@@ -629,8 +597,7 @@ struct mesh_t
                 num_elems_in_patch_saved(patch_gid)++;
 
                 // save the nodes on this patch
-                for (size_t patch_node_lid = 0; patch_node_lid < num_nodes_in_patch; patch_node_lid++)
-                {
+                for (size_t patch_node_lid = 0; patch_node_lid < num_nodes_in_patch; patch_node_lid++) {
                     // get the local node index of the element for this patch and node in patch
                     size_t node_lid = node_ordering_in_elem(patch_lid, patch_node_lid);
 
@@ -660,18 +627,15 @@ struct mesh_t
 
         RUN_CLASS({
             num_bdy_nodes_saved(0) = 0;
-            for (size_t bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches; bdy_patch_gid++)
-            {
+            for (size_t bdy_patch_gid = 0; bdy_patch_gid < num_bdy_patches; bdy_patch_gid++) {
                 // get the global index of the patch that is on the boundary
                 size_t patch_gid = bdy_patches(bdy_patch_gid);
 
                 // tag the boundary nodes
-                for (size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++)
-                {
+                for (size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++) {
                     size_t node_gid = nodes_in_patch(patch_gid, node_lid);
 
-                    if (hash_bdy_nodes(node_gid) < 0)
-                    {
+                    if (hash_bdy_nodes(node_gid) < 0) {
                         hash_bdy_nodes(node_gid) = node_gid;
                         temp_bdy_nodes(num_bdy_nodes_saved(0)) = node_gid;
 
@@ -717,8 +681,7 @@ struct mesh_t
             // num_corners_in_node = num_elems_in_node
             size_t max_num = num_corners_in_node(node_gid);
 
-            if (max_num > max_num_lcl)
-            {
+            if (max_num > max_num_lcl) {
                 max_num_lcl = max_num;
             }
         }, max_num_elems_in_node); // end parallel reduction on max
@@ -732,24 +695,19 @@ struct mesh_t
 
         // walk over the patches and save the node node connectivity
         RUN_CLASS({
-            if (num_dims == 3)
-            {
-                for (size_t patch_gid = 0; patch_gid < num_patches; patch_gid++)
-                {
-                    for (size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++)
-                    {
+            if (num_dims == 3) {
+                for (size_t patch_gid = 0; patch_gid < num_patches; patch_gid++) {
+                    for (size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++) {
                         // the first node on the edge
                         size_t node_gid_0 = nodes_in_patch(patch_gid, node_lid);
 
                         // second node on this edge
                         size_t node_gid_1;
 
-                        if (node_lid == num_nodes_in_patch - 1)
-                        {
+                        if (node_lid == num_nodes_in_patch - 1) {
                             node_gid_1 = nodes_in_patch(patch_gid, 0);
                         }
-                        else
-                        {
+                        else{
                             node_gid_1 = nodes_in_patch(patch_gid, node_lid + 1);
                         } // end if
 
@@ -760,25 +718,20 @@ struct mesh_t
                         size_t save_1 = 1;
 
                         // check to see if the node_gid_1 was already saved
-                        for (size_t contents_lid = 0; contents_lid < num_saved_0; contents_lid++)
-                        {
-                            if (temp_nodes_in_nodes(node_gid_0, contents_lid) == node_gid_1)
-                            {
+                        for (size_t contents_lid = 0; contents_lid < num_saved_0; contents_lid++) {
+                            if (temp_nodes_in_nodes(node_gid_0, contents_lid) == node_gid_1) {
                                 save_0 = 0; // don't save, it was already saved
                             }
                         }
 
                         // check to see if the node_gid_0 was already saved
-                        for (size_t contents_lid = 0; contents_lid < num_saved_1; contents_lid++)
-                        {
-                            if (temp_nodes_in_nodes(node_gid_1, contents_lid) == node_gid_0)
-                            {
+                        for (size_t contents_lid = 0; contents_lid < num_saved_1; contents_lid++) {
+                            if (temp_nodes_in_nodes(node_gid_1, contents_lid) == node_gid_0) {
                                 save_1 = 0;  // don't save, it was already saved
                             }
                         }
 
-                        if (save_0 == 1)
-                        {
+                        if (save_0 == 1) {
                             // increment the number of nodes in a node saved
                             temp_nodes_in_nodes.stride(node_gid_0)++;
 
@@ -786,8 +739,7 @@ struct mesh_t
                             temp_nodes_in_nodes(node_gid_0, num_saved_0) = node_gid_1;
                         }
 
-                        if (save_1 == 1)
-                        {
+                        if (save_1 == 1) {
                             // increment the number of nodes in a node saved
                             temp_nodes_in_nodes.stride(node_gid_1)++;
 
@@ -801,10 +753,8 @@ struct mesh_t
                     } // end for node in patch
                 } // end for patches
             } // end if 3D
-            else
-            {
-                for (size_t patch_gid = 0; patch_gid < num_patches; patch_gid++)
-                {
+            else{
+                for (size_t patch_gid = 0; patch_gid < num_patches; patch_gid++) {
                     // the first node on the edge
                     size_t node_gid_0 = nodes_in_patch(patch_gid, 0);
 
@@ -837,8 +787,7 @@ struct mesh_t
         // save the connectivity
         FOR_ALL_CLASS(node_gid, 0, num_nodes, {
             size_t num_saved = 0;
-            for (size_t node_lid = 0; node_lid < num_nodes_in_node(node_gid); node_lid++)
-            {
+            for (size_t node_lid = 0; node_lid < num_nodes_in_node(node_gid); node_lid++) {
                 nodes_in_node(node_gid, num_saved) = temp_nodes_in_nodes(node_gid, num_saved);
 
                 // increment the number of nodes in node saved
@@ -858,8 +807,7 @@ struct mesh_t
     /////////////////////////////////////////////////////////////////////////////
     void init_bdy_sets(size_t num_bcs)
     {
-        if (num_bcs == 0)
-        {
+        if (num_bcs == 0) {
             printf("ERROR: number of boundary sets = 0, set it = 1");
             num_bcs = 1;
         }

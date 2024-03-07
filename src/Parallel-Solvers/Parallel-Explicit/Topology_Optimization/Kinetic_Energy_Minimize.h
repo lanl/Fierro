@@ -148,17 +148,13 @@ public:
         nvalid_modules = valid_fea_modules.size();
 
         const Simulation_Parameters& simparam = Explicit_Solver_Pointer_->simparam;
-        for (const auto& fea_module : Explicit_Solver_Pointer_->fea_modules)
-        {
-            for (int ivalid = 0; ivalid < nvalid_modules; ivalid++)
-            {
-                if (fea_module->Module_Type == FEA_MODULE_TYPE::SGH)
-                {
+        for (const auto& fea_module : Explicit_Solver_Pointer_->fea_modules) {
+            for (int ivalid = 0; ivalid < nvalid_modules; ivalid++) {
+                if (fea_module->Module_Type == FEA_MODULE_TYPE::SGH) {
                     FEM_SGH_ = dynamic_cast<FEA_Module_SGH*>(fea_module);
                     set_module_type = FEA_MODULE_TYPE::SGH;
                 }
-                if (fea_module->Module_Type == FEA_MODULE_TYPE::Dynamic_Elasticity)
-                {
+                if (fea_module->Module_Type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
                     FEM_Dynamic_Elasticity_ = dynamic_cast<FEA_Module_Dynamic_Elasticity*>(fea_module);
                     set_module_type = FEA_MODULE_TYPE::Dynamic_Elasticity;
                 }
@@ -171,12 +167,10 @@ public:
         objective_accumulation = 0;
 
         // ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
-        if (set_module_type == FEA_MODULE_TYPE::SGH)
-        {
+        if (set_module_type == FEA_MODULE_TYPE::SGH) {
             ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_SGH_->node_velocities_distributed);
         }
-        if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity)
-        {
+        if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
             ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_Dynamic_Elasticity_->node_velocities_distributed);
         }
     }
@@ -194,12 +188,10 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void update(const ROL::Vector<real_t>& z, ROL::UpdateType type, int iter = -1)
     {
-        if (set_module_type == FEA_MODULE_TYPE::SGH)
-        {
+        if (set_module_type == FEA_MODULE_TYPE::SGH) {
             update_sgh(z, type, iter);
         }
-        if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity)
-        {
+        if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
             update_elasticity(z, type, iter);
         }
     }
@@ -225,8 +217,7 @@ public:
         ROL::Ptr<const MV>   zp = getVector(z);
         const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
-        if (type == ROL::UpdateType::Initial)
-        {
+        if (type == ROL::UpdateType::Initial) {
             // This is the first call to update
             // first linear solve was done in FEA class run function already
             FEM_Dynamic_Elasticity_->comm_variables(zp);
@@ -236,11 +227,9 @@ public:
             // decide to output current optimization state
             FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
         }
-        else if (type == ROL::UpdateType::Accept)
-        {
+        else if (type == ROL::UpdateType::Accept) {
         }
-        else if (type == ROL::UpdateType::Revert)
-        {
+        else if (type == ROL::UpdateType::Revert) {
             // u_ was set to u=S(x) during a trial update
             // and has been rejected as the new iterate
             // Revert to cached value
@@ -249,32 +238,27 @@ public:
             FEM_Dynamic_Elasticity_->comm_variables(zp);
             // update deformation variables
             FEM_Dynamic_Elasticity_->update_forward_solve(zp);
-            if (Explicit_Solver_Pointer_->myrank == 0)
-            {
+            if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called Revert" << std::endl;
             }
         }
-        else if (type == ROL::UpdateType::Trial)
-        {
+        else if (type == ROL::UpdateType::Trial) {
             // This is a new value of x
             // communicate density variables for ghosts
             FEM_Dynamic_Elasticity_->comm_variables(zp);
             // update deformation variables
             FEM_Dynamic_Elasticity_->update_forward_solve(zp);
-            if (Explicit_Solver_Pointer_->myrank == 0)
-            {
+            if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called Trial" << std::endl;
             }
 
             // decide to output current optimization state
             FEM_Dynamic_Elasticity_->Explicit_Solver_Pointer_->write_outputs();
         }
-        else // ROL::UpdateType::Temp
-        // This is a new value of x used for,
-        // e.g., finite-difference checks
-        {
-            if (Explicit_Solver_Pointer_->myrank == 0)
-            {
+        else{ // ROL::UpdateType::Temp
+            // This is a new value of x used for,
+            // e.g., finite-difference checks
+            if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called Temp" << std::endl;
             }
             FEM_Dynamic_Elasticity_->comm_variables(zp);
@@ -303,11 +287,9 @@ public:
         ROL::Ptr<const MV>   zp = getVector(z);
         const_host_vec_array design_densities = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
-        if (type == ROL::UpdateType::Initial)
-        {
+        if (type == ROL::UpdateType::Initial) {
             // This is the first call to update
-            if (Explicit_Solver_Pointer_->myrank == 0)
-            {
+            if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called SGH Initial" << std::endl;
             }
 
@@ -317,11 +299,9 @@ public:
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
         }
-        else if (type == ROL::UpdateType::Accept)
-        {
+        else if (type == ROL::UpdateType::Accept) {
         }
-        else if (type == ROL::UpdateType::Revert)
-        {
+        else if (type == ROL::UpdateType::Revert) {
             // u_ was set to u=S(x) during a trial update
             // and has been rejected as the new iterate
             // Revert to cached value
@@ -332,32 +312,27 @@ public:
             FEM_SGH_->comm_variables(zp);
             // update deformation variables
             FEM_SGH_->update_forward_solve(zp);
-            if (Explicit_Solver_Pointer_->myrank == 0)
-            {
+            if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called Revert" << std::endl;
             }
         }
-        else if (type == ROL::UpdateType::Trial)
-        {
+        else if (type == ROL::UpdateType::Trial) {
             // This is a new value of x
             // communicate density variables for ghosts
             FEM_SGH_->comm_variables(zp);
             // update deformation variables
             FEM_SGH_->update_forward_solve(zp);
-            if (Explicit_Solver_Pointer_->myrank == 0)
-            {
+            if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called Trial" << std::endl;
             }
 
             // decide to output current optimization state
             // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
         }
-        else // ROL::UpdateType::Temp
-        // This is a new value of x used for,
-        // e.g., finite-difference checks
-        {
-            if (Explicit_Solver_Pointer_->myrank == 0)
-            {
+        else{ // ROL::UpdateType::Temp
+            // This is a new value of x used for,
+            // e.g., finite-difference checks
+            if (Explicit_Solver_Pointer_->myrank == 0) {
                 *fos << "called SGH Temp" << std::endl;
             }
             FEM_SGH_->comm_variables(zp);
@@ -417,18 +392,15 @@ public:
         // std::fflush(stdout);
 
         // ROL_Force = ROL::makePtr<ROL_MV>(FEM_->Global_Nodal_Forces);
-        if (set_module_type == FEA_MODULE_TYPE::SGH)
-        {
+        if (set_module_type == FEA_MODULE_TYPE::SGH) {
             ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_SGH_->node_velocities_distributed);
         }
-        if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity)
-        {
+        if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
             ROL_Velocities = ROL::makePtr<ROL_MV>(FEM_Dynamic_Elasticity_->node_velocities_distributed);
         }
 
         std::cout.precision(10);
-        if (Explicit_Solver_Pointer_->myrank == 0)
-        {
+        if (Explicit_Solver_Pointer_->myrank == 0) {
             std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
         }
 
@@ -459,12 +431,10 @@ public:
         // FEM_->gradient_print_sync=0;
         // get local view of the data
 
-        if (set_module_type == FEA_MODULE_TYPE::SGH)
-        {
+        if (set_module_type == FEA_MODULE_TYPE::SGH) {
             FEM_SGH_->compute_topology_optimization_gradient_full(zp, gp);
         }
-        if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity)
-        {
+        if (set_module_type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
             FEM_Dynamic_Elasticity_->compute_topology_optimization_gradient_full(zp, gp);
         }
         // debug print of gradient

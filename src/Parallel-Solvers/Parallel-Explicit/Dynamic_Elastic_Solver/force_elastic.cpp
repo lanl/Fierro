@@ -83,30 +83,25 @@ void FEA_Module_Dynamic_Elasticity::get_force_elastic(
     FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         size_t dof_id;
         double node_force[3];
-        for (size_t dim = 0; dim < num_dim; dim++)
-        {
+        for (size_t dim = 0; dim < num_dim; dim++) {
             node_force[dim] = 0.0;
         } // end for dim
 
         // loop over all corners around the node and calculate the nodal force
-        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
-        {
+        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
             // Get corner gid
             size_t corner_gid = corners_in_node(node_gid, corner_lid);
 
             // loop over dimension
-            for (size_t dim = 0; dim < num_dim; dim++)
-            {
+            for (size_t dim = 0; dim < num_dim; dim++) {
                 node_force[dim] += -damping_constant * node_vel(rk_level, node_gid, dim);
             } // end for dim
         } // end for corner_lid
 
         // loop over dimension
 
-        for (size_t idim = 0; idim < num_dim; idim++)
-        {
-            for (int idof = 0; idof < Stiffness_Matrix_Strides(node_gid * num_dim + idim % num_dim); idof++)
-            {
+        for (size_t idim = 0; idim < num_dim; idim++) {
+            for (int idof = 0; idof < Stiffness_Matrix_Strides(node_gid * num_dim + idim % num_dim); idof++) {
                 dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim % num_dim, idof);
                 node_force[idim] += -(node_coords(rk_level, dof_id / num_dim, dof_id % num_dim) - all_initial_node_coords(dof_id / num_dim,
                 dof_id % num_dim)) * Stiffness_Matrix(node_gid * num_dim + idim, idof);
@@ -116,8 +111,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_elastic(
         } // end for dim
 
         // update the velocity
-        for (int dim = 0; dim < num_dim; dim++)
-        {
+        for (int dim = 0; dim < num_dim; dim++) {
             node_vel(rk_level, node_gid, dim) = node_vel(0, node_gid, dim) +
                                                 rk_alpha * dt * node_force[dim] / node_mass(node_gid);
         } // end for dim
@@ -175,15 +169,13 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(
 
     // walk over the nodes to update the velocity
     // FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-    for (size_t node_gid = 0; node_gid <= nlocal_nodes; node_gid++)
-    {
+    for (size_t node_gid = 0; node_gid <= nlocal_nodes; node_gid++) {
         double current_node_coords[3];
         size_t dof_id;
         double node_force[3];
         double applied_force[3];
         double radius;
-        for (size_t dim = 0; dim < num_dim; dim++)
-        {
+        for (size_t dim = 0; dim < num_dim; dim++) {
             node_force[dim] = 0.0;
             current_node_coords[dim] = all_initial_node_coords(node_gid, dim);
         } // end for dim
@@ -191,25 +183,21 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(
             + current_node_coords[1] * current_node_coords[1]
             + current_node_coords[2] * current_node_coords[2]);
 
-        for (size_t ilc = 0; ilc < num_lcs; ilc++)
-        {
+        for (size_t ilc = 0; ilc < num_lcs; ilc++) {
             // debug check
             // std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
 
             bool fill_this = loading(ilc).contains(current_node_coords);
-            if (fill_this)
-            {
+            if (fill_this) {
                 // loop over all corners around the node and calculate the nodal force
-                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
-                {
+                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
                     // Get corner gid
                     size_t corner_gid = corners_in_node(node_gid, corner_lid);
                     applied_force[0] = loading(ilc).x;
                     applied_force[1] = loading(ilc).y;
                     applied_force[2] = loading(ilc).z;
                     // loop over dimension
-                    for (size_t dim = 0; dim < num_dim; dim++)
-                    {
+                    for (size_t dim = 0; dim < num_dim; dim++) {
                         node_force[dim] += applied_force[dim] * (all_initial_node_coords(node_gid, 0)
                                                                  + all_initial_node_coords(node_gid, 1)
                                                                  + all_initial_node_coords(node_gid, 2)) / radius;
@@ -217,8 +205,7 @@ void FEA_Module_Dynamic_Elasticity::applied_forces(
                 } // end for corner_lid
 
                 // update the velocity
-                for (int dim = 0; dim < num_dim; dim++)
-                {
+                for (int dim = 0; dim < num_dim; dim++) {
                     node_vel(rk_level, node_gid, dim) +=
                         rk_alpha * dt * node_force[dim] / node_mass(node_gid);
                 } // end for dim
@@ -250,10 +237,8 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix()
     // initialize stiffness Matrix entries to 0
     // debug print
     // std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
-    for (int idof = 0; idof < num_dim * nlocal_nodes; idof++)
-    {
-        for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++)
-        {
+    for (int idof = 0; idof < num_dim * nlocal_nodes; idof++) {
+        for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++) {
             Stiffness_Matrix(idof, istride) = 0;
             // debug print
             // std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -264,10 +249,8 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix()
 
     // reset unsorted DOF Graph corresponding to assembly mapped values
     // debug print
-    for (int idof = 0; idof < num_dim * nlocal_nodes; idof++)
-    {
-        for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++)
-        {
+    for (int idof = 0; idof < num_dim * nlocal_nodes; idof++) {
+        for (int istride = 0; istride < Stiffness_Matrix_Strides(idof); istride++) {
             DOF_Graph_Matrix(idof, istride) = Graph_Matrix(idof / num_dim, istride / num_dim) * num_dim + istride % num_dim;
             // debug print
             // std::cout << "{" <<istride + 1 << "," << DOF_Graph_Matrix(idof,istride) << "} ";
@@ -277,32 +260,25 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix()
     }
 
     // assemble the global stiffness matrix
-    if (num_dim == 2)
-    {
-        for (int ielem = 0; ielem < rnum_elem; ielem++)
-        {
+    if (num_dim == 2) {
+        for (int ielem = 0; ielem < rnum_elem; ielem++) {
             element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
             nodes_per_elem = elem2D->num_nodes();
             // construct local stiffness matrix for this element
             local_matrix_multiply(ielem, Local_Stiffness_Matrix);
             // assign entries of this local matrix to the sparse global matrix storage;
-            for (int inode = 0; inode < nodes_per_elem; inode++)
-            {
+            for (int inode = 0; inode < nodes_per_elem; inode++) {
                 // see if this node is local
                 local_node_index = nodes_in_elem.host(ielem, inode);
-                if (!map->isNodeLocalElement(local_node_index))
-                {
+                if (!map->isNodeLocalElement(local_node_index)) {
                     continue;
                 }
                 // set dof row start index
                 current_row = num_dim * local_node_index;
-                for (int jnode = 0; jnode < nodes_per_elem; jnode++)
-                {
+                for (int jnode = 0; jnode < nodes_per_elem; jnode++) {
                     current_column = num_dim * Global_Stiffness_Matrix_Assembly_Map(ielem, inode, jnode);
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
-                        for (int jdim = 0; jdim < num_dim; jdim++)
-                        {
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        for (int jdim = 0; jdim < num_dim; jdim++) {
                             Stiffness_Matrix(current_row + idim, current_column + jdim) +=
                                 Local_Stiffness_Matrix(num_dim * inode + idim, num_dim * jnode + jdim);
                         }
@@ -312,32 +288,25 @@ void FEA_Module_Dynamic_Elasticity::assemble_matrix()
         }
     }
 
-    if (num_dim == 3)
-    {
-        for (int ielem = 0; ielem < rnum_elem; ielem++)
-        {
+    if (num_dim == 3) {
+        for (int ielem = 0; ielem < rnum_elem; ielem++) {
             element_select->choose_3Delem_type(Element_Types(ielem), elem);
             nodes_per_elem = elem->num_nodes();
             // construct local stiffness matrix for this element
             local_matrix_multiply(ielem, Local_Stiffness_Matrix);
             // assign entries of this local matrix to the sparse global matrix storage;
-            for (int inode = 0; inode < nodes_per_elem; inode++)
-            {
+            for (int inode = 0; inode < nodes_per_elem; inode++) {
                 // see if this node is local
                 local_node_index = nodes_in_elem.host(ielem, inode);
-                if (!map->isNodeLocalElement(local_node_index))
-                {
+                if (!map->isNodeLocalElement(local_node_index)) {
                     continue;
                 }
                 // set dof row start index
                 current_row = num_dim * local_node_index;
-                for (int jnode = 0; jnode < nodes_per_elem; jnode++)
-                {
+                for (int jnode = 0; jnode < nodes_per_elem; jnode++) {
                     current_column = num_dim * Global_Stiffness_Matrix_Assembly_Map(ielem, inode, jnode);
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
-                        for (int jdim = 0; jdim < num_dim; jdim++)
-                        {
+                    for (int idim = 0; idim < num_dim; idim++) {
+                        for (int jdim = 0; jdim < num_dim; jdim++) {
                             Stiffness_Matrix(current_row + idim, current_column + jdim) +=
                                 Local_Stiffness_Matrix(num_dim * inode + idim, num_dim * jnode + jdim);
                         }
@@ -365,12 +334,10 @@ void FEA_Module_Dynamic_Elasticity::Element_Material_Properties(size_t ielem, re
     real_t unit_scaling    = simparam->get_unit_scaling();
     real_t penalty_product = 1;
     real_t density_epsilon = simparam->optimization_options.density_epsilon;
-    if (density < 0)
-    {
+    if (density < 0) {
         density = 0;
     }
-    for (int i = 0; i < penalty_power; i++)
-    {
+    for (int i = 0; i < penalty_power; i++) {
         penalty_product *= density;
     }
     // relationship between density and stiffness
@@ -397,12 +364,10 @@ void FEA_Module_Dynamic_Elasticity::Gradient_Element_Material_Properties(size_t 
     real_t penalty_product = 1;
     real_t density_epsilon = simparam->optimization_options.density_epsilon;
     Element_Modulus_Derivative = 0;
-    if (density < 0)
-    {
+    if (density < 0) {
         density = 0;
     }
-    for (int i = 0; i < penalty_power - 1; i++)
-    {
+    for (int i = 0; i < penalty_power - 1; i++) {
         penalty_product *= density;
     }
     // relationship between density and stiffness
@@ -429,19 +394,15 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
     // local variable for host view of densities from the dual view
 
     const_host_vec_array all_node_densities;
-    if (nodal_density_flag)
-    {
-        if (simparam->optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter)
-        {
+    if (nodal_density_flag) {
+        if (simparam->optimization_options.density_filter == DENSITY_FILTER::helmholtz_filter) {
             all_node_densities = all_filtered_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
         }
-        else
-        {
+        else{
             all_node_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
         }
     }
-    else
-    {
+    else{
         Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
     int    num_dim = simparam->num_dims;
@@ -485,12 +446,10 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_density(elem->num_basis());
 
     size_t Brows;
-    if (num_dim == 2)
-    {
+    if (num_dim == 2) {
         Brows = 3;
     }
-    if (num_dim == 3)
-    {
+    if (num_dim == 3) {
         Brows = 6;
     }
     FArrayKokkos<real_t, array_layout, HostSpace, memory_traits> B_matrix_contribution(Brows, num_dim * elem->num_basis());
@@ -506,28 +465,24 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
 
     real_t current_density = 1;
     CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
-    {
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2)) {
         convert_node_order(0) = 0;
         convert_node_order(1) = 1;
         convert_node_order(2) = 3;
         convert_node_order(3) = 2;
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             convert_node_order(4) = 4;
             convert_node_order(5) = 5;
             convert_node_order(6) = 7;
             convert_node_order(7) = 6;
         }
     }
-    else if ((active_node_ordering_convention == Solver::IJK && num_dim == 3) || (active_node_ordering_convention == Solver::ENSIGHT && num_dim == 2))
-    {
+    else if ((active_node_ordering_convention == Solver::IJK && num_dim == 3) || (active_node_ordering_convention == Solver::ENSIGHT && num_dim == 2)) {
         convert_node_order(0) = 0;
         convert_node_order(1) = 1;
         convert_node_order(2) = 2;
         convert_node_order(3) = 3;
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             convert_node_order(4) = 4;
             convert_node_order(5) = 5;
             convert_node_order(6) = 6;
@@ -536,14 +491,12 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
     }
 
     // acquire set of nodes for this local element
-    for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
-    {
+    for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++) {
         local_node_id = nodes_in_elem.host(ielem, convert_node_order(node_loop));
         nodal_positions(node_loop, 0) = all_initial_node_coords(local_node_id, 0);
         nodal_positions(node_loop, 1) = all_initial_node_coords(local_node_id, 1);
         nodal_positions(node_loop, 2) = all_initial_node_coords(local_node_id, 2);
-        if (nodal_density_flag)
-        {
+        if (nodal_density_flag) {
             nodal_density(node_loop) = all_node_densities(local_node_id, 0);
         }
         /*
@@ -557,58 +510,47 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
     }
 
     // initialize C matrix
-    for (int irow = 0; irow < Brows; irow++)
-    {
-        for (int icol = 0; icol < Brows; icol++)
-        {
+    for (int irow = 0; irow < Brows; irow++) {
+        for (int icol = 0; icol < Brows; icol++) {
             C_matrix(irow, icol) = 0;
         }
     }
 
     // initialize local stiffness matrix storage
-    for (int ifill = 0; ifill < num_dim * nodes_per_elem; ifill++)
-    {
-        for (int jfill = 0; jfill < num_dim * nodes_per_elem; jfill++)
-        {
+    for (int ifill = 0; ifill < num_dim * nodes_per_elem; ifill++) {
+        for (int jfill = 0; jfill < num_dim * nodes_per_elem; jfill++) {
             Local_Matrix(ifill, jfill) = 0;
         }
     }
 
     // B matrix initialization
-    for (int irow = 0; irow < Brows; irow++)
-    {
-        for (int icol = 0; icol < num_dim * nodes_per_elem; icol++)
-        {
+    for (int irow = 0; irow < Brows; irow++) {
+        for (int icol = 0; icol < num_dim * nodes_per_elem; icol++) {
             CB_matrix(irow, icol) = B_matrix(irow, icol) = 0;
         }
     }
 
     // loop over quadrature points
-    for (int iquad = 0; iquad < direct_product_count; iquad++)
-    {
+    for (int iquad = 0; iquad < direct_product_count; iquad++) {
         // set current quadrature point
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             z_quad = iquad / (num_gauss_points * num_gauss_points);
         }
         y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
         x_quad = iquad % num_gauss_points;
         quad_coordinate(0) = legendre_nodes_1D(x_quad);
         quad_coordinate(1) = legendre_nodes_1D(y_quad);
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             quad_coordinate(2) = legendre_nodes_1D(z_quad);
         }
 
         // set current quadrature weight
         quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
         quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
         }
-        else
-        {
+        else{
             quad_coordinate_weight(2) = 1;
         }
         weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
@@ -632,16 +574,14 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
         // std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
         // compute Elastic (C) matrix
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             C_matrix(0, 0) = Pressure_Term;
             C_matrix(1, 1) = Pressure_Term;
             C_matrix(0, 1) = Poisson_Ratio;
             C_matrix(1, 0) = Poisson_Ratio;
             C_matrix(2, 2) = Shear_Term;
         }
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             C_matrix(0, 0) = Pressure_Term;
             C_matrix(1, 1) = Pressure_Term;
             C_matrix(2, 2) = Pressure_Term;
@@ -680,8 +620,7 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
         JT_row1(0) = 0;
         JT_row1(1) = 0;
         JT_row1(2) = 0;
-        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
-        {
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++) {
             JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
             JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
             JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
@@ -691,8 +630,7 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
         JT_row2(0) = 0;
         JT_row2(1) = 0;
         JT_row2(2) = 0;
-        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
-        {
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++) {
             JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
             JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
             JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
@@ -702,8 +640,7 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
         JT_row3(0) = 0;
         JT_row3(1) = 0;
         JT_row3(2) = 0;
-        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++)
-        {
+        for (int node_loop = 0; node_loop < elem->num_basis(); node_loop++) {
             JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
             JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
             JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
@@ -719,16 +656,13 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
         Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
                    JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
                    JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
-        if (Jacobian < 0)
-        {
+        if (Jacobian < 0) {
             Jacobian = -Jacobian;
         }
         invJacobian = 1 / Jacobian;
         // compute the contributions of this quadrature point to the B matrix
-        if (num_dim == 2)
-        {
-            for (int ishape = 0; ishape < nodes_per_elem; ishape++)
-            {
+        if (num_dim == 2) {
+            for (int ishape = 0; ishape < nodes_per_elem; ishape++) {
                 B_matrix_contribution(0, ishape * num_dim) = (basis_derivative_s1(ishape) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
                                                               basis_derivative_s2(ishape) * (JT_row1(1) * JT_row3(2) - JT_row3(1) * JT_row1(2)) +
                                                               basis_derivative_s3(ishape) * (JT_row1(1) * JT_row2(2) - JT_row2(1) * JT_row1(2)));
@@ -767,10 +701,8 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
                                                                   basis_derivative_s3(ishape) * (JT_row1(0) * JT_row2(2) - JT_row2(0) * JT_row1(2)));
             }
         }
-        if (num_dim == 3)
-        {
-            for (int ishape = 0; ishape < nodes_per_elem; ishape++)
-            {
+        if (num_dim == 3) {
+            for (int ishape = 0; ishape < nodes_per_elem; ishape++) {
                 B_matrix_contribution(0, ishape * num_dim) = (basis_derivative_s1(ishape) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
                                                               basis_derivative_s2(ishape) * (JT_row1(1) * JT_row3(2) - JT_row3(1) * JT_row1(2)) +
                                                               basis_derivative_s3(ishape) * (JT_row1(1) * JT_row2(2) - JT_row2(1) * JT_row1(2)));
@@ -822,49 +754,38 @@ void FEA_Module_Dynamic_Elasticity::local_matrix_multiply(int ielem, CArrayKokko
         //end debug block
         */
         // accumulate B matrix
-        for (int irow = 0; irow < Brows; irow++)
-        {
-            for (int icol = 0; icol < num_dim * nodes_per_elem; icol++)
-            {
+        for (int irow = 0; irow < Brows; irow++) {
+            for (int icol = 0; icol < num_dim * nodes_per_elem; icol++) {
                 B_matrix(irow, icol) += B_matrix_contribution(irow, icol);
             }
         }
 
         // compute the previous multiplied by the Elastic (C) Matrix
-        for (int irow = 0; irow < Brows; irow++)
-        {
-            for (int icol = 0; icol < num_dim * nodes_per_elem; icol++)
-            {
+        for (int irow = 0; irow < Brows; irow++) {
+            for (int icol = 0; icol < num_dim * nodes_per_elem; icol++) {
                 CB_matrix_contribution(irow, icol) = 0;
-                for (int span = 0; span < Brows; span++)
-                {
+                for (int span = 0; span < Brows; span++) {
                     CB_matrix_contribution(irow, icol) += C_matrix(irow, span) * B_matrix_contribution(span, icol);
                 }
             }
         }
 
         // accumulate CB matrix
-        for (int irow = 0; irow < Brows; irow++)
-        {
-            for (int icol = 0; icol < num_dim * nodes_per_elem; icol++)
-            {
+        for (int irow = 0; irow < Brows; irow++) {
+            for (int icol = 0; icol < num_dim * nodes_per_elem; icol++) {
                 CB_matrix(irow, icol) += CB_matrix_contribution(irow, icol);
             }
         }
 
         // compute the contributions of this quadrature point to all the local stiffness matrix elements
-        for (int ifill = 0; ifill < num_dim * nodes_per_elem; ifill++)
-        {
-            for (int jfill = ifill; jfill < num_dim * nodes_per_elem; jfill++)
-            {
+        for (int ifill = 0; ifill < num_dim * nodes_per_elem; ifill++) {
+            for (int jfill = ifill; jfill < num_dim * nodes_per_elem; jfill++) {
                 matrix_term = 0;
-                for (int span = 0; span < Brows; span++)
-                {
+                for (int span = 0; span < Brows; span++) {
                     matrix_term += B_matrix_contribution(span, ifill) * CB_matrix_contribution(span, jfill);
                 }
                 Local_Matrix(ifill, jfill) += Elastic_Constant * weight_multiply * matrix_term * invJacobian;
-                if (ifill != jfill)
-                {
+                if (ifill != jfill) {
                     Local_Matrix(jfill, ifill) = Local_Matrix(ifill, jfill);
                 }
             }
@@ -927,12 +848,10 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     const_host_vec_array Element_Densities;
     // local variable for host view of densities from the dual view
     const_host_vec_array all_node_densities;
-    if (nodal_density_flag)
-    {
+    if (nodal_density_flag) {
         all_node_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
-    else
-    {
+    else{
         Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
     }
     int num_dim = simparam->num_dims;
@@ -985,12 +904,10 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     CArrayKokkos<real_t, array_layout, HostSpace, memory_traits> nodal_density(elem->num_basis());
 
     size_t Brows;
-    if (num_dim == 2)
-    {
+    if (num_dim == 2) {
         Brows = 3;
     }
-    if (num_dim == 3)
-    {
+    if (num_dim == 3) {
         Brows = 6;
     }
     FArrayKokkos<real_t, array_layout, HostSpace, memory_traits> B_matrix_contribution(Brows, num_dim * elem->num_basis());
@@ -1008,28 +925,24 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     real_t current_density = 1;
 
     CArrayKokkos<size_t, array_layout, HostSpace, memory_traits> convert_node_order(max_nodes_per_element);
-    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2))
-    {
+    if ((active_node_ordering_convention == Solver::ENSIGHT && num_dim == 3) || (active_node_ordering_convention == Solver::IJK && num_dim == 2)) {
         convert_node_order(0) = 0;
         convert_node_order(1) = 1;
         convert_node_order(2) = 3;
         convert_node_order(3) = 2;
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             convert_node_order(4) = 4;
             convert_node_order(5) = 5;
             convert_node_order(6) = 7;
             convert_node_order(7) = 6;
         }
     }
-    else if ((active_node_ordering_convention == Solver::IJK && num_dim == 3) || (active_node_ordering_convention == Solver::ENSIGHT && num_dim == 2))
-    {
+    else if ((active_node_ordering_convention == Solver::IJK && num_dim == 3) || (active_node_ordering_convention == Solver::ENSIGHT && num_dim == 2)) {
         convert_node_order(0) = 0;
         convert_node_order(1) = 1;
         convert_node_order(2) = 2;
         convert_node_order(3) = 3;
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             convert_node_order(4) = 4;
             convert_node_order(5) = 5;
             convert_node_order(6) = 6;
@@ -1038,34 +951,26 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
     }
 
     // loop through each element and assign the contribution to compliance gradient for each of its local nodes
-    if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-    {
-        if (myrank == 0)
-        {
+    if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+        if (myrank == 0) {
             std::cout << "gradient term derivative of force" << std::endl;
         }
     }
 
-    for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++)
-    {
+    for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++) {
         // compute timestep from time data
         global_dt = time_data[cycle + 1] - time_data[cycle];
 
         // print
-        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-        {
-            if (cycle == 0)
-            {
-                if (myrank == 0)
-                {
+        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+            if (cycle == 0) {
+                if (myrank == 0) {
                     printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                 }
             }
             // print time step every 10 cycles
-            else if (cycle % 20 == 0)
-            {
-                if (myrank == 0)
-                {
+            else if (cycle % 20 == 0) {
+                if (myrank == 0) {
                     printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                 }
             } // end if
@@ -1081,31 +986,25 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
             const_host_vec_array current_coordinate_vector = (*forward_solve_coordinate_data)[cycle]->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
 
             // interface of arrays for current implementation of force calculation
-            for (size_t ielem = 0; ielem < rnum_elem; ielem++)
-            {
+            for (size_t ielem = 0; ielem < rnum_elem; ielem++) {
                 nodes_per_elem = elem->num_basis();
 
                 // initialize C matrix
-                for (int irow = 0; irow < Brows; irow++)
-                {
-                    for (int icol = 0; icol < Brows; icol++)
-                    {
+                for (int irow = 0; irow < Brows; irow++) {
+                    for (int icol = 0; icol < Brows; icol++) {
                         C_matrix(irow, icol) = 0;
                     }
                 }
 
                 // B matrix initialization
-                for (int irow = 0; irow < Brows; irow++)
-                {
-                    for (int icol = 0; icol < num_dim * nodes_per_elem; icol++)
-                    {
+                for (int irow = 0; irow < Brows; irow++) {
+                    for (int icol = 0; icol < num_dim * nodes_per_elem; icol++) {
                         CB_matrix(irow, icol) = 0;
                     }
                 }
 
                 // acquire set of nodes and nodal displacements for this local element
-                for (int node_loop = 0; node_loop < nodes_per_elem; node_loop++)
-                {
+                for (int node_loop = 0; node_loop < nodes_per_elem; node_loop++) {
                     local_node_id = nodes_in_elem.host(ielem, convert_node_order(node_loop));
                     local_dof_idx = nodes_in_elem.host(ielem, convert_node_order(node_loop)) * num_dim;
                     local_dof_idy = local_dof_idx + 1;
@@ -1125,16 +1024,14 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                     current_element_adjoint(node_loop * num_dim)     = 0.5 * (current_adjoint_vector(local_node_id, 0) + next_adjoint_vector(local_node_id, 0));
                     current_element_adjoint(node_loop * num_dim + 1) = 0.5 * (current_adjoint_vector(local_node_id, 1) + next_adjoint_vector(local_node_id, 1));
 
-                    if (num_dim == 3)
-                    {
+                    if (num_dim == 3) {
                         nodal_positions(node_loop, 2) = all_initial_node_coords(local_node_id, 2);
                         current_nodal_displacements(node_loop * num_dim + 2) = 0.5 * (next_coordinate_vector(local_node_id, 2) - all_initial_node_coords(local_node_id,
                         2) + current_coordinate_vector(local_node_id, 2) - all_initial_node_coords(local_node_id, 2));
                         current_element_adjoint(node_loop * num_dim + 2) = 0.5 * (current_adjoint_vector(local_node_id, 2) + next_adjoint_vector(local_node_id, 2));
                     }
 
-                    if (nodal_density_flag)
-                    {
+                    if (nodal_density_flag) {
                         nodal_density(node_loop) = all_node_densities(local_node_id, 0);
                     }
                     // debug print
@@ -1157,31 +1054,26 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                 */
 
                 // loop over quadrature points
-                for (int iquad = 0; iquad < direct_product_count; iquad++)
-                {
+                for (int iquad = 0; iquad < direct_product_count; iquad++) {
                     // set current quadrature point
-                    if (num_dim == 3)
-                    {
+                    if (num_dim == 3) {
                         z_quad = iquad / (num_gauss_points * num_gauss_points);
                     }
                     y_quad = (iquad % (num_gauss_points * num_gauss_points)) / num_gauss_points;
                     x_quad = iquad % num_gauss_points;
                     quad_coordinate(0) = legendre_nodes_1D(x_quad);
                     quad_coordinate(1) = legendre_nodes_1D(y_quad);
-                    if (num_dim == 3)
-                    {
+                    if (num_dim == 3) {
                         quad_coordinate(2) = legendre_nodes_1D(z_quad);
                     }
 
                     // set current quadrature weight
                     quad_coordinate_weight(0) = legendre_weights_1D(x_quad);
                     quad_coordinate_weight(1) = legendre_weights_1D(y_quad);
-                    if (num_dim == 3)
-                    {
+                    if (num_dim == 3) {
                         quad_coordinate_weight(2) = legendre_weights_1D(z_quad);
                     }
-                    else
-                    {
+                    else{
                         quad_coordinate_weight(2) = 1;
                     }
                     weight_multiply = quad_coordinate_weight(0) * quad_coordinate_weight(1) * quad_coordinate_weight(2);
@@ -1200,8 +1092,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                     JT_row1(0) = 0;
                     JT_row1(1) = 0;
                     JT_row1(2) = 0;
-                    for (int node_loop = 0; node_loop < nodes_per_elem; node_loop++)
-                    {
+                    for (int node_loop = 0; node_loop < nodes_per_elem; node_loop++) {
                         JT_row1(0) += nodal_positions(node_loop, 0) * basis_derivative_s1(node_loop);
                         JT_row1(1) += nodal_positions(node_loop, 1) * basis_derivative_s1(node_loop);
                         JT_row1(2) += nodal_positions(node_loop, 2) * basis_derivative_s1(node_loop);
@@ -1211,8 +1102,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                     JT_row2(0) = 0;
                     JT_row2(1) = 0;
                     JT_row2(2) = 0;
-                    for (int node_loop = 0; node_loop < nodes_per_elem; node_loop++)
-                    {
+                    for (int node_loop = 0; node_loop < nodes_per_elem; node_loop++) {
                         JT_row2(0) += nodal_positions(node_loop, 0) * basis_derivative_s2(node_loop);
                         JT_row2(1) += nodal_positions(node_loop, 1) * basis_derivative_s2(node_loop);
                         JT_row2(2) += nodal_positions(node_loop, 2) * basis_derivative_s2(node_loop);
@@ -1222,8 +1112,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                     JT_row3(0) = 0;
                     JT_row3(1) = 0;
                     JT_row3(2) = 0;
-                    for (int node_loop = 0; node_loop < nodes_per_elem; node_loop++)
-                    {
+                    for (int node_loop = 0; node_loop < nodes_per_elem; node_loop++) {
                         JT_row3(0) += nodal_positions(node_loop, 0) * basis_derivative_s3(node_loop);
                         JT_row3(1) += nodal_positions(node_loop, 1) * basis_derivative_s3(node_loop);
                         JT_row3(2) += nodal_positions(node_loop, 2) * basis_derivative_s3(node_loop);
@@ -1233,8 +1122,7 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                     Jacobian = JT_row1(0) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
                                JT_row1(1) * (JT_row2(0) * JT_row3(2) - JT_row3(0) * JT_row2(2)) +
                                JT_row1(2) * (JT_row2(0) * JT_row3(1) - JT_row3(0) * JT_row2(1));
-                    if (Jacobian < 0)
-                    {
+                    if (Jacobian < 0) {
                         Jacobian = -Jacobian;
                     }
                     invJacobian = 1 / Jacobian;
@@ -1246,10 +1134,8 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                     // std::cout << "Current Density " << current_density << std::endl;
 
                     // compute the contributions of this quadrature point to the B matrix
-                    if (num_dim == 2)
-                    {
-                        for (int ishape = 0; ishape < nodes_per_elem; ishape++)
-                        {
+                    if (num_dim == 2) {
+                        for (int ishape = 0; ishape < nodes_per_elem; ishape++) {
                             B_matrix_contribution(0, ishape * num_dim) = (basis_derivative_s1(ishape) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
                                                                           basis_derivative_s2(ishape) * (JT_row1(1) * JT_row3(2) - JT_row3(1) * JT_row1(2)) +
                                                                           basis_derivative_s3(ishape) * (JT_row1(1) * JT_row2(2) - JT_row2(1) * JT_row1(2)));
@@ -1288,10 +1174,8 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                                                                               basis_derivative_s3(ishape) * (JT_row1(0) * JT_row2(2) - JT_row2(0) * JT_row1(2)));
                         }
                     }
-                    if (num_dim == 3)
-                    {
-                        for (int ishape = 0; ishape < nodes_per_elem; ishape++)
-                        {
+                    if (num_dim == 3) {
+                        for (int ishape = 0; ishape < nodes_per_elem; ishape++) {
                             B_matrix_contribution(0, ishape * num_dim) = (basis_derivative_s1(ishape) * (JT_row2(1) * JT_row3(2) - JT_row3(1) * JT_row2(2)) -
                                                                           basis_derivative_s2(ishape) * (JT_row1(1) * JT_row3(2) - JT_row3(1) * JT_row1(2)) +
                                                                           basis_derivative_s3(ishape) * (JT_row1(1) * JT_row2(2) - JT_row2(1) * JT_row1(2)));
@@ -1341,16 +1225,14 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                     // std::cout << "Element Material Params " << Elastic_Constant << std::endl;
 
                     // compute Elastic (C) matrix
-                    if (num_dim == 2)
-                    {
+                    if (num_dim == 2) {
                         C_matrix(0, 0) = Pressure_Term;
                         C_matrix(1, 1) = Pressure_Term;
                         C_matrix(0, 1) = Poisson_Ratio;
                         C_matrix(1, 0) = Poisson_Ratio;
                         C_matrix(2, 2) = Shear_Term;
                     }
-                    if (num_dim == 3)
-                    {
+                    if (num_dim == 3) {
                         C_matrix(0, 0) = Pressure_Term;
                         C_matrix(1, 1) = Pressure_Term;
                         C_matrix(2, 2) = Pressure_Term;
@@ -1366,31 +1248,24 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                     }
 
                     // compute the previous multiplied by the Elastic (C) Matrix
-                    for (int irow = 0; irow < Brows; irow++)
-                    {
-                        for (int icol = 0; icol < num_dim * nodes_per_elem; icol++)
-                        {
+                    for (int irow = 0; irow < Brows; irow++) {
+                        for (int icol = 0; icol < num_dim * nodes_per_elem; icol++) {
                             CB_matrix_contribution(irow, icol) = 0;
-                            for (int span = 0; span < Brows; span++)
-                            {
+                            for (int span = 0; span < Brows; span++) {
                                 CB_matrix_contribution(irow, icol) += C_matrix(irow, span) * B_matrix_contribution(span, icol);
                             }
                         }
                     }
 
                     // compute the contributions of this quadrature point to all the local stiffness matrix elements
-                    for (int ifill = 0; ifill < num_dim * nodes_per_elem; ifill++)
-                    {
-                        for (int jfill = ifill; jfill < num_dim * nodes_per_elem; jfill++)
-                        {
+                    for (int ifill = 0; ifill < num_dim * nodes_per_elem; ifill++) {
+                        for (int jfill = ifill; jfill < num_dim * nodes_per_elem; jfill++) {
                             matrix_term = 0;
-                            for (int span = 0; span < Brows; span++)
-                            {
+                            for (int span = 0; span < Brows; span++) {
                                 matrix_term += B_matrix_contribution(span, ifill) * CB_matrix_contribution(span, jfill);
                             }
                             Local_Matrix_Contribution(ifill, jfill) = matrix_term;
-                            if (ifill != jfill)
-                            {
+                            if (ifill != jfill) {
                                 Local_Matrix_Contribution(jfill, ifill) = Local_Matrix_Contribution(ifill, jfill);
                             }
                         }
@@ -1398,10 +1273,8 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
 
                     // compute inner product for this quadrature point contribution
                     inner_product = 0;
-                    for (int ifill = 0; ifill < num_dim * nodes_per_elem; ifill++)
-                    {
-                        for (int jfill = 0; jfill < num_dim * nodes_per_elem; jfill++)
-                        {
+                    for (int ifill = 0; ifill < num_dim * nodes_per_elem; ifill++) {
+                        for (int jfill = 0; jfill < num_dim * nodes_per_elem; jfill++) {
                             inner_product += Local_Matrix_Contribution(ifill, jfill) * current_element_adjoint(ifill) * current_nodal_displacements(jfill);
                             // debug
                             // if(Local_Matrix_Contribution(ifill, jfill)<0) Local_Matrix_Contribution(ifill, jfill) = - Local_Matrix_Contribution(ifill, jfill);
@@ -1410,10 +1283,8 @@ void FEA_Module_Dynamic_Elasticity::compute_stiffness_gradients(const_host_vec_a
                     }
 
                     // evaluate local stiffness matrix gradient with respect to igradient
-                    for (int igradient = 0; igradient < nodes_per_elem; igradient++)
-                    {
-                        if (!map->isNodeLocalElement(nodes_in_elem.host(ielem, igradient)))
-                        {
+                    for (int igradient = 0; igradient < nodes_per_elem; igradient++) {
+                        if (!map->isNodeLocalElement(nodes_in_elem.host(ielem, igradient))) {
                             continue;
                         }
                         local_node_id = nodes_in_elem.host(ielem, igradient);

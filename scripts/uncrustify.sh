@@ -4,7 +4,9 @@
 # This script assumes uncrustify has been installed
 
 
+
 uncrustifyConfigDir="docs/formatting"
+uncrustify_ex_dir="dev-utils/uncrustify/build"
 # Save the directory the user had before calling
 startDir=$(pwd)
 thisScriptDir=$(dirname "$0")
@@ -15,6 +17,11 @@ echo "Uncrustify config directory: $uncrustifyConfigDir"
 # Get the full path to the config needed by uncrustify
 cd $uncrustifyConfigDir
 fullUncrustifyDir=$(pwd)
+cd $startDir
+
+#Get the full path to the uncrustify executable
+cd $uncrustify_ex_dir
+uncrustify_exe=$(pwd)/uncrustify
 cd $startDir
 
 # Get the source directory
@@ -29,14 +36,14 @@ treeProcess() {
   for file in *.cpp; do
     if [ -f "$file" ]; then
       # echo "Using: $(pwd)/$f"
-      uncrustify -c "$fullUncrustifyDir"/uncrustify.cfg --no-backup "$(pwd)/$file"
+      "$uncrustify_exe" -c "$fullUncrustifyDir"/uncrustify.cfg --no-backup "$(pwd)/$file"
     fi
   done
 
   for file in *.h; do
     if [ -f "$file" ]; then
       # echo "Using: $(pwd)/$f"
-      uncrustify -c "$fullUncrustifyDir"/uncrustify.cfg --no-backup "$(pwd)/$file"
+      "$uncrustify_exe" -c "$fullUncrustifyDir"/uncrustify.cfg --no-backup "$(pwd)/$file"
     fi
   done
 

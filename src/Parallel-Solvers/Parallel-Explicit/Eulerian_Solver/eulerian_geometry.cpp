@@ -30,8 +30,7 @@ void FEA_Module_Eulerian::example_function(double rk_alpha,
 
     // example device loop
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
-        for (int dim = 0; dim < num_dims; dim++)
-        {
+        for (int dim = 0; dim < num_dims; dim++) {
             double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
             node_coords(rk_level, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha * dt * half_vel;
         }
