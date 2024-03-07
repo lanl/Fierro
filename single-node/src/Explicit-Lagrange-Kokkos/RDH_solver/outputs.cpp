@@ -656,6 +656,16 @@ void VTKHexN(const mesh_t &mesh,
 
     // save the cell state to an array for exporting to graphics files
     CArray <double> elem_fields(num_elems, num_scalar_vars);
+
+    // Initialize element field data to zero
+    for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++)
+    {
+        for (int var=0; var<num_scalar_vars; var++)
+        {
+            elem_fields(elem_gid, var) = 0.0;
+        }
+    }
+
     size_t elem_switch = 1;
 
 
@@ -900,7 +910,7 @@ void VTKHexN(const mesh_t &mesh,
     // } // end for scalar_vars
     
     fprintf(out[0],"\n");
-    fprintf(out[0],"CELL_DATA %zu \n", num_zones);
+    fprintf(out[0],"CELL_DATA %zu \n", mesh.num_elems);
     
     for (int var=0; var<num_scalar_vars; var++){
 
@@ -926,5 +936,7 @@ void VTKHexN(const mesh_t &mesh,
     // } // end for scalar_vars
     
     fclose(out[0]);
+
+    delete[] name;
 
 } // end write vtk high-order
