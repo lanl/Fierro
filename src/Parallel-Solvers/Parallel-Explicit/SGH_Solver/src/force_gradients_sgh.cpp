@@ -291,6 +291,9 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                                                                                 sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
                                                                                     + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) )
                                                                                     + (vel(2) - vel_star(2) ) * (vel(2) - vel_star(2) ) );
+                        if(mag_vel==0){
+                            mag_vel_gradient(igradient,jdim) = (1 - 1/num_nodes_in_elem);
+                        }
                     }
                     else
                     {
@@ -298,6 +301,9 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                                                                             sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
                                                                                 + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) )
                                                                                 + (vel(2) - vel_star(2) ) * (vel(2) - vel_star(2) ) );
+                        if(mag_vel==0){
+                            mag_vel_gradient(igradient,jdim) = -1/num_nodes_in_elem;
+                        }
                     }
                 }
             }
@@ -337,6 +343,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                     for(int jdim = 0; jdim < num_dim; jdim++)
                     {
                         muc_gradient(node_lid, igradient, jdim) = material(mat_id).q2 * mag_vel_gradient(igradient,jdim);
+                        //if(muc_gradient(node_lid, igradient, jdim)!=0) std::cout << " NON ZERO " << muc_gradient(node_lid, igradient, jdim) << std::endl;
                     }
                 }
             }
@@ -349,6 +356,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                     for(int jdim = 0; jdim < num_dim; jdim++)
                     {
                         muc_gradient(node_lid, igradient, jdim) = material(mat_id).q2ex * mag_vel_gradient(igradient,jdim);
+                        //if(muc_gradient(node_lid, igradient, jdim)!=0) std::cout << " NON ZERO " << muc_gradient(node_lid, igradient, jdim) << std::endl;
                     }
                 }
             } // end if on divergence sign
@@ -394,7 +402,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
             sum(3) += mu_term;
 
             // sum gradients
-
+            muc(node_lid) = mu_term; // the impeadance time surface area is stored here
             for (int igradient = 0; igradient < num_nodes_in_elem; igradient++)
             {
                 for (int jdim = 0; jdim < num_dims; jdim++)
@@ -415,7 +423,6 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                 }
             }
 
-            muc(node_lid) = mu_term; // the impeadance time surface area is stored here
         } // end for node_lid loop over nodes of the elem
 
         // The Riemann velocity, called vel_star
