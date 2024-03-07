@@ -1,0 +1,6 @@
+{
+  "file-series-version" : "1.0",
+  "files" : [
+    { "name" : "data/VTK0.vtk", "time" :  6.00000e-01 },
+  ]
+}
