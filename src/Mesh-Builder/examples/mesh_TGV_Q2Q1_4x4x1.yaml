@@ -1,0 +1,11 @@
+
+output:
+  name: mesh
+  file_type: VTK
+
+input:
+  type: Box
+  length: [1, 1, 0.33]
+  num_elems: [4, 4, 1]
+  origin: [0, 0, 0]
+  p_order: 2
