@@ -241,9 +241,9 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
 
             ViewCArrayKokkos<double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
 
-            vel_star(0) += vel(0)/num_nodes_in_elem;
-            vel_star(1) += vel(1)/num_nodes_in_elem;
-            vel_star(2) += vel(2)/num_nodes_in_elem;
+            vel_star(0) += vel(0)/((real_t) num_nodes_in_elem);
+            vel_star(1) += vel(1)/((real_t) num_nodes_in_elem);
+            vel_star(2) += vel(2)/((real_t) num_nodes_in_elem);
         } // end for loop over nodes
 
         // find shock direction and shock impedance associated with each node
@@ -287,22 +287,16 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                 {   
                     if(igradient == node_lid)
                     {
-                        mag_vel_gradient(igradient,jdim) = (1 - 1/((real_t) num_nodes_in_elem))*((vel(jdim) - vel_star(jdim) ))/
-                                                                                sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
-                                                                                    + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) )
-                                                                                    + (vel(2) - vel_star(2) ) * (vel(2) - vel_star(2) ) );
-                        if(mag_vel==0){
-                            mag_vel_gradient(igradient,jdim) = (1 - 1/((real_t) num_nodes_in_elem));
+                        mag_vel_gradient(igradient,jdim) = (1.0 - 1.0/((real_t) num_nodes_in_elem))*((vel(jdim) - vel_star(jdim) ))/mag_vel;
+                        if(mag_vel < fuzz){
+                            mag_vel_gradient(igradient,jdim) = (1.0 - 1.0/((real_t) num_nodes_in_elem));
                         }
                     }
                     else
                     {
-                        mag_vel_gradient(igradient,jdim) = -1/((real_t) num_nodes_in_elem)*( (vel(jdim) - vel_star(jdim) ))/
-                                                                            sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
-                                                                                + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) )
-                                                                                + (vel(2) - vel_star(2) ) * (vel(2) - vel_star(2) ) );
-                        if(mag_vel==0){
-                            mag_vel_gradient(igradient,jdim) = -1/((real_t) num_nodes_in_elem);
+                        mag_vel_gradient(igradient,jdim) = -1.0/((real_t) num_nodes_in_elem)*( (vel(jdim) - vel_star(jdim) ))/mag_vel;
+                        if(mag_vel < fuzz){
+                            mag_vel_gradient(igradient,jdim) = 1.0/((real_t) num_nodes_in_elem);
                         }
                     }
                 }
