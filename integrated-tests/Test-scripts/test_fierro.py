@@ -6,13 +6,20 @@ import sys
 import math
 
 executable = "./../../build-fierro-openmp/bin/fierro-parallel-explicit"
-sim_input = "Solver-Inputs/SGH_Sedov_12x12x12.yaml"
 
-# Run simulation
-os.system(executable + ' ' + sim_input)
+inputs = []
+standard_results = []
+
+tests = ["Noh", "Sedov", "Sod"]
+
+position_keyword = "POINTS"
+
+for i in range(len(tests)):
+    inputs.append("Solver-Inputs/SGH_"+tests[i]+"_simple.yaml")
+    standard_results.append("standard-results/SGH/"+tests[i]+"/vtk/data/VTK0.vtk")
 
 
-# Functions for reading results from vtk file
+# Extract vector valued data from vtk output file
 def extract_vector_data(filename, keyword):
     data = []
     found_keyword = False
@@ -36,6 +43,7 @@ def extract_vector_data(filename, keyword):
 
     return data
 
+# Extract scalar valued data from vtk output file
 def extract_scalar_data(filename, keyword):
     data = []
     found_keyword = False
@@ -55,8 +63,7 @@ def extract_scalar_data(filename, keyword):
  
     return data
 
-
-
+# Calculate the percent difference between two arrays of scalars
 def percent_difference_scalars(array1, array2):
     if len(array1) != len(array2):
         raise ValueError("Arrays must have the same length")
@@ -68,6 +75,7 @@ def percent_difference_scalars(array1, array2):
 
     return percent_diff
 
+# Calculate the percent difference between two arrays of vectors
 def percent_difference_vectors(array1, array2):
     if len(array1) != len(array2):
         raise ValueError("Arrays must have the same length")
@@ -80,38 +88,36 @@ def percent_difference_vectors(array1, array2):
         diff = [array2[i][j] - array1[i][j] for j in range(3)]
         percent_diff.append([(diff[j] / array1[i][j]) * 100 if array1[i][j] != 0 else 0 for j in range(3)])
 
-    return percent_diff
+    percent_diff_mag = []
+    for i in range(len(array1)):
+        percent_diff_mag.append(magnitude(percent_diff[i]))
 
+    return percent_diff_mag
+
+# Calculate the magnitude of a vector
 def magnitude(array):
     mag = math.sqrt(sum(x**2 for x in array))
     return mag
 
+# Run each test
+for i in range(len(tests)):
+    
+    # Run simulation
+    print("Running "+tests[i])
+    os.system(executable + ' ' + inputs[i])
 
-# Read ground truth results for sedov
-GT_filename = "standard-results/SGH/Sedov_12x12x12/vtk/data/VTK0.vtk"
+    GT_positions = extract_vector_data(standard_results[i], position_keyword)
 
-velocity_keyword = "VECTORS velocity float"
-position_keyword = "POINTS 2197 float"
-SIE_keyword = "SCALARS SIE float 1"
-density_keyword = "SCALARS element_density float 1"
+    # Read simulation results
+    results_filename = "vtk/data/VTK0.vtk"
 
-GT_positions = extract_vector_data(GT_filename, position_keyword)
-GT_velocities = extract_vector_data(GT_filename, velocity_keyword)
-GT_SIE = extract_scalar_data(GT_filename, SIE_keyword)
-GT_densities = extract_scalar_data(GT_filename, density_keyword)
-
-
-# Read simulation results
-results_filename = "vtk/data/VTK0.vtk"
-
-results_positions = extract_vector_data(results_filename, position_keyword)
-results_velocities = extract_vector_data(results_filename, velocity_keyword)
-results_SIE = extract_scalar_data(results_filename, SIE_keyword)
-results_densities = extract_scalar_data(results_filename, density_keyword)
+    results_positions = extract_vector_data(results_filename, position_keyword)
+    position_diff = percent_difference_vectors(GT_positions, results_positions)
 
 
-density_diff = percent_difference_scalars(GT_densities, results_densities)
+    for i in range(len(position_diff)):
+        if position_diff[i] >= 1.0e-6:
+            raise ValueError(" ****************** ERROR: Position difference out of range for "+tests[i]+" problem ****************** ")
 
-print("Density difference: ")
-print(magnitude(density_diff))
-
+    print("Removing simulation outputs")
+    os.system('rm -rf  vtk' )

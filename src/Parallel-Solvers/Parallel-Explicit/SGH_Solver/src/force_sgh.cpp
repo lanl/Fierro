@@ -80,10 +80,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
 
     // check to see if any material model will be run on the host
     bool any_host_material_model_run = false;
-    for (int imat = 0; imat < material.size(); imat++)
-    {
-        if (material.host(imat).strength_run_location == RUN_LOCATION::host)
-        {
+    for (int imat = 0; imat < material.size(); imat++) {
+        if (material.host(imat).strength_run_location == RUN_LOCATION::host) {
             any_host_material_model_run = true;
         }
     }
@@ -154,19 +152,15 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
                     rk_level);
 
         // save vel_grad in elem_vel_grad
-        for (size_t i = 0; i < 3; i++)
-        {
-            for (size_t j = 0; j < 3; j++)
-            {
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
                 elem_vel_grad(elem_gid, i, j) = vel_grad(i, j);
             }
         }
 
         // the -1 is for the inward surface area normal,
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 area_normal(node_lid, dim) = (-1.0) * area_normal(node_lid, dim);
             } // end for
         } // end for
@@ -185,20 +179,16 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
         double mag_curl = sqrt(curl[0] * curl[0] + curl[1] * curl[1] + curl[2] * curl[2]);
 
         // --- Calculate the Cauchy stress ---
-        for (size_t i = 0; i < 3; i++)
-        {
-            for (size_t j = 0; j < 3; j++)
-            {
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
                 tau(i, j) = stress(i, j);
                 // artificial viscosity can be added here to tau
             } // end for
         } // end for
 
         // add the pressure
-        if (elem_pres(elem_gid) != 0)
-        {
-            for (int i = 0; i < num_dims; i++)
-            {
+        if (elem_pres(elem_gid) != 0) {
+            for (int i = 0; i < num_dims; i++) {
                 tau(i, i) -= elem_pres(elem_gid);
             } // end for
         }
@@ -208,15 +198,13 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
         // estimate of the Riemann velocity
 
         // initialize to Riemann velocity to zero
-        for (size_t dim = 0; dim < num_dims; dim++)
-        {
+        for (size_t dim = 0; dim < num_dims; dim++) {
             vel_star(dim) = 0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
         // an estimate of Riemann velocity
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gloabl index and create view of nodal velocity
             int node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -230,8 +218,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
         // find shock direction and shock impedance associated with each node
 
         // initialize sum term in MARS to zero
-        for (int i = 0; i < 4; i++)
-        {
+        for (int i = 0; i < 4; i++) {
             sum(i) = 0.0;
         }
 
@@ -240,8 +227,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
         size_t mat_id = elem_mat_id(elem_gid);
 
         // loop over the nodes of the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get global node id
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -253,16 +239,13 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
                 + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) )
                 + (vel(2) - vel_star(2) ) * (vel(2) - vel_star(2) ) );
 
-            if (mag_vel > small)
-            {
+            if (mag_vel > small) {
                 // estimate of the shock direction, a unit normal
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = (vel(dim) - vel_star(dim)) / mag_vel;
                 }
             }
-            else
-            {
+            else{
                 // if there is no velocity change, then use the surface area
                 // normal as the shock direction
                 mag = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
@@ -270,20 +253,17 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
                     + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
 
                 // estimate of the shock direction
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = area_normal(node_lid, dim) / mag;
                 }
             } // end if mag_vel
 
             // cell divergence indicates compression or expansions
-            if (div < 0)  // element in compression
-            {
+            if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
             }
-            else   // element in expansion
-            {
+            else{  // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
@@ -292,8 +272,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
             double mu_term;
 
             // Coding to use shock direction
-            if (use_shock_dir == 1)
-            {
+            if (use_shock_dir == 1) {
                 // this is denominator of the Riamann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction
@@ -302,8 +281,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
                     + shock_dir(1) * area_normal(node_lid, 1)
                     + shock_dir(2) * area_normal(node_lid, 2) );
             }
-            else
-            {
+            else{
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
@@ -320,17 +298,13 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
         } // end for node_lid loop over nodes of the elem
 
         // The Riemann velocity, called vel_star
-        if (sum(3) > fuzz)
-        {
-            for (size_t i = 0; i < num_dims; i++)
-            {
+        if (sum(3) > fuzz) {
+            for (size_t i = 0; i < num_dims; i++) {
                 vel_star(i) = sum(i) / sum(3);
             }
         }
-        else
-        {
-            for (int i = 0; i < num_dims; i++)
-            {
+        else{
+            for (int i = 0; i < num_dims; i++) {
                 vel_star(i) = 0.0;
             }
         } // end if
@@ -357,8 +331,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
         // loop over the nieghboring cells
-        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++)
-        {
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
             // Get global index for neighboring cell
             size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
 
@@ -389,16 +362,14 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
         phi = fmin(phi_curl * phi, alpha * phi); // if noise arrises in simulation on really smooth flows, then try something like
         phi = fmax(phi, 0.001);  // ensuring a very small amount of dissipation for stability and robustness
 
-        if (material(mat_id).maximum_limiter)
-        {
+        if (material(mat_id).maximum_limiter) {
             phi = 1;
         }
 
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
 
             // Get corner gid
@@ -408,8 +379,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++)
-            {
+            for (int dim = 0; dim < num_dims; dim++) {
                 corner_force(corner_gid, dim) =
                     area_normal(node_lid, 0) * tau(0, dim)
                     + area_normal(node_lid, 1) * tau(1, dim)
@@ -425,10 +395,8 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
         // calculate the new stress at the next rk level, if it is a hypo model
 
         // hypo elastic plastic model
-        if (material(mat_id).strength_type == STRENGTH_TYPE::hypo)
-        {
-            if (material(mat_id).strength_run_location == RUN_LOCATION::device)
-            {
+        if (material(mat_id).strength_type == STRENGTH_TYPE::hypo) {
+            if (material(mat_id).strength_run_location == RUN_LOCATION::device) {
                 // cut out the node_gids for this element
                 ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
 
@@ -459,8 +427,7 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
         } // end logical on hypo strength model
     }); // end parallel for loop over elements
 
-    if (any_host_material_model_run == true)
-    {
+    if (any_host_material_model_run == true) {
         // update host
         elem_vel_grad.update_host();
         // below host updates are commented out to save time because they are not used for
@@ -473,16 +440,13 @@ void FEA_Module_SGH::get_force_sgh(const DCArrayKokkos<material_t>& material,
         // elem_vol.update_host();
 
         // calling user strength model on host
-        for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++)
-        {
+        for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
             const size_t num_dims = 3;
             size_t mat_id = elem_mat_id.host(elem_gid);
 
             // hypo elastic plastic model
-            if (material.host(mat_id).strength_type == STRENGTH_TYPE::hypo)
-            {
-                if (material.host(mat_id).strength_run_location == RUN_LOCATION::host)
-                {
+            if (material.host(mat_id).strength_type == STRENGTH_TYPE::hypo) {
+                if (material.host(mat_id).strength_run_location == RUN_LOCATION::host) {
                     // cut out the node_gids for this element
                     ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem.host(elem_gid, 0), 8);
 
@@ -628,10 +592,8 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
                       rk_level);
 
         // the -1 is for the inward surface area normal,
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 area_normal(node_lid, dim) = (-1.0) * area_normal(node_lid, dim);
             } // end for
         } // end for
@@ -647,18 +609,15 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
         double mag_curl = curl;
 
         // --- Calculate the Cauchy stress ---
-        for (size_t i = 0; i < 3; i++)
-        {
-            for (size_t j = 0; j < 3; j++)
-            {
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
                 tau(i, j) = stress(i, j);
                 // artificial viscosity can be added here to tau
             } // end for
         } // end for
 
         // add the pressure
-        for (int i = 0; i < 3; i++)
-        {
+        for (int i = 0; i < 3; i++) {
             tau(i, i) -= elem_pres(elem_gid);
         } // end for
 
@@ -667,15 +626,13 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
         // estimate of the Riemann velocity
 
         // initialize to Riemann velocity to zero
-        for (size_t dim = 0; dim < num_dims; dim++)
-        {
+        for (size_t dim = 0; dim < num_dims; dim++) {
             vel_star(dim) = 0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
         // an estimate of Riemann velocity
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gloabl index and create view of nodal velocity
             int node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -688,8 +645,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
         // find shock direction and shock impedance associated with each node
 
         // initialize sum term in MARS to zero
-        for (int i = 0; i < 4; i++)
-        {
+        for (int i = 0; i < 4; i++) {
             sum(i) = 0.0;
         }
 
@@ -697,8 +653,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
         double mag_vel;   // magnitude of velocity
 
         // loop over the nodes of the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get global node id
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -709,37 +664,31 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
             mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
                 + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) ) );
 
-            if (mag_vel > small)
-            {
+            if (mag_vel > small) {
                 // estimate of the shock direction, a unit normal
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = (vel(dim) - vel_star(dim)) / mag_vel;
                 }
             }
-            else
-            {
+            else{
                 // if there is no velocity change, then use the surface area
                 // normal as the shock direction
                 mag = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
                     + area_normal(node_lid, 1) * area_normal(node_lid, 1) );
 
                 // estimate of the shock direction
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = area_normal(node_lid, dim) / mag;
                 }
             } // end if mag_vel
 
             // cell divergence indicates compression or expansions
             size_t mat_id = elem_mat_id(elem_gid);
-            if (div < 0)  // element in compression
-            {
+            if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
             }
-            else   // element in expansion
-            {
+            else{  // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
@@ -748,8 +697,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
             double mu_term;
 
             // Coding to use shock direction
-            if (use_shock_dir == 1)
-            {
+            if (use_shock_dir == 1) {
                 // this is denominator of the Riamann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction
@@ -757,8 +705,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
                           fabs(shock_dir(0) * area_normal(0)
                     + shock_dir(1) * area_normal(1) );
             }
-            else
-            {
+            else{
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
@@ -773,17 +720,13 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
         } // end for node_lid loop over nodes of the elem
 
         // The Riemann velocity, called vel_star
-        if (sum(3) > fuzz)
-        {
-            for (size_t i = 0; i < num_dims; i++)
-            {
+        if (sum(3) > fuzz) {
+            for (size_t i = 0; i < num_dims; i++) {
                 vel_star(i) = sum(i) / sum(3);
             }
         }
-        else
-        {
-            for (int i = 0; i < num_dims; i++)
-            {
+        else{
+            for (int i = 0; i < num_dims; i++) {
                 vel_star(i) = 0.0;
             }
         } // end if
@@ -810,8 +753,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
         // loop over the nieghboring cells
-        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++)
-        {
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
             // Get global index for neighboring cell
             size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
 
@@ -848,8 +790,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
 
             // Get corner gid
@@ -859,8 +800,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++)
-            {
+            for (int dim = 0; dim < num_dims; dim++) {
                 corner_force(corner_gid, dim) =
                     area_normal(node_lid, 0) * tau(0, dim)
                     + area_normal(node_lid, 1) * tau(1, dim)
@@ -871,8 +811,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
 
             double node_radius = node_coords(rk_level, node_gid, 1);
 
-            if (node_radius > 1e-14)
-            {
+            if (node_radius > 1e-14) {
                 // sigma_RZ / R_p
                 corner_force(corner_gid, 0) += tau(1, 0) * elem_area * 0.25 / node_radius;
 
@@ -887,8 +826,7 @@ void FEA_Module_SGH::get_force_sgh2D(const DCArrayKokkos<material_t>& material,
         size_t mat_id = elem_mat_id(elem_gid);
 
         // hypo elastic plastic model
-        if (material(mat_id).strength_type == STRENGTH_TYPE::hypo)
-        {
+        if (material(mat_id).strength_type == STRENGTH_TYPE::hypo) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
 
@@ -975,38 +913,32 @@ void FEA_Module_SGH::applied_forces(const DCArrayKokkos<material_t>& material,
         double node_force[3];
         double applied_force[3];
         double radius;
-        for (size_t dim = 0; dim < num_dim; dim++)
-        {
+        for (size_t dim = 0; dim < num_dim; dim++) {
             node_force[dim] = 0.0;
             current_node_coords[dim] = all_initial_node_coords(node_gid, dim);
         } // end for dim
         radius = sqrt(current_node_coords[0] * current_node_coords[0] + current_node_coords[1] * current_node_coords[1] + current_node_coords[2] * current_node_coords[2]);
-        for (size_t ilc = 0; ilc < num_lcs; ilc++)
-        {
+        for (size_t ilc = 0; ilc < num_lcs; ilc++) {
             // debug check
             // std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
 
             bool fill_this = loading(ilc).volume.contains(current_node_coords);
-            if (fill_this)
-            {
+            if (fill_this) {
                 // loop over all corners around the node and calculate the nodal force
-                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
-                {
+                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
                     // Get corner gid
                     size_t corner_gid = corners_in_node(node_gid, corner_lid);
                     applied_force[0]  = loading(ilc).x;
                     applied_force[1]  = loading(ilc).y;
                     applied_force[2]  = loading(ilc).z;
                     // loop over dimension
-                    for (size_t dim = 0; dim < num_dim; dim++)
-                    {
+                    for (size_t dim = 0; dim < num_dim; dim++) {
                         node_force[dim] += applied_force[dim] * (all_initial_node_coords(node_gid, 0) + all_initial_node_coords(node_gid, 1) + all_initial_node_coords(node_gid, 2)) / radius;
                     } // end for dim
                 } // end for corner_lid
 
                 // update the velocity
-                for (int dim = 0; dim < num_dim; dim++)
-                {
+                for (int dim = 0; dim < num_dim; dim++) {
                     node_vel(rk_level, node_gid, dim) +=
                         rk_alpha * dt * node_force[dim] / node_mass(node_gid);
                 } // end for dim

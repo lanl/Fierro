@@ -61,8 +61,7 @@ void FEA_Module_SGH::update_position_sgh(double rk_alpha,
 
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
-        for (int dim = 0; dim < num_dims; dim++)
-        {
+        for (int dim = 0; dim < num_dims; dim++) {
             double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
             node_coords(rk_level, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha * dt * half_vel;
         }
@@ -108,8 +107,7 @@ void FEA_Module_SGH::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
@@ -298,8 +296,7 @@ void FEA_Module_SGH::get_vol()
     const size_t rk_level = rk_num_bins - 1;
     const size_t num_dims = num_dim;
 
-    if (num_dims == 2)
-    {
+    if (num_dims == 2) {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
@@ -307,8 +304,7 @@ void FEA_Module_SGH::get_vol()
         });
         Kokkos::fence();
     }
-    else
-    {
+    else{
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
@@ -352,8 +348,7 @@ void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
     auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
@@ -410,8 +405,7 @@ void FEA_Module_SGH::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
     auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
@@ -505,8 +499,7 @@ void FEA_Module_SGH::get_vol_quad(const DViewCArrayKokkos<double>& elem_vol,
     auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
@@ -553,8 +546,7 @@ double FEA_Module_SGH::get_area_quad(const size_t elem_gid,
     auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
@@ -638,8 +630,7 @@ void FEA_Module_SGH::get_area_weights2D(const ViewCArrayKokkos<double>& corner_a
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     rc = zc = 0.0;
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         rc += 0.25 * y(node_lid);
@@ -679,8 +670,7 @@ void FEA_Module_SGH::get_vol_ugradient(const size_t gradient_node_id, const size
     const size_t rk_level = rk_num_bins - 1;
     const size_t num_dims = num_dim;
 
-    if (num_dims == 2)
-    {
+    if (num_dims == 2) {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
@@ -688,8 +678,7 @@ void FEA_Module_SGH::get_vol_ugradient(const size_t gradient_node_id, const size
         });
         Kokkos::fence();
     }
-    else
-    {
+    else{
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
@@ -735,8 +724,7 @@ void FEA_Module_SGH::get_vol_hex_ugradient(const ViewCArrayKokkos<double>& elem_
     auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
@@ -745,12 +733,9 @@ void FEA_Module_SGH::get_vol_hex_ugradient(const ViewCArrayKokkos<double>& elem_
     double twelth = 1. / 12.;
 
     // element volume gradient
-    for (int inode = 0; inode < 8; inode++)
-    {
-        for (int idim = 0; idim < num_dims; idim++)
-        {
-            switch (num_dims * inode + idim)
-            {
+    for (int inode = 0; inode < 8; inode++) {
+        for (int idim = 0; idim < num_dims; idim++) {
+            switch (num_dims * inode + idim) {
             case 0:
                 gradient_result =
                     ((y(2) * (z(1) - z(3)) + y(7) * (z(3) - z(4)) + y(5) * (-z(1) + z(4)) + y(1) * (-z(2) - z(3) + z(4) + z(5)) + y(3) * (z(1) + z(2) - z(4) - z(7)) + y(4) *
@@ -977,8 +962,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     auto gradient_terms = ViewCArrayKokkos<double>(gradient_terms_array, 2, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
@@ -1013,8 +997,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = 0;
     gradient_terms(1, 7) = -y(3) + y(4);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(0, 0, inode, 0) = 0;
         B_matrix_gradients(0, 0, inode, 1) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(0, 0, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1047,8 +1030,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = y(2) - y(5);
     gradient_terms(1, 7) = 0;
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(1, 0, inode, 0) = 0;
         B_matrix_gradients(1, 0, inode, 1) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(1, 0, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1081,8 +1063,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = -y(1) + y(3) - y(5) + y(7);
     gradient_terms(1, 7) = y(3) - y(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(2, 0, inode, 0) = 0;
         B_matrix_gradients(2, 0, inode, 1) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(2, 0, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1115,8 +1096,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = -y(2) + y(7);
     gradient_terms(1, 7) = y(0) - y(2) + y(4) - y(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(3, 0, inode, 0) = 0;
         B_matrix_gradients(3, 0, inode, 1) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(3, 0, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1149,8 +1129,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = y(5) - y(7);
     gradient_terms(1, 7) = -y(0) - y(3) + y(5) + y(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(4, 0, inode, 0) = 0;
         B_matrix_gradients(4, 0, inode, 1) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(4, 0, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1183,8 +1162,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = y(1) + y(2) - y(4) - y(7);
     gradient_terms(1, 7) = -y(4) + y(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(5, 0, inode, 0) = 0;
         B_matrix_gradients(5, 0, inode, 1) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(5, 0, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1217,8 +1195,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = 0;
     gradient_terms(1, 7) = y(2) + y(3) - y(4) - y(5);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(6, 0, inode, 0) = 0;
         B_matrix_gradients(6, 0, inode, 1) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(6, 0, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1251,8 +1228,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = -y(2) - y(3) + y(4) + y(5);
     gradient_terms(1, 7) = 0;
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(7, 0, inode, 0) = 0;
         B_matrix_gradients(7, 0, inode, 1) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(7, 0, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1285,8 +1261,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = 0;
     gradient_terms(1, 7) = x(3) - x(4);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(0, 1, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(0, 1, inode, 1) = 0;
         B_matrix_gradients(0, 1, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1319,8 +1294,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = -x(2) + x(5);
     gradient_terms(1, 7) = 0;
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(1, 1, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(1, 1, inode, 1) = 0;
         B_matrix_gradients(1, 1, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1353,8 +1327,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = x(1) - x(3) + x(5) - x(7);
     gradient_terms(1, 7) = -x(3) + x(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(2, 1, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(2, 1, inode, 1) = 0;
         B_matrix_gradients(2, 1, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1387,8 +1360,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = x(2) - x(7);
     gradient_terms(1, 7) = -x(0) + x(2) - x(4) + x(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(3, 1, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(3, 1, inode, 1) = 0;
         B_matrix_gradients(3, 1, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1421,8 +1393,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = -x(5) + x(7);
     gradient_terms(1, 7) = x(0) + x(3) - x(5) - x(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(4, 1, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(4, 1, inode, 1) = 0;
         B_matrix_gradients(4, 1, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1455,8 +1426,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = -x(1) - x(2) + x(4) + x(7);
     gradient_terms(1, 7) = x(4) - x(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(5, 1, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(5, 1, inode, 1) = 0;
         B_matrix_gradients(5, 1, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1489,8 +1459,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = 0;
     gradient_terms(1, 7) = -x(2) - x(3) + x(4) + x(5);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(6, 1, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(6, 1, inode, 1) = 0;
         B_matrix_gradients(6, 1, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1523,8 +1492,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = x(2) + x(3) - x(4) - x(5);
     gradient_terms(1, 7) = 0;
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(7, 1, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(7, 1, inode, 1) = 0;
         B_matrix_gradients(7, 1, inode, 2) = gradient_terms(1, inode) * twelth;
@@ -1557,8 +1525,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = 0;
     gradient_terms(1, 7) = -x(3) + x(4);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(0, 2, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(0, 2, inode, 1) = gradient_terms(1, inode) * twelth;
         B_matrix_gradients(0, 2, inode, 2) = 0;
@@ -1591,8 +1558,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = x(2) - x(5);
     gradient_terms(1, 7) = 0;
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(1, 2, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(1, 2, inode, 1) = gradient_terms(1, inode) * twelth;
         B_matrix_gradients(1, 2, inode, 2) = 0;
@@ -1625,8 +1591,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = -x(1) + x(3) - x(5) + x(7);
     gradient_terms(1, 7) = x(3) - x(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(2, 2, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(2, 2, inode, 1) = gradient_terms(1, inode) * twelth;
         B_matrix_gradients(2, 2, inode, 2) = 0;
@@ -1659,8 +1624,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = -x(2) + x(7);
     gradient_terms(1, 7) = x(0) - x(2) + x(4) - x(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(3, 2, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(3, 2, inode, 1) = gradient_terms(1, inode) * twelth;
         B_matrix_gradients(3, 2, inode, 2) = 0;
@@ -1684,7 +1648,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(0, 7) = y(0) + y(3) - y(5) - y(6);
 
     // y derivative
-    gradient_terms(1, 0) = -x(1) + x(3) - x(4) + x(7);
+    gradient_terms(1, 0) = -x(1) + x(3) - x(5) + x(7);
     gradient_terms(1, 1) = x(0) - x(5);
     gradient_terms(1, 2) = 0;
     gradient_terms(1, 3) = -x(0) + x(7);
@@ -1693,8 +1657,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = x(5) - x(7);
     gradient_terms(1, 7) = -x(0) - x(3) + x(5) + x(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(4, 2, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(4, 2, inode, 1) = gradient_terms(1, inode) * twelth;
         B_matrix_gradients(4, 2, inode, 2) = 0;
@@ -1727,8 +1690,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = x(1) + x(2) - x(4) - x(7);
     gradient_terms(1, 7) = -x(4) + x(6);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(5, 2, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(5, 2, inode, 1) = gradient_terms(1, inode) * twelth;
         B_matrix_gradients(5, 2, inode, 2) = 0;
@@ -1761,8 +1723,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = 0;
     gradient_terms(1, 7) = x(2) + x(3) - x(4) - x(5);
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(6, 2, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(6, 2, inode, 1) = gradient_terms(1, inode) * twelth;
         B_matrix_gradients(6, 2, inode, 2) = 0;
@@ -1795,8 +1756,7 @@ void FEA_Module_SGH::get_bmatrix_gradients(const ViewCArrayKokkos<double>& B_mat
     gradient_terms(1, 6) = -x(2) - x(3) + x(4) + x(5);
     gradient_terms(1, 7) = 0;
 
-    for (int inode = 0; inode < 8; inode++)
-    {
+    for (int inode = 0; inode < 8; inode++) {
         B_matrix_gradients(7, 2, inode, 0) = gradient_terms(0, inode) * twelth;
         B_matrix_gradients(7, 2, inode, 1) = gradient_terms(1, inode) * twelth;
         B_matrix_gradients(7, 2, inode, 2) = 0;

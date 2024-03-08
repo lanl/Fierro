@@ -90,4 +90,4 @@ struct Volume : Yaml::ValidatedYaml {
       }
     }
 };
-IMPL_YAML_SERIALIZABLE_FOR(Volume, type, radius1, radius2)
+IMPL_YAML_SERIALIZABLE_FOR(Volume, type, radius1, radius2, x1, x2, y1, y2, z1, z2)

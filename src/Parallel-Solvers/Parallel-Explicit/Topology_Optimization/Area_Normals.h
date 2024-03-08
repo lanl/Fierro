@@ -145,17 +145,13 @@ public:
         nvalid_modules = valid_fea_modules.size();
 
         const Simulation_Parameters& simparam = Explicit_Solver_Pointer_->simparam;
-        for (const auto& fea_module : Explicit_Solver_Pointer_->fea_modules)
-        {
-            for (int ivalid = 0; ivalid < nvalid_modules; ivalid++)
-            {
-                if (fea_module->Module_Type == FEA_MODULE_TYPE::SGH)
-                {
+        for (const auto& fea_module : Explicit_Solver_Pointer_->fea_modules) {
+            for (int ivalid = 0; ivalid < nvalid_modules; ivalid++) {
+                if (fea_module->Module_Type == FEA_MODULE_TYPE::SGH) {
                     FEM_SGH_ = dynamic_cast<FEA_Module_SGH*>(fea_module);
                     set_module_type = FEA_MODULE_TYPE::SGH;
                 }
-                if (fea_module->Module_Type == FEA_MODULE_TYPE::Dynamic_Elasticity)
-                {
+                if (fea_module->Module_Type == FEA_MODULE_TYPE::Dynamic_Elasticity) {
                     FEM_Dynamic_Elasticity_ = dynamic_cast<FEA_Module_Dynamic_Elasticity*>(fea_module);
                     set_module_type = FEA_MODULE_TYPE::Dynamic_Elasticity;
                 }
@@ -208,8 +204,7 @@ public:
         size_t nodes_in_elem_array[8];
         double node_coords_array[2 * 8 * 3];
         ViewCArrayKokkos<size_t> elem_node_gids(nodes_in_elem_array, 8);
-        for (int init = 0; init < 8; init++)
-        {
+        for (int init = 0; init < 8; init++) {
             elem_node_gids(init) = init;
         }
         ViewCArrayKokkos<double> area_normal(area_normal_array, 8, 3);
@@ -219,8 +214,7 @@ public:
 
         const_host_vec_array design_coordinates = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
         DViewCArrayKokkos<double> node_coords(node_coords_array, 2, 8, 3);
-        for (int inode = 0; inode < 8; inode++)
-        {
+        for (int inode = 0; inode < 8; inode++) {
             size_t local_node_id = FEM_SGH_->nodes_in_elem(0, inode);
             node_coords(1, inode, 0) = design_coordinates(local_node_id, 0);
             node_coords(1, inode, 1) = design_coordinates(local_node_id, 1);
@@ -260,8 +254,7 @@ public:
         size_t nodes_in_elem[8];
         double node_coords_array[2 * 8 * 3];
         ViewCArrayKokkos<size_t> elem_node_gids(nodes_in_elem, 8);
-        for (int init = 0; init < 8; init++)
-        {
+        for (int init = 0; init < 8; init++) {
             elem_node_gids(init) = init;
         }
 
@@ -272,16 +265,14 @@ public:
         const_host_vec_array design_coordinates = zp->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
         host_vec_array design_gradients = gp->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
         DViewCArrayKokkos<double> node_coords(node_coords_array, 2, 8, 3);
-        for (int inode = 0; inode < 8; inode++)
-        {
+        for (int inode = 0; inode < 8; inode++) {
             size_t local_node_id = FEM_SGH_->nodes_in_elem(0, inode);
             node_coords(1, inode, 0) = design_coordinates(local_node_id, 0);
             node_coords(1, inode, 1) = design_coordinates(local_node_id, 1);
             node_coords(1, inode, 2) = design_coordinates(local_node_id, 2);
         }
 
-        for (int igradient = 0; igradient < FEM_SGH_->nlocal_nodes + FEM_SGH_->nghost_nodes; igradient++)
-        {
+        for (int igradient = 0; igradient < FEM_SGH_->nlocal_nodes + FEM_SGH_->nghost_nodes; igradient++) {
             design_gradients(igradient, 0) = 0;
             design_gradients(igradient, 1) = 0;
             design_gradients(igradient, 2) = 0;
@@ -293,11 +284,9 @@ public:
                 elem_node_gids,
                 1);
 
-        for (int inode = 0; inode < 8; inode++)
-        {
+        for (int inode = 0; inode < 8; inode++) {
             size_t local_node_id = FEM_SGH_->nodes_in_elem(0, inode);
-            for (int idim = 0; idim < 3; idim++)
-            {
+            for (int idim = 0; idim < 3; idim++) {
                 design_gradients(local_node_id, idim) = -area_normal_gradients(set_node_, set_dim_, inode, idim);
             }
         }

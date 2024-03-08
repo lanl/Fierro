@@ -68,8 +68,7 @@ void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
         // --- tally the contribution from each corner to the element ---
 
         // Loop over the nodes in the element
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
 
             // Get node global id for the local node id
@@ -79,14 +78,12 @@ void FEA_Module_SGH::update_energy_sgh(double rk_alpha,
             size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
 
             double node_radius = 1;
-            if (num_dims == 2)
-            {
+            if (num_dims == 2) {
                 node_radius = node_coords(rk_level, node_gid, 1);
             }
 
             // calculate the Power=F dot V for this corner
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
                 elem_power += corner_force(corner_gid, dim) * node_radius * half_vel;
             } // end for dim

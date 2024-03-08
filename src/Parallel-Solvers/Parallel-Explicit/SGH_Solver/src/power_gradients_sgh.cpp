@@ -66,33 +66,25 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
     DCArrayKokkos<real_t> elem_power_dgradients(rnum_elem);
 
     // gradient contribution from gradient of Force vector with respect to design variable.
-    if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-    {
-        if (myrank == 0)
-        {
+    if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+        if (myrank == 0) {
             std::cout << "gradient term involving adjoint derivative" << std::endl;
         }
     }
 
-    for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++)
-    {
+    for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++) {
         // compute timestep from time data
         global_dt = time_data[cycle + 1] - time_data[cycle];
         // print
-        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-        {
-            if (cycle == 0)
-            {
-                if (myrank == 0)
-                {
+        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+            if (cycle == 0) {
+                if (myrank == 0) {
                     printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                 }
             }
             // print time step every 10 cycles
-            else if (cycle % 20 == 0)
-            {
-                if (myrank == 0)
-                {
+            else if (cycle % 20 == 0) {
+                if (myrank == 0) {
                     printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                 }
             } // end if
@@ -111,8 +103,7 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
 
             // first half of integration step calculation
             FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     node_vel(rk_level, node_gid, idim)    = current_velocity_vector(node_gid, idim);
                     node_coords(rk_level, node_gid, idim) = current_coord_vector(node_gid, idim);
                 }
@@ -127,18 +118,15 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
             get_vol();
 
             // ---- Calculate velocity diveregence for the element ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 get_divergence2D(elem_div, node_coords, node_vel, elem_vol);
             }
-            else
-            {
+            else{
                 get_divergence(elem_div, node_coords, node_vel, elem_vol);
             } // end if 2D
 
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 update_state2D(material,
                             *mesh,
                             node_coords,
@@ -154,8 +142,7 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
                             1.0,
                             cycle);
             }
-            else
-            {
+            else{
                 update_state(material,
                             *mesh,
                             node_coords,
@@ -173,8 +160,7 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
             }
 
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 get_force_sgh2D(material,
                             *mesh,
                             node_coords,
@@ -191,8 +177,7 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
                             1.0,
                             cycle);
             }
-            else
-            {
+            else{
                 get_force_sgh(material,
                         *mesh,
                         node_coords,
@@ -242,8 +227,7 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
 
                 inner_product = current_psi_adjoint_vector(elem_id, 0) * elem_power_dgradients(elem_id);
 
-                for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                {
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     // compute gradient of local element contribution to v^t*M*v product
                     corner_id = elem_id * num_nodes_in_elem + inode;
                     corner_value_storage(corner_id) = inner_product;
@@ -255,8 +239,7 @@ void FEA_Module_SGH::power_design_gradient_term(const_vec_array design_variables
             // multiply
             FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
                 size_t corner_id;
-                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++)
-                {
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += -corner_value_storage(corner_id) * global_dt;
                 }
@@ -303,8 +286,7 @@ void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
         // --- tally the contribution from each corner to the element ---
 
         // Loop over the nodes in the element
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
 
             // Get node global id for the local node id
@@ -314,14 +296,12 @@ void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
             size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
 
             double node_radius = 1;
-            if (num_dims == 2)
-            {
+            if (num_dims == 2) {
                 node_radius = node_coords(rk_level, node_gid, 1);
             }
 
             // calculate the Power=F dot V for this corner
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
                 elem_power_dgradients(elem_gid) -= corner_vector_storage(corner_gid, dim) * node_radius * node_vel(rk_level, node_gid, dim);
             } // end for dim
@@ -362,16 +342,14 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
 
     // initialize gradient matrix
     FOR_ALL_CLASS(dof_gid, 0, nlocal_nodes * num_dims, {
-        for (int idof = 0; idof < DOF_to_Elem_Matrix_Strides(dof_gid); idof++)
-        {
+        for (int idof = 0; idof < DOF_to_Elem_Matrix_Strides(dof_gid); idof++) {
             Power_Gradient_Positions(dof_gid, idof) = 0;
         }
     }); // end parallel for loop over nodes
     Kokkos::fence();
 
     // loop over all the elements in the mesh
-    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++)
-    {
+    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++) {
         // FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
         double elem_power = 0.0;
@@ -379,8 +357,7 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
         // --- tally the contribution from each corner to the element ---
 
         // Loop over the nodes in the element
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
             size_t column_id;
             size_t gradient_node_id;
@@ -391,22 +368,17 @@ void FEA_Module_SGH::get_power_ugradient_sgh(double rk_alpha,
             size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
 
             double node_radius = 1;
-            if (num_dims == 2)
-            {
+            if (num_dims == 2) {
                 node_radius = node_coords(rk_level, node_gid, 1);
             }
 
             // calculate the Power=F dot V for this corner
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
-                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++)
-                {
-                    for (size_t jdim = 0; jdim < num_dims; jdim++)
-                    {
+            for (size_t dim = 0; dim < num_dims; dim++) {
+                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                    for (size_t jdim = 0; jdim < num_dims; jdim++) {
                         column_id = Element_Gradient_Matrix_Assembly_Map(elem_gid, igradient);
                         gradient_node_id = nodes_in_elem(elem_gid, igradient);
-                        if (!map->isNodeLocalElement(gradient_node_id))
-                        {
+                        if (!map->isNodeLocalElement(gradient_node_id)) {
                             continue;
                         }
                         Power_Gradient_Positions(gradient_node_id * num_dims + jdim, column_id) -=
@@ -444,16 +416,14 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
 
     // initialize gradient matrix
     FOR_ALL_CLASS(dof_gid, 0, nlocal_nodes * num_dims, {
-        for (int idof = 0; idof < DOF_to_Elem_Matrix_Strides(dof_gid); idof++)
-        {
+        for (int idof = 0; idof < DOF_to_Elem_Matrix_Strides(dof_gid); idof++) {
             Power_Gradient_Velocities(dof_gid, idof) = 0;
         }
     }); // end parallel for loop over nodes
     Kokkos::fence();
 
     // loop over all the elements in the mesh
-    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++)
-    {
+    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++) {
         // FOR_ALL_CLASS (elem_gid, 0, rnum_elem, {
 
         double elem_power = 0.0;
@@ -461,8 +431,7 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
         // --- tally the contribution from each corner to the element ---
 
         // Loop over the nodes in the element
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
             size_t column_id;
             size_t gradient_node_id;
@@ -473,35 +442,29 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
             size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
 
             double node_radius = 1;
-            if (num_dims == 2)
-            {
+            if (num_dims == 2) {
                 node_radius = node_coords(rk_level, node_gid, 1);
             }
 
             // calculate the Power=F dot V for this corner
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
-                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++)
-                {
+            for (size_t dim = 0; dim < num_dims; dim++) {
+                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
                     column_id = Element_Gradient_Matrix_Assembly_Map(elem_gid, igradient);
                     gradient_node_id = nodes_in_elem(elem_gid, igradient);
-                    if (!map->isNodeLocalElement(gradient_node_id))
-                    {
+                    if (!map->isNodeLocalElement(gradient_node_id)) {
                         continue;
                     }
-                    for (size_t jdim = 0; jdim < num_dims; jdim++)
-                    {
-                        if (node_lid == igradient&&jdim==dim)
-                        {
+                    for (size_t jdim = 0; jdim < num_dims; jdim++) {
+                        if (node_lid == igradient&&jdim==dim) {
                             Power_Gradient_Velocities(gradient_node_id * num_dims + jdim, column_id) -=
                                 corner_gradient_storage(corner_gid, dim, igradient, jdim) * node_vel(rk_level, node_gid, dim)
                                 * node_radius + corner_force(corner_gid, dim) * node_radius;
                         }
-                        else
-                        {
+                        else {
                             Power_Gradient_Velocities(gradient_node_id * num_dims + jdim, column_id) -=
                                 corner_gradient_storage(corner_gid, dim, igradient, jdim) * node_vel(rk_level, node_gid, dim) * node_radius;
                         }
+
                     }
                 }
             } // end for dim
@@ -552,8 +515,7 @@ void FEA_Module_SGH::get_power_egradient_sgh(double rk_alpha,
         // --- tally the contribution from each corner to the element ---
 
         // Loop over the nodes in the element
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
 
             // Get node global id for the local node id
@@ -563,14 +525,12 @@ void FEA_Module_SGH::get_power_egradient_sgh(double rk_alpha,
             size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
 
             double node_radius = 1;
-            if (num_dims == 2)
-            {
+            if (num_dims == 2) {
                 node_radius = node_coords(rk_level, node_gid, 1);
             }
 
             // calculate the Power=F dot V for this corner
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
                 Power_Gradient_Energies(elem_gid) -= Force_Gradient_Energies(elem_gid, node_lid * num_dims + dim) * node_radius * node_vel(rk_level, node_gid, dim);
             } // end for dim

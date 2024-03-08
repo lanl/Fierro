@@ -71,8 +71,7 @@ void FEA_Module_Dynamic_Elasticity::get_velgrad(ViewCArrayKokkos<double>& vel_gr
     ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir vel component
 
     // get the vertex velocities for the cell
-    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-    {
+    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
         // Get node gid
         size_t node_gid = elem_node_gids(node_lid);
 
@@ -170,8 +169,7 @@ void FEA_Module_Dynamic_Elasticity::get_velgrad2D(ViewCArrayKokkos<double>& vel_
     ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
 
     // get the vertex velocities for the cell
-    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-    {
+    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
         // Get node gid
         size_t node_gid = elem_node_gids(node_lid);
 
@@ -180,10 +178,8 @@ void FEA_Module_Dynamic_Elasticity::get_velgrad2D(ViewCArrayKokkos<double>& vel_
     } // end for
 
     // initialize to zero
-    for (size_t i = 0; i < 3; i++)
-    {
-        for (size_t j = 0; j < 3; j++)
-        {
+    for (size_t i = 0; i < 3; i++) {
+        for (size_t j = 0; j < 3; j++) {
             vel_grad(i, j) = 0.0;
         }
     }
@@ -260,8 +256,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence(DViewCArrayKokkos<double>& el
                     rk_level);
 
         // get the vertex velocities for the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
 
@@ -350,8 +345,7 @@ void FEA_Module_Dynamic_Elasticity::get_divergence2D(DViewCArrayKokkos<double>& 
         // true volume uses the elem_vol
 
         // get the vertex velocities and node coordinate for the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
 
@@ -421,19 +415,15 @@ void FEA_Module_Dynamic_Elasticity::decompose_vel_grad(ViewCArrayKokkos<double>&
     const size_t num_dims = 3;
 
     // initialize to zero
-    for (size_t i = 0; i < num_dims; i++)
-    {
-        for (size_t j = 0; j < num_dims; j++)
-        {
+    for (size_t i = 0; i < num_dims; i++) {
+        for (size_t j = 0; j < num_dims; j++) {
             D_tensor(i, j) = 0.0;
             W_tensor(i, j) = 0.0;
         }
     } // end for
 
-    for (size_t i = 0; i < num_dims; i++)
-    {
-        for (size_t j = 0; j < num_dims; j++)
-        {
+    for (size_t i = 0; i < num_dims; i++) {
+        for (size_t j = 0; j < num_dims; j++) {
             D_tensor(i, j) = 0.5 * (vel_grad(i, j) + vel_grad(j, i));
             W_tensor(i, j) = 0.5 * (vel_grad(i, j) - vel_grad(j, i));
         }
