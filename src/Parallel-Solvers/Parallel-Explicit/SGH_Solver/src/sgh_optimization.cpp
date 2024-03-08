@@ -115,10 +115,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
         const_host_vec_array all_node_densities = all_node_densities_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadOnly);
         // debug print
         // std::cout << "NODE DENSITY TEST " << all_node_densities(0,0) << std::endl;
-        for (int elem_id = 0; elem_id < rnum_elem; elem_id++)
-        {
-            for (int inode = 0; inode < num_nodes_in_elem; inode++)
-            {
+        for (int elem_id = 0; elem_id < rnum_elem; elem_id++) {
+            for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                 current_element_nodal_densities(inode) = all_node_densities(nodes_in_elem(elem_id, inode), 0);
             }
             relative_element_densities.host(elem_id) = average_element_density(num_nodes_in_elem, current_element_nodal_densities);
@@ -143,16 +141,14 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
         const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
         vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
         FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-            for (int idim = 0; idim < num_dim; idim++)
-            {
+            for (int idim = 0; idim < num_dim; idim++) {
                 all_node_coords_interface(node_gid, idim) = node_coords_interface(node_gid, idim);
             }
         }); // end parallel for
         Kokkos::fence();
 
         FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
-            for (int idim = 0; idim < num_dim; idim++)
-            {
+            for (int idim = 0; idim < num_dim; idim++) {
                 all_node_coords_interface(node_gid, idim) = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
             }
         }); // end parallel for
@@ -183,14 +179,11 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     // view scope
     {
         host_vec_array interface_node_coords = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
-        for (size_t ibin = 0; ibin < rk_num_bins; ibin++)
-        {
+        for (size_t ibin = 0; ibin < rk_num_bins; ibin++) {
             // save node data to node.coords
             // std::cout << "NODE DATA ON RANK " << myrank << std::endl;
-            if (num_dim == 2)
-            {
-                for (int inode = 0; inode < nall_nodes; inode++)
-                {
+            if (num_dim == 2) {
+                for (int inode = 0; inode < nall_nodes; inode++) {
                     // std::cout << "Node index " << inode+1 << " ";
                     node_coords.host(ibin, inode, 0) = interface_node_coords(inode, 0);
                     // std::cout << host_node_coords_state(0,inode,0)+1<< " ";
@@ -198,10 +191,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                     // std::cout << host_node_coords_state(0,inode,1)+1<< " ";
                 }
             }
-            else if (num_dim == 3)
-            {
-                for (int inode = 0; inode < nall_nodes; inode++)
-                {
+            else if (num_dim == 3) {
+                for (int inode = 0; inode < nall_nodes; inode++) {
                     // std::cout << "Node index " << inode+1 << " ";
                     node_coords.host(ibin, inode, 0) = interface_node_coords(inode, 0);
                     // std::cout << host_node_coords_state(0,inode,0)+1<< " ";
@@ -216,12 +207,9 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     } // end view scope
 
     // save the node coords to the current RK value
-    for (size_t node_gid = 0; node_gid < nall_nodes; node_gid++)
-    {
-        for (int rk = 1; rk < rk_num_bins; rk++)
-        {
-            for (int dim = 0; dim < num_dim; dim++)
-            {
+    for (size_t node_gid = 0; node_gid < nall_nodes; node_gid++) {
+        for (int rk = 1; rk < rk_num_bins; rk++) {
+            for (int dim = 0; dim < num_dim; dim++) {
                 node_coords.host(rk, node_gid, dim) = node_coords.host(0, node_gid, dim);
             } // end for dim
         } // end for rk
@@ -236,8 +224,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     // loop over the fill instructures
     // view scope
     {
-        for (int f_id = 0; f_id < num_fills; f_id++)
-        {
+        for (int f_id = 0; f_id < num_fills; f_id++) {
             // parallel loop over elements in mesh
             FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
                 // calculate the coordinates and radius of the element
@@ -247,16 +234,13 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                 elem_coords[2] = 0.0;
 
                 // get the coordinates of the element center
-                for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-                {
+                for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
                     elem_coords[0] += node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), 0);
                     elem_coords[1] += node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), 1);
-                    if (num_dim == 3)
-                    {
+                    if (num_dim == 3) {
                         elem_coords[2] += node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), 2);
                     }
-                    else
-                    {
+                    else{
                         elem_coords[2] = 0.0;
                     }
                 } // end loop over nodes in element
@@ -268,8 +252,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                 bool fill_this = mat_fill(f_id).volume.contains(elem_coords);
 
                 // paint the material state on the element
-                if (fill_this)
-                {
+                if (fill_this) {
                     // density
                     elem_den(elem_gid) = mat_fill(f_id).den;
 
@@ -282,8 +265,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                     // specific internal energy
                     elem_sie(rk_level, elem_gid) = mat_fill(f_id).sie;
 
-                    if (simparam->topology_optimization_on && mat_fill(f_id).extensive_energy_setting)
-                    {
+                    if (simparam->topology_optimization_on && mat_fill(f_id).extensive_energy_setting) {
                         elem_sie(rk_level, elem_gid) = elem_sie(rk_level, elem_gid) / relative_element_densities(elem_gid);
                     }
 
@@ -292,10 +274,8 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
 
                     // --- stress tensor ---
                     // always 3D even for 2D-RZ
-                    for (size_t i = 0; i < 3; i++)
-                    {
-                        for (size_t j = 0; j < 3; j++)
-                        {
+                    for (size_t i = 0; i < 3; i++) {
+                        for (size_t j = 0; j < 3; j++) {
                             elem_stress(rk_level, elem_gid, i, j) = 0.0;
                         }
                     } // end for
@@ -329,20 +309,17 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                                             elem_sie(rk_level, elem_gid));
 
                     // loop over the nodes of this element and apply velocity
-                    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-                    {
+                    for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
                         // get the mesh node index
                         size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
                         // --- Velocity ---
-                        switch (mat_fill(f_id).velocity)
-                        {
+                        switch (mat_fill(f_id).velocity) {
                             case VELOCITY_TYPE::cartesian:
                                 {
                                     node_vel(rk_level, node_gid, 0) = mat_fill(f_id).u;
                                     node_vel(rk_level, node_gid, 1) = mat_fill(f_id).v;
-                                    if (num_dim == 3)
-                                    {
+                                    if (num_dim == 3) {
                                         node_vel(rk_level, node_gid, 2) = mat_fill(f_id).w;
                                     }
 
@@ -356,29 +333,24 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                                     dir[1] = 0.0;
                                     double radius_val = 0.0;
 
-                                    for (int dim = 0; dim < 2; dim++)
-                                    {
+                                    for (int dim = 0; dim < 2; dim++) {
                                         dir[dim]    = node_coords(rk_level, node_gid, dim);
                                         radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
                                     } // end for
                                     radius_val = sqrt(radius_val);
 
-                                    for (int dim = 0; dim < 2; dim++)
-                                    {
-                                        if (radius_val > 1.0e-14)
-                                        {
+                                    for (int dim = 0; dim < 2; dim++) {
+                                        if (radius_val > 1.0e-14) {
                                             dir[dim] /= (radius_val);
                                         }
-                                        else
-                                        {
+                                        else{
                                             dir[dim] = 0.0;
                                         }
                                     } // end for
 
                                     node_vel(rk_level, node_gid, 0) = mat_fill(f_id).speed * dir[0];
                                     node_vel(rk_level, node_gid, 1) = mat_fill(f_id).speed * dir[1];
-                                    if (num_dim == 3)
-                                    {
+                                    if (num_dim == 3) {
                                         node_vel(rk_level, node_gid, 2) = 0.0;
                                     }
 
@@ -393,29 +365,24 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                                     dir[2] = 0.0;
                                     double radius_val = 0.0;
 
-                                    for (int dim = 0; dim < 3; dim++)
-                                    {
+                                    for (int dim = 0; dim < 3; dim++) {
                                         dir[dim]    = node_coords(rk_level, node_gid, dim);
                                         radius_val += node_coords(rk_level, node_gid, dim) * node_coords(rk_level, node_gid, dim);
                                     } // end for
                                     radius_val = sqrt(radius_val);
 
-                                    for (int dim = 0; dim < 3; dim++)
-                                    {
-                                        if (radius_val > 1.0e-14)
-                                        {
+                                    for (int dim = 0; dim < 3; dim++) {
+                                        if (radius_val > 1.0e-14) {
                                             dir[dim] /= (radius_val);
                                         }
-                                        else
-                                        {
+                                        else{
                                             dir[dim] = 0.0;
                                         }
                                     } // end for
 
                                     node_vel(rk_level, node_gid, 0) = mat_fill(f_id).speed * dir[0];
                                     node_vel(rk_level, node_gid, 1) = mat_fill(f_id).speed * dir[1];
-                                    if (num_dim == 3)
-                                    {
+                                    if (num_dim == 3) {
                                         node_vel(rk_level, node_gid, 2) = mat_fill(f_id).speed * dir[2];
                                     }
 
@@ -433,8 +400,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                                 {
                                     node_vel(rk_level, node_gid, 0) = sin(PI * node_coords(rk_level, node_gid, 0)) * cos(PI * node_coords(rk_level, node_gid, 1));
                                     node_vel(rk_level, node_gid, 1) =  -1.0 * cos(PI * node_coords(rk_level, node_gid, 0)) * sin(PI * node_coords(rk_level, node_gid, 1));
-                                    if (num_dim == 3)
-                                    {
+                                    if (num_dim == 3) {
                                         node_vel(rk_level, node_gid, 2) = 0.0;
                                     }
 
@@ -443,8 +409,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                         } // end of switch
                     } // end loop over nodes of element
 
-                    if (mat_fill(f_id).velocity == VELOCITY_TYPE::tg_vortex)
-                    {
+                    if (mat_fill(f_id).velocity == VELOCITY_TYPE::tg_vortex) {
                         elem_pres(elem_gid) = 0.25 * (cos(2.0 * PI * elem_coords[0]) + cos(2.0 * PI * elem_coords[1]) ) + 1.0;
 
                         // p = rho*ie*(gamma - 1)
@@ -463,8 +428,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     FEA_Module_SGH::boundary_velocity(*mesh, boundary, node_vel);
 
     // calculate the corner massess if 2D
-    if (num_dim == 2)
-    {
+    if (num_dim == 2) {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             // facial area of the corners
             double corner_areas_array[4];
@@ -479,8 +443,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
                                rk_level);
 
             // loop over the corners of the element and calculate the mass
-            for (size_t corner_lid = 0; corner_lid < 4; corner_lid++)
-            {
+            for (size_t corner_lid = 0; corner_lid < 4; corner_lid++) {
                 size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
                 corner_mass(corner_gid) = corner_areas(corner_lid) * elem_den(elem_gid); // node radius is added later
             } // end for over corners
@@ -491,19 +454,15 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
         node_mass(node_gid) = 0.0;
 
-        if (num_dim == 3)
-        {
-            for (size_t elem_lid = 0; elem_lid < num_corners_in_node(node_gid); elem_lid++)
-            {
+        if (num_dim == 3) {
+            for (size_t elem_lid = 0; elem_lid < num_corners_in_node(node_gid); elem_lid++) {
                 size_t elem_gid      = elems_in_node(node_gid, elem_lid);
                 node_mass(node_gid) += 1.0 / 8.0 * elem_mass(elem_gid);
             } // end for elem_lid
         } // end if dims=3
-        else
-        {
+        else{
             // 2D-RZ
-            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
-            {
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++) {
                 size_t corner_gid    = corners_in_node(node_gid, corner_lid);
                 node_mass(node_gid) += corner_mass(corner_gid);  // sans the radius so it is areal node mass
 
@@ -537,8 +496,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
     Kokkos::fence();
 
     // update stiffness matrix
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on)
-    {
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         // assemble_matrix();
     }
 
@@ -569,8 +527,7 @@ void FEA_Module_SGH::update_forward_solve(Teuchos::RCP<const MV> zp)
 double FEA_Module_SGH::average_element_density(const int nodes_per_elem, const CArray<double> current_nodal_densities) const
 {
     double result = 0;
-    for (int i = 0; i < nodes_per_elem; i++)
-    {
+    for (int i = 0; i < nodes_per_elem; i++) {
         result += current_nodal_densities(i) / nodes_per_elem;
     }
 
@@ -602,30 +559,23 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
 
     // solve terminal value problem, proceeds in time backward. For simplicity, we use the same timestep data from the forward solve.
     // A linear interpolant is assumed between velocity data points; velocity midpoint is used to update the adjoint.
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         std::cout << "Computing adjoint vector " << time_data.size() << std::endl;
     }
 
-    for (int cycle = last_time_step; cycle >= 0; cycle--)
-    {
+    for (int cycle = last_time_step; cycle >= 0; cycle--) {
         // compute timestep from time data
         global_dt = time_data[cycle + 1] - time_data[cycle];
         // print
-        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-        {
-            if (cycle == last_time_step)
-            {
-                if (myrank == 0)
-                {
+        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+            if (cycle == last_time_step) {
+                if (myrank == 0) {
                     printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                 }
             }
             // print time step every 20 cycles
-            else if (cycle % 20 == 0)
-            {
-                if (myrank == 0)
-                {
+            else if (cycle % 20 == 0) {
+                if (myrank == 0) {
                     printf("cycle = %d, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                 }
             } // end if
@@ -651,8 +601,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
             // interface of arrays for current implementation of force calculation
 
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     node_vel(rk_level, node_gid, idim)    = previous_velocity_vector(node_gid, idim);
                     node_coords(rk_level, node_gid, idim) = previous_coordinate_vector(node_gid, idim);
                 }
@@ -669,15 +618,13 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
             get_vol();
 
             // ---- Calculate velocity diveregence for the element ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 get_divergence2D(elem_div,
                           node_coords,
                           node_vel,
                           elem_vol);
             }
-            else
-            {
+            else{
                 get_divergence(elem_div,
                         node_coords,
                         node_vel,
@@ -685,8 +632,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
             } // end if 2D
 
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 update_state2D(material,
                           *mesh,
                           node_coords,
@@ -702,8 +648,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                           1.0,
                           cycle);
             }
-            else
-            {
+            else{
                 update_state(material,
                         *mesh,
                         node_coords,
@@ -720,8 +665,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                         cycle);
             }
 
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 get_force_sgh2D(material,
                             *mesh,
                             node_coords,
@@ -738,8 +682,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                             1.0,
                             cycle);
             }
-            else
-            {
+            else{
                 get_force_sgh(material,
                         *mesh,
                         node_coords,
@@ -847,20 +790,17 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                 real_t matrix_contribution;
                 size_t dof_id;
                 size_t elem_id;
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     // EQUATION 1
                     matrix_contribution = 0;
                     // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
-                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++)
-                    {
+                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
                         dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
                         matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
                     }
 
                     // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
-                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++)
-                    {
+                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
                         elem_id = elems_in_node(node_gid, ielem);
                         matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
                     }
@@ -878,20 +818,17 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                 real_t matrix_contribution;
                 size_t dof_id;
                 size_t elem_id;
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     // EQUATION 2
                     matrix_contribution = 0;
                     // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++)
-                    {
+                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
                         dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
                         matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Positions(node_gid * num_dim + idim, idof);
                     }
 
                     // compute resulting row of transpose of power gradient w.r.t displacement matrix right multiplied by psi adjoint vector
-                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++)
-                    {
+                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
                         elem_id = elems_in_node(node_gid, ielem);
                         matrix_contribution += psi_previous_adjoint_vector(elem_id, 0) * Power_Gradient_Positions(node_gid * num_dim + idim, ielem);
                     }
@@ -914,8 +851,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                 // EQUATION 3
                 matrix_contribution = 0;
                 // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-                for (int idof = 0; idof < num_nodes_in_elem * num_dim; idof++)
-                {
+                for (int idof = 0; idof < num_nodes_in_elem * num_dim; idof++) {
                     dof_id = nodes_in_elem(elem_gid, idof / num_dim) * num_dim + idof % num_dim;
                     matrix_contribution += previous_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Energies(elem_gid, idof);
                 }
@@ -943,8 +879,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
 
             // compute gradients at midpoint
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes + nghost_nodes, {
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     node_vel(rk_level, node_gid, idim)    = 0.5 * (previous_velocity_vector(node_gid, idim) + current_velocity_vector(node_gid, idim));
                     node_coords(rk_level, node_gid, idim) = 0.5 * (previous_coordinate_vector(node_gid, idim) + current_coordinate_vector(node_gid, idim));
                 }
@@ -961,15 +896,13 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
             get_vol();
 
             // ---- Calculate velocity diveregence for the element ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 get_divergence2D(elem_div,
                           node_coords,
                           node_vel,
                           elem_vol);
             }
-            else
-            {
+            else{
                 get_divergence(elem_div,
                         node_coords,
                         node_vel,
@@ -977,8 +910,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
             } // end if 2D
 
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 update_state2D(material,
                           *mesh,
                           node_coords,
@@ -994,8 +926,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                           1.0,
                           cycle);
             }
-            else
-            {
+            else{
                 update_state(material,
                         *mesh,
                         node_coords,
@@ -1012,8 +943,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                         cycle);
             }
 
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 get_force_sgh2D(material,
                             *mesh,
                             node_coords,
@@ -1030,8 +960,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                             1.0,
                             cycle);
             }
-            else
-            {
+            else{
                 get_force_sgh(material,
                         *mesh,
                         node_coords,
@@ -1125,21 +1054,18 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                 real_t matrix_contribution;
                 size_t dof_id;
                 size_t elem_id;
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     // EQUATION 1
                     matrix_contribution = 0;
                     // compute resulting row of force velocity gradient matrix transpose right multiplied by adjoint vector
 
-                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++)
-                    {
+                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
                         dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
                         matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Velocities(node_gid * num_dim + idim, idof);
                     }
 
                     // compute resulting row of transpose of power gradient w.r.t velocity matrix right multiplied by psi adjoint vector
-                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++)
-                    {
+                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
                         elem_id = elems_in_node(node_gid, ielem);
                         matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Velocities(node_gid * num_dim + idim, ielem);
                     }
@@ -1158,20 +1084,17 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                 real_t matrix_contribution;
                 size_t dof_id;
                 size_t elem_id;
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     // EQUATION 2
                     matrix_contribution = 0;
                     // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++)
-                    {
+                    for (int idof = 0; idof < Gradient_Matrix_Strides(node_gid * num_dim + idim); idof++) {
                         dof_id = DOF_Graph_Matrix(node_gid * num_dim + idim, idof);
                         matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Positions(node_gid * num_dim + idim, idof);
                     }
 
                     // compute resulting row of transpose of power gradient w.r.t displacement matrix right multiplied by psi adjoint vector
-                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++)
-                    {
+                    for (int ielem = 0; ielem < DOF_to_Elem_Matrix_Strides(node_gid * num_dim + idim); ielem++) {
                         elem_id = elems_in_node(node_gid, ielem);
                         matrix_contribution += psi_midpoint_adjoint_vector(elem_id, 0) * Power_Gradient_Positions(node_gid * num_dim + idim, ielem);
                     }
@@ -1192,8 +1115,7 @@ void FEA_Module_SGH::compute_topology_optimization_adjoint_full()
                 // EQUATION 3
                 matrix_contribution = 0;
                 // compute resulting row of force displacement gradient matrix transpose right multiplied by adjoint vector
-                for (int idof = 0; idof < num_nodes_in_elem * num_dim; idof++)
-                {
+                for (int idof = 0; idof < num_nodes_in_elem * num_dim; idof++) {
                     dof_id = nodes_in_elem(elem_gid, idof / num_dim) * num_dim + idof % num_dim;
                     matrix_contribution += midpoint_adjoint_vector(dof_id / num_dim, dof_id % num_dim) * Force_Gradient_Energies(elem_gid, idof);
                 }
@@ -1238,8 +1160,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
     CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_adjoint    = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
 
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         std::cout << "Computing accumulated kinetic energy gradient" << std::endl;
     }
 
@@ -1255,34 +1176,26 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         Kokkos::fence();
 
         // gradient contribution from kinetic energy v(dM/drho)v product.
-        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-        {
-            if (myrank == 0)
-            {
+        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+            if (myrank == 0) {
                 std::cout << "v*dM/drho*v term" << std::endl;
             }
         }
 
-        for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++)
-        {
+        for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++) {
             // compute timestep from time data
             global_dt = time_data[cycle + 1] - time_data[cycle];
 
             // print
-            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-            {
-                if (cycle == 0)
-                {
-                    if (myrank == 0)
-                    {
+            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+                if (cycle == 0) {
+                    if (myrank == 0) {
                         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                     }
                 }
                 // print time step every 10 cycles
-                else if (cycle % 20 == 0)
-                {
-                    if (myrank == 0)
-                    {
+                else if (cycle % 20 == 0) {
+                    if (myrank == 0) {
                         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                     }
                 } // end if
@@ -1299,30 +1212,25 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                     // std::cout << elem_mass(elem_id) <<std::endl;
 
                     // current_nodal_velocities
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                    {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         node_id = nodes_in_elem(elem_id, inode);
                         // midpoint rule for integration being used; add velocities and divide by 2
                         current_element_velocities(inode, 0) = (current_velocity_vector(node_id, 0) + next_velocity_vector(node_id, 0)) / 2;
                         current_element_velocities(inode, 1) = (current_velocity_vector(node_id, 1) + next_velocity_vector(node_id, 1)) / 2;
-                        if (num_dim == 3)
-                        {
+                        if (num_dim == 3) {
                             current_element_velocities(inode, 2) = (current_velocity_vector(node_id, 2) + next_velocity_vector(node_id, 2)) / 2;
                         }
                     }
 
                     inner_product = 0;
-                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++)
-                    {
+                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
                         node_id = nodes_in_elem(elem_id, ifill);
-                        for (int idim = 0; idim < num_dim; idim++)
-                        {
+                        for (int idim = 0; idim < num_dim; idim++) {
                             inner_product += elem_mass(elem_id) * current_element_velocities(ifill, idim) * current_element_velocities(ifill, idim);
                         }
                     }
 
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                    {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         // compute gradient of local element contribution to v^t*M*v product
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         // division by design ratio recovers nominal element mass used in the gradient operator
@@ -1335,8 +1243,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                 // multiply
                 FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
                     size_t corner_id;
-                    for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++)
-                    {
+                    for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                         corner_id = corners_in_node(node_id, icorner);
                         design_gradients(node_id, 0) += corner_value_storage(corner_id);
                     }
@@ -1352,33 +1259,25 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         Kokkos::fence();
 
         // gradient contribution from time derivative of adjoint \dot{lambda}(dM/drho)v product.
-        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-        {
-            if (myrank == 0)
-            {
+        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+            if (myrank == 0) {
                 std::cout << "gradient term involving adjoint derivative" << std::endl;
             }
         }
 
-        for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++)
-        {
+        for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++) {
             // compute timestep from time data
             global_dt = time_data[cycle + 1] - time_data[cycle];
             // print
-            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-            {
-                if (cycle == 0)
-                {
-                    if (myrank == 0)
-                    {
+            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+                if (cycle == 0) {
+                    if (myrank == 0) {
                         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                     }
                 }
                 // print time step every 10 cycles
-                else if (cycle % 20 == 0)
-                {
-                    if (myrank == 0)
-                    {
+                else if (cycle % 20 == 0) {
+                    if (myrank == 0) {
                         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                     }
                 } // end if
@@ -1400,24 +1299,20 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                     real_t inner_product;
                     // std::cout << elem_mass(elem_id) <<std::endl;
                     // current_nodal_velocities
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                    {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         node_id = nodes_in_elem(elem_id, inode);
                         // midpoint rule for integration being used; add velocities and divide by 2
                         current_element_velocities(inode, 0) = (current_velocity_vector(node_id, 0) + next_velocity_vector(node_id, 0)) / 2;
                         current_element_velocities(inode, 1) = (current_velocity_vector(node_id, 1) + next_velocity_vector(node_id, 1)) / 2;
-                        if (num_dim == 3)
-                        {
+                        if (num_dim == 3) {
                             current_element_velocities(inode, 2) = (current_velocity_vector(node_id, 2) + next_velocity_vector(node_id, 2)) / 2;
                         }
                     }
 
                     inner_product = 0;
-                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++)
-                    {
+                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
                         node_id = nodes_in_elem(elem_id, ifill);
-                        for (int idim = 0; idim < num_dim; idim++)
-                        {
+                        for (int idim = 0; idim < num_dim; idim++) {
                             lambda_dot_current = lambda_dot_next = (next_adjoint_vector(node_id, idim) - current_adjoint_vector(node_id, idim)) / global_dt;
                             // lambda_dot_current = current_velocity_vector(node_id,idim) + damping_constant*current_adjoint_vector(node_id,idim)/node_mass(node_id) - current_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
                             // lambda_dot_next = next_velocity_vector(node_id,idim) + damping_constant*next_adjoint_vector(node_id,idim)/node_mass(node_id) - next_phi_adjoint_vector(node_id,idim)/node_mass(node_id);
@@ -1425,8 +1320,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                         }
                     }
 
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                    {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         // compute gradient of local element contribution to v^t*M*v product
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
@@ -1438,8 +1332,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                 // multiply
                 FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
                     size_t corner_id;
-                    for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++)
-                    {
+                    for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                         corner_id = corners_in_node(node_id, icorner);
                         design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
                     }
@@ -1449,33 +1342,25 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
         }
 
         // gradient contribution from time derivative of psi_adjoint \dot{psi}(dM_E/drho)e product.
-        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-        {
-            if (myrank == 0)
-            {
+        if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+            if (myrank == 0) {
                 std::cout << "gradient term involving adjoint derivative" << std::endl;
             }
         }
 
-        for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++)
-        {
+        for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++) {
             // compute timestep from time data
             global_dt = time_data[cycle + 1] - time_data[cycle];
             // print
-            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme)
-            {
-                if (cycle == 0)
-                {
-                    if (myrank == 0)
-                    {
+            if (simparam->dynamic_options.output_time_sequence_level == TIME_OUTPUT_LEVEL::extreme) {
+                if (cycle == 0) {
+                    if (myrank == 0) {
                         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                     }
                 }
                 // print time step every 10 cycles
-                else if (cycle % 20 == 0)
-                {
-                    if (myrank == 0)
-                    {
+                else if (cycle % 20 == 0) {
+                    if (myrank == 0) {
                         printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
                     }
                 } // end if
@@ -1499,8 +1384,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                     psi_dot_current = (next_psi_adjoint_vector(elem_id, 0) - current_psi_adjoint_vector(elem_id, 0)) / global_dt;
                     inner_product   = elem_mass(elem_id) * (psi_dot_current + psi_dot_current) * current_element_internal_energy(elem_id, 0) / 2;
 
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                    {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         // compute gradient of local element contribution to v^t*M*v product
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
@@ -1512,8 +1396,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                 // multiply
                 FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
                     size_t corner_id;
-                    for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++)
-                    {
+                    for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                         corner_id = corners_in_node(node_id, icorner);
                         design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem;
                     }
@@ -1535,30 +1418,25 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                 real_t inner_product;
                 // std::cout << elem_mass(elem_id) <<std::endl;
                 // current_nodal_velocities
-                for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                {
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     node_id = nodes_in_elem(elem_id, inode);
                     // midpoint rule for integration being used; add velocities and divide by 2
                     current_element_velocities(inode, 0) = current_velocity_vector(node_id, 0);
                     current_element_velocities(inode, 1) = current_velocity_vector(node_id, 1);
-                    if (num_dim == 3)
-                    {
+                    if (num_dim == 3) {
                         current_element_velocities(inode, 2) = current_velocity_vector(node_id, 2);
                     }
                 }
 
                 inner_product = 0;
-                for (int ifill = 0; ifill < num_nodes_in_elem; ifill++)
-                {
+                for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
                     node_id = nodes_in_elem(elem_id, ifill);
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         inner_product += elem_mass(elem_id) * current_adjoint_vector(node_id, idim) * current_element_velocities(ifill, idim);
                     }
                 }
 
-                for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                {
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     // compute gradient of local element contribution to v^t*M*v product
                     corner_id = elem_id * num_nodes_in_elem + inode;
                     corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
@@ -1570,8 +1448,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
             // multiply
             FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
                 size_t corner_id;
-                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++)
-                {
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
                 }
@@ -1592,18 +1469,15 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
                 size_t corner_id;
                 real_t inner_product;
                 // std::cout << elem_mass(elem_id) <<std::endl;
-                
-                if (elem_extensive_initial_energy_condition(elem_id))
-                {
+
+                if (elem_extensive_initial_energy_condition(elem_id)) {
                     inner_product = 0;
                 }
-                else
-                {
+                else{
                     inner_product = elem_mass(elem_id) * current_psi_adjoint_vector(elem_id, 0) * current_element_internal_energy(elem_id, 0);
                 }
 
-                for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                {
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     // compute gradient of local element contribution to v^t*M*v product
                     corner_id = elem_id * num_nodes_in_elem + inode;
                     corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
@@ -1615,8 +1489,7 @@ void FEA_Module_SGH::compute_topology_optimization_gradient_full(Teuchos::RCP<co
             // multiply
             FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
                 size_t corner_id;
-                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++)
-                {
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += -corner_value_storage(corner_id) / (double)num_nodes_in_elem;
                 }
@@ -1697,34 +1570,26 @@ void FEA_Module_SGH::init_assembly()
     Kokkos::fence();
 
     // count upper bound of strides for Sparse Pattern Graph by allowing repeats due to connectivity
-    if (num_dim == 2)
-    {
-        for (int ielem = 0; ielem < rnum_elem; ielem++)
-        {
+    if (num_dim == 2) {
+        for (int ielem = 0; ielem < rnum_elem; ielem++) {
             element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
             nodes_per_element = elem2D->num_nodes();
-            for (int lnode = 0; lnode < nodes_per_element; lnode++)
-            {
+            for (int lnode = 0; lnode < nodes_per_element; lnode++) {
                 local_node_index = nodes_in_elem(ielem, lnode);
-                if (local_node_index < nlocal_nodes)
-                {
+                if (local_node_index < nlocal_nodes) {
                     Dual_Graph_Matrix_Strides_initial.host(local_node_index) += nodes_per_element;
                 }
             }
         }
     }
 
-    if (num_dim == 3)
-    {
-        for (int ielem = 0; ielem < rnum_elem; ielem++)
-        {
+    if (num_dim == 3) {
+        for (int ielem = 0; ielem < rnum_elem; ielem++) {
             element_select->choose_3Delem_type(Element_Types(ielem), elem);
             nodes_per_element = elem->num_nodes();
-            for (int lnode = 0; lnode < nodes_per_element; lnode++)
-            {
+            for (int lnode = 0; lnode < nodes_per_element; lnode++) {
                 local_node_index = nodes_in_elem(ielem, lnode);
-                if (local_node_index < nlocal_nodes)
-                {
+                if (local_node_index < nlocal_nodes) {
                     Dual_Graph_Matrix_Strides_initial.host(local_node_index) += nodes_per_element;
                 }
             }
@@ -1744,8 +1609,7 @@ void FEA_Module_SGH::init_assembly()
     // compute maximum stride
     size_t update = 0;
     REDUCE_MAX_CLASS(inode, 0, nlocal_nodes, update, {
-        if (update < Graph_Matrix_Strides_initial(inode))
-        {
+        if (update < Graph_Matrix_Strides_initial(inode)) {
             update = Graph_Matrix_Strides_initial(inode);
         }
     }, max_stride);
@@ -1759,19 +1623,14 @@ void FEA_Module_SGH::init_assembly()
     RaggedRightArrayofVectorsKokkos<LO, array_layout, device_type, memory_traits> Element_local_indices(Graph_Matrix_Strides_initial, 3);
 
     // Fill the initial Graph with repeats
-    if (num_dim == 2)
-    {
-        for (int ielem = 0; ielem < rnum_elem; ielem++)
-        {
+    if (num_dim == 2) {
+        for (int ielem = 0; ielem < rnum_elem; ielem++) {
             element_select->choose_2Delem_type(Element_Types(ielem), elem2D);
             nodes_per_element = elem2D->num_nodes();
-            for (int lnode = 0; lnode < nodes_per_element; lnode++)
-            {
+            for (int lnode = 0; lnode < nodes_per_element; lnode++) {
                 local_node_index = nodes_in_elem(ielem, lnode);
-                if (local_node_index < nlocal_nodes)
-                {
-                    for (int jnode = 0; jnode < nodes_per_element; jnode++)
-                    {
+                if (local_node_index < nlocal_nodes) {
+                    for (int jnode = 0; jnode < nodes_per_element; jnode++) {
                         current_column_index = Graph_Fill(local_node_index) + jnode;
                         Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem, jnode);
 
@@ -1789,19 +1648,14 @@ void FEA_Module_SGH::init_assembly()
         }
     }
 
-    if (num_dim == 3)
-    {
-        for (int ielem = 0; ielem < rnum_elem; ielem++)
-        {
+    if (num_dim == 3) {
+        for (int ielem = 0; ielem < rnum_elem; ielem++) {
             element_select->choose_3Delem_type(Element_Types(ielem), elem);
             nodes_per_element = elem->num_nodes();
-            for (int lnode = 0; lnode < nodes_per_element; lnode++)
-            {
+            for (int lnode = 0; lnode < nodes_per_element; lnode++) {
                 local_node_index = nodes_in_elem(ielem, lnode);
-                if (local_node_index < nlocal_nodes)
-                {
-                    for (int jnode = 0; jnode < nodes_per_element; jnode++)
-                    {
+                if (local_node_index < nlocal_nodes) {
+                    for (int jnode = 0; jnode < nodes_per_element; jnode++) {
                         current_column_index = Graph_Fill(local_node_index) + jnode;
                         Repeat_Graph_Matrix(local_node_index, current_column_index) = nodes_in_elem(ielem, jnode);
 
@@ -1833,19 +1687,16 @@ void FEA_Module_SGH::init_assembly()
         int element_column_index;
         int current_stride;
         int current_row_n_nodes_scanned;
-        for (int inode = 0; inode < nlocal_nodes; inode++)
-        {
+        for (int inode = 0; inode < nlocal_nodes; inode++) {
             current_row_n_nodes_scanned = 0;
-            for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++)
-            {
+            for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++) {
                 // convert global index in graph to its local index for the flagging array
                 current_node = Repeat_Graph_Matrix(inode, istride);
                 // debug
                 // if(current_node==-1)
                 // std::cout << "Graph Matrix node access on task " << myrank << std::endl;
                 // std::cout << Repeat_Graph_Matrix(inode,istride) << std::endl;
-                if (node_indices_used(current_node))
-                {
+                if (node_indices_used(current_node)) {
                     // set global assembly map index to the location in the graph matrix where this global node was first found
                     current_element_index = Element_local_indices(inode, istride, 0);
                     element_row_index     = Element_local_indices(inode, istride, 1);
@@ -1857,8 +1708,7 @@ void FEA_Module_SGH::init_assembly()
                     // first swap information about the inverse and forward maps
 
                     current_stride = Graph_Matrix_Strides(inode);
-                    if (istride != current_stride - 1)
-                    {
+                    if (istride != current_stride - 1) {
                         Element_local_indices(inode, istride, 0) = Element_local_indices(inode, current_stride - 1, 0);
                         Element_local_indices(inode, istride, 1) = Element_local_indices(inode, current_stride - 1, 1);
                         Element_local_indices(inode, istride, 2) = Element_local_indices(inode, current_stride - 1, 2);
@@ -1876,8 +1726,7 @@ void FEA_Module_SGH::init_assembly()
                     istride--;
                     Graph_Matrix_Strides(inode)--;
                 }
-                else
-                {
+                else{
                     /*this node hasn't shown up in the row before; add it to the list of nodes
                       that have been scanned uniquely. Use this list to reset the flag array
                       afterwards without having to loop over all the nodes in the system*/
@@ -1888,8 +1737,7 @@ void FEA_Module_SGH::init_assembly()
                 }
             }
             // reset nodes used list for the next row of the sparse list
-            for (int node_reset = 0; node_reset < current_row_n_nodes_scanned; node_reset++)
-            {
+            for (int node_reset = 0; node_reset < current_row_n_nodes_scanned; node_reset++) {
                 node_indices_used(current_row_nodes_scanned(node_reset)) = 0;
             }
         }
@@ -1901,8 +1749,7 @@ void FEA_Module_SGH::init_assembly()
     Graph_Matrix = RaggedRightArrayKokkos<LO, array_layout, device_type, memory_traits>(Graph_Matrix_Strides);
 
     FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
-        for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++)
-        {
+        for (int istride = 0; istride < Graph_Matrix_Strides(inode); istride++) {
             Graph_Matrix(inode, istride) = Repeat_Graph_Matrix(inode, istride);
         }
     }); // end parallel for
@@ -1921,8 +1768,7 @@ void FEA_Module_SGH::init_assembly()
     Gradient_Matrix_Strides.update_host();
 
     // build inverse map for element gradient assembly
-    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++)
-    {
+    for (size_t elem_gid = 0; elem_gid < rnum_elem; elem_gid++) {
         FOR_ALL_CLASS(node_lid, 0, num_nodes_in_elem, {
             // get the global_id of the node
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
@@ -1945,8 +1791,7 @@ void FEA_Module_SGH::init_assembly()
     Kokkos::View<size_t*, array_layout, device_type, memory_traits> node_to_elem_strides = elems_in_node.mystrides_;
     DOF_to_Elem_Matrix_Strides = DCArrayKokkos<size_t, array_layout, device_type, memory_traits>(nlocal_nodes * num_dim);
     FOR_ALL_CLASS(inode, 0, nlocal_nodes, {
-        for (int idim = 0; idim < num_dim; idim++)
-        {
+        for (int idim = 0; idim < num_dim; idim++) {
             DOF_to_Elem_Matrix_Strides(inode * num_dim + idim) = count_saved_corners_in_node(inode);
         }
     }); // end parallel for
@@ -1960,8 +1805,7 @@ void FEA_Module_SGH::init_assembly()
     // debug print
     // std::cout << "DOF GRAPH MATRIX ENTRIES ON TASK " << myrank << std::endl;
     FOR_ALL_CLASS(idof, 0, num_dim * nlocal_nodes, {
-        for (int istride = 0; istride < Gradient_Matrix_Strides(idof); istride++)
-        {
+        for (int istride = 0; istride < Gradient_Matrix_Strides(idof); istride++) {
             DOF_Graph_Matrix(idof, istride) = Graph_Matrix(idof / num_dim, istride / num_dim) * num_dim + istride % num_dim;
         }
     }); // end parallel for
@@ -2040,13 +1884,11 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t& mesh,
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
     int num_dims = simparam->num_dims;
     // Loop over boundary sets
-    for (size_t bdy_set = 0; bdy_set < num_bdy_sets; bdy_set++)
-    {
+    for (size_t bdy_set = 0; bdy_set < num_bdy_sets; bdy_set++) {
         // Loop over boundary nodes in a boundary set
         FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
             // reflected (boundary array is on the device)
-            if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::reflected)
-            {
+            if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::reflected) {
                 // directions with hydro_bc:
                 // x_plane  = 0,
                 // y_plane  = 1,
@@ -2056,25 +1898,21 @@ void FEA_Module_SGH::boundary_adjoint(const mesh_t& mesh,
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
                 // Set velocity to zero in that directdion
-                if (bdy_node_gid < nlocal_nodes)
-                {
+                if (bdy_node_gid < nlocal_nodes) {
                     node_adjoint(bdy_node_gid, direction)     = 0.0;
                     node_phi_adjoint(bdy_node_gid, direction) = 0.0;
                 }
                 // node_phi_adjoint(bdy_node_gid, direction) = 0.0;
             }
-            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::fixed_position)
-            {
+            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::fixed_position) {
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
                 // debug clause
                 // if(bdy_node_gid==549412) print_flag(0) = true;
 
-                for (size_t dim = 0; dim < num_dims; dim++)
-                {
+                for (size_t dim = 0; dim < num_dims; dim++) {
                     // Set velocity to zero
-                    if (bdy_node_gid < nlocal_nodes)
-                    {
+                    if (bdy_node_gid < nlocal_nodes) {
                         node_adjoint(bdy_node_gid, dim)     = 0.0;
                         node_phi_adjoint(bdy_node_gid, dim) = 0.0;
                     }

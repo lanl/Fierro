@@ -111,8 +111,7 @@ FEA_Module_SGH::FEA_Module_SGH(
     all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
 
     // Switch for optimization solver
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on)
-    {
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_velocity        = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_position        = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -126,8 +125,7 @@ FEA_Module_SGH::FEA_Module_SGH(
         psi_adjoint_vector_distributed = Teuchos::rcp(new MV(all_element_map, 1));
     }
 
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on || simparam->num_dims == 2)
-    {
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on || simparam->num_dims == 2) {
         node_masses_distributed = Teuchos::rcp(new MV(map, 1));
         ghost_node_masses_distributed = Teuchos::rcp(new MV(ghost_node_map, 1));
     }
@@ -159,8 +157,7 @@ FEA_Module_SGH::FEA_Module_SGH(
     graphics_id    = simparam->output_options.graphics_id;
     rk_num_bins    = simparam->dynamic_options.rk_num_bins;
 
-    if (simparam->topology_optimization_on)
-    {
+    if (simparam->topology_optimization_on) {
         max_time_steps = BUFFER_GROW;
         time_data.resize(max_time_steps + 1);
         element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
@@ -172,8 +169,7 @@ FEA_Module_SGH::FEA_Module_SGH(
         psi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
 
         // assign a multivector of corresponding size to each new timestep in the buffer
-        for (int istep = 0; istep < max_time_steps + 1; istep++)
-        {
+        for (int istep = 0; istep < max_time_steps + 1; istep++) {
             (*forward_solve_velocity_data)[istep]   = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
             (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
             (*forward_solve_internal_energy_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
@@ -276,18 +272,15 @@ void FEA_Module_SGH::init_output()
     bool output_stress_flag   = simparam->output(FIELD::stress);
     int  num_dim = simparam->num_dims;
     int  Brows;
-    if (num_dim == 3)
-    {
+    if (num_dim == 3) {
         Brows = 6;
     }
-    else
-    {
+    else{
         Brows = 3;
     }
 
     // Implicit compliant code
-    if (output_velocity_flag)
-    {
+    if (output_velocity_flag) {
         // displacement_index is accessed by writers at the solver level for deformed output
         output_velocity_index = noutput;
         noutput += 1;
@@ -303,13 +296,11 @@ void FEA_Module_SGH::init_output()
         output_dof_names[noutput - 1].resize(num_dim);
         output_dof_names[noutput - 1][0] = "vx";
         output_dof_names[noutput - 1][1] = "vy";
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             output_dof_names[noutput - 1][2] = "vz";
         }
     }
-    if (output_strain_flag)
-    {
+    if (output_strain_flag) {
         output_strain_index = noutput;
         noutput += 1;
         module_outputs.resize(noutput);
@@ -322,14 +313,12 @@ void FEA_Module_SGH::init_output()
 
         output_dof_names.resize(noutput);
         output_dof_names[noutput - 1].resize(Brows);
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             output_dof_names[noutput - 1][0] = "strain_xx";
             output_dof_names[noutput - 1][1] = "strain_yy";
             output_dof_names[noutput - 1][2] = "strain_xy";
         }
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             output_dof_names[noutput - 1][0] = "strain_xx";
             output_dof_names[noutput - 1][1] = "strain_yy";
             output_dof_names[noutput - 1][2] = "strain_zz";
@@ -338,8 +327,7 @@ void FEA_Module_SGH::init_output()
             output_dof_names[noutput - 1][5] = "strain_yz";
         }
     }
-    if (output_stress_flag)
-    {
+    if (output_stress_flag) {
         output_stress_index = noutput;
         noutput += 1;
         module_outputs.resize(noutput);
@@ -352,14 +340,12 @@ void FEA_Module_SGH::init_output()
 
         output_dof_names.resize(noutput);
         output_dof_names[noutput - 1].resize(Brows);
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             output_dof_names[noutput - 1][0] = "stress_xx";
             output_dof_names[noutput - 1][1] = "stress_yy";
             output_dof_names[noutput - 1][3] = "stress_xy";
         }
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             output_dof_names[noutput - 1][0] = "stress_xx";
             output_dof_names[noutput - 1][1] = "stress_yy";
             output_dof_names[noutput - 1][2] = "stress_zz";
@@ -403,10 +389,8 @@ void FEA_Module_SGH::write_data(std::map<std::string, const double*>& point_data
 {
     const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
 
-    for (const auto& field_name : simparam->output_options.output_fields)
-    {
-        switch (field_name)
-        {
+    for (const auto& field_name : simparam->output_options.output_fields) {
+        switch (field_name) {
         case FIELD::velocity:
             // node "velocity"
             node_vel.update_host();
@@ -498,8 +482,7 @@ void FEA_Module_SGH::sort_element_output(Teuchos::RCP<Tpetra::Map<LO, GO, node_t
     {
         host_vec_array Element_Densities = Global_Element_Densities->getLocalView<HostSpace>(Tpetra::Access::ReadWrite);
         elem_den.update_host();
-        for (int ielem = 0; ielem < rnum_elem; ielem++)
-        {
+        for (int ielem = 0; ielem < rnum_elem; ielem++) {
             Element_Densities(ielem, 0) = elem_den.host(ielem);
         }
     }
@@ -540,8 +523,7 @@ void FEA_Module_SGH::comm_node_masses()
 #ifdef DEBUG
     std::ostream& out = std::cout;
     Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         *fos << "Density data :" << std::endl;
     }
     node_densities_distributed->describe(*fos, Teuchos::VERB_EXTREME);
@@ -560,8 +542,7 @@ void FEA_Module_SGH::comm_node_masses()
     all_node_velocities_distributed->describe(*fos, Teuchos::VERB_EXTREME);
 
     update_count++;
-    if (update_count == 1)
-    {
+    if (update_count == 1) {
         MPI_Barrier(world);
         MPI_Abort(world, 4);
     }
@@ -577,16 +558,14 @@ void FEA_Module_SGH::comm_node_masses()
 /////////////////////////////////////////////////////////////////////////////
 void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp)
 {
-    if (simparam->topology_optimization_on)
-    {
+    if (simparam->topology_optimization_on) {
         // set density vector to the current value chosen by the optimizer
         test_node_densities_distributed = zp;
 #ifdef DEBUG
         // debug print of design vector
         std::ostream& out = std::cout;
         Teuchos::RCP<Teuchos::FancyOStream> fos = Teuchos::fancyOStream(Teuchos::rcpFromRef(out));
-        if (myrank == 0)
-        {
+        if (myrank == 0) {
             *fos << "Density data :" << std::endl;
         }
         node_densities_distributed->describe(*fos, Teuchos::VERB_EXTREME);
@@ -600,8 +579,7 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp)
         // comms to get ghosts
         all_node_densities_distributed->doImport(*test_node_densities_distributed, *importer, Tpetra::INSERT);
     }
-    else if (simparam->shape_optimization_on)
-    {
+    else if (simparam->shape_optimization_on) {
         // clause to communicate boundary node data if the boundary nodes are ghosts on this rank
     }
 }
@@ -630,22 +608,19 @@ void FEA_Module_SGH::node_density_constraints(host_vec_array node_densities_lowe
     FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
         double current_node_coords[3];
         double radius;
-        for (size_t dim = 0; dim < num_dim; dim++)
-        {
+        for (size_t dim = 0; dim < num_dim; dim++) {
             current_node_coords[dim] = all_initial_node_coords(node_gid, dim);
         } // end for dim
         radius = sqrt(current_node_coords[0] * current_node_coords[0]
             + current_node_coords[1] * current_node_coords[1]
             + current_node_coords[2] * current_node_coords[2]);
-        for (size_t ilc = 0; ilc < num_lcs; ilc++)
-        {
+        for (size_t ilc = 0; ilc < num_lcs; ilc++) {
             // debug check
 #ifdef DEBUG
             std::cout << "LOADING CONDITION VOLUME TYPE: " << to_string(loading(ilc).volume) << std::endl;
 #endif
             bool fill_this = loading(ilc).volume.contains(current_node_coords);
-            if (fill_this)
-            {
+            if (fill_this) {
                 node_densities_lower_bound(node_gid, 0) = 1;
             }
         }
@@ -723,8 +698,7 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
     int    nboundary_patches  = Explicit_Solver_Pointer_->nboundary_patches;
     int    num_nodes_in_patch = mesh.num_nodes_in_patch;
 #ifdef DEBUG
-    if (bdy_set == mesh.num_bdy_sets)
-    {
+    if (bdy_set == mesh.num_bdy_sets) {
         printf(" ERROR: number of boundary sets must be increased by %zu",
                  bdy_set - mesh.num_bdy_sets + 1);
         exit(0);
@@ -742,8 +716,7 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
         double val = boundary(bdy_set).surface.plane_position;
 
         // save the boundary patches to this set that are on the plane, spheres, etc.
-        for (size_t bdy_patch_lid = 0; bdy_patch_lid < nboundary_patches; bdy_patch_lid++)
-        {
+        for (size_t bdy_patch_lid = 0; bdy_patch_lid < nboundary_patches; bdy_patch_lid++) {
             // save the patch index
             size_t bdy_patch_gid = bdy_patch_lid;
 
@@ -758,18 +731,15 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
 
             // debug check
 #ifdef DEBUG
-            for (size_t patch_node_lid = 0; patch_node_lid < mesh.num_nodes_in_patch; patch_node_lid++)
-            {
+            for (size_t patch_node_lid = 0; patch_node_lid < mesh.num_nodes_in_patch; patch_node_lid++) {
                 size_t node_gid = mesh.nodes_in_patch(bdy_patch_gid, patch_node_lid);
-                if (bdy_node_gid == 549412)
-                {
+                if (bdy_node_gid == 549412) {
                     print_flag(0) = true;
                 }
             }
 #endif
 
-            if (is_on_bdy)
-            {
+            if (is_on_bdy) {
                 size_t index = bdy_patches_in_set.stride(bdy_set);
 
                 // increment the number of boundary patches saved
@@ -782,8 +752,7 @@ void FEA_Module_SGH::tag_bdys(const DCArrayKokkos<boundary_t>& boundary,
 
 #ifdef DEBUG
     print_flag.update_host();
-    if (print_flag.host(0))
-    {
+    if (print_flag.host(0)) {
         std::cout << "found boundary node with id 549412" << std::endl;
     }
 #endif
@@ -826,56 +795,44 @@ bool FEA_Module_SGH::check_bdy(const size_t patch_gid,
     double these_patch_coords[3];  // Note: cannot allocated array with num_dim
 
     // loop over the nodes on the patch
-    for (size_t patch_node_lid = 0; patch_node_lid < num_nodes_in_patch; patch_node_lid++)
-    {
+    for (size_t patch_node_lid = 0; patch_node_lid < num_nodes_in_patch; patch_node_lid++) {
         // get the nodal_gid for this node in the patch
         // size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
         size_t node_gid = Local_Index_Boundary_Patches(patch_gid, patch_node_lid);
 
-        for (size_t dim = 0; dim < num_dim; dim++)
-        {
+        for (size_t dim = 0; dim < num_dim; dim++) {
             these_patch_coords[dim] = node_coords(rk_level, node_gid, dim);  // (rk, node_gid, dim)
         }
 
-        if (bc_type == BOUNDARY_TYPE::x_plane)
-        {
-            if (fabs(these_patch_coords[0] - val) <= 1.0e-7)
-            {
+        if (bc_type == BOUNDARY_TYPE::x_plane) {
+            if (fabs(these_patch_coords[0] - val) <= 1.0e-7) {
                 is_on_bdy += 1;
             }
         }
-        else if (bc_type == BOUNDARY_TYPE::y_plane)
-        {
-            if (fabs(these_patch_coords[1] - val) <= 1.0e-7)
-            {
+        else if (bc_type == BOUNDARY_TYPE::y_plane) {
+            if (fabs(these_patch_coords[1] - val) <= 1.0e-7) {
                 is_on_bdy += 1;
             }
         }
-        else if (bc_type == BOUNDARY_TYPE::z_plane)
-        {
-            if (fabs(these_patch_coords[2] - val) <= 1.0e-7)
-            {
+        else if (bc_type == BOUNDARY_TYPE::z_plane) {
+            if (fabs(these_patch_coords[2] - val) <= 1.0e-7) {
                 is_on_bdy += 1;
             }
         }
-        else if (bc_type == BOUNDARY_TYPE::cylinder)
-        {
+        else if (bc_type == BOUNDARY_TYPE::cylinder) {
             real_t R = sqrt(these_patch_coords[0] * these_patch_coords[0] +
                           these_patch_coords[1] * these_patch_coords[1]);
 
-            if (fabs(R - val) <= 1.0e-7)
-            {
+            if (fabs(R - val) <= 1.0e-7) {
                 is_on_bdy += 1;
             }
         }
-        else if (bc_type == BOUNDARY_TYPE::sphere)
-        {
+        else if (bc_type == BOUNDARY_TYPE::sphere) {
             real_t R = sqrt(these_patch_coords[0] * these_patch_coords[0] +
                           these_patch_coords[1] * these_patch_coords[1] +
                           these_patch_coords[2] * these_patch_coords[2]);
 
-            if (fabs(R - val) <= 1.0e-7)
-            {
+            if (fabs(R - val) <= 1.0e-7) {
                 is_on_bdy += 1;
             }
         }
@@ -956,15 +913,13 @@ void FEA_Module_SGH::sgh_solve()
     }
     */
     // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
-    if (simparam->topology_optimization_on)
-    {
+    if (simparam->topology_optimization_on) {
         obj_pointer = problem->getObjective();
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
         kinetic_energy_minimize_function.objective_accumulation = 0;
         global_objective_accumulation = objective_accumulation = 0;
         kinetic_energy_objective = true;
-        if (max_time_steps + 1 > forward_solve_velocity_data->size())
-        {
+        if (max_time_steps + 1 > forward_solve_velocity_data->size()) {
             old_max_forward_buffer = forward_solve_velocity_data->size();
             time_data.resize(max_time_steps + 1);
             forward_solve_velocity_data->resize(max_time_steps + 1);
@@ -974,8 +929,7 @@ void FEA_Module_SGH::sgh_solve()
             phi_adjoint_vector_data->resize(max_time_steps + 1);
             psi_adjoint_vector_data->resize(max_time_steps + 1);
             // assign a multivector of corresponding size to each new timestep in the buffer
-            for (int istep = old_max_forward_buffer; istep < max_time_steps + 1; istep++)
-            {
+            for (int istep = old_max_forward_buffer; istep < max_time_steps + 1; istep++) {
                 (*forward_solve_velocity_data)[istep]   = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                 (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                 (*forward_solve_internal_energy_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
@@ -986,16 +940,13 @@ void FEA_Module_SGH::sgh_solve()
         }
     }
 
-    if (simparam->topology_optimization_on)
-    {
+    if (simparam->topology_optimization_on) {
         nTO_modules = simparam->TO_Module_List.size();
     }
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if (simparam->output_options.write_initial)
-    {
-        if (myrank == 0)
-        {
+    if (simparam->output_options.write_initial) {
+        if (myrank == 0) {
             printf("Writing outputs to file at %f \n", time_value);
         }
 
@@ -1045,17 +996,14 @@ void FEA_Module_SGH::sgh_solve()
     // extensive KE
     REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         double ke = 0;
-        for (size_t dim = 0; dim < num_dim; dim++)
-        {
+        for (size_t dim = 0; dim < num_dim; dim++) {
             ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
         } // end for
 
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
         }
-        else
-        {
+        else{
             KE_loc_sum += node_mass(node_gid) * ke;
         }
     }, KE_sum);
@@ -1073,8 +1021,7 @@ void FEA_Module_SGH::sgh_solve()
     // save the nodal mass
     FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
         double radius = 1.0;
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             radius = node_coords(rk_level, node_gid, 1);
         }
         node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
@@ -1086,8 +1033,7 @@ void FEA_Module_SGH::sgh_solve()
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     // save initial data
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on)
-    {
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         time_data[0] = 0;
         // assign current velocity data to multivector
         // view scope
@@ -1095,8 +1041,7 @@ void FEA_Module_SGH::sgh_solve()
             vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             vec_array node_coords_interface     = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                     node_coords_interface(node_gid, idim)     = node_coords(rk_level, node_gid, idim);
                 }
@@ -1131,8 +1076,7 @@ void FEA_Module_SGH::sgh_solve()
             const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
                     all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
                 }
@@ -1140,8 +1084,7 @@ void FEA_Module_SGH::sgh_solve()
             Kokkos::fence();
 
             FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                     all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
                 }
@@ -1161,19 +1104,16 @@ void FEA_Module_SGH::sgh_solve()
     }
 
     // loop over the max number of time integration cycles
-    for (cycle = 0; cycle < cycle_stop; cycle++)
-    {
+    for (cycle = 0; cycle < cycle_stop; cycle++) {
         // get the step
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             get_timestep2D(*mesh,
                            node_coords,
                            node_vel,
                            elem_sspd,
                            elem_vol);
         }
-        else
-        {
+        else{
             get_timestep(*mesh,
                          node_coords,
                          node_vel,
@@ -1188,20 +1128,15 @@ void FEA_Module_SGH::sgh_solve()
         // stop calculation if flag
         // if (stop_calc == 1) break;
 
-        if (simparam->dynamic_options.output_time_sequence_level >= TIME_OUTPUT_LEVEL::high)
-        {
-            if (cycle == 0)
-            {
-                if (myrank == 0)
-                {
+        if (simparam->dynamic_options.output_time_sequence_level >= TIME_OUTPUT_LEVEL::high) {
+            if (cycle == 0) {
+                if (myrank == 0) {
                     printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
                 }
             }
             // print time step every 10 cycles
-            else if (cycle % 20 == 0)
-            {
-                if (myrank == 0)
-                {
+            else if (cycle % 20 == 0) {
+                if (myrank == 0) {
                     printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
                 }
             } // end if
@@ -1220,21 +1155,18 @@ void FEA_Module_SGH::sgh_solve()
                 nall_nodes);
 
         // integrate solution forward in time
-        for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++)
-        {
+        for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
             // ---- Calculate velocity diveregence for the element ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 get_divergence2D(elem_div,
                                  node_coords,
                                  node_vel,
                                  elem_vol);
             }
-            else
-            {
+            else{
                 get_divergence(elem_div,
                                node_coords,
                                node_vel,
@@ -1242,8 +1174,7 @@ void FEA_Module_SGH::sgh_solve()
             } // end if 2D
 
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 get_force_sgh2D(material,
                                 *mesh,
                                 node_coords,
@@ -1260,8 +1191,7 @@ void FEA_Module_SGH::sgh_solve()
                                 rk_alpha,
                                 cycle);
             }
-            else
-            {
+            else{
                 get_force_sgh(material,
                               *mesh,
                               node_coords,
@@ -1280,27 +1210,22 @@ void FEA_Module_SGH::sgh_solve()
             }
 
 #ifdef DEBUG
-            if (myrank == 1)
-            {
+            if (myrank == 1) {
                 std::cout << "rk_alpha = " << rk_alpha << ", dt = " << dt << std::endl;
-                for (int i = 0; i < nall_nodes; i++)
-                {
+                for (int i = 0; i < nall_nodes; i++) {
                     double node_force[3];
-                    for (size_t dim = 0; dim < num_dim; dim++)
-                    {
+                    for (size_t dim = 0; dim < num_dim; dim++) {
                         node_force[dim] = 0.0;
                     } // end for dim
 
                     // loop over all corners around the node and calculate the nodal force
-                    for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(i); corner_lid++)
-                    {
+                    for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(i); corner_lid++) {
                         // Get corner gid
                         size_t corner_gid = mesh.corners_in_node(i, corner_lid);
                         std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << corner_gid << " " << corner_force(corner_gid, 0) << " " << corner_force(corner_gid,
                         1) << " " << corner_force(corner_gid, 2) << std::endl;
                         // loop over dimension
-                        for (size_t dim = 0; dim < num_dim; dim++)
-                        {
+                        for (size_t dim = 0; dim < num_dim; dim++) {
                             node_force[dim] += corner_force(corner_gid, dim);
                         } // end for dim
                     } // end for corner_lid
@@ -1309,10 +1234,8 @@ void FEA_Module_SGH::sgh_solve()
 
             // debug print vector values on a rank
 
-            if (myrank == 0)
-            {
-                for (int i = 0; i < nall_nodes; i++)
-                {
+            if (myrank == 0) {
+                for (int i = 0; i < nall_nodes; i++) {
                     std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(rk_level, i, 0) << " " << node_vel(rk_level, i, 1) << " " << node_vel(rk_level, i,
                     2) << std::endl;
                 }
@@ -1325,8 +1248,7 @@ void FEA_Module_SGH::sgh_solve()
                               node_mass,
                               corner_force);
 
-            if (have_loading_conditions)
-            {
+            if (have_loading_conditions) {
                 applied_forces(material,
                               *mesh,
                               node_coords,
@@ -1351,8 +1273,7 @@ void FEA_Module_SGH::sgh_solve()
             {
                 vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                     }
               }); // end parallel for
@@ -1374,8 +1295,7 @@ void FEA_Module_SGH::sgh_solve()
             {
                 vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         node_vel(rk_level, node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                     }
               }); // end parallel for
@@ -1388,10 +1308,8 @@ void FEA_Module_SGH::sgh_solve()
 
 #ifdef DEBUG
             // debug print vector values on a rank
-            if (myrank == 0)
-            {
-                for (int i = 0; i < nall_nodes; i++)
-                {
+            if (myrank == 0) {
+                for (int i = 0; i < nall_nodes; i++) {
                     std::cout << Explicit_Solver_Pointer_->all_node_map->getGlobalElement(i) << " " << node_vel(rk_level, i, 0) << " " << node_vel(rk_level, i, 1) << " " << node_vel(rk_level, i,
                     2) << std::endl;
                 }
@@ -1416,8 +1334,7 @@ void FEA_Module_SGH::sgh_solve()
             get_vol();
 
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 update_state2D(material,
                                *mesh,
                                node_coords,
@@ -1433,8 +1350,7 @@ void FEA_Module_SGH::sgh_solve()
                                rk_alpha,
                                cycle);
             }
-            else
-            {
+            else{
                 update_state(material,
                              *mesh,
                              node_coords,
@@ -1457,14 +1373,12 @@ void FEA_Module_SGH::sgh_solve()
             //    3) strength models must be added by the user in user_mat.cpp
 
             // calculate the new corner masses if 2D
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 // calculate the nodal areal mass
                 FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
                     node_mass(node_gid) = 0.0;
 
-                    if (node_coords(rk_level, node_gid, 1) > tiny)
-                    {
+                    if (node_coords(rk_level, node_gid, 1) > tiny) {
                         node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(rk_level, node_gid, 1);
                     }
                     // if(cycle==0&&node_gid==1&&myrank==0)
@@ -1547,17 +1461,14 @@ void FEA_Module_SGH::sgh_solve()
                     // FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                     size_t node_gid = bdy_nodes(node_bdy_gid);
 
-                    if (node_coords(rk_level, node_gid, 1) < tiny)
-                    {
+                    if (node_coords(rk_level, node_gid, 1) < tiny) {
                         // node is on the axis
 
-                        for (size_t node_lid = 0; node_lid < num_nodes_in_node(node_gid); node_lid++)
-                        {
+                        for (size_t node_lid = 0; node_lid < num_nodes_in_node(node_gid); node_lid++) {
                             size_t node_neighbor_gid = nodes_in_node(node_gid, node_lid);
 
                             // if the node is off the axis, use it's areal mass on the boundary
-                            if (node_coords(rk_level, node_neighbor_gid, 1) > tiny)
-                            {
+                            if (node_coords(rk_level, node_neighbor_gid, 1) > tiny) {
                                 node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / 2.0);
                             }
                         } // end for over neighboring nodes
@@ -1569,15 +1480,12 @@ void FEA_Module_SGH::sgh_solve()
         // increment the time
         Explicit_Solver_Pointer_->time_value = simparam->dynamic_options.time_value = time_value += dt;
 
-        if (simparam->topology_optimization_on || simparam->shape_optimization_on)
-        {
-            if (cycle >= max_time_steps)
-            {
+        if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+            if (cycle >= max_time_steps) {
                 max_time_steps = cycle + 1;
             }
 
-            if (max_time_steps + 1 > forward_solve_velocity_data->size())
-            {
+            if (max_time_steps + 1 > forward_solve_velocity_data->size()) {
                 old_max_forward_buffer = forward_solve_velocity_data->size();
                 time_data.resize(max_time_steps + BUFFER_GROW + 1);
                 forward_solve_velocity_data->resize(max_time_steps + BUFFER_GROW + 1);
@@ -1587,8 +1495,7 @@ void FEA_Module_SGH::sgh_solve()
                 phi_adjoint_vector_data->resize(max_time_steps + BUFFER_GROW + 1);
                 psi_adjoint_vector_data->resize(max_time_steps + BUFFER_GROW + 1);
                 // assign a multivector of corresponding size to each new timestep in the buffer
-                for (int istep = old_max_forward_buffer; istep < max_time_steps + BUFFER_GROW + 1; istep++)
-                {
+                for (int istep = old_max_forward_buffer; istep < max_time_steps + BUFFER_GROW + 1; istep++) {
                     (*forward_solve_velocity_data)[istep]   = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                     (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                     (*forward_solve_internal_energy_data)[istep] = Teuchos::rcp(new MV(all_element_map, 1));
@@ -1606,8 +1513,7 @@ void FEA_Module_SGH::sgh_solve()
                 vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 vec_array node_coords_interface     = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                         node_coords_interface(node_gid, idim)     = node_coords(rk_level, node_gid, idim);
                     }
@@ -1642,8 +1548,7 @@ void FEA_Module_SGH::sgh_solve()
                 const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
                         all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
                     }
@@ -1651,8 +1556,7 @@ void FEA_Module_SGH::sgh_solve()
                 Kokkos::fence();
 
                 FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                         all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
                     }
@@ -1675,8 +1579,7 @@ void FEA_Module_SGH::sgh_solve()
             (*forward_solve_coordinate_data)[cycle + 1]->assign(*Explicit_Solver_Pointer_->all_node_coords_distributed);
 
             // kinetic energy accumulation
-            if (kinetic_energy_objective)
-            {
+            if (kinetic_energy_objective) {
                 const_vec_array node_velocities_interface = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array previous_node_velocities_interface = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 KE_loc_sum = 0.0;
@@ -1684,19 +1587,16 @@ void FEA_Module_SGH::sgh_solve()
                 // extensive KE
                 REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
                     double ke = 0;
-                    for (size_t dim = 0; dim < num_dim; dim++)
-                    {
+                    for (size_t dim = 0; dim < num_dim; dim++) {
                         // midpoint integration approximation
                         ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * (node_velocities_interface(node_gid,
                         dim) + previous_node_velocities_interface(node_gid, dim)) / 4;                                                                                                                     // 1/2 at end
                     } // end for
 
-                    if (num_dim == 2)
-                    {
+                    if (num_dim == 2) {
                         KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
                     }
-                    else
-                    {
+                    else{
                         KE_loc_sum += node_mass(node_gid) * ke;
                     }
                 }, KE_sum);
@@ -1707,40 +1607,33 @@ void FEA_Module_SGH::sgh_solve()
         }
 
         size_t write = 0;
-        if ((cycle + 1) % graphics_cyc_ival == 0 && cycle > 0)
-        {
+        if ((cycle + 1) % graphics_cyc_ival == 0 && cycle > 0) {
             write = 1;
         }
-        else if (cycle == cycle_stop)
-        {
+        else if (cycle == cycle_stop) {
             write = 1;
         }
-        else if (time_value >= time_final && simparam->output_options.write_final)
-        {
+        else if (time_value >= time_final && simparam->output_options.write_final) {
             write = 1;
         }
-        else if (time_value >= graphics_time)
-        {
+        else if (time_value >= graphics_time) {
             write = 1;
         }
 
         // write outputs
-        if (write == 1)
-        {
+        if (write == 1) {
             // interface nodal coordinate data (note: this is not needed if using write_outputs())
             // view scope
             {
                 vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         node_coords_interface(node_gid, idim) = node_coords(rk_level, node_gid, idim);
                     }
                 }); // end parallel for
             } // end view scope
 
-            if (myrank == 0)
-            {
+            if (myrank == 0) {
                 printf("Writing outputs to file at %f \n", graphics_time);
             }
 
@@ -1754,8 +1647,7 @@ void FEA_Module_SGH::sgh_solve()
         } // end if
 
         // end of calculation
-        if (time_value >= time_final)
-        {
+        if (time_value >= time_final) {
             break;
         }
     } // end for cycle loop
@@ -1763,16 +1655,14 @@ void FEA_Module_SGH::sgh_solve()
     last_time_step = cycle;
 
     // simple setup to just calculate KE minimize objective for now
-    if (simparam->topology_optimization_on)
-    {
+    if (simparam->topology_optimization_on) {
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
 
         // collect local objective values
         MPI_Allreduce(&objective_accumulation, &global_objective_accumulation, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         kinetic_energy_minimize_function.objective_accumulation = global_objective_accumulation;
 
-        if (myrank == 0)
-        {
+        if (myrank == 0) {
             std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << global_objective_accumulation << std::endl;
         }
     }
@@ -1781,8 +1671,7 @@ void FEA_Module_SGH::sgh_solve()
     auto time_difference = time_2 - time_1;
     // double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         printf("\nCalculation time in seconds: %f \n", calc_time * 1e-09);
     }
 
@@ -1803,17 +1692,14 @@ void FEA_Module_SGH::sgh_solve()
     // extensive KE
     REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         double ke = 0;
-        for (size_t dim = 0; dim < num_dim; dim++)
-        {
+        for (size_t dim = 0; dim < num_dim; dim++) {
             ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
         } // end for
 
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
         }
-        else
-        {
+        else{
             KE_loc_sum += node_mass(node_gid) * ke;
         }
     }, KE_sum);
@@ -1833,16 +1719,13 @@ void FEA_Module_SGH::sgh_solve()
 
     // reduce over MPI ranks
 
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         printf("Time=0:   KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_t0, IE_t0, TE_t0);
     }
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
     }
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         printf("total energy conservation error = %e \n\n", 100 * (TE_tend - TE_t0) / TE_t0);
     }
 

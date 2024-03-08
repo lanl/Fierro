@@ -158,10 +158,8 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
                     rk_level);
 
         // the -1 is for the inward surface area normal,
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 area_normal(node_lid, dim) = (-1.0) * area_normal(node_lid, dim);
             } // end for
         } // end for
@@ -180,18 +178,15 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
         double mag_curl = sqrt(curl[0] * curl[0] + curl[1] * curl[1] + curl[2] * curl[2]);
 
         // --- Calculate the Cauchy stress ---
-        for (size_t i = 0; i < 3; i++)
-        {
-            for (size_t j = 0; j < 3; j++)
-            {
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
                 tau(i, j) = stress(i, j);
                 // artificial viscosity can be added here to tau
             } // end for
         } // end for
 
         // add the pressure
-        for (int i = 0; i < num_dims; i++)
-        {
+        for (int i = 0; i < num_dims; i++) {
             tau(i, i) -= elem_pres(elem_gid);
         } // end for
 
@@ -200,15 +195,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
         // estimate of the Riemann velocity
 
         // initialize to Riemann velocity to zero
-        for (size_t dim = 0; dim < num_dims; dim++)
-        {
+        for (size_t dim = 0; dim < num_dims; dim++) {
             vel_star(dim) = 0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
         // an estimate of Riemann velocity
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gloabl index and create view of nodal velocity
             int node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -222,8 +215,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
         // find shock direction and shock impedance associated with each node
 
         // initialize sum term in MARS to zero
-        for (int i = 0; i < 4; i++)
-        {
+        for (int i = 0; i < 4; i++) {
             sum(i) = 0.0;
         }
 
@@ -231,8 +223,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
         double mag_vel;   // magnitude of velocity
 
         // loop over the nodes of the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get global node id
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -244,16 +235,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
                 + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) )
                 + (vel(2) - vel_star(2) ) * (vel(2) - vel_star(2) ) );
 
-            if (mag_vel > small)
-            {
+            if (mag_vel > small) {
                 // estimate of the shock direction, a unit normal
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = (vel(dim) - vel_star(dim)) / mag_vel;
                 }
             }
-            else
-            {
+            else{
                 // if there is no velocity change, then use the surface area
                 // normal as the shock direction
                 mag = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
@@ -261,21 +249,18 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
                     + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
 
                 // estimate of the shock direction
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = area_normal(node_lid, dim) / mag;
                 }
             } // end if mag_vel
 
             // cell divergence indicates compression or expansions
             size_t mat_id = elem_mat_id(elem_gid);
-            if (div < 0)  // element in compression
-            {
+            if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
             }
-            else   // element in expansion
-            {
+            else{  // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
@@ -284,8 +269,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
             double mu_term;
 
             // Coding to use shock direction
-            if (use_shock_dir == 1)
-            {
+            if (use_shock_dir == 1) {
                 // this is denominator of the Riamann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction
@@ -294,8 +278,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
                     + shock_dir(1) * area_normal(node_lid, 1)
                     + shock_dir(2) * area_normal(node_lid, 2) );
             }
-            else
-            {
+            else{
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
@@ -312,17 +295,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
         } // end for node_lid loop over nodes of the elem
 
         // The Riemann velocity, called vel_star
-        if (sum(3) > fuzz)
-        {
-            for (size_t i = 0; i < num_dims; i++)
-            {
+        if (sum(3) > fuzz) {
+            for (size_t i = 0; i < num_dims; i++) {
                 vel_star(i) = sum(i) / sum(3);
             }
         }
-        else
-        {
-            for (int i = 0; i < num_dims; i++)
-            {
+        else{
+            for (int i = 0; i < num_dims; i++) {
                 vel_star(i) = 0.0;
             }
         } // end if
@@ -349,8 +328,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
         // loop over the nieghboring cells
-        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++)
-        {
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
             // Get global index for neighboring cell
             size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
 
@@ -388,8 +366,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
 
             // Get corner gid
@@ -399,8 +376,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++)
-            {
+            for (int dim = 0; dim < num_dims; dim++) {
                 corner_vector_storage(corner_gid, dim) = -0;
                 // corner_vector_storage(corner_gid, dim) = 0;
             } // end loop over dimension
@@ -417,8 +393,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_vgradient_elastic(
     // force_gradient_position->putScalar(0);
     // set back to zero
     FOR_ALL_CLASS(idof, 0, nlocal_nodes * num_dims, {
-        for (int jdof = 0; jdof < Gradient_Matrix_Strides(idof); jdof++)
-        {
+        for (int jdof = 0; jdof < Gradient_Matrix_Strides(idof); jdof++) {
             Force_Gradient_Velocities(idof, jdof) = 0;
         }
     }); // end parallel for
@@ -552,10 +527,8 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
                     rk_level);
 
         // the -1 is for the inward surface area normal,
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 area_normal(node_lid, dim) = (-1.0) * area_normal(node_lid, dim);
             } // end for
         } // end for
@@ -574,18 +547,15 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
         double mag_curl = sqrt(curl[0] * curl[0] + curl[1] * curl[1] + curl[2] * curl[2]);
 
         // --- Calculate the Cauchy stress ---
-        for (size_t i = 0; i < 3; i++)
-        {
-            for (size_t j = 0; j < 3; j++)
-            {
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
                 tau(i, j) = stress(i, j);
                 // artificial viscosity can be added here to tau
             } // end for
         } // end for
 
         // add the pressure
-        for (int i = 0; i < num_dims; i++)
-        {
+        for (int i = 0; i < num_dims; i++) {
             tau(i, i) -= elem_pres(elem_gid);
         } // end for
 
@@ -594,15 +564,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
         // estimate of the Riemann velocity
 
         // initialize to Riemann velocity to zero
-        for (size_t dim = 0; dim < num_dims; dim++)
-        {
+        for (size_t dim = 0; dim < num_dims; dim++) {
             vel_star(dim) = 0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
         // an estimate of Riemann velocity
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gloabl index and create view of nodal velocity
             int node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -616,8 +584,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
         // find shock direction and shock impedance associated with each node
 
         // initialize sum term in MARS to zero
-        for (int i = 0; i < 4; i++)
-        {
+        for (int i = 0; i < 4; i++) {
             sum(i) = 0.0;
         }
 
@@ -625,8 +592,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
         double mag_vel;   // magnitude of velocity
 
         // loop over the nodes of the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get global node id
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -638,16 +604,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
                 + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) )
                 + (vel(2) - vel_star(2) ) * (vel(2) - vel_star(2) ) );
 
-            if (mag_vel > small)
-            {
+            if (mag_vel > small) {
                 // estimate of the shock direction, a unit normal
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = (vel(dim) - vel_star(dim)) / mag_vel;
                 }
             }
-            else
-            {
+            else{
                 // if there is no velocity change, then use the surface area
                 // normal as the shock direction
                 mag = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
@@ -655,21 +618,18 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
                     + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
 
                 // estimate of the shock direction
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = area_normal(node_lid, dim) / mag;
                 }
             } // end if mag_vel
 
             // cell divergence indicates compression or expansions
             size_t mat_id = elem_mat_id(elem_gid);
-            if (div < 0)  // element in compression
-            {
+            if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
             }
-            else   // element in expansion
-            {
+            else{  // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
@@ -678,8 +638,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
             double mu_term;
 
             // Coding to use shock direction
-            if (use_shock_dir == 1)
-            {
+            if (use_shock_dir == 1) {
                 // this is denominator of the Riamann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction
@@ -688,8 +647,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
                     + shock_dir(1) * area_normal(node_lid, 1)
                     + shock_dir(2) * area_normal(node_lid, 2) );
             }
-            else
-            {
+            else{
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
@@ -706,17 +664,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
         } // end for node_lid loop over nodes of the elem
 
         // The Riemann velocity, called vel_star
-        if (sum(3) > fuzz)
-        {
-            for (size_t i = 0; i < num_dims; i++)
-            {
+        if (sum(3) > fuzz) {
+            for (size_t i = 0; i < num_dims; i++) {
                 vel_star(i) = sum(i) / sum(3);
             }
         }
-        else
-        {
-            for (int i = 0; i < num_dims; i++)
-            {
+        else{
+            for (int i = 0; i < num_dims; i++) {
                 vel_star(i) = 0.0;
             }
         } // end if
@@ -743,8 +697,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
         // loop over the nieghboring cells
-        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++)
-        {
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
             // Get global index for neighboring cell
             size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
 
@@ -782,8 +735,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
 
             // Get corner gid
@@ -793,8 +745,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++)
-            {
+            for (int dim = 0; dim < num_dims; dim++) {
                 corner_vector_storage(corner_gid, dim) = -0.0001;
                 // corner_vector_storage(corner_gid, dim) = 0;
             } // end loop over dimension
@@ -810,8 +761,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
     // force_gradient_position->putScalar(0);
     // set back to zero
     FOR_ALL_CLASS(idof, 0, nlocal_nodes * num_dims, {
-        for (int jdof = 0; jdof < Gradient_Matrix_Strides(idof); jdof++)
-        {
+        for (int jdof = 0; jdof < Gradient_Matrix_Strides(idof); jdof++) {
             Force_Gradient_Positions(idof, jdof) = 0;
         }
     }); // end parallel for
@@ -820,8 +770,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_ugradient_elastic(const DCArrayKok
     // vec_array force_gradient_position_view = force_gradient_position->getLocalView<device_type> (Tpetra::Access::ReadWrite);
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         size_t corner_id;
-        for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++)
-        {
+        for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
             corner_id = corners_in_node(node_id, icorner);
             Force_Gradient_Positions(node_id * num_dims, 0)     += -0.001;
             Force_Gradient_Positions(node_id * num_dims + 1, 0) += -0.001;
@@ -859,24 +808,19 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
     auto current_element_adjoint = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
 
     // gradient contribution from gradient of Force vector with respect to design variable.
-    for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++)
-    {
+    for (unsigned long cycle = 0; cycle < last_time_step + 1; cycle++) {
         // compute timestep from time data
         global_dt = time_data[cycle + 1] - time_data[cycle];
 
         // print
-        if (cycle == 0)
-        {
-            if (myrank == 0)
-            {
+        if (cycle == 0) {
+            if (myrank == 0) {
                 printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
             }
         }
         // print time step every 10 cycles
-        else if (cycle % 20 == 0)
-        {
-            if (myrank == 0)
-            {
+        else if (cycle % 20 == 0) {
+            if (myrank == 0) {
                 printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_data[cycle], global_dt);
             }
         } // end if
@@ -896,48 +840,38 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
                 real_t inner_product;
                 // std::cout << elem_mass(elem_id) <<std::endl;
                 // current_nodal_velocities
-                for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                {
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     node_id = nodes_in_elem(elem_id, inode);
                     current_element_adjoint(inode, 0) = 0.5 * (current_adjoint_vector(node_id, 0) + next_adjoint_vector(node_id, 0));
                     current_element_adjoint(inode, 1) = 0.5 * (current_adjoint_vector(node_id, 1) + next_adjoint_vector(node_id, 1));
-                    if (num_dim == 3)
-                    {
+                    if (num_dim == 3) {
                         current_element_adjoint(inode, 2) = 0.5 * (current_adjoint_vector(node_id, 2) + next_adjoint_vector(node_id, 2));
                     }
                 }
 
-                if (element_constant_density)
-                {
+                if (element_constant_density) {
                     inner_product = 0;
-                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++)
-                    {
+                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
                         node_id = nodes_in_elem(elem_id, ifill);
-                        for (int idim = 0; idim < num_dim; idim++)
-                        {
+                        for (int idim = 0; idim < num_dim; idim++) {
                             // inner_product += 0.0001*current_element_adjoint(ifill,idim);
                             inner_product += 0.0001 * current_element_adjoint(ifill, idim);
                             // inner_product += 0.0001;
                         }
                     }
 
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                    {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         // compute gradient of local element contribution to v^t*M*v product
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         corner_value_storage(corner_id) = -inner_product * global_dt / (double)num_nodes_in_elem;
                     }
                 }
-                else
-                {
-                    for (int idesign = 0; idesign < num_nodes_in_elem; idesign++)
-                    {
+                else{
+                    for (int idesign = 0; idesign < num_nodes_in_elem; idesign++) {
                         inner_products(idesign) = 0;
-                        for (int ifill = 0; ifill < num_nodes_in_elem; ifill++)
-                        {
+                        for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
                             node_id = nodes_in_elem(elem_id, ifill);
-                            for (int idim = 0; idim < num_dim; idim++)
-                            {
+                            for (int idim = 0; idim < num_dim; idim++) {
                                 // inner_product += 0.0001*current_element_adjoint(ifill,idim);
                                 inner_products(idesign) += 0.0001 * current_element_adjoint(ifill, idim);
                                 // inner_product += 0.0001;
@@ -945,8 +879,7 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
                         }
                     }
 
-                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
-                    {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         // compute gradient of local element contribution to v^t*M*v product
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         corner_value_storage(corner_id) = -inner_products(inode) * global_dt;
@@ -959,8 +892,7 @@ void FEA_Module_Dynamic_Elasticity::force_design_gradient_term(const_vec_array d
             // multiply
             FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
                 size_t corner_id;
-                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++)
-                {
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
                     design_gradients(node_id, 0) += corner_value_storage(corner_id);
                 }
@@ -1075,10 +1007,8 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
                     rk_level);
 
         // the -1 is for the inward surface area normal,
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 area_normal(node_lid, dim) = (-1.0) * area_normal(node_lid, dim);
             } // end for
         } // end for
@@ -1097,18 +1027,15 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
         double mag_curl = sqrt(curl[0] * curl[0] + curl[1] * curl[1] + curl[2] * curl[2]);
 
         // --- Calculate the Cauchy stress ---
-        for (size_t i = 0; i < 3; i++)
-        {
-            for (size_t j = 0; j < 3; j++)
-            {
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
                 tau(i, j) = stress(i, j);
                 // artificial viscosity can be added here to tau
             } // end for
         } // end for
 
         // add the pressure
-        for (int i = 0; i < num_dims; i++)
-        {
+        for (int i = 0; i < num_dims; i++) {
             tau(i, i) -= elem_pres(elem_gid);
         } // end for
 
@@ -1117,15 +1044,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
         // estimate of the Riemann velocity
 
         // initialize to Riemann velocity to zero
-        for (size_t dim = 0; dim < num_dims; dim++)
-        {
+        for (size_t dim = 0; dim < num_dims; dim++) {
             vel_star(dim) = 0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
         // an estimate of Riemann velocity
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gloabl index and create view of nodal velocity
             int node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -1139,8 +1064,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
         // find shock direction and shock impedance associated with each node
 
         // initialize sum term in MARS to zero
-        for (int i = 0; i < 4; i++)
-        {
+        for (int i = 0; i < 4; i++) {
             sum(i) = 0.0;
         }
 
@@ -1148,8 +1072,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
         double mag_vel;   // magnitude of velocity
 
         // loop over the nodes of the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get global node id
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
@@ -1161,16 +1084,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
                 + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) )
                 + (vel(2) - vel_star(2) ) * (vel(2) - vel_star(2) ) );
 
-            if (mag_vel > small)
-            {
+            if (mag_vel > small) {
                 // estimate of the shock direction, a unit normal
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = (vel(dim) - vel_star(dim)) / mag_vel;
                 }
             }
-            else
-            {
+            else{
                 // if there is no velocity change, then use the surface area
                 // normal as the shock direction
                 mag = sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
@@ -1178,21 +1098,18 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
                     + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
 
                 // estimate of the shock direction
-                for (int dim = 0; dim < num_dims; dim++)
-                {
+                for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = area_normal(node_lid, dim) / mag;
                 }
             } // end if mag_vel
 
             // cell divergence indicates compression or expansions
             size_t mat_id = elem_mat_id(elem_gid);
-            if (div < 0)  // element in compression
-            {
+            if (div < 0) { // element in compression
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
             }
-            else   // element in expansion
-            {
+            else{  // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
             } // end if on divergence sign
@@ -1201,8 +1118,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
             double mu_term;
 
             // Coding to use shock direction
-            if (use_shock_dir == 1)
-            {
+            if (use_shock_dir == 1) {
                 // this is denominator of the Riamann solver and the multiplier
                 // on velocity in the numerator.  It filters on the shock
                 // direction
@@ -1211,8 +1127,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
                     + shock_dir(1) * area_normal(node_lid, 1)
                     + shock_dir(2) * area_normal(node_lid, 2) );
             }
-            else
-            {
+            else{
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
@@ -1229,17 +1144,13 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
         } // end for node_lid loop over nodes of the elem
 
         // The Riemann velocity, called vel_star
-        if (sum(3) > fuzz)
-        {
-            for (size_t i = 0; i < num_dims; i++)
-            {
+        if (sum(3) > fuzz) {
+            for (size_t i = 0; i < num_dims; i++) {
                 vel_star(i) = sum(i) / sum(3);
             }
         }
-        else
-        {
-            for (int i = 0; i < num_dims; i++)
-            {
+        else{
+            for (int i = 0; i < num_dims; i++) {
                 vel_star(i) = 0.0;
             }
         } // end if
@@ -1266,8 +1177,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
         // loop over the nieghboring cells
-        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++)
-        {
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
             // Get global index for neighboring cell
             size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
 
@@ -1305,8 +1215,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
         // ---- Calculate the Riemann force on each node ----
 
         // loop over the each node in the elem
-        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
-        {
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             size_t corner_lid = node_lid;
 
             // Get corner gid
@@ -1316,8 +1225,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
 
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++)
-            {
+            for (int dim = 0; dim < num_dims; dim++) {
                 corner_vector_storage(corner_gid, dim) = 0.0001;
             } // end loop over dimension
         } // end for loop over nodes in elem
@@ -1334,8 +1242,7 @@ void FEA_Module_Dynamic_Elasticity::get_force_dgradient_elastic(
     vec_array force_gradient_design_view = force_gradient_design->getLocalView<device_type>(Tpetra::Access::ReadWrite);
     FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
         size_t corner_id;
-        for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++)
-        {
+        for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
             corner_id = corners_in_node(node_id, icorner);
             force_gradient_design_view(node_id, 0) += corner_vector_storage(corner_id, 0);
             force_gradient_design_view(node_id, 1) += corner_vector_storage(corner_id, 1);

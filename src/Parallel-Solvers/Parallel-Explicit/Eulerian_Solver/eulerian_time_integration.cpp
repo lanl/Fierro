@@ -61,10 +61,8 @@ void FEA_Module_Eulerian::rk_init(DViewCArrayKokkos<double>& node_coords,
     // save elem quantities
     FOR_ALL_CLASS(elem_gid, 0, num_elems, {
         // stress is always 3D even with 2D-RZ
-        for (size_t i = 0; i < 3; i++)
-        {
-            for (size_t j = 0; j < 3; j++)
-            {
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
                 elem_stress(0, elem_gid, i, j) = elem_stress(rk_level, elem_gid, i, j);
             }
         }  // end for
@@ -74,8 +72,7 @@ void FEA_Module_Eulerian::rk_init(DViewCArrayKokkos<double>& node_coords,
 
     // save nodal quantities
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
-        for (size_t i = 0; i < num_dims; i++)
-        {
+        for (size_t i = 0; i < num_dims; i++) {
             node_coords(0, node_gid, i) = node_coords(rk_level, node_gid, i);
             node_vel(0, node_gid, i)    = node_vel(rk_level, node_gid, i);
         }
@@ -124,10 +121,8 @@ void FEA_Module_Eulerian::get_timestep(mesh_t& mesh,
         ViewCArrayKokkos<double> dist(distance0, 28);
 
         // Getting the coordinates of the element
-        for (size_t node_lid = 0; node_lid < 8; node_lid++)
-        {
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+        for (size_t node_lid = 0; node_lid < 8; node_lid++) {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 coords(node_lid, dim) = node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), dim);
             } // end for dim
         } // end for loop over node_lid
@@ -141,8 +136,7 @@ void FEA_Module_Eulerian::get_timestep(mesh_t& mesh,
 
         // Only works for 3D
         // Solving for the magnitude of distance between each node
-        for (size_t i = 0; i < 28; i++)
-        {
+        for (size_t i = 0; i < 28; i++) {
             a = countA;
             b = countB;
 
@@ -155,8 +149,7 @@ void FEA_Module_Eulerian::get_timestep(mesh_t& mesh,
             countA++;
 
             // tricky indexing
-            if (countB > 7)
-            {
+            if (countB > 7) {
                 loop++;
                 countB = 1 + loop;
                 countA = 0;
@@ -165,8 +158,7 @@ void FEA_Module_Eulerian::get_timestep(mesh_t& mesh,
 
         double dist_min = dist(0);
 
-        for (int i = 0; i < 28; ++i)
-        {
+        for (int i = 0; i < 28; ++i) {
             dist_min = fmin(dist(i), dist_min);
         }
 
@@ -177,16 +169,14 @@ void FEA_Module_Eulerian::get_timestep(mesh_t& mesh,
         dt_lcl_ = fmin(dt_lcl_, dt_max);               // make dt small than dt_max
         dt_lcl_ = fmax(dt_lcl_, dt_min);               // make dt larger than dt_min
 
-        if (dt_lcl_ < dt_lcl)
-        {
+        if (dt_lcl_ < dt_lcl) {
             dt_lcl = dt_lcl_;
         }
     }, min_dt_calc);  // end parallel reduction
     Kokkos::fence();
 
     // save the min dt
-    if (min_dt_calc < dt)
-    {
+    if (min_dt_calc < dt) {
         dt = min_dt_calc;
     }
 
@@ -239,10 +229,8 @@ void FEA_Module_Eulerian::get_timestep2D(mesh_t& mesh,
         ViewCArrayKokkos<double> dist(distance0, 6);
 
         // Getting the coordinates of the nodes of the element
-        for (size_t node_lid = 0; node_lid < 4; node_lid++)
-        {
-            for (size_t dim = 0; dim < num_dims; dim++)
-            {
+        for (size_t node_lid = 0; node_lid < 4; node_lid++) {
+            for (size_t dim = 0; dim < num_dims; dim++) {
                 coords(node_lid, dim) = node_coords(rk_level, nodes_in_elem(elem_gid, node_lid), dim);
             } // end for dim
         } // end for loop over node_lid
@@ -250,10 +238,8 @@ void FEA_Module_Eulerian::get_timestep2D(mesh_t& mesh,
         // Only works for 2D
         // Solving for the magnitude of distance between each node
         size_t count = 0;
-        for (size_t i = 0; i < 3; i++)
-        {
-            for (size_t j = i + 1; j <= 3; j++)
-            {
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = i + 1; j <= 3; j++) {
                 // returns magnitude of distance between each node, 6 total options
                 dist(count) = fabs(
                                  sqrt(pow((coords(i, 0) - coords(j, 0)), 2.0)
@@ -265,8 +251,7 @@ void FEA_Module_Eulerian::get_timestep2D(mesh_t& mesh,
 
         double dist_min = dist(0);
 
-        for (int i = 0; i < 6; ++i)
-        {
+        for (int i = 0; i < 6; ++i) {
             dist_min = fmin(dist(i), dist_min);
         }
 
@@ -277,16 +262,14 @@ void FEA_Module_Eulerian::get_timestep2D(mesh_t& mesh,
         dt_lcl_ = fmin(dt_lcl_, dt_max);    // make dt small than dt_max
         dt_lcl_ = fmax(dt_lcl_, dt_min);    // make dt larger than dt_min
 
-        if (dt_lcl_ < dt_lcl)
-        {
+        if (dt_lcl_ < dt_lcl) {
             dt_lcl = dt_lcl_;
         }
     }, min_dt_calc);  // end parallel reduction
     Kokkos::fence();
 
     // save the min dt
-    if (min_dt_calc < dt)
-    {
+    if (min_dt_calc < dt) {
         dt = min_dt_calc;
     }
 

@@ -94,17 +94,14 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters
         eos_global_vars = DCArrayKokkos<double>(material_options.size(), num_eos_global_vars);
         strength_global_vars = DCArrayKokkos<double>(material_options.size(), num_strength_global_vars);
 
-        for (size_t i = 0; i < material_options.size(); i++)
-        {
+        for (size_t i = 0; i < material_options.size(); i++) {
             auto mat = material_options[i];
 
-            for (size_t j = 0; j < mat.eos_global_vars.size(); j++)
-            {
+            for (size_t j = 0; j < mat.eos_global_vars.size(); j++) {
                 eos_global_vars.host(i, j) = mat.eos_global_vars[j];
             }
 
-            for (size_t j = 0; j < mat.strength_global_vars.size(); j++)
-            {
+            for (size_t j = 0; j < mat.strength_global_vars.size(); j++) {
                 strength_global_vars.host(i, j) = mat.strength_global_vars[j];
             }
         }
@@ -123,8 +120,7 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters
     template<typename T, typename K> void from_vector(DCArrayKokkos<T>& array, const std::vector<K>& vec)
     {
         array = DCArrayKokkos<T>(vec.size());
-        for (size_t i = 0; i < vec.size(); i++)
-        {
+        for (size_t i = 0; i < vec.size(); i++) {
             array.host(i) = *(T*)&vec[i];
         }
     }
@@ -140,8 +136,7 @@ struct Simulation_Parameters_Eulerian : Simulation_Parameters
     {
         max_num_eos_global_vars = 0;
         max_num_strength_global_vars = 0;
-        for (auto mo : material_options)
-        {
+        for (auto mo : material_options) {
             max_num_eos_global_vars = std::max(max_num_eos_global_vars, mo.eos_global_vars.size());
             max_num_strength_global_vars = std::max(max_num_strength_global_vars, mo.strength_global_vars.size());
         }

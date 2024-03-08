@@ -58,8 +58,7 @@ void FEA_Module_Dynamic_Elasticity::update_position_elastic(double rk_alpha,
 
     // loop over all the nodes in the mesh
     FOR_ALL_CLASS(node_gid, 0, num_nodes, {
-        for (int dim = 0; dim < num_dims; dim++)
-        {
+        for (int dim = 0; dim < num_dims; dim++) {
             double half_vel = (node_vel(rk_level, node_gid, dim) + node_vel(0, node_gid, dim)) * 0.5;
             node_coords(rk_level, node_gid, dim) = node_coords(0, node_gid, dim) + rk_alpha * dt * half_vel;
         }
@@ -105,8 +104,7 @@ void FEA_Module_Dynamic_Elasticity::get_bmatrix(const ViewCArrayKokkos<double>& 
     auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
@@ -295,8 +293,7 @@ void FEA_Module_Dynamic_Elasticity::get_vol()
     const size_t rk_level = rk_num_bins - 1;
     const size_t num_dims = num_dim;
 
-    if (num_dims == 2)
-    {
+    if (num_dims == 2) {
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 4);
@@ -304,8 +301,7 @@ void FEA_Module_Dynamic_Elasticity::get_vol()
         });
         Kokkos::fence();
     }
-    else
-    {
+    else{
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
@@ -349,8 +345,7 @@ void FEA_Module_Dynamic_Elasticity::get_vol_hex(const DViewCArrayKokkos<double>&
     auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
@@ -407,8 +402,7 @@ void FEA_Module_Dynamic_Elasticity::get_bmatrix2D(const ViewCArrayKokkos<double>
     auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
@@ -502,8 +496,7 @@ void FEA_Module_Dynamic_Elasticity::get_vol_quad(const DViewCArrayKokkos<double>
     auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
@@ -550,8 +543,7 @@ double FEA_Module_Dynamic_Elasticity::get_area_quad(const size_t elem_gid,
     auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
     } // end for
@@ -635,8 +627,7 @@ void FEA_Module_Dynamic_Elasticity::get_area_weights2D(const ViewCArrayKokkos<do
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     rc = zc = 0.0;
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++)
-    {
+    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
         rc += 0.25 * y(node_lid);

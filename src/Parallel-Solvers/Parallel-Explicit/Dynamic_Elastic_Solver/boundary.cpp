@@ -61,15 +61,12 @@ void FEA_Module_Dynamic_Elasticity::boundary_velocity(const mesh_t& mesh,
     const size_t rk_level = rk_num_bins - 1;
     int num_dims = num_dim;
     // Loop over boundary sets
-    for (size_t bdy_set = 0; bdy_set < num_bdy_sets; bdy_set++)
-    {
+    for (size_t bdy_set = 0; bdy_set < num_bdy_sets; bdy_set++) {
         // Loop over boundary nodes in a boundary set
         // FOR_ALL_CLASS(bdy_node_lid, 0, num_bdy_nodes_in_set.host(bdy_set), {
-        for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes_in_set.host(bdy_set); bdy_node_lid++)
-        {
+        for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes_in_set.host(bdy_set); bdy_node_lid++) {
             // reflected (boundary array is on the device)
-            if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::reflected)
-            {
+            if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::reflected) {
                 // directions with hydro_bc:
                 // x_plane  = 0,
                 // y_plane  = 1,
@@ -81,27 +78,23 @@ void FEA_Module_Dynamic_Elasticity::boundary_velocity(const mesh_t& mesh,
                 // Set velocity to zero in that directdion
                 node_vel(rk_level, bdy_node_gid, direction) = 0.0;
             }
-            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::fixed_position)
-            {
+            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::fixed_position) {
                 size_t bdy_node_gid = bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
                 // debug clause
                 // if(bdy_node_gid==549412) print_flag(0) = true;
 
-                for (size_t dim = 0; dim < num_dims; dim++)
-                {
+                for (size_t dim = 0; dim < num_dims; dim++) {
                     // Set velocity to zero
                     node_vel(rk_level, bdy_node_gid, dim) = 0.0;
                 }
             }
-            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::velocity)
-            {
+            else if (boundary(bdy_set).type == BOUNDARY_CONDITION_TYPE::velocity) {
                 size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
                 node_vel(rk_level, bdy_node_gid, 0) = boundary(bdy_set).u;
                 node_vel(rk_level, bdy_node_gid, 1) = boundary(bdy_set).v;
-                if (num_dims == 3)
-                {
+                if (num_dims == 3) {
                     node_vel(rk_level, bdy_node_gid, 2) = boundary(bdy_set).w;
                 }
                 // if (mesh.num_dims == 3) node_vel(rk_level, bdy_node_gid, 2) = boundary(bdy_set).w * node_coords(rk_level, bdy_node_gid, 2);

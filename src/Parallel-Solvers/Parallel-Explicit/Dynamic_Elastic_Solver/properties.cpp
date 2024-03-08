@@ -94,8 +94,7 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos<material_t>
 
         // --- Stress ---
         // hyper elastic plastic model
-        if (material(mat_id).strength_type == STRENGTH_TYPE::hyper)
-        {
+        if (material(mat_id).strength_type == STRENGTH_TYPE::hyper) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
@@ -127,10 +126,8 @@ void FEA_Module_Dynamic_Elasticity::update_state(const DCArrayKokkos<material_t>
                         rk_level);
 
             // reinit values
-            for (size_t i = 0; i < 3; i++)
-            {
-                for (size_t j = 0; j < 3; j++)
-                {
+            for (size_t i = 0; i < 3; i++) {
+                for (size_t j = 0; j < 3; j++) {
                     elem_stress(rk_level, elem_gid, i, j) = 0.0;
                 }
             }  // end for
@@ -252,8 +249,7 @@ void FEA_Module_Dynamic_Elasticity::update_state2D(const DCArrayKokkos<material_
 
         // --- Stress ---
         // hyper elastic plastic model
-        if (material(mat_id).strength_type == STRENGTH_TYPE::hyper)
-        {
+        if (material(mat_id).strength_type == STRENGTH_TYPE::hyper) {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 

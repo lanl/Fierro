@@ -130,8 +130,7 @@ FEA_Module_Eulerian::FEA_Module_Eulerian(Solver* Solver_Pointer, mesh_t& mesh, c
     node_coords_distributed         = Explicit_Solver_Pointer_->node_coords_distributed;
     node_velocities_distributed     = Explicit_Solver_Pointer_->node_velocities_distributed;
     all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
-    if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on)
-    {
+    if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on) {
         all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_velocity    = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_position    = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -141,8 +140,7 @@ FEA_Module_Eulerian::FEA_Module_Eulerian(Solver* Solver_Pointer, mesh_t& mesh, c
         relative_element_densities = DCArrayKokkos<double>(rnum_elem, "relative_element_densities");
     }
 
-    if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on || simparam->num_dims == 2)
-    {
+    if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on || simparam->num_dims == 2) {
         node_masses_distributed = Teuchos::rcp(new MV(map, 1));
         ghost_node_masses_distributed  = Teuchos::rcp(new MV(ghost_node_map, 1));
         adjoint_vector_distributed     = Teuchos::rcp(new MV(map, simparam->num_dims));
@@ -175,8 +173,7 @@ FEA_Module_Eulerian::FEA_Module_Eulerian(Solver* Solver_Pointer, mesh_t& mesh, c
     graphics_times = simparam->graphics_options.graphics_times;
     graphics_id    = simparam->graphics_options.graphics_id;
 
-    if (simparam_dynamic_opt.topology_optimization_on)
-    {
+    if (simparam_dynamic_opt.topology_optimization_on) {
         max_time_steps = BUFFER_GROW;
         forward_solve_velocity_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         time_data.resize(max_time_steps + 1);
@@ -184,8 +181,7 @@ FEA_Module_Eulerian::FEA_Module_Eulerian(Solver* Solver_Pointer, mesh_t& mesh, c
         adjoint_vector_data     = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         phi_adjoint_vector_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         // assign a multivector of corresponding size to each new timestep in the buffer
-        for (int istep = 0; istep < max_time_steps + 1; istep++)
-        {
+        for (int istep = 0; istep < max_time_steps + 1; istep++) {
             (*forward_solve_velocity_data)[istep]   = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
             (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
             (*adjoint_vector_data)[istep]     = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -249,14 +245,12 @@ void FEA_Module_Eulerian::init_boundaries()
     int num_dim = simparam->num_dims;
 
     // set the number of boundary sets
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         std::cout << "building boundary sets " << std::endl;
     }
 
     // initialize to 1 since there must be at least 1 boundary set anyway; read in may occure later
-    if (max_boundary_sets == 0)
-    {
+    if (max_boundary_sets == 0) {
         max_boundary_sets = 1;
     }
     // std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR INIT " << num_boundary_conditions <<std::endl;
@@ -266,8 +260,7 @@ void FEA_Module_Eulerian::init_boundaries()
     Node_DOF_Boundary_Condition_Type = CArrayKokkos<int, array_layout, device_type, memory_traits>(nall_nodes * num_dim, "Node_DOF_Boundary_Condition_Type");
 
     // initialize
-    for (int init = 0; init < nall_nodes * num_dim; init++)
-    {
+    for (int init = 0; init < nall_nodes * num_dim; init++) {
         Node_DOF_Boundary_Condition_Type(init) = NONE;
     }
 
@@ -286,8 +279,7 @@ void FEA_Module_Eulerian::init_boundaries()
 /////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::init_boundary_sets(int num_sets)
 {
-    if (num_sets == 0)
-    {
+    if (num_sets == 0) {
         std::cout << " Warning: number of boundary conditions = 0";
         return;
     }
@@ -300,14 +292,12 @@ void FEA_Module_Eulerian::init_boundary_sets(int num_sets)
     Boundary_Condition_Patches = CArrayKokkos<size_t, array_layout, device_type, memory_traits>(num_sets, nboundary_patches, "Boundary_Condition_Patches");
 
     // initialize data
-    for (int iset = 0; iset < num_sets; iset++)
-    {
+    for (int iset = 0; iset < num_sets; iset++) {
         NBoundary_Condition_Patches(iset) = 0;
     }
 
     // initialize
-    for (int ibdy = 0; ibdy < num_sets; ibdy++)
-    {
+    for (int ibdy = 0; ibdy < num_sets; ibdy++) {
         Boundary_Condition_Type_List(ibdy) = NONE;
     }
 }
@@ -325,15 +315,13 @@ void FEA_Module_Eulerian::grow_boundary_sets(int num_sets)
 {
     int num_dim = simparam->num_dims;
 
-    if (num_sets == 0)
-    {
+    if (num_sets == 0) {
         std::cout << " Warning: number of boundary conditions being set to 0";
         return;
     }
 
     // std::cout << " DEBUG PRINT "<<num_sets << " " << nboundary_patches << std::endl;
-    if (num_sets > max_boundary_sets)
-    {
+    if (num_sets > max_boundary_sets) {
         // temporary storage for previous data
         CArrayKokkos<int, array_layout, HostSpace, memory_traits> Temp_Boundary_Condition_Type_List     = Boundary_Condition_Type_List;
         CArrayKokkos<size_t, array_layout, device_type, memory_traits> Temp_NBoundary_Condition_Patches = NBoundary_Condition_Patches;
@@ -347,25 +335,21 @@ void FEA_Module_Eulerian::grow_boundary_sets(int num_sets)
 
         // copy previous data back over
         // std::cout << "NUM BOUNDARY CONDITIONS ON RANK " << myrank << " FOR COPY " << max_boundary_sets <<std::endl;
-        for (int iset = 0; iset < num_boundary_conditions; iset++)
-        {
+        for (int iset = 0; iset < num_boundary_conditions; iset++) {
             Boundary_Condition_Type_List(iset) = Temp_Boundary_Condition_Type_List(iset);
             NBoundary_Condition_Patches(iset)  = Temp_NBoundary_Condition_Patches(iset);
-            for (int ipatch = 0; ipatch < nboundary_patches; ipatch++)
-            {
+            for (int ipatch = 0; ipatch < nboundary_patches; ipatch++) {
                 Boundary_Condition_Patches(iset, ipatch) = Temp_Boundary_Condition_Patches(iset, ipatch);
             }
         }
 
         // initialize data
-        for (int iset = num_boundary_conditions; iset < max_boundary_sets; iset++)
-        {
+        for (int iset = num_boundary_conditions; iset < max_boundary_sets; iset++) {
             NBoundary_Condition_Patches(iset) = 0;
         }
 
         // initialize
-        for (int ibdy = num_boundary_conditions; ibdy < max_boundary_sets; ibdy++)
-        {
+        for (int ibdy = num_boundary_conditions; ibdy < max_boundary_sets; ibdy++) {
             Boundary_Condition_Type_List(ibdy) = NONE;
         }
     }
@@ -413,17 +397,14 @@ void FEA_Module_Eulerian::init_output()
     bool output_stress_flag   = simparam->output_options.output_stress;
     int  num_dim = simparam->num_dims;
     int  Brows;
-    if (num_dim == 3)
-    {
+    if (num_dim == 3) {
         Brows = 6;
     }
-    else
-    {
+    else{
         Brows = 3;
     }
 
-    if (output_velocity_flag)
-    {
+    if (output_velocity_flag) {
         // displacement_index is accessed by writers at the solver level for deformed output
         output_velocity_index = noutput;
         noutput += 1;
@@ -439,13 +420,11 @@ void FEA_Module_Eulerian::init_output()
         output_dof_names[noutput - 1].resize(num_dim);
         output_dof_names[noutput - 1][0] = "vx";
         output_dof_names[noutput - 1][1] = "vy";
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             output_dof_names[noutput - 1][2] = "vz";
         }
     }
-    if (output_strain_flag)
-    {
+    if (output_strain_flag) {
         output_strain_index = noutput;
         noutput += 1;
         module_outputs.resize(noutput);
@@ -458,14 +437,12 @@ void FEA_Module_Eulerian::init_output()
 
         output_dof_names.resize(noutput);
         output_dof_names[noutput - 1].resize(Brows);
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             output_dof_names[noutput - 1][0] = "strain_xx";
             output_dof_names[noutput - 1][1] = "strain_yy";
             output_dof_names[noutput - 1][2] = "strain_xy";
         }
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             output_dof_names[noutput - 1][0] = "strain_xx";
             output_dof_names[noutput - 1][1] = "strain_yy";
             output_dof_names[noutput - 1][2] = "strain_zz";
@@ -474,8 +451,7 @@ void FEA_Module_Eulerian::init_output()
             output_dof_names[noutput - 1][5] = "strain_yz";
         }
     }
-    if (output_stress_flag)
-    {
+    if (output_stress_flag) {
         output_stress_index = noutput;
         noutput += 1;
         module_outputs.resize(noutput);
@@ -488,14 +464,12 @@ void FEA_Module_Eulerian::init_output()
 
         output_dof_names.resize(noutput);
         output_dof_names[noutput - 1].resize(Brows);
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             output_dof_names[noutput - 1][0] = "stress_xx";
             output_dof_names[noutput - 1][1] = "stress_yy";
             output_dof_names[noutput - 1][3] = "stress_xy";
         }
-        if (num_dim == 3)
-        {
+        if (num_dim == 3) {
             output_dof_names[noutput - 1][0] = "stress_xx";
             output_dof_names[noutput - 1][1] = "stress_yy";
             output_dof_names[noutput - 1][2] = "stress_zz";
@@ -612,8 +586,7 @@ void FEA_Module_Eulerian::comm_adjoint_vectors(int cycle)
 /////////////////////////////////////////////////////////////////////////////
 void FEA_Module_Eulerian::comm_variables(Teuchos::RCP<const MV> zp)
 {
-    if (simparam_dynamic_opt.topology_optimization_on)
-    {
+    if (simparam_dynamic_opt.topology_optimization_on) {
         // set density vector to the current value chosen by the optimizer
         test_node_densities_distributed = zp;
 
@@ -633,8 +606,7 @@ void FEA_Module_Eulerian::comm_variables(Teuchos::RCP<const MV> zp)
         // comms to get ghosts
         all_node_densities_distributed->doImport(*test_node_densities_distributed, *importer, Tpetra::INSERT);
     }
-    else if (simparam_dynamic_opt.shape_optimization_on)
-    {
+    else if (simparam_dynamic_opt.shape_optimization_on) {
         // clause to communicate boundary node data if the boundary nodes are ghosts on this rank
     }
 }
@@ -681,8 +653,7 @@ void FEA_Module_Eulerian::setup()
 
     // patch ids in bdy set
     bdy_patches_in_set = mesh.bdy_patches_in_set;
-    if (num_dim == 2)
-    {
+    if (num_dim == 2) {
         bdy_nodes = mesh.bdy_nodes;
     }
 
@@ -703,8 +674,7 @@ void FEA_Module_Eulerian::setup()
 
     // elem-node conn & node-node conn
     elems_in_node = mesh.elems_in_node;
-    if (num_dim == 2)
-    {
+    if (num_dim == 2) {
         nodes_in_node     = mesh.nodes_in_node;
         num_nodes_in_node = mesh.num_nodes_in_node;
         // patch conn
@@ -715,8 +685,7 @@ void FEA_Module_Eulerian::setup()
     }
 
     // initialize if topology optimization is used
-    if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on)
-    {
+    if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on) {
         // create parameter object
         simparam_elasticity = Simulation_Parameters_Elasticity();
         init_assembly();
@@ -777,15 +746,13 @@ void FEA_Module_Eulerian::euler_solve()
     }
     */
     // simple setup to just request KE for now; above loop to be expanded and used later for scanning modules
-    if (simparam_dynamic_opt.topology_optimization_on)
-    {
+    if (simparam_dynamic_opt.topology_optimization_on) {
         obj_pointer = problem->getObjective();
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
         kinetic_energy_minimize_function.objective_accumulation = 0;
         global_objective_accumulation = objective_accumulation = 0;
         kinetic_energy_objective = true;
-        if (max_time_steps + 1 > forward_solve_velocity_data->size())
-        {
+        if (max_time_steps + 1 > forward_solve_velocity_data->size()) {
             old_max_forward_buffer = forward_solve_velocity_data->size();
             time_data.resize(max_time_steps + 1);
             forward_solve_velocity_data->resize(max_time_steps + 1);
@@ -793,8 +760,7 @@ void FEA_Module_Eulerian::euler_solve()
             adjoint_vector_data->resize(max_time_steps + 1);
             phi_adjoint_vector_data->resize(max_time_steps + 1);
             // assign a multivector of corresponding size to each new timestep in the buffer
-            for (int istep = old_max_forward_buffer; istep < max_time_steps + 1; istep++)
-            {
+            for (int istep = old_max_forward_buffer; istep < max_time_steps + 1; istep++) {
                 (*forward_solve_velocity_data)[istep]   = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                 (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                 (*adjoint_vector_data)[istep]     = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -803,16 +769,13 @@ void FEA_Module_Eulerian::euler_solve()
         }
     }
 
-    if (simparam_dynamic_opt.topology_optimization_on)
-    {
+    if (simparam_dynamic_opt.topology_optimization_on) {
         nTO_modules = simparam_dynamic_opt.TO_Module_List.size();
     }
 
     int myrank = Explicit_Solver_Pointer_->myrank;
-    if (simparam->output_options.output_file_format == OUTPUT_FORMAT::vtk)
-    {
-        if (myrank == 0)
-        {
+    if (simparam->output_options.output_file_format == OUTPUT_FORMAT::vtk) {
+        if (myrank == 0) {
             printf("Writing outputs to file at %f \n", time_value);
         }
 
@@ -880,17 +843,14 @@ void FEA_Module_Eulerian::euler_solve()
     // extensive KE
     REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         double ke = 0;
-        for (size_t dim = 0; dim < num_dim; dim++)
-        {
+        for (size_t dim = 0; dim < num_dim; dim++) {
             ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
         } // end for
 
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
         }
-        else
-        {
+        else{
             KE_loc_sum += node_mass(node_gid) * ke;
         }
     }, KE_sum);
@@ -908,8 +868,7 @@ void FEA_Module_Eulerian::euler_solve()
     // save the nodal mass
     FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
         double radius = 1.0;
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             radius = node_coords(rk_level, node_gid, 1);
         }
         node_extensive_mass(node_gid) = node_mass(node_gid) * radius;
@@ -921,8 +880,7 @@ void FEA_Module_Eulerian::euler_solve()
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     // save initial data
-    if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on)
-    {
+    if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on) {
         time_data[0] = 0;
         // assign current velocity data to multivector
         // view scope
@@ -930,8 +888,7 @@ void FEA_Module_Eulerian::euler_solve()
             vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             vec_array node_coords_interface     = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                     node_coords_interface(node_gid, idim)     = node_coords(rk_level, node_gid, idim);
                 }
@@ -967,8 +924,7 @@ void FEA_Module_Eulerian::euler_solve()
             vec_array all_node_velocities_interface = Explicit_Solver_Pointer_->all_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
 
             FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
                     all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
                 }
@@ -976,8 +932,7 @@ void FEA_Module_Eulerian::euler_solve()
             Kokkos::fence();
 
             FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
-                for (int idim = 0; idim < num_dim; idim++)
-                {
+                for (int idim = 0; idim < num_dim; idim++) {
                     all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                     all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
                 }
@@ -990,19 +945,16 @@ void FEA_Module_Eulerian::euler_solve()
     }
 
     // loop over the max number of time integration cycles
-    for (cycle = 0; cycle < cycle_stop; cycle++)
-    {
+    for (cycle = 0; cycle < cycle_stop; cycle++) {
         // get the step
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             get_timestep2D(mesh,
                            node_coords,
                            node_vel,
                            elem_sspd,
                            elem_vol);
         }
-        else
-        {
+        else{
             get_timestep(mesh,
                          node_coords,
                          node_vel,
@@ -1017,18 +969,14 @@ void FEA_Module_Eulerian::euler_solve()
         // stop calculation if flag
         // if (stop_calc == 1) break;
 
-        if (cycle == 0)
-        {
-            if (myrank == 0)
-            {
+        if (cycle == 0) {
+            if (myrank == 0) {
                 printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
             }
         }
         // print time step every 10 cycles
-        else if (cycle % 20 == 0)
-        {
-            if (myrank == 0)
-            {
+        else if (cycle % 20 == 0) {
+            if (myrank == 0) {
                 printf("cycle = %lu, time = %12.5e, time step = %12.5e \n", cycle, time_value, dt);
             }
         } // end if
@@ -1046,8 +994,7 @@ void FEA_Module_Eulerian::euler_solve()
                 nall_nodes);
 
         // integrate solution forward in time
-        for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++)
-        {
+        for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
@@ -1058,8 +1005,7 @@ void FEA_Module_Eulerian::euler_solve()
             {
                 vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                     }
               }); // end parallel for
@@ -1082,8 +1028,7 @@ void FEA_Module_Eulerian::euler_solve()
                 vec_array ghost_node_velocities_interface = Explicit_Solver_Pointer_->ghost_node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
 
                 FOR_ALL_CLASS(node_gid, nlocal_nodes, nall_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         node_vel(rk_level, node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                     }
                 }); // end parallel for
@@ -1102,14 +1047,12 @@ void FEA_Module_Eulerian::euler_solve()
             */
 
             // calculate the new corner masses if 2D
-            if (num_dim == 2)
-            {
+            if (num_dim == 2) {
                 // calculate the nodal areal mass
                 FOR_ALL_CLASS(node_gid, 0, nall_nodes, {
                     node_mass(node_gid) = 0.0;
 
-                    if (node_coords(rk_level, node_gid, 1) > tiny)
-                    {
+                    if (node_coords(rk_level, node_gid, 1) > tiny) {
                         node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(rk_level, node_gid, 1);
                     }
                     // if(cycle==0&&node_gid==1&&myrank==0)
@@ -1192,17 +1135,14 @@ void FEA_Module_Eulerian::euler_solve()
                     // FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
                     size_t node_gid = bdy_nodes(node_bdy_gid);
 
-                    if (node_coords(rk_level, node_gid, 1) < tiny)
-                    {
+                    if (node_coords(rk_level, node_gid, 1) < tiny) {
                         // node is on the axis
 
-                        for (size_t node_lid = 0; node_lid < num_nodes_in_node(node_gid); node_lid++)
-                        {
+                        for (size_t node_lid = 0; node_lid < num_nodes_in_node(node_gid); node_lid++) {
                             size_t node_neighbor_gid = nodes_in_node(node_gid, node_lid);
 
                             // if the node is off the axis, use it's areal mass on the boundary
-                            if (node_coords(rk_level, node_neighbor_gid, 1) > tiny)
-                            {
+                            if (node_coords(rk_level, node_neighbor_gid, 1) > tiny) {
                                 node_mass(node_gid) = fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / 2.0);
                             }
                         } // end for over neighboring nodes
@@ -1215,15 +1155,12 @@ void FEA_Module_Eulerian::euler_solve()
         time_value += dt;
         simparam->time_value = time_value;
 
-        if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on)
-        {
-            if (cycle >= max_time_steps)
-            {
+        if (simparam_dynamic_opt.topology_optimization_on || simparam_dynamic_opt.shape_optimization_on) {
+            if (cycle >= max_time_steps) {
                 max_time_steps = cycle + 1;
             }
 
-            if (max_time_steps + 1 > forward_solve_velocity_data->size())
-            {
+            if (max_time_steps + 1 > forward_solve_velocity_data->size()) {
                 old_max_forward_buffer = forward_solve_velocity_data->size();
                 time_data.resize(max_time_steps + BUFFER_GROW + 1);
                 forward_solve_velocity_data->resize(max_time_steps + BUFFER_GROW + 1);
@@ -1231,8 +1168,7 @@ void FEA_Module_Eulerian::euler_solve()
                 adjoint_vector_data->resize(max_time_steps + BUFFER_GROW + 1);
                 phi_adjoint_vector_data->resize(max_time_steps + BUFFER_GROW + 1);
                 // assign a multivector of corresponding size to each new timestep in the buffer
-                for (int istep = old_max_forward_buffer; istep < max_time_steps + BUFFER_GROW + 1; istep++)
-                {
+                for (int istep = old_max_forward_buffer; istep < max_time_steps + BUFFER_GROW + 1; istep++) {
                     (*forward_solve_velocity_data)[istep]   = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                     (*forward_solve_coordinate_data)[istep] = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
                     (*adjoint_vector_data)[istep]     = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -1248,8 +1184,7 @@ void FEA_Module_Eulerian::euler_solve()
                 vec_array node_velocities_interface = Explicit_Solver_Pointer_->node_velocities_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 vec_array node_coords_interface     = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         node_velocities_interface(node_gid, idim) = node_vel(rk_level, node_gid, idim);
                         node_coords_interface(node_gid, idim)     = node_coords(rk_level, node_gid, idim);
                     }
@@ -1283,8 +1218,7 @@ void FEA_Module_Eulerian::euler_solve()
                 const_vec_array ghost_node_coords_interface = Explicit_Solver_Pointer_->ghost_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 vec_array all_node_coords_interface = Explicit_Solver_Pointer_->all_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         all_node_velocities_interface(node_gid, idim) = node_velocities_interface(node_gid, idim);
                         all_node_coords_interface(node_gid, idim)     = node_coords_interface(node_gid, idim);
                     }
@@ -1292,8 +1226,7 @@ void FEA_Module_Eulerian::euler_solve()
                 Kokkos::fence();
 
                 FOR_ALL_CLASS(node_gid, nlocal_nodes, nlocal_nodes + nghost_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         all_node_velocities_interface(node_gid, idim) = ghost_node_velocities_interface(node_gid - nlocal_nodes, idim);
                         all_node_coords_interface(node_gid, idim)     = ghost_node_coords_interface(node_gid - nlocal_nodes, idim);
                     }
@@ -1309,8 +1242,7 @@ void FEA_Module_Eulerian::euler_solve()
             (*forward_solve_coordinate_data)[cycle + 1]->assign(*Explicit_Solver_Pointer_->all_node_coords_distributed);
 
             // kinetic energy accumulation
-            if (kinetic_energy_objective)
-            {
+            if (kinetic_energy_objective) {
                 const_vec_array node_velocities_interface = (*forward_solve_velocity_data)[cycle + 1]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 const_vec_array previous_node_velocities_interface = (*forward_solve_velocity_data)[cycle]->getLocalView<device_type>(Tpetra::Access::ReadOnly);
                 KE_loc_sum = 0.0;
@@ -1318,19 +1250,16 @@ void FEA_Module_Eulerian::euler_solve()
                 // extensive KE
                 REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
                     double ke = 0;
-                    for (size_t dim = 0; dim < num_dim; dim++)
-                    {
+                    for (size_t dim = 0; dim < num_dim; dim++) {
                         // midpoint integration approximation
                         ke += (node_velocities_interface(node_gid, dim) + node_velocities_interface(node_gid, dim)) * (node_velocities_interface(node_gid, dim) + node_velocities_interface(node_gid,
                         dim)) / 4;                                                                                                                                                       // 1/2 at end
                     } // end for
 
-                    if (num_dim == 2)
-                    {
+                    if (num_dim == 2) {
                         KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
                     }
-                    else
-                    {
+                    else{
                         KE_loc_sum += node_mass(node_gid) * ke;
                     }
                 }, KE_sum);
@@ -1341,41 +1270,33 @@ void FEA_Module_Eulerian::euler_solve()
         } // end topology optimization if check
 
         size_t write = 0;
-        if ((cycle + 1) % graphics_cyc_ival == 0 && cycle > 0)
-        {
+        if ((cycle + 1) % graphics_cyc_ival == 0 && cycle > 0) {
             write = 1;
         }
-        else if (cycle == cycle_stop)
-        {
+        else if (cycle == cycle_stop) {
             write = 1;
         }
-        else if (time_value >= time_final)
-        {
+        else if (time_value >= time_final) {
             write = 1;
         }
-        else if (time_value >= graphics_time)
-        {
+        else if (time_value >= graphics_time) {
             write = 1;
         }
 
         // write outputs
-        if (write == 1)
-        {
+        if (write == 1) {
             // interface nodal coordinate data (note: this is not needed if using write_outputs_new())
             // view scope
             {
                 vec_array node_coords_interface = Explicit_Solver_Pointer_->node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadWrite);
                 FOR_ALL_CLASS(node_gid, 0, nlocal_nodes, {
-                    for (int idim = 0; idim < num_dim; idim++)
-                    {
+                    for (int idim = 0; idim < num_dim; idim++) {
                         node_coords_interface(node_gid, idim) = node_coords(rk_level, node_gid, idim);
                     }
               }); // end parallel for
             } // end view scope
-            if (simparam->output_options.output_file_format == OUTPUT_FORMAT::vtk)
-            {
-                if (myrank == 0)
-                {
+            if (simparam->output_options.output_file_format == OUTPUT_FORMAT::vtk) {
+                if (myrank == 0) {
                     printf("Writing outputs to file at %f \n", graphics_time);
                 }
 
@@ -1410,8 +1331,7 @@ void FEA_Module_Eulerian::euler_solve()
         } // end if
 
         // end of calculation
-        if (time_value >= time_final)
-        {
+        if (time_value >= time_final) {
             break;
         }
     } // end for cycle loop
@@ -1419,16 +1339,14 @@ void FEA_Module_Eulerian::euler_solve()
     last_time_step = cycle;
 
     // simple setup to just calculate KE minimize objective for now
-    if (simparam_dynamic_opt.topology_optimization_on)
-    {
+    if (simparam_dynamic_opt.topology_optimization_on) {
         KineticEnergyMinimize_TopOpt& kinetic_energy_minimize_function = dynamic_cast<KineticEnergyMinimize_TopOpt&>(*obj_pointer);
 
         // collect local objective values
         MPI_Allreduce(&objective_accumulation, &global_objective_accumulation, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         kinetic_energy_minimize_function.objective_accumulation = global_objective_accumulation;
 
-        if (myrank == 0)
-        {
+        if (myrank == 0) {
             std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << global_objective_accumulation << std::endl;
         }
     }
@@ -1437,8 +1355,7 @@ void FEA_Module_Eulerian::euler_solve()
     auto time_difference = time_2 - time_1;
     // double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
     double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_difference).count();
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         printf("\nCalculation time in seconds: %f \n", calc_time * 1e-09);
     }
 
@@ -1459,17 +1376,14 @@ void FEA_Module_Eulerian::euler_solve()
     // extensive KE
     REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
         double ke = 0;
-        for (size_t dim = 0; dim < num_dim; dim++)
-        {
+        for (size_t dim = 0; dim < num_dim; dim++) {
             ke += node_vel(rk_level, node_gid, dim) * node_vel(rk_level, node_gid, dim); // 1/2 at end
         } // end for
 
-        if (num_dim == 2)
-        {
+        if (num_dim == 2) {
             KE_loc_sum += node_mass(node_gid) * node_coords(rk_level, node_gid, 1) * ke;
         }
-        else
-        {
+        else{
             KE_loc_sum += node_mass(node_gid) * ke;
         }
     }, KE_sum);
@@ -1489,16 +1403,13 @@ void FEA_Module_Eulerian::euler_solve()
 
     // reduce over MPI ranks
 
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         printf("Time=0:   KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_t0, IE_t0, TE_t0);
     }
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         printf("Time=End: KE = %20.15f, IE = %20.15f, TE = %20.15f \n", KE_tend, IE_tend, TE_tend);
     }
-    if (myrank == 0)
-    {
+    if (myrank == 0) {
         printf("total energy conservation error %= %e \n\n", 100 * (TE_tend - TE_t0) / TE_t0);
     }
 
