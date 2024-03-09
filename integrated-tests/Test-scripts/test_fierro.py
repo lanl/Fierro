@@ -5,18 +5,41 @@ import os.path
 import sys
 import math
 
-executable = "./../../build-fierro-openmp/bin/fierro-parallel-explicit"
+
+executables = []
+tests = []
+
+
+
+# Add paths to all tested executables
+sgh_executable = "./../../build-fierro-openmp/bin/fierro-parallel-explicit"
+sgh_tests = ["Noh", "Sedov", "Sod"]
+
+# Check that each executable exists
+if not os.path.exists(sgh_executable):
+    print("This test script assumes that the fierro-parallel-explicit code exists ")
+    print("and has been build in the build-fierro-openmp directory")
+    print("The executable could not be found")
+    raise ValueError("fierro-parallel-explicit executable not found")
+
+
+# Add all executables to list
+executables.append(sgh_executable)
+
+
 
 inputs = []
 standard_results = []
 
-tests = ["Noh", "Sedov", "Sod"]
+tests.append(sgh_tests)
+
 
 position_keyword = "POINTS"
 
-for i in range(len(tests)):
-    inputs.append("Solver-Inputs/SGH_"+tests[i]+"_simple.yaml")
-    standard_results.append("standard-results/SGH/"+tests[i]+"/vtk/data/VTK0.vtk")
+
+for i in range(len(tests[0])):
+    inputs.append("Solver-Inputs/SGH_"+tests[0][i]+"_simple.yaml")
+    standard_results.append("standard-results/SGH/"+tests[0][i]+"/vtk/data/VTK0.vtk")
 
 
 # Extract vector valued data from vtk output file
@@ -100,11 +123,11 @@ def magnitude(array):
     return mag
 
 # Run each test
-for i in range(len(tests)):
+for i in range(len(tests[0])):
     
     # Run simulation
-    print("Running "+tests[i])
-    os.system(executable + ' ' + inputs[i])
+    print("Running "+tests[0][i])
+    os.system(executables[0] + ' ' + inputs[i])
 
     GT_positions = extract_vector_data(standard_results[i], position_keyword)
 

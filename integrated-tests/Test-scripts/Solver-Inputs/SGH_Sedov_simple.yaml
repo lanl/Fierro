@@ -45,13 +45,10 @@ fea_module_parameters:
 materials:
   - id: 0
     eos_model: ideal_gas
-    strength_model: none
-    elastic_modulus: 10
-    poisson_ratio: 0.3
-    q1: 0.06
-    q2: 1.0
-    q1ex: 0.06
-    q2ex: 1.0
+    q1: 1.0
+    q2: 1.33333
+    q1ex: 1.0
+    q2ex: 0.0
     eos_global_vars:
       - 1.666666666666667
       - 1.0E-14
@@ -75,7 +72,7 @@ regions:
       radius2: 0.1
     material_id: 0
     den: 1.0
-    ie:  0.25833839995946534
+    ie:  0.493390
     velocity: cartesian
     u: 0.0
     v: 0.0
