@@ -134,7 +134,7 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
         double vel_star_array[3];
         double vel_star_gradient_array[num_dims * max_nodes_per_element * num_dims];
 
-        //mag_vel gradient
+        // mag_vel gradient
         double mag_vel_gradient_array[max_nodes_per_element * num_dims];
 
         // velocity gradient
@@ -232,9 +232,9 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
 
             ViewCArrayKokkos<double> vel(&node_vel(rk_level, node_gid, 0), num_dims);
 
-            vel_star(0) += vel(0)/((real_t) num_nodes_in_elem);
-            vel_star(1) += vel(1)/((real_t) num_nodes_in_elem);
-            vel_star(2) += vel(2)/((real_t) num_nodes_in_elem);
+            vel_star(0) += vel(0) / ((real_t) num_nodes_in_elem);
+            vel_star(1) += vel(1) / ((real_t) num_nodes_in_elem);
+            vel_star(2) += vel(2) / ((real_t) num_nodes_in_elem);
         } // end for loop over nodes
 
         // find shock direction and shock impedance associated with each node
@@ -243,12 +243,9 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
         for (int i = 0; i < 4; i++) {
             sum(i) = 0.0;
         }
-        for (int i = 0; i < 4; i++)
-        {
-            for (size_t igradient = 0; igradient < num_nodes_in_elem; igradient++)
-            {
-                for (size_t jdim = 0; jdim < num_dims; jdim++)
-                {
+        for (int i = 0; i < 4; i++) {
+            for (size_t igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                for (size_t jdim = 0; jdim < num_dims; jdim++) {
                     sum_gradient(i, igradient, jdim) = 0.0;
                 }
             }
@@ -270,29 +267,24 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                 + (vel(1) - vel_star(1) ) * (vel(1) - vel_star(1) )
                 + (vel(2) - vel_star(2) ) * (vel(2) - vel_star(2) ) );
 
-            for (int igradient = 0; igradient < num_nodes_in_elem; igradient++)
-            {
-                for(int jdim = 0; jdim < num_dim; jdim++)
-                {   
-                    if(igradient == node_lid)
-                    {
-                        mag_vel_gradient(igradient,jdim) = (1.0 - 1.0/((real_t) num_nodes_in_elem))*((vel(jdim) - vel_star(jdim) ))/mag_vel;
-                        if(mag_vel < fuzz){
-                            mag_vel_gradient(igradient,jdim) = (1.0 - 1.0/((real_t) num_nodes_in_elem));
+            for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                for (int jdim = 0; jdim < num_dim; jdim++) {
+                    if (igradient == node_lid) {
+                        mag_vel_gradient(igradient, jdim) = (1.0 - 1.0 / ((real_t) num_nodes_in_elem)) * ((vel(jdim) - vel_star(jdim) )) / mag_vel;
+                        if (mag_vel < fuzz) {
+                            mag_vel_gradient(igradient, jdim) = (1.0 - 1.0 / ((real_t) num_nodes_in_elem));
                         }
                     }
-                    else
-                    {
-                        mag_vel_gradient(igradient,jdim) = -1.0/((real_t) num_nodes_in_elem)*( (vel(jdim) - vel_star(jdim) ))/mag_vel;
-                        if(mag_vel < fuzz){
-                            mag_vel_gradient(igradient,jdim) = 1.0/((real_t) num_nodes_in_elem);
+                    else{
+                        mag_vel_gradient(igradient, jdim) = -1.0 / ((real_t) num_nodes_in_elem) * ( (vel(jdim) - vel_star(jdim) )) / mag_vel;
+                        if (mag_vel < fuzz) {
+                            mag_vel_gradient(igradient, jdim) = 1.0 / ((real_t) num_nodes_in_elem);
                         }
                     }
                 }
             }
 
             if (mag_vel > small) {
-
                 // estimate of the shock direction, a unit normal
                 for (int dim = 0; dim < num_dims; dim++) {
                     shock_dir(dim) = (vel(dim) - vel_star(dim)) / mag_vel;
@@ -317,24 +309,20 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1 * elem_sspd(elem_gid) + material(mat_id).q2 * mag_vel);
 
-                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++)
-                {
-                    for(int jdim = 0; jdim < num_dim; jdim++)
-                    {
-                        muc_gradient(node_lid, igradient, jdim) = material(mat_id).q2 * mag_vel_gradient(igradient,jdim);
-                        //if(muc_gradient(node_lid, igradient, jdim)!=0) std::cout << " NON ZERO " << muc_gradient(node_lid, igradient, jdim) << std::endl;
+                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                    for (int jdim = 0; jdim < num_dim; jdim++) {
+                        muc_gradient(node_lid, igradient, jdim) = material(mat_id).q2 * mag_vel_gradient(igradient, jdim);
+                        // if(muc_gradient(node_lid, igradient, jdim)!=0) std::cout << " NON ZERO " << muc_gradient(node_lid, igradient, jdim) << std::endl;
                     }
                 }
             }
             else{  // element in expansion
                 muc(node_lid) = elem_den(elem_gid) *
                                 (material(mat_id).q1ex * elem_sspd(elem_gid) + material(mat_id).q2ex * mag_vel);
-                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++)
-                {
-                    for(int jdim = 0; jdim < num_dim; jdim++)
-                    {
-                        muc_gradient(node_lid, igradient, jdim) = material(mat_id).q2ex * mag_vel_gradient(igradient,jdim);
-                        //if(muc_gradient(node_lid, igradient, jdim)!=0) std::cout << " NON ZERO " << muc_gradient(node_lid, igradient, jdim) << std::endl;
+                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                    for (int jdim = 0; jdim < num_dim; jdim++) {
+                        muc_gradient(node_lid, igradient, jdim) = material(mat_id).q2ex * mag_vel_gradient(igradient, jdim);
+                        // if(muc_gradient(node_lid, igradient, jdim)!=0) std::cout << " NON ZERO " << muc_gradient(node_lid, igradient, jdim) << std::endl;
                     }
                 }
             } // end if on divergence sign
@@ -357,17 +345,15 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                 // Using a full tensoral Riemann jump relation
                 mu_term = muc(node_lid)
                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                               + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                               + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                    + area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                    + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
 
-                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++)
-                {
-                    for (int jdim = 0; jdim < num_dims; jdim++)
-                    {
+                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                    for (int jdim = 0; jdim < num_dims; jdim++) {
                         muc_gradient(node_lid, igradient, jdim) = muc_gradient(node_lid, igradient, jdim)
-                                           * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
-                                                + area_normal(node_lid, 1) * area_normal(node_lid, 1)
-                                                + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
+                                                                  * sqrt(area_normal(node_lid, 0) * area_normal(node_lid, 0)
+                            + area_normal(node_lid, 1) * area_normal(node_lid, 1)
+                            + area_normal(node_lid, 2) * area_normal(node_lid, 2) );
                     }
                 }
             }
@@ -379,26 +365,26 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
 
             // sum gradients
             muc(node_lid) = mu_term; // the impeadance time surface area is stored here
-            for (int igradient = 0; igradient < num_nodes_in_elem; igradient++)
-            {
-                for (int jdim = 0; jdim < num_dims; jdim++)
-                {   
-                    if(igradient==node_lid&&jdim==0)
+            for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                for (int jdim = 0; jdim < num_dims; jdim++) {
+                    if (igradient == node_lid && jdim == 0) {
                         sum_gradient(0, igradient, jdim) += muc(node_lid);
+                    }
 
-                    if(igradient==node_lid&&jdim==1)
+                    if (igradient == node_lid && jdim == 1) {
                         sum_gradient(1, igradient, jdim) += muc(node_lid);
+                    }
 
-                    if(igradient==node_lid&&jdim==2)
+                    if (igradient == node_lid && jdim == 2) {
                         sum_gradient(2, igradient, jdim) += muc(node_lid);
-                        
+                    }
+
                     sum_gradient(0, igradient, jdim) += muc_gradient(node_lid, igradient, jdim) * vel(0);
                     sum_gradient(1, igradient, jdim) += muc_gradient(node_lid, igradient, jdim) * vel(1);
                     sum_gradient(2, igradient, jdim) += muc_gradient(node_lid, igradient, jdim) * vel(2);
                     sum_gradient(3, igradient, jdim) += muc_gradient(node_lid, igradient, jdim);
                 }
             }
-
         } // end for node_lid loop over nodes of the elem
 
         // The Riemann velocity, called vel_star
@@ -429,7 +415,6 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                     for (int jdim = 0; jdim < num_dims; jdim++) {
                         vel_star_gradient(i, igradient, jdim) = 0;
                     }
-
                 }
             }
         } // end if
@@ -512,19 +497,19 @@ void FEA_Module_SGH::get_force_vgradient_sgh(const DCArrayKokkos<material_t>& ma
                     column_index = num_dims * Global_Gradient_Matrix_Assembly_Map(elem_gid, igradient, node_lid);
                     for (int jdim = 0; jdim < num_dims; jdim++) {
                         if (node_lid == igradient && jdim == dim) {
-                            if (map->isNodeLocalElement(gradient_node_gid)) { //node_vel(rk_level, node_gid, dim)
-                                Force_Gradient_Velocities(gradient_node_gid * num_dims + jdim, column_index + dim) += phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim) - 1) + 
+                            if (map->isNodeLocalElement(gradient_node_gid)) {
+                                Force_Gradient_Velocities(gradient_node_gid * num_dims + jdim, column_index + dim) += phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim) - 1) +
                                                                                                                              muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim)));
                             }
-                            corner_gradient_storage(corner_gid, dim, igradient, jdim) = phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim) - 1) + 
+                            corner_gradient_storage(corner_gid, dim, igradient, jdim) = phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim) - 1) +
                                                                                                muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim)));
                         }
                         else {
                             if (map->isNodeLocalElement(gradient_node_gid)) {
-                                Force_Gradient_Velocities(gradient_node_gid * num_dims + jdim, column_index + dim) += phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim))+
+                                Force_Gradient_Velocities(gradient_node_gid * num_dims + jdim, column_index + dim) += phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim)) +
                                                                                                                              muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim)));
                             }
-                            corner_gradient_storage(corner_gid, dim, igradient, jdim) = phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim))+
+                            corner_gradient_storage(corner_gid, dim, igradient, jdim) = phi * (muc(node_lid) * (vel_star_gradient(dim, igradient, jdim)) +
                                                                                                muc_gradient(node_lid, igradient, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim)));
                         }
                     }
