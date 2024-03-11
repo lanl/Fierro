@@ -1,5 +1,5 @@
 /**********************************************************************************************
- © 2020. Triad National Security, LLC. All rights reserved.
+ ï¿½ 2020. Triad National Security, LLC. All rights reserved.
  This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
  National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
  Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -454,14 +454,16 @@ void FEA_Module_SGH::get_power_vgradient_sgh(double rk_alpha,
                     if (!map->isNodeLocalElement(gradient_node_id)) {
                         continue;
                     }
-                    if (node_lid == igradient) {
-                        Power_Gradient_Velocities(gradient_node_id * num_dims + dim, column_id) -=
-                            corner_gradient_storage(corner_gid, dim, igradient, dim) * node_vel(rk_level, node_gid, dim)
-                            * node_radius + corner_force(corner_gid, dim) * node_radius;
-                    }
-                    else{
-                        Power_Gradient_Velocities(gradient_node_id * num_dims + dim, column_id) -=
-                            corner_gradient_storage(corner_gid, dim, igradient, dim) * node_vel(rk_level, node_gid, dim) * node_radius;
+                    for (size_t jdim = 0; jdim < num_dims; jdim++) {
+                        if (node_lid == igradient && jdim == dim) {
+                            Power_Gradient_Velocities(gradient_node_id * num_dims + jdim, column_id) -=
+                                corner_gradient_storage(corner_gid, dim, igradient, jdim) * node_vel(rk_level, node_gid, dim)
+                                * node_radius + corner_force(corner_gid, dim) * node_radius;
+                        }
+                        else {
+                            Power_Gradient_Velocities(gradient_node_id * num_dims + jdim, column_id) -=
+                                corner_gradient_storage(corner_gid, dim, igradient, jdim) * node_vel(rk_level, node_gid, dim) * node_radius;
+                        }
                     }
                 }
             } // end for dim

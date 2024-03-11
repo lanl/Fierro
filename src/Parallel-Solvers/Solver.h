@@ -138,6 +138,8 @@ public:
 
     virtual void read_mesh_vtk(const char* MESH);
 
+    virtual void read_mesh_abaqus_inp(const char* MESH); //abaqus inp format reader
+
     virtual void repartition_nodes();
 
     virtual void comm_importer_setup();
@@ -262,7 +264,7 @@ public:
 
     // file readin variables
     std::ifstream* in = NULL;
-    std::streampos before_condition_header;
+    std::streampos before_condition_header, first_elem_line_streampos;
     std::string    filename;
     int words_per_line, elem_words_per_line;
     enum node_ordering_convention { IJK, ENSIGHT };
