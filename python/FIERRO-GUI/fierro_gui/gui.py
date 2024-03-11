@@ -12,8 +12,11 @@ def main():
             self.ui = FIERRO_GUI()
             self.ui.setupUi(self)
             
-            # SHOW WINDOW
+            # SHOW MAIN WINDOW
             self.show()
+            
+            # SHOW WORKING DIRECTORY WINDOW
+            self.ui.open_working_directory_dialog()
             
     app = QApplication(sys.argv)
     window = MainWindow()

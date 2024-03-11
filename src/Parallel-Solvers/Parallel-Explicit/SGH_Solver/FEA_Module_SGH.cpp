@@ -1131,6 +1131,11 @@ void FEA_Module_SGH::setup(){
         if (mat_fill(f_id).volume.type == VOLUME_TYPE::stl_to_voxel) {
             mat_fill(f_id).volume.stl_to_voxel();
         }
+        
+        // if volume is defined by a vtk file, parse it
+        if (mat_fill(f_id).volume.type == VOLUME_TYPE::vtk) {
+            mat_fill(f_id).volume.vtk();
+        }
             
         // parallel loop over elements in mesh
         //for (size_t elem_gid = 0; elem_gid <= rnum_elem; elem_gid++) {
