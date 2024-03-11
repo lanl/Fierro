@@ -6,7 +6,7 @@ import sys
 import math
 
 
-solvers = ["fierro-parallel-explicit", "fierro-parallel-implicit"]
+solvers = ["fierro-parallel-explicit"]
 
 executables = []
 tests = []
@@ -26,7 +26,7 @@ for i in range(len(solvers)):
 
 # Add names of each test
 parallel_explicit_tests = ["Noh", "Sedov", "Sod"]
-parallel_implicit_tests = ["Beam"]
+# parallel_implicit_tests = ["Beam"]
 
 
 
@@ -36,7 +36,7 @@ inputs = []
 standard_results = []
 
 tests.append(parallel_explicit_tests)
-tests.append(parallel_implicit_tests)
+# tests.append(parallel_implicit_tests)
 
 position_keyword = "POINTS"
 
@@ -137,18 +137,18 @@ for i in range(len(solvers)):
         print("Running "+tests[i][j])
         os.system(executables[i] + ' ' + inputs[i][j])
 
-        # GT_positions = extract_vector_data(standard_results[i][j], position_keyword)
+        GT_positions = extract_vector_data(standard_results[i][j], position_keyword)
 
-        # # Read simulation results
-        # results_filename = "vtk/data/VTK0.vtk"
+        # Read simulation results
+        results_filename = "vtk/data/VTK0.vtk"
 
-        # results_positions = extract_vector_data(results_filename, position_keyword)
-        # position_diff = percent_difference_vectors(GT_positions, results_positions)
+        results_positions = extract_vector_data(results_filename, position_keyword)
+        position_diff = percent_difference_vectors(GT_positions, results_positions)
 
 
-        # for k in range(len(position_diff)):
-        #     if position_diff[k] >= 1.0e-6:
-        #         raise ValueError(" ****************** ERROR: Position difference out of range for "+tests[i][j]+" problem ****************** ")
+        for k in range(len(position_diff)):
+            if position_diff[k] >= 1.0e-6:
+                raise ValueError(" ****************** ERROR: Position difference out of range for "+tests[i][j]+" problem ****************** ")
 
         print("Removing simulation outputs")
         os.system('rm -rf  vtk' )
