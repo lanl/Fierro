@@ -7,7 +7,8 @@ SERIALIZABLE_ENUM(MESH_FORMAT,
     ensight,
     tecplot,
     vtk,
-    ansys_dat
+    ansys_dat,
+    abaqus_inp
 )
 
 SERIALIZABLE_ENUM(ELEMENT_TYPE, 
@@ -39,6 +40,9 @@ struct Input_Options : Yaml::ValidatedYaml, Yaml::DerivedFields {
       switch (mesh_file_format) {
         case MESH_FORMAT::ensight:
           words_per_line = 1;
+          break;
+        case MESH_FORMAT::abaqus_inp:
+          words_per_line = 3;
           break;
         case MESH_FORMAT::vtk:
         case MESH_FORMAT::tecplot:

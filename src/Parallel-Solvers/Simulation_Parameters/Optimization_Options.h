@@ -1,5 +1,6 @@
 #pragma once
 #include "yaml-serializable.h"
+#include "Optimization_Bound_Constraint_Region.h"
 
 
 SERIALIZABLE_ENUM(FUNCTION_TYPE,
@@ -92,10 +93,12 @@ struct MultiObjectiveModule {
 YAML_ADD_REQUIRED_FIELDS_FOR(MultiObjectiveModule, type, weight_coefficient)
 IMPL_YAML_SERIALIZABLE_FOR(MultiObjectiveModule, type, weight_coefficient)
 
-struct Optimization_Options {
+struct Optimization_Options: Yaml::DerivedFields {
   OPTIMIZATION_PROCESS optimization_process = OPTIMIZATION_PROCESS::none;
   OPTIMIZATION_OBJECTIVE optimization_objective = OPTIMIZATION_OBJECTIVE::none;
   std::vector<Optimization_Constraint> constraints;
+  std::vector<Optimization_Bound_Constraint_Region> volume_bound_constraints;
+  DCArrayKokkos<Optimization_Bound_Constraint_Region> optimization_bound_constraint_volumes;
   bool method_of_moving_asymptotes = false;
   double simp_penalty_power = 3.0;
   bool thick_condition_boundary = true;
@@ -110,13 +113,19 @@ struct Optimization_Options {
 
   MULTI_OBJECTIVE_STRUCTURE multi_objective_structure = MULTI_OBJECTIVE_STRUCTURE::linear;
   std::vector<MultiObjectiveModule> multi_objective_modules;
+  //derive function requires inheritance from Yaml::DerivedFields
+  void derive() {
+    if(volume_bound_constraints.size()>=1){
+      mtr::from_vector(optimization_bound_constraint_volumes, volume_bound_constraints);
+    }
+  }
 };
 YAML_ADD_REQUIRED_FIELDS_FOR(Optimization_Options,
   optimization_objective
 )
 IMPL_YAML_SERIALIZABLE_FOR(Optimization_Options, 
   optimization_process, optimization_objective, 
-  constraints, method_of_moving_asymptotes,
+  constraints, method_of_moving_asymptotes, volume_bound_constraints,
   simp_penalty_power, density_epsilon, thick_condition_boundary,
   optimization_output_freq, density_filter, minimum_density, maximum_density,
   multi_objective_modules, multi_objective_structure, density_filter, retain_outer_shell,
