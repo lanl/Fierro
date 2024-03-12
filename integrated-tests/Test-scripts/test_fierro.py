@@ -142,6 +142,12 @@ for i in range(len(solvers)):
         # Read simulation results
         results_filename = "vtk/data/VTK0.vtk"
 
+        if os.path.exists(results_filename):
+            print("Simulation Finished")
+        else:
+            print("Simulation did not finish")
+            raise ValueError("Simulation did not finish")
+
         results_positions = extract_vector_data(results_filename, position_keyword)
         position_diff = percent_difference_vectors(GT_positions, results_positions)
 
