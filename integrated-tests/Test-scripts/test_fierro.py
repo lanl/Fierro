@@ -11,9 +11,6 @@ solvers = ["fierro-parallel-explicit"]
 executables = []
 tests = []
 
-
-
-
 # Add paths to all tested executables
 for i in range(len(solvers)):
     executables.append("./../../build-fierro-openmp/bin/"+solvers[i])
@@ -22,15 +19,10 @@ for i in range(len(solvers)):
 for i in range(len(solvers)):
     if not os.path.exists(executables[i]):
         raise ValueError(solvers[i]+" executable not found in build-fierro-openmp directory")
-
-
+\
 # Add names of each test
 parallel_explicit_tests = ["Noh", "Sedov", "Sod"]
 # parallel_implicit_tests = ["Beam"]
-
-
-
-
 
 inputs = []
 standard_results = []
