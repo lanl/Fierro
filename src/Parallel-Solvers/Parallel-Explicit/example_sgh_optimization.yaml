@@ -68,7 +68,7 @@ materials:
     poisson_ratio: 0.3
     maximum_limiter: true
     q1: 1.0
-    q2: 0
+    q2: 1.33
     q1ex: 1.0
     q2ex: 0.0
     eos_global_vars:
