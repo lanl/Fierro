@@ -219,8 +219,21 @@ void Implicit_Solver::run(){
 
       //update set options for next FEA module in loop with synchronized set options in solver's simparam class
       FEA_MODULE_TYPE m_type = simparam.fea_module_parameters[imodule]->type;
-      if(fea_module_must_read.find(m_type) != fea_module_must_read.end()){
-        fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
+      if (simparam.input_options.has_value()) {
+        const Input_Options& input_options = simparam.input_options.value();
+        if(fea_module_must_read.find(m_type) != fea_module_must_read.end()){
+          switch (input_options.mesh_file_format) {
+          case MESH_FORMAT::ansys_dat:
+            fea_modules[imodule]->read_conditions_ansys_dat(in, before_condition_header);
+            break;
+          case MESH_FORMAT::abaqus_inp:
+            fea_modules[imodule]->read_conditions_abaqus_inp(in, before_condition_header);
+            break;
+          default:
+            *fos << "ERROR: MESH FILE FORMAT DOESN'T SUPPORT CONDITION READ" << std::endl;
+            exit_solver(0);
+          }
+        }
       }
       else{
         fea_modules[imodule]->init_boundaries();

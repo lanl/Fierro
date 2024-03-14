@@ -144,6 +144,8 @@ public:
 
     virtual void read_conditions_ansys_dat(std::ifstream* in, std::streampos before_condition_header) {}
 
+    virtual void read_conditions_abaqus_inp(std::ifstream* in, std::streampos before_condition_header) {}
+
     virtual void linear_solver_parameters() {}
 
     virtual void comm_variables(Teuchos::RCP<const MV> zp) {}
