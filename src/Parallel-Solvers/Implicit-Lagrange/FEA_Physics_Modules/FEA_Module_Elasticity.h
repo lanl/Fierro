@@ -135,7 +135,9 @@ public:
 
   void Gradient_Body_Term(size_t ielem, real_t density, real_t *forces);
 
-  void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header);
+  void read_conditions_ansys_dat(std::ifstream *in, std::streampos before_condition_header); //ANSYS .dat import of specified load and boundary conditions
+
+  void read_conditions_abaqus_inp(std::ifstream *in, std::streampos before_condition_header); //ABAQUS .inp import of specified load and boundary conditions
 
   //interfaces between user input and creating data structures for bcs
   void generate_bcs();

@@ -599,6 +599,426 @@ void FEA_Module_Elasticity::read_conditions_ansys_dat(std::ifstream *in, std::st
  
 } // end read_conditions_ansys_dat
 
+/* ----------------------------------------------------------------------
+   Read ANSYS dat format mesh file
+------------------------------------------------------------------------- */
+void FEA_Module_Elasticity::read_conditions_abaqus_inp(std::ifstream *in, std::streampos before_condition_header){
+
+  char ch;
+  int num_dim = simparam->num_dims;
+  int buffer_lines = 1000;
+  int max_word = 30;
+  Input_Options input_options = simparam->input_options.value();
+  int p_order = input_options.p_order;
+  real_t unit_scaling = input_options.unit_scaling;
+  int local_node_index, current_column_index;
+  size_t strain_count;
+  std::string skip_line, read_line, substring, token;
+  std::stringstream line_parse, line_parse2;
+  CArrayKokkos<char, array_layout, HostSpace, memory_traits> read_buffer;
+  CArrayKokkos<long long int, array_layout, HostSpace, memory_traits> read_buffer_indices;
+  int buffer_loop, buffer_iteration, buffer_iterations, scan_loop, nodes_per_element, words_per_line;
+  size_t read_index_start, node_rid, elem_gid;
+  LO local_dof_id;
+  GO node_gid;
+  real_t dof_value;
+  host_vec_array node_densities;
+  //Nodes_Per_Element_Type =  elements::elem_types::Nodes_Per_Element_Type;
+
+  //initialize boundary condition storage structures
+  init_boundaries();
+
+  //task 0 reads file, it should be open by now due to Implicit Solver mesh read in
+
+  //ANSYS dat file doesn't always correctly specify total number of nodes, which is needed for the node map.
+  //First pass reads in node section to determine the maximum number of nodes, second pass distributes node data
+  //The elements section header does specify element count
+
+  //revert file position to before first condition zone
+  if(myrank==0){
+    in->seekg(before_condition_header);
+  }
+
+  //prompts all MPI ranks to expect more broadcasts
+  GO dof_count;
+  bool searching_for_conditions = true;
+  bool found_no_conditions = true;
+  int  zone_condition_type = NONE;
+  bool zero_displacement = false;
+  bool assign_flag;
+  //skip lines at the top with nonessential info; stop skipping when "Nodes for the whole assembly" string is reached
+  while (searching_for_conditions) {
+    if(myrank==0){
+      //reset variables 
+      zone_condition_type = NONE;
+      while(searching_for_conditions&&in->good()){
+        getline(*in, skip_line);
+        //std::cout << skip_line << std::endl;
+        line_parse.clear();
+        line_parse.str(skip_line);
+        //stop when the NODES= string is reached
+        while (!line_parse.eof()){
+          line_parse >> substring;
+          //std::cout << substring << std::endl;
+          if(!substring.compare("Supports")){
+            //std::cout << "FOUND BC ZONE" << std::endl;
+            searching_for_conditions = found_no_conditions = false;
+            zone_condition_type = DISPLACEMENT_CONDITION;
+          }
+          if(!substring.compare("Pressure")){
+            
+            //std::cout << "FOUND PRESSURE ZONE" << std::endl;
+            searching_for_conditions = found_no_conditions = false;
+            zone_condition_type = SURFACE_LOADING_CONDITION;
+          }
+        } //while
+      }//while
+    }
+    
+    //broadcast zone flags
+    MPI_Bcast(&zone_condition_type,1,MPI_INT,0,world);
+    //perform readin strategy according to zone type
+    if(zone_condition_type==DISPLACEMENT_CONDITION){
+      node_specified_bcs = true;
+      bool per_node_flag = false;
+      if(myrank==0){
+        getline(*in, read_line);
+        std::cout << read_line << std::endl;
+        line_parse.clear();
+        line_parse.str(read_line);
+        line_parse >> substring;
+        //parse boundary condition specifics out of jumble of comma delimited entries
+        line_parse2.clear();
+        line_parse2.str(substring);
+        while(line_parse2.good()){
+        getline(line_parse2, token, ',');
+        if(!token.compare("FIXEDSU")){
+          nonzero_bc_flag = false;
+        }
+        if(!token.compare("NODE")){
+          per_node_flag = true;
+        }
+        }
+        //read number of nodes/dof in boundary condition zone
+        line_parse >> dof_count;
+        //skip 1 line
+        getline(*in, read_line);
+      }
+      //broadcast number of fixed support conditions to read in (global ids)
+      
+      MPI_Bcast(&dof_count,1,MPI_LONG_LONG_INT,0,world);
+
+      //calculate buffer iterations to read number of lines
+      buffer_iterations = dof_count/buffer_lines;
+
+      if(dof_count%buffer_lines!=0) buffer_iterations++;
+      read_index_start = 0;
+
+      //allocate read buffer
+      read_buffer_indices = CArrayKokkos<long long int, array_layout, HostSpace, memory_traits>(buffer_lines);
+      //read global indices being fixed on rank zero then broadcast buffer until list is complete
+      for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+        //pack buffer on rank 0
+        if(myrank==0&&buffer_iteration<buffer_iterations-1){
+          for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
+            *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
+          }
+        }
+        else if(myrank==0){
+          buffer_loop=0;
+          while(buffer_iteration*buffer_lines+buffer_loop < dof_count) {
+            *in >> read_buffer_indices(buffer_loop);
+            read_buffer_indices(buffer_loop);
+            buffer_loop++;
+          }
+        }
+
+        //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+        MPI_Bcast(read_buffer_indices.pointer(),buffer_lines,MPI_LONG_LONG_INT,0,world);
+        //broadcast how many nodes were read into this buffer iteration
+        MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+
+        //debug_print
+        //std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+        //for(int iprint=0; iprint < buffer_loop; iprint++)
+        //std::cout<<"buffer packing: " << read_buffer_indices(iprint) << std::endl;
+        //return;
+
+        //determine which data to store in the swage mesh members (the local node data)
+        //loop through read buffer
+        for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+          node_gid = read_buffer_indices(scan_loop)-1; //read indices are base 1, we need base 0
+          //let map decide if this node id belongs locally; if yes store data
+          if(all_node_map->isNodeGlobalElement(node_gid)){
+            //set local node index in this mpi rank
+            local_node_index = all_node_map->getLocalElement(node_gid);
+            if(map->isNodeGlobalElement(node_gid)){
+              Number_DOF_BCS+=num_dim;
+            }
+            if(nonzero_bc_flag){
+
+            }
+            else{
+              local_dof_id = num_dim*local_node_index;
+              Node_DOF_Boundary_Condition_Type(local_dof_id) = DISPLACEMENT_CONDITION;
+              Node_DOF_Displacement_Boundary_Conditions(local_dof_id) = 0;
+              Node_DOF_Boundary_Condition_Type(local_dof_id + 1) = DISPLACEMENT_CONDITION;
+              Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 1) = 0;
+              if(num_dim==3){
+                Node_DOF_Boundary_Condition_Type(local_dof_id + 2) = DISPLACEMENT_CONDITION;
+                Node_DOF_Displacement_Boundary_Conditions(local_dof_id + 2) = 0;
+              }
+            }
+          }
+        }
+        read_index_start+=buffer_lines;
+      }
+    }
+    
+    if(zone_condition_type==SURFACE_LOADING_CONDITION){
+      LO local_patch_index;
+      LO boundary_set_npatches = 0;
+      bool look_at_end = false;
+      CArray<GO> Surface_Nodes;
+      std::streampos last_zone_ending_position;
+      //grow structures for loading condition storage
+      //debug print
+      std::cout << "BOUNDARY INDEX FOR LOADING CONDITION " << num_boundary_conditions << " FORCE SET INDEX "<< num_surface_force_sets << std::endl;
+      if(num_boundary_conditions + 1>max_boundary_sets) grow_boundary_sets(num_boundary_conditions+1);
+      num_boundary_conditions++;
+      if(num_surface_force_sets + 1>max_load_boundary_sets) grow_loading_condition_sets(num_surface_force_sets+1);
+      num_surface_force_sets++;
+      
+      GO num_patches;
+      real_t force_density[3];
+      force_density[0] = force_density[1] = force_density[2] = 0;
+      if(myrank == 0){
+        getline(*in, read_line);
+        std::cout << read_line << std::endl;
+        line_parse.clear();
+        line_parse.str(read_line);
+        line_parse >> substring;
+        //parse boundary condition specifics out of jumble of comma delimited entries
+        line_parse2.clear();
+        line_parse2.str(substring);
+        //this first token should be the word local, otherwise the traction is printed at file end
+        getline(line_parse2, token, ',');
+        if(token.compare("local")){
+          look_at_end = true;
+        }
+        
+        if(!look_at_end){
+          getline(line_parse2, token, ',');
+          force_density[0]  = std::stod(token);
+          getline(line_parse2, token, ',');
+          force_density[1]  = std::stod(token);
+          getline(line_parse2, token, ',');
+          force_density[2]  = std::stod(token);
+        
+        //skip 2 lines
+          getline(*in, read_line);
+          getline(*in, read_line);
+        }
+        //read number of surface patches
+        getline(*in, read_line);
+        std::cout << read_line << std::endl;
+        line_parse.clear();
+        line_parse.str(read_line);
+        line_parse >> substring;
+        //parse boundary condition specifics out of jumble of comma delimited entries
+        line_parse2.clear();
+        line_parse2.str(substring);
+        while(line_parse2.good()){
+          getline(line_parse2, token, ',');
+        }
+        //number of patches should be last read token
+        //element count should be the last token read in
+        num_patches = std::stoi(token);
+        
+        //std::cout << " NUMBER OF BOUNDARY PATCHES "<< num_patches << std::endl;
+        //skip 1 more line
+        getline(*in, read_line);
+      }
+
+      //broadcast number of element surface patches subject to force density
+      MPI_Bcast(&look_at_end,1,MPI_CXX_BOOL,0,world);
+
+      if(look_at_end){
+        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_PRESSURE_CONDITION;
+      }
+      else{
+        Boundary_Condition_Type_List(num_boundary_conditions-1) = SURFACE_LOADING_CONDITION;
+      }
+        
+      
+      //broadcast number of element surface patches subject to force density
+      MPI_Bcast(&num_patches,1,MPI_LONG_LONG_INT,0,world);
+      
+      std::cout << "LOAD PATCHES TO READ " << num_patches << std::endl;
+      int nodes_per_patch;
+      //select nodes per patch based on element type
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex8){
+        nodes_per_patch = 4;
+      }
+      if(Implicit_Solver_Pointer_->Element_Types(0) == elements::elem_types::Hex20){
+        nodes_per_patch = 8;
+      }
+
+      //calculate buffer iterations to read number of lines
+      buffer_iterations = num_patches/buffer_lines;
+
+      if(num_patches%buffer_lines!=0) buffer_iterations++;
+      read_index_start = 0;
+      //allocate read buffer
+      read_buffer_indices = CArrayKokkos<long long int, array_layout, HostSpace, memory_traits>(buffer_lines,nodes_per_patch);
+      int non_node_entries = 5;
+      words_per_line = nodes_per_patch + non_node_entries;
+
+      for(buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+        //pack buffer on rank 0
+        if(myrank==0&&buffer_iteration<buffer_iterations-1){
+          for (buffer_loop = 0; buffer_loop < buffer_lines; buffer_loop++) {
+            getline(*in,read_line);
+            line_parse.clear();
+            line_parse.str(read_line);
+            //debug print
+            //std::cout<< read_line <<std::endl;
+
+            for(int iword = 0; iword < words_per_line; iword++){
+              //read portions of the line into the substring variable
+              line_parse >> substring;
+              //debug print
+              //std::cout<<" "<< substring <<std::endl;
+              //assign the substring variable as a word of the read buffer
+              if(iword>non_node_entries-1){
+                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring)-1;
+              }
+            }
+          }
+        }
+        else if(myrank==0){
+          buffer_loop=0;
+          while(buffer_iteration*buffer_lines+buffer_loop < num_patches) {
+            getline(*in,read_line);
+            line_parse.clear();
+            line_parse.str(read_line);
+            for(int iword = 0; iword < words_per_line; iword++){
+              //read portions of the line into the substring variable
+              line_parse >> substring;
+              //assign the substring variable as a word of the read buffer
+              if(iword>non_node_entries-1){
+                read_buffer_indices(buffer_loop,iword-non_node_entries) = std::stoi(substring)-1; //make base 0, file has base 1
+              }
+            }
+            buffer_loop++;
+          }
+      
+        }
+
+        //broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+        MPI_Bcast(read_buffer_indices.pointer(),buffer_lines*nodes_per_patch,MPI_LONG_LONG_INT,0,world);
+        //broadcast how many nodes were read into this buffer iteration
+        MPI_Bcast(&buffer_loop,1,MPI_INT,0,world);
+
+        //determine which data to store in the swage mesh members (the local node data)
+        //loop through read buffer
+        //std::cout << "BUFFER LOOP IS " << buffer_loop << " ASSIGNED ON RANK " << myrank << std::endl;
+        int belong_count;
+        for(scan_loop = 0; scan_loop < buffer_loop; scan_loop++){
+          belong_count = 0;
+          //judge if this patch could be relevant to this MPI rank
+          //all nodes of the patch must belong to the local + ghost set of nodes
+          for(int inode = 0; inode < nodes_per_patch; inode++){
+            node_gid = read_buffer_indices(scan_loop, inode);
+            if(map->isNodeGlobalElement(node_gid)){
+              belong_count++;
+            }
+          }
+          if(belong_count){
+            //construct patch object and look for patch index; the assign patch index to the new loading condition set
+            Surface_Nodes = CArray<GO>(nodes_per_patch);
+            for(int inode = 0; inode < nodes_per_patch; inode++){
+              Surface_Nodes(inode) = read_buffer_indices(scan_loop, inode);
+            }
+            Node_Combination temp(Surface_Nodes);
+            //debug print
+            //std::cout << "PATCH NODES " << boundary_set_npatches +1 << " " << Surface_Nodes(0) << " " << Surface_Nodes(1) << " " << Surface_Nodes(2) << " " << Surface_Nodes(3) << " ASSIGNED ON RANK " << myrank << std::endl;
+            //construct Node Combination object for this surface
+            local_patch_index = Implicit_Solver_Pointer_->boundary_patch_to_index[temp];
+            //debug print
+            //std::cout << "MAPPED PATCH NODES " << boundary_set_npatches +1 << " " << Boundary_Patches(local_patch_index).node_set(0) << " " << Boundary_Patches(local_patch_index).node_set(1) << " " << Boundary_Patches(local_patch_index).node_set(2) << " " << Boundary_Patches(local_patch_index).node_set(3) << " ASSIGNED ON RANK " << myrank << std::endl;
+            Boundary_Condition_Patches(num_boundary_conditions-1,boundary_set_npatches++) = local_patch_index;
+            //debug print
+            //std::cout << "PATCH INDEX " << local_patch_index << " ASSIGNED ON RANK " << myrank << std::endl;
+          }
+          //find patch id associated with node combination
+        }
+        read_index_start+=buffer_lines;
+      }
+      NBoundary_Condition_Patches(num_boundary_conditions-1) = boundary_set_npatches;
+      
+      //get surface pressure from the end of the file
+      if(myrank==0){
+        if(look_at_end){
+          //save file position in case there other conditions to read in afterwards
+          last_zone_ending_position = in->tellg();
+          bool found_pressure = false;
+          real_t pressure;
+          while(in->good()){
+            getline(*in, read_line);
+            //std::cout << read_line << std::endl;
+            line_parse.clear();
+            line_parse.str(read_line);
+            line_parse >> substring;
+            //parse for surface pressure token "sf" then obtain pressure value
+            line_parse2.clear();
+            line_parse2.str(substring);
+            while(line_parse2.good()){
+              getline(line_parse2, token, ',');
+              if(!token.compare("sf")){
+                found_pressure = true;
+              }
+            }
+            if(found_pressure){
+              //last token read in from the line should be the pressure
+              pressure = std::stod(token);
+              break;
+            }
+          }
+          force_density[0] = pressure;
+          //reset file position
+          in->seekg(last_zone_ending_position);
+        }
+      }
+
+      //broadcast surface force density
+      MPI_Bcast(&force_density,3,MPI_DOUBLE,0,world);
+      
+      //std::cout << " FORCE DENSITY "<< force_density[0] << std::endl;
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,0)  = force_density[0];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,1)  = force_density[1];
+      Boundary_Surface_Force_Densities(num_surface_force_sets-1,2)  = force_density[2];
+    }
+
+    if(myrank==0){
+      //previous search on rank 0 for boundary condition keywords failed if search is still true
+      if(found_no_conditions){
+        std::cout << "FILE FORMAT ERROR" << std::endl;
+      }
+      //check if there is yet more text to try reading for more boundary condition keywords
+      searching_for_conditions = in->good();
+    }
+    
+    MPI_Bcast(&searching_for_conditions,1,MPI_CXX_BOOL,0,world);
+  } //All rank while loop
+
+  //close file
+  if(myrank == 0) in->close();
+  
+ 
+} // end read_conditions_ansys_dat
+
 /* ----------------------------------------------------------------------------
    Initialize sets of element boundary surfaces and arrays for input conditions
 ------------------------------------------------------------------------------- */
