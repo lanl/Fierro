@@ -27,7 +27,6 @@ int main(int argc, char* argv[])
 
     Kokkos::initialize();
 
-
     Driver driver(argv[1]);
 
     driver.initialize(num_solvers);

@@ -31,8 +31,7 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-#include "mesh.h"
-#include "state.h"
+
 #include "sgh_solver.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -292,10 +291,7 @@ void SGH::get_divergence(DViewCArrayKokkos<double>& elem_div,
         // The b_matrix are the outward corner area normals
         double b_matrix_array[24];
         ViewCArrayKokkos<double> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
-        get_bmatrix(b_matrix,
-                    elem_gid,
-                    node_coords,
-                    elem_node_gids);
+        geometry::get_bmatrix(b_matrix, elem_gid, node_coords, elem_node_gids);
 
         // get the vertex velocities for the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -374,13 +370,10 @@ void SGH::get_divergence2D(DViewCArrayKokkos<double>& elem_div,
         // The b_matrix are the outward corner area normals
         double b_matrix_array[24];
         ViewCArrayKokkos<double> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
-        get_bmatrix2D(b_matrix,
-                      elem_gid,
-                      node_coords,
-                      elem_node_gids);
+        geometry::get_bmatrix2D(b_matrix, elem_gid, node_coords, elem_node_gids);
 
         // calculate the area of the quad
-        double elem_area = get_area_quad(elem_gid, node_coords, elem_node_gids);
+        double elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
         // true volume uses the elem_vol
 
         // get the vertex velocities and node coordinate for the elem

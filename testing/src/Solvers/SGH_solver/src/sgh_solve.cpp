@@ -34,6 +34,7 @@
 
 #include "state.h"
 #include "mesh.h"
+#include "geometry_new.h"
 #include "sgh_solver.h"
 #include <chrono>
 
@@ -302,7 +303,7 @@ void SGH::solve(CArrayKokkos<material_t>& material,
                                 node_vel);
 
             // ---- Calculate cell volume for next time step ----
-            get_vol(elem_vol, node_coords, mesh);
+            geometry::get_vol(elem_vol, node_coords, mesh);
 
             // ---- Calculate elem state (den, pres, sound speed, stress) for next time step ----
             if (mesh.num_dims == 2) {

@@ -31,8 +31,7 @@
  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
-#include "mesh.h"
-#include "state.h"
+
 #include "sgh_solver.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -128,10 +127,10 @@ void SGH::get_force(const CArrayKokkos<material_t>& material,
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
 
         // get the B matrix which are the OUTWARD corner area normals
-        get_bmatrix(area_normal,
-                    elem_gid,
-                    node_coords,
-                    elem_node_gids);
+        geometry::get_bmatrix(area_normal,
+                              elem_gid,
+                              node_coords,
+                              elem_node_gids);
 
         // --- Calculate the velocity gradient ---
         get_velgrad(vel_grad,
@@ -488,23 +487,20 @@ void SGH::get_force_2D(const CArrayKokkos<material_t>& material,
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
 
         // get the B matrix which are the OUTWARD corner area normals
-        get_bmatrix2D(area_normal,
-                      elem_gid,
-                      node_coords,
-                      elem_node_gids);
+        geometry::get_bmatrix2D(area_normal,
+                                elem_gid,
+                                node_coords,
+                                elem_node_gids);
         // NOTE: I added a minus in bmatrix2D, it should be outward pointing now?
 
         // facial area of the element
-        double elem_area = get_area_quad(elem_gid, node_coords, elem_node_gids);
+        double elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
 
         // facial area of the corners
         double corner_areas_array[4];
         ViewCArrayKokkos<double> corner_areas(&corner_areas_array[0], 4);
 
-        get_area_weights2D(corner_areas,
-                           elem_gid,
-                           node_coords,
-                           elem_node_gids);
+        geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);
 
         // --- Calculate the velocity gradient ---
         get_velgrad2D(vel_grad,

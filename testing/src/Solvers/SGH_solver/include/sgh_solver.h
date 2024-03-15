@@ -39,6 +39,7 @@
 #include "solver.h"
 #include "mesh.h"
 #include "state.h"
+#include "geometry_new.h"
 #include "io_utils.h"
 
 using namespace mtr; // matar namespace
@@ -254,7 +255,7 @@ public:
         node_coords.update_device();
         Kokkos::fence();
 
-        get_vol(elem_vol, node_coords, mesh);
+        geometry::get_vol(elem_vol, node_coords, mesh);
 
         // intialize time, time_step, and cycles
         time_value = 0.0;
@@ -491,71 +492,6 @@ public:
         const size_t num_nodes,
         DViewCArrayKokkos<double>& node_coords,
         const DViewCArrayKokkos<double>& node_vel);
-
-    // NOTE: Consider pulling this up as well
-    KOKKOS_FUNCTION
-    void get_bmatrix(
-        const ViewCArrayKokkos<double>& B_matrix,
-        const size_t elem_gid,
-        const DViewCArrayKokkos<double>& node_coords,
-        const ViewCArrayKokkos<size_t>&  elem_node_gids);
-
-    // NOTE: Consider pulling this up as well
-    void get_vol(
-        const DViewCArrayKokkos<double>& elem_vol,
-        const DViewCArrayKokkos<double>& node_coords,
-        const mesh_t& mesh);
-
-    // Exact volume for a hex element
-    // NOTE: Consider pulling this up as well
-    KOKKOS_FUNCTION
-    void get_vol_hex(
-        const DViewCArrayKokkos<double>& elem_vol,
-        const size_t elem_gid,
-        const DViewCArrayKokkos<double>& node_coords,
-        const ViewCArrayKokkos<size_t>&  elem_node_gids);
-
-    // true volume of a quad in RZ coords
-    // NOTE: Consider pulling this up as well
-    KOKKOS_FUNCTION
-    void get_vol_quad(
-        const DViewCArrayKokkos<double>& elem_vol,
-        const size_t elem_gid,
-        const DViewCArrayKokkos<double>& node_coords,
-        const ViewCArrayKokkos<size_t>&  elem_node_gids);
-
-    // NOTE: Consider pulling this up as well
-    KOKKOS_FUNCTION
-    void get_bmatrix2D(
-        const ViewCArrayKokkos<double>& B_matrix,
-        const size_t elem_gid,
-        const DViewCArrayKokkos<double>& node_coords,
-        const ViewCArrayKokkos<size_t>&  elem_node_gids);
-
-    // element facial area
-    // NOTE: Consider pulling this up as well
-    KOKKOS_FUNCTION
-    double get_area_quad(
-        const size_t elem_gid,
-        const DViewCArrayKokkos<double>& node_coords,
-        const ViewCArrayKokkos<size_t>&  elem_node_gids);
-
-    // NOTE: Consider pulling this up as well
-    KOKKOS_FUNCTION
-    double heron(
-        const double x1,
-        const double y1,
-        const double x2,
-        const double y2,
-        const double x3,
-        const double y3);
-
-    KOKKOS_FUNCTION
-    void get_area_weights2D(
-        const ViewCArrayKokkos<double>& corner_areas,
-        const size_t elem_gid,
-        const DViewCArrayKokkos<double>& node_coords,
-        const ViewCArrayKokkos<size_t>&  elem_node_gids);
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity(

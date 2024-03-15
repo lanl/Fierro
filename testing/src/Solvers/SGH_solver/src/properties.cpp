@@ -32,8 +32,6 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-#include "state.h"
-#include "mesh.h"
 #include "sgh_solver.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -107,10 +105,7 @@ void SGH::update_state(const CArrayKokkos<material_t>& material,
             ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
 
             // get the B matrix which are the OUTWARD corner area normals
-            get_bmatrix(area,
-                        elem_gid,
-                        node_coords,
-                        elem_node_gids);
+            geometry::get_bmatrix(area, elem_gid, node_coords, elem_node_gids);
 
             // --- Calculate the velocity gradient ---
             get_velgrad(vel_grad,
@@ -224,10 +219,7 @@ void SGH::update_state2D(const CArrayKokkos<material_t>& material,
             ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
 
             // get the B matrix which are the OUTWARD corner area normals
-            get_bmatrix(area,
-                        elem_gid,
-                        node_coords,
-                        elem_node_gids);
+            geometry::get_bmatrix(area, elem_gid, node_coords, elem_node_gids);
 
             // --- Calculate the velocity gradient ---
             get_velgrad(vel_grad,
