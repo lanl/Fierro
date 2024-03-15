@@ -1268,7 +1268,6 @@ void get_velgrad2D(ViewCArrayKokkos<double>&        vel_grad,
                    const double                     elem_area,
                    const size_t                     elem_gid);
 
-/// REMOVE TO GEOMETRY OR LINEAR ALGEBRA LIBRARY
 KOKKOS_FUNCTION
 void decompose_vel_grad(ViewCArrayKokkos<double>&        D_tensor,
                         ViewCArrayKokkos<double>&        W_tensor,
